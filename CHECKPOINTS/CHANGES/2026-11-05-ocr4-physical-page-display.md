@@ -1,3 +1,9 @@
+## 05/11/2026 - OCR4 / VERIFIED TEST COMPATIBILITY / CURRENT-MAIN RECORDS PRESERVED
+
+Retained task4 owner /root, PR3673. Recovered the exact137/137-tested compatibility files from artifact13408722602 after its publication-only PDF text check stopped on a normal title line break. Normalized text verifies the unchanged PDF title; no application or test assertion was relaxed. The initial new helper tests were corrected to resolve the client package, not the separate server PDF.js package. Original15-test reproduction remains12PASS/3FAIL; corrected combined137PASS/0FAIL/0SKIP and normal client build are verified, not full CI or hosted PASS.
+
+Merged concurrent documentation mainf1830f3470c05741d920891159362b8f01a6a938 into this source branch only. Preserve all peer R01-R05 results, Azure-timing claim, manual/numbered records and the entire current-main registries as exact suffixes after unchanged task4 prefixes. All tested runtime/test bytes remain unchanged. Require exact new-head full CI and independent review; no merge to main, deployment, OCR/provider request, invoice/payment/draft/stock/fiscal operation or old-fixture replay. Broad OCR completeness stays OPEN.
+
 ## 05/11/2026 - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / TEST BUNDLER COMPATIBILITY / AWAITING FULL CI
 
 Retained task4 owner /root; source PR3673, branch fix/ocr4-physical-page-display-20261105. Exact full CI42009262448 on d604619 failed3 of5835 server tests (5832PASS,0SKIP). Independently downloaded original job127183902392 log SHA256738ac499dee72b45b64ba1bcd7b0b722237553b3c765e8e2722b0511552d3a32 identifies the SAME build-time error in pos-decimal-keyboard, pos-direct-credit-payment and pos-internal-return-ui: plain esbuild interpreted the Vite PDF worker ?url import as worker JavaScript with no default export. This is not a failed monetary assertion. Raw-log artifact13407993190 is retained; no diagnosis inferred from truncated logs.

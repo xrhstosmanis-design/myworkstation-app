@@ -1,0 +1,36 @@
+{
+  "status": "TESTED_COMPATIBILITY_AND_MAIN_DOCUMENTATION_SYNCHRONIZED",
+  "source_commit": "4e5c500fa22a082aecd10a3c904b67e018532f23",
+  "main_commit": "f1830f3470c05741d920891159362b8f01a6a938",
+  "common_commit": "3b33cc2998dc366cc44f9bd9e65dadf77a343651",
+  "targeted_tests": 137,
+  "source_runtime_and_tests_unchanged_by_sync": true,
+  "registries": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "main_blob": "28aef041eb9f98c5a3fd8c50db84ec39c0c09c42",
+      "retained_task4_prefix_bytes": 4916,
+      "new_prefix_bytes": 1180,
+      "after_blob": "135dd495b04df6a24d0c7dbacfbc63b9129f4eec",
+      "complete_main_suffix_preserved": true
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "main_blob": "87991019b553305e1ebbc7c5dd6c11dc87a9f643",
+      "retained_task4_prefix_bytes": 4916,
+      "new_prefix_bytes": 1180,
+      "after_blob": "c40020092eb49dec4aa9c681d8beaf14c6d2d73a",
+      "complete_main_suffix_preserved": true
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "main_blob": "5a6d1941216182dc64c118892e4ee5b0973aab40",
+      "retained_task4_prefix_bytes": 4916,
+      "new_prefix_bytes": 1180,
+      "after_blob": "6223b6fa0c0725ffff705b9e377e0884fecb0177",
+      "complete_main_suffix_preserved": true
+    }
+  },
+  "tracker_pages": 964,
+  "full_ci": "PENDING",
+  "independent_review": "PENDING",
+  "deployment": false,
+  "hosted_acceptance": false
+}
