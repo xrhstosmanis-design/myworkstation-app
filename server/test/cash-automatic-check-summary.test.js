@@ -29,3 +29,12 @@ test('missing paper scope or empty/invalid source never claims completion',()=>{
  assert.equal(summarizeAutomaticCashCheck(report({paperEvidence:undefined})).status,'HOLD');
  assert.throws(()=>summarizeAutomaticCashCheck({rows:[]}),TypeError);
 });
+
+test('oversized stored-paper discovery explains HOLD without authorizing paid OCR or cash adjustment',()=>{
+ const input=report({paperEvidence:{coverage:{discoveryComplete:false,discoveryReason:'ATTACHMENT_BYTE_LIMIT'},items:[]}});
+ const before=structuredClone(input),out=summarizeAutomaticCashCheck(input);
+ assert.equal(out.status,'HOLD');assert.equal(out.paperCoverage,'INCOMPLETE');
+ assert.equal(out.paperIssueCode,'ATTACHMENT_BYTE_LIMIT');
+ assert.equal(out.financialAdjustmentCents,0);assert.equal(out.humanApproval,false);
+ assert.deepEqual(input,before);
+});
