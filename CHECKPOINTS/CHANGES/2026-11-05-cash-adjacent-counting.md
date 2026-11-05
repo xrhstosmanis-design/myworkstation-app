@@ -11,3 +11,16 @@ Regression: synthetic unequal +/- with residual, exactly equal/reversed signs, c
 Technical-blocker note: the central active/tracker/pending registry originals are unusually large (3.4–5.0 MB). Attempts to append via the connected GitHub contents/blob endpoint failed at HTTP/2 transport; do NOT treat registry synchronization as complete. This branch must remain DRAFT/unmerged and no implementation PASS until an intact registry update and the required policy gate are completed. No new live financial action has been performed.
 
 Registry synchronization after green claim (PR #3660): PR #3657 GitHub Actions run 41930987830 SUCCESS, with exact old registry bytes preserved under the new SOURCE-PR prefix, two canonical tracker PDFs regenerated, and temporary workflow removed. This is not native cash CI nor MYWORKSTATION LAB PASS; original money, ledger, reviews and real stores remain unchanged.
+
+
+## 2026-11-05 — BackOffice one-click automatic cash audit (DRAFT)
+
+Owner requires MyWorkStation itself, not chat-side SQL, to run selected-store cash checks (shift adjacency, ledger, EFTPOS, expenses, handoff, stored handwritten evidence and pending issues). Existing canonical FULL-audit sources remain authoritative; paid OCR remains a separate explicit operation.
+
+- Added pure read-only `server/src/services/cash-automatic-check-summary.js`: selected-store audit statuses `HOLD` / `REVIEW_REQUIRED` / `NO_DIFFERENCES`, shift/card difference counts, adjacent-candidate/ambiguous pair counts and stored-paper completeness; `financialAdjustmentCents:0`, `humanApproval:false`.
+- Added authenticated `GET /api/cash-reconciliation/stores/:storeId/automatic-check?from=YYYY-MM-DD&to=YYYY-MM-DD`, limited by the existing 31-day period schema and existing selected-store authorization, canonical report generation, and `scope.fullAudit=true`. No request triggers a paid AI reader, review write, cash OFFSET, delivery or posting.
+- Wired `client/src/components/shared/CashReconciliationPanel.jsx` to an owner-visible **Αυτόματος έλεγχος χωρίς χρέωση** button. It renders the summary and the existing detailed canonical report; the distinct existing paid handwritten extraction button remains opt-in.
+- Added summary fail-closed tests and HTTP authorization/no-write tests. These are **committed but NOT YET RUN** under native Node20/PG/HTTP CI on new head. Do not cite the earlier green CI #9247 for the new changes.
+- Real selected-store Diadochou data and stored photo readings were previously inspected read-only; this does not establish that this newly wired UI has passed authenticated LIVE acceptance. All unclear photo associations remain pending rather than automatically confirmed.
+
+Protected: PR #3657 remains OPEN/DRAFT/unmerged; production, money, employee charges, bank, cards, invoices and prior reviews are unchanged. Next: complete native CI on the exact new head; resolve any regressions, validate authenticated selected-store read-only acceptance and preserve all central registry history while reconciling current main before guarded merge/release.
