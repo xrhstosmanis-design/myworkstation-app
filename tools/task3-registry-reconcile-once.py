@@ -35,6 +35,16 @@ def content(ref,path):
 if git("rev-parse","origin/main").decode().strip()!=PEER:
  raise SystemExit("ABORT main is no longer the exact reviewed peer")
 subprocess.run(("git","merge-base","--is-ancestor",TASK,"HEAD"),check=True)
+# Codex P2 guard: later PR-branch edits to protected documents or PDFs must
+# never be silently overwritten by content reconstructed from pinned TASK.
+# Stop even on a DRY RUN so the operator sees an unsafe input immediately.
+for protected_path in (*DOCS, *PDFS):
+ if content("HEAD", protected_path) != content(TASK, protected_path):
+  raise SystemExit(
+   f"ABORT protected PR-branch file changed after pinned TASK: {protected_path}; "
+   "reconcile newer branch content explicitly before applying"
+  )
+
 prepared={}
 for path in DOCS:
  base,task,peer=[content(r,path) for r in (BASE,TASK,PEER)]
@@ -64,6 +74,9 @@ if git("symbolic-ref","--short","HEAD").decode().strip()!="fix/task3-lab-prepara
  raise SystemExit("ABORT must use existing Task3 PR branch")
 if git("status","--porcelain"):
  raise SystemExit("ABORT dirty working tree")
+# Do not reconcile or later push from a checkout lagging the remote PR branch.
+if git("rev-parse","HEAD") != git("rev-parse","origin/fix/task3-lab-preparation-20261105"):
+ raise SystemExit("ABORT local PR branch is not at the exact fetched remote head")
 if git("rev-parse","origin/main").decode().strip()!=PEER:
  raise SystemExit("ABORT main moved after verification")
 
