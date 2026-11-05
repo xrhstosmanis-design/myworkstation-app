@@ -2,7 +2,17 @@
 // Never authorizes an OFFSET, financial finality, employee charge or paper reading.
 const safeNumber=value=>Number.isSafeInteger(value);
 export function summarizeAutomaticCashCheck(report){
-  if(!report||!Array.isArray(report.rows)||!report.rows.length||!report.rows.every(r=>typeof r.sessionId==='string'&&r.sessionId))throw new TypeError('Complete selected-store cash report required');
+  if(!report||!Array.isArray(report.rows)||!report.rows.every(r=>typeof r.sessionId==='string'&&r.sessionId))throw new TypeError('Complete selected-store cash report required');
+  // An empty valid date window is not a complete zero-difference audit.
+  // Retain an explicit HOLD until a closed shift exists for the selected period.
+  if(report.rows.length===0)return {
+    version:1,status:'HOLD',storeId:report.storeId,period:report.period,reportHash:report.reportHash,
+    checkedShifts:0,pendingShifts:0,cashDifferenceShifts:0,cardDifferenceShifts:0,
+    countingCandidates:0,ambiguousPairs:0,paperCoverage:'UNAVAILABLE',paperIssueCode:null,
+    unresolvedPapers:null,unreadPaperSources:null,pendingPaperSources:null,reviewPaperSources:null,
+    financialAdjustmentCents:0,humanApproval:false,
+    note:'Δεν υπάρχουν κλεισμένες βάρδιες στην επιλεγμένη περίοδο — δεν επιτρέπεται συμπέρασμα μηδενικών διαφορών.'
+  };
   const candidates=Array.isArray(report.countingErrorCandidates)?report.countingErrorCandidates:[];
   const ambiguous=candidates.filter(p=>p.status==='AMBIGUOUS_OVERLAP').length;
   const proposed=candidates.filter(p=>p.status==='COUNTING_ERROR_CANDIDATE').length;
