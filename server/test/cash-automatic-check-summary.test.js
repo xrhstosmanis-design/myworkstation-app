@@ -33,7 +33,7 @@ test('discovery alone cannot certify unread photographs as complete',()=>{
 });
 test('missing paper scope or empty/invalid source never claims completion',()=>{
  assert.equal(summarizeAutomaticCashCheck(report({paperEvidence:undefined})).status,'HOLD');
- assert.throws(()=>summarizeAutomaticCashCheck({rows:[]}),TypeError);
+ assert.throws(()=>summarizeAutomaticCashCheck({rows:'not an array'}),TypeError);
 });
 
 test('oversized stored-paper discovery explains HOLD without authorizing paid OCR or cash adjustment',()=>{
@@ -65,4 +65,13 @@ test('informational upload-date metadata is not an actionable paper error',()=>{
  assert.equal(out.status,'HOLD');assert.equal(out.paperCoverage,'INCOMPLETE');
  assert.equal(out.paperIssueCode,null,'upload timestamps alone cannot establish printed document dates');
  assert.equal(out.unreadPaperSources,1);assert.equal(out.financialAdjustmentCents,0);
+});
+
+test('empty selected date window returns explicit HOLD without misreporting zero differences as clean',()=>{
+ const input=report({rows:[],paperEvidence:{status:'COMPLETE',coverage:{discoveryComplete:true,complete:true},items:[]}}),before=structuredClone(input);
+ const out=summarizeAutomaticCashCheck(input);
+ assert.equal(out.status,'HOLD');assert.equal(out.checkedShifts,0);
+ assert.equal(out.paperCoverage,'UNAVAILABLE');assert.match(out.note,/Δεν υπάρχουν κλεισμένες βάρδιες/);
+ assert.equal(out.financialAdjustmentCents,0);assert.equal(out.humanApproval,false);
+ assert.deepEqual(input,before);
 });
