@@ -221,8 +221,13 @@ export default function InventoryFastCount({ api, current, reload, setError, del
   };
 
   const createProduct = () => {
-    if (delegated) return;
-    window.dispatchEvent(new CustomEvent("mws:new-product", { detail: { barcode: lookup.trim() } }));
+    const barcode = lookup.trim();
+    if (!barcode || current.status !== "DRAFT" || locked || saving) return;
+    if (delegated) {
+      if (delegated.canCreateProduct && delegated.onCreateProduct) delegated.onCreateProduct(barcode);
+      return;
+    }
+    window.dispatchEvent(new CustomEvent("mws:new-product", { detail: { barcode } }));
   };
 
   return (
@@ -282,7 +287,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
               {matches.map((line) => <button key={line.id} disabled={locked || saving} onClick={() => choose(line)}><b>{line.name}</b><small>{displayBarcode(line) || line.sku || "—"}</small></button>)}
             </div>
           )}
-          {!delegated && !selected && lookup.trim() && matches.length === 0 && (
+          {(!delegated || delegated.canCreateProduct) && !selected && lookup.trim() && matches.length === 0 && (
             <button type="button" className="inv2-new-product" onClick={createProduct}>+ Καταχώρηση νέου είδους με αυτό το barcode</button>
           )}
         </section>
