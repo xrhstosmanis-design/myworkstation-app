@@ -509,11 +509,17 @@ test('native inventory Enter on quantity saves selected count, not barcode looku
   await m.act(async()=>barcode.closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
   const quantity=document.querySelector('input[aria-label="Ποσότητα καταμέτρησης"]');
   assert.equal(quantity.disabled,false);
-  await m.act(async()=>quantity.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})));
+  await m.act(async()=>{
+   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(quantity,'3.25');
+   quantity.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  const enterEvent=new window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true});
+  await m.act(async()=>quantity.dispatchEvent(enterEvent));
+  assert.equal(enterEvent.defaultPrevented,true,'Enter must cancel the enclosing barcode lookup form submission');
   assert.equal(calls.length,1);
   assert.equal(calls[0].stocktakeId,'take-enter');
   assert.equal(calls[0].body.lineId,'line-1');
-  assert.equal(calls[0].body.quantity,1);
+  assert.equal(calls[0].body.quantity,3.25);
   assert.equal(calls[0].body.source,'SCANNER');
   assert.equal(calls[0].body.expectedVersion,0);
   assert.match(calls[0].body.clientEventId,/^[a-f0-9-]{36}$/);
