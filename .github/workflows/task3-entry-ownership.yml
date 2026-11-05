@@ -12,7 +12,7 @@ jobs:
   reproduce-and-verify:
     if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/tools/task3-entry-ownership-20261105'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,18 +32,19 @@ jobs:
         run: |
           python3 tools/task3-entry-ownership.py tests
           python3 tools/task3-entry-ownership-assets.py
+          cp server/test/store-invoice-entry-mounted.test.mjs /tmp/task3-entry-ownership/debug-test.mjs
           set +e
-          node --test server/test/store-invoice-entry-mounted.test.mjs > /tmp/task3-entry-ownership/red.tap 2>&1
+          timeout 90s node --test server/test/store-invoice-entry-mounted.test.mjs > /tmp/task3-entry-ownership/red.tap 2>&1
           status=$?
           set -e
           cat /tmp/task3-entry-ownership/red.tap
-          test "$status" -ne 0
+          test "$status" -eq 1
           python3 tools/task3-entry-ownership.py verify-red
       - name: Apply bounded navigation ownership correction and run focused regressions
         run: |
           set -o pipefail
           python3 tools/task3-entry-ownership.py fix
-          node --test server/test/store-invoice-entry-mounted.test.mjs server/test/backoffice-workspace-stability.test.js server/test/backoffice-common-store-ui.test.js server/test/backoffice-session-boundary-mounted.test.mjs server/test/invoice-inbox-day-archive-ui.test.js server/test/invoice-common-credit-ui.test.js 2>&1 | tee /tmp/task3-entry-ownership/green.tap
+          timeout 90s node --test server/test/store-invoice-entry-mounted.test.mjs server/test/backoffice-workspace-stability.test.js server/test/backoffice-common-store-ui.test.js server/test/backoffice-session-boundary-mounted.test.mjs server/test/invoice-inbox-day-archive-ui.test.js server/test/invoice-common-credit-ui.test.js 2>&1 | tee /tmp/task3-entry-ownership/green.tap
       - name: Preserve lossless records after verified green tests
         run: |
           set -o pipefail
