@@ -1,0 +1,98 @@
+name: Task3 Canonical Registry Preview ONLY (temporary)
+on:
+  push:
+    branches:
+      - fix/task3-lab-preparation-20261105
+    paths:
+      - .github/workflows/task3-registry-preview-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-and-verify-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPECTED_MAIN: 833ecadf3f4eaedaeea00f62d9d502ba328a4028
+    steps:
+      - name: Checkout exact existing PR branch and full history
+        uses: actions/checkout@v4
+        with:
+          ref: fix/task3-lab-preparation-20261105
+          fetch-depth: 0
+      - name: Verify exact peer and PR heads (fail closed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main fix/task3-lab-preparation-20261105
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/fix/task3-lab-preparation-20261105)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          test -z "$(git status --porcelain)"
+          git merge-base --is-ancestor 723d1a3cdd2fe45675c92a3dbe60c2511489a6ac HEAD
+      - name: Install only PDF tools (no application dependencies)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends poppler-utils fonts-dejavu-core
+          python3 -m pip install --user reportlab==4.2.5
+      - name: Run fail-closed DRY RUN, changing nothing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/task3-registry-reconcile-once.py --expected-main "$EXPECTED_MAIN"
+          test -z "$(git status --porcelain)"
+      - name: Prepare merge and generate both PDFs LOCALLY, no commit/push
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          python3 tools/task3-registry-reconcile-once.py --expected-main "$EXPECTED_MAIN" --apply
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          test -z "$(git ls-files -u)"
+      - name: Independently verify exact three-registry bytes, source guards and PDF pair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, subprocess, re
+          base="69c9a14f3ec00ad044e4fa1d7d08aa4894248836"
+          task="723d1a3cdd2fe45675c92a3dbe60c2511489a6ac"
+          peer="833ecadf3f4eaedaeea00f62d9d502ba328a4028"
+          docs=("CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md","docs/roadmap/OPEN_WORK_TRACKER.md","docs/roadmap/PENDING_WORK.md")
+          def show(ref,path): return subprocess.check_output(("git","show",f"{ref}:{path}"))
+          for path in docs:
+              common=show(base,path)
+              task_blob=show(task,path)
+              peer_blob=show(peer,path)
+              got=Path(path).read_bytes()
+              assert task_blob.endswith(common) and peer_blob.endswith(common), path
+              expected=peer_blob[:-len(common)]+task_blob[:-len(common)]+common
+              assert got==expected, f"Content loss or unexpected added bytes: {path}"
+              print("PASS registry",path,len(got),hashlib.sha256(got).hexdigest())
+          for path in ("client/src/components/cloud/StoreCloudPage.jsx","client/src/components/cloud/StoreInvoiceEntry.jsx","client/src/components/commerce/CommerceHub.jsx","client/src/components/commerce/CommerceLauncher.jsx","server/test/store-invoice-entry-mounted.test.mjs"):
+              assert Path(path).read_bytes()==show("HEAD",path), f"Task3 runtime/test changed: {path}"
+          p1=Path("docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf").read_bytes()
+          p2=Path("output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf").read_bytes()
+          assert p1==p2 and p1.startswith(b"%PDF-"), "PDF copies not identical/valid"
+          i=subprocess.check_output(["pdfinfo","output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf"],text=True)
+          pages=int(re.search(r"^Pages:\s*(\d+)$",i,re.M).group(1))
+          assert pages>=900, f"Invalid PDF pages: {pages}"
+          print("PASS PDF",pages,"pages",len(p1),"bytes SHA256",hashlib.sha256(p1).hexdigest())
+          PY
+      - name: Save preview artifacts only (never push/merge/deploy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: task3-registry-preview
+          path: |
+            CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+            docs/roadmap/OPEN_WORK_TRACKER.md
+            docs/roadmap/PENDING_WORK.md
+            docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+            output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          retention-days: 3
+          if-no-files-found: error
