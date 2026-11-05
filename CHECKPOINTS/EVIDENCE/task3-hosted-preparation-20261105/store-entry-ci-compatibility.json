@@ -1,0 +1,166 @@
+{
+  "source": "4ba3a9868670e0958aa533bdb116d3f9b67ee54f",
+  "reconciledMain": "fcbf02372d57dc22f006f1fa8906b52717374380",
+  "rawLogEvidenceArtifact": 13412322712,
+  "rawLogSha256": "7f8eb7671e1f344324e87aab8cc0f651dca21fef8a7c1b7d13ba175731058592",
+  "red": {
+    "source": "4ba3a9868670e0958aa533bdb116d3f9b67ee54f",
+    "metrics": {
+      "tests": 11,
+      "pass": 2,
+      "fail": 9,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "unchangedTests": [
+      "server/test/kat-shift-reconciliation-v1.test.js",
+      "server/test/wholesale-launcher-lock.test.js",
+      "server/test/wholesale-seller-launcher.test.js",
+      "server/test/wholesale-suite-access-ui.test.js"
+    ]
+  },
+  "green": {
+    "tests": 51,
+    "pass": 51,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "runtimeChanges": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "before": "bf32b33691307c41d414561565ee11123e93907d",
+      "after": "6bc73caf1f41642fd8485f35f7256d5c1c5fd85e"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceLauncher.jsx",
+      "before": "b4a117445acc4c0481ca0b2e0490c3aceaa92133",
+      "after": "789e26ed3936061c40e303361c0da6d13205ad1e"
+    }
+  ],
+  "testFilesUnchanged": [
+    "server/test/kat-shift-reconciliation-v1.test.js",
+    "server/test/wholesale-launcher-lock.test.js",
+    "server/test/wholesale-seller-launcher.test.js",
+    "server/test/wholesale-suite-access-ui.test.js"
+  ],
+  "registryHistory": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "mainBlob": "4c89763efeec8c8c0c420336baeeba4c5c61b3ea",
+      "outputBlob": "4d210350f1b6974449dc26c0919cee450dfa536c",
+      "preservedMainSuffix": true,
+      "preservedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "mainBlob": "061c2df9ad7899b5ce23a2e496747ed92ed94c66",
+      "outputBlob": "8e8adc057212b5dadd68ee639ff3a675751726ed",
+      "preservedMainSuffix": true,
+      "preservedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "mainBlob": "073e54c74a3f49e1f5e8d9cb677cc5d960cbb484",
+      "outputBlob": "697283247292a52a63c6250cc0923fd47dcfdf77",
+      "preservedMainSuffix": true,
+      "preservedTask3Prefix": true
+    }
+  ],
+  "protectedPeerFiles": [
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-05-invoice-azure-phase-timing.md",
+      "blob": "f3c68f1368852edc4b5bbac94e14266a844636e1"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01-after.json",
+      "blob": "0c3c4ab6c013b37c859a84876835522322b18a3c"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01-before.json",
+      "blob": "d934a3c236605198f17ce130b4e46c91f4857b42"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01-connection-changed-after-result.jpg",
+      "blob": "a9c08cee1f8c2bd2e33a975a98d579c17e33ab8f"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01-logs.json",
+      "blob": "9ace59d710ca23fbe24f824df1ef77166e72f27b"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01-manifest.json",
+      "blob": "defe32e37dcb7b545c6aef69fc8b8f9a26501ec0"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01-result.json",
+      "blob": "c9e4ffbc9cac22c07ab9a02a8edab3bd011dae5c"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01-shift-after.jpg",
+      "blob": "36f88bb11147700ffe5bd0fb1b5143e65f31e1c4"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/T01.pdf",
+      "blob": "4cc936d357ddb12558bfa632f873342bb2469352"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/results.json",
+      "blob": "fcc3649526204f1d4d449361f74f27c865ed66b8"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/snapshot.sql",
+      "blob": "e1ba453178f34d31614f3036f8df19c0bcd6719a"
+    },
+    {
+      "path": "docs/manual/invoices/PASS.md",
+      "blob": "29c8355d3fce96a5df506c37e2fa66123edf3eb6"
+    },
+    {
+      "path": "docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf",
+      "blob": "c93144f28d193815966f82a9547d6e44c1557554"
+    },
+    {
+      "path": "docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md",
+      "blob": "30873ae648dc8bb22133a3114ba696a6c1232372"
+    },
+    {
+      "path": "server/src/lib/pos-fast-header-timing.js",
+      "blob": "d644aa7c061c8339add6ce527462a46795d3c4c7"
+    },
+    {
+      "path": "server/src/routes/commerce-azure-invoice-reader.js",
+      "blob": "e6de6cc1ba02504e9a16bd7abeabe657aba12b91"
+    },
+    {
+      "path": "server/src/routes/commerce-pos-v244.js",
+      "blob": "563e606c858bb7ea7850a735838fb35c848b7403"
+    },
+    {
+      "path": "server/test/pos-azure-operation-timing.test.js",
+      "blob": "eb7257f1cf01b5a74aacb352159827716a503271"
+    },
+    {
+      "path": "server/test/pos-fast-header-latency.test.js",
+      "blob": "3059d0733c74b0ed498a7d653818de19179832c9"
+    },
+    {
+      "path": "server/test/pos-fast-header-timing.test.js",
+      "blob": "402843449616ac52163c3e372f2b2a1fc5a90211"
+    },
+    {
+      "path": "server/test/pos-invoice-multipage-upload-v1.test.js",
+      "blob": "9a34865764f447f446ea8ff432d418bed7a881fd"
+    }
+  ],
+  "pdf": {
+    "pages": 966,
+    "sha256": "7d0f1c67b3ca80b5059f45cf8e1f00f4664aef119cf910061fedbe52aab0ce96",
+    "copiesEqual": true,
+    "sampledVisualReview": "PENDING"
+  },
+  "fullReplacementCI": "PENDING",
+  "independentReplacementReview": "PENDING",
+  "hostedAcceptance": "NOT EXECUTED",
+  "productionMutation": false
+}

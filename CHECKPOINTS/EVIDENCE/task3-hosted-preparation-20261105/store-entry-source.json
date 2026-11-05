@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "3b33cc2998dc366cc44f9bd9e65dadf77a343651",
+  "previousSourcePR": 3672,
+  "previousCandidateCommit": "d23f79490db91b1d793c15c0211fe154b195a568",
+  "sourceFiles": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "blob": "6782d3cc93c828f97056223ae6d5968fb907b777"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceHub.jsx",
+      "blob": "74c52aa823d26a96abe0fb6af50bcbd4acfcc272"
+    },
+    {
+      "path": "client/src/components/cloud/StoreInvoiceEntry.jsx",
+      "blob": "427f9864d5ccec1bf697caf93718ae06d2a6db15"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "blob": "3abbbd59e78cc3a41bbae23fae86cc082d54506c"
+    }
+  ],
+  "registryHistory": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "beforeBlob": "728f320ae4cb1fc445fc23b157ddce65256a1b5c",
+      "afterBlob": "12bfb5a13fef884ea3ad4c636d4a28d01e621f17",
+      "oldBytes": 5245504,
+      "preservedSuffix": true
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "beforeBlob": "f23abe0e6e33a5c004841c5e2e56746c48b607d8",
+      "afterBlob": "c436e64a2890f58a7812924dffa47fb4ffc2d40a",
+      "oldBytes": 4069578,
+      "preservedSuffix": true
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "beforeBlob": "fa81bac23931066aec1247393c7a171fcd102b02",
+      "afterBlob": "038c4c2d35bb1ef8cc83072a04a524e59fdb8605",
+      "oldBytes": 3597331,
+      "preservedSuffix": true
+    },
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-05-task3-hosted-preparation-design.md",
+      "beforeBlob": "80708ebbbdee01081986de31789e09b669bfdb77",
+      "afterBlob": "a0095affecffb55610951f31d1f25a852874f99e",
+      "oldBytes": 13568,
+      "preservedSuffix": true
+    }
+  ],
+  "previousFocusedRuns": [
+    42005553465,
+    42006172236,
+    42006739191
+  ],
+  "tests": {
+    "pass": 29,
+    "fail": 0,
+    "skip": 0,
+    "kind": "isolated mounted components with fake API transport; unchanged source blobs"
+  },
+  "pdf": {
+    "pages": 961,
+    "sha256": "4fa80cda51326e32679c41d18d26affd04fa18eb68b7745ec9d331011ffa0132",
+    "identicalCopies": [
+      "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf",
+      "docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf"
+    ],
+    "visualReviewAtBuild": "PENDING"
+  },
+  "fullNativeCI": "REQUIRED ON RECONCILED SOURCE PR AND MAIN",
+  "independentReview": "PENDING",
+  "runtimeInstallation": "NOT SUBMITTED",
+  "hostedAcceptance": "NOT EXECUTED",
+  "businessMutationsSubmitted": false,
+  "task3": "OPEN; retained owner /root",
+  "peerClaims": "PRESERVED: physical-page display and latency repeatability; no edits to peer checkpoints, evidence, source or ownership"
+}

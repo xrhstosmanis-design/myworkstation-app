@@ -1,0 +1,76 @@
+{
+  "task": "INVOICE-CREDIT-HOSTED-PREP-01",
+  "repository": "xrhstosmanis-design/myworkstation-app",
+  "pullRequest": 3672,
+  "stage": "READ_ONLY_PREVIEW_VERIFIED__NOT_PUBLISHED",
+  "date": "2026-11-05",
+  "currentMainAtVerifiedRun": "759311ed86ad3d58f77b6819fb408043a60f6031",
+  "protectedTask": "723d1a3cdd2fe45675c92a3dbe60c2511489a6ac",
+  "fullCommonHistory": "69c9a14f3ec00ad044e4fa1d7d08aa4894248836",
+  "previewPrHead": "0f3d19f35d42d1e0e341f341e069549947270494",
+  "latestReadOnlyPreview": {
+    "runId": 42081215787,
+    "url": "https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42081215787",
+    "conclusion": "success",
+    "artifactId": 13441381509,
+    "artifactUrl": "https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42081215787/artifacts/13441381509",
+    "rights": "contents: read; no commit, push, merge or deploy",
+    "dryRun": "PASS",
+    "locallyPreparedUncommittedMerge": "PASS",
+    "independentRegistryByteVerification": "PASS",
+    "protectedFiveTask3RuntimeAndTestFilesUnchanged": true,
+    "registries": [
+      {
+        "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+        "bytes": 5299922,
+        "sha256": "6f125028d4073fc3ab5930367e4f695fbe381eabb3348e8385a5e1b8be2cc8ea"
+      },
+      {
+        "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+        "bytes": 4126776,
+        "sha256": "fa4707af61a463dfd41dc4bad4ba2a66153f266ff64278e2b402236e3b4d9cfc"
+      },
+      {
+        "path": "docs/roadmap/PENDING_WORK.md",
+        "bytes": 3654529,
+        "sha256": "6cb22187bbb24574f120f1256e1a1c245d360aa12a9fa7846939214c44bbf18f"
+      }
+    ],
+    "pdfCopies": [
+      "docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf",
+      "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf"
+    ],
+    "pdfPages": 974,
+    "pdfBytesEach": 3590725,
+    "pdfCopiesByteIdentical": true,
+    "pdfSha256": "74b1bded4b0378fc3bfda202b6d42bb08b5edf520c1ede29df17283adae25fe6",
+    "registryFormula": "exact latest-main prefix + exact protected Task3 prefix + exact common historical suffix",
+    "thisWasPreviewOnly": true
+  },
+  "priorReadOnlyPreview": {
+    "runId": 42080253694,
+    "main": "833ecadf3f4eaedaeea00f62d9d502ba328a4028",
+    "pdfPages": 972,
+    "supersededByNewestOcr4Main": true
+  },
+  "review": {
+    "codexLatestP2GuardReviewedCommit": "052f392bc2522661265899a37b704e393de1a77a",
+    "conclusion": "no major issues in reviewed P2 correction; NOT a review of finally integrated files"
+  },
+  "blockingIssue": "Codex GitHub bot continues to request creation of Cloud environment even after owner-confirmed publication; exact response https://github.com/xrhstosmanis-design/myworkstation-app/pull/3672#issuecomment-6665587902",
+  "remainingGates": {
+    "actuallyPublishAllThreeCanonicalMarkdownAndBothPdfFilesToPr": "PENDING",
+    "removeTemporaryReconciliationHelperAfterVerifiedPublication": "PENDING",
+    "exactPublishedNewHeadFullNativeCi": "PENDING",
+    "independentNewHeadReview": "PENDING",
+    "mergeMain": "NOT_PERFORMED",
+    "deployedRevisionAndRelease": "NOT_PERFORMED",
+    "hostedInvoiceCreditLabAcceptance": "NOT_EXECUTED",
+    "previousPairAcceptance": "PASS retained as historical evidence only",
+    "thirdMemberReview": "FAIL retained as historical evidence only"
+  },
+  "productionOrBusinessDataModified": false,
+  "financialOrProviderWrites": false,
+  "prMustRemainDraft": true,
+  "note": "This manifest records output bytes in a temporary read-only Actions artifact only. Do not mistake this small evidence commit or workflow cleanup for completed canonical Markdown/PDF integration or hosted acceptance."
+}

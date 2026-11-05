@@ -53,7 +53,7 @@ export default function CommerceLauncher(){
   const [entryLoading,setEntryLoading]=useState(false);
   const [entryError,setEntryError]=useState("");
   const [visible,setVisible]=useState(false);
-  const visibleRef=useRef(false);
+  const visibleRef=useRef(false),workspaceElementRef=useRef(null);
   const [mode,setMode]=useState("products");
   const [legacyView,setLegacyView]=useState("operations");
   const [inventoryStoreId,setInventoryStoreId]=useState("");
@@ -130,6 +130,7 @@ export default function CommerceLauncher(){
     if(visibleRef.current&&!operations&&!explicitStoreChange)return;
     // Set it synchronously as events can be emitted twice before React commits
     // the visible state. A second open must not reset the workspace.
+    if(!window.dispatchEvent(new window.CustomEvent("mws:commerce-entry-request",{cancelable:true})))return;
     visibleRef.current=true;refreshWholesaleAccess();
     const requestId=++openRequestRef.current;
     setMode(operations?"legacy":"products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
@@ -150,8 +151,10 @@ export default function CommerceLauncher(){
   };
   useEffect(()=>{
     const handleOpen=event=>open(event.detail);
+    const reserveWorkspace=event=>{if(visibleRef.current||workspaceElementRef.current)event.preventDefault()};
     window.addEventListener("mws:commerce-open",handleOpen);
-    return()=>window.removeEventListener("mws:commerce-open",handleOpen);
+    window.addEventListener("mws:store-invoice-entry-request",reserveWorkspace);
+    return()=>{window.removeEventListener("mws:commerce-open",handleOpen);window.removeEventListener("mws:store-invoice-entry-request",reserveWorkspace)};
   },[]);
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
   const interceptWarehouse=event=>{
@@ -174,7 +177,7 @@ export default function CommerceLauncher(){
   // Its original key/body must survive login recovery within this page.
   if(!authenticated&&!wholesaleSubmissionLocked)return null;
   return <>
-    {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
+    {visible&&<div ref={workspaceElementRef} className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
       <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation Κεντρική Διαχείριση</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" disabled={wholesaleSubmissionLocked} onClick={()=>{if(wholesaleLockRef.current)return;setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" disabled={wholesaleSubmissionLocked} onClick={()=>{if(wholesaleLockRef.current)return;visibleRef.current=false;setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
       {!minimized&&<>
       {entryLoading?<p role="status">Φόρτωση λειτουργιών καταστήματος…</p>:entryError?<p role="alert">{entryError}</p>:<>

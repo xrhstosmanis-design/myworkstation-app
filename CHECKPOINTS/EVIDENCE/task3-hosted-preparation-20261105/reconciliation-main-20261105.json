@@ -1,0 +1,51 @@
+{
+  "task": "INVOICE-CREDIT-HOSTED-PREP-01",
+  "repository": "xrhstosmanis-design/myworkstation-app",
+  "pr": 3672,
+  "protectedSource": "11fdcaf6e336df4cb25d1d655005c4c9f7f03f1f",
+  "reconciledIntegrationCommit": "8739a1ad6e80c0a53901baa3ef039db7d7001fae",
+  "peerMain": "69c9a14f3ec00ad044e4fa1d7d08aa4894248836",
+  "reconciliationWorkflowRun": 42041614209,
+  "reconciliationResult": "success",
+  "verifiedSourcePathsUnchanged": [
+    "client/src/components/cloud/StoreCloudPage.jsx",
+    "client/src/components/cloud/StoreInvoiceEntry.jsx",
+    "client/src/components/commerce/CommerceHub.jsx",
+    "client/src/components/commerce/CommerceLauncher.jsx",
+    "server/test/store-invoice-entry-mounted.test.mjs"
+  ],
+  "canonicalRegistries": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "blob": "4897bb23de19a245c6bca21d9d3d8336913685b2",
+      "bytes": 5277305
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "blob": "bce6b6bb6e08c38afab7cbc4471cf7af484fc636",
+      "bytes": 4101379
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "blob": "b5d89c580e8e3c6c728ca9e68aca06bdf7e91fb0",
+      "bytes": 3629132
+    }
+  ],
+  "canonicalPdf": {
+    "blob": "7e69fa1dcd3421f13fa4088758151967175d8e61",
+    "bytes": 3567328,
+    "pages": 968,
+    "copiesIdentical": true,
+    "copies": [
+      "docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf",
+      "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf"
+    ]
+  },
+  "verifiedPeerCheckpointPreserved": "CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md",
+  "temporaryWorkflowRemoved": true,
+  "exactPostReconciliationCI": "PENDING",
+  "independentPostReconciliationReview": "PENDING",
+  "hostedInvoiceAcceptance": "NOT_EXECUTED",
+  "productionDeployment": "NOT_PERFORMED",
+  "financialOrBusinessWrites": false
+}

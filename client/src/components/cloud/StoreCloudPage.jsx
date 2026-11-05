@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ArrowLeft,BriefcaseBusiness,Barcode,Copy,KeyRound,RefreshCw,ShieldCheck,Users,WalletCards} from "lucide-react";
+import StoreInvoiceEntry from "./StoreInvoiceEntry.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
@@ -47,6 +48,27 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
   const [pairingCopied,setPairingCopied]=useState(false);
   const [writerState,setWriterState]=useState({loading:true,configured:false,online:false,lastSeenAt:null});
   const [toolOpen,setToolOpen]=useState("");
+  const [invoiceOpen,setInvoiceOpen]=useState(false);
+  const [invoiceEntryMessage,setInvoiceEntryMessage]=useState("");
+  const invoiceOpenRef=useRef(false),invoiceRegionRef=useRef(null);
+  // Native document-wide installers support one commerce workspace. Refuse a
+  // competing entry rather than discarding the user's current working state.
+  const refuseCompetingCommerce=()=>{
+    if(!invoiceOpenRef.current&&!invoiceRegionRef.current)return false;
+    setInvoiceEntryMessage("Κλείσε πρώτα τη θυρίδα τιμολογίων για να ανοίξεις την Εμπορική λειτουργία.");return true;
+  };
+  useEffect(()=>{
+    const reserve=event=>{if(refuseCompetingCommerce())event.preventDefault()};
+    window.addEventListener("mws:commerce-entry-request",reserve);
+    return()=>window.removeEventListener("mws:commerce-entry-request",reserve);
+  },[]);
+  const openInvoices=()=>{
+    if(navigationLocked||invoiceOpenRef.current)return;
+    if(!window.dispatchEvent(new window.CustomEvent("mws:store-invoice-entry-request",{cancelable:true}))){setInvoiceEntryMessage("Κλείσε πρώτα την ανοικτή Εμπορική λειτουργία για να ανοίξεις τη θυρίδα τιμολογίων.");return}
+    invoiceOpenRef.current=true;setInvoiceEntryMessage("");setInvoiceOpen(true);
+  };
+  const openCommerce=()=>{if(refuseCompetingCommerce())return;onOpenCommerce?onOpenCommerce():window.dispatchEvent(new window.CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))};
+  const closeInvoices=()=>{if(navigationLocked)return;invoiceOpenRef.current=false;setInvoiceEntryMessage("");setInvoiceOpen(false)};
   const [primary,setPrimary]=useState(can("sales.read")?"shifts":"payments");
   const currentPrimary=primaryView??primary;
   const choosePrimary=value=>{if(navigationLocked)return;onPrimaryChange?onPrimaryChange(value):setPrimary(value)};
@@ -138,7 +160,8 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
       <button className="cloud-back" disabled={navigationLocked} onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
       <div className="cloud-titlebar-actions">
         <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
-        {(!delegated||onOpenCommerce)&&<button className="cloud-refresh" type="button" disabled={navigationLocked} onClick={()=>onOpenCommerce?onOpenCommerce():window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>}
+        {(!delegated||onOpenCommerce)&&<button className="cloud-refresh" type="button" disabled={navigationLocked} onClick={openCommerce}><BriefcaseBusiness/>Εμπορική λειτουργία</button>}
+        {!delegated&&<button className="cloud-refresh" type="button" aria-expanded={invoiceOpen} disabled={navigationLocked} onClick={openInvoices}>Θυρίδα τιμολογίων καταστήματος</button>}
         {!delegated&&<ScreenRecorderWindowLauncher/>}
       </div>
     </div>
@@ -150,6 +173,12 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
         <p>Ενεργή βάρδια, συναλλαγές, έλεγχος ταμείου και πληρωμές Ιδιοκτήτη / Διαχειριστή. Όλα χρησιμοποιούν την υπάρχουσα Εμπορική λειτουργία και την ενιαία βάση.</p>
       </div>
     </div>
+
+    {!delegated&&invoiceEntryMessage&&<p role="alert">{invoiceEntryMessage}</p>}
+    {!delegated&&invoiceOpen&&<section ref={invoiceRegionRef} aria-label="Θυρίδα επιλεγμένου καταστήματος">
+      <button className="owner-tool-close" type="button" disabled={navigationLocked} onClick={closeInvoices}>Κλείσιμο θυρίδας τιμολογίων</button>
+      <StoreInvoiceEntry api={api} storeId={store.id}/>
+    </section>}
 
     <nav className="owner-primary-nav" aria-label="Βάρδιες και πληρωμές">
       {can("sales.read")&&<button type="button" aria-pressed={currentPrimary==="shifts"} disabled={navigationLocked} onClick={()=>choosePrimary("shifts")}><WalletCards/>Βάρδιες & ταμεία</button>}
