@@ -1,0 +1,10 @@
+# Acharnon RBS source implementation
+
+## 05/11/2026 — ACHARNON-RBS-FISCAL-PROFILE-01 / SOURCE PR #3682 / CI PENDING
+
+Source owner: isolated Acharnon RBS profile follow-up to merged before-source claim PR #3678. Branch `fix/acharnon-rbs-fiscal-profile-20261105`. Exact selected store `cmw0pwyvo000uokg2jrjm1p0c`; owner identity is not hardcoded or inferred: the authenticated `req.user.companyId` must equal the tenant-owned, server-loaded `store.companyId`. Client checkout company/store fields never choose the profile.
+
+Code adds ONLY Acharnon internal legacyVatCode → department/VAT profiles: 1/1/0, 2/2/0, 3/3/0, 4/4/6, 5/5/13, 6/6/24, 7/7/24, 8/8/0, 9/9/0, 17/17/24, 18/18/24. KAT10 and Diadoxou7 profiles are unchanged. The existing CAP Driver checkout builds the command after resolving the confirmed mapping; payments CASH1/CARD2 from existing installation settings remain unchanged, as do Windows-1253, mismatch block, one-shot/no-replay, shift, license, financial and stock posting. No schema, catalogue, pricing, production SQL, credentials or writer/device operation.
+
+Tests added in `server/test/rbs-capdriver-acharnon-profile.test.js`: all eleven pairings, wrong/missing authenticated owner-store identity, foreign store profile cross-over, invalid VAT/code/department, and actual checkout command statement for NERO 500ML 0.50EUR department5 VAT13 with one CASH1 or CARD2 final CR; body-provided foreign identity cannot select profile. Source PR #3682 initially failed CI checkpoint policy because this log was missing; remediation recorded here. FULL PR CI / main CI / deployed exact revision / physical receipt / financial, payment, stock and audit deltas all OPEN until verified; no claim of successful sale. No repeat of older attempted or paid transactions.
+
