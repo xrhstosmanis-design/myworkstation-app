@@ -59,3 +59,25 @@ test('full-mode review requests preserve the report mode and reject invalid mode
  const send=mode=>fetch(`http://127.0.0.1:${server.address().port}/stores/store/reviews${mode}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});
  try{assert.equal((await send('?fullAudit=0')).status,400);assert.equal(auth,0);assert.equal((await send('?fullAudit=1')).status,200);assert.equal(scopes[0].fullAudit,true);assert.equal((await send('')).status,200);assert.equal(Object.hasOwn(scopes[1],'fullAudit'),false);}finally{await new Promise(r=>server.close(r));}
 });
+
+test('automatic-check route runs a full read-only selected-store audit with no provider or review writes',async()=>
+ let reads=0,writes=0,authorizations=0,fullAudit=false;
+ const repository={generation:async()=> '0',read:async(scope,period)=>{
+  reads++;fullAudit=scope.fullAudit===true;
+  return {storeId:'store',period,reportHash:'report-hash',rows:[{sessionId:'a',status:'AWAITING_REVIEW',remainingCents:-34400,cardCents:-22750,fullAudit:{status:'PENDING'}}],paperEvidence:{coverage:{discoveryComplete:false},items:[{status:'UNRESOLVED'}]},countingErrorCandidates:[{status:'AMBIGUOUS_OVERLAP'}]};
+ },apply:async()=>{writes++;throw Error('no review writes allowed')}};
+ const authorize=async(_db,user,storeId)=>{authorizations++;if(user?.id!=='allowed'||storeId!=='store')throw Object.assign(Error('denied'),{code:'CASH_PAPER_ACCESS_DENIED',status:403});return {scope:{companyId:'co',storeId},actor:{id:'allowed'}};};
+ const app=express();app.use((req,res,next)=>{req.user={id:req.headers.authorization==='Bearer authorized'?'allowed':'denied'};next()});app.use(createCashReconciliationRouter({db:{},repository,authorize,imports:{}}));
+ const server=createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;
+ try{
+  const base='/stores/store/automatic-check?from=2026-10-22&to=2026-10-23';
+  let response=await fetch(origin+base);assert.equal(response.status,403);assert.equal(reads,0);
+  response=await fetch(origin+'/stores/store/automatic-check?from=2026-10-01&to=2026-11-12',{headers:{authorization:'Bearer authorized'}});assert.equal(response.status,400);assert.equal(reads,0);
+  response=await fetch(origin+base,{headers:{authorization:'Bearer authorized'}});assert.equal(response.status,200);
+  const data=await response.json();assert.equal(response.headers.get('cache-control'),'private, no-store');
+  assert.equal(data.automaticCheck.status,'HOLD');assert.equal(data.automaticCheck.ambiguousPairs,1);
+  assert.equal(data.automaticCheck.paperCoverage,'INCOMPLETE');assert.equal(data.automaticCheck.financialAdjustmentCents,0);
+  assert.equal(data.automaticCheck.humanApproval,false);assert.equal(data.automaticCheck.reportHash,data.reportHash);
+  assert.equal(fullAudit,true);assert.equal(reads,1);assert.equal(writes,0);assert.equal(authorizations,2);
+ }finally{await new Promise(resolve=>server.close(resolve));}
+});
