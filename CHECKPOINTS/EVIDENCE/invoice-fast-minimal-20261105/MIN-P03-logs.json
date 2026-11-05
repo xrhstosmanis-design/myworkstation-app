@@ -1,0 +1,467 @@
+{
+  "hasMore": false,
+  "logs": [
+    {
+      "id": "2d5489ed-4c42-4333-aadc-344bda8cb42a",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"exact_file_lookup\",\"outcome\":\"ok\",\"elapsedMs\":3.932}",
+      "timestamp": "2026-11-05T14:04:49.509741435Z"
+    },
+    {
+      "id": "d87fee2f-ecf1-4283-a4a9-60690d414ef7",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_submit\",\"outcome\":\"ok\",\"elapsedMs\":745.557}",
+      "timestamp": "2026-11-05T14:04:50.257195313Z"
+    },
+    {
+      "id": "c3ffd667-aa54-4a4a-acb6-112caf9bf536",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":700.017,\"poll\":1}",
+      "timestamp": "2026-11-05T14:04:50.958388887Z"
+    },
+    {
+      "id": "b578e132-632c-4cf8-bacd-ec27a47ac4d5",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":160.21,\"poll\":1}",
+      "timestamp": "2026-11-05T14:04:51.117853924Z"
+    },
+    {
+      "id": "8943ce45-7b01-4f67-9878-5307e6eb73e6",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":700.41,\"poll\":2}",
+      "timestamp": "2026-11-05T14:04:51.81840115Z"
+    },
+    {
+      "id": "573bfb41-1ad7-452d-822e-7ef77d4f1b06",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":154.686,\"poll\":2}",
+      "timestamp": "2026-11-05T14:04:51.973224407Z"
+    },
+    {
+      "id": "9245d1fc-480c-44c3-9983-2f95856e5c16",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":1200.278,\"poll\":3}",
+      "timestamp": "2026-11-05T14:04:53.175672516Z"
+    },
+    {
+      "id": "260dff68-523a-4d05-9c42-1582edddacb1",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":158.291,\"poll\":3}",
+      "timestamp": "2026-11-05T14:04:53.33216132Z"
+    },
+    {
+      "id": "71bdef61-1e37-4a3d-a05c-cb0d00759466",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":1202.485,\"poll\":4}",
+      "timestamp": "2026-11-05T14:04:54.53538722Z"
+    },
+    {
+      "id": "594a0649-1f1f-4f29-9118-b6ad3cb7909e",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":169.139,\"poll\":4}",
+      "timestamp": "2026-11-05T14:04:54.704658399Z"
+    },
+    {
+      "id": "89a147c6-6464-40c0-a0aa-934b43bf73a8",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":1200.692,\"poll\":5}",
+      "timestamp": "2026-11-05T14:04:55.905524073Z"
+    },
+    {
+      "id": "0a0459e2-296a-4b73-a970-e97582f6f57c",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":156.698,\"poll\":5}",
+      "timestamp": "2026-11-05T14:04:56.062408298Z"
+    },
+    {
+      "id": "39cb21e0-9150-4537-9f9b-fc8beed8bd2c",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":1200.472,\"poll\":6}",
+      "timestamp": "2026-11-05T14:04:57.263055016Z"
+    },
+    {
+      "id": "93efdbc5-f76e-4dab-91ca-84e98c2dc420",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":312.978,\"poll\":6}",
+      "timestamp": "2026-11-05T14:04:57.57621851Z"
+    },
+    {
+      "id": "2be53ab7-d141-4ea1-aa9c-b676cf548599",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_header\",\"outcome\":\"ok\",\"elapsedMs\":8066.456}",
+      "timestamp": "2026-11-05T14:04:57.577177836Z"
+    },
+    {
+      "id": "51e892d3-8d76-43fd-9937-dfa060815659",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"azure_supplier_match\",\"outcome\":\"ok\",\"elapsedMs\":2.673}",
+      "timestamp": "2026-11-05T14:04:57.581361122Z"
+    },
+    {
+      "id": "df1326f5-2fc0-4274-91c8-3d23cc605b14",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"openai_attempt\",\"outcome\":\"ok\",\"elapsedMs\":2240.865,\"attempt\":1}",
+      "timestamp": "2026-11-05T14:04:59.826511995Z"
+    },
+    {
+      "id": "6af0e354-a88f-49c6-a9cd-33e476ffbf96",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"openai_header\",\"outcome\":\"ok\",\"elapsedMs\":2241.032}",
+      "timestamp": "2026-11-05T14:04:59.826532245Z"
+    },
+    {
+      "id": "d35161bb-6999-4ac6-9a75-3c24fa69645f",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"openai_supplier_match\",\"outcome\":\"ok\",\"elapsedMs\":1.946}",
+      "timestamp": "2026-11-05T14:04:59.828556161Z"
+    },
+    {
+      "id": "2524368d-1d18-4c66-a2b4-dc538fe409a7",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"747686ff-701e-40f6-be18-978457d48f49\",\"stage\":\"request_total\",\"outcome\":\"finished\",\"elapsedMs\":10326.47}",
+      "timestamp": "2026-11-05T14:04:59.829713623Z"
+    }
+  ],
+  "nextEndTime": "2026-11-05T14:05:05Z",
+  "nextStartTime": "2026-11-05T14:04:59.829713624Z"
+}
