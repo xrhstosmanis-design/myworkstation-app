@@ -38,3 +38,17 @@ test('oversized stored-paper discovery explains HOLD without authorizing paid OC
  assert.equal(out.financialAdjustmentCents,0);assert.equal(out.humanApproval,false);
  assert.deepEqual(input,before);
 });
+
+test('automatic cash report separates unread and uncertain stored papers without any financial adjustment',()=>{
+ const paperEvidence={coverage:{discoveryComplete:false},items:[
+  {line:null,status:'UNRESOLVED',reason:'NOT_READ'},
+  {line:null,status:'UNRESOLVED',reason:'PENDING'},
+  {line:null,status:'UNRESOLVED',reason:'REQUIRES_REVIEW'},
+  {line:0,status:'UNRESOLVED',reason:'UNCERTAIN_LINE'},
+  {line:1,status:'MATCHED',reason:'UNIQUE_RECORDED_CORROBORATION'}]};
+ const input=report({paperEvidence}),copy=structuredClone(input),out=summarizeAutomaticCashCheck(input);
+ assert.equal(out.status,'HOLD');assert.equal(out.unreadPaperSources,1);
+ assert.equal(out.pendingPaperSources,1);assert.equal(out.reviewPaperSources,1);
+ assert.equal(out.unresolvedPapers,4);assert.equal(out.financialAdjustmentCents,0);
+ assert.equal(out.humanApproval,false);assert.deepEqual(input,copy);
+});
