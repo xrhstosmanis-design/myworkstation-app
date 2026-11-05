@@ -1,0 +1,147 @@
+name: OCR4 page display claim builder (isolated)
+on:
+  push:
+    branches: [build/ocr4-page-display-claim-20261105]
+    paths: [.github/workflows/ocr4-page-display-claim-once.yml]
+permissions:
+  contents: write
+concurrency:
+  group: ocr4-page-display-claim-20261105
+  cancel-in-progress: false
+jobs:
+  claim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE: 401f6a1f5dad3a8c5f38b65ab5d7c9115b6cee6f
+      TARGET: docs/ocr4-physical-page-display-20261105
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 401f6a1f5dad3a8c5f38b65ab5d7c9115b6cee6f
+          fetch-depth: 1
+      - name: Verify isolated base and branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = build/ocr4-page-display-claim-20261105
+          test "$(git rev-parse HEAD)" = "$BASE"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$BASE"
+          test -z "$(git ls-remote origin refs/heads/$TARGET)"
+      - name: Install document-generation dependencies only
+        run: python -m pip install reportlab==4.2.5 pypdf==5.1.0 PyMuPDF==1.25.3
+      - name: Preserve current records and write bounded claim
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os,re,shutil,subprocess
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          out=Path(os.environ['RUNNER_TEMP'])/'ocr4-page-display-claim'
+          out.mkdir()
+          base=os.environ['BASE']
+          stamp=datetime.now(ZoneInfo('Europe/Athens')).isoformat(timespec='seconds')
+          checkpoint='CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md'
+          entry='''## 05/11/2026 - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / OCR4 / BEFORE-SOURCE CLAIM / OPEN
+
+          Retained invoice/task4 owner /root; continuation of POS-BACKGROUND-PDF-PAGES-01 and installed INVOICE-PDF-TOTAL-SAFETY-01, not an ownership transfer. Documentation branch docs/ocr4-physical-page-display-20261105; subsequent bounded source branch fix/ocr4-physical-page-display-20261105. User requests continued correction. Source edits begin only after this synchronized claim passes normal applicable CI and is merged to main.
+
+          Observed defect: accepted I has two physical PDF pages but the FAST form displays "1 σελίδα έτοιμη (1%)" because nextPages.length counts uploaded files. I's four-field/24.80 limited PASS, original timing, snapshots and ownership remain protected; no replay of I/H/G/F/D, paid or CREDIT documents. J37.20 remains unused. A count is not proof of complete OCR or row coverage.
+
+          Bounded source scope: separate uploaded-file/image counts from locally measured original PDF page counts in the existing FAST invoice form. Reuse the installed PDF library without rendering/OCR/provider calls; retain original bytes and source order. Show pending/unknown explicitly for unreadable, encrypted, invalid, cancelled or stale PDF counts; never silently substitute one page. Use request/source/store lifetime fencing and cleanup; counting must not delay or change existing OCR requests. Keep file-count wording accurate throughout status/removal controls. Verify actual multi-page PDFs, invalid input, cleanup, removal/replacement and store/unmount isolation with focused tests and the normal build/browser checks.
+
+          Protected: existing five-file selection/physical-page server bounds, original attachments/jobs, supplier/number/date/amount/confidence fields, models/reasoning/provider order/deadlines, wallet/access/tenant/module/licence checks, payment/credit/draft/stock/fiscal writers and the installed subtotal guard. No new upload endpoint, authentication workaround, source preparation route, business write, hosted provider call or unrelated refactor. Peer task3 preparation/navigation and task2 latency scopes remain separate. No feature or general OCR PASS from this claim or a display count.
+
+          Publication: prepend this identical entry to complete active/tracker/pending records, preserving every prior byte; regenerate both canonical tracker PDF copies. Existing numbered acceptance and manuals remain unchanged because no new functional acceptance exists. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md. Next: publish this claim, then implement the narrow source/test change, independent review, exact full PR/main CI and ordinary guarded release; hosted page-display acceptance stays NOT TESTED until independently observed. General suppliers/rows/packages/discounts/VAT/EFK remains OPEN.
+
+          '''
+          entry='\n'.join(line[10:] if line.startswith('          ') else line for line in entry.split('\n'))
+          payload=entry.encode()
+          registries=['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']
+          receipt={'base_main':base,'recorded_at':stamp,'kind':'BEFORE_SOURCE_DOCUMENTATION_ONLY','registries':{},'runtime_changed':False,'provider_called':False,'lab_performed':False}
+          def blob(data):return hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+          for path in registries:
+            p=Path(path); before=p.read_bytes(); expected=subprocess.check_output(['git','rev-parse',base+':'+path],text=True).strip()
+            assert blob(before)==expected
+            for which,data in [('before',before),('after',payload+before)]:
+              q=out/which/path;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(data)
+            p.write_bytes(payload+before)
+            assert p.read_bytes()[len(payload):]==before
+            receipt['registries'][path]={'before_blob':expected,'after_blob':blob(p.read_bytes()),'prefix_bytes':len(payload),'old_bytes':len(before),'old_suffix_preserved':True}
+          Path(checkpoint).write_text(entry+'## Claim receipt\n\nPrepared at '+stamp+' from exact main '+base+'. No application source or LAB action was performed. This entry becomes authoritative only after normal documentation CI and main integration.\n')
+          # Pin the small source inventory needed for the subsequent bounded work.
+          selected={Path('AGENTS.md'),Path('client/package.json'),Path('client/package-lock.json'),Path('server/package.json'),Path('package.json'),Path('docs/roadmap/generate-open-work-tracker.py')}
+          selected.update(Path('client/src/lib').glob('*.js'))
+          for name in ['StoreSupplierInvoicePremiumFast.jsx','StoreSupplierInvoiceFast.jsx','StorePosPaymentsModal.jsx','DocumentPagePreview.jsx','useMobileDocumentPhotos.js']:
+            selected.add(Path('client/src/components/store')/name)
+          patterns=re.compile(r'pdfjs|getDocument|DocumentPagePreview|StoreSupplierInvoicePremiumFast|prepareDocumentFile|physical.pages|physicalPages',re.I)
+          matches=[]
+          for root in ['client/src','server/test','server/src/lib']:
+            for p in Path(root).rglob('*'):
+              if p.is_file() and p.suffix in ['.js','.jsx','.mjs','.json']:
+                text=p.read_text(errors='replace')
+                if patterns.search(text):
+                  selected.add(p)
+                  matches += [f'{p}:{i}: {line[:250]}' for i,line in enumerate(text.splitlines(),1) if patterns.search(line)]
+          selected.add(Path('CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'))
+          identities={}
+          for p in sorted(selected):
+            if not p.is_file():continue
+            dest=out/'source'/p;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,dest)
+            identities[str(p)]=blob(p.read_bytes())
+          (out/'source-blobs.json').write_text(json.dumps(identities,indent=2)+'\n')
+          (out/'source-inventory.txt').write_text('\n'.join(matches)+'\n')
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          (out/'claim.md').write_text(Path(checkpoint).read_text())
+          print(json.dumps({'base':base,'source_files':len(identities),'claim_prefix_bytes':len(payload)}))
+          PY
+      - name: Regenerate and inspect tracker PDF
+        shell: bash
+        run: |
+          set -euo pipefail
+          python docs/roadmap/generate-open-work-tracker.py
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          python - <<'PY'
+          import hashlib,json,os,shutil
+          from pathlib import Path
+          import fitz
+          from pypdf import PdfReader
+          out=Path(os.environ['RUNNER_TEMP'])/'ocr4-page-display-claim'
+          path=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf')
+          assert path.read_bytes()==Path('docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf').read_bytes()
+          pdf=PdfReader(str(path)); assert 'INVOICE-PHYSICAL-PAGE-DISPLAY-01' in '\n'.join(p.extract_text() for p in pdf.pages[:3])
+          doc=fitz.open(path)
+          for i in [0,1,len(doc)-1]:doc[i].get_pixmap(matrix=fitz.Matrix(1.2,1.2)).save(out/f'page-{i+1}.png')
+          for name in ['output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf']:
+            dest=out/'after'/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(name,dest)
+          receipt=json.loads((out/'receipt.json').read_text());receipt['pdf']={'pages':len(pdf.pages),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'copies_equal':True,'claim_text_present':True,'visual_review':'PENDING'}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          evidence=Path('CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105');evidence.mkdir(parents=True,exist_ok=True)
+          (evidence/'claim-registry-sync.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - name: Publish only the clean documentation tree to its own new branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$BASE"
+          test -z "$(git ls-remote origin refs/heads/$TARGET)"
+          git add CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/claim-registry-sync.json CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          test "$(git diff --cached --name-only | wc -l)" -eq 7
+          test -z "$(git diff --cached --name-only | grep -E '^(.github/|client/|server/)' || true)"
+          git config user.name 'MyWorkStation coordination bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          TREE=$(git write-tree)
+          COMMIT=$(printf '%s\n' 'docs(ocr4): claim accurate file and physical-PDF-page display before source' | git commit-tree "$TREE" -p "$BASE")
+          test "$(git rev-parse "$COMMIT^1")" = "$BASE"
+          git push origin "$COMMIT:refs/heads/$TARGET"
+          printf '%s\n' "$COMMIT" | tee "$RUNNER_TEMP/ocr4-page-display-claim/published-commit.txt"
+          git diff --stat "$BASE" "$COMMIT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-page-display-claim-review
+          path: ${{ runner.temp }}/ocr4-page-display-claim
+          retention-days: 7
+          if-no-files-found: error
