@@ -630,7 +630,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `15`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / ΜΕΛΛΟΝΤΙΚΟ
-- **Υπόλοιπο / όριο:** 05Nov INVOICE-HEADER-LATENCY: νέο δίσελιδο H σε 0aef945f, τέσσερα αυτόματα στοιχεία/24,80 € LIMITED LAB PASS χωρίς υποβολή. Αρχική μέτρηση 21,959 δευτ. browser / 21,746 δευτ. server, Azure 14,839 / OpenAI 6,885 δευτ. με μία προσπάθεια· ίδιοι δέκα μετρημένοι πίνακες LAB/control και ενεργή βάρδια. Δεν τεκμηριώνεται μείωση αναμονής ή φυσικό POS PASS. Ταχύτητα και γενική ακρίβεια OPEN, /root retained. Checkpoint 2026-11-04-invoice-header-timing και manual invoices/PASS. Βελτίωση OCR· δεν ανοίγει ξανά το ολοκληρωμένο Gate 3 βοηθού.
+- **Υπόλοιπο / όριο:** 05Nov INVOICE-HEADER-LATENCY: H 21,959 δευτ. → νέο I 8,538 δευτ. browser (61,12% μικρότερη αναμονή στα δύο δείγματα), server 8,318 δευτ. σε b7c75d4. Τέσσερα αυτόματα πεδία/24,80 € LIMITED LAB PASS, ίδιοι δέκα πίνακες/ενεργή βάρδια LAB και control, χωρίς υποβολή/πληρωμή/πρόχειρο/stock. I/H καταναλωμένα, δεν επαναλαμβάνονται. Ταχύτητα πολλών δειγμάτων/προμηθευτών, φυσικό POS, αιτιώδης επίδραση reasoning και γενική ακρίβεια OCR OPEN· /root retained, PR3668/checkpoint2026-11-05-invoice-header-I-measurement/manual invoices/PASS. Δεν ανοίγει ξανά το ολοκληρωμένο Gate 3 βοηθού.
 
 ## 16 — Προχωρημένο Chat, Push και εργασίες
 
