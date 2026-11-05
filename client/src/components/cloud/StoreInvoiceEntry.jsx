@@ -31,5 +31,5 @@ export default function StoreInvoiceEntry({api,storeId}){
   },[api,selected]);
   if(!entry||entry.storeId!==selected)return <p role="status">Έλεγχος πρόσβασης στη θυρίδα του καταστήματος…</p>;
   if(entry.error)return <p role="alert">{entry.error}</p>;
-  return <CommerceHub key={selected} api={api} stores={[entry.store]} activeStoreId={selected} initialTab="documents" initialActiveModules={entry.modules}/>;
+  return <CommerceHub key={selected} api={api} stores={[entry.store]} activeStoreId={selected} initialTab="documents" verifiedActiveModules={entry.modules}/>;
 }

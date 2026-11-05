@@ -1,0 +1,76 @@
+{
+  "source": "7634cf61764d8769c72bbf374b95f5be3037804a",
+  "independentReview": 5783310600,
+  "finding": 4479218877,
+  "originalFullCI": 42007773079,
+  "tests": {
+    "tests": 32,
+    "pass": 32,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "red": {
+    "source": "7634cf61764d8769c72bbf374b95f5be3037804a",
+    "expectedFailures": 2,
+    "infrastructureFailureAccepted": false
+  },
+  "sourceFiles": [
+    {
+      "path": "client/src/components/commerce/CommerceHub.jsx",
+      "beforeBlob": "74c52aa823d26a96abe0fb6af50bcbd4acfcc272",
+      "afterBlob": "72c1d7757fdfcbefdea09d423c6038ee59b40857"
+    },
+    {
+      "path": "client/src/components/cloud/StoreInvoiceEntry.jsx",
+      "beforeBlob": "427f9864d5ccec1bf697caf93718ae06d2a6db15",
+      "afterBlob": "1a1c536cae5ec5e85d8e09620e71de12419cb855"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "beforeBlob": "3abbbd59e78cc3a41bbae23fae86cc082d54506c",
+      "afterBlob": "a15ce1e14b2a7cd2c00af1dabde913423947d4f5"
+    }
+  ],
+  "registryHistory": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "oldBytes": 5248119,
+      "beforeBlob": "12bfb5a13fef884ea3ad4c636d4a28d01e621f17",
+      "afterBlob": "04e3ed42af5d4f9187c56275a0606fb4968df824",
+      "preservedSuffix": true
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "oldBytes": 4072193,
+      "beforeBlob": "c436e64a2890f58a7812924dffa47fb4ffc2d40a",
+      "afterBlob": "ee85f8a99c0f82a0c996d0e3e128fd5524b1082f",
+      "preservedSuffix": true
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "oldBytes": 3599946,
+      "beforeBlob": "038c4c2d35bb1ef8cc83072a04a524e59fdb8605",
+      "afterBlob": "2ac86ceb04293eaf107e76bc6670c2c4519e6b1f",
+      "preservedSuffix": true
+    },
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-05-task3-hosted-preparation-design.md",
+      "oldBytes": 16183,
+      "beforeBlob": "a0095affecffb55610951f31d1f25a852874f99e",
+      "afterBlob": "29ae19ce9b32698a4f040fe74eed216c2666bcc2",
+      "preservedSuffix": true
+    }
+  ],
+  "pdf": {
+    "pages": 962,
+    "sha256": "e4b0f1bd946640d76839df55f3e01f6c07bfe077e597a5b6f8b75239999e29ab",
+    "copiesIdentical": true,
+    "visualReview": "PENDING"
+  },
+  "newFullCI": "PENDING",
+  "independentReReview": "PENDING",
+  "deployment": "NOT EXECUTED",
+  "hostedAcceptance": "NOT TESTED",
+  "businessMutations": false
+}
