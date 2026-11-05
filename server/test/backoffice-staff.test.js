@@ -101,3 +101,15 @@ test('destructive inventory payloads reject forged authority, duplicate lines an
   assert.equal(transactions,0);
   for(const profile of Object.values(staffProfiles))for(const key of ['inventory.clear','inventory.bulk-zero','inventory.delete'])assert.equal(profile.capabilities.includes(key),false);
 });
+
+test('personal inventory product attachment maps narrowly to counting; unrelated routes stay denied',()=>{
+  assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes/take-1/lines'),'inventory.count');
+  for(const [method,path] of [
+    ['GET','/api/inventory-v2/stocktakes/take-1/lines'],
+    ['DELETE','/api/inventory-v2/stocktakes/take-1/lines'],
+    ['POST','/api/inventory-v2/stocktakes/take-1/lines/other'],
+    ['POST','/api/inventory-v2/stocktakes/take-1/line'],
+  ])assert.equal(staffRequestCapability(method,path),null);
+  assert.equal(validStaffCapabilities(['inventory.read','inventory.count']),true);
+  assert.equal(validStaffCapabilities(['products.read','products.create']),true);
+});
