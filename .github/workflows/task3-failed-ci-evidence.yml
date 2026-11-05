@@ -25,7 +25,7 @@ jobs:
           test "$(git rev-parse HEAD)" = 4ba3a9868670e0958aa533bdb116d3f9b67ee54f
           gh api repos/xrhstosmanis-design/myworkstation-app/actions/runs/42016014254 > /tmp/task3-failed-ci-evidence/run.json
           gh api repos/xrhstosmanis-design/myworkstation-app/actions/jobs/127206724281 > /tmp/task3-failed-ci-evidence/job.json
-          gh api repos/xrhstosmanis-design/myworkstation-app/actions/jobs/127206724281/logs > /tmp/task3-failed-ci-evidence/job.log
+          gh api --allow-escape-sequences repos/xrhstosmanis-design/myworkstation-app/actions/jobs/127206724281/logs > /tmp/task3-failed-ci-evidence/job.log
           python3 - <<'PY'
           from pathlib import Path
           import hashlib,json,re,subprocess
@@ -35,7 +35,9 @@ jobs:
           assert job['run_id']==42016014254 and job['id']==127206724281
           files=subprocess.check_output(['git','ls-files'],text=True).splitlines()
           (out/'source-test-paths.txt').write_text('\n'.join(p for p in files if p.startswith('server/test/'))+'\n')
-          lines=(out/'job.log').read_text(errors='replace').splitlines()
+          text=(out/'job.log').read_text(errors='replace')
+          assert text.strip(),'Expected nonempty raw log'
+          lines=re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]','',text).splitlines()
           failures=[i for i,line in enumerate(lines) if re.search(r'\bnot ok \d+',line)]
           pieces=[]
           for i in failures:pieces.append('\n'.join(lines[max(0,i-3):i+65]))
