@@ -1,0 +1,61 @@
+name: Assemble FAST minimal claim once
+on:
+  push:
+    branches: [docs/invoice-fast-minimal-claim-20261105]
+    paths: [.github/workflows/invoice-minimal-claim-assemble-once.yml]
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          filter: blob:none
+      - name: Verify original source and branch lease
+        run: |
+          test "$(git rev-parse HEAD^)" = fcbf02372d57dc22f006f1fa8906b52717374380
+          test "$(git ls-remote origin refs/heads/docs/invoice-fast-minimal-claim-20261105 | cut -f1)" = "$(git rev-parse HEAD)"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install reportlab==4.4.9
+      - name: Stage exact reviewed source recipe 1
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('/tmp/minimal-claim-recipe.b64')
+          p.write_text('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')
+      - name: Assemble exact tested files, preserve registry suffixes and remove this workflow
+        shell: python
+        run: |
+          import subprocess,json,zlib,base64,hashlib,shutil
+          from pathlib import Path
+          changes=json.loads(zlib.decompress(base64.b64decode(Path('/tmp/minimal-claim-recipe.b64').read_text())))
+          for path,e in changes.items():
+           p=Path(path)
+           if e['mode']=='new':assert not p.exists(),path;old=b''
+           else:old=p.read_bytes();assert hashlib.sha256(old).hexdigest()==e['old'],path
+           data=base64.b64decode(e['data'])
+           if e['mode']=='patch':
+            subprocess.run(['git','apply','--check','--whitespace=error','-'],input=data,check=True)
+            subprocess.run(['git','apply','--whitespace=error','-'],input=data,check=True)
+            value=p.read_bytes()
+           else:value=data+old if e['mode']=='prepend' else data
+           assert hashlib.sha256(value).hexdigest()==e['expected'],path
+           if e['mode']=='prepend':assert value.endswith(old),path
+           p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(value)
+           if path.endswith('.json'):json.loads(value)
+          subprocess.run(['python','docs/roadmap/generate-open-work-tracker.py'],check=True)
+          shutil.copyfile('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf')
+          workflow='.github/workflows/invoice-minimal-claim-assemble-once.yml';Path(workflow).unlink()
+          allowed=set(changes)|set(['output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf', 'docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf'])|{workflow}
+          actual=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())|set(subprocess.check_output(['git','ls-files','--others','--exclude-standard'],text=True).splitlines())
+          assert actual==allowed,(actual,allowed)
+          subprocess.run(['git','diff','--check','--','*.md','*.js','*.json'],check=True)
+          subprocess.run(['git','add','--',*sorted(allowed)],check=True)
+          subprocess.run(['git','-c','user.name=github-actions[bot]','-c','user.email=41898282+github-actions[bot]@users.noreply.github.com','commit','-m','docs(invoice): claim bounded FAST minimal effort experiment'],check=True)
+          subprocess.run(['git','push','origin','HEAD:docs/invoice-fast-minimal-claim-20261105'],check=True)
