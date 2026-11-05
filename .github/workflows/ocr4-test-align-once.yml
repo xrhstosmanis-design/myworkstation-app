@@ -10,11 +10,14 @@ jobs:
     if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/staging/ocr4-multipage-test-align-20261105'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://synthetic:synthetic@127.0.0.1:1/ocr4_no_database
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 2
+          fetch-depth: 10
           filter: blob:none
       - uses: actions/setup-node@v4
         with:
@@ -26,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = 2b1b18c2bd30b74ac490fe781636de05dc95ee36
+          git merge-base --is-ancestor 2b1b18c2bd30b74ac490fe781636de05dc95ee36 HEAD
           test "$(git ls-remote origin refs/heads/fix/ocr4-pdf-total-safety-20261105 | cut -f1)" = 2b1b18c2bd30b74ac490fe781636de05dc95ee36
           mkdir /tmp/ocr4-test-align
           python - <<'PY'
@@ -38,10 +41,12 @@ jobs:
           (root/'before.test.js').write_bytes(b)
           for p in ['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']:
             dest=root/'before'/p;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(Path(p).read_bytes())
-          (root/'receipt.json').write_text(json.dumps({'base':'2b1b18c2bd30b74ac490fe781636de05dc95ee36','runtime_sha256':hashlib.sha256(runtime).hexdigest(),'test_before_blob':'7bd1c5f087f7d74762db88ce37ac196d8aaaef41','scope':'Existing static expectation alignment only; runtime unchanged; not release or OCR acceptance.'},indent=2)+'\n')
+          (root/'receipt.json').write_text(json.dumps({'base':'2b1b18c2bd30b74ac490fe781636de05dc95ee36','runtime_sha256':hashlib.sha256(runtime).hexdigest(),'test_before_blob':'7bd1c5f087f7d74762db88ce37ac196d8aaaef41','scope':'Existing static expectation alignment only; runtime unchanged; not release or OCR acceptance. Standard Prisma client generation is required for the imported verifier; no database is contacted.'},indent=2)+'\n')
           PY
       - name: Install declared dependencies without lifecycle or manifest changes
-        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false --no-save
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --package-lock=false --no-save
+          npm run prisma:generate -w server
       - name: Reproduce the exact remaining legacy assertion
         shell: bash
         run: |
@@ -108,7 +113,7 @@ jobs:
             '## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / VERIFIED CI CAUSE / LEGACY TEST ALIGNED / AWAITING FULL CI',
             'Retained task4 owner /root, source PR3667. Main723b167 is already synchronized without losing peer3665. Exact downloaded raw CI logs for jobs127068324620 and127077517536 both show the same single failure: pos-invoice-multipage-upload-v1.test.js, MANTZILAS FAST total. Previous contradictory tool diagnoses remain withdrawn. Raw evidence artifact13393140796 SHA25658634e5970e05d6336322ba32e014c3246b9c960ea0dee50daec759eeb4e238e; test-before blob7bd1c5f087f7d74762db88ce37ac196d8aaaef41 verified.',
             'Cause: one historical static regex required unconditional VAT-footer reuse. The test now requires the numeric-one-page eligibility binding and guarded production assignment. All original parser/account-balance/unbalanced-footer assertions remain. The actual production assignment is also executed: eligible full-document reuse returns318.74; ineligible multi-page/unknown-page reuse returns0. No runtime edit, amount relaxation, deleted test, skip or threshold change.',
-            'Complete-checkout Node20 targeted seven suites: before324PASS/1FAIL; after325PASS/0FAIL/0SKIP. Runtime SHA25632e1f56f985603aaa7c819a490c9dc2d846884c0c43dbd7e4f22f8fd9d5653e8 unchanged. Provider/database/wallet I/O simulated. This is not full native CI, independent approval or OCR/LAB acceptance. Keep source PR DRAFT until review and full exact checks.',
+            'Initial staging run stopped before test edits because the imported verifier required a generated Prisma client (277PASS plus one module-load failure); standard client generation fixes only that setup, with no database connection. Complete-checkout Node20 targeted seven suites: before324PASS/1FAIL; after325PASS/0FAIL/0SKIP. Runtime SHA25632e1f56f985603aaa7c819a490c9dc2d846884c0c43dbd7e4f22f8fd9d5653e8 unchanged. Provider/database/wallet I/O simulated. This is not full native CI, independent approval or OCR/LAB acceptance. Keep source PR DRAFT until review and full exact checks.',
             'No paid provider request, invoice submission/payment, stock/fiscal operation, main change or deployment. Protect H/G, H21.959s and reserved I; no historical replay. General OCR, supplier/pages/packages/discount/VAT/EFK and latency remain OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md. Next: exact full PR/main CI and independent read-only review before guarded release and fresh no-submit LAB acceptance.'
           ])+'\n\n'
           assert all(x.rstrip()==x for x in prefix.splitlines());r['registries']={}
