@@ -88,7 +88,7 @@ test('runner validates only chosen original on intermediate steps, once per sour
  validated.length=0;assert.equal((await runner.readNext(scope,{id:'actor'},period)).status,'COMPLETE');assert.deepEqual(validated,['second','m']);assert.equal(new Set(validated).size,2);assert.equal(paid,2);
  validated.length=0;assert.equal((await runner.readNext(scope,{id:'actor'},period)).status,'COMPLETE');assert.deepEqual(validated,['m','second']);assert.equal(paid,2);
 });
-test('metadata admission caps aggregate originals at25MiB before cached bytes or provider dispatch',async()=>{
+test('metadata admission caps aggregate originals at100MiB before cached bytes or provider dispatch',async()=>{
  const atLimit={...discovery,sources:[{...source,sizeBytes:automaticPaperByteLimit}]};assert.equal(boundAutomaticPaperDiscovery(atLimit),atLimit);
  const empty={status:'NO_ATTACHMENTS_IN_DISCOVERY',sources:[]};assert.equal(boundAutomaticPaperDiscovery(empty),empty);
  for(const [candidate,reason]of [[{...discovery,sources:[{...source,sizeBytes:automaticPaperByteLimit+1}]},'ATTACHMENT_BYTE_LIMIT'],[discovery,'ATTACHMENT_SIZE_UNAVAILABLE'],[{...discovery,sources:[{...source,sizeBytes:0}]},'ATTACHMENT_SIZE_UNAVAILABLE'],[{...discovery,sources:Array.from({length:51},()=>({...source,sizeBytes:1}))},'ATTACHMENT_BYTE_LIMIT']]){
@@ -154,4 +154,18 @@ test('LAB closing preserves five verified headers and exactly corroborates numer
  const foreign={...lab,session:{...lab.session,id:'foreign',companyId:'elsewhere',terminalPos:'OTHER'}};
  const foreignHeader=project({sessions:new Map([['night',lab],['foreign',foreign]]),papers:[{...source,reading:{...reading,extraction:extraction([header('Ταμείο:OTHER'),closing])}}]});assert.equal(foreignHeader.items[0].status,'UNRESOLVED');
  const loneNumber={...raw,operatorText:'2'};assert.equal(project({sessions:new Map([['night',{...original,session:{...original.session,openedByName:'2'}}]]),papers:[{...source,reading:{...reading,extraction:normalizePaper(loneNumber)}}]}).items[0].status,'UNRESOLVED');
+});
+
+test('Diadochou-sized 37 attachment metadata set fits 100 MiB without loading original bytes',()=>{
+ const MiB=1024*1024;
+ const sources=Array.from({length:37},(_,index)=>({sourceId:'SHA256:'+String(index+1).padStart(64,'0'),checksum:String(index+1).padStart(64,'0'),sizeBytes:index===36?5*MiB:2*MiB,references:[{messageId:'file-'+index}]}));
+ const metadata={status:'AWAITING_READING',sources};
+ const accepted=boundAutomaticPaperDiscovery(metadata);
+ assert.equal(accepted,metadata);assert.equal(sources.length,37);
+ assert(sources.reduce((sum,p)=>sum+p.sizeBytes,0)>25*MiB);
+ assert(sources.reduce((sum,p)=>sum+p.sizeBytes,0)<automaticPaperByteLimit);
+ const tooLarge={...metadata,sources:[{...sources[0],sizeBytes:automaticPaperByteLimit+1}]};
+ assert.equal(boundAutomaticPaperDiscovery(tooLarge).reason,'ATTACHMENT_BYTE_LIMIT');
+ assert.equal(boundAutomaticPaperDiscovery(tooLarge).status,'UNAVAILABLE');
+ assert.equal(boundAutomaticPaperDiscovery({...metadata,sources:Array.from({length:51},(_,i)=>({...sources[0],sourceId:String(i),sizeBytes:1}))}).status,'UNAVAILABLE');
 });
