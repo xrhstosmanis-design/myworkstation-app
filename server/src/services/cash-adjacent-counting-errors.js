@@ -1,7 +1,7 @@
 // Read-only consecutive cash counting candidates. Never alter money, reviews or financial finality.
 // The canonical report supplies only already-authorized, same-snapshot scoped sources.
 const integer=value=>Number.isSafeInteger(value);
-const signedResidual=(v,matched)=>Math.sign(v)*(Math.abs(v)-matched);
+const signedResidual=(v,matched)=>{const remaining=Math.abs(v)-matched;return remaining===0?0:Math.sign(v)*remaining;};
 const compare=(a,b)=>new Date(a.previousClosedAt)-new Date(b.previousClosedAt)||a.previousSessionId.localeCompare(b.previousSessionId);
 export function projectAdjacentCashCountingCandidates({source,rows,immediatePair,cashCurrent,exactCents,localDay}){
   if(!(source?.sessions instanceof Map)||!(rows instanceof Map)||typeof immediatePair!=='function'||typeof cashCurrent!=='function'||typeof exactCents!=='function'||typeof localDay!=='function')throw new TypeError('Invalid adjacent cash report inputs');
