@@ -55,5 +55,35 @@ test('native read-only two-stocktake SQL/HTTP: scope, count boundary, exports, f
     await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES ('doc','c','s','2026-09-01','LATE-1','2026-10-01 06:30')`);
     await db.$executeRaw`UPDATE "StockMovement" SET "sourceType"='PURCHASE_ORDER',"sourceId"='order' WHERE "id"='purchase'`;
     const late=await readInventoryReconciliation(db,current);assert.ok(late.rows[0].findings.includes('LATE_DOCUMENT'));assert.equal(late.rows[0].movements.find(x=>x.id==='purchase').documentNumber,'LATE-1');
+    await db.$executeRaw`ALTER TABLE "Stocktake" ADD COLUMN "scopeType" text`;
+    await db.$executeRaw`UPDATE "Stocktake" SET "scopeType"='FREE' WHERE "id" IN ('old','new')`;
+    await db.$executeRaw`UPDATE "StocktakeLine" SET "unitCost"=2 WHERE "id"='b'`;
+    await db.$executeRaw`UPDATE "StockMovement" SET "sourceType"='PURCHASE_DOCUMENT',"sourceId"='invoice' WHERE "id"='purchase'`;
+    await db.$executeRaw`INSERT INTO "Product" VALUES ('zero','c','Zero','002'),('untouched','c','Untouched','003')`;
+    await db.$executeRaw`INSERT INTO "StocktakeLine" VALUES
+      ('zero-old','old','zero','2026-10-01 02:00',0,2),('zero-new','new','zero','2026-10-01 10:00',0,2),
+      ('untouched-old','old','untouched',NULL,NULL,2),('untouched-new','new','untouched',NULL,NULL,2)`;
+    await db.$executeRaw`INSERT INTO "InventoryCountEvent" VALUES
+      ('zero-event-old','c','s','old','zero-old','COUNT',NULL,0,0,'Owner','BACKOFFICE','2026-10-01 02:00'),
+      ('zero-event-new','c','s','new','zero-new','COUNT',NULL,0,0,'Owner','BACKOFFICE','2026-10-01 10:00')`;
+
+    const freeReport = await readInventoryReconciliation(db,current);
+    assert.deepEqual(freeReport.rows.map(row=>row.productId), ['p','zero']);
+    assert.equal(freeReport.summary.netValue, -20);
+    assert.equal(freeReport.rows[1].difference, 0);
+
+    for (const [lineId, finding] of [['zero-old','MISSING_PREVIOUS_COUNT'],['zero-new','MISSING_CURRENT_COUNT']]) {
+      await db.$executeRaw`UPDATE "StocktakeLine" SET "countedQuantity"=NULL,"countedAt"=NULL WHERE "id"=${lineId}`;
+      const oneSided = await readInventoryReconciliation(db,current);
+      const zero = oneSided.rows.find(row=>row.productId==='zero');
+      assert.ok(zero.findings.includes(finding));
+      assert.equal(zero.difference, null);
+      await db.$executeRaw`UPDATE "StocktakeLine" SET "countedQuantity"=0,"countedAt"=(
+        SELECT "createdAt" FROM "InventoryCountEvent" WHERE "lineId"=${lineId}) WHERE "id"=${lineId}`;
+    }
+
+    await db.$executeRaw`UPDATE "Stocktake" SET "scopeType"='FULL' WHERE "id"='old'`;
+    const mixedReport = await readInventoryReconciliation(db,current);
+    assert.ok(mixedReport.rows.some(row=>row.productId==='untouched'));
   } finally {if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();}
 });
