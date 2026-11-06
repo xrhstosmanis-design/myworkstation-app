@@ -526,3 +526,34 @@ test('native inventory Enter on quantity saves selected count, not barcode looku
   assert.equal(errors.filter(Boolean).length,0);
  }finally{await m.close()}
 });
+
+test('inventory counted-only filter survives detail unmount and stays scoped to the stocktake', async () => {
+ const Center = await component('inventory/InventoryV2Center');
+ const current = {id:'take-1',name:'First count',status:'DRAFT',lines:[
+  {id:'a',name:'Already counted',sku:'COUNT',barcodes:['111'],countedQuantity:2,countVersion:1},
+  {id:'b',name:'Not counted',sku:'UNC',barcodes:['222'],countedQuantity:null,countVersion:0},
+ ]};
+ const other = {...current,id:'take-2',name:'Second count'};
+ const stores = [{id:'a1',name:'A1'}];
+ const props = detail => ({
+  stores,
+  delegated:{storeId:'a1',storeName:'A1',stocktakes:[current,other],listLoaded:true,current:detail,onLoad:()=>{},onOpen:()=>{},setError:()=>{}},
+  api:async()=>assert.fail('display preferences must not call Owner endpoints'),
+ });
+ const m = await mount(Center,props(current));
+ try {
+  assert.ok(button('Μόνο καταμετρημένα'));
+  await m.act(async()=>button('Μόνο καταμετρημένα').click());
+  await m.render(props(null));
+  assert.equal(document.querySelector('.inv2-table-wrap'),null);
+  await m.render(props({...current,lines:current.lines.map(line=>({...line}))}));
+  assert.ok(button('Εμφάνιση όλων'));
+  assert.match(document.querySelector('.inv2-table-wrap').textContent,/Already counted/);
+  assert.doesNotMatch(document.querySelector('.inv2-table-wrap').textContent,/Not counted/);
+  await m.render(props(other));
+  assert.ok(button('Μόνο καταμετρημένα'));
+  assert.match(document.querySelector('.inv2-table-wrap').textContent,/Not counted/);
+ } finally {
+  await m.close();
+ }
+});

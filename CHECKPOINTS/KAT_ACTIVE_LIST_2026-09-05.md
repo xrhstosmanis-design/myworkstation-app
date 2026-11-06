@@ -1,3 +1,11 @@
+## 06/11/2026 — CASH-ADJACENT-COUNT-21 / TWO REVIEW CORRECTIONS / LOCAL VERIFICATION
+
+Same owner, draft PR #3683. Corrected stale automatic summaries after manual review and selected-period boundary ambiguity; unavailable outer context cannot produce a numeric allocation proposal. Node20 focused96/96PASS; actual panel/JWT/store authorization/route/canonical projection with synthetic sources passed Chromium desktop/mobile, zero write/provider hooks. These are isolated local checks, not hosted cash LAB or financial finality. Previous fullCI42165538303 was green only for6f5beff4; corrected head requires fresh full native CI. Pinned mainf81aba24 and every peer registry byte preserved. Next: publish the reviewed branch through the authorized connector and bounded Git synchronization, then exact CI and guarded release/hosted acceptance. Parent CASH-UNIFIED-AUDIT-15 remains OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md.
+
+## 06/11/2026 — CASH-ADJACENT-COUNT-21 / TASK 5 REVIEW CONTINUATION / SAME OWNER
+
+Continue draft PR #3683, feat/cash-audit-clean-main-20261105. Exact previous head6f5beff4 fullCI42165538303 passed all5 jobs (5940+8 native tests). Hosted automatic-check acceptance and parent financial reconciliation remain OPEN. Read-only review found stale automatic summary after manual review and selected-period boundary ambiguity; bounded corrections and isolated native/browser regression are next. Current-main f81aba24 peer records/source remain intact. Local Git publication lacks credentials; preserve full bytes and do not claim a push/release. No paid OCR, production or money/employee mutation. Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md.
+
 ## 06/11/2026 - CASH-ADJACENT-COUNT-21 / RETAINED OWNER / CURRENT-MAIN SYNC / AWAITING CI AND LAB
 
 Continuation on existing PR #3683 and feat/cash-audit-clean-main-20261105. Previous exact head 3a97af7110c56797103c0626ad1dbb7e7cddbf90 passed native CI42087752586, all five jobs. Integrated main0cd52a6c without changing cash runtime/test bytes or inventory Enter source/test/checkpoint. Both additive registry prefixes retained after complete common-base suffix verification. Fresh integrated-head CI and authenticated selected-store read-only acceptance remain pending. DRAFT; parent CASH-UNIFIED-AUDIT-15 OPEN. No main update, deploy, paid OCR, OFFSET, financial/employee mutation or approval. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md. Next inspect exact new-head CI.
@@ -5,6 +13,34 @@ Continuation on existing PR #3683 and feat/cash-audit-clean-main-20261105. Previ
 ## 05/11/2026 — CASH-ADJACENT-COUNT-21 / AUTOMATIC CASH AUDIT / DRAFT SOURCE INTEGRATION
 
 PR #3683 (feat/cash-audit-clean-main-20261105) integrates 15 cash-only source/test/checkpoint files over main 759311ed86ad3d58f77b6819fb408043a60f6031 without overwriting parallel tasks. Previous pre-integration CI rerun 42064325969 passed 5/5, but merged-head run 42086169126 stopped at the mandatory active-list gate before executing full source tests; this additive entry fixes that prerequisite, not an implementation PASS. BackOffice selected-store automatic audit remains read-only and without paid OCR. Uncertain counting pairs or paper evidence require HOLD/review, never automatic OFFSET, cash movement or employee charge. Pending: exact-head full CI, review, authenticated selected-store LAB acceptance, and guarded release. No production deploy or financial mutation. Task-local checkpoint: CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md.
+
+## 06/11/2026 — CENTRAL-AGENT-IO-01 / ASSIGNED / DOCS CANDIDATE / NOT TESTED
+
+Owner: κεντρικός συντονιστής /root. Branch: `docs/central-bounded-agent-io-20261106`. Ρητή εντολή ιδιοκτήτη «Ξεκίνα» για κεντρική δοκιμή περιορισμού εξόδου σε όλες τις σελίδες. Ανεξάρτητο scope: μόνο κοινές οδηγίες ανάγνωσης/μεταφοράς, χωρίς ανάληψη εργασιών άλλων owners ή αλλαγή εφαρμογής.
+
+Base main: `0eab200446e5284bb7312a612d923feb7116be5c`. Τοπική ανάκτηση πλήρων μητρώων: tracker 4.119.924 bytes, pending 3.646.706 bytes, ενεργή λίστα 5.295.710 bytes. Η συνδεδεμένη ανάγνωση επέστρεψε κενό content για τα μεγάλα αρχεία, ενώ το τοπικό Git έδωσε μη κενά δεδομένα. Αυτό τεκμηριώνει πρόβλημα της συγκεκριμένης διαδρομής ανάγνωσης, όχι αιτία ή λύση του ορίου συνομιλίας.
+
+Πρόταση: τοπικό Git για μεγάλα αρχεία, προέλεγχος μεγέθους, μικρά αποσπάσματα/diff, όρια γραμμών ΚΑΙ χαρακτήρων, καμία εμφάνιση ολόκληρου blob/Base64 και ανεξάρτητος έλεγχος remote πριν από επανάληψη ενέργειας. Διατηρείται αυτούσιο όλο το προηγούμενο ιστορικό, οι αναθέσεις και οι κανόνες PASS/CI/LAB. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-06-central-bounded-agent-io.md`.
+
+Status: NOT TESTED ως κεντρική παράκαμψη σε νέα πλήρη εργασία. Δεν είναι platform fix ή LAB PASS. Next: review/CI και ενσωμάτωση του ακριβούς docs-only PR, έπειτα μία οριοθετημένη εργασία με καταγεγραμμένα μεγέθη εξόδου. Καμία αναγέννηση PDF ή PASS closure σε αυτή την αλλαγή· όλα τα υπάρχοντα artifacts διατηρούνται.
+
+## 06/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / counted-only filter #3690 OPEN
+
+- Owner /root continues the existing bounded filter PR. The accepted Owner/Super Admin keyboard Enter result is recorded on main via #3694, revision eefc5672.
+- PR #3690 run 42082802761 failed at the active-list/checkpoint policy check. Reconcile the branch with main, retain the existing Enter regression, and cover the filter across a temporary detail unmount and a different stocktake.
+- Exact updated PR CI and hosted LAB acceptance remain pending. Filter changes display only. No new count, stock movement, finalization or financial write was performed.
+
+## 05/11/2026 21:43 Europe/Athens - INVENTORY-SCAN-WORKFLOW-01 / ENTER PR #3689 / LIMITED OWNER UI LAB PASS / WHOLE SCOPE OPEN
+
+Retained owner: /root. Original claim: #3684. Enter branch: fix/inventory-quantity-enter-20261105. The approved PR head 962bf8113654da77051db1e2ac783fa223daeacd merged as 0cd52a6c49c7da92b41756efec911e846b7e5aa4, with the reviewed tree unchanged. Full PR CI 42090428560 and exact main CI 42093525223 each completed all five jobs successfully: 5,913 server tests + 8 backup tests passed, with zero failures or skips. Normal guard 42095172878 / job 127483286831 triggered the pinned deployment at 19:34:56 UTC and confirmed the exact healthy revision at 19:36:59 UTC. Independent public health at 19:37:13 UTC returned HTTP 200, ok=true and the exact merged revision. Rollback artifact 13445879862 preserves previous healthy revision 759311ed. The freshly loaded LAB client main-JEXcvf8-.js matched the served HTML. These are release checks, separate from the measured observation below.
+
+At 19:41:57.696 UTC (21:41:57 Europe/Athens), the authenticated Owner/Super Admin pressed browser-keyboard Enter once for quantity 3.25 in the normal MYWORKSTATION LAB UI. The selected item was LAB EXCEL TEST 2, SKU LAB-EXCEL-20260909-02 / barcode 2900000000018, in existing draft LAB31-THEORY-20261103-01 / ID 8925a034-cd4f-4e05-a14b-d4d96881a1bf. Its blank count became 3.25, with difference +5.25 against snapshot -2; the draft stayed DRAFT. Both entry fields cleared, quantity became disabled and focus returned to the empty barcode input. Fresh before/after Full Audit exports contain 109 rows: 1 changed and 108 identical. There is exactly one new COUNT by the authenticated Owner/SA. SCANNER is the existing API source classification; the action used a browser keyboard.
+
+Fresh stock-report and movement-drilldown reads retained current stock -2 and the same one SALE -1 / POS_SALE movement, dated 01 Oct at 12:51:17 Europe/Athens, within the selected 01 Sep-05 Nov range. MAIN opening/current cash remained 40 EUR with one movement/transaction; all other measured money totals remained zero. The historical closed MAIN / LAB POS 2 control and offline counters (pending 2, failed 0, synced 2, replay 0) were unchanged. There was no second live terminal to compare. Exactly one ordinary UI draft-count write occurred; no direct database/API operation outside the normal UI, finalization, stock posting, shift or financial action occurred. The synthetic count remains as evidence.
+
+This supersedes AWAITING LAB only for the Owner/SA shared-component Enter keyboard path. Personal/delegated lab31 and physical scanner acceptance remain NOT TESTED. This single initially uncounted row does not newly certify repeated additive counting, pencil replacement, ArrowDown, retries or concurrency. No grants changed. The whole INVENTORY-SCAN-WORKFLOW-01 scope remains OPEN/ASSIGNED. Filter #3690, unknown barcode #3691 and dependent product attachment #3692 remain OPEN. CENTRAL-BACKOFFICE-ACCESS-01, INVENTORY-RECONCILIATION-01 and every peer owner/PASS retain their scopes. The archive movement-menu preflight error remains a separate observation.
+
+Evidence: CHECKPOINTS/CHANGES/2026-11-05-inventory-scan-workflow.md; measured receipt and screenshot in CHECKPOINTS/EVIDENCE/inventory-enter-20261105/; verified usage in docs/manual/inventory/PASS.md. Next: review existing filter PR #3690 and its exact current CI under the same owner before any further source change or LAB action. Do not repeat the accepted count.
 
 ## 05/11/2026 20:47 Europe/Athens — INVENTORY-SCAN-WORKFLOW-01 / ENTER PR #3689 / LOCAL REGRESSION PASS / AWAITING FULL CI AND LAB
 

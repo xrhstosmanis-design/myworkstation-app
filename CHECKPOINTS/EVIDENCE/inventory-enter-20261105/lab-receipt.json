@@ -1,0 +1,91 @@
+{
+  "scope": "Owner/SA shared-component browser keyboard Enter; delegated and physical scanner not tested",
+  "revision": "0cd52a6c49c7da92b41756efec911e846b7e5aa4",
+  "actionUtc": "2026-11-05T19:41:57.696Z",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "draftId": "8925a034-cd4f-4e05-a14b-d4d96881a1bf",
+  "draftName": "LAB31-THEORY-20261103-01",
+  "rowCounts": [
+    109,
+    109
+  ],
+  "changedRowCount": 1,
+  "unchangedOtherRows": 108,
+  "before": {
+    "SKU": "LAB-EXCEL-20260909-02",
+    "Barcode": "2900000000018",
+    "Περιγραφή": "LAB EXCEL TEST 2",
+    "Ζώνη": "",
+    "Θεωρητικό": "-2",
+    "Καταμέτρηση": "",
+    "Διαφορά": "",
+    "Κόστος": "",
+    "Αξία διαφοράς": "",
+    "Καταμετρητής": "—",
+    "Πηγή": "",
+    "Συμβάντα": ""
+  },
+  "after": {
+    "SKU": "LAB-EXCEL-20260909-02",
+    "Barcode": "2900000000018",
+    "Περιγραφή": "LAB EXCEL TEST 2",
+    "Ζώνη": "",
+    "Θεωρητικό": "-2",
+    "Καταμέτρηση": "3.25",
+    "Διαφορά": "5.25",
+    "Κόστος": "",
+    "Αξία διαφοράς": "",
+    "Καταμετρητής": "authenticated Owner/Super Admin",
+    "Πηγή": "SCANNER",
+    "Συμβάντα": "COUNT · authenticated Owner/Super Admin · 2026-11-05 21:41:57 Europe/Athens"
+  },
+  "auditCsvSha256": [
+    "8b2a038ba0dbc4068717efeff28102922b3345ee3d650f184fbfc310360d0b9c",
+    "c850b636ebb3fe6803b7783fe3d97ae9642c89bf2cf147ab6375b2fba8706a70"
+  ],
+  "stockBeforeAfter": [
+    -2,
+    -2
+  ],
+  "movementCountInSelectedRangeBeforeAfter": [
+    1,
+    1
+  ],
+  "latestMovement": "2026-10-01 12:51:17 Europe/Athens SALE -1 POS_SALE",
+  "cashMainBeforeAfter": [
+    40,
+    40
+  ],
+  "cashMovementCountBeforeAfter": [
+    1,
+    1
+  ],
+  "otherCashAmountsBeforeAfter": [
+    0,
+    0
+  ],
+  "closedShiftControl": "One MAIN closed shift, LAB POS 2, zero cash/card/EFTPOS/difference, agreement; same before/after",
+  "offlineCountersBeforeAfter": {
+    "pending": [
+      2,
+      2
+    ],
+    "failed": [
+      0,
+      0
+    ],
+    "synced": [
+      2,
+      2
+    ],
+    "replay": [
+      0,
+      0
+    ]
+  },
+  "fieldResetObserved": true,
+  "barcodeFocusObserved": true,
+  "draftRemainedOpen": true,
+  "finalizationPerformed": false,
+  "newGrantsIssued": false
+}
