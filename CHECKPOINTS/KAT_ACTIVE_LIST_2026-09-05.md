@@ -1,3 +1,7 @@
+## 06/11/2026 — INVENTORY-RECONCILIATION-01 / FREE STOCKTAKE COMPARISON / AWAITING CI AND LAB
+
+Owner of INVENTORY-RECONCILIATION-01 retained. The owner requested this bounded correction. Branch `fix/free-stocktake-uncounted`. Two finalized FREE stocktakes omit products with no count on either side. A one-sided count remains visible with its missing-side finding. Explicit zero counts are retained. The existing mixed-scope comparison remains in force. Checkpoint `CHECKPOINTS/CHANGES/2026-11-06-free-stocktake-reconciliation.md`.
+
 ## 06/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / counted-only filter #3690 OPEN
 
 - Owner /root continues the existing bounded filter PR. The accepted Owner/Super Admin keyboard Enter result is recorded on main via #3694, revision eefc5672.
