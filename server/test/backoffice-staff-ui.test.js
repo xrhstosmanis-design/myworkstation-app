@@ -495,24 +495,65 @@ test('personal native cash discards an old-store response and rejects a wrong-pe
  }finally{release?.();await m.close()}
 });
 
+test('native inventory Enter on quantity saves selected count, not barcode lookup',async()=>{
+ const Count=await component('inventory/InventoryFastCount'),calls=[],errors=[];
+ const current={id:'take-enter',status:'DRAFT',lines:[{id:'line-1',name:'Synthetic item',sku:'SKU1',barcodes:['5200000000001'],countedQuantity:null,countVersion:0}]};
+ const delegated={canCount:true,canClear:false,canBulkZero:false,locked:false,onCount:async request=>{calls.push(request);return true}};
+ const m=await mount(Count,{current,delegated,setError:value=>errors.push(value),api:async()=>{throw Error('Unexpected owner write')},reload:async()=>{}});
+ try{
+  const barcode=document.querySelector('input[placeholder="Barcode, SKU ή περιγραφή"]');
+  await m.act(async()=>{
+   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(barcode,'5200000000001');
+   barcode.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  await m.act(async()=>barcode.closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  const quantity=document.querySelector('input[aria-label="Ποσότητα καταμέτρησης"]');
+  assert.equal(quantity.disabled,false);
+  await m.act(async()=>{
+   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(quantity,'3.25');
+   quantity.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  const enterEvent=new window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true});
+  await m.act(async()=>quantity.dispatchEvent(enterEvent));
+  assert.equal(enterEvent.defaultPrevented,true,'Enter must cancel the enclosing barcode lookup form submission');
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].stocktakeId,'take-enter');
+  assert.equal(calls[0].body.lineId,'line-1');
+  assert.equal(calls[0].body.quantity,3.25);
+  assert.equal(calls[0].body.source,'SCANNER');
+  assert.equal(calls[0].body.expectedVersion,0);
+  assert.match(calls[0].body.clientEventId,/^[a-f0-9-]{36}$/);
+  assert.equal(errors.filter(Boolean).length,0);
+ }finally{await m.close()}
+});
 
-test('inventory counted-only filter follows parent preference across detail refresh',async()=>{
- const Count=await component('inventory/InventoryFastCount');
- const base={id:'take-1',status:'DRAFT',lines:[
+test('inventory counted-only filter survives detail unmount and stays scoped to the stocktake', async () => {
+ const Center = await component('inventory/InventoryV2Center');
+ const current = {id:'take-1',name:'First count',status:'DRAFT',lines:[
   {id:'a',name:'Already counted',sku:'COUNT',barcodes:['111'],countedQuantity:2,countVersion:1},
   {id:'b',name:'Not counted',sku:'UNC',barcodes:['222'],countedQuantity:null,countVersion:0},
  ]};
- let preference=true;
- const baseProps={api:async()=>{throw Error('No stock writes')},setError:()=>{},delegated:{canCount:false,canClear:false,canBulkZero:false}};
- const props=(current)=>({...baseProps,current,showAllPreference:preference,onShowAllPreferenceChange:value=>{preference=value}});
- const m=await mount(Count,props(base));
- try{
-  assert.match(document.body.textContent,/Όλα τα είδη απογραφής/);
-  await m.act(async()=>{[...document.querySelectorAll('button')].find(x=>x.textContent==='Μόνο καταμετρημένα').click()});
-  assert.equal(preference,false);
-  await m.render(props({...base,lines:base.lines.map(line=>({...line}))}));
-  assert.match(document.body.textContent,/Καταμετρημένα είδη/);
-  assert.equal(document.body.textContent.includes('Not counted'),false);
-  assert.equal(document.body.textContent.includes('Already counted'),true);
- }finally{await m.close()}
+ const other = {...current,id:'take-2',name:'Second count'};
+ const stores = [{id:'a1',name:'A1'}];
+ const props = detail => ({
+  stores,
+  delegated:{storeId:'a1',storeName:'A1',stocktakes:[current,other],listLoaded:true,current:detail,onLoad:()=>{},onOpen:()=>{},setError:()=>{}},
+  api:async()=>assert.fail('display preferences must not call Owner endpoints'),
+ });
+ const m = await mount(Center,props(current));
+ try {
+  assert.ok(button('Μόνο καταμετρημένα'));
+  await m.act(async()=>button('Μόνο καταμετρημένα').click());
+  await m.render(props(null));
+  assert.equal(document.querySelector('.inv2-table-wrap'),null);
+  await m.render(props({...current,lines:current.lines.map(line=>({...line}))}));
+  assert.ok(button('Εμφάνιση όλων'));
+  assert.match(document.querySelector('.inv2-table-wrap').textContent,/Already counted/);
+  assert.doesNotMatch(document.querySelector('.inv2-table-wrap').textContent,/Not counted/);
+  await m.render(props(other));
+  assert.ok(button('Μόνο καταμετρημένα'));
+  assert.match(document.querySelector('.inv2-table-wrap').textContent,/Not counted/);
+ } finally {
+  await m.close();
+ }
 });

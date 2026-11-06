@@ -265,7 +265,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
                   disabled={!selected || locked || saving}
                   onChange={(event) => setQuantity(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === "ArrowDown") save(event);
+                    if (event.key === "Enter" || event.key === "ArrowDown") save(event);
                   }}
                 />
                 <button type="button" className="primary" disabled={!selected || locked || saving} onClick={save}>
