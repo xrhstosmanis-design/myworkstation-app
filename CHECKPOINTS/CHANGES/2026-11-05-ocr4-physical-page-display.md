@@ -1,3 +1,7 @@
+## 06/11/2026 — Νεότερη περιορισμένη hosted παρατήρηση K01
+
+Το K01 χρησιμοποιήθηκε μία φορά στην κανονική Premium φόρμα του επιλεγμένου LAB: 1 αρχείο / 2 φυσικές σελίδες PDF και 4/4 σωστά πεδία χωρίς edits/submit. Η εμφάνιση confidence 1% παραμένει χωριστή ανοικτή διερεύνηση. Πλήρες OCR, οικονομικά/stock/control, φυσικό POS και γενικό OCR4 παραμένουν OPEN/NOT TESTED. Ακριβές αποτέλεσμα/όρια και μη καταγεγραμμένη live revision: CHECKPOINTS/CHANGES/2026-11-06-ocr4-k01-hosted-reading.md. Τα ιστορικά source/offline receipts παρακάτω διατηρούνται· δεν επαναλαμβάνουμε K01 για τεκμηρίωση.
+
 ## 05/11/2026 - OCR4 / VERIFIED TEST COMPATIBILITY / CURRENT-MAIN RECORDS PRESERVED
 
 Retained task4 owner /root, PR3673. Recovered the exact137/137-tested compatibility files from artifact13408722602 after its publication-only PDF text check stopped on a normal title line break. Normalized text verifies the unchanged PDF title; no application or test assertion was relaxed. The initial new helper tests were corrected to resolve the client package, not the separate server PDF.js package. Original15-test reproduction remains12PASS/3FAIL; corrected combined137PASS/0FAIL/0SKIP and normal client build are verified, not full CI or hosted PASS.
