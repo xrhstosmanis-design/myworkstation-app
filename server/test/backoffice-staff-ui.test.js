@@ -494,3 +494,35 @@ test('personal native cash discards an old-store response and rejects a wrong-pe
   wrong=true;await m.act(async()=>button('Ανανέωση ελέγχου').click());assert.ok(!document.body.textContent.includes('CURRENT A2 REPORT'));assert.ok(!document.body.textContent.includes('WRONG PERIOD PRIVATE'));assert.equal(button('Αντιγραφή ελεγμένης αναφοράς'),undefined);assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκε/);
  }finally{release?.();await m.close()}
 });
+
+test('native inventory Enter on quantity saves selected count, not barcode lookup',async()=>{
+ const Count=await component('inventory/InventoryFastCount'),calls=[],errors=[];
+ const current={id:'take-enter',status:'DRAFT',lines:[{id:'line-1',name:'Synthetic item',sku:'SKU1',barcodes:['5200000000001'],countedQuantity:null,countVersion:0}]};
+ const delegated={canCount:true,canClear:false,canBulkZero:false,locked:false,onCount:async request=>{calls.push(request);return true}};
+ const m=await mount(Count,{current,delegated,setError:value=>errors.push(value),api:async()=>{throw Error('Unexpected owner write')},reload:async()=>{}});
+ try{
+  const barcode=document.querySelector('input[placeholder="Barcode, SKU ή περιγραφή"]');
+  await m.act(async()=>{
+   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(barcode,'5200000000001');
+   barcode.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  await m.act(async()=>barcode.closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  const quantity=document.querySelector('input[aria-label="Ποσότητα καταμέτρησης"]');
+  assert.equal(quantity.disabled,false);
+  await m.act(async()=>{
+   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(quantity,'3.25');
+   quantity.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  const enterEvent=new window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true});
+  await m.act(async()=>quantity.dispatchEvent(enterEvent));
+  assert.equal(enterEvent.defaultPrevented,true,'Enter must cancel the enclosing barcode lookup form submission');
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].stocktakeId,'take-enter');
+  assert.equal(calls[0].body.lineId,'line-1');
+  assert.equal(calls[0].body.quantity,3.25);
+  assert.equal(calls[0].body.source,'SCANNER');
+  assert.equal(calls[0].body.expectedVersion,0);
+  assert.match(calls[0].body.clientEventId,/^[a-f0-9-]{36}$/);
+  assert.equal(errors.filter(Boolean).length,0);
+ }finally{await m.close()}
+});
