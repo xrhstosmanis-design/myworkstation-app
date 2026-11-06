@@ -1,0 +1,108 @@
+{
+  "scope": "Local prepublication verification of documentation and K01 evidence; no runtime source change",
+  "base_main": "34e25f7f9af015d114e69f3992d85a7999b257f1",
+  "prepared_at_utc": "2026-11-06T20:30:39.204095+00:00",
+  "files": {
+    "CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md": {
+      "bytes": 10717,
+      "sha256": "f9a0e46c4edbb8a07cf434014359a93d44d178294cc0fbcec1930567acedd149",
+      "git_blob": "890468de2c0cae4a09e0b7170b84c04d5f1022fa"
+    },
+    "CHECKPOINTS/CHANGES/2026-11-06-ocr4-k01-hosted-reading.md": {
+      "bytes": 8313,
+      "sha256": "ff9637454fac11c0c4703db43d365771d4950efde54c255b605335ac88855583",
+      "git_blob": "666652d36541b978c71356d5c7320c2682550625"
+    },
+    "CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/LAB-OCR4-20261106-K01.pdf": {
+      "bytes": 55825,
+      "sha256": "7de9ea9e5dca6cfc0e8347aea743a9036b66948abf841e78055efc29f55bd18c",
+      "git_blob": "d321aeb78aa02383e8e854caa30f9251a249c2f9"
+    },
+    "CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/hosted-k01-20261106.jpg": {
+      "bytes": 112417,
+      "sha256": "e68b27204b4a03948aba09cb870d25f8eceff358de17aa7567c60dac5e0719db",
+      "git_blob": "025f09b22d281f66f807437c4a34e4d64b2314c0"
+    },
+    "CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/hosted-k01-20261106.json": {
+      "bytes": 7418,
+      "sha256": "e7fed67af062eba8d8c861659d6a555b8a3aed8cf1cb3395aff71c3126cb594b",
+      "git_blob": "2a5b47ac1abd315b11de61c6c92fbb4ca3629f59"
+    },
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "bytes": 5306210,
+      "sha256": "9c11385d491125121fc7dbfacd94d463c9cc901b158693a0d89da0331b504bd9",
+      "git_blob": "385bcd8fb9f27eb0dd6d42fb0539ac09f3cfe513"
+    },
+    "docs/manual/invoices/PASS.md": {
+      "bytes": 164353,
+      "sha256": "e547b56f8b123bac56a77ace67e92c48615ca84bf5f2b2e8df0b39c08976d363",
+      "git_blob": "ae09d915510e28c90609f3b4b1a5f1520de63e50"
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "bytes": 4125824,
+      "sha256": "c7b64d2aa07b9ac7daf3332527eb40f4bc579d9b3499ecc3bc1e376d4f87be19",
+      "git_blob": "a9c379f0e02e3d50575a5a5f0fc1f19558d22758"
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "bytes": 3652606,
+      "sha256": "335e4e680ad1c410e71513b5ea24c4f4fbff5be7ffa7ebe9f35dac3d34ae73e4",
+      "git_blob": "ea7ccf634ecb6de3590663c9bfe7ff43b8eec72c"
+    },
+    "docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf": {
+      "bytes": 3589993,
+      "sha256": "27c4f2f216f69eff8a21f2674dc8f8b6a36e2e3a2d34a554ee64781dddd447c8",
+      "git_blob": "157185ef9c1f0c97ac0cbe58d2064db10c16b068"
+    },
+    "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf": {
+      "bytes": 3589993,
+      "sha256": "27c4f2f216f69eff8a21f2674dc8f8b6a36e2e3a2d34a554ee64781dddd447c8",
+      "git_blob": "157185ef9c1f0c97ac0cbe58d2064db10c16b068"
+    }
+  },
+  "preserved_originals": {
+    "CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md": {
+      "base_bytes": 9818,
+      "base_sha256": "fa97a94f51176d249b43f8c8dcd53c1fd1d95ba6a74fc0318c6be8e7e246f2e3",
+      "exact_suffix_preserved": true,
+      "added_prefix_bytes": 899
+    },
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "base_bytes": 5302553,
+      "base_sha256": "35f6de4cf90587b90f25c5c4c0dfaf7a80b7f035f8edcfc4b2c440927ecd142d",
+      "exact_suffix_preserved": true,
+      "added_prefix_bytes": 3657
+    },
+    "docs/manual/invoices/PASS.md": {
+      "base_bytes": 159882,
+      "base_sha256": "9bb892facd8419780948fd848ab7698d5d08007ddc9dae4bbb06601ba5e33d7e",
+      "exact_suffix_preserved": true,
+      "added_prefix_bytes": 4471
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "base_bytes": 4122167,
+      "base_sha256": "0f42353f63320d8519278c145d3579958431c3f2b685372dbbf09ed9efdeaa9a",
+      "exact_suffix_preserved": true,
+      "added_prefix_bytes": 3657
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "base_bytes": 3648949,
+      "base_sha256": "79b14d7d6d40ddf14de89d417f961300d7431fbac5f7021238beed9ce335e558",
+      "exact_suffix_preserved": true,
+      "added_prefix_bytes": 3657
+    }
+  },
+  "tracker_pdf": {
+    "pages": 973,
+    "canonical_copies_identical": true,
+    "visual_review": "PASS: newly inserted text on page 1 and transition on page 2 inspected; old historical text retained from complete tracker source.",
+    "new_entry_text_checks": [
+      "K01 HOSTED LIMITED PASS",
+      "LAB-OCR4-20261106-K01",
+      "2 φυσικές σελίδες PDF",
+      "49,60",
+      "NOT CAPTURED",
+      "confidence"
+    ]
+  },
+  "independent_review": "Authored receipt/checkpoint/manual and three registry prefixes reviewed with no required correction; final staged package reviewed separately before publication."
+}
