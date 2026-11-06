@@ -2,6 +2,7 @@ import {staffInventoryAction} from '../src/services/backoffice-staff-inventory-a
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {staffProfiles,staffRequestCapability,changeStaffCapability,validStaffCapabilities} from '../../shared/backoffice-staff.mjs';
+import {targetStocktakeForSavedProduct,shouldRefreshStocktakeAfterAttach} from '../../shared/inventory-stocktake-product-origin.mjs';
 import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services/backoffice-staff-accounts.js';
 import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
@@ -112,4 +113,31 @@ test('personal inventory product attachment maps narrowly to counting; unrelated
   ])assert.equal(staffRequestCapability(method,path),null);
   assert.equal(validStaffCapabilities(['inventory.read','inventory.count']),true);
   assert.equal(validStaffCapabilities(['products.read','products.create']),true);
+});
+
+test('a delayed product-save response still targets the originating stocktake, not the newly selected one',async()=>{
+  const origin=Object.freeze({stocktakeId:'draft-original',storeId:'store-a',scope:'store-a:inventory',barcode:'123'});
+  let selectedStocktakeId='draft-original',resolveSave;
+  const response=new Promise(resolve=>{resolveSave=resolve});
+  const attach=async()=>{
+    const saved=await response;
+    const target=targetStocktakeForSavedProduct(origin,{storeId:'store-a',scope:origin.scope,savedStoreId:saved.storeId});
+    return {target,refresh:shouldRefreshStocktakeAfterAttach(target,selectedStocktakeId)};
+  };
+  const pending=attach();
+  selectedStocktakeId='draft-other';
+  resolveSave({id:'product-1',storeId:'store-a'});
+  assert.deepEqual(await pending,{target:'draft-original',refresh:false});
+  assert.equal(shouldRefreshStocktakeAfterAttach('draft-original','draft-original'),true);
+});
+
+test('product attachment rejects stale store, view or mismatched saved product scope',()=>{
+  const origin={stocktakeId:'draft-original',storeId:'store-a',scope:'store-a:inventory'};
+  const target=(storeId,scope,savedStoreId)=>targetStocktakeForSavedProduct(origin,{storeId,scope,savedStoreId});
+  assert.equal(target('store-a',origin.scope,'store-a'),'draft-original');
+  assert.equal(target('store-b',origin.scope,'store-a'),null);
+  assert.equal(target('store-a','store-a:products','store-a'),null);
+  assert.equal(target('store-a',origin.scope,'store-b'),null);
+  assert.equal(targetStocktakeForSavedProduct(null,{storeId:'store-a',scope:origin.scope,savedStoreId:'store-a'}),null);
+  assert.equal(shouldRefreshStocktakeAfterAttach(null,'draft-original'),false);
 });
