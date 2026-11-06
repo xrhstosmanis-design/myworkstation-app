@@ -33,7 +33,7 @@ jobs:
           from pathlib import Path
           import subprocess, os, hashlib
           OLD_HEAD = '6f5beff4c1b1e2f467023aa966ee02d5a3ac303d'
-          INPUT_PARENT = '36ba90a1173f55d4b9c5184ccbc4001f38d46324'
+          INPUT_PARENT = '7208736c7b577acb9870e0e69d0644dbf022a660'
           MAIN = 'f81aba245787e5ecda325d81ba919ef130a44e63'
           BRANCH = 'feat/cash-audit-clean-main-20261105'
           ACTIVE = 'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md'
@@ -70,7 +70,7 @@ jobs:
           subprocess.run(['git', 'add', '--', ACTIVE], check=True)
           subprocess.run(['git', 'rm', '--', WORKFLOW], check=True)
           assert not git('diff', '--name-only', '--diff-filter=U').strip(), 'unresolved conflict'
-          subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
+          subprocess.run(['git', 'diff', '--cached', '--check', MAIN], check=True)
           tree = git('write-tree').decode().strip()
           assert tree == EXPECTED_TREE, 'final tree differs from reviewed local tree'
           subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
