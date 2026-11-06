@@ -3,6 +3,7 @@ import {Router} from 'express';
 import {prisma} from '../prisma.js';
 import {authorizeCashPaper} from './cash-papers.js';
 import {createCashReconciliationRepository} from '../services/cash-reconciliation-repository.js';
+import {summarizeAutomaticCashCheck} from '../services/cash-automatic-check-summary.js';
 import {periodSchema,reviewRequestId,reconciliationRequest,reconcileError} from '../services/cash-reconciliation-contract.js';
 import {createKioskCashImports,kioskImportRequest,kioskRevokeRequest} from '../services/cash-kiosk-imports.js';
 
@@ -84,6 +85,21 @@ export function createCashReconciliationRouter({db=prisma,authorize=authorizeCas
     if(req.query.fullAudit==='1')scope.fullAudit=true;
     const result=await repository.read(scope,period.data,{historyPage,requestId});await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
   }catch(error){fail(res,error,'READ');}});
+  // Full automatic read-only audit for a selected store and bounded date range.
+  // Existing authorization, source snapshot, paper discovery and report guards
+  // remain authoritative; this route never calls the paid reader or reviews.
+  router.get('/stores/:storeId/automatic-check',async(req,res)=>{try{
+    const parsed=periodSchema.safeParse({from:req.query.from,to:req.query.to});
+    if(!parsed.success)return res.status(400).json({code:'CASH_RECONCILIATION_INVALID_REQUEST',error:'Επίλεξε έγκυρη περίοδο έως 31 ημέρες.'});
+    const {scope}=await authorize(db,req.user,req.params.storeId);
+    scope.generation=await repository.generation(scope);
+    scope.fullAudit=true;
+    const report=await repository.read(scope,parsed.data);
+    await current(req,scope);
+    const automaticCheck=summarizeAutomaticCashCheck(report);
+    res.setHeader('Cache-Control','private, no-store');
+    res.json({...report,automaticCheck});
+  }catch(error){fail(res,error,'AUTOMATIC_CHECK');}});
   router.get('/stores/:storeId/archive',async(req,res)=>{try{
     const result=await readCashReviewedArchive({db,authorize,repository,req});res.setHeader('Cache-Control','private, no-store');res.json(result);
   }catch(error){fail(res,error,'ARCHIVE');}});

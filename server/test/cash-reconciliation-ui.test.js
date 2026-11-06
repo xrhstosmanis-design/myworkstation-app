@@ -213,3 +213,68 @@ test('explicit available-reading view uses only GET and full evidence without di
  const api=async(path,options={})=>{calls.push({path,...options});assert.equal(options.method,undefined,'preview must never POST or charge a provider');return report('A',period);};
  try{await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await act(async()=>button('Έλεγχος με επανυπολογισμούς').click());await act(async()=>button('Έλεγχος με διαθέσιμες αναγνώσεις').click());assert.equal(calls.length,2);assert.equal(new URL(calls[1].path,'https://isolated.invalid').searchParams.get('fullAudit'),'1');assert(calls.every(c=>c.path.startsWith('/api/cash-reconciliation/')));assert.match(document.body.textContent,/SERVER REPORT A/);}finally{await m.cleanup();}
 });
+
+const freeAutomaticButton='Αυτόματος έλεγχος χωρίς χρέωση';
+const withAutomaticSummary=(result,overrides={})=>({...result,automaticCheck:{storeId:result.storeId,reportHash:result.reportHash,status:'REVIEW_REQUIRED',checkedShifts:result.rows.length,pendingShifts:2,cashDifferenceShifts:2,cardDifferenceShifts:0,countingCandidates:1,ambiguousPairs:0,paperCoverage:'INCOMPLETE',unresolvedPapers:1,unreadPaperSources:1,pendingPaperSources:0,reviewPaperSources:0,...overrides}});
+
+for(const kind of ['CONFIRM','OFFSET','REVOKE'])test(`no-charge automatic summary is invalidated by a successful ${kind} and only a fresh automatic GET replaces it`,async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m,calls=[];let reviewed=false;
+ const snapshot=()=>({...report('A',period),reportHash:(reviewed?'e':'d').repeat(64),text:reviewed?'UPDATED CANONICAL REPORT '+kind:'ORIGINAL CANONICAL REPORT',history:[{id:'prior-confirmation',kind:'CONFIRM',sessionId:'a',active:true,actorName:'Test',note:'Existing synthetic review',createdAt:period.from}]});
+ const api=async(path,options={})=>{
+  calls.push({path,...options});const url=new URL(path,'https://isolated.invalid');
+  if(options.method==='POST'){
+   assert.equal(url.pathname,'/api/cash-reconciliation/stores/A/reviews');assert.equal(url.searchParams.get('fullAudit'),'1');
+   assert.equal(JSON.parse(options.body).data.kind,kind);reviewed=true;return snapshot();
+  }
+  assert.equal(options.method,undefined);
+  return url.pathname.endsWith('/automatic-check')?withAutomaticSummary(snapshot(),reviewed?{status:'HOLD',countingCandidates:0}:{}):snapshot();
+ };
+ const click=async el=>{assert.ok(el);await act(async()=>el.click());},change=async(el,value)=>{
+  assert.ok(el);await act(async()=>{const proto=el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?dom.window.HTMLTextAreaElement.prototype:dom.window.HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});
+ };
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));assert.equal(calls.length,0);
+  await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(freeAutomaticButton));
+  assert.match(document.querySelector('.cash-auto-summary')?.textContent||'',/Χρειάζεται ανθρώπινος έλεγχος/);
+  assert.match(document.querySelector('.cash-auto-summary').textContent,/Πιθανά λάθη καταμέτρησης: 1/);
+  await change(field('Ενέργεια ελέγχου'),kind);
+  if(kind==='OFFSET'){
+   await change(field('Προηγούμενη βάρδια'),'a');await change(field('Επόμενη βάρδια'),'b');await change(field('Επιβεβαιωμένο ποσό'),'80,00');
+  }else if(kind==='CONFIRM')await change(field('Βάρδια ελέγχου'),'a');
+  else await change(field('Καταχώρηση προς αναίρεση'),'prior-confirmation');
+  await change(field('Τεκμηρίωση'),'Επανελέγχθηκαν τα στοιχεία της βάρδιας.');await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));
+  assert.equal(calls.filter(c=>c.method==='POST').length,1);assert.equal(document.querySelector('pre').textContent,'UPDATED CANONICAL REPORT '+kind);
+  assert.equal(document.querySelector('.cash-auto-summary'),null,'summary of the old report must not accompany a newly accepted canonical report');
+  await click(button(freeAutomaticButton));
+  assert.match(document.querySelector('.cash-auto-summary')?.textContent||'',/HOLD — εκκρεμεί τεκμηρίωση/);
+  assert.match(document.querySelector('.cash-auto-summary').textContent,/Πιθανά λάθη καταμέτρησης: 0/);
+  assert.equal(calls.filter(c=>c.method==='POST').length,1,'fresh no-charge check never replays the review');
+  assert.equal(calls.filter(c=>c.path.includes('/automatic-check')).length,2);
+  assert(calls.every(c=>c.path.startsWith('/api/cash-reconciliation/stores/A')),'no paid paper reader is requested');
+ }finally{await m.cleanup();}
+});
+
+for(const changed of ['store','period'])test(`no-charge automatic check discards a delayed summary after the selected ${changed} changes`,async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let release,delay=true;
+ const api=async(path,options={})=>{
+  calls.push({path,...options});assert.equal(options.method,undefined);
+  const url=new URL(path,'https://isolated.invalid'),store=url.pathname.split('/')[4],p={from:url.searchParams.get('from'),to:url.searchParams.get('to')},result=report(store,p);
+  if(url.pathname.endsWith('/automatic-check')){
+   if(delay)return new Promise(resolve=>release=()=>resolve(withAutomaticSummary(result)));
+   return withAutomaticSummary(result);
+  }
+  return result;
+ };
+ const render=(store,p)=>act(async()=>root.render(React.createElement(Component,{api,storeId:store,...p}))),click=async el=>{assert.ok(el);await act(async()=>el.click());};
+ try{
+  await render('A',period);await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(freeAutomaticButton));assert.equal(typeof release,'function');
+  const newStore=changed==='store'?'B':'A',newPeriod=changed==='period'?{from:'2026-10-24',to:'2026-10-25'}:period;
+  await render(newStore,newPeriod);await act(async()=>release());
+  assert.equal(document.querySelector('.cash-auto-summary'),null);assert.equal(document.querySelector('pre'),null);
+  assert.equal(button('Έλεγχος με επανυπολογισμούς').getAttribute('aria-expanded'),'false');assert.equal(calls.length,2,'changing scope does not replay a request');
+  delay=false;await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(freeAutomaticButton));
+  assert.ok(document.querySelector('.cash-auto-summary'));assert.equal(document.querySelector('pre').textContent,report(newStore,newPeriod).text);
+  const latest=new URL(calls.at(-1).path,'https://isolated.invalid');assert.equal(latest.pathname,`/api/cash-reconciliation/stores/${newStore}/automatic-check`);assert.equal(latest.searchParams.get('from'),newPeriod.from);assert.equal(latest.searchParams.get('to'),newPeriod.to);
+  assert.equal(calls.length,4);
+ }finally{await m.cleanup();}
+});

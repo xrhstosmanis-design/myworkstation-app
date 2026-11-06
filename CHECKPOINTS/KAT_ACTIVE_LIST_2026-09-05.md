@@ -1,3 +1,19 @@
+## 06/11/2026 — CASH-ADJACENT-COUNT-21 / TWO REVIEW CORRECTIONS / LOCAL VERIFICATION
+
+Same owner, draft PR #3683. Corrected stale automatic summaries after manual review and selected-period boundary ambiguity; unavailable outer context cannot produce a numeric allocation proposal. Node20 focused96/96PASS; actual panel/JWT/store authorization/route/canonical projection with synthetic sources passed Chromium desktop/mobile, zero write/provider hooks. These are isolated local checks, not hosted cash LAB or financial finality. Previous fullCI42165538303 was green only for6f5beff4; corrected head requires fresh full native CI. Pinned mainf81aba24 and every peer registry byte preserved. Next: publish the reviewed branch through the authorized connector and bounded Git synchronization, then exact CI and guarded release/hosted acceptance. Parent CASH-UNIFIED-AUDIT-15 remains OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md.
+
+## 06/11/2026 — CASH-ADJACENT-COUNT-21 / TASK 5 REVIEW CONTINUATION / SAME OWNER
+
+Continue draft PR #3683, feat/cash-audit-clean-main-20261105. Exact previous head6f5beff4 fullCI42165538303 passed all5 jobs (5940+8 native tests). Hosted automatic-check acceptance and parent financial reconciliation remain OPEN. Read-only review found stale automatic summary after manual review and selected-period boundary ambiguity; bounded corrections and isolated native/browser regression are next. Current-main f81aba24 peer records/source remain intact. Local Git publication lacks credentials; preserve full bytes and do not claim a push/release. No paid OCR, production or money/employee mutation. Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md.
+
+## 06/11/2026 - CASH-ADJACENT-COUNT-21 / RETAINED OWNER / CURRENT-MAIN SYNC / AWAITING CI AND LAB
+
+Continuation on existing PR #3683 and feat/cash-audit-clean-main-20261105. Previous exact head 3a97af7110c56797103c0626ad1dbb7e7cddbf90 passed native CI42087752586, all five jobs. Integrated main0cd52a6c without changing cash runtime/test bytes or inventory Enter source/test/checkpoint. Both additive registry prefixes retained after complete common-base suffix verification. Fresh integrated-head CI and authenticated selected-store read-only acceptance remain pending. DRAFT; parent CASH-UNIFIED-AUDIT-15 OPEN. No main update, deploy, paid OCR, OFFSET, financial/employee mutation or approval. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md. Next inspect exact new-head CI.
+
+## 05/11/2026 — CASH-ADJACENT-COUNT-21 / AUTOMATIC CASH AUDIT / DRAFT SOURCE INTEGRATION
+
+PR #3683 (feat/cash-audit-clean-main-20261105) integrates 15 cash-only source/test/checkpoint files over main 759311ed86ad3d58f77b6819fb408043a60f6031 without overwriting parallel tasks. Previous pre-integration CI rerun 42064325969 passed 5/5, but merged-head run 42086169126 stopped at the mandatory active-list gate before executing full source tests; this additive entry fixes that prerequisite, not an implementation PASS. BackOffice selected-store automatic audit remains read-only and without paid OCR. Uncertain counting pairs or paper evidence require HOLD/review, never automatic OFFSET, cash movement or employee charge. Pending: exact-head full CI, review, authenticated selected-store LAB acceptance, and guarded release. No production deploy or financial mutation. Task-local checkpoint: CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md.
+
 ## 06/11/2026 — CENTRAL-AGENT-IO-01 / ASSIGNED / DOCS CANDIDATE / NOT TESTED
 
 Owner: κεντρικός συντονιστής /root. Branch: `docs/central-bounded-agent-io-20261106`. Ρητή εντολή ιδιοκτήτη «Ξεκίνα» για κεντρική δοκιμή περιορισμού εξόδου σε όλες τις σελίδες. Ανεξάρτητο scope: μόνο κοινές οδηγίες ανάγνωσης/μεταφοράς, χωρίς ανάληψη εργασιών άλλων owners ή αλλαγή εφαρμογής.

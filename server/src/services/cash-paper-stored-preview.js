@@ -1,7 +1,8 @@
 // GET-only stored evidence. The caller supplies the unchanged paid-admission
 // result and budget. No provider, writer or cross-request cache is available here.
-const maxByteLimit=25*1024*1024;
+const maxByteLimit=100*1024*1024;
 const maxOriginalBytes=7*1024*1024; // Existing validatePaperSource ceiling.
+const smallAdmittedBudget=25*1024*1024; // Preserve existing small-set validation order.
 const reasons=new Set(['ATTACHMENT_BYTE_LIMIT','ATTACHMENT_SIZE_UNAVAILABLE']);
 const discoverable=new Set(['AWAITING_READING','LIMITED']);
 const validSource=s=>s&&typeof s.sourceId==='string'&&/^[a-f0-9]{64}$/.test(s.checksum||'')&&Array.isArray(s.references)&&s.references.length>0&&s.references.every(r=>typeof r?.messageId==='string'&&r.messageId.trim());
@@ -10,8 +11,14 @@ const unresolved=()=>({status:'REQUIRES_REVIEW'});
 export async function readStoredCashPaperPreview({repository,scope,discovery,admitted,byteLimit}){
   if(!Number.isSafeInteger(byteLimit)||byteLimit<=0||byteLimit>maxByteLimit)throw new TypeError('Invalid stored-paper byte budget');
   const fallback=admitted?.status==='UNAVAILABLE'&&reasons.has(admitted.reason)&&discoverable.has(discovery?.status)&&Array.isArray(discovery.sources)&&discovery.sources.length>0&&discovery.sources.length<=50;
+  // For large admitted sets, inspect cached reading state before fetching the
+  // original binary. NOT_READ/PENDING/REQUIRES_REVIEW never require source bytes.
+  // Every extracted reading still revalidates the exact original hash and size.
+  const largeAdmitted=!fallback&&admitted?.status==='AWAITING_READING'&&Array.isArray(admitted.sources)
+    &&admitted.sources.length<=50&&admitted.sources.every(s=>Number.isSafeInteger(s?.sizeBytes)&&s.sizeBytes>0)
+    &&admitted.sources.reduce((total,source)=>total+source.sizeBytes,0)>smallAdmittedBudget;
   const papers=[];
-  if(!fallback){
+  if(!fallback&&!largeAdmitted){
     // Preserve the admitted legacy path, including validation-before-get,
     // ordering and unresolved error shape. It is not a new paid-read path.
     for(const source of admitted?.sources||[]){
@@ -47,5 +54,5 @@ export async function readStoredCashPaperPreview({repository,scope,discovery,adm
   }
   // Partial admission never proves a complete scan, even if every eligible
   // stored original was validated. The original discovery snapshot is retained.
-  return {discovery:{...discovery,status:'LIMITED',reason:admitted.reason,complete:false},papers};
+  return largeAdmitted?{discovery:admitted,papers}:{discovery:{...discovery,status:'LIMITED',reason:admitted.reason,complete:false},papers};
 }
