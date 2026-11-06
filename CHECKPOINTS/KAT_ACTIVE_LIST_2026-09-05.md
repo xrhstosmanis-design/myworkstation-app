@@ -1,3 +1,9 @@
+## 06/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / counted-only filter #3690 OPEN
+
+- Owner /root continues the existing bounded filter PR. The accepted Owner/Super Admin keyboard Enter result is recorded on main via #3694, revision eefc5672.
+- PR #3690 run 42082802761 failed at the active-list/checkpoint policy check. Reconcile the branch with main, retain the existing Enter regression, and cover the filter across a temporary detail unmount and a different stocktake.
+- Exact updated PR CI and hosted LAB acceptance remain pending. Filter changes display only. No new count, stock movement, finalization or financial write was performed.
+
 ## 05/11/2026 21:43 Europe/Athens - INVENTORY-SCAN-WORKFLOW-01 / ENTER PR #3689 / LIMITED OWNER UI LAB PASS / WHOLE SCOPE OPEN
 
 Retained owner: /root. Original claim: #3684. Enter branch: fix/inventory-quantity-enter-20261105. The approved PR head 962bf8113654da77051db1e2ac783fa223daeacd merged as 0cd52a6c49c7da92b41756efec911e846b7e5aa4, with the reviewed tree unchanged. Full PR CI 42090428560 and exact main CI 42093525223 each completed all five jobs successfully: 5,913 server tests + 8 backup tests passed, with zero failures or skips. Normal guard 42095172878 / job 127483286831 triggered the pinned deployment at 19:34:56 UTC and confirmed the exact healthy revision at 19:36:59 UTC. Independent public health at 19:37:13 UTC returned HTTP 200, ok=true and the exact merged revision. Rollback artifact 13445879862 preserves previous healthy revision 759311ed. The freshly loaded LAB client main-JEXcvf8-.js matched the served HTML. These are release checks, separate from the measured observation below.

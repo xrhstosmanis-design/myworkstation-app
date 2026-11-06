@@ -25,7 +25,7 @@ export function inventoryTotals(lines = []) {
   );
 }
 
-export default function InventoryFastCount({ api, current, reload, setError, delegated = null }) {
+export default function InventoryFastCount({ api, current, reload, setError, delegated = null, showAllPreference, onShowAllPreferenceChange }) {
   const canCount = !delegated || (delegated.canCount === true && current.status === "DRAFT");
   const canClear = !delegated || (delegated.canClear === true && current.status === "DRAFT");
   const canBulkZero = !delegated || (delegated.canBulkZero === true && current.status === "DRAFT");
@@ -41,7 +41,13 @@ export default function InventoryFastCount({ api, current, reload, setError, del
   const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [replaceCount, setReplaceCount] = useState(false);
-  const [showAll, setShowAll] = useState(Boolean(delegated) || current.status !== "DRAFT");
+  const [localShowAll, setLocalShowAll] = useState(Boolean(delegated) || current.status !== "DRAFT");
+  const showAll = showAllPreference ?? localShowAll;
+  const setShowAll = updater => {
+    const next = typeof updater === "function" ? updater(showAll) : updater;
+    if (onShowAllPreferenceChange) onShowAllPreferenceChange(next);
+    else setLocalShowAll(next);
+  };
   const [matches, setMatches] = useState([]);
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());

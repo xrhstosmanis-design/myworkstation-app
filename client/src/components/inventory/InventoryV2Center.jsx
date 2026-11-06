@@ -47,6 +47,8 @@ export default function InventoryV2Center({
   const locked = Boolean(delegated?.locked||reviewLocked);
   const finalizingRef = useRef(false);
   const [mobileView,setMobileView]=useState(false);
+  // Keep the display filter while a detail refresh temporarily unmounts FastCount.
+  const [countFilterByStocktake,setCountFilterByStocktake]=useState({});
   useEffect(()=>setMobileView(false),[current?.id,current?.status]);
   useEffect(() => { setFinalizeReason(current?.scopeType === "FREE" ? "Καταχώρηση καταμετρημένων ειδών" : ""); }, [current?.id, current?.scopeType]);
   const grantUrl = !delegated && grant ? `${window.location.origin}${grant.accessUrl}` : "";
@@ -613,7 +615,7 @@ export default function InventoryV2Center({
                   )}
                 </form>
               )}
-              {!delegated && mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount key={delegated ? current.id : undefined} api={api} current={current} reload={open} setError={delegated ? delegated.setError : setError} delegated={delegated ? {canCount:delegated.canCount,canClear:delegated.canClear,canBulkZero:delegated.canBulkZero,onClear:delegated.onClear,onBulkZero:delegated.onBulkZero,canSeeExpected:delegated.canFinalize||delegated.canSeeExpected,locked,onCount:delegated.onCount} : null} />}
+              {!delegated && mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount key={delegated ? current.id : undefined} showAllPreference={Object.prototype.hasOwnProperty.call(countFilterByStocktake,current.id) ? countFilterByStocktake[current.id] : (Boolean(delegated) || current.status !== "DRAFT")} onShowAllPreferenceChange={value=>setCountFilterByStocktake(previous=>({...previous,[current.id]:value}))} api={api} current={current} reload={open} setError={delegated ? delegated.setError : setError} delegated={delegated ? {canCount:delegated.canCount,canClear:delegated.canClear,canBulkZero:delegated.canBulkZero,onClear:delegated.onClear,onBulkZero:delegated.onBulkZero,canSeeExpected:delegated.canFinalize||delegated.canSeeExpected,locked,onCount:delegated.onCount} : null} />}
               <footer>
                 {delegated ? (delegated.canFinalize ? delegated.finalizationForm : null) : <>
                 <span>
