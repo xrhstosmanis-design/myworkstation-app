@@ -1,5 +1,19 @@
 # 06/11/2026 — Task 5 automatic cash audit / retained owner / review continuation
 
+## Current delivery status — 06/11/2026, installation verified / AWAITING LAB
+
+This section supersedes only the older publication/release status below; those entries remain historical evidence. The owner explicitly approved installation of PR #3683 and the subsequent read-only MYWORKSTATION LAB check with the reply «εγκρινω». Source head `795720d95ae63c4687748dc82089481a50d9c335` passed exact source CI [42274917114](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42274917114), all five jobs, 5952 + 8 tests, zero failures/skips/cancellations. PR #3683 was merged at 19:14:59 UTC as `a4e0b020a0fd444892133a5a6399df9ed359bf71`.
+
+Exact-main CI [42277948014](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42277948014) passed on that merge, first attempt, all five jobs and all 5960 tests; completed 19:29:26 UTC. The existing guarded Render workflow [42280068079](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42280068079) started automatically, passed full-CI/freshness checks, preserved the preceding healthy revision `0eab200446e5284bb7312a612d923feb7116be5c`, and completed SUCCESS at 19:32:17 UTC / 21:32:17 Athens. Its exact-health step observed the approved revision healthy at 19:32:13 UTC. Root independently observed `/api/health` with `ok:true` and the same revision at 20:01:02 UTC. No manual deployment or rerun was needed.
+
+**TECHNICAL RELEASE VERIFIED; HOSTED CASH ACCEPTANCE NOT TESTED.** The native `/platform-admin` page initially required login. After a first secure-auth submission failure with no visible application error, the user requested the form again; that secure request advanced to the 2FA screen. The subsequent secure 2FA call timed out, and both the state check and the prescribed fresh-tab verification also timed out. Authentication completion is UNKNOWN. No authenticated cash report or automatic-check action was observed, and this access/tooling block is not a cash application regression. No paid reader, review/offset, financial/employee adjustment or outbound email was performed.
+
+Task `CASH-ADJACENT-COUNT-21` and parent `CASH-UNIFIED-AUDIT-15` retain the same owner and remain OPEN. Prior scoped basic/full-report acceptance remains protected. Handwritten accuracy, physical cash agreement and final financial reconciliation remain OPEN. This is a release receipt, not a new LAB/LIVE/USER functional PASS; no manual completion or financial acceptance is implied. The active registry receives an additive delivery update while preserving its full existing bytes. This documentation-only receipt does not require a new runtime deployment.
+
+**Next action:** once the native browser session can be observed, verify the deployed revision and selected LAB store/period, capture a fresh read-only baseline, run «Αυτόματος έλεγχος χωρίς χρέωση» once, and record the scoped result and unchanged measured values. Historical unread evidence may correctly remain HOLD. Do not replay a transaction, paid OCR or manual review to repair this missing acceptance observation.
+
+Evidence: `CHECKPOINTS/EVIDENCE/cash-automatic-review-20261106/release-receipt.json`. Existing `source-verification.json` remains unchanged.
+
 Continue CASH-ADJACENT-COUNT-21 and parent CASH-UNIFIED-AUDIT-15 on existing draft PR #3683, branch `feat/cash-audit-clean-main-20261105`. PR #3657 is historical and must not be advanced. The owner assigned task 5 in this conversation. No competing scope or ownership transfer.
 
 ## Before-change evidence

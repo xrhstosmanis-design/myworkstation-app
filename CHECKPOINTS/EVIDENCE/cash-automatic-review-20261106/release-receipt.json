@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "task": "CASH-ADJACENT-COUNT-21",
+  "parent": "CASH-UNIFIED-AUDIT-15",
+  "owner": "retained existing cash owner",
+  "taskStatus": "OPEN",
+  "parentStatus": "OPEN",
+  "approval": {
+    "date": "2026-11-06",
+    "verbatim": "εγκρινω",
+    "scope": "Install PR #3683, then authenticated read-only MYWORKSTATION LAB acceptance"
+  },
+  "source": {
+    "pr": 3683,
+    "head": "795720d95ae63c4687748dc82089481a50d9c335",
+    "mergedRevision": "a4e0b020a0fd444892133a5a6399df9ed359bf71",
+    "mergedAt": "2026-11-06T19:14:59Z"
+  },
+  "sourceCi": {
+    "run": 42274917114,
+    "conclusion": "success",
+    "jobsPassed": 5,
+    "testsPassed": 5960,
+    "failures": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "completedAt": "2026-11-06T19:06:50Z"
+  },
+  "mainCi": {
+    "run": 42277948014,
+    "revision": "a4e0b020a0fd444892133a5a6399df9ed359bf71",
+    "event": "push",
+    "attempt": 1,
+    "conclusion": "success",
+    "jobsPassed": 5,
+    "nativeJob": 128099241485,
+    "testsPassed": 5960,
+    "failures": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "completedAt": "2026-11-06T19:29:26Z"
+  },
+  "deployment": {
+    "workflowRun": 42280068079,
+    "job": 128106541193,
+    "event": "workflow_run",
+    "attempt": 1,
+    "revision": "a4e0b020a0fd444892133a5a6399df9ed359bf71",
+    "conclusion": "success",
+    "completedAt": "2026-11-06T19:32:17Z",
+    "exactHealthAt": "2026-11-06T19:32:13Z",
+    "manualTrigger": false,
+    "rerun": false
+  },
+  "rollback": {
+    "revision": "0eab200446e5284bb7312a612d923feb7116be5c",
+    "artifactId": 13534797762,
+    "bytes": 339,
+    "digest": "sha256:b99079337bd029b2cf3ae94dd441ab977093b669033bb56eb5107657813849b0"
+  },
+  "independentHealth": {
+    "observedAt": "2026-11-06T20:01:02.899780+00:00",
+    "ok": true,
+    "revision": "a4e0b020a0fd444892133a5a6399df9ed359bf71",
+    "version": "0.22.0+kat-test-pos"
+  },
+  "acceptance": {
+    "hostedCashAcceptance": "NOT_TESTED",
+    "authentication": "UNKNOWN",
+    "blocker": "BROWSER_UNRESPONSIVE_AFTER_SECURE_2FA_REQUEST",
+    "lastObservedNativePage": "2FA screen",
+    "confirmedAuthenticatedCashActions": 0,
+    "applicationRegression": "NOT_ESTABLISHED",
+    "financialFinality": "OPEN"
+  },
+  "nextAction": "Re-establish observable native /platform-admin access, verify exact revision and LAB scope, capture fresh read-only baseline, run no-charge automatic check once and record measured result.",
+  "registryPreservation": {
+    "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+    "priorBytes": 5301426,
+    "priorSha256": "7a6c7c78637176dc4257f1944b410d5fdc84bf2329e87827cb3bddd147af5c95",
+    "method": "additive prefix; complete prior bytes retained as suffix"
+  },
+  "limits": [
+    "No hosted LAB/LIVE/USER functional PASS claimed",
+    "No paid reader, manual review/offset or financial/employee mutation",
+    "No outbound email",
+    "No runtime deployment required for this documentation-only receipt"
+  ]
+}
