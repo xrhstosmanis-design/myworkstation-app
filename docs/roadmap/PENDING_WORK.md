@@ -1,3 +1,13 @@
+## 06/11/2026 — CENTRAL-AGENT-IO-01 / ASSIGNED / DOCS CANDIDATE / NOT TESTED
+
+Owner: κεντρικός συντονιστής /root. Branch: `docs/central-bounded-agent-io-20261106`. Ρητή εντολή ιδιοκτήτη «Ξεκίνα» για κεντρική δοκιμή περιορισμού εξόδου σε όλες τις σελίδες. Ανεξάρτητο scope: μόνο κοινές οδηγίες ανάγνωσης/μεταφοράς, χωρίς ανάληψη εργασιών άλλων owners ή αλλαγή εφαρμογής.
+
+Base main: `0eab200446e5284bb7312a612d923feb7116be5c`. Τοπική ανάκτηση πλήρων μητρώων: tracker 4.119.924 bytes, pending 3.646.706 bytes, ενεργή λίστα 5.295.710 bytes. Η συνδεδεμένη ανάγνωση επέστρεψε κενό content για τα μεγάλα αρχεία, ενώ το τοπικό Git έδωσε μη κενά δεδομένα. Αυτό τεκμηριώνει πρόβλημα της συγκεκριμένης διαδρομής ανάγνωσης, όχι αιτία ή λύση του ορίου συνομιλίας.
+
+Πρόταση: τοπικό Git για μεγάλα αρχεία, προέλεγχος μεγέθους, μικρά αποσπάσματα/diff, όρια γραμμών ΚΑΙ χαρακτήρων, καμία εμφάνιση ολόκληρου blob/Base64 και ανεξάρτητος έλεγχος remote πριν από επανάληψη ενέργειας. Διατηρείται αυτούσιο όλο το προηγούμενο ιστορικό, οι αναθέσεις και οι κανόνες PASS/CI/LAB. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-06-central-bounded-agent-io.md`.
+
+Status: NOT TESTED ως κεντρική παράκαμψη σε νέα πλήρη εργασία. Δεν είναι platform fix ή LAB PASS. Next: review/CI και ενσωμάτωση του ακριβούς docs-only PR, έπειτα μία οριοθετημένη εργασία με καταγεγραμμένα μεγέθη εξόδου. Καμία αναγέννηση PDF ή PASS closure σε αυτή την αλλαγή· όλα τα υπάρχοντα artifacts διατηρούνται.
+
 ## 05/11/2026 21:43 Europe/Athens - INVENTORY-SCAN-WORKFLOW-01 / REMAINING SCOPE OPEN / OWNER ENTER RECEIPT
 
 Retained owner: /root, original claim #3684. Owner/SA browser-keyboard Enter acceptance is completed only for the measured shared-component path. Source PR #3689 merged as 0cd52a6c49c7da92b41756efec911e846b7e5aa4. Full PR CI 42090428560 and exact main CI 42093525223 completed all five jobs successfully: 5,913 server tests + 8 backup tests passed, with zero failures or skips. Normal guard 42095172878 / job 127483286831 completed the release; independent health at 19:37:13 UTC confirmed that exact revision.
