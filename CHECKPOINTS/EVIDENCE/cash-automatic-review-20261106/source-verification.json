@@ -1,0 +1,196 @@
+{
+  "classification": "SOURCE_AND_LOCAL_SYNTHETIC_VERIFICATION_ONLY",
+  "previous_remote_head": "6f5beff4c1b1e2f467023aa966ee02d5a3ac303d",
+  "pinned_main": "f81aba245787e5ecda325d81ba919ef130a44e63",
+  "previous_full_ci": {
+    "run": 42165538303,
+    "conclusion": "success",
+    "scope": "previous head only"
+  },
+  "focused_native": {
+    "node": "v20.20.2",
+    "environment": {
+      "NODE_ENV": "test"
+    },
+    "command": [
+      "node",
+      "--test",
+      "server/test/cash-adjacent-counting-errors.test.js",
+      "server/test/cash-adjacent-counting-report.test.js",
+      "server/test/cash-automatic-check-summary.test.js",
+      "server/test/cash-paper-automatic.test.js",
+      "server/test/cash-paper-stored-preview.test.js",
+      "server/test/cash-reviewed-automatic.test.js",
+      "server/test/cash-reconciliation-http.test.js",
+      "server/test/cash-reconciliation-ui.test.js"
+    ],
+    "tests": 96,
+    "pass": 96,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "log_sha256": "fccabe2cb41485dc0e8bd185860a34b63aba95571d7d8f6c9162775f601b8faa"
+  },
+  "browser": {
+    "testedAt": "2026-11-06T18:45:18.092Z",
+    "classification": "LOCAL_SYNTHETIC_BROWSER_AND_HTTP_PASS",
+    "scope": "Actual React panel, JWT session middleware, default owner/store/module authorization, registered route, canonical report projection; injected synthetic sessions and source repository",
+    "notTested": [
+      "Native local PostgreSQL: root-only UID map prevents initdb",
+      "Hosted authenticated BackOffice cash LAB",
+      "Real-store handwritten evidence accuracy",
+      "Production deploy or financial acceptance"
+    ],
+    "gitHead": "d585485a1c32d80e1a8c7b9ea1365314982073ad",
+    "sourceSha256": {
+      "client/src/components/shared/CashReconciliationPanel.jsx": "89fcd09685423aa0bd22e3f1cfb201a1a621e1be9b96b43dbc641a4e7b6e1a3d",
+      "server/src/routes/cash-reconciliation.js": "897f0842b7b1da1fd9f0f69f797eb18d5b00bc18ecc9b03a35063d29a21500f0",
+      "server/src/services/cash-adjacent-counting-errors.js": "42002191be29e505930a2fcc9c4cdd7d6982270223d7acc8cd295aaf73e1a893",
+      "server/src/services/cash-automatic-check-summary.js": "8b75ca9319461a64a9b69621fa2a49012482cd24a8f40877d43e7fe6d720b886",
+      "server/src/services/cash-reconciliation-report.js": "ac993be6d620db65afd3850ecedaaf8e7e210f758664655885235f5b1717ea09"
+    },
+    "node": "v20.20.2",
+    "chromium": "131.0.6778.0",
+    "httpSecurity": {
+      "unauthenticated": 401,
+      "invalidJwt": 401,
+      "employee": 403,
+      "foreignStore": 404,
+      "invalidPeriod": 400,
+      "noSourceReadsBeforeAuthorization": true,
+      "privateNoStore": true,
+      "emptyPeriodHolds": true
+    },
+    "reads": 16,
+    "writes": 0,
+    "providerCalls": 0,
+    "sessionReads": 19,
+    "browserEvidence": [
+      {
+        "status": "PASS",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "requestCount": 7,
+        "requests": [
+          {
+            "path": "/api/cash-reconciliation/stores/storeA?from=2026-10-23&to=2026-10-23&historyPage=0",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA/automatic-check?from=2026-10-23&to=2026-10-23",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA?from=2026-10-23&to=2026-10-23&historyPage=0&fullAudit=1",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA/automatic-check?from=2026-10-23&to=2026-10-23",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeB?from=2026-10-23&to=2026-10-23&historyPage=0",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA?from=2026-10-23&to=2026-10-23&historyPage=0",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA/automatic-check?from=2026-10-23&to=2026-10-23",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          }
+        ],
+        "automaticStatus": "HOLD",
+        "candidate": {
+          "commonCents": 34308,
+          "previousResidualCents": -92,
+          "nextResidualCents": 0
+        },
+        "unreadPaperSources": 1,
+        "noMutationRequests": true,
+        "staleStoreReplyDiscarded": true
+      },
+      {
+        "status": "PASS",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "requestCount": 7,
+        "requests": [
+          {
+            "path": "/api/cash-reconciliation/stores/storeA?from=2026-10-23&to=2026-10-23&historyPage=0",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA/automatic-check?from=2026-10-23&to=2026-10-23",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA?from=2026-10-23&to=2026-10-23&historyPage=0&fullAudit=1",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA/automatic-check?from=2026-10-23&to=2026-10-23",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeB?from=2026-10-23&to=2026-10-23&historyPage=0",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA?from=2026-10-23&to=2026-10-23&historyPage=0",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          },
+          {
+            "path": "/api/cash-reconciliation/stores/storeA/automatic-check?from=2026-10-23&to=2026-10-23",
+            "method": "GET",
+            "hasBody": false,
+            "status": 200
+          }
+        ],
+        "automaticStatus": "HOLD",
+        "candidate": {
+          "commonCents": 34308,
+          "previousResidualCents": -92,
+          "nextResidualCents": 0
+        },
+        "unreadPaperSources": 1,
+        "noMutationRequests": true,
+        "staleStoreReplyDiscarded": true
+      }
+    ]
+  },
+  "new_head_full_ci": "PENDING",
+  "hosted_cash_acceptance": "NOT_TESTED",
+  "financial_acceptance": "OPEN"
+}

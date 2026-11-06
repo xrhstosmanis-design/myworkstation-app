@@ -19,6 +19,14 @@ const base=(x=-34400,y=34308)=>{
   const rows=new Map([['a',{sessionId:'a',sourceHash:'hash-a',operatorName:'Night',remainingCents:x,offsetCents:0,offsets:[],recheck:false,reviewed:false,auditValid:true,cardCents:-22750}],['b',{sessionId:'b',sourceHash:'hash-b',operatorName:'Morning',remainingCents:y,offsetCents:0,offsets:[],recheck:false,reviewed:false,auditValid:true,cardCents:22750}]]);
   return {source:{sessions,rule:{mode:'FULL',carryOverEnabled:true},selectedIds:['a','b']},rows};
 };
+const triple=()=>{
+  const input=base(),b=input.source.sessions.get('b').session;
+  b.nextSession={id:'c'};const c={id:'c',companyId:'company',storeId:'store',terminalPos:'POS1',status:'CLOSED',openedAt:'2026-10-23T11:11:00Z',closedAt:'2026-10-23T18:00:00Z',openingOperational:'1250.00',previousSession:{id:'b'}};
+  b.actualOperational='1250.00';input.source.sessions.set('c',{session:c,sourceHash:'hash-c'});
+  input.rows.set('c',{sessionId:'c',sourceHash:'hash-c',operatorName:'Afternoon',remainingCents:-10000,offsetCents:0,offsets:[],recheck:false,reviewed:false,auditValid:true,cardCents:0});
+  input.source.selectedIds=['a','b','c'];
+  return input;
+};
 const project=input=>projectAdjacentCashCountingCandidates({...input,immediatePair:immediately,cashCurrent:current,exactCents:cents,localDay:x=>new Date(x).toISOString().slice(0,10)});
 
 test('unequal adjacent opposite signs produce a counting candidate plus exact residual without touching cash or cards',()=>{
@@ -76,13 +84,40 @@ test('cards-only opposite differences cannot manufacture a cash-counting finding
   const input=base(0,0);input.rows.get('a').cardCents=-22750;input.rows.get('b').cardCents=22750;assert.deepEqual(project(input),[]);
 });
 test('triple alternating differences are disclosed as ambiguous without allocating the same shift twice',()=>{
-  const input=base(),b=input.source.sessions.get('b').session;
-  b.nextSession={id:'c'};const c={id:'c',companyId:'company',storeId:'store',terminalPos:'POS1',status:'CLOSED',openedAt:'2026-10-23T11:11:00Z',closedAt:'2026-10-23T18:00:00Z',openingOperational:'1250.00',previousSession:{id:'b'}};
-  b.actualOperational='1250.00';input.source.sessions.set('c',{session:c,sourceHash:'hash-c'});
-  input.rows.set('c',{sessionId:'c',sourceHash:'hash-c',operatorName:'Afternoon',remainingCents:-10000,offsetCents:0,offsets:[],recheck:false,reviewed:false,auditValid:true,cardCents:0});
-  input.source.selectedIds=['a','b','c'];
+  const input=triple();
   const pairs=project(input);assert.equal(pairs.length,2);assert(pairs.every(p=>p.status==='AMBIGUOUS_OVERLAP'&&p.commonCents===null&&p.previousResidualCents===null&&p.nextResidualCents===null));
   assert.match(adjacentCashCountingText(pairs).join('\n'),/ΑΜΦΙΒΟΛΗ ΑΛΛΗΛΟΥΧΙΑ/);
+});
+test('a selected first or last shift retains an out-of-period competing pair as ambiguity',()=>{
+  for(const selected of ['a','c']){
+    const input=triple();input.source.selectedIds=[selected];const before=structuredClone(input),pairs=project(input);
+    assert.equal(pairs.length,1,'only the pair touching the selected shift is displayed');
+    assert.equal(pairs[0].status,'AMBIGUOUS_OVERLAP');
+    assert.deepEqual([pairs[0].commonCents,pairs[0].previousResidualCents,pairs[0].nextResidualCents],[null,null,null]);
+    assert.equal(selected==='a'?pairs[0].previousSessionId:pairs[0].nextSessionId,selected);
+    assert.deepEqual(input,before,'period filtering cannot change source amounts, reviews or identifiers');
+  }
+});
+test('missing outer-neighbour evidence suppresses a numeric proposal without claiming proven ambiguity',()=>{
+  for(const [selected,missing] of [['a','c'],['c','a']]){
+    const input=triple();input.source.selectedIds=[selected];input.source.sessions.delete(missing);input.rows.delete(missing);
+    const before=structuredClone(input),pairs=project(input);
+    assert.deepEqual(pairs,[]);
+    assert.deepEqual(adjacentCashCountingText(pairs),[],'unavailable context is not proof of an overlapping pair');
+    assert.deepEqual(input,before);
+  }
+});
+test('a loaded noncompeting neighbour does not suppress a selected numeric proposal',()=>{
+  const input=triple();input.source.selectedIds=['a'];input.rows.get('c').remainingCents=10000;
+  const before=structuredClone(input),pairs=project(input);
+  assert.equal(pairs.length,1);assert.equal(pairs[0].status,'COUNTING_ERROR_CANDIDATE');
+  assert.deepEqual([pairs[0].commonCents,pairs[0].previousResidualCents,pairs[0].nextResidualCents],[34308,-92,0]);
+  assert.deepEqual(input,before);
+});
+test('known ambiguity remains visible even when a further outer neighbour is unavailable',()=>{
+  const input=triple();input.source.selectedIds=['a'];input.source.sessions.get('a').session.previousSession={id:'unavailable'};
+  const pairs=project(input);assert.equal(pairs.length,1);assert.equal(pairs[0].status,'AMBIGUOUS_OVERLAP');
+  assert.deepEqual([pairs[0].commonCents,pairs[0].previousResidualCents,pairs[0].nextResidualCents],[null,null,null]);
 });
 test('selected period boundary keeps only the linked pair, with deterministic ordering',()=>{
   const input=base();input.source.selectedIds=['b'];assert.equal(project(input).length,1);

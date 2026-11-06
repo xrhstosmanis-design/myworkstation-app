@@ -21,6 +21,13 @@ function fixture(){
  b.nextClosed=false;
  return {store:{id:'store',name:'Synthetic Cash LAB'},rule:{mode:'FULL',carryOverEnabled:true,posEftposEnabled:true},sessions:new Map([['a',a],['b',b]]),selectedIds:['a','b'],period:{from:'2026-10-23',to:'2026-10-23'},coverage:'BOUNDED_CLOSED_SHIFTS'};
 }
+function tripleFixture(){
+ const source=fixture(),b=source.sessions.get('b');
+ const c=shift({id:'c',name:'Afternoon',opened:'2026-10-23T11:11:00Z',closed:'2026-10-23T18:00:00Z',opening:1006.10,actual:1006.10,expected:1106.10,variance:-100,cashSales:100});
+ b.session.nextSession={id:'c'};c.session.previousSession={id:'b'};
+ b.nextClosed=true;c.nextClosed=false;source.sessions.set('c',c);source.selectedIds.push('c');
+ return source;
+}
 test('canonical cash report proactively classifies adjacent opposite cash but never allocates or approves money',()=>{
  const s=fixture(),before=structuredClone(s),report=projectReconciliation(s,[]);
  assert.equal(report.countingErrorCandidates?.length,1);
@@ -56,6 +63,32 @@ test('card-only sign alternation does not create counting mistake or change sour
  b.session.openingOperational=a.session.actualOperational;b.automaticSnapshot.openingOperational=b.session.openingOperational;b.session.openingDrawer=b.session.openingOperational;b.automaticSnapshot.openingDrawer=b.session.openingDrawer;
  a.cardCents=-22750;b.cardCents=22750;
  const out=projectReconciliation(s,[]);assert.equal(out.countingErrorCandidates,undefined);assert.doesNotMatch(out.text,/ΠΡΟΤΕΙΝΟΜΕΝΟ ΛΑΘΟΣ ΚΑΤΑΜΕΤΡΗΣΗΣ/);
+});
+
+test('canonical and automatic reports preserve boundary ambiguity without changing selected financial rows',()=>{
+ for(const selected of ['a','c']){
+  const source=tripleFixture();source.selectedIds=[selected];const before=structuredClone(source),report=projectReconciliation(source,[]);
+  assert.equal(report.countingErrorCandidates.length,1);
+  assert.equal(report.countingErrorCandidates[0].status,'AMBIGUOUS_OVERLAP');
+  assert.deepEqual([report.countingErrorCandidates[0].commonCents,report.countingErrorCandidates[0].previousResidualCents,report.countingErrorCandidates[0].nextResidualCents],[null,null,null]);
+  const original=source.sessions.get(selected);
+  assert.deepEqual(report.rows.map(r=>[r.sessionId,r.initialCents,r.remainingCents,r.offsetCents,r.reviewed]),[[selected,original.initialCents,original.basisCents,0,false]]);
+  assert.match(report.text,/ΑΜΦΙΒΟΛΗ ΑΛΛΗΛΟΥΧΙΑ/);assert.doesNotMatch(report.text,/ΠΡΟΤΕΙΝΟΜΕΝΟ ΛΑΘΟΣ ΚΑΤΑΜΕΤΡΗΣΗΣ/);
+  const automatic=projectAutomaticReviewedReport(report);
+  assert.deepEqual(automatic.countingErrorCandidates,report.countingErrorCandidates);assert.equal(automatic.text,report.text);assert.equal(automatic.reportHash,report.reportHash);
+  assert.equal(projectReconciliation(source,[]).reportHash,report.reportHash);assert.deepEqual(source,before);
+ }
+});
+test('one-neighbour canonical reports retain original differences without inventing a boundary allocation',()=>{
+ for(const [selected,missing] of [['a','c'],['c','a']]){
+  const source=tripleFixture();source.selectedIds=[selected];source.sessions.delete(missing);
+  const before=structuredClone(source),report=projectReconciliation(source,[]),original=source.sessions.get(selected);
+  assert.equal(report.countingErrorCandidates,undefined);
+  assert.deepEqual(report.rows.map(r=>[r.initialCents,r.remainingCents,r.offsetCents,r.reviewed]),[[original.initialCents,original.basisCents,0,false]]);
+  assert.doesNotMatch(report.text,/ΠΡΟΤΕΙΝΟΜΕΝΟ ΛΑΘΟΣ ΚΑΤΑΜΕΤΡΗΣΗΣ|ΑΜΦΙΒΟΛΗ ΑΛΛΗΛΟΥΧΙΑ/);
+  const automatic=projectAutomaticReviewedReport(report);assert.equal(automatic.text,report.text);assert.equal(automatic.reportHash,report.reportHash);
+  assert.deepEqual(source,before);
+ }
 });
 
 test('automatic reviewed projection preserves candidate text and fingerprint without modifying financial rows',()=>{

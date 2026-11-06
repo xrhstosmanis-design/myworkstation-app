@@ -9,7 +9,7 @@ export function projectAdjacentCashCountingCandidates({source,rows,immediatePair
   const proposed=[];
   for(const previous of source.sessions.values()){
     const next=source.sessions.get(previous?.session?.nextSession?.id);
-    if(!next||!selected.has(previous.session.id)&&!selected.has(next.session.id)||!immediatePair(previous,next,source.rule))continue;
+    if(!next||!immediatePair(previous,next,source.rule))continue;
     if(next.session.previousSession?.id&&next.session.previousSession.id!==previous.session.id)continue;
     const a=rows.get(previous.session.id),b=rows.get(next.session.id);
     if(!a||!b||a.recheck||b.recheck||a.reviewed||b.reviewed||!cashCurrent(a)||!cashCurrent(b))continue;
@@ -35,9 +35,16 @@ export function projectAdjacentCashCountingCandidates({source,rows,immediatePair
   }
   const frequency=new Map();
   for(const pair of proposed)for(const id of [pair.previousSessionId,pair.nextSessionId])frequency.set(id,(frequency.get(id)||0)+1);
-  return proposed.map(pair=>frequency.get(pair.previousSessionId)>1||frequency.get(pair.nextSessionId)>1
-    ? {...pair,status:'AMBIGUOUS_OVERLAP',commonCents:null,previousResidualCents:null,nextResidualCents:null}
-    : pair).sort(compare);
+  // Count all available competing pairs before limiting display to the period.
+  return proposed.filter(pair=>selected.has(pair.previousSessionId)||selected.has(pair.nextSessionId)).flatMap(pair=>{
+    if(frequency.get(pair.previousSessionId)>1||frequency.get(pair.nextSessionId)>1)return [{...pair,status:'AMBIGUOUS_OVERLAP',commonCents:null,previousResidualCents:null,nextResidualCents:null}];
+    const previous=source.sessions.get(pair.previousSessionId).session,next=source.sessions.get(pair.nextSessionId).session;
+    const outerIds=[previous.previousSession?.id,next.nextSession?.id].filter(Boolean);
+    // The source reader is bounded. An unloaded outer neighbour might compete;
+    // omit the numeric proposal without claiming a proven overlapping pair.
+    if(outerIds.some(id=>!source.sessions.has(id)||!rows.has(id)))return [];
+    return [pair];
+  }).sort(compare);
 }
 export function adjacentCashCountingText(pairs){
   const money=n=>(Math.abs(n)/100).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
