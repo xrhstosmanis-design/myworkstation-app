@@ -1,3 +1,5 @@
+07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 · recovery #3692 — Owner /root unchanged. Draft recovery branch from main; safe original-DRAFT product attachment candidate, both-grant checks and replay tests; full CI and measured LAB NOT TESTED; attachment #3692 awaits fresh CI, review and measured LAB. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-inventory-product-attach-recovery.md. Do not repeat accepted Enter/filter counts.
+
 07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 · recovery #3691 — Owner /root unchanged. Draft recovery branch from main; unknown barcode new-product-card candidate and permission/stocktake scope tests; full CI and measured LAB NOT TESTED; separate line attachment #3692 remains OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-inventory-unknown-barcode-recovery.md. Do not repeat accepted Enter/filter counts.
 
 ## 06/11/2026 22:14 Europe/Athens - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / OCR4 / K01 HOSTED LIMITED PASS / REMAINING SCOPE OPEN
