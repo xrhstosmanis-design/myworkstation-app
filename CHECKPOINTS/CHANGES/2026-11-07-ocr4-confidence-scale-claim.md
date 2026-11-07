@@ -46,3 +46,13 @@ The continuation synchronized the existing claim with main `7b40395f1313dd5cc1d3
 Regenerated both canonical tracker PDF copies with the unchanged repository generator. They are byte-identical: SHA-256 `5d21254f8dc6811ca2896f2d7d85b55cb6278d9d6b4ba14e2b255d179d879e4f`, 3,596,207 bytes, 975 pages. Text extraction confirms both the OCR claim and preserved cash-email claim in the opening pages. Visual inspection of pages 1-3 confirms readable text, margins, footers and transitions; historical pages were not freshly reviewed.
 
 This is documentation reconciliation only. Runtime code and tests are unchanged; no OCR provider call, invoice submission, payment or new LAB PASS occurred. PR #3709 remains the single delivery path. Next: exact updated-head review and normal CI before the approved claim merge; only then start the bounded schema/prompt implementation.
+
+## 07/11/2026 - constrained continuation after GitHub publication
+
+Verified PR #3709 head b996ebc1 had the approved six documentation files, while main had advanced to 83cee2b and the branch was behind by six commits. No runtime code or tests changed and no normal PR workflow runs were found for b996ebc1.
+
+Kept the original approved 1,861-character OCR claim prefix intact, then synchronized **only** docs/roadmap/OPEN_WORK_TRACKER.md (commit e35d7f77) and docs/roadmap/PENDING_WORK.md (commit b3cdd868) with each file's newer main contents. For each, the branch text was read back and verified to equal the exact claim prefix followed byte-for-byte by the current-main text at the time of verification. The latest CASH-UNIFIED-AUDIT-15 preview-failure claim was preserved. No K01 replay, paid OCR, invoice submission, payment or production deployment occurred.
+
+CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md was intentionally **not modified** after GitHub returned an h2 transport/body error during the larger-file operation; a post-error SHA check confirmed its old blob remained c6a2af0aee72e86198403a9cac79d9afd393462e. The two tracker PDF copies also remain to be regenerated and verified against the complete reconciled registries.
+
+Status: DRAFT / PARTIALLY RECONCILED / NOT MERGEABLE. Next small action: safely reconcile the larger active-list file by a transport supporting its complete contents, then regenerate and compare both PDFs, verify exact diff and normal CI, and only then consider the previously approved claim merge. No source implementation before that gate.
