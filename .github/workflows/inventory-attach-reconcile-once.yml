@@ -53,36 +53,44 @@ jobs:
           export MERGE_BASE="$(git merge-base HEAD origin/main)"
           python3 - <<'PY'
           from pathlib import Path
-          import os,subprocess
+          import os,subprocess,hashlib
           path='CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md'
           ours=Path(path).read_bytes()
           base=subprocess.check_output(['git','show',os.environ['MERGE_BASE']+':'+path])
           main=subprocess.check_output(['git','show','origin/main:'+path])
-          import hashlib
-          print('Bounded registry comparison: merge_base=',os.environ['MERGE_BASE'][:14],
-              'lengths=',len(base),len(ours),len(main),
-              'base_sha256=',hashlib.sha256(base).hexdigest()[:16],
-              'ours_suffix_matches=',ours.endswith(base),'main_suffix_matches=',main.endswith(base),
-              'ours_tail_sha256=',hashlib.sha256(ours[-4096:]).hexdigest()[:16],
-              'main_tail_sha256=',hashlib.sha256(main[-4096:]).hexdigest()[:16],
-              'base_tail_sha256=',hashlib.sha256(base[-4096:]).hexdigest()[:16],flush=True)
-          if len(base)<100000 or not ours.endswith(base) or not main.endswith(base):
-              raise SystemExit('Registry history is not a shared unchanged suffix: BLOCK')
-          our_prefix=ours[:-len(base)]
-          main_prefix=main[:-len(base)]
+          shared=0
+          for three in zip(reversed(base),reversed(ours),reversed(main)):
+              if three[0]!=three[1] or three[0]!=three[2]:
+                  break
+              shared+=1
+          if shared<5_000_000:
+              raise SystemExit('Shared full history is too small; refusing to overwrite')
+          base_prefix=base[:-shared]
+          our_prefix=ours[:-shared]
+          main_prefix=main[:-shared]
+          history=base[-shared:]
+          print('Historical suffix integrity:',shared,'bytes, sha256=',hashlib.sha256(history).hexdigest()[:20],
+              'prefix lengths:',len(base_prefix),len(our_prefix),len(main_prefix),flush=True)
+          if not (base_prefix.endswith(b'\n\n') and our_prefix.endswith(b'\n\n') and main_prefix.endswith(b'\n\n')):
+              raise SystemExit('History does not begin at a clean paragraph boundary')
+          if max(map(len,(base_prefix,our_prefix,main_prefix)))>10000:
+              raise SystemExit('Unexpectedly large added prefix; fail closed')
+          basic=[line for line in base_prefix.splitlines() if line.strip()]
           our_lines=[line for line in our_prefix.splitlines() if line.strip()]
-          main_lines=set(line for line in main_prefix.splitlines() if line.strip())
+          main_lines=[line for line in main_prefix.splitlines() if line.strip()]
+          if not basic or not all(b in our_lines and b in main_lines for b in basic):
+              raise SystemExit('The source-base OPEN entries are not preserved in both branches')
           exclusive=[line for line in our_lines if line not in main_lines]
           if len(exclusive)!=1 or b'3702' not in exclusive[0] or b'INVENTORY-SCAN-WORKFLOW-01' not in exclusive[0]:
-              raise SystemExit('Cannot identify exactly one attachment-only OPEN line; no branch update')
-          if len(exclusive[0])>1400 or len(main_prefix)>10000 or len(our_prefix)>10000:
-              raise SystemExit('Unexpected prefix size; abort')
+              raise SystemExit('Cannot identify exactly one attachment-only OPEN line')
+          if len(exclusive[0])>1400:
+              raise SystemExit('Unexpected attachment entry length')
           Path('/tmp/main-register-full').write_bytes(main)
           Path('/tmp/attachment-only-line').write_bytes(exclusive[0])
-          print('Full shared-register history checked',len(base),'bytes, 1 unique attachment entry')
-          for f in ['AGENTS.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']:
-              if Path(f).stat().st_size<100000:
-                  raise SystemExit('Canonical record missing/truncated: '+f)
+          print('Verified and preserved current main plus one unique attachment entry')
+          for name,minbytes in [('AGENTS.md',5000),('docs/roadmap/OPEN_WORK_TRACKER.md',100000),('docs/roadmap/PENDING_WORK.md',100000)]:
+              if Path(name).stat().st_size<minbytes:
+                  raise SystemExit('Canonical record missing/truncated: '+name)
           PY
           set +e
           git merge --no-commit --no-ff origin/main
