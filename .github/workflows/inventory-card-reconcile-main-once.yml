@@ -36,7 +36,8 @@ jobs:
           git config user.name "myworkstation-recovery-bot"
           git config user.email "actions@users.noreply.github.com"
           git fetch --no-tags origin main
-          test "$(git rev-parse HEAD^)" = "$EXPECTED_PREVIOUS"
+          git merge-base --is-ancestor "$EXPECTED_PREVIOUS" HEAD
+          test "$(git diff --name-only "$EXPECTED_PREVIOUS" HEAD)" = ".github/workflows/inventory-card-reconcile-main-once.yml"
           test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
           export MERGE_BASE="$(git merge-base HEAD origin/main)"
           python3 - <<'PY'
