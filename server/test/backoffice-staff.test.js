@@ -2,6 +2,7 @@ import {staffInventoryAction} from '../src/services/backoffice-staff-inventory-a
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {staffProfiles,staffRequestCapability,changeStaffCapability,validStaffCapabilities} from '../../shared/backoffice-staff.mjs';
+import {targetStocktakeForSavedProduct,shouldRefreshStocktakeAfterAttach} from '../../shared/inventory-stocktake-product-origin.mjs';
 import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services/backoffice-staff-accounts.js';
 import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
@@ -100,4 +101,23 @@ test('destructive inventory payloads reject forged authority, duplicate lines an
   await assert.rejects(staffInventoryAction(db,{...req,staffGrant:{capability:'inventory.bulk-zero'},body:{lines:[duplicate,duplicate],clientBatchId:req.body.clientEventId}},'inventory.bulk-zero'),{status:400});
   assert.equal(transactions,0);
   for(const profile of Object.values(staffProfiles))for(const key of ['inventory.clear','inventory.bulk-zero','inventory.delete'])assert.equal(profile.capabilities.includes(key),false);
+});
+
+test('staff new-product line admission is inventory.count for exact POST only',()=>{
+  assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes/take-1/lines'),'inventory.count');
+  for(const [method,path] of [['GET','/api/inventory-v2/stocktakes/take-1/lines'],['DELETE','/api/inventory-v2/stocktakes/take-1/lines'],['POST','/api/inventory-v2/stocktakes/take-1/line'],['POST','/api/inventory-v2/stocktakes/take-1/lines/other']])assert.equal(staffRequestCapability(method,path),null);
+});
+
+test('product creation after stocktake navigation does not attach to a different draft',()=>{
+  const origin=Object.freeze({storeId:'store-a',stocktakeId:'draft-a',scope:'store-a:inventory',barcode:'123'});
+  const target=(selectedStocktakeId,storeId='store-a',scope=origin.scope,savedStoreId='store-a')=>targetStocktakeForSavedProduct(origin,{storeId,scope,savedStoreId,selectedStocktakeId});
+  assert.equal(target('draft-a'),'draft-a');
+  assert.equal(target('draft-b'),null);
+  assert.equal(target(null),null);
+  assert.equal(target('draft-a','store-b'),null);
+  assert.equal(target('draft-a','store-a','store-a:products'),null);
+  assert.equal(target('draft-a','store-a',origin.scope,'store-b'),null);
+  assert.equal(targetStocktakeForSavedProduct(null,{storeId:'store-a',scope:origin.scope,savedStoreId:'store-a',selectedStocktakeId:'draft-a'}),null);
+  assert.equal(shouldRefreshStocktakeAfterAttach('draft-a','draft-b'),false);
+  assert.equal(shouldRefreshStocktakeAfterAttach('draft-a','draft-a'),true);
 });
