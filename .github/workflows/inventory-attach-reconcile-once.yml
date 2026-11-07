@@ -1,0 +1,108 @@
+name: Reconcile inventory attachment with accepted main once
+on:
+  push:
+    branches:
+      - recovery/inventory-product-attach-20261107
+    paths:
+      - .github/workflows/inventory-attach-reconcile-once.yml
+permissions:
+  contents: write
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout original bounded branch through local Git
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/inventory-product-attach-20261107
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            AGENTS.md
+            CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+            CHECKPOINTS/CHANGES/2026-11-07-inventory-product-attach-recovery.md
+            CHECKPOINTS/CHANGES/2026-11-07-inventory-unknown-barcode-recovery.md
+            client/src/components/BackofficeStaffWorkspace.jsx
+            client/src/components/inventory/InventoryFastCount.jsx
+            client/src/components/inventory/InventoryV2Center.jsx
+            server/src/routes/inventory-v2.js
+            server/test/backoffice-staff-ui.test.js
+            server/test/backoffice-staff.test.js
+            server/test/inventory-draft-mutations.test.js
+            server/test/inventory-product-attach-authorization.test.mjs
+            shared/backoffice-staff.mjs
+            shared/inventory-stocktake-product-origin.mjs
+            docs/roadmap/OPEN_WORK_TRACKER.md
+            docs/roadmap/PENDING_WORK.md
+            docs/manual/inventory/PASS.md
+            .github/workflows/inventory-attach-reconcile-once.yml
+      - name: Verify shared history and reconcile only known conflict
+        shell: bash
+        env:
+          EXPECTED_PREVIOUS: "3d7b6b41def571669ceb499c05a554c09073d384"
+          EXPECTED_MAIN: "5606b18cc591cb6682dbe54f3aa0fb7e01c0cf91"
+        run: |
+          set -euo pipefail
+          git config user.name "myworkstation-recovery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$EXPECTED_PREVIOUS" HEAD
+          test "$(git diff --name-only "$EXPECTED_PREVIOUS" HEAD)" = ".github/workflows/inventory-attach-reconcile-once.yml"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          export MERGE_BASE="$(git merge-base HEAD origin/main)"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,subprocess
+          path='CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md'
+          ours=Path(path).read_bytes()
+          base=subprocess.check_output(['git','show',os.environ['MERGE_BASE']+':'+path])
+          main=subprocess.check_output(['git','show','origin/main:'+path])
+          if len(base)<100000 or not ours.endswith(base) or not main.endswith(base):
+              raise SystemExit('Registry history is not a shared unchanged suffix: BLOCK')
+          our_prefix=ours[:-len(base)]
+          main_prefix=main[:-len(base)]
+          our_lines=[line for line in our_prefix.splitlines() if line.strip()]
+          main_lines=set(line for line in main_prefix.splitlines() if line.strip())
+          exclusive=[line for line in our_lines if line not in main_lines]
+          if len(exclusive)!=1 or b'3702' not in exclusive[0] or b'INVENTORY-SCAN-WORKFLOW-01' not in exclusive[0]:
+              raise SystemExit('Cannot identify exactly one attachment-only OPEN line; no branch update')
+          if len(exclusive[0])>1400 or len(main_prefix)>10000 or len(our_prefix)>10000:
+              raise SystemExit('Unexpected prefix size; abort')
+          Path('/tmp/main-register-full').write_bytes(main)
+          Path('/tmp/attachment-only-line').write_bytes(exclusive[0])
+          print('Full shared-register history checked',len(base),'bytes, 1 unique attachment entry')
+          for f in ['AGENTS.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']:
+              if Path(f).stat().st_size<100000:
+                  raise SystemExit('Canonical record missing/truncated: '+f)
+          PY
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_code=$?
+          set -e
+          if [ "$merge_code" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            if [ "$conflicts" != "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md" ]; then
+              echo "Unexpected code conflict(s); stopped without push: $conflicts"
+              exit 1
+            fi
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          full=Path('/tmp/main-register-full').read_bytes()
+          entry=Path('/tmp/attachment-only-line').read_bytes()
+          p=Path('CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md')
+          next_data=entry+b'\n\n'+full
+          if not next_data.endswith(full):
+              raise SystemExit('Main record not retained')
+          if full.count(entry):
+              raise SystemExit('Duplicate attachment entry in main')
+          p.write_bytes(next_data)
+          print('Preserved every byte of current main and prefixed one attachment item')
+          PY
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+          git rm -- .github/workflows/inventory-attach-reconcile-once.yml
+          test -z "$(git diff --name-only --diff-filter=U)"
+          git diff --cached --check -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md
+          git commit -m "chore(inventory): reconcile safe attachment with validated card merge"
+          git push origin HEAD:recovery/inventory-product-attach-20261107
