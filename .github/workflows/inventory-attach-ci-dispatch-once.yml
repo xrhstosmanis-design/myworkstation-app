@@ -1,0 +1,39 @@
+name: Inventory attachment exact-head full CI dispatch once
+on:
+  push:
+    branches: [ops/inventory-attach-ci-dispatch-20261107]
+    paths: [.github/workflows/inventory-attach-ci-dispatch-once.yml]
+permissions:
+  actions: write
+  contents: read
+jobs:
+  verify-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact reviewed candidate via local Git
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/inventory-product-attach-20261107
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            tools/verify-checkpoint-policy.mjs
+            AGENTS.md
+      - name: Validate current head and dispatch existing full CI
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          expected=0f12c4e4e0f09a63708d7887d554b8154fbf2091
+          ref=recovery/inventory-product-attach-20261107
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$expected"
+          git merge-base --is-ancestor origin/main HEAD
+          actual="$(gh api "repos/$GITHUB_REPOSITORY/pulls/3702" --jq '.head.sha')"
+          test "$actual" = "$expected"
+          base="$(git merge-base origin/main HEAD)"
+          node tools/verify-checkpoint-policy.mjs "$base" "$expected"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/dispatches" -f "ref=$ref"
+          echo "Dispatched original full CI for #3702 exact head $expected; no code or production change."
