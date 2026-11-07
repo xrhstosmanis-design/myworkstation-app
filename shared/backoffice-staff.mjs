@@ -90,5 +90,6 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&/^\/api\/backoffice-staff\/cash\/stores\/[^/]+$/.test(path))return 'cash.read';
   if(method==='GET'&&/^\/api\/backoffice-staff\/inventory\/stores\/[^/]+\/stocktakes(?:\/[^/]+)?$/.test(path))return 'inventory.read';
   if(method==='POST'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/count$/.test(path))return 'inventory.count';
+  if(method==='POST'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/lines$/.test(path))return 'inventory.count';
   return null;
 }
