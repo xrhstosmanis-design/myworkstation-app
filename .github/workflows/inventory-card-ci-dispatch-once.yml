@@ -1,0 +1,39 @@
+name: Inventory card exact-head full CI dispatch once
+on:
+  push:
+    branches: [ops/inventory-card-ci-dispatch-20261107]
+    paths: [.github/workflows/inventory-card-ci-dispatch-once.yml]
+permissions:
+  actions: write
+  contents: read
+jobs:
+  verify-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source with local Git
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/inventory-unknown-barcode-20261107
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            tools/verify-checkpoint-policy.mjs
+            AGENTS.md
+      - name: Verify exact head, ancestry, checkpoint gate and dispatch regular CI
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          expected=17a53ac97373b3731806287aa3a4b8896cb62db5
+          ref=recovery/inventory-unknown-barcode-20261107
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$expected"
+          git merge-base --is-ancestor origin/main HEAD
+          actual="$(gh api "repos/$GITHUB_REPOSITORY/pulls/3701" --jq '.head.sha')"
+          test "$actual" = "$expected"
+          base="$(git merge-base origin/main HEAD)"
+          node tools/verify-checkpoint-policy.mjs "$base" "$expected"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/dispatches" -f "ref=$ref"
+          echo "Dispatched existing MyWorkStation CI workflow_dispatch to exact PR #3701 head $expected; no source or production mutation."
