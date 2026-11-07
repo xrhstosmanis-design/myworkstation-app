@@ -10,13 +10,23 @@ const checked=e=>{
  if(new Set(e.report.rows.map(r=>r.sessionId)).size!==e.report.rows.length||e.report.text!==reconciliationText(e.report)||e.fingerprint!==fingerprint(e))fail();
  return e;
 };
+// The complete envelope is checked before this private readiness projection.
+// Its full findings remain in the preview, fingerprint and delivered report.
+const provisionalReadinessReport=report=>{
+ const view={...report,rows:report.rows.map(row=>{
+  const cash={...row};delete cash.fullEvidence;delete cash.fullCoverage;delete cash.fullAudit;return cash;
+ })};
+ delete view.paperEvidence;
+ view.text=reconciliationText(view);
+ return projectAutomaticReviewedReport(view);
+};
 export function createReviewedCashEmailReader({db,authorize,repository}){
  return async(user,storeId,date)=>{
   const parsed=periodSchema.safeParse({from:date,to:date});if(!parsed.success)fail('CASH_EMAIL_INVALID_DATE',400);
   const admission=authorize||(await import('../routes/cash-papers.js')).authorizeCashPaper;
   const repo=repository||(await import('./cash-reconciliation-repository.js')).createCashReconciliationRepository(db);
   try{
-   const {scope}=await admission(db,user,storeId);scope.generation=await repo.generation(scope);
+   const {scope}=await admission(db,user,storeId);scope.generation=await repo.generation(scope);scope.fullAudit=true;
    const report=await repo.read(scope,parsed.data);
    const fresh=await admission(db,user,storeId);
    if(fresh.scope.companyId!==scope.companyId||fresh.scope.storeId!==scope.storeId||await repo.generation(scope)!==scope.generation)fail();
@@ -33,7 +43,7 @@ export function reviewedCashEmailReadiness(evidence,legacyRows){
  if(!legacyRows.every(r=>r.reviewValid===true||r.reviewValid===false&&r.reviewDecision===null&&r.reviewedAt===null&&r.reviewedBy===null&&cashArithmeticIsCurrent(byId.get(r.sessionId))))return false;
  if(rows.some(r=>hasCashNumericContradiction(r.automaticAudit)))return false;
  if(rows.every(r=>r.reviewed===true||r.status==='NOT_APPLICABLE'))return true;
- return rows.every(r=>r.reviewed||cashArithmeticIsCurrent(r))&&canSendProvisionalCashReport(projectAutomaticReviewedReport(e.report));
+ return rows.every(r=>r.reviewed||cashArithmeticIsCurrent(r))&&canSendProvisionalCashReport(provisionalReadinessReport(e.report));
 }
 export function assertReviewedCashEmailPreview(evidence,{reportHash,generation}){
  const e=checked(evidence);if(e.fingerprint!==reportHash||e.generation!==generation)fail('CASH_EMAIL_PREVIEW_CHANGED');return e;
