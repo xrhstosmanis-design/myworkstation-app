@@ -181,6 +181,7 @@ export default function PlatformAdminApp(){
   const [recoveryWorkflow,setRecoveryWorkflow]=useState(null);
   const [cashReport,setCashReport]=useState(null);
   const [cashEmailDraft,setCashEmailDraft]=useState(null);
+  const [cashEmailSending,setCashEmailSending]=useState(false);
   const [cashReportDate,setCashReportDate]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens"}).format(new Date()));
   const [cashPeriod,setCashPeriod]=useState("DAY");
   const [cashSessionId,setCashSessionId]=useState("");
@@ -579,41 +580,42 @@ export default function PlatformAdminApp(){
   };
 
   const openCashEmailPreview=async(store,mode)=>{
+    if(cashEmailSendInFlight.current)return;
     if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
     if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το email καλύπτει μόνο πλήρη ημερολογιακή ημέρα.");
-    const sequence=++cashLoadSequence.current,date=cashReport.from||cashReport.date,api=requestFor("cash");
-    const current=()=>sequence===cashLoadSequence.current;
+    const sequence=++cashLoadSequence.current,date=cashReport.from||cashReport.date,api=requestFor("cash"),origin=scopeFor("cash"),context=readBackofficeContext(localStorage).key;
+    const current=()=>sequence===cashLoadSequence.current&&readBackofficeContext(localStorage).key===context&&(origin?currentTwinOrigin(origin):aiTwinOriginRef.current?.destination!=="cash");
     const key="cash-"+(mode==="owners"?"email":"preview")+":"+store.storeId;
     setCashEmailDraft(null);setBusy(key);setError("");setMessage("");
     try{
       const preview=await api("/api/platform/cash-control/stores/"+store.storeId+"/email-preview?date="+date);
       if(!current())return;
-      if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/)||!Array.isArray(preview.rows)||!Array.isArray(preview.recipients))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
-      if(mode==="owners"&&!preview.rows.length)throw new Error("Δεν υπάρχουν κλεισμένες βάρδιες για αποστολή.");
-      setCashEmailDraft({...preview,mode,sequence});
-    }catch(err){if(current())setError(err.message)}finally{if(current())setBusy("")}
+      if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/)||!Array.isArray(preview.rows)||!Array.isArray(preview.recipients)||preview.recipients.some(recipient=>typeof recipient!=="string"))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
+      setCashEmailDraft({...preview,mode,sequence,api,current,report:cashReport});
+    }catch(err){if(current())setError(err.message)}finally{if(current())setBusy(value=>value===key?"":value)}
   };
   const previewAndSendCashReport=store=>openCashEmailPreview(store,"owners");
   const sendCashPreviewToMe=store=>openCashEmailPreview(store,"self");
+  const cancelCashEmailPreview=()=>{if(cashEmailSendInFlight.current)return;cashLoadSequence.current++;setCashEmailDraft(null)};
 
   const confirmCashEmail=async comment=>{
     const draft=cashEmailDraft;
-    if(!draft||cashEmailSendInFlight.current)return;
-    if(draft.sequence!==cashLoadSequence.current||!cashReportMatchesSelection()||!cashReport||cashReport.from!==draft.date||cashReport.to!==draft.date||!(cashReport.stores||[]).some(store=>store.storeId===draft.storeId)){
+    if(!draft||cashEmailSendInFlight.current||draft.attempted)return;
+    if(!draft.current()||draft.report!==cashReport||!cashReportMatchesSelection()||!cashReport||cashReport.from!==draft.date||cashReport.to!==draft.date||!(cashReport.stores||[]).some(store=>store.storeId===draft.storeId)){
       setCashEmailDraft(null);setError("Τα δεδομένα ή τα φίλτρα άλλαξαν. Άνοιξε νέα προεπισκόπηση.");return;
     }
-    if(draft.mode==="owners"&&draft.readyToSend!==true)return;
-    cashEmailSendInFlight.current=true;
+    if(draft.mode==="owners"&&(draft.readyToSend!==true||!draft.rows.length||!draft.recipients.length))return;
+    cashEmailSendInFlight.current=true;draft.attempted=true;setCashEmailSending(true);
     const key="cash-email-send:"+draft.storeId;
     setBusy(key);setError("");setMessage("");
     try{
       const route=draft.mode==="owners"?"send-email":"send-preview";
-      const sent=await requestFor("cash")("/api/platform/cash-control/stores/"+draft.storeId+"/"+route,{method:"POST",body:JSON.stringify({date:draft.date,comment,reportHash:draft.reportHash,generation:draft.generation})});
-      if(draft.sequence!==cashLoadSequence.current)return;
+      const sent=await draft.api("/api/platform/cash-control/stores/"+draft.storeId+"/"+route,{method:"POST",body:JSON.stringify({date:draft.date,comment,reportHash:draft.reportHash,generation:draft.generation})});
+      if(!draft.current())return;
       setCashEmailDraft(null);
       setMessage(draft.mode==="owners"?"Η αναφορά του "+draft.storeName+" στάλθηκε σε: "+sent.recipients.join(", ")+".":"Η δοκιμαστική αναφορά στάλθηκε μόνο στο "+sent.recipients.join(", ")+".");
-    }catch(err){if(draft.sequence===cashLoadSequence.current){setCashEmailDraft(null);setError(err.message)}}
-    finally{cashEmailSendInFlight.current=false;setBusy(value=>value===key?"":value)}
+    }catch(err){if(draft.current()){setCashEmailDraft(null);setError(err.message)}}
+    finally{cashEmailSendInFlight.current=false;setCashEmailSending(false);setBusy(value=>value===key?"":value)}
   };
 
   const downloadShortages=async store=>{
@@ -705,7 +707,7 @@ export default function PlatformAdminApp(){
         </div><p className="site-explanation">Ελλείμματα: {cashMoney(store.shortage)} · Πλεονάσματα: {cashMoney(store.surplus)}. Οι κανονικές κινήσεις δεν εμφανίζονται· εμφανίζονται μόνο τα περίεργα συμβάντα με την ακριβή ώρα.</p>
       </article>})}</section>}
     </section></div>}
-    {cashEmailDraft&&cashReport&&<CashEmailPreviewDialog draft={cashEmailDraft} selfEmail={user?.email||""} stale={cashEmailDraft.sequence!==cashLoadSequence.current||!cashReportMatchesSelection()} busy={busy==="cash-email-send:"+cashEmailDraft.storeId} onCancel={()=>setCashEmailDraft(null)} onSend={confirmCashEmail}/>}
+    {cashEmailDraft&&cashReport&&<CashEmailPreviewDialog key={cashEmailDraft.sequence} draft={cashEmailDraft} selfEmail={user?.email||""} stale={!cashEmailDraft.current()||cashEmailDraft.report!==cashReport||!cashReportMatchesSelection()} busy={cashEmailSending} onCancel={cancelCashEmailPreview} onSend={confirmCashEmail}/>}
 
     {newOwnerCompany&&<div className="platform-modal"><form onSubmit={createOwnerCompany}><button type="button" className="modal-close" onClick={()=>setNewOwnerCompany(null)}><X/></button><h2>Νέα εταιρεία για {newOwnerCompany.fullName}</h2><p>Ξεχωριστό ΑΦΜ, κατάστημα και δεδομένα με την υπάρχουσα σύνδεση ιδιοκτήτη.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId" minLength="9" required/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setNewOwnerCompany(null)}>Ακύρωση</button><button disabled={busy==="owner-company-create"}>{busy==="owner-company-create"?"Δημιουργία…":"Δημιουργία εταιρείας"}</button></div></form></div>}
     {companyIdentityEdit&&<CompanyIdentityEditor key={companyIdentityEdit.id} company={companyIdentityEdit} request={request} onClose={()=>setCompanyIdentityEdit(null)} onSaved={()=>{setCompanyIdentityEdit(null);setMessage("Τα στοιχεία της υπάρχουσας εταιρείας αποθηκεύτηκαν.");load()}}/>}

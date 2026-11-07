@@ -1,3 +1,46 @@
+## 07/11/2026 23:13:35 Europe/Athens - Consolidated full email preview UI candidate / AWAITING LAB
+
+**Status: consolidated source candidate; hosted full-preview acceptance AWAITING LAB. Delivery NOT TESTED / NOT SENT.** Retained owner `codex/cash-chat-reconciliation-20261026`, coordinated by `/root`; parent `CASH-UNIFIED-AUDIT-15` stays OPEN / ASSIGNED without transfer. This receipt does not relabel the earlier observed native preview FAIL or grant financial closure or outbound approval.
+
+### Concurrency reconciliation and exact baseline
+
+The existing [PR #3711](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3711), branch `fix/cash-email-preview-20261107`, already contained a remote candidate and additive documentation at head `7ab01058ded81df25b366176e5642206b3f5bf23`. The separate local candidate with staged tree `baa512c29b1e6234c4135560e0001f829623fce0` remained unpublished and is preserved separately. Its earlier 67-test local success describes only that unpublished candidate; it is not the result for this consolidated source.
+
+The remote branch then advanced to exact base `4b620b2928b0acb9dfdca2174c3bf4b1db1d6466`, adding only an adaptation of old native-alert assertions in `server/test/automatic-cash-control-daily-v1.test.js` (5 insertions, 1 deletion). The full remote change is retained. Independent review confirmed that its readiness and freshness checks remain protected. The consolidated work starts from this new exact base and retains all remote history, registry prefixes and baseline bytes. The remote note `CHECKPOINTS/CHANGES/2026-11-07-cash-email-preview-ui.md` stays unchanged as historical evidence. Before-source claim #3710 remains merged at `83cee2b70b08e14acaee82bd93129c3586ca64bf`; this is the same retained-owner correction.
+
+PR #3711 was temporarily marked draft at `2026-11-07T21:01:44Z`, and a concrete review hold was prepended at `2026-11-07T21:02:04Z`. Those review-metadata actions did not change its source or ref. The verified local consolidation below does not itself establish exact-head CI, release or hosted acceptance.
+
+### Bounded consolidation
+
+Keep the existing full, literal, scrollable in-app report preview and visible server-selected recipients for the three cash presentations: owner send, self preview and owner-not-ready report view. Keep the optional blank operator comment and explicit Send/Cancel controls. The additions close captured store/day and session freshness gaps, manage modal focus and Escape/cancel behavior during an in-flight send, and preserve complete usability in a short viewport. They retain atomic double-submit protection and reject stale delayed results against a changed scope.
+
+Four client/test files are changed relative to the current remote base:
+
+- `client/src/components/platform/PlatformAdminApp.jsx`
+- `client/src/components/platform/CashEmailPreviewDialog.jsx`
+- `client/src/components/platform/platform-admin.css`
+- `server/test/cash-reviewed-email-ui.test.js`
+
+This increment is 91 insertions and 32 deletions across those four files. It uses the existing platform stylesheet; no new separate stylesheet is introduced. Backend full-audit reading, canonical report text and fingerprint/generation, server readiness and authorization, send-time recheck and server recipient authority remain unchanged. Owner `readyToSend:false` stays viewable but blocked for delivery; full-audit PENDING alone does not block delivery when server readiness is true. Self-preview keeps its existing permission. No paid OCR/provider calls, schedules, recipient changes, ledger/review/offset writes or new send approval are included.
+
+### Actual verification for this consolidated source
+
+Node **20.20.2** completed the focused email, preview UI, report/full-audit and existing automatic-contract/flow suite: **67 PASS / 0 FAIL / 0 SKIP / 0 CANCEL**. The complete retained private log is **17,339 bytes**, SHA256 `11c7059ee45768c8138a01422f0aa091fbf37812d2d7f1fdcb1787a13ec0f8d6`. This is a new complete result for the consolidated source, distinct from the old unpublished candidate's count. An earlier footerless run is retained as incomplete and is not counted.
+
+The additional exact-remote `server/test/automatic-cash-control-daily-v1.test.js` contract suite completed separately with **11 PASS / 0 FAIL / 0 SKIP / 0 CANCEL**. Its retained private log is **2,462 bytes**, SHA256 `e9be5345a6a04ed05ba09a3d439378c9548cfc59e8afbe500e9819cde75656c6`. These are separate suite results; neither is a hosted observation or real-email delivery test. Test mail/HTTP transports are synthetic and no production email was sent.
+
+Final independent review reported **NO BLOCKERS** for the consolidated changes and the retained remote daily-contract adaptation. Text whitespace verification is clean. Backend services, schemas and shared contracts are untouched. These facts support the local source candidate only; exact publication-head CI, authorized guarded release and a new hosted full-preview observation remain pending.
+
+### Protected evidence and next acceptance
+
+The installed source at `be3844895e807db469c3d3571cefa42bd7f3ec1c` produced the observed oversized native dialog truncation. Its sanitized `CHECKPOINTS/EVIDENCE/cash-system-email-20261107/native-preview.json` remains unchanged with overall status FAIL. Visible full-mode findings did not establish complete report or recipient visibility. A local source/test result cannot replace that historical observation.
+
+The manual remains unchanged, with no new functional PASS. Preserve earlier 03/11 source evidence, 04/11 basic/full saved-reading scoped PASS, the limited 07/11 no-charge LIVE UI PASS and all financial/source residuals in their documented limits. Every existing peer registry byte and retained owner is preserved. The final increment is ten paths relative to base `4b620b2`: four client/test files and six documentation paths. The complete PR scope relative to claim main `83cee2b7` is twelve paths, also retaining the remote UI note and daily-contract test.
+
+Next: complete exact consolidated publication-head CI and review, then authorized merge and guarded release, followed by one separately authorized native preview observation. Verify complete system-generated first and last report lines, recipient visibility, conditional handoff wording, optional blank comment and Cancel. Do not repeat the completed no-charge check. Corrected hosted UI acceptance remains AWAITING LAB. Actual SMTP/inbox delivery remains NOT TESTED / NOT SENT; separate approval of the exact recipients is still outstanding. This source correction grants no outbound authorization.
+
+---
+
 ## 07/11/2026 22:19:03 Europe/Athens - Installed full source; native full-preview FAIL; UI correction claimed
 
 **Overall native full-preview acceptance: FAIL.** The complete system-generated email preview was not observable in the oversized browser dialog. This is not a preview PASS, delivery PASS or financial closure. Retained owner: codex/cash-chat-reconciliation-20261026, coordinated by /root; parent CASH-UNIFIED-AUDIT-15 remains OPEN / ASSIGNED with no transfer.
