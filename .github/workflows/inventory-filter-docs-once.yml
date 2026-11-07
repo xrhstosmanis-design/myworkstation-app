@@ -1,0 +1,88 @@
+name: Recover accepted inventory filter documentation once
+on:
+  push:
+    branches:
+      - docs/inventory-count-filter-userpass-recovery-20261107
+    paths:
+      - .github/workflows/inventory-filter-docs-once.yml
+permissions:
+  contents: write
+jobs:
+  publish-exact-receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bounded original documents via local Git
+        uses: actions/checkout@v4
+        with:
+          ref: docs/inventory-count-filter-userpass-recovery-20261107
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            AGENTS.md
+            CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+            CHECKPOINTS/CHANGES/2026-11-05-inventory-scan-workflow.md
+            docs/manual/inventory/PASS.md
+            docs/roadmap/OPEN_WORK_TRACKER.md
+            docs/roadmap/PENDING_WORK.md
+            docs/roadmap/generate-open-work-tracker.py
+            output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+            .github/workflows/inventory-filter-docs-once.yml
+      - name: Verify full records and prepend only scoped USER PASS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          active=Path('CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md')
+          tracker=Path('docs/roadmap/OPEN_WORK_TRACKER.md')
+          pending=Path('docs/roadmap/PENDING_WORK.md')
+          manual=Path('docs/manual/inventory/PASS.md')
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-11-05-inventory-scan-workflow.md')
+          guide=Path('AGENTS.md')
+          for p in (active,tracker,pending,manual,checkpoint,guide):
+              if not p.is_file() or not p.stat().st_size:
+                  raise SystemExit('Missing canonical file: '+str(p))
+          if 'USER PASS: φίλτρο' not in manual.read_text():
+              raise SystemExit('No measured USER PASS in manual')
+          if 'Recovery publication of 06/11 counted-only USER PASS' not in checkpoint.read_text():
+              raise SystemExit('No exact acceptance checkpoint')
+          if active.stat().st_size < 100000 or tracker.stat().st_size < 100000:
+              raise SystemExit('Unexpectedly short shared registry; refusing to rewrite')
+          if b'INVENTORY-SCAN-WORKFLOW-01' not in active.read_bytes() or b'INVENTORY-SCAN-WORKFLOW-01' not in tracker.read_bytes():
+              raise SystemExit('Existing registry ownership/scope missing')
+          marker='07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / #3690 filter USER PASS'.encode('utf-8')
+          summary=('07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / #3690 filter USER PASS (LIMITED). '
+             'Owner /root; existing MYWORKSTATION LAB Owner/SA draft 109 all rows / one counted 3.25 row; '
+             'owner confirmed filter on 06/11 at 11:08 Europe/Athens. Existing count unchanged. '
+             'Only filter closed; physical scanner, staff-specific admission and new-product card/attach '
+             'remain OPEN (#3701/#3702). See CHECKPOINTS/CHANGES/2026-11-05-inventory-scan-workflow.md '
+             'and docs/manual/inventory/PASS.md. No repeat count.\n\n').encode('utf-8')
+          for p in (active,tracker,pending):
+              original=p.read_bytes()
+              if marker not in original:
+                  p.write_bytes(summary+original)
+                  if not p.read_bytes().endswith(original):
+                      raise SystemExit('Original bytes lost: '+str(p))
+          PY
+      - name: Regenerate canonical tracker PDF and verify first rendered page
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check reportlab
+          python3 docs/roadmap/generate-open-work-tracker.py
+          test -s output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          pdfinfo output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf | grep -q '^Pages:'
+          pdftoppm -f 1 -l 1 -r 72 -png -singlefile output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf /tmp/mws-filter-receipt
+          test -s /tmp/mws-filter-receipt.png
+      - name: Commit and push complete records via local Git, remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -- .github/workflows/inventory-filter-docs-once.yml
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          git diff --cached --check
+          git config user.name "myworkstation-recovery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "docs(inventory): retain full registries and rendered filter USER PASS receipt"
+          git push origin HEAD:docs/inventory-count-filter-userpass-recovery-20261107
