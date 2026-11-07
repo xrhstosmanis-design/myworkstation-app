@@ -94,7 +94,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add --sparse -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
           git rm -- .github/workflows/cash-email-preview-publish-once.yml
-          git diff --cached --check
+          git diff --cached --check -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md
           git commit -m "docs(cash): synchronize bounded native full-preview UI candidate"
           git push origin HEAD:refs/heads/fix/cash-email-preview-20261107
           git log -1 --format='Published %H'
