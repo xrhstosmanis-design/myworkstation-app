@@ -1,3 +1,9 @@
+## 07/11/2026 — CASH-ADJACENT-COUNT-21 / CURRENT REMAINING SCOPE / OPEN-ASSIGNED
+
+Same retained cash owner and parent CASH-UNIFIED-AUDIT-15. The single native no-charge UI invocation is completed and is removed from current pending acceptance: limited LIVE UI PASS on runtime5606b18c, invoked on 07/11 at 16:34:50 Europe/Athens, with completed result observed by 16:36:08. Its former authentication/unobserved-action blocker below is superseded history, not work to replay. Source#3683/release#3699 are merged.
+
+Remaining work only: reconcile applicable handwritten/source/expense evidence and ambiguous findings; establish final financial reconciliation/approval; complete separately authorized broader role/device/period and manual-review/switch-race coverage. Database/ledger effects, independent control-state checks, provider billing telemetry and canonical reportHash were not measured by this one UI observation and are not closed by it. No automatic financial approval, employee charge or task/parent closure is recorded. Preserve the existing basic/full saved-reading PASS. Current checkpoint CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md and manual docs/manual/cash-control/PASS.md define the observed limit. Unrelated owners and pending tasks below remain unchanged.
+
 ## 07/11/2026 08:31 Europe/Athens — OCR4-LOCAL-PDF-3697 / ASSIGNED / BEFORE SOURCE
 
 Owner: κεντρικός συντονιστής `/root` (έγκριση ιδιοκτήτη στη συνομιλία). Μία ανάθεση για το υπάρχον GitHub issue #3697. Κλάδος καταχώρισης: `docs/ocr4-local-pdf-claim-20261106`. Προβλεπόμενος κλάδος κώδικα μετά τη συγχώνευση της ανάθεσης: `fix/ocr4-local-pdf-3697`.
