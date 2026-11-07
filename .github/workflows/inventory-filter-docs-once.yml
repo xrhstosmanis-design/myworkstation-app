@@ -69,12 +69,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --disable-pip-version-check reportlab
+          python3 -m pip install --disable-pip-version-check reportlab pymupdf
           python3 docs/roadmap/generate-open-work-tracker.py
           test -s output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
-          pdfinfo output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf | grep -q '^Pages:'
-          pdftoppm -f 1 -l 1 -r 72 -png -singlefile output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf /tmp/mws-filter-receipt
-          test -s /tmp/mws-filter-receipt.png
+          python3 - <<'PY'
+          from pathlib import Path
+          import fitz
+          path=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf')
+          doc=fitz.open(path)
+          if doc.page_count<1:
+              raise SystemExit('Generated PDF has no pages')
+          pix=doc[0].get_pixmap(matrix=fitz.Matrix(1.25,1.25))
+          pix.save('/tmp/mws-filter-receipt.png')
+          if not Path('/tmp/mws-filter-receipt.png').stat().st_size:
+              raise SystemExit('PDF first page did not render')
+          doc.close()
+          PY
       - name: Commit and push complete records via local Git, remove helper
         shell: bash
         run: |
