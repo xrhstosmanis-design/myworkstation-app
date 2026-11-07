@@ -44,6 +44,10 @@ Protected: existing 03/11 source evidence, 04/11 basic/full saved-reading scoped
 
 Next: publish this documentation-only claim on main after applicable CI, then implement the bounded correction and verify synthetic parity/freshness guards, exact CI and separately authorized LAB. All full-email delivery and new behavior remain NOT TESTED / NOT SENT. Parent and existing residual financial/source work remain OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. All prior registry bytes and peer ownership retained.
 
+## 07/11/2026 — OCR4-LOCAL-PDF-3697 / SOURCE PR #3706 / LOCAL CHECKS ONLY
+
+Owner: central coordinator `/root`. Assignment #3704 merged before source. Commit `4e4ce0c`: five focused tests passed. Isolated Chromium confirmed one- and three-page synthetic scanned PDFs, ordered OCR, original file bytes and visible malformed-PDF error with zero POSTs. One digit was misread. Hosted LAB, independent review and green source CI remain pending. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-07-ocr4-local-pdf-3697-source.md`.
+
 ## 07/11/2026 — CASH-ADJACENT-COUNT-21 / NATIVE LIVE UI CHECK OBSERVED / PARENT OPEN
 
 Same owner; one explicitly owner-authorized live-store no-charge UI check was invoked on runtime5606b18c at 16:34:50 Europe/Athens; completed result was observed by 16:36:08. HOLD,3checked/pending shifts,3ambiguous candidates,0numeric proposals; visible cash rows/ambiguities/pending replies unchanged and history0→0. This closes only the prior unobserved/auth-blocked single native invocation; no LAB, DB/provider telemetry, reportHash or final financial acceptance claim. Task and CASH-UNIFIED-AUDIT-15 remain OPEN/ASSIGNED. Source#3683/release#3699 are merged; old draft/awaiting-CI/no-action delivery notes below are historical. Next: reconcile applicable source evidence and ambiguities; preserve prior basic/full PASS. Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md; manual: docs/manual/cash-control/PASS.md; evidence: live-ui-acceptance-20261107.json. Entire prior registry retained.
