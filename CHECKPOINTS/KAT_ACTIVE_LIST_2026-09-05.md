@@ -1,3 +1,5 @@
+07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 · recovery #3691 — Owner /root unchanged. Draft recovery branch from main; unknown barcode new-product-card candidate and permission/stocktake scope tests; full CI and measured LAB NOT TESTED; separate line attachment #3692 remains OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-inventory-unknown-barcode-recovery.md. Do not repeat accepted Enter/filter counts.
+
 ## 06/11/2026 22:14 Europe/Athens - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / OCR4 / K01 HOSTED LIMITED PASS / REMAINING SCOPE OPEN
 
 Retained task4 owner /root; documentation branch docs/ocr4-k01-hosted-20261106, existing page-display scope, no ownership transfer or runtime change. One authorized selection/read of the new synthetic LAB-OCR4-20261106-K01 in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, store cmtpopbgo000trhb5ng9ytiru, after disclosure of provider use at platform cost. Ready fields were captured by 2026-11-06T20:14:56.265Z; the later 20:20:43Z record-completion time is not a latency measurement. Fixture: one PDF, 55,825 bytes, SHA256 7de9ea9e5dca6cfc0e8347aea743a9036b66948abf841e78055efc29f55bd18c.
