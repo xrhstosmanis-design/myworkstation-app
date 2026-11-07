@@ -69,7 +69,7 @@ jobs:
           # The three record prefixes share trailing blank-line bytes.
           # Align the historical start to the original paragraph boundary.
           while shared>=5_000_000 and not all(
-              data[:-shared].endswith(b'\\n\\n') for data in (base,ours,main)
+              data[:-shared].endswith(b'\n\n') for data in (base,ours,main)
           ):
               shared-=1
               if original_shared-shared>8:
