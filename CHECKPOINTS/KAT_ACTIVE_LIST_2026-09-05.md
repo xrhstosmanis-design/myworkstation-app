@@ -20,6 +20,18 @@ Node 20.20.2 focused checks: 44 PASS / 0 FAIL / 0 SKIP; injected fake mail trans
 
 No paid OCR, ledger/review/offset writes, schedules, recipient/settings changes or production email attempt. Prior outbound approval rejection remains; separate approval of exact recipients is still required. Delivery NOT TESTED / NOT SENT. Parent financial/source residuals and all peer ownership stay OPEN. Next: exact source CI/review and authorized release, then scoped native full-report/email-preview LAB parity. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. Complete base registry suffixes retained.
 
+## 07/11/2026 17:05 Europe/Athens - OCR4-CONFIDENCE-SCALE-01 / ASSIGNED / BEFORE SOURCE
+
+Retained invoice/task4 owner /root; continuation from docs/ocr4-k01-hosted-20261106 at the owner's request to continue here in small steps. Claim branch docs/ocr4-confidence-scale-claim-20261107; subsequent source branch fix/ocr4-confidence-scale-20261107.
+
+Scope: only make the FAST provider's confidence unit explicit in the schema description and prompt: percentage points from 0 to 100; 99 means 99%, 1 means 1%, and 0.99 remains a valid 0.99%. No automatic multiplication, minimum confidence, UI conversion or retrospective reinterpretation of K01. Add focused actual-request/response regression coverage with synthetic mocked provider values.
+
+Read-only source review at main a9d6873c98f045de943bc67e3ff15ba70843f896: the schema already permits 0-100; the prompt does not name the scale, the endpoint preserves the numeric value, and the UI rounds it. K01's raw confidence is NOT CAPTURED, so its historical cause remains UNPROVEN. Existing limited K01 file/page/header PASS remains protected; K01 and all previously consumed fixtures are not replayed. Full OCR and hosted acceptance remain OPEN.
+
+Preserve supplier/number/date/total selection, physical PDF counting, provider order/models/reasoning/timeouts, Azure and durable reuse, tenant/store authorization, wallet and every payment/draft/stock/fiscal writer. OCR4-LOCAL-PDF-3697 and the separate latency scopes/owners are unchanged. Source integration starts only after normal claim CI and merge to main. Next: the bounded prompt/schema clarification and focused checks; no paid OCR or production transaction in this step.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-ocr4-confidence-scale-claim.md. All earlier registry bytes are retained unchanged below. No new LAB PASS or numbered-work closure is claimed.
+
 ## 07/11/2026 21:19 Europe/Athens - CASH-UNIFIED-AUDIT-15 / SYSTEM-GENERATED EMAIL / BEFORE SOURCE
 
 ASSIGNED - retained owner codex/cash-chat-reconciliation-20261026, coordinated by /root; no transfer or competing claim. Claim branch docs/cash-system-email-claim-20261107; implementation branch fix/cash-system-email-20261107. OPEN / AWAITING IMPLEMENTATION AND LAB.
