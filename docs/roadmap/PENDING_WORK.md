@@ -1,3 +1,17 @@
+## 07/11/2026 23:13:35 Europe/Athens - CASH-UNIFIED-AUDIT-15 / CONSOLIDATED PREVIEW UI CANDIDATE / AWAITING LAB
+
+Same retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Existing PR #3711 history, UI note and registry prefixes retained. Consolidation uses exact remote base 4b620b2928b0acb9dfdca2174c3bf4b1db1d6466, including the complete intervening daily-contract test adaptation. The prior local baa512c candidate stayed unpublished; its old test evidence is separate. Draft/review hold on 07/11 at 21:01:44Z / 21:02:04Z changed PR metadata only.
+
+Bounded additions repair captured scope/session freshness, modal focus and Escape/in-flight cancel behavior, and short-height access while preserving the full scrollable system report, visible recipients, optional blank comment and explicit Send/Cancel. Four existing client/test paths, using platform-admin.css; backend/schema/recipient authority unchanged. Preserve owner/self readiness, canonical fingerprint/generation, stale-response rejection and atomic double-submit protection. No financial/provider/schedule expansion.
+
+Actual consolidated Node 20.20.2 focused suite: 67 PASS / 0 FAIL / 0 SKIP / 0 CANCEL; separate exact-remote daily contract: 11 PASS / 0 FAIL / 0 SKIP / 0 CANCEL. Initial footerless run not counted. Final independent review: NO BLOCKERS; text whitespace check clean. Local source evidence only; new exact-head CI/release and hosted full-preview acceptance remain pending. Preserve actual native-preview FAIL JSON, unchanged manual, prior scoped cash PASS and every peer byte/owner. No new functional PASS.
+
+Delivery NOT TESTED / NOT SENT; exact-recipient approval remains outstanding. Next: exact CI/review and authorized guarded release, then complete native preview/recipients/blank-comment/Cancel observation. Do not repeat the completed no-charge check or any rejected outbound action. Parent checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. Ten-path increment over current remote base; complete twelve-path PR includes the retained remote UI note and daily-contract test.
+
+## 07/11/2026 - CASH-UNIFIED-AUDIT-15 - FULL EMAIL PREVIEW UI CANDIDATE
+
+Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Before-source claim #3710 merged. PR #3711 (fix/cash-email-preview-20261107) replaces oversized native cash-email dialogs with a complete scrollable in-app system-generated report preview and explicit Send/Cancel for owner, self preview and not-ready visibility. Original backend reader, arithmetic, permissions, fingerprint/generation, recipients, SMTP and schedules unchanged. Synthetic >10,240-character mounted UI regression and atomic double-send, stale-store/day and pending-readiness checks added. Exact CI and LIVE recheck remain pending; no actual email sent and no financial, review, provider, bank or fiscal mutation. Prior limited PASS and the real 10,240-character preview FAIL remain preserved. Separate approval of exact outbound recipients required. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-email-preview-ui.md.
+
 ## 07/11/2026 17:05 Europe/Athens - OCR4-CONFIDENCE-SCALE-01 / ASSIGNED / BEFORE SOURCE
 
 Retained invoice/task4 owner /root; continuation from docs/ocr4-k01-hosted-20261106 at the owner's request to continue here in small steps. Claim branch docs/ocr4-confidence-scale-claim-20261107; subsequent source branch fix/ocr4-confidence-scale-20261107.

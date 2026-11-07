@@ -146,3 +146,16 @@
 
 /* Keep each owner at its intrinsic height; the working list owns scrolling. */
 .platform-company-cards{grid-auto-rows:max-content}
+
+/* Full, untruncated in-app preview for system-generated cash reports. */
+.cash-email-preview-overlay{z-index:75}
+.cash-email-preview-dialog{position:relative;box-sizing:border-box;width:min(980px,96vw);max-height:94vh;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:24px;border-radius:20px;background:#fff;box-shadow:0 28px 80px rgba(0,0,0,.3)}
+.cash-email-preview-dialog h2{padding-right:46px;margin:0}
+.cash-email-preview-dialog p{margin:0}
+.cash-email-preview-dialog .cash-email-preview-description{font-size:13px;color:#475569}
+.cash-email-preview-content{box-sizing:border-box;flex:1 1 auto;min-height:120px;max-height:56vh;overflow:auto;margin:0;padding:16px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;color:#14243b;font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
+.cash-email-preview-end{font-size:12px;font-weight:800;color:#475569}
+.cash-email-preview-comment{display:grid;gap:6px}
+.cash-email-preview-comment textarea{box-sizing:border-box;resize:vertical;min-height:62px;max-height:100px;width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}
+.cash-email-preview-actions{margin-top:2px;flex-shrink:0}
+@media(max-width:800px){.cash-email-preview-dialog{width:96vw;max-height:94vh;padding:16px}.cash-email-preview-content{max-height:48vh}}
