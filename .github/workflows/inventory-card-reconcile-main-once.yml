@@ -33,6 +33,8 @@ jobs:
           EXPECTED_MAIN: "f0aca8f104c37be776c8a7dfc140a14cedf6bccc"
         run: |
           set -euo pipefail
+          git config user.name "myworkstation-recovery-bot"
+          git config user.email "actions@users.noreply.github.com"
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD^)" = "$EXPECTED_PREVIOUS"
           test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
