@@ -58,6 +58,14 @@ jobs:
           ours=Path(path).read_bytes()
           base=subprocess.check_output(['git','show',os.environ['MERGE_BASE']+':'+path])
           main=subprocess.check_output(['git','show','origin/main:'+path])
+          import hashlib
+          print('Bounded registry comparison: merge_base=',os.environ['MERGE_BASE'][:14],
+              'lengths=',len(base),len(ours),len(main),
+              'base_sha256=',hashlib.sha256(base).hexdigest()[:16],
+              'ours_suffix_matches=',ours.endswith(base),'main_suffix_matches=',main.endswith(base),
+              'ours_tail_sha256=',hashlib.sha256(ours[-4096:]).hexdigest()[:16],
+              'main_tail_sha256=',hashlib.sha256(main[-4096:]).hexdigest()[:16],
+              'base_tail_sha256=',hashlib.sha256(base[-4096:]).hexdigest()[:16],flush=True)
           if len(base)<100000 or not ours.endswith(base) or not main.endswith(base):
               raise SystemExit('Registry history is not a shared unchanged suffix: BLOCK')
           our_prefix=ours[:-len(base)]
