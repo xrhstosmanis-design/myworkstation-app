@@ -10,6 +10,28 @@ Preserve supplier/number/date/total selection, physical PDF counting, provider o
 
 Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-ocr4-confidence-scale-claim.md. All earlier registry bytes are retained unchanged below. No new LAB PASS or numbered-work closure is claimed.
 
+## 07/11/2026 22:19:03 Europe/Athens - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW FAIL / UI CLAIM BEFORE SOURCE
+
+Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Source PR #3708 is installed at be3844895e807db469c3d3571cefa42bd7f3ec1c. Claim branch docs/cash-email-preview-claim-20261107; future implementation fix/cash-email-preview-20261107. OPEN / ASSIGNED / AWAITING UI IMPLEMENTATION AND LAB.
+
+Actual native preview opened on 07/11 at 20:10:42.209 UTC and was observed by 20:11:08.808 UTC. Full-mode content was visible: three pending full-audit rows, the canonical system follow-up sentence, duplicate evidence and cached/unread papers. However, the observed message stopped at exactly 10,240 characters mid-paper line; recipients and final instructions were not visible. Overall full-preview acceptance is FAIL, not PASS. This observation does not establish a universal browser limit or complete-body parity.
+
+The comment field was empty; no comment was typed. Cancel at 20:14:15.269 UTC closed the dialog and restored the native button. No email was sent. Delivery remains NOT TESTED / NOT SENT and exact-recipient approval remains outstanding. Financial/source reconciliation stays OPEN; prior 03/11 source evidence, 04/11 basic/full scoped PASS and 07/11 no-charge LIVE UI PASS remain protected.
+
+Bounded UI correction only: replace the oversized browser dialog with a scrollable in-app complete system preview, visible recipients, optional blank comment and explicit Send/Cancel. Preserve the installed full reader, canonical text, readiness/auth/store/day/fingerprint/generation/stale-context/double-submit guards. No schedules, paid providers, recipient changes, financial/review writes or new send authorization. No new manual PASS; existing limited short-preview history is not contradicted.
+
+Next: merge this documentation-only claim after applicable CI before UI source edits, then verify long-body completeness and guards with synthetic tests and separately authorized native preview/cancel acceptance. Do not repeat the completed no-charge button or any outbound action. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md; sanitized evidence: CHECKPOINTS/EVIDENCE/cash-system-email-20261107/native-preview.json. Every prior registry byte and peer owner retained.
+
+## 07/11/2026 21:34:07 Europe/Athens - CASH-UNIFIED-AUDIT-15 / SOURCE CANDIDATE / AWAITING LAB
+
+Same owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Claim PR #3707 merged as 7b40395f1313dd5cc1d3789878930e1eca56602b after exact docs CI 42406315142. Implementation branch fix/cash-system-email-20261107.
+
+Candidate: native email reads the full existing no-charge report; the complete canonical envelope is checked before a private email-only basic-readiness projection. Delivered findings, canonical fingerprint/generation and arithmetic/provisional/auth/recipient guards remain authoritative. One conditional system-generated follow-up instruction supports owner/manager review; blank sender comment supported. Scheduled/public schemas and duplicate formatting stay unchanged.
+
+Node 20.20.2 focused checks: 44 PASS / 0 FAIL / 0 SKIP; injected fake mail transport only. Final independent review found no blocking issue in the five approved source/test paths. This is local source evidence only; exact source CI/release and new hosted acceptance remain pending. AWAITING LAB, no new functional/manual PASS. Preserve 03/11 source evidence, 04/11 basic/full saved-reading scoped PASS and 07/11 limited no-charge LIVE UI PASS.
+
+No paid OCR, ledger/review/offset writes, schedules, recipient/settings changes or production email attempt. Prior outbound approval rejection remains; separate approval of exact recipients is still required. Delivery NOT TESTED / NOT SENT. Parent financial/source residuals and all peer ownership stay OPEN. Next: exact source CI/review and authorized release, then scoped native full-report/email-preview LAB parity. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. Complete base registry suffixes retained.
+
 ## 07/11/2026 21:19 Europe/Athens - CASH-UNIFIED-AUDIT-15 / SYSTEM-GENERATED EMAIL / BEFORE SOURCE
 
 ASSIGNED - retained owner codex/cash-chat-reconciliation-20261026, coordinated by /root; no transfer or competing claim. Claim branch docs/cash-system-email-claim-20261107; implementation branch fix/cash-system-email-20261107. OPEN / AWAITING IMPLEMENTATION AND LAB.
