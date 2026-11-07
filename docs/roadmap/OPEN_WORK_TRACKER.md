@@ -1,3 +1,11 @@
+## 07/11/2026 08:31 Europe/Athens — OCR4-LOCAL-PDF-3697 / ASSIGNED / BEFORE SOURCE
+
+Owner: κεντρικός συντονιστής `/root` (έγκριση ιδιοκτήτη στη συνομιλία). Μία ανάθεση για το υπάρχον GitHub issue #3697. Κλάδος καταχώρισης: `docs/ocr4-local-pdf-claim-20261106`. Προβλεπόμενος κλάδος κώδικα μετά τη συγχώνευση της ανάθεσης: `fix/ocr4-local-pdf-3697`.
+
+Εύρος: μόνο «Τοπική ανάγνωση» PDF. Διαδοχική αναγνώριση όλων των φυσικών σελίδων, συγκέντρωση κειμένου και γραμμών με τη σειρά, σαφές σφάλμα σελίδας και αποδέσμευση πόρων. Έλεγχος του ενεργού AiReaderPanel και των δύο legacy helpers του issue. Διατήρηση αρχικού PDF και ροής εικόνας. Το FAST #3673 και οι λειτουργίες πληρωμών, αποθεμάτων, οριστικοποίησης και φορολογίας είναι εκτός εύρους.
+
+Κατάσταση: OPEN. Υπάρχει ξεχωριστό προσχέδιο patch. Πέντε απομονωμένες δοκιμές με προσομοιώσεις πέρασαν. Έλεγχος σειράς με συνθετικά PDF και Poppler/Tesseract CLI, με λάθη χαρακτήρων. Εκκρεμούν browser/PDF.js/Tesseract.js και LAB. Αλλαγές κώδικα στο repository μετά τη δημοσίευση της ανάθεσης στο main. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-07-ocr4-local-pdf-3697-claim.md`.
+
 07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / #3690 filter USER PASS (LIMITED). Owner /root; existing MYWORKSTATION LAB Owner/SA draft 109 all rows / one counted 3.25 row; owner confirmed filter on 06/11 at 11:08 Europe/Athens. Existing count unchanged. Only filter closed; physical scanner, staff-specific admission and new-product card/attach remain OPEN (#3701/#3702). See CHECKPOINTS/CHANGES/2026-11-05-inventory-scan-workflow.md and docs/manual/inventory/PASS.md. No repeat count.
 
 ## 06/11/2026 22:14 Europe/Athens - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / OCR4 / K01 HOSTED LIMITED PASS / REMAINING SCOPE OPEN
