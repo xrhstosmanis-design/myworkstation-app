@@ -21,7 +21,8 @@ test("AI recheck is manual and provider remains locked",()=>{
 });
 
 test("reader retains OCR lines and confidence",()=>{
-  assert.match(panel,/result\.data\.text/);
+  assert.match(panel,/const \{ confidence, \.\.\.result \} = await recognizeLocalInvoice\(source, collectLines,/);
+  assert.match(panel,/localConfidence: confidence,\s+result,/);
   assert.match(panel,/line\.confidence/);
   assert.match(panel,/Μη αναγνωρίσιμο/);
   assert.match(catalog,/key:"AI_READER"[\s\S]*commercialReady:true/);

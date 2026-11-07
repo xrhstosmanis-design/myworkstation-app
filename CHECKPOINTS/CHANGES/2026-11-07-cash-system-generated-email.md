@@ -1,3 +1,7 @@
+## 07/11 - Shared OCR4/main reconciliation / CI and LIVE pending
+
+Main 6351596b was integrated in PR #3711. Three common Markdown registries preserve the latest main file bytes verbatim, plus the cash-only prefix, including any prior OCR edits. Two tracker PDF copies were regenerated identically with the repository generator and first pages rendered and checked for both headings. This is a merge/conflict receipt, not an acceptance PASS. Preview and email delivery are NOT TESTED after the UI change. No real email, financial mutation or recipient edit was made. The PR stays Draft awaiting exact combined-head CI, review and approval.
+
 ## 07/11/2026 23:13:35 Europe/Athens - Consolidated full email preview UI candidate / AWAITING LAB
 
 **Status: consolidated source candidate; hosted full-preview acceptance AWAITING LAB. Delivery NOT TESTED / NOT SENT.** Retained owner `codex/cash-chat-reconciliation-20261026`, coordinated by `/root`; parent `CASH-UNIFIED-AUDIT-15` stays OPEN / ASSIGNED without transfer. This receipt does not relabel the earlier observed native preview FAIL or grant financial closure or outbound approval.
