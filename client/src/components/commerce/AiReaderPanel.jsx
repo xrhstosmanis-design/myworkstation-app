@@ -1,3 +1,4 @@
+import { recognizeLocalInvoice } from "../../lib/local-invoice-ocr.mjs";
 import DocumentScanButton from "../store/DocumentScanButton.jsx";
 import {prepareDocumentFile} from "../../lib/document-image-quality.js";
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
@@ -27,15 +28,45 @@ function collectLines(data){
   if(found.length)return found;return String(data.text||"").split(/\r?\n/).map(text=>text.trim()).filter(Boolean).map(text=>({text,confidence:Math.round(Number(data.confidence)||0)}));
 }
 
-async function imageForOcr(file){
-  if(file.type!=="application/pdf")return (await prepareDocumentFile(file,{strict:true,maxSide:3000,enhance:true})).file;const pdfjs=await import("pdfjs-dist/legacy/build/pdf.mjs");pdfjs.GlobalWorkerOptions.workerSrc=new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs",import.meta.url).toString();const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const page=await pdf.getPage(1),viewport=page.getViewport({scale:2}),canvas=document.createElement("canvas");canvas.width=viewport.width;canvas.height=viewport.height;await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;return canvas.toDataURL("image/png",.92);
-}
-
 export default function AiReaderPanel({api,storeId,status,onStatus,focusJobId=""}){
   const [file,setFile]=useState(null),[jobs,setJobs]=useState([]),[products,setProducts]=useState([]),[suppliers,setSuppliers]=useState([]),[working,setWorking]=useState(false),[progress,setProgress]=useState(0),[error,setError]=useState(""),[message,setMessage]=useState(""),[selected,setSelected]=useState(null),[supplierId,setSupplierId]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(greeceDateInput(new Date())),[draftLines,setDraftLines]=useState([]);
   const load=async()=>{if(!storeId)return;const [jobRows,productRows,supplierRows]=await Promise.all([api(`/api/commerce/ai-reader/jobs?storeId=${encodeURIComponent(storeId)}`),api("/api/commerce/products"),api("/api/commerce/suppliers")]);setJobs(jobRows);setProducts(productRows);setSuppliers(supplierRows)};
   useEffect(()=>{setSelected(null);load().catch(e=>setError(e.message))},[storeId]);
-  const run=async()=>{if(!file||!storeId)return;setWorking(true);setError("");setMessage("");setProgress(1);try{const {createWorker}=await import("tesseract.js");const worker=await createWorker("ell+eng",1,{logger:m=>{if(m.status==="recognizing text")setProgress(Math.max(1,Math.round((m.progress||0)*100)))}});let result;try{result=await worker.recognize(await imageForOcr(file))}finally{await worker.terminate()}const lines=collectLines(result.data),confidence=Math.round(Number(result.data.confidence)||0);await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId,filename:file.name,mimeType:file.type,dataUrl:await readFile(file),localConfidence:confidence,result:{rawText:result.data.text||"",lines,pageCount:file.type==="application/pdf"?1:null,pdfNote:file.type==="application/pdf"?"Αναγνώστηκε η πρώτη σελίδα του PDF.":null}})});setFile(null);setProgress(100);setMessage("Η πρόχειρη ανάγνωση αποθηκεύτηκε χωρίς χρήση AI.");await Promise.all([load(),onStatus?.()])}catch(e){setError(e.message||"Η τοπική αναγνώριση απέτυχε.")}finally{setWorking(false)}};
+  const run = async () => {
+    if (!file || !storeId) return;
+    setWorking(true);
+    setError("");
+    setMessage("");
+    setProgress(1);
+    try {
+      const source = file.type === "application/pdf"
+        ? file
+        : (await prepareDocumentFile(file, { strict: true, maxSide: 3000, enhance: true })).file;
+      const { confidence, ...result } = await recognizeLocalInvoice(source, collectLines, {
+        pdfImageType: "image/png",
+        onProgress: (progress) => setProgress(Math.max(1, Math.min(99, Math.round(progress * 100)))),
+      });
+      await api("/api/commerce/ai-reader/jobs", {
+        method: "POST",
+        body: JSON.stringify({
+          storeId,
+          filename: file.name,
+          mimeType: file.type,
+          dataUrl: await readFile(file),
+          localConfidence: confidence,
+          result,
+        }),
+      });
+      setFile(null);
+      setProgress(100);
+      setMessage("Η πρόχειρη ανάγνωση αποθηκεύτηκε χωρίς χρήση AI.");
+      await Promise.all([load(), onStatus?.()]);
+    } catch (error) {
+      setError(error.message || "Η τοπική αναγνώριση απέτυχε.");
+    } finally {
+      setWorking(false);
+    }
+  };
   const choose=job=>{setSelected(job);const result=job.result||{},supplierText=[result.supplier?.name,result.supplier?.taxId,result.rawText].filter(Boolean).join(" "),supplier=bestMatch(supplierText,suppliers);setSupplierId(supplier.value>=.5?supplier.id:"");setDocumentNumber(String(result.documentNumber||""));if(/^\d{4}-\d{2}-\d{2}/.test(String(result.documentDate||"")))setDocumentDate(String(result.documentDate).slice(0,10));const structured=Array.isArray(result.productLines)?result.productLines:[];setDraftLines(structured.length?structured.map(line=>{const text=String(line.description||line.rawText||"").trim(),product=bestMatch(`${line.code||""} ${line.barcode||""} ${text}`,products);return {...blankLine(),included:true,text,confidence:Number(line.confidence||result.aiConfidence||0),productId:product.value>=.5?product.id:"",supplierItemCode:String(line.supplierItemCode||line.code||"").trim(),supplierBarcode:String(line.supplierBarcode||line.barcode||"").trim(),quantity:Number(line.quantity||0)||1,unit:String(line.unit||"").toLocaleUpperCase("el-GR").includes("PACK")?"PACKAGE":"PIECE",unitsPerPackage:Number(line.unitsPerPackage||1)||1,unitCost:Number(line.unitCost||0),vatRate:Number(line.vatRate||0)}}):(result.lines||[]).map(line=>{const product=bestMatch(line.text,products);return {...blankLine(),included:false,text:line.text,confidence:line.confidence,productId:product.value>=.5?product.id:""}}));setError("");setMessage("")};
   useEffect(()=>{if(!focusJobId||selected?.id===focusJobId||!jobs.length||!products.length||!suppliers.length)return;const job=jobs.find(row=>row.id===focusJobId);if(job)choose(job)},[focusJobId,jobs,products,suppliers,selected?.id]);
   const changeLine=(index,field,value)=>setDraftLines(rows=>rows.map((row,i)=>i===index?{...row,[field]:value}:row));
