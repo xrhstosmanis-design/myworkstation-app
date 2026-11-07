@@ -613,7 +613,7 @@ export default function PlatformAdminApp(){
       setCashEmailDraft(null);
       setMessage(draft.mode==="owners"?"Η αναφορά του "+draft.storeName+" στάλθηκε σε: "+sent.recipients.join(", ")+".":"Η δοκιμαστική αναφορά στάλθηκε μόνο στο "+sent.recipients.join(", ")+".");
     }catch(err){if(draft.sequence===cashLoadSequence.current){setCashEmailDraft(null);setError(err.message)}}
-    finally{cashEmailSendInFlight.current=false;if(draft.sequence===cashLoadSequence.current)setBusy("")}
+    finally{cashEmailSendInFlight.current=false;setBusy(value=>value===key?"":value)}
   };
 
   const downloadShortages=async store=>{
