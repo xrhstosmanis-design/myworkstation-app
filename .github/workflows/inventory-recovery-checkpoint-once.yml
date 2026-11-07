@@ -14,7 +14,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: recovery/inventory-unknown-barcode-20261107
-          fetch-depth: 0
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            AGENTS.md
+            CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+            CHECKPOINTS/CHANGES/2026-11-07-inventory-unknown-barcode-recovery.md
+            docs/roadmap/OPEN_WORK_TRACKER.md
+            docs/roadmap/PENDING_WORK.md
+            .github/workflows/inventory-recovery-checkpoint-once.yml
       - name: Verify complete original registries and prepend scoped OPEN entry
         shell: bash
         run: |
