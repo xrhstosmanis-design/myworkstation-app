@@ -119,6 +119,7 @@ export function reconciliationText(report){
   const names=[...new Set(report.rows.filter(r=>r.reviewed).map(r=>r.reviewedBy).filter(Boolean))],tokens=names.length===1?names[0].normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR').split(/\s+/):[];
   const signature=names.length===1?tokens.includes('ΧΡΗΣΤΟΣ')&&tokens.includes('ΜΑΝΗΣ')?'ΜΑΝΗΣ ΧΡΗΣΤΟΣ':names[0].toLocaleUpperCase('el-GR'):null;
   const lines=['ΕΛΕΓΧΟΣ ΤΑΜΕΙΩΝ MYWORKSTATION',`${report.storeName} · ${report.period.from} έως ${report.period.to}`,'','ΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ'+(signature?' — '+signature:'')];
+  if(report.rows.some(row=>['PENDING','AWAITING_NEXT_SHIFT'].includes(row.fullAudit?.status)))lines.push('Η αναφορά δημιουργήθηκε αυτόματα από το MyWorkStation. Για την ολοκλήρωση της διασταύρωσης χρειάζεται έλεγχος και διευκρίνιση από τον υπεύθυνο ή τον ιδιοκτήτη, με τα διαθέσιμα παραστατικά.');
   if(!report.rows.length)lines.push('Δεν βρέθηκαν κλεισμένες βάρδιες στην επιλεγμένη περίοδο.');
   for(const row of report.rows){
     if(row.fullAudit){

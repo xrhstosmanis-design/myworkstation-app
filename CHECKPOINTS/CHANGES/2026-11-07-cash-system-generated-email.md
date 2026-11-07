@@ -1,3 +1,46 @@
+## 07/11/2026 21:34:07 Europe/Athens - CASH-UNIFIED-AUDIT-15 / SOURCE CANDIDATE / AWAITING LAB
+
+This entry advances the before-source claim below to a local implementation candidate only. Retained owner codex/cash-chat-reconciliation-20261026, coordinated by /root; no transfer. Branch `fix/cash-system-email-20261107`, exact implementation base `7b40395f1313dd5cc1d3789878930e1eca56602b`.
+
+Claim PR #3707 was merged before source edits. Its exact head `4585d25b3bd870cfecfa6327e0a2e7455b1dfc0b` passed documentation CI [42406315142](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42406315142); bounded helper 42406195207 produced reviewed tree `ac54daa06d23bb6b806fb691df405f42f1b1c64d`. Main documentation CI 42406429038 also succeeded on that exact merge; deployment-classifier workflow 42406483251 succeeded with its production deploy job skipped. These documentation results are not source CI, LAB acceptance or delivery proof.
+
+### Bounded correction
+
+The native email reader enables `scope.fullAudit = true`, so preview and send regenerate the existing full read-only report with stored-paper coverage, duplicate evidence and full pending findings. The complete canonical envelope is validated before an email-only readiness projection omits full-only fields for the existing basic contract. That private projection does not replace the preview, fingerprint or delivered text. Scheduled delivery and public schemas remain unchanged.
+
+The shared canonical renderer adds one short conditional system instruction for pending/awaited-next-shift full audits, directing the responsible manager or owner to complete the cross-check using available evidence. A blank sender comment remains supported. No assistant-composed report/comment, external mailbox or expanded duplicate formatter is introduced.
+
+### Verification and limits
+
+Node 20.20.2 focused verification completed **44 PASS / 0 FAIL / 0 SKIP**. All mail sends used injected fake transport; no real SMTP operation occurred. Repository-relative selection:
+
+```sh
+node --test \
+  server/test/cash-reviewed-email.test.js \
+  server/test/cash-reviewed-email-routes.test.js \
+  server/test/cash-reviewed-email-ui.test.js \
+  server/test/cash-reconciliation-report.test.js \
+  server/test/cash-full-audit.test.js \
+  server/test/cash-reviewed-automatic.test.js \
+  server/test/cash-reviewed-automatic-flow.test.js
+```
+
+Successful local log: `cash-system-email-focused-rerun1-20261107.log`, 12,156 bytes, SHA256 `3fb3aff9ff00755b611259fc24dfc95be508ad25df3ab8e969ec4c460c503b4a`. The initial run had three environment/module blocks because the unchanged `ops/backup/lifecycle/manifest.json` was absent from the sparse checkout; same-base hydration resolved that setup issue before the completed rerun. The initial log is retained. No source defect or new hosted result is inferred from the setup failure. `git diff --check` completed with exit 0.
+
+Final independent review reported **no blocking findings** in the five approved source/test paths and read the successful 44-test log. This is source review and local synthetic verification, not hosted or financial acceptance.
+
+Protected behavior: full canonical text/fingerprints and generation; stale source/text/store/day rejection; arithmetic and provisional-readiness barriers; authorization and configured-recipient safeguards; original amounts, evidence, review history and existing report behavior. Keep the 03/11 source evidence, 04/11 basic/full saved-reading scoped PASS and 07/11 limited no-charge LIVE UI PASS unchanged.
+
+Status remains OPEN / ASSIGNED / AWAITING LAB. Exact source PR/main CI, guarded release, new hosted full-email comparison and actual delivery have not been established by this local receipt. No new functional PASS or manual entry. No paid OCR, ledger/review/offset writes, schedules, SMTP/recipient setting changes, new recipients or production email attempt.
+
+The previous outbound approval rejection still applies. System provenance/channel clarification and this correction do not authorize the rejected destination set. Separate approval for the exact intended recipients is required before any later native email attempt. Full-email delivery remains NOT TESTED / NOT SENT; SMTP submission, if later authorized and observed, is not inbox/read confirmation.
+
+### Next action
+
+Publish the bounded source candidate and this synchronized documentation, obtain exact applicable CI and review, then proceed through authorized integration and the existing guarded release. Compare the native full report and native email preview in separately authorized LAB without sender-written content or financial mutation. Actual email delivery is a separate approval and observation.
+
+All bytes of the three registries at base `7b40395f1313dd5cc1d3789878930e1eca56602b` must remain as unchanged suffixes. The existing generator produces both PDF copies with ReportLab 4.4.9, invariant metadata and `SOURCE_DATE_EPOCH=1794080047`; only the first two pages are included in the bounded visual review. Historical claim details below remain evidence, with their earlier implementation status superseded only by this local receipt.
+
 # 07/11/2026 - Full system-generated cash email / before-source claim
 
 ## Assignment and status
