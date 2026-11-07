@@ -36,7 +36,7 @@ jobs:
               raise SystemExit('Tracker owner/work scope not verified; stop')
           if not guide.read_bytes().startswith(b'##'):
               raise SystemExit('AGENTS.md not verified; stop')
-          marker=b'07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 · recovery #3691'
+          marker='07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 · recovery #3691'.encode('utf-8')
           if marker not in before:
               entry=(marker.decode('utf-8')+
                  ' — Owner /root unchanged. Draft recovery branch from main; unknown barcode new-product-card candidate and permission/stocktake scope tests; full CI and measured LAB NOT TESTED; separate line attachment #3692 remains OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-inventory-unknown-barcode-recovery.md. Do not repeat accepted Enter/filter counts.\n\n').encode('utf-8')
