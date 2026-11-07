@@ -90,6 +90,10 @@ jobs:
           if not basic or not all(b in our_lines and b in main_lines for b in basic):
               raise SystemExit('The source-base OPEN entries are not preserved in both branches')
           exclusive=[line for line in our_lines if line not in main_lines]
+          print('Additive record comparison: base, ours, main, unique=',len(basic),len(our_lines),len(main_lines),len(exclusive),flush=True)
+          for name,rows in [('base',basic),('ours',our_lines),('main',main_lines),('unique',exclusive)]:
+              for line in rows[:4]:
+                  print(name,'bytes=',len(line),'sha=',hashlib.sha256(line).hexdigest()[:16],'head=',repr(line[:115]),flush=True)
           if len(exclusive)!=1 or b'3702' not in exclusive[0] or b'INVENTORY-SCAN-WORKFLOW-01' not in exclusive[0]:
               raise SystemExit('Cannot identify exactly one attachment-only OPEN line')
           if len(exclusive[0])>1400:
