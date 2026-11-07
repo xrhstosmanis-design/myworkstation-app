@@ -1,0 +1,53 @@
+name: PR3709 safe in-GitHub reconciliation preflight
+on:
+  push:
+    branches:
+      - docs/ocr4-confidence-scale-claim-20261107
+    paths:
+      - .github/workflows/pr3709-safe-sync.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Sparse checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/pr3709-safe-sync.yml
+            CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+            docs/roadmap/OPEN_WORK_TRACKER.md
+            docs/roadmap/PENDING_WORK.md
+      - name: Verify exact suffixes without writing to any branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --filter=blob:none origin main
+          python3 - <<'PY'
+          import subprocess
+          def show(ref, path):
+              return subprocess.check_output(["git", "show", f"{ref}:{path}"])
+          main = subprocess.check_output(["git", "rev-parse", "origin/main"], text=True).strip()
+          assert main == "83cee2b70b08e14acaee82bd93129c3586ca64bf", "main changed; stop and recheck"
+          branch = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          base = "7b40395f1313dd5cc1d3789878930e1eca56602b"
+          path = "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md"
+          old, current, claimed = (show(ref, path) for ref in (base, main, branch))
+          assert current.endswith(old) and claimed.endswith(old)
+          main_new, claim_new = current[:-len(old)], claimed[:-len(old)]
+          assert main_new.count(b"\n") == 22 and claim_new.count(b"\n") == 12
+          assert claim_new.startswith(b"## 07/11/2026 17:05 Europe/Athens - OCR4-CONFIDENCE-SCALE-01")
+          for path in ("docs/roadmap/OPEN_WORK_TRACKER.md", "docs/roadmap/PENDING_WORK.md"):
+              main_doc, claim_doc = show(main, path), show(branch, path)
+              assert claim_doc.endswith(main_doc), path
+              assert claim_doc.startswith(b"## 07/11/2026 17:05 Europe/Athens - OCR4-CONFIDENCE-SCALE-01")
+          print("PASS: 22 main + 12 claim lines; all previous bytes preserved; both trackers contain latest main.")
+          print("READ-ONLY: no files, branches, or production changed.")
+          PY
