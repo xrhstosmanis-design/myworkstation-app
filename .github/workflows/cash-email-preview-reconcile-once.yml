@@ -1,0 +1,116 @@
+name: Cash preview one-time shared registry merge
+on:
+  push:
+    branches: [fix/cash-email-preview-20261107]
+    paths: ['.github/workflows/cash-email-preview-reconcile-once.yml']
+permissions:
+  contents: write
+concurrency:
+  group: cash-email-preview-reconcile-once
+  cancel-in-progress: false
+jobs:
+  reconcile:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SOURCE_DATE_EPOCH: '1794082743'
+      PYTHONHASHSEED: '0'
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            .github/workflows
+            CHECKPOINTS/CHANGES
+            CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+            docs/roadmap
+            output/pdf
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install existing PDF generator dependencies
+        run: |
+          python -m pip install --disable-pip-version-check reportlab==4.4.9
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-dejavu-core poppler-utils
+      - name: Strict merge and byte-preserving registry conflict resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_MAIN=6351596bfcdb4c4e3b3c48a5046867a10451adef
+          EXPECTED_REVIEWED=202d1dc4a7600e18636a813fedbba00be5a1b604
+          test "$(git rev-parse 'HEAD^')" = "$EXPECTED_REVIEWED" || { echo "STOP: review head advanced"; exit 1; }
+          test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$TARGET_MAIN" || { echo "STOP: main advanced"; exit 1; }
+          git fetch origin main:refs/remotes/origin/main
+          test "$(git rev-parse origin/main)" = "$TARGET_MAIN"
+          test "$(git merge-base HEAD origin/main)" = "83cee2b70b08e14acaee82bd93129c3586ca64bf"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          set +e
+          git merge --no-commit --no-ff origin/main -m "Merge current main OCR4 into cash preview"
+          exitcode=$?
+          set -e
+          test "$exitcode" -eq 0 -o "$exitcode" -eq 1 || { echo "STOP: unexpected merge error"; exit 1; }
+          git diff --name-only --diff-filter=U > /tmp/cash-conflicts.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess, hashlib, shutil, re
+          from runpy import run_path
+          import reportlab
+          assert reportlab.Version=='4.4.9'
+          base='83cee2b70b08e14acaee82bd93129c3586ca64bf'
+          textpaths=['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']
+          pdfpaths=['docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
+          conflicts=set(Path('/tmp/cash-conflicts.txt').read_text().splitlines())
+          assert conflicts<=set(textpaths+pdfpaths),f'Unexpected merge conflicts: {sorted(conflicts-set(textpaths+pdfpaths))}'
+          def show(ref,path):
+              return subprocess.check_output(['git','show',f'{ref}:{path}'])
+          for path in textpaths:
+              old=show(base,path); cash=show('HEAD',path); main=show('origin/main',path)
+              assert old and cash.endswith(old),(path,'cash original suffix changed')
+              assert main.endswith(old),(path,'main original suffix changed')
+              m=main[:-len(old)];c=cash[:-len(old)]
+              assert m and c,(path,'expected nonempty prefixes')
+              assert b'OCR' in m or b'ocr' in m,(path,'unrecognized main prefix')
+              assert b'CASH' in c,(path,'unrecognized cash prefix')
+              result=m+c+old
+              assert result.endswith(old) and result.count(c)==1 and result.count(m)==1
+              Path(path).write_bytes(result)
+              print(path,'base',len(old),'ocr prefix',len(m),'cash prefix',len(c),'sha256',hashlib.sha256(result).hexdigest())
+          reportlab.rl_config.invariant=1
+          run_path('docs/roadmap/generate-open-work-tracker.py',run_name='__main__')
+          first=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf')
+          second=Path('docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf')
+          shutil.copyfile(first,second)
+          assert first.read_bytes()==second.read_bytes()
+          info=subprocess.check_output(['pdfinfo',str(first)],text=True)
+          pages=int(re.search(r'^Pages:\s+(\d+)',info,re.M).group(1))
+          assert pages>100,pages
+          excerpt=subprocess.check_output(['pdftotext','-f','1','-l','2',str(first),'-'],text=True)
+          assert 'CASH' in excerpt and 'OCR' in excerpt, 'Combined PDF headings absent'
+          p=Path('/tmp/cash-merged-pdf');p.mkdir(exist_ok=True)
+          subprocess.run(['pdftoppm','-f','1','-l','2','-scale-to','1000','-png',str(first),str(p/'page')],check=True,stdout=subprocess.DEVNULL)
+          assert len(list(p.glob('page-*.png')))>=2
+          claim=Path('CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md')
+          old=claim.read_bytes()
+          prefix=('## 07/11 - Shared OCR4/main reconciliation / CI and LIVE pending\n\n'
+                  'Main 6351596b was integrated in PR #3711. Three common Markdown registries '
+                  'preserve both newest OCR and CASH prefixes and the complete original base suffix. '
+                  'Two tracker PDF copies were regenerated identically with the repository generator '
+                  'and first pages rendered and checked for both headings. This is a merge/conflict '
+                  'receipt, not an acceptance PASS. Preview and email delivery are NOT TESTED after '
+                  'the UI change. No real email, financial mutation or recipient edit was made. '
+                  'The PR stays Draft awaiting exact combined-head CI, review and approval.\\n\\n')
+          claim.write_bytes(prefix.encode()+old)
+          print('PDF',pages,'pages; identical SHA256',hashlib.sha256(first.read_bytes()).hexdigest())
+          PY
+          git add --sparse -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          git rm -- .github/workflows/cash-email-preview-reconcile-once.yml
+          test -z "$(git diff --name-only --diff-filter=U)" || { echo "STOP: unresolved paths"; exit 1; }
+          git diff --cached --check -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md
+          git commit -m "merge(cash): reconcile OCR4 and cash email preview registries"
+          test "$(git rev-list --parents -n1 HEAD | wc -w)" -eq 3 || { echo "STOP: not a merge commit"; exit 1; }
+          git push origin HEAD:refs/heads/fix/cash-email-preview-20261107
+          git log -1 --format='Merged source %H'
