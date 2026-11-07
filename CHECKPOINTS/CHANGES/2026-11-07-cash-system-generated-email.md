@@ -1,3 +1,9 @@
+## 07/11/2026 — Exact combined-branch CI trigger / AWAITING LAB
+
+The reviewed cash preview source at `202d1dc4` passed CI run [42415499841](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42415499841), 5/5 jobs. Main moved separately to `6351596b` with OCR4 changes. The one-shot bounded reconciliation run [42417158130](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42417158130) completed SUCCESS, creating two-parent merge `27f2c1a9c5b4ef2c1bf5b45a7de7b9066455d0cb`, preserving the entire then-current main shared registry bytes as suffixes, prepending only the cash-specific registry additions, regenerating identical tracker PDFs, and removing its temporary workflow. GitHub reports mergeable `true`; this does not establish CI on the merged tree.
+
+This documentation-only connector commit requests CI for the exact combined PR head; source, PDF and email functionality are unchanged. PR #3711 stays Draft pending the final CI, owner review and separate release authorization. Complete hosted report preview+Cancel is still AWAITING LAB. Actual email is NOT SENT / NOT TESTED. Financial reconciliation remains OPEN.
+
 ## 07/11 - Shared OCR4/main reconciliation / CI and LIVE pending
 
 Main 6351596b was integrated in PR #3711. Three common Markdown registries preserve the latest main file bytes verbatim, plus the cash-only prefix, including any prior OCR edits. Two tracker PDF copies were regenerated identically with the repository generator and first pages rendered and checked for both headings. This is a merge/conflict receipt, not an acceptance PASS. Preview and email delivery are NOT TESTED after the UI change. No real email, financial mutation or recipient edit was made. The PR stays Draft awaiting exact combined-head CI, review and approval.
