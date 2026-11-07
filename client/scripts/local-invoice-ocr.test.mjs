@@ -92,3 +92,32 @@ test("image is passed directly to OCR without opening a PDF", async () => {
   assert.equal(result.pdfNote, null);
   assert.deepEqual(events, ["worker-create", image, "worker-end"]);
 });
+
+test("multipage PDF results over the line limit are rejected after cleanup", async () => {
+  const { options, events } = fixture(2);
+  const manyLines = (data) => Array.from({ length: 501 }, () => collectLines(data)[0]);
+  await assert.rejects(recognizeLocalInvoice(pdf, manyLines, options), /1000 γραμμών/);
+  assert.deepEqual(events.slice(-2), ["worker-end", "pdf-destroy"]);
+});
+
+test("multipage PDF results at the line limit keep every line", async () => {
+  const { options } = fixture(2);
+  const manyLines = (data) => Array.from({ length: 500 }, () => collectLines(data)[0]);
+  const result = await recognizeLocalInvoice(pdf, manyLines, options);
+  assert.equal(result.lines.length, 1000);
+  assert.equal(result.lines[0].text, "MARKER 1");
+  assert.equal(result.lines.at(-1).text, "MARKER 2");
+});
+
+test("PDF OCR rejects overlong raw text and overlong individual lines", async () => {
+  const { options } = fixture(1);
+  options.createWorker = () => ({
+    recognize: () => ({ data: { text: "a".repeat(100001), confidence: 90 } }),
+    terminate() {},
+  });
+  await assert.rejects(recognizeLocalInvoice(pdf, () => [], options), /100000 χαρακτήρων/);
+  await assert.rejects(
+    recognizeLocalInvoice(pdf, () => [{ text: "a".repeat(1001), confidence: 90 }], fixture(1).options),
+    /γραμμή OCR 1.*1000 χαρακτήρων/,
+  );
+});

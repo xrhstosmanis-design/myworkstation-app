@@ -1,3 +1,5 @@
+import { LOCAL_INVOICE_OCR_LIMITS } from "../../../shared/local-invoice-ocr-limits.mjs";
+
 async function openPdf(file) {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -86,12 +88,28 @@ export async function recognizeLocalInvoice(
     }
   }
 
+  const rawText = pages.map((data) => data?.text || "").join("\n");
+  const lines = pages.flatMap((data) => collectLines(data || {}));
+  if (pageCount !== null) {
+    const limits = LOCAL_INVOICE_OCR_LIMITS;
+    if (lines.length > limits.lines) {
+      throw new Error(`Το αποτέλεσμα OCR του PDF ξεπερνά το όριο αποθήκευσης των ${limits.lines} γραμμών.`);
+    }
+    if (rawText.length > limits.rawText) {
+      throw new Error(`Το κείμενο OCR του PDF ξεπερνά το όριο αποθήκευσης των ${limits.rawText} χαρακτήρων.`);
+    }
+    const longLine = lines.findIndex(({ text }) => text.length > limits.lineText);
+    if (longLine !== -1) {
+      throw new Error(`Η γραμμή OCR ${longLine + 1} του PDF ξεπερνά το όριο αποθήκευσης των ${limits.lineText} χαρακτήρων.`);
+    }
+  }
+
   return {
     confidence: Math.max(0, Math.min(100, Math.round(
       pages.reduce((sum, data) => sum + (Number(data?.confidence) || 0), 0) / pages.length,
     ))),
-    rawText: pages.map((data) => data?.text || "").join("\n"),
-    lines: pages.flatMap((data) => collectLines(data || {})),
+    rawText,
+    lines,
     pageCount,
     pdfNote: pageCount === null ? null : `Το OCR διάβασε ${pageCount} από ${pageCount} σελίδες του PDF.`,
   };
