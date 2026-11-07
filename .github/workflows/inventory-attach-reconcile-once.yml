@@ -94,7 +94,7 @@ jobs:
           for name,rows in [('base',basic),('ours',our_lines),('main',main_lines),('unique',exclusive)]:
               for line in rows[:4]:
                   print(name,'bytes=',len(line),'sha=',hashlib.sha256(line).hexdigest()[:16],'head=',repr(line[:115]),flush=True)
-          if len(exclusive)!=1 or b'3702' not in exclusive[0] or b'INVENTORY-SCAN-WORKFLOW-01' not in exclusive[0]:
+          if len(exclusive)!=1 or b'recovery #3692' not in exclusive[0] or b'INVENTORY-SCAN-WORKFLOW-01' not in exclusive[0]:
               raise SystemExit('Cannot identify exactly one attachment-only OPEN line')
           if len(exclusive[0])>1400:
               raise SystemExit('Unexpected attachment entry length')
