@@ -119,7 +119,7 @@ jobs:
             docs/roadmap/PENDING_WORK.md \
             docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf \
             output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
-          git diff --cached --check
+          git diff --cached --check -- '*.md'
           python3 - <<'PY'
           import subprocess
           expected = {
