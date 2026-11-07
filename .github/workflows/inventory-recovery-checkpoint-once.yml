@@ -1,0 +1,53 @@
+name: Inventory recovery one-time checkpoint
+on:
+  push:
+    branches:
+      - recovery/inventory-unknown-barcode-20261107
+    paths:
+      - .github/workflows/inventory-recovery-checkpoint-once.yml
+permissions:
+  contents: write
+jobs:
+  retain-shared-history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: recovery/inventory-unknown-barcode-20261107
+          fetch-depth: 0
+      - name: Verify complete original registries and prepend scoped OPEN entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          active=Path('CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md')
+          tracker=Path('docs/roadmap/OPEN_WORK_TRACKER.md')
+          pending=Path('docs/roadmap/PENDING_WORK.md')
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-11-07-inventory-unknown-barcode-recovery.md')
+          guide=Path('AGENTS.md')
+          for p in (active,tracker,pending,checkpoint,guide):
+              if not p.is_file() or p.stat().st_size==0:
+                  raise SystemExit('Missing authoritative file: '+str(p))
+          before=active.read_bytes()
+          if len(before)<100000 or b'INVENTORY-SCAN-WORKFLOW-01' not in before:
+              raise SystemExit('Unexpected active-list structure: preserve original without changing it')
+          if b'INVENTORY-SCAN-WORKFLOW-01' not in tracker.read_bytes():
+              raise SystemExit('Tracker owner/work scope not verified; stop')
+          if not guide.read_bytes().startswith(b'##'):
+              raise SystemExit('AGENTS.md not verified; stop')
+          marker=b'07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 · recovery #3691'
+          if marker not in before:
+              entry=(marker.decode('utf-8')+
+                 ' — Owner /root unchanged. Draft recovery branch from main; unknown barcode new-product-card candidate and permission/stocktake scope tests; full CI and measured LAB NOT TESTED; separate line attachment #3692 remains OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-inventory-unknown-barcode-recovery.md. Do not repeat accepted Enter/filter counts.\n\n').encode('utf-8')
+              active.write_bytes(entry+before)
+              if not active.read_bytes().endswith(before):
+                  raise SystemExit('Original active-list history was not preserved exactly')
+          PY
+          git rm -- .github/workflows/inventory-recovery-checkpoint-once.yml
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+          git diff --cached --check
+          git config user.name "myworkstation-recovery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "docs(inventory): preserve full active list and record recovery checkpoint"
+          git push origin HEAD:recovery/inventory-unknown-barcode-20261107
