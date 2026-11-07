@@ -1,3 +1,11 @@
+## 07/11/2026 22:24:54 UTC - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW AND CANCEL / SCOPED LIVE PASS
+
+Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. PR #3711 merged as ff4665eb8ec4b7b572ac65d792a788e48657a051; exact PR CI 42417280001 and main CI 42418343730 passed all five jobs. Guarded deploy 42419487430 / job 128544666223 succeeded; actual health confirmed the exact revision at 07/11 22:14:28.5241665 UTC.
+
+Actual native owner preview, 07/11 22:20:04.336–22:21:02.568 UTC: full rendered system report 15,141 JavaScript characters / 147 lines, declared count matched, start visible and actual end reached by native scrolling. Three full-audit pending rows, system handoff sentence and two configured recipients were visible; addresses remain private. Optional comment stayed blank. Cancel closed the dialog and restored the preview control; Send was not selected. No operator email, no-charge repetition or monetary/approval action. PASS applies only to this full native preview and Cancel.
+
+No raw HTTP/reportHash/generation parity, independent DB/global-state/provider/SMTP/inbox proof, mobile or other-role coverage. Delivery NOT SENT / NOT TESTED; exact-recipient approval remains OUTSTANDING after prior automatic approval rejection. Parent financial/source scope OPEN / ASSIGNED. Old native-preview.json FAIL and every prior registry byte/owner remain unchanged. Manual update is scoped only to observed preview/Cancel. New sanitized evidence: CHECKPOINTS/EVIDENCE/cash-system-email-20261107/native-in-app-preview.json. Parent checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. No new outbound authorization or financial closure.
+
 ## 07/11/2026 23:13:35 Europe/Athens - CASH-UNIFIED-AUDIT-15 / CONSOLIDATED PREVIEW UI CANDIDATE / AWAITING LAB
 
 Same retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Existing PR #3711 history, UI note and registry prefixes retained. Consolidation uses exact remote base 4b620b2928b0acb9dfdca2174c3bf4b1db1d6466, including the complete intervening daily-contract test adaptation. The prior local baa512c candidate stayed unpublished; its old test evidence is separate. Draft/review hold on 07/11 at 21:01:44Z / 21:02:04Z changed PR metadata only.
