@@ -1,3 +1,29 @@
+## 07/11/2026 22:24:54 UTC - Native full system email preview and Cancel: scoped LIVE PASS
+
+**PASS only for the observed full native in-app system preview and Cancel.** Retained owner `codex/cash-chat-reconciliation-20261026`, with `/root` coordination; parent `CASH-UNIFIED-AUDIT-15` remains OPEN / ASSIGNED. Financial finality remains OPEN. Actual email delivery is NOT SENT / NOT TESTED; approval of the exact recipients remains OUTSTANDING after the earlier automatic approval review rejection.
+
+### Exact installed source
+
+[PR #3711](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3711), final head `b8e53ae3b4bebcde4ffaa0f94ef8a354352a6287`, merged as `ff4665eb8ec4b7b572ac65d792a788e48657a051`. Exact-head [PR CI 42417280001](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42417280001) and exact-main [CI 42418343730](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42418343730) each passed all five jobs. Guarded [deployment 42419487430](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42419487430), job `128544666223`, completed SUCCESS at `2026-11-07T22:14:30Z`. Its actual runtime health confirmation at `2026-11-07T22:14:28.5241665Z` had `ok:true`, version `0.22.0+kat-test-pos` and the exact merge revision. This was the final health observation, not an echoed source fragment.
+
+### Actual native observation (all timestamps UTC)
+
+After a fresh authenticated owner-session reload, the operator confirmed the selected private store/day and displayed three-shift report period. The owner preview was invoked once at `2026-11-07T22:20:04.336Z`; the completed in-app dialog was observed at `22:20:38.117Z`. An interrupted tool reply was followed by read-only confirmation, without another click. No JavaScript prompt appeared.
+
+The rendered report body contained **15,141 JavaScript characters and 147 lines**; the UI declared the same 15,141 count. Its start was visible. The full report included three explicitly pending full-audit rows, the canonical system-owned owner/manager follow-up instruction, duplicate-candidate, paper and final consecutive-shift sections. Two configured owner recipient addresses were visible above and outside the report body; their values are omitted here. The optional comment was empty, and Send and Cancel were enabled.
+
+Native Ctrl+End at `22:20:48.834Z` reached the report end: scrollTop `3632`, scrollHeight `3980`, clientHeight `347`, within the observed two-pixel end tolerance. The actual final informational line and end cue were visible, with header, recipients and actions still visible. Cancel at `22:21:02.568Z` closed the dialog (remaining dialog count zero) and restored the enabled owner-preview control. No comment was typed and Send was not selected. No email, no-charge check or monetary/approval action was performed by the operator during this observation.
+
+Sanitized evidence: `CHECKPOINTS/EVIDENCE/cash-system-email-20261107/native-in-app-preview.json`. Private observation artifact SHA256: `290aea10cc2a9509eac84d056daa44389012eb3ddb6958132783b3faf14cfd51`; private deployment-log SHA256: `c0c94fab3e14ccacacb61c4ef4f438c553849c8852db813dbbe3abfba0d686be`. Private recipient values, store/staff identities, amounts, transaction IDs, filenames, screenshots and raw report text are not published.
+
+### Scope limits and remaining work
+
+This is complete rendered-preview and cancellation acceptance, not HTTP-body or canonical hash/generation parity. Raw HTTP, reportHash and generation were not captured. Independent DB/ledger/global-state invariance, provider calls/billing and SMTP/inbox/read-receipt delivery were not measured. Mobile, other devices/roles and the wider interaction matrix were not tested here. Operator no-send is not a network-level zero-POST or global SMTP proof.
+
+The earlier `native-preview.json` remains unchanged with its actual FAIL at the former installed revision. Earlier limited cash PASS, all peer registry bytes and ownership remain protected. The manual adds only this bounded native preview/Cancel result. No financial closure, new recipient approval, schedule/provider activation or repeat no-charge action follows from it. Delivery remains blocked pending separate approval of the exact recipients; the parent financial/source work remains OPEN.
+
+---
+
 ## 07/11/2026 — Exact combined-branch CI trigger / AWAITING LAB
 
 The reviewed cash preview source at `202d1dc4` passed CI run [42415499841](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42415499841), 5/5 jobs. Main moved separately to `6351596b` with OCR4 changes. The one-shot bounded reconciliation run [42417158130](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42417158130) completed SUCCESS, creating two-parent merge `27f2c1a9c5b4ef2c1bf5b45a7de7b9066455d0cb`, preserving the entire then-current main shared registry bytes as suffixes, prepending only the cash-specific registry additions, regenerating identical tracker PDFs, and removing its temporary workflow. GitHub reports mergeable `true`; this does not establish CI on the merged tree.
