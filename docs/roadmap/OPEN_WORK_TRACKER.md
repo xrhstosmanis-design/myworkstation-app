@@ -10,6 +10,18 @@ Preserve supplier/number/date/total selection, physical PDF counting, provider o
 
 Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-ocr4-confidence-scale-claim.md. All earlier registry bytes are retained unchanged below. No new LAB PASS or numbered-work closure is claimed.
 
+## 07/11/2026 21:19 Europe/Athens - CASH-UNIFIED-AUDIT-15 / SYSTEM-GENERATED EMAIL / BEFORE SOURCE
+
+ASSIGNED - retained owner codex/cash-chat-reconciliation-20261026, coordinated by /root; no transfer or competing claim. Claim branch docs/cash-system-email-claim-20261107; implementation branch fix/cash-system-email-20261107. OPEN / AWAITING IMPLEMENTATION AND LAB.
+
+The owner requires the system to generate the full cash report and send it through its native email flow; the owner or manager then reviews its findings and pending items. Current native email uses an ordinary source read, while the no-charge full check enables fullAudit. Duplicate-sale, stored-paper and full-audit pending evidence therefore does not all reach the existing email preview. This is a bounded connection gap, not a new financial-finality requirement.
+
+Scope: connect native email preview/send to the existing full read-only report, validate the complete canonical envelope, and retain the email-only readiness projection without changing scheduled/public schemas. Preserve preview fingerprints/generation, arithmetic/provisional/auth/recipient guards and original amounts. Add only short system-owned pending/follow-up wording; no assistant-authored report/comment or richer duplicate formatter.
+
+Protected: existing 03/11 source evidence, 04/11 basic/full saved-reading scoped PASS and 07/11 limited no-charge LIVE UI PASS. No new functional PASS, manual entry, source fix or delivery is claimed. No paid OCR, ledger/review/offset writes, schedules, new recipients or production email attempt. Earlier outbound approval rejection remains effective; this claim/code correction grants no send approval. Any later delivery needs separate approval for its exact recipients.
+
+Next: publish this documentation-only claim on main after applicable CI, then implement the bounded correction and verify synthetic parity/freshness guards, exact CI and separately authorized LAB. All full-email delivery and new behavior remain NOT TESTED / NOT SENT. Parent and existing residual financial/source work remain OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. All prior registry bytes and peer ownership retained.
+
 ## 07/11/2026 — CASH-ADJACENT-COUNT-21 / LIMITED NATIVE LIVE UI PASS; OPEN/ASSIGNED
 
 Retained cash owner. Source PR#3683 and release receipt#3699 are merged. On runtime5606b18cc591cb6682dbe54f3aa0fb7e01c0cf91, one owner-directed live-store no-charge automatic UI invocation was recorded on 07/11 at 16:34:50 Europe/Athens; completed result was observed by 16:36:08: HOLD,3checked/pending shifts,3ambiguous candidates and0numeric proposals. Before/after compared visible rows and pending replies matched; review history0→0. This supersedes historical draft#3657/skipped-CI/authentication-block delivery notes only for this flow. It is not financial agreement. Database, provider telemetry and reportHash NOT MEASURED; broader hosted coverage and financial/evidence reconciliation remain OPEN under the same owner, including parent CASH-UNIFIED-AUDIT-15. Do not replay the completed read merely for recording. Checkpoint CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md; manual docs/manual/cash-control/PASS.md; sanitized live-ui-acceptance-20261107.json.

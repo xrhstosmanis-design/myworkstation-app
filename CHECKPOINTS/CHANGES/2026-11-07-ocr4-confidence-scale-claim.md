@@ -38,3 +38,11 @@ Before publication, reconciled the original reviewed claim with current main 2f0
 Both generated tracker PDF copies are byte-identical (SHA-256 3659a4f96d8c787ea7d21e48f3cf96f686f710febb017c6bc13765a20538cb07; 3,593,860 bytes; 975 pages). Text extraction confirms the claim on page 1. Visual review covers the new first page and the transition on page 2, without claiming a fresh visual review of all historic pages. A separate read-only reviewer found no issue with the scope, low-value preservation or K01 evidence limits. Markdown whitespace checks passed. Runtime source and tests remain unchanged.
 
 The owner explicitly approved publication of these six documentation files as a separate PR and normal-CI-gated merge on 7 November 2026. No source integration precedes that gate.
+
+## 07/11/2026 21:55 Europe/Athens - PR #3709 documentation synchronization
+
+The continuation synchronized the existing claim with main `7b40395f1313dd5cc1d3789878930e1eca56602b`, preserving the independent CASH-UNIFIED-AUDIT-15 system-email assignment from #3707. Each of the three registries contains the exact approved 1,861-byte OCR claim prefix followed by every byte of its current-main version. The cash checkpoint, prior ownership and historical evidence remain unchanged.
+
+Regenerated both canonical tracker PDF copies with the unchanged repository generator. They are byte-identical: SHA-256 `5d21254f8dc6811ca2896f2d7d85b55cb6278d9d6b4ba14e2b255d179d879e4f`, 3,596,207 bytes, 975 pages. Text extraction confirms both the OCR claim and preserved cash-email claim in the opening pages. Visual inspection of pages 1-3 confirms readable text, margins, footers and transitions; historical pages were not freshly reviewed.
+
+This is documentation reconciliation only. Runtime code and tests are unchanged; no OCR provider call, invoice submission, payment or new LAB PASS occurred. PR #3709 remains the single delivery path. Next: exact updated-head review and normal CI before the approved claim merge; only then start the bounded schema/prompt implementation.
