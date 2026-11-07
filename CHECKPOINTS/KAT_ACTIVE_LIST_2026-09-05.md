@@ -1,3 +1,7 @@
+## 07/11/2026 — CASH-ADJACENT-COUNT-21 / NATIVE LIVE UI CHECK OBSERVED / PARENT OPEN
+
+Same owner; one explicitly owner-authorized live-store no-charge UI check was invoked on runtime5606b18c at 16:34:50 Europe/Athens; completed result was observed by 16:36:08. HOLD,3checked/pending shifts,3ambiguous candidates,0numeric proposals; visible cash rows/ambiguities/pending replies unchanged and history0→0. This closes only the prior unobserved/auth-blocked single native invocation; no LAB, DB/provider telemetry, reportHash or final financial acceptance claim. Task and CASH-UNIFIED-AUDIT-15 remain OPEN/ASSIGNED. Source#3683/release#3699 are merged; old draft/awaiting-CI/no-action delivery notes below are historical. Next: reconcile applicable source evidence and ambiguities; preserve prior basic/full PASS. Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md; manual: docs/manual/cash-control/PASS.md; evidence: live-ui-acceptance-20261107.json. Entire prior registry retained.
+
 ## 07/11/2026 08:31 Europe/Athens — OCR4-LOCAL-PDF-3697 / ASSIGNED / BEFORE SOURCE
 
 Owner: κεντρικός συντονιστής `/root` (έγκριση ιδιοκτήτη στη συνομιλία). Μία ανάθεση για το υπάρχον GitHub issue #3697. Κλάδος καταχώρισης: `docs/ocr4-local-pdf-claim-20261106`. Προβλεπόμενος κλάδος κώδικα μετά τη συγχώνευση της ανάθεσης: `fix/ocr4-local-pdf-3697`.
