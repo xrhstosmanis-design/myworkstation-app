@@ -1,3 +1,7 @@
+## 07/11/2026 - CASH-UNIFIED-AUDIT-15 - FULL EMAIL PREVIEW UI CANDIDATE
+
+Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Before-source claim #3710 merged. PR #3711 (fix/cash-email-preview-20261107) replaces oversized native cash-email dialogs with a complete scrollable in-app system-generated report preview and explicit Send/Cancel for owner, self preview and not-ready visibility. Original backend reader, arithmetic, permissions, fingerprint/generation, recipients, SMTP and schedules unchanged. Synthetic >10,240-character mounted UI regression and atomic double-send, stale-store/day and pending-readiness checks added. Exact CI and LIVE recheck remain pending; no actual email sent and no financial, review, provider, bank or fiscal mutation. Prior limited PASS and the real 10,240-character preview FAIL remain preserved. Separate approval of exact outbound recipients required. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-email-preview-ui.md.
+
 ## 07/11/2026 22:19:03 Europe/Athens - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW FAIL / UI CLAIM BEFORE SOURCE
 
 Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Source PR #3708 is installed at be3844895e807db469c3d3571cefa42bd7f3ec1c. Claim branch docs/cash-email-preview-claim-20261107; future implementation fix/cash-email-preview-20261107. OPEN / ASSIGNED / AWAITING UI IMPLEMENTATION AND LAB.
