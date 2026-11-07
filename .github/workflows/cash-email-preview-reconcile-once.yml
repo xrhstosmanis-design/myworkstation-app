@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           TARGET_MAIN=6351596bfcdb4c4e3b3c48a5046867a10451adef
-          EXPECTED_REVIEWED=e59e6685ab98ee9a2594ebbfd39717cf5daf3db8
+          EXPECTED_REVIEWED=72a641a44854b19fa11da722609efd96ab79fe1f
           test "$(git rev-parse 'HEAD^')" = "$EXPECTED_REVIEWED" || { echo "STOP: review head advanced"; exit 1; }
           test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$TARGET_MAIN" || { echo "STOP: main advanced"; exit 1; }
           git fetch origin main:refs/remotes/origin/main
@@ -59,6 +59,7 @@ jobs:
           import subprocess, hashlib, shutil, re
           from runpy import run_path
           import reportlab
+          import reportlab.rl_config
           assert reportlab.Version=='4.4.9'
           base='83cee2b70b08e14acaee82bd93129c3586ca64bf'
           textpaths=['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']
