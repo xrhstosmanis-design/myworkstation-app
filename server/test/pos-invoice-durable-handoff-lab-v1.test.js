@@ -132,7 +132,7 @@ test("multi-page header reading continues when one page has no usable header",()
   assert.match(select,/catch\(error\)\{headerErrors\.push\(error\)\}/);
   assert.doesNotMatch(select,/Promise\.all|Promise\.allSettled/);
   assert.match(select,/if\(!headerResults\.length\)throw/);
-  const merge=select.indexOf("mergeFastInvoiceHeaders(headerResults,{imageTotals})");
+  const merge=select.indexOf("mergeFastInvoiceHeaders(headerResults,{imageHeaders})");
   assert.ok(merge>select.indexOf("headerErrors.push(error)"));
 });
 

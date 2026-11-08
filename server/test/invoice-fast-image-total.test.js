@@ -4,7 +4,7 @@ import {mergeFastInvoiceHeaders} from "../../client/src/lib/invoice-fast-header-
 
 const subtotal={totalGross:120};
 const payable={totalGross:496,totalGrossVerified:true};
-const merge=imageTotals=>mergeFastInvoiceHeaders(imageTotals,{imageTotals});
+const merge=imageHeaders=>mergeFastInvoiceHeaders(imageHeaders,{imageHeaders});
 
 test("a uniquely verified photo total wins in either upload order",()=>{
   for(const pages of [[subtotal,payable],[payable,subtotal]]){
@@ -28,7 +28,7 @@ test("different unverified or competing verified totals require review",()=>{
 });
 
 test("previous photo candidates are used even when only an added page was read",()=>{
-  const result=mergeFastInvoiceHeaders([subtotal],{imageTotals:[payable,subtotal]});
+  const result=mergeFastInvoiceHeaders([subtotal],{imageHeaders:[payable,subtotal]});
   assert.equal(result.totalHeader,payable);
 });
 
