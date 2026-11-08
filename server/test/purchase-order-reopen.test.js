@@ -130,3 +130,10 @@ test('native actual inventory ledger SQL reconciles full reopened history withou
   assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "StockMovement"'))[0].n,9);
  }finally{await f.close()}
 });
+
+test('summarizeReopenLines produces a bounded per-line audit without unknown fields',()=>{
+ const out=reopen.summarizeReopenLines([{id:'l1',productId:'p',quantity:'2',secret:'x',description:'a'.repeat(300)},{id:'l2'}],1);
+ assert.equal(out.lineCount,2);assert.equal(out.truncated,true);assert.equal(out.lines.length,1);
+ assert.equal(out.lines[0].secret,undefined);assert.equal(out.lines[0].description.length,200);
+ assert.deepEqual(reopen.summarizeReopenLines(null),{lineCount:0,truncated:false,lines:[]});
+});
