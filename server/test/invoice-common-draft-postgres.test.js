@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {z} from "zod";
-import {invoiceDbFixture,isolatedInvoiceDb} from "./helpers/invoice-common-draft-fixture.js";
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from "./helpers/invoice-common-draft-fixture.js";
 import * as common from "../src/lib/invoice-common-draft.js";
 import {loadInvoiceAssistantSource} from "../src/lib/invoice-assistant-source.js";
 const scope={companyId:'c',storeId:'s',inboxId:'inbox'};
@@ -67,9 +67,9 @@ test('native nonempty reviewed rows move once with IDs and values preserved; row
  }finally{await f.close()}
 });
 
-async function actualHandlers(path,db){
+async function actualHandlers(path,db,extra={}){
  const handlers={};const router={use:()=>{},get:()=>{},post:(p,...f)=>handlers['POST '+p]=f.at(-1),patch:(p,...f)=>handlers['PATCH '+p]=f.at(-1),delete:()=>{}};
- const deps={Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},...common};
+ const deps={Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},...common,...extra};
  const src=(await readFile(new URL(path,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');new Function(...Object.keys(deps),src)(...Object.values(deps));return handlers;
 }
 async function invoke(handler,params,body={}){let result,failure,status=200;const req={params,body,user:{companyId:'c',id:'owner',role:'OWNER',fullName:'Fixture owner'}};const res={json:value=>{result=value},status:value=>(status=value,res)};await handler(req,res,e=>failure=e);return {result,failure,status};}
@@ -78,10 +78,26 @@ test('native actual approval/order-finalization paths serialize to one stock pos
  for(const first of ['order','document','race']){const f=await invoiceDbFixture();try{
   await f.seed({posLines:1});const preview=await common.previewInvoiceReconciliation(f.db,scope);await f.db.$transaction(tx=>common.reconcileInvoiceDrafts(tx,scope,confirmed(preview)));
   await f.db.$executeRawUnsafe(`INSERT INTO "PurchaseDocumentLine"("id","purchaseDocumentId","productId","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES('dl','d-pos','p','Fixture',3,'PIECE',1,3,13,.39,3.39)`);
-  const orders=await actualHandlers('../src/routes/purchase-order-posting-guard.js',f.db),docs=await actualHandlers('../src/routes/commerce-invoice-draft-approval.js',f.db);
+  const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(f.db);
+  const orders=await actualHandlers('../src/routes/purchase-order-posting-guard.js',f.db,{applyPackStockCorrectionInTransaction}),docs=await actualHandlers('../src/routes/commerce-invoice-draft-approval.js',f.db);
   const order=()=>invoke(orders['PATCH /:orderId'],{orderId:'pos'},{status:'FINAL'}),document=()=>invoke(docs['POST /purchases/:documentId/approve'],{documentId:'d-pos'});
-  if(first==='race'){const results=await Promise.all([order(),document()]);assert.ok(results.some(r=>r.result));assert.ok(results.every(r=>!r.failure||r.failure.code==='INVOICE_ALREADY_POSTED'));}
-  else {const result=await(first==='order'?order():document());assert.ifError(result.failure);assert.ok(result.result);const second=await(first==='order'?document():order());if(first==='order')assert.equal(second.failure?.code,'INVOICE_ALREADY_POSTED');else assert.equal(second.result.idempotent,true);}
+  if(first==='race'){
+   const [review,approval]=await Promise.all([order(),document()]);
+   assert.ifError(review.failure);
+   if(review.result.awaitingInvoice)assert.equal(approval.failure?.code,'INVOICE_AWAITING_OWNER_POSTING');
+   else assert.ok(approval.result);
+  }else if(first==='order'){
+   assert.equal((await order()).result.awaitingInvoice,true);
+   assert.equal((await document()).failure?.code,'INVOICE_AWAITING_OWNER_POSTING');
+  }else{
+   assert.ifError((await document()).failure);
+   const retry=await order();
+   assert.equal(retry.result.idempotent,true);
+  }
+  if(first!=='document'){
+   const status=(await f.db.$queryRaw`SELECT "awaitingInvoice" FROM "PurchaseOrder" WHERE "id"='pos'`)[0];
+   if(status.awaitingInvoice)assert.ifError((await invoke(orders['PATCH /:orderId'],{orderId:'pos'},{status:'INVOICED'})).failure);
+  }
   const stocks=await f.db.$queryRawUnsafe('SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"');assert.deepEqual(stocks.map(s=>[s.storeId,Number(s.currentStock)]),[['control',20],['s',13]]);
   assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "StockMovement"'))[0].count,1);assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "InvoiceStockPosting"'))[0].count,1);
   const alias=await invoke(orders['PATCH /:orderId'],{orderId:'mydata'},{status:'FINAL'});assert.ok(alias.failure?.status===409||alias.status===409);assert.ok(alias.failure?.message||alias.result?.error);assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "StockMovement"'))[0].count,1);

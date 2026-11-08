@@ -109,7 +109,7 @@ function mismatchMessage(data){
 async function maybeOwnerManagerOverride({response,input,init,originalFetch,url,method}){
   if(method!=="PATCH"||!/^\/api\/purchase-orders\/[^/]+$/.test(url.pathname))return response;
   const requestBody=readJsonBody(input,init);
-  if(requestBody?.status!=="FINAL"||requestBody?.totalMismatchOverride===true)return response;
+  if(!["FINAL","INVOICED"].includes(requestBody?.status)||requestBody?.totalMismatchOverride===true)return response;
   if(response.status!==409)return response;
 
   let data={};
@@ -133,7 +133,7 @@ async function maybeOwnerManagerOverride({response,input,init,originalFetch,url,
     if(reason.length<5)alert("Ο λόγος είναι υποχρεωτικός και πρέπει να είναι σαφής (τουλάχιστον 5 χαρακτήρες).");
   }
 
-  const retryBody={...requestBody,status:"FINAL",totalMismatchOverride:true,totalMismatchReason:reason};
+  const retryBody={...requestBody,totalMismatchOverride:true,totalMismatchReason:reason};
   const retryInit={...init,method:"PATCH",body:JSON.stringify(retryBody)};
   const headers=new Headers(init?.headers||(typeof input!=="string"?input?.headers:undefined)||{});
   if(!headers.has("Content-Type"))headers.set("Content-Type","application/json");

@@ -77,7 +77,7 @@ const statements=[
          AND UPPER(REGEXP_REPLACE(TRIM(candidate."sku"),'[[:space:]]+','','g'))=UPPER(REGEXP_REPLACE(TRIM(l."supplierCode"),'[[:space:]]+','','g'))
      )) AS "productId",NULLIF(TRIM(l."supplierCode"),'') AS "supplierCode",o."createdAt" AS at
      FROM "PurchaseOrderLine" l
-     JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."status" IN ('FINAL','INVOICED')
+     JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice"
      WHERE o."supplierId" IS NOT NULL
    ) purchases
    ORDER BY purchases."companyId",purchases."supplierId",purchases."productId",purchases.at DESC

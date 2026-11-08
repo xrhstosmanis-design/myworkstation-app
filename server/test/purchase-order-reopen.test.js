@@ -5,13 +5,14 @@ import crypto from 'node:crypto';
 import {z} from 'zod';
 import * as common from '../src/lib/invoice-common-draft.js';
 import * as reopen from '../src/services/purchase-order-reopen.js';
-import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
+import {loadInvoiceAssistantSource} from '../src/lib/invoice-assistant-source.js';
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
 const actor={id:'owner',companyId:'c',role:'OWNER',fullName:'Isolated owner'};
 const confirmed=p=>({storeId:'s',version:p.version,reason:'Accidental finalization correction',confirm:true});
 async function handlers(file,db,extra={}){
  const h={},router={use(){},get:(p,...f)=>h['GET '+p]=f.at(-1),post:(p,...f)=>h['POST '+p]=f.at(-1),patch:(p,...f)=>h['PATCH '+p]=f.at(-1),delete(){}};
  const deps={Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},purchaseOrderTotalReconciliationGuard:()=>{},...common,...reopen,...extra};
- const src=(await readFile(new URL(file,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
+ const src=(await readFile(new URL(file,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replaceAll('export async function ','async function ');
  new Function(...Object.keys(deps),src)(...Object.values(deps));return h;
 }
 async function invoke(handler,params,body={},user=actor,query={}){let result,failure,status=200;const res={json:v=>(result=v,res),status:v=>(status=v,res)};await handler({params,body,user,query},res,e=>failure=e);return {result,failure,status};}
@@ -24,15 +25,12 @@ async function fixture(){
  await f.db.$executeRawUnsafe('CREATE TABLE "User"("id" text PRIMARY KEY,"companyId" text)');
  await f.db.$executeRawUnsafe(`INSERT INTO "User" VALUES('owner','c')`);
  await reopen.ensurePurchaseOrderReopenSchema(f.db);
- const posting=await handlers('../src/routes/purchase-order-posting-guard.js',f.db);
+
  const packHandlers=await handlers('../src/routes/purchase-order-unresolved-guard.js',f.db);
- // Load the actual pack function from the same runtime route, not a mirrored calculation.
- const packSrc=(await readFile(new URL('../src/routes/purchase-order-unresolved-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return {applyPackStockCorrection,ensureSchema};');
- const packRoute=new Function('Router','prisma','crypto','purchaseOrderTotalReconciliationGuard','lockInvoiceStore',packSrc)(()=>({use(){},patch(){}}),f.db,crypto,()=>{},common.lockInvoiceStore);
- // Real middleware prepares these columns before posting; avoid altering a prepared SELECT * result between cycles.
- await packRoute.ensureSchema();const pack=packRoute.applyPackStockCorrection;
- const patch=body=>invoke(posting['PATCH /:orderId'],{orderId:'pos'},body);
- const finalize=async(version=0)=>{const r=await patch({status:'FINAL',expectedReopenVersion:version});assert.ifError(r.failure);await pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Isolated',expectedReopenVersion:version});assert.ifError((await patch({status:'INVOICED',expectedReopenVersion:version})).failure)};
+ const packRoute=await invoicePackPostingFixture(f.db);const pack=packRoute.applyPackStockCorrection;
+ const posting=await handlers('../src/routes/purchase-order-posting-guard.js',f.db,{applyPackStockCorrectionInTransaction:packRoute.applyPackStockCorrectionInTransaction});
+ const patch=(body,user=actor)=>invoke(posting['PATCH /:orderId'],{orderId:'pos'},body,user);
+ const finalize=async(version=0)=>{const r=await patch({status:'FINAL',expectedReopenVersion:version});assert.ifError(r.failure);assert.equal(r.result.awaitingInvoice,true);assert.ifError((await patch({status:'INVOICED',expectedReopenVersion:version})).failure)};
  const stock=async()=>Number((await f.db.$queryRawUnsafe(`SELECT "currentStock" FROM "StoreProduct" WHERE "id"='stock'`))[0].currentStock);
  const preserved=async()=>JSON.stringify(await f.db.$queryRawUnsafe(`SELECT jsonb_build_object('payments',(SELECT jsonb_agg(t ORDER BY t."id") FROM "StoreTransaction" t),'files',(SELECT jsonb_agg(t ORDER BY t."id") FROM "DocumentAttachment" t),'jobs',(SELECT jsonb_agg(t ORDER BY t."id") FROM "AiReaderJob" t),'control',(SELECT row_to_json(t) FROM "StoreProduct" t WHERE t."id"='control-stock')) AS value`));
  return {...f,patch,finalize,stock,preserved,pack,packHandlers};
@@ -46,22 +44,32 @@ test('reopen rejects unauthorized actors and malformed requests before database 
  assert.throws(()=>reopen.assertReopenedIdentity({reopenVersion:1,supplierId:'a',invoiceNumber:'x'},{supplierId:'b'}));
 });
 
-test('native full posting, pack inversion, corrected re-post and second reopen retain same order, documents, original payment and control store',{skip:!isolatedInvoiceDb()},async()=>{
+test('native FINAL and INVOICED reopen, pack inversion and corrected re-post retain same order, documents, original payment and control store',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await fixture();try{
   await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrderLine" SET "stockUnitsPerInvoiceUnit"=12 WHERE "orderId"='pos'`);
-  await f.finalize();assert.equal(await f.stock(),46);const keep=await f.preserved();
+  await f.db.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL' WHERE "id"='pos'`;
+  assert.ifError((await f.patch({status:'FINAL',expectedReopenVersion:0})).failure);
+  await f.pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Isolated',expectedReopenVersion:0});
+  assert.equal(await f.stock(),46);const keep=await f.preserved();
+  await f.db.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"='pos'`;
+  assert.equal(await loadInvoiceAssistantSource(f.db,'c','pos'),null);
   const beforeDocs=await f.db.$queryRawUnsafe('SELECT "id","documentDate","createdByUserId" FROM "PurchaseDocument" ORDER BY "id"');
-  const p=await reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s');assert.equal(p.stockChanges[0].delta,-36);assert.equal(await f.stock(),46);
+  const p=await reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s');assert.equal(p.status,'FINAL');assert.equal(p.stockChanges[0].delta,-36);assert.equal(await f.stock(),46);
   const results=await Promise.all([reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(p)),reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(p))]);
   assert.equal(results.filter(r=>!r.idempotent).length,1);assert.equal(await f.stock(),10);assert.equal(await f.preserved(),keep);
+  const source=await loadInvoiceAssistantSource(f.db,'c','pos');
+  assert.equal(source.document.id,'d-pos');
+  assert.equal(source.pages[0].filename,'POS.jpg');
   const stale=await f.patch({status:'FINAL'});assert.equal(stale.failure?.status,409);
   const docs=await handlers('../src/routes/commerce-invoice-draft-approval.js',f.db);const approval=await invoke(docs['POST /purchases/:documentId/approve'],{documentId:'d-pos'});assert.equal(approval.failure?.status,409);
-  await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrderLine" SET "quantity"=2,"netAmount"=2,"vatAmount"=.26,"grossAmount"=2.26,"stockUnitsPerInvoiceUnit"=6 WHERE "orderId"='pos'`);
+  await f.db.$executeRaw`INSERT INTO "PurchaseOrderLine"
+    ("id","orderId","productId","supplierCode","description","quantity","unitCost","netAmount","vatRate","vatAmount","grossAmount","stockUnitsPerInvoiceUnit")
+    VALUES ('corrected-line','pos','p','CODE','Corrected row',2,1,2,13,.26,2.26,6)`;
   assert.ifError((await f.patch({status:'FINAL',expectedReopenVersion:1})).failure);
   const beforeDelayedPack=await f.snapshot();
   await assert.rejects(f.pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Old cycle',expectedReopenVersion:0}),e=>e.status===409);
   assert.equal(await f.snapshot(),beforeDelayedPack,'a delayed old-cycle pack callback cannot mutate the new finalization');
-  await f.pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Current cycle',expectedReopenVersion:1});
+  await f.db.$executeRaw`UPDATE "PurchaseDocument" SET "totalGross"=2.26 WHERE "id"='d-pos'`;
   assert.ifError((await f.patch({status:'INVOICED',expectedReopenVersion:1})).failure);
   assert.equal(await f.stock(),22);assert.equal(await f.preserved(),keep);
   assert.deepEqual(await f.db.$queryRawUnsafe('SELECT "id","documentDate","createdByUserId" FROM "PurchaseDocument" ORDER BY "id"'),beforeDocs);
@@ -102,7 +110,7 @@ test('native approved adjustments, credit documents and corrupt movement ownersh
 
 test('native registered HTTP reopen routes enforce actor/scope and perform one confirmed transition',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await fixture();let server;try{
-  await f.finalize();const {default:express,Router}=await import('express');const src=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
+  await f.finalize();const {default:express,Router}=await import('express');const src=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replaceAll('export async function ','async function ');
   const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder);
   const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.headers['x-fixture-role']==='operator'?{...actor,tokenType:'STORE_OPERATOR'}:actor;next()});app.use('/api/purchase-orders',router);app.use((err,req,res,next)=>res.status(err.status||400).json({error:err.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const url=`http://127.0.0.1:${server.address().port}/api/purchase-orders/pos`;
@@ -128,6 +136,36 @@ test('native actual inventory ledger SQL reconciles full reopened history withou
   await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrderLine" SET "stockUnitsPerInvoiceUnit"=2 WHERE "orderId"='pos'`);
   for(let cycle=0;cycle<2;cycle++){await f.finalize(cycle);await verify(16);const preview=await reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s');await reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(preview));await verify(10)}
   assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "StockMovement"'))[0].n,9);
+ }finally{await f.close()}
+});
+
+test('POS review preserves stock and payment until authorized invoicing, including a return to draft',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();try{
+  const before=await f.snapshot(), preserved=await f.preserved();
+  const submitted=await f.patch({status:'FINAL'});
+  assert.ifError(submitted.failure);
+  assert.equal(submitted.result.awaitingInvoice,true);
+  assert.equal(await f.snapshot(),before);
+  const operator={...actor,tokenType:'STORE_OPERATOR',storeId:'s'};
+  assert.equal((await f.patch({status:'INVOICED'},operator)).status,403);
+  const docs=await handlers('../src/routes/commerce-invoice-draft-approval.js',f.db);
+  const alternate=await invoke(docs['POST /purchases/:documentId/approve'],{documentId:'d-pos'});
+  assert.equal(alternate.failure?.status,409);
+  assert.ifError((await f.patch({status:'NEW',returnForCorrection:true})).failure);
+  assert.equal((await loadInvoiceAssistantSource(f.db,'c','pos')).pages[0].filename,'POS.jpg');
+  await f.db.$executeRaw`UPDATE "PurchaseOrderLine" SET "stockUnitsPerInvoiceUnit"=12 WHERE "orderId"='pos'`;
+  assert.ifError((await f.patch({status:'FINAL'})).failure);
+  assert.equal(await f.snapshot(),before);
+  await f.db.$executeRaw`ALTER TABLE "StockMovement" ADD CONSTRAINT "simulated_pack_failure" CHECK ("movementType"<>'PURCHASE_PACK_CORRECTION')`;
+  assert.ok((await f.patch({status:'INVOICED'})).failure);
+  assert.equal(await f.snapshot(),before,'a pack write failure rolls back the entire invoicing');
+  assert.equal((await f.db.$queryRaw`SELECT "awaitingInvoice" FROM "PurchaseOrder" WHERE "id"='pos'`)[0].awaitingInvoice,true);
+  await f.db.$executeRaw`ALTER TABLE "StockMovement" DROP CONSTRAINT "simulated_pack_failure"`;
+  const results=await Promise.all([f.patch({status:'INVOICED'}),f.patch({status:'INVOICED'})]);
+  for(const result of results){assert.ifError(result.failure);assert.equal(result.result.status,'INVOICED');}
+  assert.equal(results.filter(result=>result.result.idempotent).length,1);
+  assert.equal(await f.stock(),46);
+  assert.equal(await f.preserved(),preserved);
  }finally{await f.close()}
 });
 
