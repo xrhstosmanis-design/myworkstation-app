@@ -19166,3 +19166,8 @@ Read-only preparation selected MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙ
 Fresh selected-store preview on exact healthyc7830ad loaded the new existing-credit preservation message; the false double-magnitude discrepancy is absent. The POS and original tables agree with the physical row. Only the original paid-credit table radio is enabled; both radios and the confirmation checkbox remain unchecked. This is read-only hosted preview evidence, not a consolidation or measured LAB PASS.
 
 Scope remains OPEN / AWAITING MEASURED LAB. Single next action: identify an eligible existing synthetic applied-credit family and publish its measured original/financial/audit/stock/control baseline before one reviewed consolidation. If no such family is available, retain that prerequisite rather than reuse a real customer credit, seed production SQL or claim CI as LAB PASS. Real historical consolidation remains unexecuted. Owner retained until exact recorded completion or a named handoff. Checkpoint CHECKPOINTS/CHANGES/2026-11-03-invoice-credit-consolidation.md.
+
+
+## 08/11/2026 — PLATFORM-COMPANY-LAYOUT-02 / Compact layout follow-up / PR #3734
+
+The approved desktop layout reduces the height of the top controls and owner cards and assigns two thirds of the workspace to the right detail pane. Chromium layout fixture passed at 1920, 1024 and 390 px. Signed-in application acceptance and release remain pending. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-08-platform-company-layout-compact.md`.
