@@ -21,7 +21,7 @@ test('mounted reopen preview cancels without mutation, submits once with reason,
  dom.window.close();
 });
 
-test('actual invoiced and reopened order editors open without mutating OCR reconciliation and preserve identity controls',async()=>{
+test('actual finalized, invoiced and reopened order editors open without mutating OCR reconciliation and preserve identity controls',async()=>{
  const dom=new JSDOM('<div id="root"></div>',{url:'https://fixture.invalid'}),doc=dom.window.document,calls=[];
  dom.window.localStorage.setItem('user',JSON.stringify({role:'SUPER_ADMIN'}));
  const source=(await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
@@ -29,7 +29,11 @@ test('actual invoiced and reopened order editors open without mutating OCR recon
  const fetch=async(path,options={})=>{calls.push({path,options});assert.equal(options.method,undefined);return {ok:true,json:async()=>({order,lines:[],totals:{net:0,gross:0}})}};
  const open=new Function('document','window','localStorage','fetch','greeceDateInput','installInvoiceProductMatcher',source+';return openOrder;')(doc,dom.window,dom.window.localStorage,fetch,()=> '2026-10-18',()=>{});
  await open(doc.querySelector('#root'),'same');assert.equal(calls.length,1);assert.ok(doc.querySelector('[data-reopen]'));doc.querySelector('.po-modal-overlay').remove();
- order={...order,status:'NEW',reopenVersion:1};await open(doc.querySelector('#root'),'same');assert.equal(calls.length,2);assert.equal(doc.querySelector('[data-order-supplier]').disabled,true);assert.equal(doc.querySelector('[data-order-invoice]').disabled,true);assert.equal(doc.querySelector('[data-add-line]').disabled,false);assert.equal(doc.querySelector('[data-invoice-assistant]'),null);
+ order={...order,status:'FINAL'};await open(doc.querySelector('#root'),'same');assert.equal(calls.length,2);assert.ok(doc.querySelector('[data-reopen]'));doc.querySelector('.po-modal-overlay').remove();
+ order={...order,awaitingInvoice:true};await open(doc.querySelector('#root'),'same');
+ assert.ok(doc.querySelector('[data-return-to-draft]'));assert.equal(doc.querySelector('[data-reopen]'),null);
+ assert.equal(doc.querySelector('[data-invoice]').disabled,false);doc.querySelector('.po-modal-overlay').remove();
+ order={...order,status:'NEW',awaitingInvoice:false,reopenVersion:1};await open(doc.querySelector('#root'),'same');assert.equal(calls.length,4);assert.equal(doc.querySelector('[data-order-supplier]').disabled,true);assert.equal(doc.querySelector('[data-order-invoice]').disabled,true);assert.equal(doc.querySelector('[data-add-line]').disabled,false);assert.ok(doc.querySelector('[data-invoice-assistant]'));
  dom.window.close();
 });
 

@@ -41,13 +41,14 @@ router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){ne
 
 router.patch("/:orderId",async(req,res,next)=>{
   try{
-    if(req.body?.status!=="FINAL")return next();
+    const requestedStatus=req.body?.status;
+    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED")return next();
     const companyId=req.user?.companyId;
     if(!companyId)return next();
 
     const rows=await prisma.$queryRaw`
       SELECT o."id",o."status",o."invoiceNumber",o."sourceType",o."sourceDocumentId",
-             d."totalGross" AS "invoiceTotal"
+             o."awaitingInvoice", d."status" AS "documentStatus", d."documentType", d."totalGross" AS "invoiceTotal"
       FROM "PurchaseOrder" o
       LEFT JOIN "PurchaseDocument" d
         ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId"
@@ -59,7 +60,8 @@ router.patch("/:orderId",async(req,res,next)=>{
     // Αν έχει ήδη Οριστικοποιηθεί, η ευθύνη/αιτιολογία έχει ήδη κριθεί στην
     // πρώτη μετάβαση NEW -> FINAL. Επιτρέπουμε idempotent επανέλεγχο/posting
     // (π.χ. pack correction) χωρίς δεύτερη δήλωση ευθύνης.
-    if(order.status==="FINAL"||order.status==="INVOICED")return next();
+    if(requestedStatus==="INVOICED"&&!order.awaitingInvoice)return next();
+    if(requestedStatus==="FINAL"&&(order.status!=="NEW"||order.documentType==="INVOICE"&&order.documentStatus==="DRAFT"))return next();
 
     // Reconciliation is mandatory for invoices created from the POS OCR/V2.4.4 flow.
     if(order.sourceType!=="POS_OCR_DRAFT"||!order.sourceDocumentId||Number(order.invoiceTotal||0)<=0)return next();
