@@ -33,9 +33,15 @@ while($true) {
                 try {$scopeHash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($current.companyId+'|'+$current.storeId+'|'+$current.terminalPos))).Replace('-','')} finally {$sha.Dispose()}
                 $cloudMutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$scopeHash))
                 $cloudHeld=$false
+                $testMutex=$null
+                $testHeld=$false
                 try {
                     try {$cloudHeld=$cloudMutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$cloudHeld=$true}
                     if(-not $cloudHeld){throw 'STOP: connector is still running. Close its PowerShell before option 9.'}
+                    # Option 2 and option 9 must not overlap in the signed STATUS/report flow.
+                    $testMutex=New-Object Threading.Mutex($false,('Global\MWS.Ftext.CloudTest.'+$scopeHash))
+                    try {$testHeld=$testMutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$testHeld=$true}
+                    if(-not $testHeld){throw 'STOP: option 2 STATUS check is still running. No recovery was started.'}
                     $pendingReport=(Get-FtextCredentialPath $current)+'.pending-report.json'
                     if(Test-Path -LiteralPath $pendingReport){throw 'STOP: pending cloud STATUS acknowledgement; preserve it and use option 2.'}
                     Invoke-FtextCloudPing $current | Out-Null
@@ -49,7 +55,12 @@ while($true) {
                     }
                     Write-Host 'SUCCESS: verified device STATUS and fresh cloud readiness. No receipt or payment was issued.' -ForegroundColor Green
                     Write-Host 'Restart the connector with option 3 and verify that readiness remains available.'
-                } finally {if($cloudHeld){$cloudMutex.ReleaseMutex()};$cloudMutex.Dispose()}
+                } finally {
+                    if($testHeld){$testMutex.ReleaseMutex()}
+                    if($null -ne $testMutex){$testMutex.Dispose()}
+                    if($cloudHeld){$cloudMutex.ReleaseMutex()}
+                    $cloudMutex.Dispose()
+                }
             }
         }
     } catch { Write-Host ('STOP: '+$_.Exception.Message) -ForegroundColor Red }
