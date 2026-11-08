@@ -2,6 +2,11 @@ name: Claude invoice implementation — isolated PR pilot
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/claude-invoice-write-pilot.yml'
 
 permissions:
   contents: write
@@ -79,8 +84,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
           git commit -m "draft(invoice): Claude scoped owner finalization step"
-          gh auth setup-git
-          git push --set-upstream origin "$BRANCH"
+          # Claude Action may leave a Git credential override; use the job token explicitly for this push.
+          AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="$AUTH_HEADER" push --set-upstream origin "$BRANCH"
           gh pr create --draft --base main --head "$BRANCH" \
             --title "draft(invoice): Claude owner-finalization scoped step" \
             --body "Claude-produced isolated #28 implementation. Requires full CI, review, LAB acceptance and normal protected merge. No production deploy or automatic merge."
