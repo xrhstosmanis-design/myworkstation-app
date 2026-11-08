@@ -29,21 +29,27 @@ while($true) {
                 $confirm=Read-Host 'Close the connector first. Type RECOVER to inspect and safely recover only orphan STATUS'
                 if($confirm -cne 'RECOVER'){Write-Host 'No changes made.';continue}
                 $current=Get-FtextCloudConfig $ConfigPath
-                # The scoped status-report queue is immutable until safely acknowledged.
-                $pendingReport=(Get-FtextCredentialPath $current)+'.pending-report.json'
-                if(Test-Path -LiteralPath $pendingReport){throw 'STOP: pending cloud STATUS acknowledgement; preserve it and use option 2.'}
-                Invoke-FtextCloudPing $current | Out-Null
-                $recovery=Invoke-FtextOrphanStatusRecovery -ConfigPath $ConfigPath
-                Write-Host ('STATUS RECOVERY: '+$recovery.state)
-                if($recovery.archivePath){Write-Host ('Original files preserved at: '+$recovery.archivePath)}
-                # The existing signed, serialized, nonfiscal STATUS + cloud acknowledgement remains authoritative.
-                $ready=Invoke-FtextCloudReadiness -ConfigPath $ConfigPath -TimeoutSeconds 30
-                $freshUntil=Get-FtextCloudReadinessRefreshAt
-                if(-not $ready -or $freshUntil -le [DateTime]::UtcNow) {
-                    throw 'STOP: FTEXT has not supplied fresh acknowledged readiness. No payment was sent.'
-                }
-                Write-Host 'SUCCESS: verified device STATUS and fresh cloud readiness. No receipt or payment was issued.' -ForegroundColor Green
-                Write-Host 'Restart the connector with option 3 and verify that readiness remains available.'
+                $sha=[Security.Cryptography.SHA256]::Create()
+                try {$scopeHash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($current.companyId+'|'+$current.storeId+'|'+$current.terminalPos))).Replace('-','')} finally {$sha.Dispose()}
+                $cloudMutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$scopeHash))
+                $cloudHeld=$false
+                try {
+                    try {$cloudHeld=$cloudMutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$cloudHeld=$true}
+                    if(-not $cloudHeld){throw 'STOP: connector is still running. Close its PowerShell before option 9.'}
+                    $pendingReport=(Get-FtextCredentialPath $current)+'.pending-report.json'
+                    if(Test-Path -LiteralPath $pendingReport){throw 'STOP: pending cloud STATUS acknowledgement; preserve it and use option 2.'}
+                    Invoke-FtextCloudPing $current | Out-Null
+                    $recovery=Invoke-FtextOrphanStatusRecovery -ConfigPath $ConfigPath
+                    Write-Host ('STATUS RECOVERY: '+$recovery.state)
+                    if($recovery.archivePath){Write-Host ('Original files preserved at: '+$recovery.archivePath)}
+                    $ready=Invoke-FtextCloudReadiness -ConfigPath $ConfigPath -TimeoutSeconds 30
+                    $freshUntil=Get-FtextCloudReadinessRefreshAt
+                    if(-not $ready -or $freshUntil -le [DateTime]::UtcNow) {
+                        throw 'STOP: FTEXT has not supplied fresh acknowledged readiness. No payment was sent.'
+                    }
+                    Write-Host 'SUCCESS: verified device STATUS and fresh cloud readiness. No receipt or payment was issued.' -ForegroundColor Green
+                    Write-Host 'Restart the connector with option 3 and verify that readiness remains available.'
+                } finally {if($cloudHeld){$cloudMutex.ReleaseMutex()};$cloudMutex.Dispose()}
             }
         }
     } catch { Write-Host ('STOP: '+$_.Exception.Message) -ForegroundColor Red }
