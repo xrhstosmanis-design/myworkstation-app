@@ -12,3 +12,7 @@ Required remaining gates: actual Windows PowerShell 5.1 script parser and all FT
 ## 2026-11-08 — native option 2/9 lock test repair, CI retrigger
 
 The Windows status-foundation run for source 416a9fcd failed AFTER reporting `PASS CMD option 9 blocks concurrent option 2 STATUS without changing input`: the added test left its Read-Host input stub active for the existing bad-installer rejection fixture, which then raised `Unexpected menu prompt`. The test restores the original option-4 stub after the concurrency fixture in source 0b428865; source code/financial/fiscal behavior is not changed by this fix. This note triggers a fresh PR validation after branch-only reconciliation with current main. No CI PASS is claimed before its exact new head checks finish; no merge, deploy, Windows installer update or physical sale is authorized.
+
+## 08/11/2026 — authorized merge gate, documentation #3721 complete
+
+Documentation claim PR #3721 was merged as 14422e62 after its five checks passed. Owner explicitly approved reconciliation, required verification and merge of PR #3724, **not** physical installation. Previous source d6fc79589918a4cc0d853b115b0c602cfac0622b passed six/ six CI checks including native Windows status-foundation and complete build-and-test. Current branch reconciliation imports only newer main work and updates this scoped checkpoint; full exact-head CI must pass again before merge. No real fiscal/financial operation, vendor update, file replay, readiness relaxation or on-PC installation. Physical acceptance remains OPEN.
