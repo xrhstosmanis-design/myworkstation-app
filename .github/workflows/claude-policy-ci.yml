@@ -1,0 +1,26 @@
+name: Claude automation policy — isolated tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/claude-policy-ci.yml'
+      - 'docs/coord/claude-automation-policy*.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  policy-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run fail-closed policy tests
+        run: node --test docs/coord/claude-automation-policy.test.mjs
