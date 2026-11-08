@@ -59,6 +59,8 @@ try {
     } finally {
         if($null -ne $guardJob){Stop-Job $guardJob -ErrorAction SilentlyContinue;Remove-Job $guardJob -Force -ErrorAction SilentlyContinue}
         Remove-Variable -Name FTEXT_TEST_MENU_CHOICES -Scope Global -ErrorAction SilentlyContinue
+        # Restore the original menu-exit stub for the following invalid-package test.
+        function Read-Host {param($Prompt) return '4'}
     }
     # The fixed allowlist must continue to reject any unrecognized payload.
     $files['Unexpected.ps1']=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("throw 'must not execute'"))
