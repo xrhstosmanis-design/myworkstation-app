@@ -1,3 +1,21 @@
+## 08/11/2026 09:27:50 UTC — PR #3713 exact CI PASS / AWAITING LAB
+
+Draft PR #3713 (base main 64c36f4, head 6b52a9e7d9601e085f919ba9d5097c006903a59b) remains OPEN and unmerged. Official MyWorkStation CI run 42466387516 passed 5/5 jobs on that exact head; build-and-test ran the checkpoint policy step, the full server suite with isolated PostgreSQL 16 including the new mandatory history access test, client build, browser checks and HTTP E2E. No review comments.
+
+Status: CI PASS / AWAITING LAB. Hosted read-only pagination (Platform Admin and selected-store Owner) NOT VERIFIED. Not complete; no manual or roadmap closure. No merge or deploy.
+
+## 08/11/2026 09:10 UTC — History endpoint access proof / LOCAL PASS / AWAITING CI / NOT LAB
+
+Branch test/ai-wallet-history-access-20261108, test-only commit c940e11de5460ee984c76037a28fed618d1f5843 (based on main 64c36f4). Adds server/test/ai-wallet-history-access-postgres.test.js; no runtime source, schema, settings or data change.
+
+Production state (read-only): PR3612 merge 43a140e passed main CI 41879308257 (5/5). /api/health on 08/11 08:34:18 UTC returned HTTP 200 with revision ff4665eb8ec4b7b572ac65d792a788e48657a051, which contains 43a140e with the seven PR3612 code files unchanged. Both history routes without a token returned 401 on 08/11 08:38:28 UTC (synthetic ids, no database reached).
+
+Local isolated evidence (Node 20.20.2, temporary PostgreSQL 16 bound to 127.0.0.1, synthetic data only, temporary schemas dropped, container removed): 29/29 PASS, 0 FAIL, 0 SKIP across the new test, the three existing history tests and the existing wallet access/waiver/postpaid/cost-auth tests. Dependencies via npm install because the repository has no lockfile, matching CI.
+
+New test proves on both routes: 401 without session; OWNER reads only the selected store plus company credits over two pages without duplicates; OWNER refused the platform route (403) and foreign, inactive and missing stores (404); foreign-company owner, EMPLOYEE and MANAGER refused; Super Admin reads company-wide history only, refused the store route (403) and missing or inactive companies (404); cross-store, cross-company cursors and unknown query parameters 400; revoked sessions 401; wallets, entries and business controls unchanged. Removing either role denial in a scratch copy made the test fail as expected.
+
+NOT RUN: official CI for c940e11. NOT VERIFIED: hosted UI pagination for Platform Admin and selected-store Owner (read-only acceptance by the owner). No LAB PASS, manual or numbered-work closure. No financial/provider/credit/waiver action; the separate private residual waiver remains unexecuted and owner-only. Next: owner-approved PR for exact CI, then read-only hosted acceptance.
+
 ## 04Nov2026 — PR3612 integration continuation / AWAITING LAB
 
 04Nov2026 continuation: source PR #3612 exact head d7ac495 passed full PR CI41685034134 attempt2 and native recovery; attempt1 hit the 25-minute job limit after approximately19-minute all-history checkout, not a recorded source-test failure. Reconcile latest main and preserve peer blob-filter CI optimization and all unrelated source/docs. No wallet runtime path overlap found. Same bounded history implementation; re-run exact reconciled full PR/main CI and normal guarded deploy before hosted read-only acceptance. Pagination remains AWAITING LAB. The separately approved private residual waiver is still unexecuted: final native submit was stopped by automatic review requiring the human owner to perform the financial action. Native form is prepared; no SQL/provider/alternate-channel execution or false financial PASS.
