@@ -37,8 +37,13 @@ while($true) {
                 Write-Host ('STATUS RECOVERY: '+$recovery.state)
                 if($recovery.archivePath){Write-Host ('Original files preserved at: '+$recovery.archivePath)}
                 # The existing signed, serialized, nonfiscal STATUS + cloud acknowledgement remains authoritative.
-                & (Join-Path $PSScriptRoot 'Cloud-Test.ps1') -ConfigPath $ConfigPath
-                Write-Host 'Restart the connector with option 3 only after a verified readiness result.'
+                $ready=Invoke-FtextCloudReadiness -ConfigPath $ConfigPath -TimeoutSeconds 30
+                $freshUntil=Get-FtextCloudReadinessRefreshAt
+                if(-not $ready -or $freshUntil -le [DateTime]::UtcNow) {
+                    throw 'STOP: FTEXT has not supplied fresh acknowledged readiness. No payment was sent.'
+                }
+                Write-Host 'SUCCESS: verified device STATUS and fresh cloud readiness. No receipt or payment was issued.' -ForegroundColor Green
+                Write-Host 'Restart the connector with option 3 and verify that readiness remains available.'
             }
         }
     } catch { Write-Host ('STOP: '+$_.Exception.Message) -ForegroundColor Red }
