@@ -208,7 +208,20 @@ test('native cancel of a posted purchase reverses stock once, is idempotent, is 
   assert.equal((await reopen.cancelPurchaseOrder(f.db,actor,'pos',confirmed(p))).idempotent,true);
   await assert.rejects(reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(p)),e=>e.status===409);
   await assert.rejects(reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s'),e=>e.status===409);
-  assert.equal((await f.patch({status:'FINAL'})).failure?.status,409);
+  const [cancelled]=await f.db.$queryRawUnsafe('SELECT "supplierId","invoiceNumber","reopenVersion" FROM "PurchaseOrder" WHERE "id"=\'pos\'');
+  for(const status of ['FINAL','INVOICED']){
+   const attempt=await f.patch({status,expectedReopenVersion:Number(cancelled.reopenVersion),supplierId:cancelled.supplierId,invoiceNumber:cancelled.invoiceNumber});
+   assert.equal(attempt.failure?.status,409,'cancelled purchase must reject privileged '+status+' even with correct version and identity');
+  }
   assert.equal(await f.stock(),10);
  }finally{await f.close()}
+});
+
+test('cancelled purchases cannot use the normal purchase-order editor',async()=>{
+ const source=await readFile(new URL('../src/routes/purchase-orders.js',import.meta.url),'utf8');
+ const fnSource=source.match(/^function editable\(found\)\{[^\n]+/m)?.[0];
+ assert.ok(fnSource,'real purchase editor guard must be present');
+ const editable=new Function(fnSource+';return editable;')();
+ assert.throws(()=>editable({status:'CANCELLED'}),e=>e.status===409);
+ assert.doesNotThrow(()=>editable({status:'NEW',awaitingInvoice:false}));
 });
