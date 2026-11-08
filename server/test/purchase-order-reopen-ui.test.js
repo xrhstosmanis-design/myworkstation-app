@@ -50,3 +50,22 @@ test('delayed reopen previews cannot open after changing store or closing the so
   dom.window.close();
  }
 });
+
+test('reopen preview shows escaped bounded lineAudit read-only and omits it when absent',async()=>{
+ const dom=new JSDOM('<div id="root"></div><div id="parent"></div>',{url:'https://fixture.invalid'}),doc=dom.window.document,calls=[];
+ const source=(await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
+ const base={version:'b'.repeat(64),expenseDelta:-5,negativeStockCount:0,stockChanges:[{name:'p',before:5,delta:-2,after:3}]};
+ let preview={...base,lineAudit:{lineCount:60,truncated:true,lines:Array.from({length:60},(_,i)=>({id:'l'+i,description:i?'row'+i:'<img src=x>',quantity:'2',netAmount:'4'}))}};
+ const fetch=async(path,options={})=>{calls.push({path,options});return {ok:true,json:async()=>preview}};
+ const show=new Function('document','window','localStorage','fetch','greeceDateInput','installInvoiceProductMatcher',source+';return showReopen;')(doc,dom.window,dom.window.localStorage,fetch,()=> '2026-10-18',()=>{});
+ const root=doc.querySelector('#root'),parent=doc.querySelector('#parent'),order={id:'fixture',storeId:'s'};
+ await show(root,parent,order,()=>{},()=>true);
+ const audit=doc.querySelector('[data-reopen-line-audit]');assert.ok(audit);
+ assert.equal(audit.querySelectorAll('tbody tr').length,50);assert.equal(audit.querySelectorAll('img').length,0);
+ assert.equal(audit.querySelector('tbody td').textContent,'<img src=x>');assert.match(audit.querySelector('summary').textContent,/60.*μερική/);
+ assert.equal(calls.filter(c=>c.options.method==='POST').length,0);
+ doc.querySelector('[data-po-close]').click();
+ preview=base;await show(root,parent,order,()=>{},()=>true);
+ assert.equal(doc.querySelector('[data-reopen-line-audit]'),null);assert.ok(doc.querySelector('[data-reopen-form]'));
+ dom.window.close();
+});
