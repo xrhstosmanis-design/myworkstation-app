@@ -1,0 +1,49 @@
+name: Claude handoff — manual read-only pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Approved MyWorkStation task"
+        required: true
+        type: choice
+        options:
+          - INVOICE-OWNER-FINALIZATION-01
+          - AUTO-REPORT-OBSERVABILITY-01
+          - OCR-CONFIDENCE-01
+          - AI-WALLET-HISTORY-02
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: claude-handoff-${{ inputs.task }}
+  cancel-in-progress: false
+
+jobs:
+  read-only-handoff:
+    if: ${{ github.actor == 'xrhstosmanis-design' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository (read-only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Read-only Claude checkpoint review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are conducting a READ-ONLY MyWorkStation coordination check.
+            Task: ${{ inputs.task }}
+            Follow AGENTS.md. Inspect only the relevant small files/checkpoints,
+            and identify the existing owner, PR, latest confirmed status, blockers,
+            and exactly one safe next step. The authoritative coordinator is issue #3714.
+            Never edit any files, execute shell commands, send messages, use external
+            services, create commits/branches/PRs, change settings, or invoke deployments.
+            Do not print tokens, credentials, emails, private user data or large files.
+            Output a short Greek summary to the workflow log.
+          claude_args: '--allowedTools "Read,Glob,Grep" --max-turns 8'
