@@ -1,0 +1,31 @@
+# INACTIVE REFERENCE TEMPLATE — DO NOT MOVE TO .github/workflows WITHOUT REVIEW
+# This file is not an active GitHub Actions workflow. It cannot trigger a merge or deployment.
+name: MyWorkStation guarded merge and Render deploy (INACTIVE TEMPLATE)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Reviewed PR number"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  preflight:
+    # Intentionally disabled. No workflow may merge or deploy from this template.
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Record intended safeguards
+        run: |
+          echo "DISABLED: no merge and no deploy"
+          echo "Before implementation: verify branch protections, exact PR head, required CI checks,"
+          echo "approved workstream scope, no draft status, no shared-file conflicts,"
+          echo "and exact target Render service srv-d9isenfavr4c73bdh52g."
+          echo "Require immutable revision binding and a verified post-deploy /api/health."
+          echo "No deploy-hook secret or privileged token may be printed or embedded."
