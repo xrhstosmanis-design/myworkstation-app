@@ -29,6 +29,37 @@ try {
         if($readback.terminalPos -ne $config.terminalPos -or $readback.cashEnabled -ne $cash) {throw 'Configuration changed'}
         Write-Host "PASS actual installer opens real setup and extracts all seven files, cash=$cash"
     }
+    # Real menu option 9 must fail closed if option 2 owns the cloud STATUS mutex.
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {$scopeHash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($config.companyId+'|'+$config.storeId+'|'+$config.terminalPos))).Replace('-','')} finally {$sha.Dispose()}
+    $mutexName='Global\MWS.Ftext.CloudTest.'+$scopeHash
+    $readyFile=Join-Path $root 'option2-held.txt'
+    $guardJob=Start-Job -ArgumentList $mutexName,$readyFile -ScriptBlock {
+        param($name,$path)
+        $mutex=New-Object Threading.Mutex($false,$name);$held=$false
+        try {
+            $held=$mutex.WaitOne(0)
+            if(-not $held){throw 'Could not hold option 2 mutex.'}
+            [IO.File]::WriteAllText($path,'HELD')
+            Start-Sleep -Seconds 15
+        } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
+    }
+    try {
+        for($i=0;$i -lt 100 -and -not (Test-Path -LiteralPath $readyFile);$i++){Start-Sleep -Milliseconds 100}
+        if(-not (Test-Path -LiteralPath $readyFile)){throw 'Option 2 mutex test worker did not start.'}
+        $global:FTEXT_TEST_MENU_CHOICES=New-Object 'Collections.Generic.Queue[string]'
+        foreach($answer in @('9','RECOVER','4')){$global:FTEXT_TEST_MENU_CHOICES.Enqueue($answer)}
+        function Read-Host {param($Prompt) if($global:FTEXT_TEST_MENU_CHOICES.Count -eq 0){throw 'Unexpected menu prompt.'};return $global:FTEXT_TEST_MENU_CHOICES.Dequeue()}
+        $result=(& (Join-Path $destination 'Setup.ps1') -ConfigPath (Join-Path $destination 'config.json') 6>&1 | Out-String)
+        if($result -notmatch 'STOP: option 2 STATUS check is still running' -or $result -match 'STATUS RECOVERY:'){
+            throw "Option 9 did not reject overlapping option 2: $result"
+        }
+        if(@(Get-ChildItem -LiteralPath $folder -Force -File).Count -ne 0){throw 'Option 9 touched input while option 2 was active.'}
+        Write-Host 'PASS CMD option 9 blocks concurrent option 2 STATUS without changing input'
+    } finally {
+        if($null -ne $guardJob){Stop-Job $guardJob -ErrorAction SilentlyContinue;Remove-Job $guardJob -Force -ErrorAction SilentlyContinue}
+        Remove-Variable -Name FTEXT_TEST_MENU_CHOICES -Scope Global -ErrorAction SilentlyContinue
+    }
     # The fixed allowlist must continue to reject any unrecognized payload.
     $files['Unexpected.ps1']=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("throw 'must not execute'"))
     $bad=$template.Replace('__CONFIG_BASE64__',$config64).Replace('__FILES_BASE64__',[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($files|ConvertTo-Json -Compress))))
