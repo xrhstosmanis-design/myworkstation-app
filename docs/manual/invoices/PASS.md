@@ -1,3 +1,7 @@
+## 08/11/2026 — FAST invoice number review (#3740)
+
+In the LAB BackOffice, open Payments → Supplier Invoice → New Invoice. For the synthetic photo pair with the same printed number, the form filled that number. For a pair with conflicting readings, the number stayed blank and the form asked for verification against the original. Compare the displayed header with the original before continuing. A single candidate can still be misread. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3740-hosted-lab.md`.
+
 ## 08/11/2026 — FAST invoice photo payable review (#3733)
 
 In the LAB BackOffice, open Payments → Supplier Invoice → New Invoice and select the two images of the same invoice. A uniquely supported payable was filled in either selection order. When the read returned conflicting totals without unique evidence, the amount stayed blank and the form asked the operator to check the printed payable. Compare the displayed header with the original before continuing. This acceptance covers synthetic header reads only. Physical POS and real-photo repeatability remain open. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3733-hosted-lab.md`.
