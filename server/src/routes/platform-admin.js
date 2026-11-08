@@ -1,6 +1,6 @@
 import {customerCostMeter,revalidateCostRequest} from '../services/ai-customer-cost-runtime.js';
 import {walletActivityFromRequest} from '../services/ai-wallet-activity.js';
-import {createReviewedCashEmailReader,reviewedCashEmailReadiness,assertReviewedCashEmailPreview} from '../services/cash-reviewed-email.js';
+import {createReviewedCashEmailReader,reviewedCashEmailReadiness,assertReviewedCashEmailPreview,renderReviewedCashEmail} from '../services/cash-reviewed-email.js';
 import {saveOnlineVisibility} from "../online-catalog-visibility.js";
 import {saveStoreMetadata} from '../services/store-metadata-mutation.js';
 import {assistantHistoryTurnMetadata} from '../services/assistant-history-turns.js';
@@ -1388,10 +1388,24 @@ async function cashReportEmailData(storeId,date,user){
   return {store,recipients,rows:normalized,evidence,readyToSend:reviewedCashEmailReadiness(evidence,normalized)};
 }
 
+function cashPersonalTestRecipient(user){
+  const accountEmail=String(user.email||"").trim().toLowerCase();
+  const configuredAccount=String(process.env.CASH_CONTROL_TEST_ACCOUNT_EMAIL||"").trim().toLowerCase();
+  const configuredRecipient=String(process.env.CASH_CONTROL_TEST_RECIPIENT_EMAIL||"").trim().toLowerCase();
+  const override=Boolean(accountEmail&&accountEmail===configuredAccount&&configuredRecipient);
+  const email=override?configuredRecipient:accountEmail;
+  if(!z.string().email().safeParse(email).success){
+    throw Object.assign(new Error("Δεν έχει οριστεί έγκυρο email προσωπικής δοκιμής."),{status:422});
+  }
+  return {email,override};
+}
+
 router.get("/cash-control/stores/:storeId/email-preview",async(req,res,next)=>{try{
   const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(String(req.query.date||""));
   const report=await cashReportEmailData(req.params.storeId,date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
-  res.json({date,storeId:report.store.id,storeName:report.store.name,recipients:report.recipients,rows:report.rows,readyToSend:report.readyToSend,text:report.evidence.report.text,reportHash:report.evidence.fingerprint,generation:report.evidence.generation,manualSendOnly:true});
+  const personalRecipient=req.query.mode==="self"?cashPersonalTestRecipient(req.user).email:undefined;
+  const {html}=renderReviewedCashEmail({evidence:report.evidence,companyId:report.store.companyId,storeId:report.store.id,storeName:report.store.name,date,previewOnly:req.query.mode==="self"});
+  res.json({date,storeId:report.store.id,storeName:report.store.name,recipients:report.recipients,personalRecipient,html,rows:report.rows,readyToSend:report.readyToSend,text:report.evidence.report.text,reportHash:report.evidence.fingerprint,generation:report.evidence.generation,manualSendOnly:true});
 }catch(error){next(error)}});
 
 router.post("/cash-control/stores/:storeId/send-email",async(req,res,next)=>{try{
@@ -1407,13 +1421,17 @@ router.post("/cash-control/stores/:storeId/send-email",async(req,res,next)=>{try
 }catch(error){next(error)}});
 
 router.post("/cash-control/stores/:storeId/send-preview",async(req,res,next)=>{try{
-  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional()}).parse(req.body||{});
-  const recipient=String(req.user.email||"").trim().toLowerCase();if(!recipient)return res.status(422).json({error:"Δεν έχει οριστεί email στον λογαριασμό Super Admin."});
+  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional(),expectedRecipient:z.string().email().optional()}).parse(req.body||{});
+  const {expectedRecipient}=body;
+  const {email:recipient,override}=cashPersonalTestRecipient(req.user);
+  if((override||expectedRecipient!==undefined)&&expectedRecipient!==recipient){
+    return res.status(409).json({error:"Ο παραλήπτης δοκιμής άλλαξε. Άνοιξε νέα προεπισκόπηση.",code:"CASH_EMAIL_PREVIEW_CHANGED"});
+  }
   const report=await cashReportEmailData(req.params.storeId,body.date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   if(!report.rows.length)return res.status(422).json({error:"Δεν υπάρχουν κλεισμένες βάρδιες για αυτή την ημερομηνία."});
   assertReviewedCashEmailPreview(report.evidence,body);
   const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:[recipient],previewOnly:true,storeName:report.store.name,date:body.date,rows:report.rows,evidence:report.evidence,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
-  await prisma.authAudit.create({data:{userId:req.user.id,email:recipient,event:"CASH_CONTROL_REPORT_PREVIEW_SENT",success:true,deviceName:`${report.store.name} · ${body.date}`}});
+  await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"CASH_CONTROL_REPORT_PREVIEW_SENT",success:true,deviceName:`${report.store.name} · ${body.date} · ${recipient}`}});
   res.json({ok:true,recipients:sent.recipients,messageId:sent.messageId,previewOnly:true});
 }catch(error){next(error)}});
 

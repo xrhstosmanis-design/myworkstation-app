@@ -1,3 +1,25 @@
+## 08/11/2026 — FAST invoice number review (#3740)
+
+In the LAB BackOffice, open Payments → Supplier Invoice → New Invoice. For the synthetic photo pair with the same printed number, the form filled that number. For a pair with conflicting readings, the number stayed blank and the form asked for verification against the original. Compare the displayed header with the original before continuing. A single candidate can still be misread. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3740-hosted-lab.md`.
+
+## 08/11/2026 — FAST invoice photo payable review (#3733)
+
+In the LAB BackOffice, open Payments → Supplier Invoice → New Invoice and select the two images of the same invoice. A uniquely supported payable was filled in either selection order. When the read returned conflicting totals without unique evidence, the amount stayed blank and the form asked the operator to check the printed payable. Compare the displayed header with the original before continuing. This acceptance covers synthetic header reads only. Physical POS and real-photo repeatability remain open. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3733-hosted-lab.md`.
+
+## 06/11/2026 — K01: 1 αρχείο / 2 φυσικές σελίδες PDF και τέσσερα πεδία, περιορισμένο hosted PASS
+
+Ελεγμένος ρόλος: Platform owner / Super Admin υποστήριξης, desktop Cloud Chrome, εταιρεία MYWORKSTATION LAB και κατάστημα ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Η δοκιμή δεν επεκτείνει δικαιώματα και δεν πιστοποιεί άλλους ρόλους, mobile ή φυσικό POS. Κανονική είσοδος διαχειριστή: https://myworkstation-app.onrender.com/platform-admin.
+
+Επαληθευμένη διαδρομή: επιλεγμένη εταιρεία/κατάστημα → Πλήρες Backoffice → Πληρωμές Ιδιοκτήτη / Διαχειριστή → Πληρωμή Τιμολογίου → Νέο τιμολόγιο → Επιλογή έως 5 αρχείων (εικόνες / PDF). Επιβεβαίωσε πρώτα τη σωστή εταιρεία και το κατάστημα. Η επιλογή αρχείου αρχίζει άμεσα ανάγνωση AI· όταν η χρέωση πελάτη είναι OFF, η υπηρεσία συνεχίζεται με κόστος πλατφόρμας. Δεν αλλάζουμε ρυθμίσεις χρέωσης για αυτόν τον έλεγχο.
+
+Στη συγκεκριμένη μία επιλογή του νέου συνθετικού LAB-OCR4-20261106-K01.pdf η φόρμα έδειξε **1 αρχείο · 1 PDF / Αρχείο 1: 2 φυσικές σελίδες PDF**. Συμπλήρωσε χωρίς διόρθωση **LAB METER TEST**, **LAB-OCR4-20261106-K01**, **6 Νοεμβρίου 2026** (DOM 2026-11-06) και **49,60 €**, αντί των επιμέρους 18,60 € και 31,00 €. Το αποτέλεσμα ήταν ορατό έως 22:14:56 Europe/Athens. Δεν μετρήθηκε latency ούτε καταγράφηκε η ενεργή revision. Δεν επιλέχθηκε τύπος/ΠΛΗΡΩΜΕΝΟ/ΜΕ ΠΙΣΤΩΣΗ και δεν πατήθηκε καταχώριση ή πληρωμή. Το wallet έμεινε 4,610532 € διαθέσιμο / 0 € δεσμευμένο με billing OFF· αυτό δεν μετρά το κόστος provider.
+
+Κριτήριο αυτού του περιορισμένου PASS: σωστή ένδειξη αρχείου/φυσικών σελίδων και αντιστοίχιση των τεσσάρων πεδίων στο πρωτότυπο. Η καταμέτρηση **δεν πιστοποιεί πλήρη OCR ή κάλυψη όλων των γραμμών**. Ποσότητες/γραμμές/ΦΠΑ/εκπτώσεις/ΕΦΚ, υποβολή, πληρωμή, απόθεμα και οικονομικό/control πριν-μετά παραμένουν NOT TESTED σε αυτό το βήμα. Τα παλιότερα αποδεκτά scopes διατηρούνται.
+
+Παρατήρηση και πρακτικός έλεγχος: το μήνυμα έγραφε «1 αρχείο έτοιμο (1%)». Πρόκειται για reader confidence στη μορφοποίηση της φόρμας, όχι ποσοστό προόδου ή διαβασμένων σελίδων. Η αρχική τιμή και κλίμακα δεν επαληθεύτηκαν και παραμένουν OPEN· δεν το αναβαπτίζουμε σε 99%/100%. Σύγκρινε πάντοτε τα πεδία με το πρωτότυπο και κατέγραψε τυχόν διαφορά πριν από επόμενη ενέργεια. Το K01 έχει ήδη χρησιμοποιηθεί: δεν το ξανανεβάζουμε για συμπλήρωση τεκμηρίων. Νέα δοκιμή χρειάζεται νέο αναγνωριστικό και φρέσκα σχετικά πριν/μετά/control. Το J και τα προστατευμένα παλιά δείγματα δεν χρησιμοποιήθηκαν.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-ocr4-k01-hosted-reading.md. Receipt: CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/hosted-k01-20261106.json. Η ένδειξη δύο σελίδων τεκμηριώνεται από την πραγματική accessibility παρατήρηση· το συνημμένο screenshot δείχνει τα τέσσερα πεδία, με την ημερομηνία σε μορφή MM/DD/YYYY του browser.
+
 ## 05/11/2026 19:27 Europe/Athens - Δίσελιδα PDF: τρεις κεφαλίδες PASS σε 2,10-3,46 δευτ., γενική ταχύτητα OPEN
 
 Ο εξουσιοδοτημένος διαχειριστής με AI READER PREMIUM επιλέγει τη σωστή εταιρεία/κατάστημα από https://myworkstation-app.onrender.com/platform-admin → MYWORKSTATION LAB → ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ → Πλήρες Backoffice → Πληρωμές Ιδιοκτήτη / Διαχειριστή → Πληρωμή Τιμολογίου → Νέο τιμολόγιο → Επιλογή έως 5 σελίδων / PDF. Επιλέγει το νέο πρωτότυπο μία φορά και συγκρίνει προμηθευτή, αριθμό, ημερομηνία και τελικό ποσό με το έντυπο. Σε επαληθευμένο από τον διακομιστή PDF2-5φυσικών σελίδων η κεφαλίδα πλέον μπορεί να ολοκληρωθεί απευθείας από ολόκληρο το PDF χωρίς αναμονή Azure. Μονοσέλιδα, εικόνες και παλιά αιτήματα διατηρούν την υπάρχουσα διαδρομή. Η πλήρης ανάγνωση ειδών συνεχίζει από την κανονική διαδρομή του Backoffice· το νέο περιορισμένο PASS αφορά μόνο την κεφαλίδα.

@@ -14,26 +14,42 @@ const handoffOption=q=>`${q.previousDay} · ${q.previousOperator} (${q.previousS
 const cents=text=>{const s=String(text).trim();if(!/^-?\d{1,9}(?:[,.]\d{1,2})?$/.test(s))return null;const negative=s[0]==='-',[whole,part='']=s.replace('-','').replace(',','.').split('.');const n=Number(whole)*100+Number(part.padEnd(2,'0'));return Number.isSafeInteger(n)?negative?-n:n:null;};
 export default function CashReconciliationPanel({api,storeId,from,to,readOnly=false}){
   const [opened,setOpened]=useState(false),[loadedData,setData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[needsRefresh,setNeedsRefresh]=useState(false);
+  const [automaticSummary,setAutomaticSummary]=useState(null);
   const data=readOnly&&(loadedData?.storeId!==storeId||loadedData?.period?.from!==from||loadedData?.period?.to!==to)?null:loadedData;
   const [issueId,setIssueId]=useState(''),[issueStatus,setIssueStatus]=useState('OPEN');
   const [mode,setMode]=useState('OFFSET'),[first,setFirst]=useState(''),[second,setSecond]=useState(''),[amount,setAmount]=useState(''),[note,setNote]=useState(''),[verified,setVerified]=useState(false),[target,setTarget]=useState('');
   const [papers,setPapers]=useState([]),[paperId,setPaperId]=useState(''),[lineIndex,setLineIndex]=useState(''),[confirmedKind,setConfirmedKind]=useState(''),[confirmedDate,setConfirmedDate]=useState(''),[operatorContext,setOperatorContext]=useState(''),[transactionId,setTransactionId]=useState(''),[resumeFrom,setResumeFrom]=useState(''),[pendingNotes,setPendingNotes]=useState('');
   const scope=JSON.stringify([storeId,from,to]),selected=useRef(scope),sequence=useRef(0),busyRef=useRef(false),pendingRequest=useRef(null);selected.current=scope;
   const fullMode=useRef(false);
-  useEffect(()=>{fullMode.current=false;sequence.current++;busyRef.current=false;pendingRequest.current=null;setOpened(false);setData(null);setBusy(false);setError('');setMessage('');setNeedsRefresh(false);setPapers([]);setPaperId('');setLineIndex('');setVerified(false);setNote('');setFirst('');setSecond('');setTarget('');setIssueId('');setIssueStatus('OPEN');return()=>{sequence.current++;};},[scope,readOnly]);
+  useEffect(()=>{fullMode.current=false;sequence.current++;busyRef.current=false;pendingRequest.current=null;setOpened(false);setData(null);setAutomaticSummary(null);setBusy(false);setError('');setMessage('');setNeedsRefresh(false);setPapers([]);setPaperId('');setLineIndex('');setVerified(false);setNote('');setFirst('');setSecond('');setTarget('');setIssueId('');setIssueStatus('OPEN');return()=>{sequence.current++;};},[scope,readOnly]);
   const validReply=result=>result?.storeId===storeId&&result.period?.from===from&&result.period?.to===to&&typeof result.generation==='string'&&typeof result.head==='string'&&Array.isArray(result.rows)&&typeof result.text==='string';
-  const accept=result=>{setIssueId('');setIssueStatus('OPEN');setData(result);setNeedsRefresh(false);setResumeFrom(result.checkpoint?.resumeFrom||from);setPendingNotes(result.checkpoint?.pendingNotes?.join('\n')??result.rows.filter(r=>!r.reviewed&&r.automaticallyCalculated!==true&&r.status!=='NOT_APPLICABLE').map(r=>`${r.day} · ${r.operatorName}: εκκρεμεί ο έλεγχος βάρδιας.`).join('\n'));setVerified(false);};
+  const accept=result=>{setIssueId('');setIssueStatus('OPEN');setData(result);setAutomaticSummary(null);setNeedsRefresh(false);setResumeFrom(result.checkpoint?.resumeFrom||from);setPendingNotes(result.checkpoint?.pendingNotes?.join('\n')??result.rows.filter(r=>!r.reviewed&&r.automaticallyCalculated!==true&&r.status!=='NOT_APPLICABLE').map(r=>`${r.day} · ${r.operatorName}: εκκρεμεί ο έλεγχος βάρδιας.`).join('\n'));setVerified(false);};
   const load=async(historyPage=0)=>{
-    if(!storeId||!from||!to||busyRef.current||readOnly&&historyPage!==0)return;const own=scope,id=++sequence.current;busyRef.current=true;setBusy(true);setError('');setMessage('');setData(null);
+    if(!storeId||!from||!to||busyRef.current||readOnly&&historyPage!==0)return;const own=scope,id=++sequence.current;busyRef.current=true;setBusy(true);setError('');setMessage('');setData(null);setAutomaticSummary(null);
     try{const pendingId=pendingRequest.current?.requestId,result=await api(readOnly?`/api/backoffice-staff/cash/stores/${encodeURIComponent(storeId)}?${new URLSearchParams({from,to})}`:`/api/cash-reconciliation/stores/${encodeURIComponent(storeId)}?${new URLSearchParams({from,to,historyPage:String(historyPage),...(fullMode.current?{fullAudit:'1'}:{}),...(pendingId?{requestId:pendingId}:{})})}`);if(id!==sequence.current||selected.current!==own)return;if(!validReply(result))throw Error('Δεν επιβεβαιώθηκε το κατάστημα και η περίοδος.');
       if(Number(result.historyPage||0)!==historyPage)throw Error('Δεν επιβεβαιώθηκε η σελίδα ιστορικού.');if(pendingId){if(result.requestId!==pendingId||!['APPLIED','NOT_FOUND'].includes(result.requestStatus))throw Error('Δεν επιβεβαιώθηκε η προηγούμενη ενέργεια.');if(result.requestStatus==='APPLIED'){setMessage('Η προηγούμενη ενέργεια είχε ήδη καταχωριστεί.');pendingRequest.current=null;setNote('');}else setMessage('Η προηγούμενη ενέργεια δεν βρέθηκε. Έλεγξε τα στοιχεία πριν την υποβάλεις ξανά.');}accept(result);
     }catch(e){if(id===sequence.current&&selected.current===own){setError(e.message||'Δεν φορτώθηκε ο έλεγχος.');setNeedsRefresh(true);}}
     finally{if(id===sequence.current&&selected.current===own){busyRef.current=false;setBusy(false);}}
   };
+  // Uses only saved readings and the existing authenticated canonical audit.
+  // Unlike the opt-in AI button below, this never invokes /read-next or a paid provider.
+  const automaticReadOnly=async()=>{
+    if(readOnly||busyRef.current||!storeId||!from||!to)return;
+    const own=scope,id=++sequence.current,current=()=>id===sequence.current&&selected.current===own;
+    busyRef.current=true;setBusy(true);setError('');setMessage('');setData(null);setAutomaticSummary(null);
+    try{
+      const result=await api(`/api/cash-reconciliation/stores/${encodeURIComponent(storeId)}/automatic-check?${new URLSearchParams({from,to})}`);
+      if(!current())return;
+      if(!validReply(result)||result.automaticCheck?.storeId!==storeId||result.automaticCheck?.reportHash!==result.reportHash)throw Error('Δεν επιβεβαιώθηκε η αυτόματη αναφορά στο επιλεγμένο κατάστημα.');
+      fullMode.current=true;accept(result);setAutomaticSummary(result.automaticCheck);
+      setMessage('Ο αυτόματος έλεγχος ολοκληρώθηκε με διαθέσιμα στοιχεία, χωρίς χρεώσιμη ανάγνωση ή οικονομική καταχώριση.');
+    }catch(e){if(current()){setError(e.message||'Δεν ολοκληρώθηκε ο αυτόματος έλεγχος.');setNeedsRefresh(true);}}
+    finally{if(current()){busyRef.current=false;setBusy(false);}}
+  };
   const automaticCheck=async()=>{
     if(readOnly||busyRef.current||!storeId||!from||!to)return;
     const own=scope,id=++sequence.current,current=()=>id===sequence.current&&selected.current===own;
-    busyRef.current=true;setBusy(true);setError('');setData(null);setMessage('Αναζήτηση χειρόγραφων από το τσατ…');
+    busyRef.current=true;setBusy(true);setError('');setData(null);setAutomaticSummary(null);setMessage('Αναζήτηση χειρόγραφων από το τσατ…');
     let finished=false;
     try{
       const list=await api(`/api/cash-papers/stores/${encodeURIComponent(storeId)}`);
@@ -90,10 +106,10 @@ export default function CashReconciliationPanel({api,storeId,from,to,readOnly=fa
     catch(e){if(current()){setError(e.message||'Δεν δημιουργήθηκε το αρχείο.');setNeedsRefresh(true);}}
     finally{if(current()){busyRef.current=false;setBusy(false);}}
   };
-  const toggle=()=>{if(opened){sequence.current++;busyRef.current=false;setOpened(false);setData(null);setBusy(false);}else{setOpened(true);load();}};
+  const toggle=()=>{if(opened){sequence.current++;busyRef.current=false;setOpened(false);setData(null);setAutomaticSummary(null);setBusy(false);}else{setOpened(true);load();}};
   return <section className="cash-reconciliation-panel" aria-label="Έλεγχος και επανυπολογισμός">
     <button type="button" onClick={toggle} disabled={!storeId||!from||!to||busy} aria-expanded={opened}>Έλεγχος με επανυπολογισμούς</button>
-    {opened&&<div><p>{from} έως {to}</p><button type="button" onClick={()=>load(0)} disabled={busy}>Ανανέωση ελέγχου</button>{!readOnly&&<><button type="button" onClick={()=>{if(busyRef.current)return;fullMode.current=true;load(0);}} disabled={busy}>Έλεγχος με διαθέσιμες αναγνώσεις</button><button type="button" onClick={automaticCheck} disabled={busy}>Αυτόματος έλεγχος με χειρόγραφα και συμβάντα</button><p>Διαβάζει τα υποστηριζόμενα συνημμένα του τσατ με AI και διασταυρώνει τα στοιχεία. Οι προηγούμενες αναγνώσεις επαναχρησιμοποιούνται. Η ανάγνωση AI ακολουθεί την υπάρχουσα χρέωση της υπηρεσίας.</p></>}{busy&&<p role="status">Αναμονή αποτελέσματος…</p>}{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
+    {opened&&<div><p>{from} έως {to}</p><button type="button" onClick={()=>load(0)} disabled={busy}>Ανανέωση ελέγχου</button>{!readOnly&&<><button type="button" onClick={()=>{if(busyRef.current)return;fullMode.current=true;load(0);}} disabled={busy}>Έλεγχος με διαθέσιμες αναγνώσεις</button><button type="button" onClick={automaticReadOnly} disabled={busy}>Αυτόματος έλεγχος χωρίς χρέωση</button><button type="button" onClick={automaticCheck} disabled={busy}>Αυτόματος έλεγχος με χειρόγραφα και συμβάντα</button><p>Διαβάζει τα υποστηριζόμενα συνημμένα του τσατ με AI και διασταυρώνει τα στοιχεία. Οι προηγούμενες αναγνώσεις επαναχρησιμοποιούνται. Η ανάγνωση AI ακολουθεί την υπάρχουσα χρέωση της υπηρεσίας.</p></>}{busy&&<p role="status">Αναμονή αποτελέσματος…</p>}{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}{automaticSummary&&<div role="status" className="cash-auto-summary"><strong>Αυτόματος έλεγχος: {automaticSummary.status==='NO_DIFFERENCES'?'Χωρίς εντοπισμένες διαφορές':automaticSummary.status==='REVIEW_REQUIRED'?'Χρειάζεται ανθρώπινος έλεγχος':'HOLD — εκκρεμεί τεκμηρίωση'}</strong><p>Βάρδιες: {automaticSummary.checkedShifts} · Εκκρεμείς: {automaticSummary.pendingShifts} · Διαφορές μετρητών: {automaticSummary.cashDifferenceShifts} · Διαφορές καρτών: {automaticSummary.cardDifferenceShifts} · Πιθανά λάθη καταμέτρησης: {automaticSummary.countingCandidates} · Αμφίβολα ζεύγη: {automaticSummary.ambiguousPairs}.</p><p>Χειρόγραφα: {automaticSummary.paperCoverage==='COMPLETE'?'Πλήρης διαθέσιμη κάλυψη':automaticSummary.paperCoverage==='INCOMPLETE'?'Μερική κάλυψη':'Δεν είναι διαθέσιμα'} · Ανεπίλυτες γραμμές: {automaticSummary.unresolvedPapers??'άγνωστο'}. Αδιάβαστα συνημμένα: {automaticSummary.unreadPaperSources??'άγνωστο'} · Σε αναμονή: {automaticSummary.pendingPaperSources??'άγνωστο'} · Χρειάζονται επανέλεγχο: {automaticSummary.reviewPaperSources??'άγνωστο'}.{automaticSummary.paperIssueCode==='ATTACHMENT_BYTE_LIMIT'?' Υπέρβαση ορίου 100 MiB συνημμένων — απαιτείται ασφαλής επανέλεγχος πηγών.':automaticSummary.paperIssueCode==='ATTACHMENT_SIZE_UNAVAILABLE'?' Δεν επαληθεύτηκαν τα μεγέθη όλων των συνημμένων.':automaticSummary.paperIssueCode?' Εκκρεμεί η κάλυψη πηγών ('+automaticSummary.paperIssueCode+').':''}</p><p>Μόνο προτεινόμενα ευρήματα — χωρίς αυτόματο συμψηφισμό ή χρέωση υπαλλήλου.</p></div>}
       {data&&<><pre style={{whiteSpace:'pre-wrap',fontFamily:'inherit'}}>{data.text}</pre><button type="button" disabled={busy||needsRefresh} onClick={()=>navigator.clipboard.writeText(data.text)}>Αντιγραφή ελεγμένης αναφοράς</button>
         {!readOnly&&<button type="button" disabled={busy||needsRefresh} onClick={exportArchive}>Excel με επανυπολογισμούς</button>}
         {data.issueRegister&&<details open><summary>Εκκρεμότητες παραστατικών</summary>

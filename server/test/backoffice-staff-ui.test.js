@@ -557,3 +557,50 @@ test('inventory counted-only filter survives detail unmount and stays scoped to 
   await m.close();
  }
 });
+
+
+test('delegated unknown-barcode button requires both explicit product permission and DRAFT',async()=>{
+ const Count=await component('inventory/InventoryFastCount'),events=[],current={id:'draft-a',status:'DRAFT',scopeType:'FULL',lines:[]};
+ const props=(allowed,locked=false,stocktake=current)=>({api:async()=>assert.fail('No Owner endpoint for a missing barcode'),current:stocktake,reload:async()=>{},setError:()=>{},delegated:{canCount:true,canCreateProduct:allowed,locked,onCreateProduct:code=>events.push(code)}});
+ const m=await mount(Count,props(false));
+ try{
+  const input=document.querySelector('input[placeholder="Barcode, SKU ή περιγραφή"]');assert.ok(input);
+  await m.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'5200123456789');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  assert.equal(document.querySelector('.inv2-new-product'),null,'count permission alone cannot create product');
+  await m.render(props(true));
+  assert.ok(document.querySelector('.inv2-new-product'));
+  await m.act(async()=>document.querySelector('.inv2-new-product').click());assert.deepEqual(events,['5200123456789']);
+  await m.render(props(true,true));
+  await m.act(async()=>document.querySelector('.inv2-new-product').click());assert.equal(events.length,1,'locked draft cannot open another card');
+  await m.render(props(true,false,{...current,status:'FINALIZED'}));
+  assert.equal(document.querySelector('.inv2-new-product'),null,'finalized draft never permits this action');
+ }finally{await m.close()}
+});
+
+test('personal inventory opens the existing store-scoped new-product card without stock/count writes',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),writes=[];
+ const current={id:'draft-a',storeId:'a1',name:'Unknown barcode draft',status:'DRAFT',scopeType:'FULL',lines:[]};
+ const staff={...identity,stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count','products.read','products.create']}]};
+ const api=async(path,options={})=>{
+  if(options.method&&options.method!=='GET'){writes.push({path,options});throw Error('No state-changing call expected');}
+  if(path==='/api/backoffice-staff/me')return staff;
+  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes')return {storeId:'a1',stocktakes:[current]};
+  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes/draft-a')return current;
+  if(path.includes('/new-card/options'))return {categories:[],brands:[],vatDepartments:[],suppliers:[],supplierCodes:[]};
+  return {};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Απογραφή').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,45)));
+  await m.act(async()=>document.querySelector('.inv2-history-open').click());
+  const input=document.querySelector('input[placeholder="Barcode, SKU ή περιγραφή"]');assert.ok(input);
+  await m.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'5200123456789');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  const create=document.querySelector('.inv2-new-product');assert.ok(create);
+  await m.act(async()=>create.click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,80)));
+  const dialog=document.querySelector('[role="dialog"][aria-label="Νέο είδος · Πλήρης καρτέλα"]');assert.ok(dialog,'existing full product card must open');
+  assert.equal(writes.length,0,'no product, quantity or stock mutation without Save');
+  const stockInput=[...dialog.querySelectorAll('label')].find(x=>x.textContent.includes('Αρχικό απόθεμα'))?.querySelector('input');
+  assert.ok(stockInput);assert.equal(stockInput.disabled,true,'opening stock is always disabled in inventory entry');
+ }finally{await m.close()}
+});

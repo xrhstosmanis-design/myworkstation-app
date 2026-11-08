@@ -1,3 +1,111 @@
+## 07/11/2026 22:24:54 UTC - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW AND CANCEL / SCOPED LIVE PASS
+
+Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. PR #3711 merged as ff4665eb8ec4b7b572ac65d792a788e48657a051; exact PR CI 42417280001 and main CI 42418343730 passed all five jobs. Guarded deploy 42419487430 / job 128544666223 succeeded; actual health confirmed the exact revision at 07/11 22:14:28.5241665 UTC.
+
+Actual native owner preview, 07/11 22:20:04.336–22:21:02.568 UTC: full rendered system report 15,141 JavaScript characters / 147 lines, declared count matched, start visible and actual end reached by native scrolling. Three full-audit pending rows, system handoff sentence and two configured recipients were visible; addresses remain private. Optional comment stayed blank. Cancel closed the dialog and restored the preview control; Send was not selected. No operator email, no-charge repetition or monetary/approval action. PASS applies only to this full native preview and Cancel.
+
+No raw HTTP/reportHash/generation parity, independent DB/global-state/provider/SMTP/inbox proof, mobile or other-role coverage. Delivery NOT SENT / NOT TESTED; exact-recipient approval remains OUTSTANDING after prior automatic approval rejection. Parent financial/source scope OPEN / ASSIGNED. Old native-preview.json FAIL and every prior registry byte/owner remain unchanged. Manual update is scoped only to observed preview/Cancel. New sanitized evidence: CHECKPOINTS/EVIDENCE/cash-system-email-20261107/native-in-app-preview.json. Parent checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. No new outbound authorization or financial closure.
+
+## 07/11/2026 23:13:35 Europe/Athens - CASH-UNIFIED-AUDIT-15 / CONSOLIDATED PREVIEW UI CANDIDATE / AWAITING LAB
+
+Same retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Existing PR #3711 history, UI note and registry prefixes retained. Consolidation uses exact remote base 4b620b2928b0acb9dfdca2174c3bf4b1db1d6466, including the complete intervening daily-contract test adaptation. The prior local baa512c candidate stayed unpublished; its old test evidence is separate. Draft/review hold on 07/11 at 21:01:44Z / 21:02:04Z changed PR metadata only.
+
+Bounded additions repair captured scope/session freshness, modal focus and Escape/in-flight cancel behavior, and short-height access while preserving the full scrollable system report, visible recipients, optional blank comment and explicit Send/Cancel. Four existing client/test paths, using platform-admin.css; backend/schema/recipient authority unchanged. Preserve owner/self readiness, canonical fingerprint/generation, stale-response rejection and atomic double-submit protection. No financial/provider/schedule expansion.
+
+Actual consolidated Node 20.20.2 focused suite: 67 PASS / 0 FAIL / 0 SKIP / 0 CANCEL; separate exact-remote daily contract: 11 PASS / 0 FAIL / 0 SKIP / 0 CANCEL. Initial footerless run not counted. Final independent review: NO BLOCKERS; text whitespace check clean. Local source evidence only; new exact-head CI/release and hosted full-preview acceptance remain pending. Preserve actual native-preview FAIL JSON, unchanged manual, prior scoped cash PASS and every peer byte/owner. No new functional PASS.
+
+Delivery NOT TESTED / NOT SENT; exact-recipient approval remains outstanding. Next: exact CI/review and authorized guarded release, then complete native preview/recipients/blank-comment/Cancel observation. Do not repeat the completed no-charge check or any rejected outbound action. Parent checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. Ten-path increment over current remote base; complete twelve-path PR includes the retained remote UI note and daily-contract test.
+
+## 07/11/2026 - CASH-UNIFIED-AUDIT-15 - FULL EMAIL PREVIEW UI CANDIDATE
+
+Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Before-source claim #3710 merged. PR #3711 (fix/cash-email-preview-20261107) replaces oversized native cash-email dialogs with a complete scrollable in-app system-generated report preview and explicit Send/Cancel for owner, self preview and not-ready visibility. Original backend reader, arithmetic, permissions, fingerprint/generation, recipients, SMTP and schedules unchanged. Synthetic >10,240-character mounted UI regression and atomic double-send, stale-store/day and pending-readiness checks added. Exact CI and LIVE recheck remain pending; no actual email sent and no financial, review, provider, bank or fiscal mutation. Prior limited PASS and the real 10,240-character preview FAIL remain preserved. Separate approval of exact outbound recipients required. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-email-preview-ui.md.
+
+## 07/11/2026 17:05 Europe/Athens - OCR4-CONFIDENCE-SCALE-01 / ASSIGNED / BEFORE SOURCE
+
+Retained invoice/task4 owner /root; continuation from docs/ocr4-k01-hosted-20261106 at the owner's request to continue here in small steps. Claim branch docs/ocr4-confidence-scale-claim-20261107; subsequent source branch fix/ocr4-confidence-scale-20261107.
+
+Scope: only make the FAST provider's confidence unit explicit in the schema description and prompt: percentage points from 0 to 100; 99 means 99%, 1 means 1%, and 0.99 remains a valid 0.99%. No automatic multiplication, minimum confidence, UI conversion or retrospective reinterpretation of K01. Add focused actual-request/response regression coverage with synthetic mocked provider values.
+
+Read-only source review at main a9d6873c98f045de943bc67e3ff15ba70843f896: the schema already permits 0-100; the prompt does not name the scale, the endpoint preserves the numeric value, and the UI rounds it. K01's raw confidence is NOT CAPTURED, so its historical cause remains UNPROVEN. Existing limited K01 file/page/header PASS remains protected; K01 and all previously consumed fixtures are not replayed. Full OCR and hosted acceptance remain OPEN.
+
+Preserve supplier/number/date/total selection, physical PDF counting, provider order/models/reasoning/timeouts, Azure and durable reuse, tenant/store authorization, wallet and every payment/draft/stock/fiscal writer. OCR4-LOCAL-PDF-3697 and the separate latency scopes/owners are unchanged. Source integration starts only after normal claim CI and merge to main. Next: the bounded prompt/schema clarification and focused checks; no paid OCR or production transaction in this step.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-ocr4-confidence-scale-claim.md. All earlier registry bytes are retained unchanged below. No new LAB PASS or numbered-work closure is claimed.
+
+## 07/11/2026 22:19:03 Europe/Athens - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW FAIL / UI CLAIM BEFORE SOURCE
+
+Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Source PR #3708 is installed at be3844895e807db469c3d3571cefa42bd7f3ec1c. Claim branch docs/cash-email-preview-claim-20261107; future implementation fix/cash-email-preview-20261107. OPEN / ASSIGNED / AWAITING UI IMPLEMENTATION AND LAB.
+
+Actual native preview opened on 07/11 at 20:10:42.209 UTC and was observed by 20:11:08.808 UTC. Full-mode content was visible: three pending full-audit rows, the canonical system follow-up sentence, duplicate evidence and cached/unread papers. However, the observed message stopped at exactly 10,240 characters mid-paper line; recipients and final instructions were not visible. Overall full-preview acceptance is FAIL, not PASS. This observation does not establish a universal browser limit or complete-body parity.
+
+The comment field was empty; no comment was typed. Cancel at 20:14:15.269 UTC closed the dialog and restored the native button. No email was sent. Delivery remains NOT TESTED / NOT SENT and exact-recipient approval remains outstanding. Financial/source reconciliation stays OPEN; prior 03/11 source evidence, 04/11 basic/full scoped PASS and 07/11 no-charge LIVE UI PASS remain protected.
+
+Bounded UI correction only: replace the oversized browser dialog with a scrollable in-app complete system preview, visible recipients, optional blank comment and explicit Send/Cancel. Preserve the installed full reader, canonical text, readiness/auth/store/day/fingerprint/generation/stale-context/double-submit guards. No schedules, paid providers, recipient changes, financial/review writes or new send authorization. No new manual PASS; existing limited short-preview history is not contradicted.
+
+Next: merge this documentation-only claim after applicable CI before UI source edits, then verify long-body completeness and guards with synthetic tests and separately authorized native preview/cancel acceptance. Do not repeat the completed no-charge button or any outbound action. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md; sanitized evidence: CHECKPOINTS/EVIDENCE/cash-system-email-20261107/native-preview.json. Every prior registry byte and peer owner retained.
+
+## 07/11/2026 21:34:07 Europe/Athens - CASH-UNIFIED-AUDIT-15 / SOURCE CANDIDATE / AWAITING LAB
+
+Same owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. Claim PR #3707 merged as 7b40395f1313dd5cc1d3789878930e1eca56602b after exact docs CI 42406315142. Implementation branch fix/cash-system-email-20261107.
+
+Candidate: native email reads the full existing no-charge report; the complete canonical envelope is checked before a private email-only basic-readiness projection. Delivered findings, canonical fingerprint/generation and arithmetic/provisional/auth/recipient guards remain authoritative. One conditional system-generated follow-up instruction supports owner/manager review; blank sender comment supported. Scheduled/public schemas and duplicate formatting stay unchanged.
+
+Node 20.20.2 focused checks: 44 PASS / 0 FAIL / 0 SKIP; injected fake mail transport only. Final independent review found no blocking issue in the five approved source/test paths. This is local source evidence only; exact source CI/release and new hosted acceptance remain pending. AWAITING LAB, no new functional/manual PASS. Preserve 03/11 source evidence, 04/11 basic/full saved-reading scoped PASS and 07/11 limited no-charge LIVE UI PASS.
+
+No paid OCR, ledger/review/offset writes, schedules, recipient/settings changes or production email attempt. Prior outbound approval rejection remains; separate approval of exact recipients is still required. Delivery NOT TESTED / NOT SENT. Parent financial/source residuals and all peer ownership stay OPEN. Next: exact source CI/review and authorized release, then scoped native full-report/email-preview LAB parity. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. Complete base registry suffixes retained.
+
+## 07/11/2026 21:19 Europe/Athens - CASH-UNIFIED-AUDIT-15 / SYSTEM-GENERATED EMAIL / BEFORE SOURCE
+
+ASSIGNED - retained owner codex/cash-chat-reconciliation-20261026, coordinated by /root; no transfer or competing claim. Claim branch docs/cash-system-email-claim-20261107; implementation branch fix/cash-system-email-20261107. OPEN / AWAITING IMPLEMENTATION AND LAB.
+
+The owner requires the system to generate the full cash report and send it through its native email flow; the owner or manager then reviews its findings and pending items. Current native email uses an ordinary source read, while the no-charge full check enables fullAudit. Duplicate-sale, stored-paper and full-audit pending evidence therefore does not all reach the existing email preview. This is a bounded connection gap, not a new financial-finality requirement.
+
+Scope: connect native email preview/send to the existing full read-only report, validate the complete canonical envelope, and retain the email-only readiness projection without changing scheduled/public schemas. Preserve preview fingerprints/generation, arithmetic/provisional/auth/recipient guards and original amounts. Add only short system-owned pending/follow-up wording; no assistant-authored report/comment or richer duplicate formatter.
+
+Protected: existing 03/11 source evidence, 04/11 basic/full saved-reading scoped PASS and 07/11 limited no-charge LIVE UI PASS. No new functional PASS, manual entry, source fix or delivery is claimed. No paid OCR, ledger/review/offset writes, schedules, new recipients or production email attempt. Earlier outbound approval rejection remains effective; this claim/code correction grants no send approval. Any later delivery needs separate approval for its exact recipients.
+
+Next: publish this documentation-only claim on main after applicable CI, then implement the bounded correction and verify synthetic parity/freshness guards, exact CI and separately authorized LAB. All full-email delivery and new behavior remain NOT TESTED / NOT SENT. Parent and existing residual financial/source work remain OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-07-cash-system-generated-email.md. All prior registry bytes and peer ownership retained.
+
+## 07/11/2026 — CASH-ADJACENT-COUNT-21 / CURRENT REMAINING SCOPE / OPEN-ASSIGNED
+
+Same retained cash owner and parent CASH-UNIFIED-AUDIT-15. The single native no-charge UI invocation is completed and is removed from current pending acceptance: limited LIVE UI PASS on runtime5606b18c, invoked on 07/11 at 16:34:50 Europe/Athens, with completed result observed by 16:36:08. Its former authentication/unobserved-action blocker below is superseded history, not work to replay. Source#3683/release#3699 are merged.
+
+Remaining work only: reconcile applicable handwritten/source/expense evidence and ambiguous findings; establish final financial reconciliation/approval; complete separately authorized broader role/device/period and manual-review/switch-race coverage. Database/ledger effects, independent control-state checks, provider billing telemetry and canonical reportHash were not measured by this one UI observation and are not closed by it. No automatic financial approval, employee charge or task/parent closure is recorded. Preserve the existing basic/full saved-reading PASS. Current checkpoint CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md and manual docs/manual/cash-control/PASS.md define the observed limit. Unrelated owners and pending tasks below remain unchanged.
+
+## 07/11/2026 08:31 Europe/Athens — OCR4-LOCAL-PDF-3697 / ASSIGNED / BEFORE SOURCE
+
+Owner: κεντρικός συντονιστής `/root` (έγκριση ιδιοκτήτη στη συνομιλία). Μία ανάθεση για το υπάρχον GitHub issue #3697. Κλάδος καταχώρισης: `docs/ocr4-local-pdf-claim-20261106`. Προβλεπόμενος κλάδος κώδικα μετά τη συγχώνευση της ανάθεσης: `fix/ocr4-local-pdf-3697`.
+
+Εύρος: μόνο «Τοπική ανάγνωση» PDF. Διαδοχική αναγνώριση όλων των φυσικών σελίδων, συγκέντρωση κειμένου και γραμμών με τη σειρά, σαφές σφάλμα σελίδας και αποδέσμευση πόρων. Έλεγχος του ενεργού AiReaderPanel και των δύο legacy helpers του issue. Διατήρηση αρχικού PDF και ροής εικόνας. Το FAST #3673 και οι λειτουργίες πληρωμών, αποθεμάτων, οριστικοποίησης και φορολογίας είναι εκτός εύρους.
+
+Κατάσταση: OPEN. Υπάρχει ξεχωριστό προσχέδιο patch. Πέντε απομονωμένες δοκιμές με προσομοιώσεις πέρασαν. Έλεγχος σειράς με συνθετικά PDF και Poppler/Tesseract CLI, με λάθη χαρακτήρων. Εκκρεμούν browser/PDF.js/Tesseract.js και LAB. Αλλαγές κώδικα στο repository μετά τη δημοσίευση της ανάθεσης στο main. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-07-ocr4-local-pdf-3697-claim.md`.
+
+07/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / #3690 filter USER PASS (LIMITED). Owner /root; existing MYWORKSTATION LAB Owner/SA draft 109 all rows / one counted 3.25 row; owner confirmed filter on 06/11 at 11:08 Europe/Athens. Existing count unchanged. Only filter closed; physical scanner, staff-specific admission and new-product card/attach remain OPEN (#3701/#3702). See CHECKPOINTS/CHANGES/2026-11-05-inventory-scan-workflow.md and docs/manual/inventory/PASS.md. No repeat count.
+
+## 06/11/2026 22:14 Europe/Athens - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / OCR4 / K01 HOSTED LIMITED PASS / REMAINING SCOPE OPEN
+
+Retained task4 owner /root; documentation branch docs/ocr4-k01-hosted-20261106, existing page-display scope, no ownership transfer or runtime change. One authorized selection/read of the new synthetic LAB-OCR4-20261106-K01 in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, store cmtpopbgo000trhb5ng9ytiru, after disclosure of provider use at platform cost. Ready fields were captured by 2026-11-06T20:14:56.265Z; the later 20:20:43Z record-completion time is not a latency measurement. Fixture: one PDF, 55,825 bytes, SHA256 7de9ea9e5dca6cfc0e8347aea743a9036b66948abf841e78055efc29f55bd18c.
+
+LIMITED HOSTED PASS: actual accessibility-tree observation showed «1 αρχείο · 1 PDF» and «Αρχείο 1: 2 φυσικές σελίδες PDF». The four fields matched without edits: LAB METER TEST; LAB-OCR4-20261106-K01; 2026-11-06; 49,60 EUR, not either page subtotal 18,60 or 31,00 EUR. The ready screenshot captures the four fields and the 1% status; the page-count badge was below its viewport and is evidenced by the accessibility-tree observation, not that screenshot crop. One successful UI file selection; no replay, field correction, invoice submission, payment action or setting change. ΠΛΗΡΩΜΕΝΟ and ΜΕ ΠΙΣΤΩΣΗ were not selected; submit remained disabled.
+
+Fresh company-wallet observations before/after agreed: customer balance 4.610532 EUR, reserved 0 EUR, customer/invoice billing OFF; historical AI amount 0.409468 EUR, 10 calls and 14 movements unchanged. Those wallet counters do not measure platform-funded provider usage. Actual provider-call count and cost were NOT CAPTURED; one UI selection may include server retry or metadata rescue. Financial/database deltas and another-terminal/control reconciliation are NOT TESTED. The shift overview GET may reconcile pre-existing online sales; no global zero-database-write claim is made.
+
+The displayed «1 αρχείο έτοιμο (1%). Έλεγξε τα 4 στοιχεία και συνέχισε.» is reader-confidence formatting, not document coverage or progress. Raw confidence and its scale were not captured; confidence interpretation remains OPEN, with no invented 99%/100% value. Full product-line/quantity/package/discount/VAT/EFK extraction, invoice/payment/stock behavior and general OCR/latency acceptance remain outside this observation and NOT TESTED here. Existing No09/No15 status and all other assignments are unchanged. The exact live revision during K01 was NOT CAPTURED; do not substitute a prior health revision or infer it from earlier CI/deployment evidence.
+
+Close only the pending need to observe this K01 file/page display and its four header fields. K01 is now consumed and must not be replayed to repair records or investigate confidence; original J 37.20 remains unused and unchanged. Earlier source-stage AWAITING LAB entries below remain historical and are superseded only for this narrow observed result. Broader OCR4 work remains OPEN with the same owner. Next: complete the normal documentation CI/merge for this result; any confidence investigation uses retained evidence under a separate bounded step, without another K01 read.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-ocr4-k01-hosted-reading.md. Evidence: CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/hosted-k01-20261106.json. Manual: docs/manual/invoices/PASS.md. Preserve every prior registry byte and all peer results/claims; this entry records hosted observation, not a new source fix or a full OCR/financial/control PASS.
+
+## 06/11/2026 — CENTRAL-AGENT-IO-01 / ASSIGNED / DOCS CANDIDATE / NOT TESTED
+
+Owner: κεντρικός συντονιστής /root. Branch: `docs/central-bounded-agent-io-20261106`. Ρητή εντολή ιδιοκτήτη «Ξεκίνα» για κεντρική δοκιμή περιορισμού εξόδου σε όλες τις σελίδες. Ανεξάρτητο scope: μόνο κοινές οδηγίες ανάγνωσης/μεταφοράς, χωρίς ανάληψη εργασιών άλλων owners ή αλλαγή εφαρμογής.
+
+Base main: `0eab200446e5284bb7312a612d923feb7116be5c`. Τοπική ανάκτηση πλήρων μητρώων: tracker 4.119.924 bytes, pending 3.646.706 bytes, ενεργή λίστα 5.295.710 bytes. Η συνδεδεμένη ανάγνωση επέστρεψε κενό content για τα μεγάλα αρχεία, ενώ το τοπικό Git έδωσε μη κενά δεδομένα. Αυτό τεκμηριώνει πρόβλημα της συγκεκριμένης διαδρομής ανάγνωσης, όχι αιτία ή λύση του ορίου συνομιλίας.
+
+Πρόταση: τοπικό Git για μεγάλα αρχεία, προέλεγχος μεγέθους, μικρά αποσπάσματα/diff, όρια γραμμών ΚΑΙ χαρακτήρων, καμία εμφάνιση ολόκληρου blob/Base64 και ανεξάρτητος έλεγχος remote πριν από επανάληψη ενέργειας. Διατηρείται αυτούσιο όλο το προηγούμενο ιστορικό, οι αναθέσεις και οι κανόνες PASS/CI/LAB. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-06-central-bounded-agent-io.md`.
+
+Status: NOT TESTED ως κεντρική παράκαμψη σε νέα πλήρη εργασία. Δεν είναι platform fix ή LAB PASS. Next: review/CI και ενσωμάτωση του ακριβούς docs-only PR, έπειτα μία οριοθετημένη εργασία με καταγεγραμμένα μεγέθη εξόδου. Καμία αναγέννηση PDF ή PASS closure σε αυτή την αλλαγή· όλα τα υπάρχοντα artifacts διατηρούνται.
+
 ## 05/11/2026 21:43 Europe/Athens - INVENTORY-SCAN-WORKFLOW-01 / REMAINING SCOPE OPEN / OWNER ENTER RECEIPT
 
 Retained owner: /root, original claim #3684. Owner/SA browser-keyboard Enter acceptance is completed only for the measured shared-component path. Source PR #3689 merged as 0cd52a6c49c7da92b41756efec911e846b7e5aa4. Full PR CI 42090428560 and exact main CI 42093525223 completed all five jobs successfully: 5,913 server tests + 8 backup tests passed, with zero failures or skips. Normal guard 42095172878 / job 127483286831 completed the release; independent health at 19:37:13 UTC confirmed that exact revision.

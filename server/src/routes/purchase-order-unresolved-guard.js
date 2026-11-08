@@ -54,9 +54,12 @@ async function ensureSchema(){
   schemaReady=true;
 }
 
-async function applyPackStockCorrection({orderId,companyId,userId,userName,expectedReopenVersion=0,req}){
+async function applyPackStockCorrection(input){
   await ensureSchema();
-  return prisma.$transaction(async tx=>{
+  return prisma.$transaction(tx=>applyPackStockCorrectionInTransaction(tx,input));
+}
+
+export async function applyPackStockCorrectionInTransaction(tx,{orderId,companyId,userId,userName,expectedReopenVersion=0,req}){
     const scope=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} LIMIT 1`;
     if(!scope[0])throw Object.assign(new Error("Δεν βρέθηκε η αγορά."),{status:404});
     if(req?.user?.staffAccess===true)await requireStaffAction(tx,req,scope[0].storeId,'invoices.approve');
@@ -141,7 +144,6 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName,expec
       WHERE "orderId"=${orderId}`;
 
     return {ok:true,idempotent:false,correctedProducts:audit.filter(row=>Math.abs(row.delta)>0.000001).length,audit};
-  });
 }
 
 // Πρώτα ελέγχεται η οικονομική συμφωνία του OCR τιμολογίου. Αν υπάρχει
@@ -162,6 +164,7 @@ router.patch("/:orderId",async(req,res,next)=>{
       WHERE o."id"=l."orderId"
         AND o."id"=${req.params.orderId}
         AND o."companyId"=${req.user.companyId}
+        AND o."status"='NEW'
         AND l."productId" IS NOT NULL
         AND (COALESCE(l."invoiceUnit",'PIECE')<>'PACKAGE' OR COALESCE(l."stockUnitsPerInvoiceUnit",0)>0)
         AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;});
@@ -189,7 +192,7 @@ router.patch("/:orderId",async(req,res,next)=>{
     let finished=false;
     res.json=body=>{
       if(finished)return originalJson(body);
-      const successfulFinal=res.statusCode<400&&body?.status==="FINAL";
+      const successfulFinal=res.statusCode<400&&body?.status==="FINAL"&&!body.awaitingInvoice;
       if(!successfulFinal){finished=true;return originalJson(body)}
       finished=true;
       applyPackStockCorrection({

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
+import {lockEditablePurchaseOrder} from '../src/services/purchase-order-reopen.js';
 import {mappingConfirmationUserId} from '../src/lib/supplier-mapping-confirmation-actor.js';
 import {fixture,isolated} from './helpers/invoice-product-preparation-fixture.js';
 import {previewInvoiceProduct,confirmInvoiceProduct} from '../src/lib/invoice-product-preparation.js';
@@ -28,6 +29,7 @@ test('actual exact autoresolve carries full actor into its transactional learnin
 const snapshot=async db=>{const out={};for(const name of ['Product','ProductBarcode','StoreProduct','StockMovement','StoreOperatorAudit','PurchaseOrder','PurchaseOrderLine','SupplierProductMapping','SupplierProductLink'])out[name]=await db.$queryRawUnsafe(`SELECT row_to_json(t) AS row FROM "${name}" t ORDER BY row_to_json(t)::text`);return out};
 async function routeFixture(){
  const f=await fixture();
+ await f.db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN "reopenVersion" integer NOT NULL DEFAULT 0');
  await f.db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD UNIQUE("storeId","productId")');
  await f.db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN "gift" bool, ADD COLUMN "markupPercent" numeric, ADD COLUMN "vatAmount" numeric, ADD COLUMN "proposedSalePrice" numeric');
  return f;
@@ -38,7 +40,7 @@ function createHandler(db,central=async()=>{}){
  const ownedLine=new Function('prisma',ownedText+';return ownedLine;')(db);
  let handler;const router={post(path,fn){assert.equal(path,'/:orderId/ocr-lines/:lineId/create-product');handler=fn}};
  const text=source.slice(source.indexOf('router.post("/:orderId/ocr-lines/:lineId/create-product"'),source.indexOf('\nexport default router;'));
- new Function('router','prisma','z','id','ownedLine','learnSupplierMapping','learnCentralInvoiceCorrection','ean13','generateInternalBarcode',text)(router,db,z,randomUUID,ownedLine,learn,central,()=>{throw Error('unexpected generated barcode')},()=>{throw Error('unexpected generated barcode')});
+ new Function('router','prisma','z','id','ownedLine','learnSupplierMapping','learnCentralInvoiceCorrection','ean13','generateInternalBarcode','lockEditablePurchaseOrder',text)(router,db,z,randomUUID,ownedLine,learn,central,()=>{throw Error('unexpected generated barcode')},()=>{throw Error('unexpected generated barcode')},lockEditablePurchaseOrder);
  return async(actor,body)=>{let status=200,data,error;const res={status(n){status=n;return this},json(v){data=v;return this}};await handler({user:{companyId:'company',...actor},params:{orderId:'order',lineId:'line'},body},res,e=>{error=e});if(error)throw error;return {status,data}};
 }
 const form={name:'Synthetic new item',supplierCode:'SUP1',barcodeMode:'PROVIDED',barcode:'5200000000018',quantity:3,unitCost:2,vatRate:13,salePrice:3};

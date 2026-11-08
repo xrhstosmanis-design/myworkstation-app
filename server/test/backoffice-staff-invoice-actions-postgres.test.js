@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {z} from 'zod';
-import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
 import {installStaffActionPolicy} from './helpers/backoffice-staff-actions-fixture.js';
 import {requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
 import * as common from '../src/lib/invoice-common-draft.js';
+import {lockEditablePurchaseOrder} from "../src/services/purchase-order-reopen.js";
 import {purchasePrintedRounding} from '../src/lib/purchase-printed-rounding.js';
 
 test('native delegated invoice metadata and canonical approval preserve one posting, actor, control stock and live withdrawal',{skip:!isolatedInvoiceDb(),timeout:90000},async()=>{
@@ -33,18 +34,21 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const lineSchema=source.slice(source.indexOf('const lineSchema='),source.indexOf('router.get("/report",'));
   const auditState=source.slice(source.indexOf('const auditLineState='),source.indexOf('async function writePurchaseAudit('));
   const lineStart=source.indexOf('router.patch("/:orderId/lines/:lineId",'),lineEnd=source.indexOf('\nrouter.delete("/:orderId/lines/:lineId",',lineStart);let editLine;
-  const lineBindings={...deps,router:{patch:(_path,h)=>editLine=h},n:value=>Number(value||0),purchasePrintedRounding,
+  const lineBindings={...deps,router:{patch:(_path,h)=>editLine=h},n:value=>Number(value||0),purchasePrintedRounding,lockEditablePurchaseOrder,
    line:async(_company,id)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"=${id}`)[0],
    learnConfirmedLineCorrection:()=>assert.fail('store-only staff edit must not change company supplier learning'),learnCentralInvoiceCorrection:()=>assert.fail('store-only staff edit must not change cross-company learning')};
   new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(lineStart,lineEnd))(...Object.values(lineBindings));
   const changedLine=await invoke(editLine,'invoices.edit',{description:'Reviewed store-only line',quantity:3});assert.ifError(changedLine.failure);assert.equal(changedLine.result.ok,true);assert.equal(changedLine.result.mappingLearned,false);assert.equal(changedLine.result.centralLearning.learned,false);assert.equal(await f.snapshot(),before);
   const handlers={},router={use:()=>{},post:()=>{},delete:()=>{},patch:(path,h)=>handlers[path]=h};
   const posting=(await readFile(new URL('../src/routes/purchase-order-posting-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
-  const bindings={Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
-  const approve=()=>invoke(handlers['/:orderId'],'invoices.approve',{status:'FINAL'});
+  const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(db,requireStaffAction);
+  const bindings={applyPackStockCorrectionInTransaction,Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
+  const approve=(status='FINAL')=>invoke(handlers['/:orderId'],'invoices.approve',{status});
   assert.equal((await approve()).failure?.status,403);assert.equal(await f.snapshot(),before);
   await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["invoices.read","invoices.edit","invoices.approve"]'::jsonb`;
-  const results=await Promise.all([approve(),approve()]);for(const r of results){assert.ifError(r.failure);assert.equal(r.result.status,'FINAL')}
+  assert.equal((await approve()).result.awaitingInvoice,true);
+  assert.equal(await f.snapshot(),before);
+  const results=await Promise.all([approve('INVOICED'),approve('INVOICED')]);for(const r of results){assert.ifError(r.failure);assert.equal(r.result.status,'INVOICED')}
   assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StockMovement"`)[0].count),1);
   assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "InvoiceStockPosting"`)[0].count),1);
   assert.equal((await db.$queryRaw`SELECT "createdByUserId" FROM "StockMovement"`)[0].createdByUserId,'delegated');

@@ -228,6 +228,10 @@ router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),a
       if(!doc){const error=new Error("Δεν βρέθηκε το παραστατικό.");error.status=404;throw error}
       if(doc.status==="APPROVED")return {alreadyApproved:true,id:doc.id};
       if(doc.status!=="DRAFT"){const error=new Error("Το παραστατικό δεν είναι σε κατάσταση πρόχειρου ελέγχου.");error.status=409;throw error}
+      if(doc.purchaseOrderId){
+        const orders=await tx.$queryRaw`SELECT "awaitingInvoice" FROM "PurchaseOrder" WHERE "id"=${doc.purchaseOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${doc.storeId}`;
+        if(orders[0]?.awaitingInvoice)throw Object.assign(new Error("Η αγορά είναι προς έλεγχο. Χρησιμοποίησε την Τιμολόγηση στην ίδια αγορά."),{status:409,code:"INVOICE_AWAITING_OWNER_POSTING"});
+      }
       await assertInvoiceStockAvailable(tx,{companyId:req.user.companyId,storeId:doc.storeId,sourceDocumentId:doc.id,orderId:doc.purchaseOrderId||null});
       const creditNote=doc.documentType==="CREDIT_NOTE",stockSign=creditNote?-1:1;
       const lines=await tx.$queryRaw`SELECT l.*,p."trackStock" FROM "PurchaseDocumentLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId} WHERE l."purchaseDocumentId"=${doc.id} ORDER BY l."id"`;

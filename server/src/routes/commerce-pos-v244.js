@@ -646,7 +646,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 0. documentType = CREDIT_NOTE αν γράφει ΠΙΣΤΩΤΙΚΟ ή CREDIT NOTE, αλλιώς INVOICE. Μη θεωρήσεις την πίστωση ως τρόπο πληρωμής ένδειξη πιστωτικού.
 1. supplierName = ο ΕΚΔΟΤΗΣ/ΠΡΟΜΗΘΕΥΤΗΣ του παραστατικού, όχι ο πελάτης/παραλήπτης.
 2. supplierTaxId = το ΑΦΜ του εκδότη/προμηθευτή.
-3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
+3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας. Αγνόησε MARK, ΜΑΡΚ, UID, αριθμούς QR και τιμές της ενότητας ΣΧΕΤΙΚΑ ΠΑΡΑΣΤΑΤΙΚΑ. Κράτησε τη σειρά και τα αρχικά μηδενικά όπως τυπώθηκαν.
 4. documentDate = η ημερομηνία έκδοσης του παραστατικού σε YYYY-MM-DD. Μην χρησιμοποιήσεις σημερινή ημερομηνία αν δεν φαίνεται στο χαρτί.
 5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ του ΤΙΜΟΛΟΓΙΟΥ. Αν παρακάτω υπάρχει ξεχωριστή «ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ» ή PAYMENT RECEIPT, αγνόησε το ποσό της απόδειξης: μπορεί να διαφέρει από το πληρωτέο του τιμολογίου. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal. ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ, ΥΠΟΛΟΙΠΟ ΛΟΓΑΡΙΑΣΜΟΥ, BALANCE ή αξία/υπόλοιπο εγγυοδοσίας. Αν υπάρχει «ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ Φ.Π.Α.», προτίμησε το μικτό ποσό της γραμμής «ΣΥΝΟΛΑ» που αποδεικνύεται από καθαρή αξία + ΦΠΑ.
 
@@ -682,9 +682,10 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         azureRawText=String(parsed.rawText||"");
         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
         const supplier=await timing.measure("azure_supplier_match",()=>azureSupplierMatch(req.user.companyId,parsed.supplier));
-        const azureTotalGross=round2(recoverVatSummaryInvoiceTotal(azureRawText)||recoverBalancedInvoicePayable(azureRawText)||parsed.totalGross||0);
+        const balancedPayable=recoverBalancedInvoicePayable(azureRawText);
+        const azureTotalGross=round2(recoverVatSummaryInvoiceTotal(azureRawText)||balancedPayable||parsed.totalGross||0);
         const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
-        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,documentType:parsed.documentType==="CREDIT_NOTE"||/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(azureRawText)?"CREDIT_NOTE":"INVOICE",provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
+        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,totalGrossVerified:!isPdf&&balancedPayable>0&&round2(balancedPayable)===azureTotalGross,documentType:parsed.documentType==="CREDIT_NOTE"||/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(azureRawText)?"CREDIT_NOTE":"INVOICE",provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
         const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
         // Payment-header readiness does not require the product table, which
         // remains the existing durable background reader's responsibility.
@@ -747,6 +748,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       documentDate,
       documentType:parsed.documentType==="CREDIT_NOTE"||azureHeaderFallback?.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",
       totalGross:totalGross>0?totalGross:0,
+      totalGrossVerified:!isPdf&&verifiedPayableTotal>0&&round2(verifiedPayableTotal)===totalGross,
       productLines
     });
   });
