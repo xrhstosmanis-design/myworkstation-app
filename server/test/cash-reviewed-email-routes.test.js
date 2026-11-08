@@ -56,6 +56,35 @@ test('actual registered Platform email routes preview common text, refuse stale/
   assert.equal((await post('send-email',body)).status,409);assert.equal((await post('send-preview',body)).status,409);assert.equal(f.sent.length,4);body.reportHash=(await(await get()).json()).reportHash;
   f.legacyRows[0].reviewedAt='2026-10-20T10:00:00Z';assert.equal((await(await get()).json()).readyToSend,false);assert.equal((await post('send-email',body)).status,409);assert.equal(f.sent.length,4);f.legacyRows[0].reviewedAt=null;
   f.deny=true;assert.equal((await get()).status,403);assert.equal((await post('send-email',body)).status,403);f.deny=false;assert.equal((await get('foreign')).status,403);assert.equal(f.sent.length,4);
-  f.user={id:'actor',role:'OWNER'};assert.equal((await get()).status,403);f.user=null;assert.equal((await get()).status,401);assert.equal(f.sent.length,4);
+  const accountKey='CASH_CONTROL_TEST_ACCOUNT_EMAIL',recipientKey='CASH_CONTROL_TEST_RECIPIENT_EMAIL';
+  const priorAccount=process.env[accountKey],priorRecipient=process.env[recipientKey];
+  try{
+   process.env[accountKey]='auditor@example.invalid';
+   process.env[recipientKey]='personal@example.invalid';
+   const personalPreview=()=>fetch(base+'store/email-preview?date=2026-10-21&mode=self');
+   const personal=await(await personalPreview()).json();
+   assert.equal(personal.personalRecipient,'personal@example.invalid');
+   assert.equal((await(await get()).json()).personalRecipient,undefined);
+   assert.deepEqual(personal.recipients,['owner@example.invalid','responsible@example.invalid']);
+   assert.equal((await post('send-preview',body)).status,409);
+   assert.equal((await post('send-preview',{...body,expectedRecipient:'auditor@example.invalid'})).status,409);
+   assert.equal(f.sent.length,4);
+   const personalBody={...body,expectedRecipient:personal.personalRecipient};
+   assert.equal((await post('send-preview',personalBody)).status,200);
+   assert.deepEqual(f.sent[4].args.to,['personal@example.invalid']);
+   assert.equal(f.audits.at(-1).email,'auditor@example.invalid');
+   f.user.email='another@example.invalid';
+   assert.equal((await(await personalPreview()).json()).personalRecipient,'another@example.invalid');
+   assert.equal((await post('send-preview',personalBody)).status,409);
+   f.user.email='auditor@example.invalid';
+   process.env[recipientKey]='invalid-address';
+   assert.equal((await personalPreview()).status,422);
+   assert.equal((await post('send-preview',personalBody)).status,422);
+   assert.equal(f.sent.length,5);
+  }finally{
+   if(priorAccount===undefined)delete process.env[accountKey];else process.env[accountKey]=priorAccount;
+   if(priorRecipient===undefined)delete process.env[recipientKey];else process.env[recipientKey]=priorRecipient;
+  }
+  f.user={id:'actor',role:'OWNER'};assert.equal((await get()).status,403);f.user=null;assert.equal((await get()).status,401);assert.equal(f.sent.length,5);
  }finally{if(server)await new Promise(resolve=>server.close(resolve));delete globalThis[key];}
 });
