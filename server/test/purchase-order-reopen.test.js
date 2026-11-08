@@ -300,8 +300,10 @@ test('synthetic full-stack BackOffice cancellation uses isolated HTTP and Postgr
   assert.equal(await f.preserved(),originalEvidence,'original payment, attachments, jobs and control store must be identical');
   const [order]=await f.db.$queryRawUnsafe('SELECT "status" FROM "PurchaseOrder" WHERE "id"=$1','pos');
   assert.equal(order.status,'CANCELLED');
-  const [document]=await f.db.$queryRawUnsafe('SELECT "status" FROM "PurchaseDocument" WHERE "id"=$1','d-pos');
-  assert.equal(document.status,'CANCELLED');
+  const [document]=await f.db.$queryRawUnsafe('SELECT "status" FROM "PurchaseDocument" WHERE "id"=$1','pos');
+  assert.equal(document.status,'CANCELLED','the approved purchase projection must be cancelled');
+  const [originalDraft]=await f.db.$queryRawUnsafe('SELECT "status" FROM "PurchaseDocument" WHERE "id"=$1','d-pos');
+  assert.equal(originalDraft.status,'DRAFT','the original POS source document must remain preserved');
   const [links]=await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "PurchaseOrderReopenMovement"');
   assert.equal(links.n,1,'one inverse stock movement must be linked to one audit');
   const audits=await f.db.$queryRawUnsafe('SELECT "details" FROM "StoreOperatorAudit" WHERE "eventType"=$1','PURCHASE_ORDER_CANCELLED');
