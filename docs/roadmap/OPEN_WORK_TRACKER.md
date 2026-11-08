@@ -1,3 +1,15 @@
+## 08/11/2026 Europe/Athens - INVOICE-OWNER-FINALIZATION-01 / ASSIGNED / BEFORE SOURCE
+
+Owner: Claude Code page, branch claude/admiring-heisenberg-y0jv5v (task #28, priority IMMEDIATE). New independent scope; no existing claim found in the tracker, active list or pending roadmap. Checkpoint: CHECKPOINTS/CHANGES/2026-11-08-invoice-owner-correction-claim.md.
+
+Owner decision 08/11/2026: the POS operator **keeps** the current invoice finalization and stock posting rights unchanged. The Owner or an authorized manager must be able, after finalization, to **correct** (items/quantities, Invoice Assistant rerun on the same draft) or **delete/cancel** the finalized invoice.
+
+Scope: (1) extend the existing management-only PurchaseOrder reopen (server/src/services/purchase-order-reopen.js, currently INVOICED only) to also accept FINAL, with the same exact recorded stock compensation, immutable audit and payment/photo retention; (2) owner decision 08/11/2026: "Delete" of a FINAL/INVOICED invoice returns it to an editable draft (NEW) through the same reopen with exact stock compensation, required reason and preview; it never hard-deletes the order, lines, photos or POS payment. Hard deletion stays limited to the existing NEW-draft DELETE, which already refuses a REOPENED document; (3) per-line correction history (append-only); (4) BackOffice buttons for FINAL/INVOICED orders in client/src/components/commerce/installPurchaseOrdersSuite.js. Owner decision 08/11/2026: SUPER_ADMIN/OWNER/ADMIN/MANAGER have both reopen and delete-to-draft rights; STORE_OPERATOR has neither.
+
+Read-only evidence at main 64c36f4: PATCH status=FINAL (server/src/routes/purchase-order-posting-guard.js:166-331) posts StockMovement, StoreProduct stock, Product cost/sale price, APPROVED PurchaseDocument and posting rows, and is reachable by POS operators via posPurchaseOrderAccess; DELETE (:95-120) allows only NEW drafts without posting; reopen rejects FINAL (purchase-order-reopen.js:34). Reopen has only a LIMITED LIVE preview PASS (18/10); actual reversal/re-finalization remains NOT TESTED. No line-level correction history exists.
+
+Preserve: operator finalization, idempotent single posting, store/company isolation, one settlement/one AI job/one draft, POS payment retention, existing reopen behavior for INVOICED, fiscal/myDATA untouched. Status: OPEN / BEFORE SOURCE. No code, LAB transaction, stock or payment mutation in this claim. Next: after claim CI and merge to main, bounded server change with regression tests, then AWAITING LAB.
+
 ## 07/11/2026 22:24:54 UTC - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW AND CANCEL / SCOPED LIVE PASS
 
 Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. PR #3711 merged as ff4665eb8ec4b7b572ac65d792a788e48657a051; exact PR CI 42417280001 and main CI 42418343730 passed all five jobs. Guarded deploy 42419487430 / job 128544666223 succeeded; actual health confirmed the exact revision at 07/11 22:14:28.5241665 UTC.
