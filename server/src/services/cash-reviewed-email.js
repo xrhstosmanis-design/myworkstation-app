@@ -49,11 +49,42 @@ export function assertReviewedCashEmailPreview(evidence,{reportHash,generation})
  const e=checked(evidence);if(e.fingerprint!==reportHash||e.generation!==generation)fail('CASH_EMAIL_PREVIEW_CHANGED');return e;
 }
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const amount=cents=>Number.isSafeInteger(cents)?(cents/100).toLocaleString('el-GR',{style:'currency',currency:'EUR',signDisplay:'exceptZero'}):'—';
+const shiftTime=new Intl.DateTimeFormat('el-GR',{timeZone:'Europe/Athens',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+const clock=value=>value&&Number.isFinite(Date.parse(value))?shiftTime.format(new Date(value)):'—';
+function reportTable(title,headers,rows){
+ const cell='border:1px solid #cbd5e1;padding:6px 8px;text-align:left';
+ return '<h3>'+escape(title)+'</h3><table style="border-collapse:collapse;width:100%"><thead><tr>'+
+   headers.map(h=>'<th scope="col" style="'+cell+';background:#f1f5f9">'+escape(h)+'</th>').join('')+
+   '</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(v=>'<td style="'+cell+'">'+escape(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+}
+function cashEmailHtml(report,text){
+ const rows=report.rows;
+ const pending=rows.some(row=>row.fullAudit?.pendingChecks?.length||(!row.reviewed&&row.status!=='NOT_APPLICABLE'))||
+   report.paperEvidence?.items.some(item=>item.status==='UNRESOLVED')||report.paperEvidence?.coverage?.complete===false;
+ const cash=rows.map(row=>{
+   const status=row.fullAudit?.status||row.status;
+   const result=status==='NOT_APPLICABLE'?'Δεν εφαρμόζεται':status==='AWAITING_NEXT_SHIFT'?'Αναμονή επόμενης βάρδιας':
+     (row.fullAudit?status==='FINAL':row.reviewed)?'Ελεγμένο':'Εκκρεμεί διασταύρωση';
+   return [row.shiftLabel,row.operatorName,clock(row.openedAt)+'–'+clock(row.closedAt),amount(row.initialCents),amount(row.remainingCents),result];
+ });
+ const cards=rows.map(row=>[row.shiftLabel,row.operatorName,amount(row.cardCents),Number.isSafeInteger(row.cardCents)?'Καταγεγραμμένη διαφορά':'Ελλιπή στοιχεία']);
+ const details=text.replace(/^Χρειάζεται διευκρίνιση · /gm,'Δεν ελέγχθηκε πλήρως · ');
+ const followUp=pending?'<h3>Εκκρεμότητες και συνέχεια</h3><p><strong>Περιμένω απάντηση μέσω email για καθεμία από τις εκκρεμότητες, με τις απαραίτητες διευκρινίσεις και τα σχετικά αποδεικτικά, ώστε να ολοκληρωθεί ο έλεγχος και να κλείσουν.</strong></p>':'';
+ return '<div lang="el" style="font-family:Arial,sans-serif;line-height:1.5;max-width:760px"><h2>'+escape(report.storeName)+' — Έλεγχος ταμείων</h2><p>'+
+   escape(report.period.from)+(report.period.to===report.period.from?'':' έως '+escape(report.period.to))+
+   ' · Κλεισμένες βάρδιες: '+rows.length+'</p>'+
+   reportTable('Μετρητά και παραδόσεις',['Βάρδια','Χειριστής','Ώρες','Αρχική διαφορά','Υπόλοιπο ελέγχου','Κατάσταση'],cash)+
+   reportTable('Κάρτες POS–EFTPOS',['Βάρδια','Χειριστής','Διαφορά','Κατάσταση'],cards)+
+   '<h3>Αναλυτικά ευρήματα και τεκμήρια</h3><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escape(details)+'</div>'+followUp+'</div>';
+}
+
 export function renderReviewedCashEmail({evidence,companyId,storeId,storeName,date,comment='',previewOnly=false}){
  const e=checked(evidence),r=e.report;
  if(e.companyId!==companyId||e.storeId!==storeId||r.storeName!==storeName||r.period.from!==date||r.period.to!==date||typeof comment!=='string'||comment.length>2000)fail();
  const subject=`Έλεγχος ταμείων MyWorkStation · ${storeName} · ${date}`;
  const text=[...(previewOnly?['ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΑΝΑΦΟΡΑΣ','']:[]),r.text,...(comment?['','Πρόσθετο σχόλιο αποστολής: '+comment]:[])].join('\n');
- const html=`<div style="font-family:Arial,sans-serif;max-width:760px"><div style="white-space:pre-wrap">${escape(text)}</div></div>`;
+ const html=cashEmailHtml(r,text);
  return {subject,text,html};
 }

@@ -1,6 +1,6 @@
 import {customerCostMeter,revalidateCostRequest} from '../services/ai-customer-cost-runtime.js';
 import {walletActivityFromRequest} from '../services/ai-wallet-activity.js';
-import {createReviewedCashEmailReader,reviewedCashEmailReadiness,assertReviewedCashEmailPreview} from '../services/cash-reviewed-email.js';
+import {createReviewedCashEmailReader,reviewedCashEmailReadiness,assertReviewedCashEmailPreview,renderReviewedCashEmail} from '../services/cash-reviewed-email.js';
 import {saveOnlineVisibility} from "../online-catalog-visibility.js";
 import {saveStoreMetadata} from '../services/store-metadata-mutation.js';
 import {assistantHistoryTurnMetadata} from '../services/assistant-history-turns.js';
@@ -1404,7 +1404,8 @@ router.get("/cash-control/stores/:storeId/email-preview",async(req,res,next)=>{t
   const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(String(req.query.date||""));
   const report=await cashReportEmailData(req.params.storeId,date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const personalRecipient=req.query.mode==="self"?cashPersonalTestRecipient(req.user).email:undefined;
-  res.json({date,storeId:report.store.id,storeName:report.store.name,recipients:report.recipients,personalRecipient,rows:report.rows,readyToSend:report.readyToSend,text:report.evidence.report.text,reportHash:report.evidence.fingerprint,generation:report.evidence.generation,manualSendOnly:true});
+  const {html}=renderReviewedCashEmail({evidence:report.evidence,companyId:report.store.companyId,storeId:report.store.id,storeName:report.store.name,date,previewOnly:req.query.mode==="self"});
+  res.json({date,storeId:report.store.id,storeName:report.store.name,recipients:report.recipients,personalRecipient,html,rows:report.rows,readyToSend:report.readyToSend,text:report.evidence.report.text,reportHash:report.evidence.fingerprint,generation:report.evidence.generation,manualSendOnly:true});
 }catch(error){next(error)}});
 
 router.post("/cash-control/stores/:storeId/send-email",async(req,res,next)=>{try{
