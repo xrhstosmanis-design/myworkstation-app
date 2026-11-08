@@ -132,7 +132,8 @@ test("multi-page header reading continues when one page has no usable header",()
   assert.match(select,/catch\(error\)\{headerErrors\.push\(error\)\}/);
   assert.doesNotMatch(select,/Promise\.all|Promise\.allSettled/);
   assert.match(select,/if\(!headerResults\.length\)throw/);
-  assert.ok(select.indexOf("headerErrors.push(error)")<select.indexOf("mergeFastInvoiceHeaders(headerResults)"));
+  const merge=select.indexOf("mergeFastInvoiceHeaders(headerResults,{imageTotals})");
+  assert.ok(merge>select.indexOf("headerErrors.push(error)"));
 });
 
 test("FAST header retries empty or malformed structured AI responses safely",()=>{
