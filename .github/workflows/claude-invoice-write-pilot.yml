@@ -45,9 +45,18 @@ jobs:
             Work ONLY on INVOICE-OWNER-FINALIZATION-01 (#28) in MyWorkStation.
             Follow AGENTS.md and authoritative docs/roadmap/OPEN_WORK_TRACKER.md.
             Read CHECKPOINTS/ACTIVE_WORK_2026.md and relevant checkpoints.
-            Implement ONE small safe step toward owner-authorized invoice
-            correction/reopen/cancel with inventory reversal and line audit.
-            Keep existing employee finalization, payment evidence and photos intact.
+            NEXT SPECIFIC SCOPE: owner/authorized-manager cancellation or void
+            of a previously posted purchase invoice, including safe inverse
+            inventory handling, tenant/store permissions, idempotency and audit.
+            Preserve employee finalization, payment evidence and original photos.
+            Do NOT reimplement preview.lineAudit (merged #3731), and do NOT
+            edit client/src/components/commerce/installPurchaseOrdersSuite.js
+            or server/test/purchase-order-reopen-ui.test.js: the BackOffice
+            lineAudit UI is already owned by separate PR #3737.
+            First inspect current code, checkpoints and existing open PR claims.
+            Implement ONE small server-side cancellation step with focused tests,
+            OR a focused native-DB test exposing a missing guard if a correct
+            cancellation implementation is not yet possible. Do not invent PASS.
             Use an isolated branch. Do not change main, deploy, migrate databases,
             send emails, process payments or modify live financial records.
             Update CHECKPOINTS/ACTIVE_WORK_2026.md and add a small checkpoint
@@ -88,6 +97,10 @@ jobs:
           # Claude Action may leave a Git credential override; use the job token explicitly for this push.
           AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           git -c http.https://github.com/.extraheader="$AUTH_HEADER" push --set-upstream origin "$BRANCH"
-          gh pr create --draft --base main --head "$BRANCH" \
-            --title "draft(invoice): Claude owner-finalization scoped step" \
-            --body "Claude-produced isolated #28 implementation. Requires full CI, review, LAB acceptance and normal protected merge. No production deploy or automatic merge."
+          if gh pr create --draft --base main --head "$BRANCH" \
+              --title "draft(invoice): Claude owner-finalization scoped step" \
+              --body "Claude-produced isolated #28 implementation. Requires full CI, review, LAB acceptance and normal protected merge. No production deploy or automatic merge."; then
+            echo "Draft PR created."
+          else
+            echo "::warning::Branch $BRANCH pushed, but GitHub Actions cannot create PR in this repository. Coordinator must create one Draft PR without rerunning Claude."
+          fi
