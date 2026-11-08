@@ -10,7 +10,7 @@ test("implementation changes require active list and a new checkpoint",()=>{
 
   const complete=validateCheckpointFiles([
     "server/src/index.js",
-    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+    "CHECKPOINTS/ACTIVE_WORK_2026.md",
     "CHECKPOINTS/CHANGES/2026-09-06-example.md"
   ]);
   assert.equal(complete.ok,true);
