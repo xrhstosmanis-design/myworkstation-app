@@ -11,7 +11,7 @@
 | 1 | OCR-CONFIDENCE-01 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #3706, #3709 | Code merged; hosted LAB NOT TESTED | LAB confidence and multipage checks |
 | 2 | AI-WALLET-HISTORY-02 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #3713 | Draft; LAB NOT TESTED | Scoped LAB acceptance |
 | 0 | FTEXT-STATUS-ORPHAN-01 / CMD option 9 | retained FTEXT recovery owner | #3695, #3721, #3724 | Source Windows/full CI PASS at 454e75af; conflict resolution under recheck; physical NOT TESTED | Recheck reconciled CI and independent review; approval before merge/install |
-| — | Claude automation | Συντονιστής | #3714, #3716, #3717, #3718, #3719 | Compact registry merged in #3719; isolated policy tests PASS in #3718; old central CI #9416 FAIL | Claude pilot #3722 merged; first run #42491919612 reached successful Claude result at 9 turns but Action FAIL at max 8; scoped fix raises max to 20 |
+| — | Claude automation | Συντονιστής | #3714, #3716, #3717, #3718, #3719 | Compact registry merged in #3719; isolated policy tests PASS in #3718; old central CI #9416 FAIL | Read-only Claude pilot #2 PASS per owner screenshot; proposed isolated invoice write pilot, NOT ACTIVE |
 
 ## Κανόνας ενημέρωσης
 
