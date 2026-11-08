@@ -72,33 +72,38 @@ export function summarizeReopenLines(lines,limit=500){
  const rows=(Array.isArray(lines)?lines:[]).slice(0,limit).map(l=>Object.fromEntries(LINE_AUDIT_KEYS.filter(k=>l?.[k]!=null).map(k=>[k,typeof l[k]==="string"?l[k].slice(0,200):l[k]])));
  return {lineCount:Array.isArray(lines)?lines.length:0,truncated:Array.isArray(lines)&&lines.length>limit,lines:rows};
 }
-function preview(data){return {orderId:data.order.id,storeId:data.order.storeId,invoiceNumber:data.order.invoiceNumber,status:data.order.status,reopenVersion:n(data.order.reopenVersion),version:data.version,stockChanges:data.stockChanges,negativeStockCount:data.stockChanges.filter(s=>s.after<0).length,expenseDelta:-n(data.document.totalGross),paymentChanged:false,paymentCount:data.snapshot.payments.length,catalogPricesChanged:false,sourceFilesPreserved:true};}
+export function preview(data){return {orderId:data.order.id,storeId:data.order.storeId,invoiceNumber:data.order.invoiceNumber,status:data.order.status,reopenVersion:n(data.order.reopenVersion),version:data.version,stockChanges:data.stockChanges,negativeStockCount:data.stockChanges.filter(s=>s.after<0).length,expenseDelta:-n(data.document.totalGross),paymentChanged:false,paymentCount:data.snapshot.payments.length,catalogPricesChanged:false,sourceFilesPreserved:true,lineAudit:summarizeReopenLines(data.snapshot.lines)};}
 export async function previewPurchaseOrderReopen(db,actor,orderId,storeId){
  requireReopenActor(actor,storeId);await ensurePurchaseOrderReopenSchema(db);
  return db.$transaction(async tx=>{await lockInvoiceStore(tx,actor.companyId,storeId);return preview(await load(tx,actor,orderId,storeId))},{timeout:20000});
 }
-export async function reopenPurchaseOrder(db,actor,orderId,input){
+export const cancelSchema=reopenSchema;
+export const reopenPurchaseOrder=(db,actor,orderId,input)=>transitionPurchaseOrder(db,actor,orderId,input,"NEW");
+// Owner/authorized-manager void of a posted purchase: same audited inverse-stock transaction as reopen, but the order ends CANCELLED (terminal, not editable).
+export const cancelPurchaseOrder=(db,actor,orderId,input)=>transitionPurchaseOrder(db,actor,orderId,input,"CANCELLED");
+async function transitionPurchaseOrder(db,actor,orderId,input,target){
+ const cancel=target==="CANCELLED";
  requireReopenActor(actor,input?.storeId);const body=reopenSchema.parse(input);await ensurePurchaseOrderReopenSchema(db);
  return db.$transaction(async tx=>{
   await lockInvoiceStore(tx,actor.companyId,body.storeId);
   const [prior]=await raw(tx,'SELECT "result" FROM "PurchaseOrderReopenAudit" WHERE "companyId"=$1 AND "storeId"=$2 AND "orderId"=$3 AND "previewVersion"=$4',actor.companyId,body.storeId,orderId,body.version);
-  if(prior){const [current]=await raw(tx,'SELECT "status","reopenVersion" FROM "PurchaseOrder" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3',orderId,actor.companyId,body.storeId);if(current?.status!=="NEW"||n(current.reopenVersion)!==n(prior.result.reopenVersion))throw fail("Αυτή η επαναφορά έχει ήδη ολοκληρωθεί και η παραγγελία άλλαξε ξανά. Ανανέωσε την προβολή.");return {...prior.result,idempotent:true}}
+  if(prior){const [current]=await raw(tx,'SELECT "status","reopenVersion" FROM "PurchaseOrder" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3',orderId,actor.companyId,body.storeId);if(current?.status!==target||prior.result?.status!==target||n(current.reopenVersion)!==n(prior.result.reopenVersion))throw fail("Αυτή η επαναφορά έχει ήδη ολοκληρωθεί και η παραγγελία άλλαξε ξανά. Ανανέωσε την προβολή.");return {...prior.result,idempotent:true}}
   const data=await load(tx,actor,orderId,body.storeId);
   if(data.version!==body.version)throw fail("Η παραγγελία ή το απόθεμα άλλαξε μετά την προεπισκόπηση. Άνοιξε νέα προεπισκόπηση.");
   if(data.stockChanges.some(s=>s.after<0)&&!body.confirmNegativeStock)throw fail("Η επαναφορά θα αφήσει αρνητικό απόθεμα σε ορισμένα είδη. Χρειάζεται ρητή επιβεβαίωση.",400);
   const auditId=crypto.randomUUID(),reopenVersion=n(data.order.reopenVersion)+1,actorName=actor.fullName||actor.name||actor.email||actor.id;
-  const result={ok:true,status:"NEW",orderId,storeId:body.storeId,reopenVersion,auditId,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false,idempotent:false};
+  const result={ok:true,status:target,orderId,storeId:body.storeId,reopenVersion,auditId,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false,idempotent:false};
   await run(tx,`INSERT INTO "PurchaseOrderReopenAudit" ("id","companyId","storeId","orderId","previewVersion","orderVersion","reason","actorId","actorName","actorRole","snapshot","result") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb)`,auditId,actor.companyId,body.storeId,orderId,body.version,reopenVersion,body.reason,actor.id,actorName,actor.role,JSON.stringify(data.snapshot),JSON.stringify(result));
   const userId=await mappingConfirmationUserId(tx,{actor,companyId:actor.companyId});
-  for(const m of data.snapshot.movements){const reversalId=crypto.randomUUID();await run(tx,`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES ($1,$2,$3,'PURCHASE_REOPEN',$4::numeric,$5::numeric,'PURCHASE_ORDER_REOPEN',$6,$7,$8)`,reversalId,body.storeId,m.productId,String(-n(m.quantity)),String(m.unitCost??0),auditId,`Επαναφορά αγοράς ${data.order.invoiceNumber||orderId}: ${body.reason}`,userId);await run(tx,'INSERT INTO "PurchaseOrderReopenMovement" ("movementId","reopenId","companyId","orderId","reversalMovementId") VALUES ($1,$2,$3,$4,$5)',m.id,auditId,actor.companyId,orderId,reversalId)}
+  for(const m of data.snapshot.movements){const reversalId=crypto.randomUUID();await run(tx,`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES ($1,$2,$3,'PURCHASE_REOPEN',$4::numeric,$5::numeric,'PURCHASE_ORDER_REOPEN',$6,$7,$8)`,reversalId,body.storeId,m.productId,String(-n(m.quantity)),String(m.unitCost??0),auditId,`${cancel?"Ακύρωση":"Επαναφορά"} αγοράς ${data.order.invoiceNumber||orderId}: ${body.reason}`,userId);await run(tx,'INSERT INTO "PurchaseOrderReopenMovement" ("movementId","reopenId","companyId","orderId","reversalMovementId") VALUES ($1,$2,$3,$4,$5)',m.id,auditId,actor.companyId,orderId,reversalId)}
   for(const change of data.stockChanges)await run(tx,'UPDATE "StoreProduct" SET "currentStock"="currentStock"+$1::numeric,"updatedAt"=NOW() WHERE "storeId"=$2 AND "productId"=$3',String(change.delta),body.storeId,change.productId);
   // Internal approved projection is retained, not exposed as a second editable source draft.
-  await run(tx,'UPDATE "PurchaseDocument" SET "status"=\'REOPENED\',"updatedAt"=NOW() WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3',data.document.id,actor.companyId,body.storeId);
+  await run(tx,'UPDATE "PurchaseDocument" SET "status"=$4,"updatedAt"=NOW() WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3',data.document.id,actor.companyId,body.storeId,cancel?"CANCELLED":"REOPENED");
   await run(tx,'DELETE FROM "PurchaseOrderPosting" WHERE "orderId"=$1 AND "companyId"=$2',orderId,actor.companyId);
   await run(tx,'DELETE FROM "InvoiceStockPosting" WHERE "companyId"=$1 AND "sourceDocumentId"=$2 AND "storeId"=$3 AND "orderId"=$4',actor.companyId,data.order.sourceDocumentId||orderId,body.storeId,orderId);
   if(data.hasPack)await run(tx,'DELETE FROM "PurchaseOrderPackCorrection" WHERE "orderId"=$1 AND "companyId"=$2',orderId,actor.companyId);
-  await run(tx,'UPDATE "PurchaseOrder" SET "status"=\'NEW\',"reopenVersion"=$1,"finalizedAt"=NULL,"invoicedAt"=NULL,"updatedByName"=$2,"updatedAt"=NOW() WHERE "id"=$3 AND "companyId"=$4 AND "storeId"=$5',reopenVersion,actorName,orderId,actor.companyId,body.storeId);
-  await run(tx,`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES ($1,$2,$3,NULL,$4,'PURCHASE_ORDER_REOPENED',$5::jsonb)`,crypto.randomUUID(),actor.companyId,body.storeId,actor.id,JSON.stringify({orderId,invoiceNumber:data.order.invoiceNumber,auditId,reason:body.reason,actorName,actorRole:actor.role,before:data.order.status,after:"NEW",reopenVersion,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false,lineAudit:summarizeReopenLines(data.snapshot.lines)}));
+  await run(tx,'UPDATE "PurchaseOrder" SET "status"=$6,"reopenVersion"=$1,"finalizedAt"=NULL,"invoicedAt"=NULL,"updatedByName"=$2,"updatedAt"=NOW() WHERE "id"=$3 AND "companyId"=$4 AND "storeId"=$5',reopenVersion,actorName,orderId,actor.companyId,body.storeId,target);
+  await run(tx,`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES ($1,$2,$3,NULL,$4,$5,$6::jsonb)`,crypto.randomUUID(),actor.companyId,body.storeId,actor.id,cancel?'PURCHASE_ORDER_CANCELLED':'PURCHASE_ORDER_REOPENED',JSON.stringify({orderId,invoiceNumber:data.order.invoiceNumber,auditId,reason:body.reason,actorName,actorRole:actor.role,before:data.order.status,after:target,reopenVersion,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false,lineAudit:summarizeReopenLines(data.snapshot.lines)}));
   return result;
  },{timeout:30000});
 }
