@@ -137,3 +137,10 @@ test('summarizeReopenLines produces a bounded per-line audit without unknown fie
  assert.equal(out.lines[0].secret,undefined);assert.equal(out.lines[0].description.length,200);
  assert.deepEqual(reopen.summarizeReopenLines(null),{lineCount:0,truncated:false,lines:[]});
 });
+
+test('reopen preview exposes the bounded line audit without changing the version or payment flags',()=>{
+ const data={order:{id:'o',storeId:'s',invoiceNumber:'A1',status:'INVOICED',reopenVersion:0},version:'v',stockChanges:[{after:1}],document:{totalGross:'10'},snapshot:{payments:[],lines:[{id:'l1',productId:'p',quantity:'2',secret:'x'}]}};
+ const p=reopen.preview(data);
+ assert.equal(p.version,'v');assert.equal(p.paymentChanged,false);assert.equal(p.lineAudit.lineCount,1);
+ assert.deepEqual(p.lineAudit.lines[0],{id:'l1',productId:'p',quantity:'2'});
+});
