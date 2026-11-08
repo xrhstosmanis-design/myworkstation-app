@@ -1,3 +1,9 @@
+## 08/11/2026 09:27:50 UTC - AI-WALLET-HISTORY-02 / PR3713 EXACT CI PASS / AWAITING LAB
+
+Same retained wallet scope and branch test/ai-wallet-history-access-20261108; Draft PR #3713 remains OPEN and unmerged. Official MyWorkStation CI run 42466387516 on exact head 6b52a9e7d9601e085f919ba9d5097c006903a59b passed 5/5 jobs (classify-changes, hikvision-preflight-windows, rbs-capdriver-windows-script-parse, wholesale-isolated-lab, build-and-test). build-and-test included the checkpoint policy step, the full server suite with isolated PostgreSQL 16 (the new history access test is mandatory under CI and cannot skip), client build, browser checks and HTTP E2E. No review comments.
+
+CI PASS is not LAB PASS. Hosted read-only pagination for Platform Admin and selected-store Owner remains NOT VERIFIED; production behaviour beyond the earlier 401 refusal is NOT VERIFIED. AI-WALLET-HISTORY-02 is not complete: no manual, pending-roadmap removal or numbered-work closure. No merge, deploy, financial, provider, credit or waiver action. Next: owner decision on PR #3713, then read-only hosted acceptance. Checkpoint: CHECKPOINTS/CHANGES/2026-11-03-ai-wallet-history-completion.md. All earlier registry bytes are retained unchanged below.
+
 ## 08/11/2026 09:10 UTC - AI-WALLET-HISTORY-02 / HISTORY ACCESS TEST LOCAL PASS / AWAITING CI / NOT LAB
 
 Retained wallet scope; continuation branch test/ai-wallet-history-access-20261108 at the owner's explicit step-by-step approval in this session. Test-only commit c940e11de5460ee984c76037a28fed618d1f5843 adds server/test/ai-wallet-history-access-postgres.test.js; no production source, schema, settings or data change. PR3612 merge 43a140e is in main and in production: read-only /api/health on 08/11 08:34:18 UTC returned HTTP 200, revision ff4665eb8ec4 (descendant of 43a140e; the seven PR3612 code files are identical). Main CI 41879308257 for 43a140e passed 5/5 jobs.

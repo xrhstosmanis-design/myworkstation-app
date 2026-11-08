@@ -1,3 +1,9 @@
+## 08/11/2026 09:27:50 UTC — PR #3713 exact CI PASS / AWAITING LAB
+
+Draft PR #3713 (base main 64c36f4, head 6b52a9e7d9601e085f919ba9d5097c006903a59b) remains OPEN and unmerged. Official MyWorkStation CI run 42466387516 passed 5/5 jobs on that exact head; build-and-test ran the checkpoint policy step, the full server suite with isolated PostgreSQL 16 including the new mandatory history access test, client build, browser checks and HTTP E2E. No review comments.
+
+Status: CI PASS / AWAITING LAB. Hosted read-only pagination (Platform Admin and selected-store Owner) NOT VERIFIED. Not complete; no manual or roadmap closure. No merge or deploy.
+
 ## 08/11/2026 09:10 UTC — History endpoint access proof / LOCAL PASS / AWAITING CI / NOT LAB
 
 Branch test/ai-wallet-history-access-20261108, test-only commit c940e11de5460ee984c76037a28fed618d1f5843 (based on main 64c36f4). Adds server/test/ai-wallet-history-access-postgres.test.js; no runtime source, schema, settings or data change.
