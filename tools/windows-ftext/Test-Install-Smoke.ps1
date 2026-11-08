@@ -18,7 +18,7 @@ try {
         # Only menu exit is selected. Pair, STATUS and connector never run.
         function Read-Host { param($Prompt) return '4' }
         $output=(& ([scriptblock]::Create($source)) 6>&1 | Out-String)
-        if($output -notmatch '4. Close setup' -or $output -match 'STOP:') { throw "Setup did not open: $output" }
+        if($output -notmatch '4. Close setup' -or $output -notmatch '9. Safe STATUS communication recovery' -or $output -match 'STOP:') { throw "Setup did not open: $output" }
         $destination=Join-Path $root ('MyWorkStation\Ftext\install-company\install-store\'+$config.terminalPos)
         foreach($name in $names) {
             $expected=[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PSScriptRoot $name)))
