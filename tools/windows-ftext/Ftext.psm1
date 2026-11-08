@@ -407,4 +407,91 @@ function Invoke-FtextOutputArchive {
         return [pscustomobject]@{requestId=$id;movedFiles=$moved;outputPath=$destination}
     } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
-Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive,Get-FtextOutputRoot,Get-FtextOutputPending,Assert-FtextOutputRequestNotArchived,Invoke-FtextOutputArchive,Assert-FtextOutputIdle
+
+# Operator-initiated, NONFISCAL STATUS-only orphan isolation. No payment retransmission.
+function Invoke-FtextOrphanStatusRecovery {
+    [CmdletBinding()]
+    param([Parameter(Mandatory=$true)][string]$ConfigPath)
+    $c=Get-FtextConfig $ConfigPath
+    $folder=[string]$c.workFolder
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {$hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($folder.ToUpperInvariant()))).Replace('-','')} finally {$sha.Dispose()}
+    $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtext_'+$hash))
+    $held=$false
+    try {
+        try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+        if(-not $held) {throw 'BLOCKED: FTEXT folder is in use. Stop connector before option 9.'}
+        $markerPath=Join-Path $folder '.mws-ftext-status.json'
+        if((Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-cash.json')) -or
+           (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-cash-status.json'))) {
+            throw 'BLOCKED: unresolved fiscal request. No payment may be resent.'
+        }
+        $inputs=@(Get-ChildItem -LiteralPath $folder -Force -File | Where-Object {$_.Extension -ieq '.txt' -or $_.Extension -ieq '.pending'})
+        if(-not (Test-Path -LiteralPath $markerPath -PathType Leaf)) {
+            if($inputs.Count -gt 0){throw 'BLOCKED: existing input without a STATUS marker.'}
+            return [pscustomobject]@{state='NO_ACTION';archivePath=$null}
+        }
+        $item=Get-Item -LiteralPath $markerPath -Force
+        if(($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -lt 2 -or $item.Length -gt 4096) {throw 'BLOCKED: unsafe STATUS marker.'}
+        $marker=Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach($key in @('companyId','storeId','terminalPos','serialNumber')) {
+            if(-not $marker.PSObject.Properties[$key] -or [string]$marker.$key -cne [string]$c.$key){throw 'BLOCKED: foreign STATUS marker.'}
+        }
+        if(-not $marker.PSObject.Properties['id'] -or [string]$marker.id -cnotmatch '^[a-f0-9]{32}$' -or
+           -not $marker.PSObject.Properties['command'] -or [string]$marker.command -cne 'STATUS' -or
+           -not $marker.PSObject.Properties['createdAt']) {throw 'BLOCKED: malformed STATUS marker.'}
+        $created=[DateTimeOffset]::Parse([string]$marker.createdAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime
+        $age=([DateTime]::UtcNow-$created).TotalSeconds
+        if($age -lt 120 -or $age -gt 2592000){throw 'BLOCKED: STATUS marker timestamp is not eligible.'}
+        $id=[string]$marker.id
+        $base='mws-status-'+$id
+        $command=Join-Path $folder ($base+'.txt')
+        $pending=Join-Path $folder ($base+'.pending')
+        $result=Join-Path $folder ($base+'.res')
+        $evidence=Join-Path $folder ($base+'.json')
+        if((Test-Path -LiteralPath $command) -or (Test-Path -LiteralPath $result) -or (Test-Path -LiteralPath $evidence)){
+            throw 'BLOCKED: original input, result or evidence exists.'
+        }
+        $otherInputs=@($inputs | Where-Object {$_.Name -cne ($base+'.pending')})
+        if($otherInputs.Count -gt 0){
+            throw 'BLOCKED: other FTEXT input is pending.'
+        }
+        $hasPending=Test-Path -LiteralPath $pending -PathType Leaf
+        if($hasPending){
+            $pinfo=Get-Item -LiteralPath $pending -Force
+            if(($pinfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $pinfo.Length -gt 1024){throw 'BLOCKED: unsafe pending file.'}
+            $expected=('RESULT_FILENAME|'+$result+[char]13+[char]10+'STATUS'+[char]13+[char]10)
+            if([Convert]::ToBase64String([IO.File]::ReadAllBytes($pending)) -cne
+               [Convert]::ToBase64String([Text.Encoding]::GetEncoding(1253).GetBytes($expected))){
+                throw 'BLOCKED: pending file is not the exact nonfiscal STATUS.'
+            }
+        }
+        if([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)){throw 'BLOCKED: local archive unavailable.'}
+        $archive=Join-Path $env:LOCALAPPDATA ('MyWorkStation\FtextOrphanRecovery\'+$c.companyId+'\'+$c.storeId+'\'+$c.terminalPos+'\'+$id)
+        $archive=[IO.Path]::GetFullPath($archive)
+        $inputRoot=[IO.Path]::GetFullPath($folder).TrimEnd('\')
+        if([IO.Path]::GetPathRoot($archive) -ine [IO.Path]::GetPathRoot($inputRoot) -or
+           $archive.StartsWith($inputRoot+'\',[StringComparison]::OrdinalIgnoreCase) -or
+           (Test-Path -LiteralPath $archive)){throw 'BLOCKED: archive location/collision.'}
+        Assert-FtextArchivePath $inputRoot
+        Assert-FtextArchivePath $archive
+        [IO.Directory]::CreateDirectory($archive) | Out-Null
+        $names=@('.mws-ftext-status.json')
+        if($hasPending){$names+=($base+'.pending')}
+        foreach($name in $names){
+            $bytes=[IO.File]::ReadAllBytes((Join-Path $folder $name))
+            $copy=Join-Path $archive ('copy-'+$name)
+            $stream=[IO.File]::Open($copy,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+            try{$stream.Write($bytes,0,$bytes.Length);$stream.Flush($true)} finally{$stream.Dispose()}
+            if([Convert]::ToBase64String([IO.File]::ReadAllBytes($copy)) -cne [Convert]::ToBase64String($bytes)){
+                throw 'BLOCKED: durable archive readback mismatch.'
+            }
+        }
+        # Move the unpublished input first and STATUS marker last. Partial moves fail closed on retry.
+        if($hasPending){[IO.File]::Move($pending,(Join-Path $archive ('original-'+$base+'.pending')))}
+        [IO.File]::Move($markerPath,(Join-Path $archive 'original-.mws-ftext-status.json'))
+        return [pscustomobject]@{state='ISOLATED';archivePath=$archive}
+    } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+
+Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive,Invoke-FtextOrphanStatusRecovery,Get-FtextOutputRoot,Get-FtextOutputPending,Assert-FtextOutputRequestNotArchived,Invoke-FtextOutputArchive,Assert-FtextOutputIdle
