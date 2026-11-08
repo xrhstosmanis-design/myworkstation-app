@@ -18,7 +18,7 @@ async function mount(entry,keep=[]){
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text);
 test('Platform cash preview shows the entire long native report and only explicit Send posts the unchanged fingerprint',async()=>{
  const m=await mount('platform/PlatformAdminApp.jsx',['CashReportPeriodFields.jsx','CashEmailPreviewDialog.jsx']),{act,dom,React,root,Component}=m,calls=[];
- let date,pending=false,delay=false,release,foreign=false,long=false,holdSend=false,releaseSend,releaseExport,sendStatus=200,throwSend=false,emptyRows=false,recipients=['owner@example.invalid'];
+ let formattedOnce=true,date,pending=false,delay=false,release,foreign=false,long=false,holdSend=false,releaseSend,releaseExport,sendStatus=200,throwSend=false,emptyRows=false,recipients=['owner@example.invalid'];
  const beginning='ΕΛΕΓΧΟΣ ΤΑΜΕΙΩΝ MYWORKSTATION\nΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ\nΧρυσάνθη: Έλλειμμα 7,00 €\nPOS–EFTPOS: διαφορά +200,00 €.';
  const ending='ΤΕΛΟΣ ΑΝΑΦΟΡΑΣ ΜΕΤΑ ΤΟΝ ΧΑΡΑΚΤΗΡΑ 10240';
  const full=beginning+'\n'+('Χειρόγραφο προς διασταύρωση, χωρίς καταλογισμό.\n'.repeat(330))+'\n'+ending;
@@ -36,7 +36,7 @@ test('Platform cash preview shows the entire long native report and only explici
   else if(url.pathname==='/api/platform/cash-control/daily'){
    date=url.searchParams.get('from');const totals={shifts:1,shortage:87,surplus:0,variance:-87,cardVariance:200,expensesWithoutDocument:0};
    data={...Object.fromEntries(url.searchParams),totals,rows:[{companyId:'co',storeId:'A',sessionId:'a',openedByName:'Χρυσάνθη',openedAt:date+'T06:00:00Z',closedAt:date+'T14:00:00Z',variance:-87,cardVariance:200,auditRule:{mode:'FULL'},duplicateCandidates:0}],stores:[{...totals,storeId:'A',storeName:'Store A',companyName:'Company'}]};
-  }else if(url.pathname.endsWith('/email-preview')){const snapshot=preview();if(delay)return new Promise(resolve=>release=()=>resolve({ok:true,status:200,text:async()=>JSON.stringify(snapshot)}));data=snapshot;}
+  }else if(url.pathname.endsWith('/email-preview')){const snapshot=preview();if(delay)return new Promise(resolve=>release=()=>resolve({ok:true,status:200,text:async()=>JSON.stringify(snapshot)}));data={...snapshot,...(formattedOnce?{html:'<table><tr><td>Πίνακας δοκιμής</td></tr></table>'}:{})};formattedOnce=false;}
   else if(url.pathname.endsWith('/send-email')||url.pathname.endsWith('/send-preview')){
    if(throwSend)throw Error('Synthetic network failure');
    data=sendStatus===200?{recipients:[url.pathname.endsWith('/send-preview')?'personal@example.invalid':'owner@example.invalid'],messageId:'synthetic-no-smtp'}:{error:'Ανανέωσε την προεπισκόπηση της αναφοράς.',code:'CASH_EMAIL_PREVIEW_CHANGED'};
@@ -57,6 +57,10 @@ test('Platform cash preview shows the entire long native report and only explici
   await act(async()=>root.render(React.createElement(Component)));
   await click(button('Οικονομικά & Έλεγχοι'));await click(button('Ταμεία'));await select('A');await click(button('Εμφάνιση'));
   long=true;const opener=button('Προεπισκόπηση & email ιδιοκτητών');opener.focus();await click(opener);
+  const frame=dialog().querySelector('iframe');
+  assert.equal(frame.getAttribute('sandbox'),'');
+  assert.match(frame.getAttribute('srcdoc'),/Πίνακας δοκιμής/);
+  await click(button('Προβολή απλού κειμένου'));
   assert.equal(shown()?.textContent,full,'the complete body, including the last marker, stays in the DOM');
   assert(document.querySelector('[role="dialog"]')?.textContent.includes('owner@example.invalid'));
   assert(!shown().contains(document.querySelector('#cash-email-preview-recipients')),'recipients stay outside the report scroller');
