@@ -26,6 +26,8 @@ export default function CashEmailPreviewDialog({draft,selfEmail="",stale=false,b
       if(previous?.isConnected)previous.focus();
     };
   },[]);
+  const [showText,setShowText]=useState(false);
+  const formatted=typeof draft.html==="string"&&draft.html.length>0;
   const owners=draft.mode==="owners";
   const recipientText=owners?(draft.recipients||[]).join(", "):(selfEmail||"μόνο στο email του συνδεδεμένου λογαριασμού");
   const ownerHold=!owners?"":!draft.rows.length?"Δεν υπάρχουν κλεισμένες βάρδιες για αποστολή.":!draft.recipients.length?"Δεν έχουν οριστεί παραλήπτες ιδιοκτήτη ή υπευθύνου.":draft.readyToSend!==true?"Η αναφορά παραμένει προς έλεγχο, αλλά δεν πληροί ακόμη τους κανόνες αποστολής. Δεν μπορεί να σταλεί.":"";
@@ -36,8 +38,10 @@ export default function CashEmailPreviewDialog({draft,selfEmail="",stale=false,b
       <h2 id="cash-email-preview-title">Πλήρης προεπισκόπηση αναφοράς ταμείων</h2>
       <p>{draft.storeName} · {draft.date} · {owners?"Αποστολή προς έλεγχο":"Προσωπική δοκιμή"}</p>
       <p id="cash-email-preview-recipients"><strong>Παραλήπτες:</strong> {recipientText||"Δεν έχουν οριστεί παραλήπτες"}</p>
-      <p className="cash-email-preview-description">Η αναφορά δημιουργήθηκε από το MyWorkStation. Το κείμενο παρακάτω εμφανίζεται ολόκληρο ({draft.text.length.toLocaleString("el-GR")} χαρακτήρες) και έχει δική του κύλιση.</p>
-      <pre className="cash-email-preview-content" data-testid="cash-email-full-body" tabIndex={0} aria-label="Πλήρες κείμενο αναφοράς προς αποστολή">{draft.text}</pre>
+      <p className="cash-email-preview-description">Η αναφορά δημιουργήθηκε από το MyWorkStation. Η πλήρης αναφορά είναι διαθέσιμη παρακάτω ({draft.text.length.toLocaleString("el-GR")} χαρακτήρες) και έχει δική του κύλιση.</p>
+      {formatted&&<button type="button" className="secondary" onClick={()=>setShowText(value=>!value)}>{showText?"Προβολή με πίνακες":"Προβολή απλού κειμένου"}</button>}
+      {formatted&&!showText&&<iframe title="Αναφορά ταμείων με πίνακες" sandbox="" srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">${draft.html}`} tabIndex={0} style={{width:"100%",minHeight:0,height:"42vh",border:"1px solid #cbd5e1",background:"white"}}/>}
+      {(!formatted||showText)&&<pre className="cash-email-preview-content" data-testid="cash-email-full-body" tabIndex={0} aria-label="Πλήρες κείμενο αναφοράς προς αποστολή">{draft.text}</pre>}
       <p className="cash-email-preview-end">Τέλος πλήρους αναφοράς</p>
       <label className="cash-email-preview-comment">Προαιρετικό σχόλιο (η αναφορά δεν χρειάζεται συμπλήρωση)
         <textarea value={comment} maxLength={2000} rows={2} onChange={event=>setComment(event.target.value)} placeholder="Αφήστε κενό για αποκλειστικά αυτόματη αναφορά." disabled={busy}/>
