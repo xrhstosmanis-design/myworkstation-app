@@ -111,7 +111,7 @@ test('native approved adjustments, credit documents and corrupt movement ownersh
 test('native registered HTTP reopen routes enforce actor/scope and perform one confirmed transition',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await fixture();let server;try{
   await f.finalize();const {default:express,Router}=await import('express');const src=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replaceAll('export async function ','async function ');
-  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder);
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder','cancelPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
   const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.headers['x-fixture-role']==='operator'?{...actor,tokenType:'STORE_OPERATOR'}:actor;next()});app.use('/api/purchase-orders',router);app.use((err,req,res,next)=>res.status(err.status||400).json({error:err.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const url=`http://127.0.0.1:${server.address().port}/api/purchase-orders/pos`;
   const denied=await fetch(url+'/reopen-preview?storeId=s',{headers:{'x-fixture-role':'operator'}});assert.equal(denied.status,403);
@@ -181,4 +181,34 @@ test('reopen preview exposes the bounded line audit without changing the version
  const p=reopen.preview(data);
  assert.equal(p.version,'v');assert.equal(p.paymentChanged,false);assert.equal(p.lineAudit.lineCount,1);
  assert.deepEqual(p.lineAudit.lines[0],{id:'l1',productId:'p',quantity:'2'});
+});
+
+test('cancel rejects unauthorized actors and malformed requests before database access',async()=>{
+ const db=new Proxy({},{get(){throw new Error('Database must not be accessed')}});
+ for(const user of [null,{...actor,role:'CASHIER'},{...actor,tokenType:'STORE_OPERATOR'},{...actor,storeId:'other'}])await assert.rejects(reopen.cancelPurchaseOrder(db,user,'pos',confirmed({version:'a'.repeat(64)})),e=>e.status===403);
+ await assert.rejects(reopen.cancelPurchaseOrder(db,actor,'pos',{...confirmed({version:'a'.repeat(64)}),confirm:false}));
+ await assert.rejects(reopen.cancelPurchaseOrder(db,actor,'pos',{...confirmed({version:'a'.repeat(64)}),reason:'no'}));
+});
+
+test('native cancel of a posted purchase reverses stock once, is idempotent, is terminal and preserves payments, photos and the control store',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();try{
+  await f.finalize();assert.equal(await f.stock(),13);const keep=await f.preserved();
+  const p=await reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s');
+  await assert.rejects(reopen.cancelPurchaseOrder(f.db,{...actor,companyId:'foreign'},'pos',confirmed(p)),e=>e.status===404);
+  await assert.rejects(reopen.cancelPurchaseOrder(f.db,actor,'pos',{...confirmed(p),storeId:'control'}),e=>e.status===404);
+  assert.equal(await f.stock(),13);
+  const results=await Promise.all([reopen.cancelPurchaseOrder(f.db,actor,'pos',confirmed(p)),reopen.cancelPurchaseOrder(f.db,actor,'pos',confirmed(p))]);
+  assert.equal(results.filter(r=>!r.idempotent).length,1);assert.ok(results.every(r=>r.status==='CANCELLED'));
+  assert.equal(await f.stock(),10);assert.equal(await f.preserved(),keep);
+  const [order]=await f.db.$queryRawUnsafe(`SELECT "status" FROM "PurchaseOrder" WHERE "id"='pos'`);assert.equal(order.status,'CANCELLED');
+  assert.deepEqual((await f.db.$queryRawUnsafe(`SELECT "status" FROM "PurchaseDocument" WHERE "sourceType"='PURCHASE_ORDER' AND "status" IN ('APPROVED','CANCELLED','REOPENED')`)).map(d=>d.status),['CANCELLED']);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_ORDER_CANCELLED'`))[0].n,1);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_ORDER_REOPENED'`))[0].n,0);
+  // Replay of the same confirmed request stays idempotent; terminal state cannot be reopened, edited, re-finalized or cancelled again.
+  assert.equal((await reopen.cancelPurchaseOrder(f.db,actor,'pos',confirmed(p))).idempotent,true);
+  await assert.rejects(reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(p)),e=>e.status===409);
+  await assert.rejects(reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s'),e=>e.status===409);
+  assert.equal((await f.patch({status:'FINAL'})).failure?.status,409);
+  assert.equal(await f.stock(),10);
+ }finally{await f.close()}
 });
