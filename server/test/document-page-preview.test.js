@@ -39,7 +39,7 @@ test("mounted original-image preview is explicit, local, bounded and scope/sourc
 test("actual Premium Fast with real scanner control appends five pages and previews without extra header/payment calls",async()=>{
   const entry=fileURLToPath(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url));
   const output=await build({entryPoints:[entry],bundle:true,write:false,format:"cjs",platform:"node",packages:"external",plugins:[{name:"isolated-media-and-reader",setup(b){
-    b.onResolve({filter:/^\./},args=>args.importer===entry&&!["./DocumentPagePreview.jsx","./DocumentScanButton.jsx","../../lib/invoice-fast-header-request.js"].includes(args.path)?{path:args.path,namespace:"fixture"}:undefined);
+    b.onResolve({filter:/^\./},args=>args.importer===entry&&!["./DocumentPagePreview.jsx","./DocumentScanButton.jsx","../../lib/invoice-fast-header-request.js","../../lib/invoice-fast-supplier-match.js"].includes(args.path)?{path:args.path,namespace:"fixture"}:undefined);
     b.onResolve({filter:/^lucide-react$/},()=>({path:"icons",namespace:"fixture"}));
     b.onLoad({filter:/.*/,namespace:"fixture"},args=>{
       let contents="export default function Stub(){return null}";
@@ -48,7 +48,6 @@ test("actual Premium Fast with real scanner control appends five pages and previ
       else if(args.path.includes("useMobileDocumentPhotos"))contents="export default()=>({pending:false})";
       else if(args.path.includes("document-image-quality"))contents="export const prepareDocumentFile=async file=>({file,changed:false,quality:{}})";
       else if(args.path.includes("invoice-fast-header-merge"))contents="export const mergeFastInvoiceHeaders=()=>({confidence:100})";
-      else if(args.path.includes("invoice-fast-supplier-match"))contents="export const knownSupplierFromFastHeaders=()=>null";
       else if(args.path.includes("pos-uploaded-credit-cash"))contents="export const settleUploadedCredit=()=>{throw Error('No payment in preview test')}";
       else if(args.path==="icons")contents="export const Camera=()=>null,FileUp=()=>null,Wallet=()=>null";
       return{contents,loader:"js",resolveDir:fileURLToPath(new URL("../../client/src/components/store/",import.meta.url))};
