@@ -72,7 +72,7 @@ export function summarizeReopenLines(lines,limit=500){
  const rows=(Array.isArray(lines)?lines:[]).slice(0,limit).map(l=>Object.fromEntries(LINE_AUDIT_KEYS.filter(k=>l?.[k]!=null).map(k=>[k,typeof l[k]==="string"?l[k].slice(0,200):l[k]])));
  return {lineCount:Array.isArray(lines)?lines.length:0,truncated:Array.isArray(lines)&&lines.length>limit,lines:rows};
 }
-function preview(data){return {orderId:data.order.id,storeId:data.order.storeId,invoiceNumber:data.order.invoiceNumber,status:data.order.status,reopenVersion:n(data.order.reopenVersion),version:data.version,stockChanges:data.stockChanges,negativeStockCount:data.stockChanges.filter(s=>s.after<0).length,expenseDelta:-n(data.document.totalGross),paymentChanged:false,paymentCount:data.snapshot.payments.length,catalogPricesChanged:false,sourceFilesPreserved:true};}
+export function preview(data){return {orderId:data.order.id,storeId:data.order.storeId,invoiceNumber:data.order.invoiceNumber,status:data.order.status,reopenVersion:n(data.order.reopenVersion),version:data.version,stockChanges:data.stockChanges,negativeStockCount:data.stockChanges.filter(s=>s.after<0).length,expenseDelta:-n(data.document.totalGross),paymentChanged:false,paymentCount:data.snapshot.payments.length,catalogPricesChanged:false,sourceFilesPreserved:true,lineAudit:summarizeReopenLines(data.snapshot.lines)};}
 export async function previewPurchaseOrderReopen(db,actor,orderId,storeId){
  requireReopenActor(actor,storeId);await ensurePurchaseOrderReopenSchema(db);
  return db.$transaction(async tx=>{await lockInvoiceStore(tx,actor.companyId,storeId);return preview(await load(tx,actor,orderId,storeId))},{timeout:20000});
