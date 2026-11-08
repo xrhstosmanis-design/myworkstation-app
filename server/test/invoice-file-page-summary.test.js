@@ -15,7 +15,7 @@ async function component(name,parent=false){
   const result=await build({entryPoints:[entry],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',plugins:[{name:'metadata-test-dependencies',setup(builder){
     builder.onResolve({filter:/invoice-pdf-count-loader\.js$/},()=>({path:'pdf-loader',namespace:'fixture'}));
     if(parent){
-      builder.onResolve({filter:/^\./},args=>args.importer===entry&&!['./InvoiceFilePageSummary.jsx','./DocumentPagePreview.jsx','../../lib/invoice-fast-header-request.js'].includes(args.path)?{path:args.path,namespace:'fixture'}:undefined);
+      builder.onResolve({filter:/^\./},args=>args.importer===entry&&!['./InvoiceFilePageSummary.jsx','./DocumentPagePreview.jsx','../../lib/invoice-fast-header-request.js','../../lib/invoice-fast-supplier-match.js'].includes(args.path)?{path:args.path,namespace:'fixture'}:undefined);
       builder.onResolve({filter:/^lucide-react$/},()=>({path:'icons',namespace:'fixture'}));
     }
     builder.onLoad({filter:/.*/,namespace:'fixture'},args=>{
@@ -26,7 +26,6 @@ async function component(name,parent=false){
       else if(args.path.includes('useMobileDocumentPhotos'))contents='export default()=>({pending:false})';
       else if(args.path.includes('document-image-quality'))contents='export const prepareDocumentFile=async file=>({file,changed:false,quality:null})';
       else if(args.path.includes('invoice-fast-header-merge'))contents='export const mergeFastInvoiceHeaders=rows=>({supplierHeader:rows[0],documentHeader:rows[0],totalHeader:rows[0],confidence:99})';
-      else if(args.path.includes('invoice-fast-supplier-match'))contents='export const knownSupplierFromFastHeaders=(_rows,suppliers)=>suppliers[0]';
       else if(args.path.includes('pos-uploaded-credit-cash'))contents='export const settleUploadedCredit=()=>{throw Error("no payment")};';
       else if(args.path==='icons')contents='export const Camera=()=>null,FileUp=()=>null,Wallet=()=>null';
       return{contents,loader:'js'};

@@ -14,3 +14,17 @@ export function knownSupplierFromFastHeaders(headers,suppliers){
   }
   return null;
 }
+
+export function hasConflictingFastSuppliers(headers,suppliers){
+  const ids=new Set();
+  const taxIds=new Set();
+  for(const header of headers){
+    const id=String(header?.supplierId||"");
+    if(id)ids.add(id);
+    const matched=id?(suppliers||[]).find(supplier=>String(supplier.id)===id):null;
+    for(const taxId of [header?.supplierTaxId,matched?.taxId].map(taxDigits)){
+      if(taxId.length===9)taxIds.add(taxId);
+    }
+  }
+  return ids.size>1||taxIds.size>1;
+}
