@@ -437,8 +437,7 @@ function Invoke-FtextOrphanStatusRecovery {
         foreach($key in @('companyId','storeId','terminalPos','serialNumber')) {
             if(-not $marker.PSObject.Properties[$key] -or [string]$marker.$key -cne [string]$c.$key){throw 'BLOCKED: foreign STATUS marker.'}
         }
-        if(-not $marker.PSObject.Properties['id'] -or [string]$marker.id -cnotmatch '^[a-f0-9]{32}
- -or
+        if(-not $marker.PSObject.Properties['id'] -or [string]$marker.id -cnotmatch '^[a-f0-9]{32}$' -or
            -not $marker.PSObject.Properties['command'] -or [string]$marker.command -cne 'STATUS' -or
            -not $marker.PSObject.Properties['createdAt']) {throw 'BLOCKED: malformed STATUS marker.'}
         $created=[DateTimeOffset]::Parse([string]$marker.createdAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime
