@@ -552,4 +552,4 @@ Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-Ftex
     } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
 
-Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive,Get-FtextOutputRoot,Get-FtextOutputPending,Assert-FtextOutputRequestNotArchived,Invoke-FtextOutputArchive,Assert-FtextOutputIdle
+Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive,Invoke-FtextOrphanStatusRecovery,Get-FtextOutputRoot,Get-FtextOutputPending,Assert-FtextOutputRequestNotArchived,Invoke-FtextOutputArchive,Assert-FtextOutputIdle
