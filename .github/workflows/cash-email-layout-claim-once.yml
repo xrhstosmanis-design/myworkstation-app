@@ -1,0 +1,44 @@
+name: Publish cash email layout claim
+on:
+  push:
+    branches: [docs/cash-owner-email-layout-claim-20261108]
+    paths: [.github/workflows/cash-email-layout-claim-once.yml]
+permissions:
+  contents: write
+jobs:
+  claim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import subprocess
+          now=datetime.now(ZoneInfo("Europe/Athens")).isoformat(timespec="seconds")
+          base=subprocess.check_output(["git","rev-parse","HEAD^"],text=True).strip()
+          scope="Retained cash owner codex/cash-chat-reconciliation-20261026, coordinated by /root. Scope: owner-style cash report email from the same checked MyWorkStation data, with shift cash and POS/EFTPOS tables, applicable evidence and pending replies. Unchecked paper stays visible with its reason and does not add a delivery hold. Preserve financial HOLD and current safety gates. First preview: previously verified test store/day. No actual owner send in this scope."
+          checkpoint=Path("CHECKPOINTS/CHANGES/2026-11-08-cash-owner-email-layout-claim.md")
+          active=Path("CHECKPOINTS/ACTIVE_WORK_2026.md")
+          tracker=Path("docs/roadmap/OPEN_WORK_TRACKER.md")
+          assert not checkpoint.exists()
+          current=active.read_bytes()
+          old=[line for line in current.splitlines() if b"| CASH-UNIFIED-AUDIT-15 |" in line]
+          assert len(old)==1
+          note=f"{scope}\n\nBranch: docs/cash-owner-email-layout-claim-20261108. Base: {base}. Implementation and hosted preview NOT TESTED.\n"
+          checkpoint.write_text(f"# Cash audit owner email layout claim — {now}\n\n"+note,encoding="utf-8")
+          tracker.write_bytes((f"## {now} — CASH-UNIFIED-AUDIT-15 / OWNER EMAIL LAYOUT CLAIM\n\n"+note+"\nCheckpoint: CHECKPOINTS/CHANGES/2026-11-08-cash-owner-email-layout-claim.md\n\n").encode()+tracker.read_bytes())
+          row=old[0].decode().removesuffix(" |")+" · [Layout claim](CHANGES/2026-11-08-cash-owner-email-layout-claim.md) |"
+          active.write_bytes(current.replace(old[0],row.encode(),1))
+          PY
+          git rm -- .github/workflows/cash-email-layout-claim-once.yml
+          git add -- CHECKPOINTS/CHANGES/2026-11-08-cash-owner-email-layout-claim.md CHECKPOINTS/ACTIVE_WORK_2026.md docs/roadmap/OPEN_WORK_TRACKER.md
+          git diff --cached --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "docs(cash): claim owner report layout before implementation"
+          git push origin HEAD:refs/heads/docs/cash-owner-email-layout-claim-20261108
