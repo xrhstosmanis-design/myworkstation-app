@@ -6,7 +6,7 @@
 
 | Προτεραιότητα | Εργασία | Υπεύθυνος | PR / issue | Τρέχουσα κατάσταση | Επόμενο βήμα |
 | --- | --- | --- | --- | --- | --- |
-| 0 | INVOICE-OWNER-FINALIZATION-01 (#28) | Claude — ανάθεση εκκρεμεί | #2705, #3715 | Implementation NOT VERIFIED | Owner correction/reopen/cancel, audit and LAB verification |
+| 0 | INVOICE-OWNER-FINALIZATION-01 (#28) | Claude — ανάθεση εκκρεμεί | #2705, #3715 | Προσχέδιο επαναφοράς FINAL — [checkpoint](CHANGES/2026-11-08-invoice-final-reopen.md) | LAB με παλιά καταχώριση, μετά χωριστή μετάβαση καταχώρισης στην Τιμολόγηση |
 | 1 | AUTO-REPORT-OBSERVABILITY-01 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #2704 | Preview verified; email delivery NOT TESTED | Verify recipients and controlled send |
 | 1 | OCR-CONFIDENCE-01 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #3706, #3709 | Code merged; hosted LAB NOT TESTED | LAB confidence and multipage checks |
 | 2 | AI-WALLET-HISTORY-02 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #3713 | Draft; LAB NOT TESTED | Scoped LAB acceptance |

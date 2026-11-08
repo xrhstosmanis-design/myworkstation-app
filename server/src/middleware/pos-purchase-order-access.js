@@ -29,8 +29,10 @@ export function createPosPurchaseOrderAccess(db=prisma,entitlement=requireStoreM
    if((req.body?.addBarcode||(/\/confirm-product$/.test(tail)&&Boolean(req.body?.barcode))||(/\/create-product$/.test(tail)&&["PROVIDED","GENERATED"].includes(req.body?.barcodeMode)))&&profile.permissions?.addBarcode!==true)
     return res.status(403).json({error:"Δεν έχεις δικαίωμα προσθήκης barcode.",code:"POS_ORDERS_BARCODE_DENIED"});
    if(!collection){
-    const rows=await db.$queryRaw`SELECT "id","storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`;
+    const rows=await db.$queryRaw`SELECT "id","storeId","reopenVersion" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
+    if(Number(rows[0].reopenVersion)>0&&tail!=="detail")
+     return res.status(403).json({error:"Η επαναφερμένη αγορά διορθώνεται από εξουσιοδοτημένο χρήστη στο BackOffice.",code:"POS_ORDERS_REOPEN_DENIED"});
     const lineId=tail.match(/^(?:lines|ocr-lines)\/([^/]+)/)?.[1];
     if(lineId){const lines=await db.$queryRaw`SELECT "id" FROM "PurchaseOrderLine" WHERE "id"=${lineId} AND "orderId"=${orderId} LIMIT 1`;
      if(!lines[0])return res.status(404).json({error:"Δεν βρέθηκε η γραμμή παραγγελίας."});}

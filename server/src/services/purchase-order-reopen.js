@@ -31,7 +31,7 @@ async function load(tx,actor,orderId,storeId){
  const companyId=actor.companyId;
  const [order]=await raw(tx,`SELECT o.* FROM "PurchaseOrder" o JOIN "Store" s ON s."id"=o."storeId" AND s."companyId"=o."companyId" WHERE o."id"=$1 AND o."companyId"=$2 AND o."storeId"=$3 FOR UPDATE OF o`,orderId,companyId,storeId);
  if(!order)throw fail("Δεν βρέθηκε η παραγγελία στο επιλεγμένο κατάστημα.",404);
- if(order.status!=="INVOICED")throw fail("Επαναφέρεται μόνο τιμολογημένη παραγγελία. Ανανέωσε την προβολή.");
+ if(!["FINAL","INVOICED"].includes(order.status))throw fail("Επαναφέρεται μόνο οριστικοποιημένη ή τιμολογημένη παραγγελία. Ανανέωσε την προβολή.");
  const postings=await raw(tx,'SELECT * FROM "PurchaseOrderPosting" WHERE "orderId"=$1 AND "companyId"=$2 FOR UPDATE',orderId,companyId);
  const stockPostings=await raw(tx,'SELECT * FROM "InvoiceStockPosting" WHERE "companyId"=$1 AND ("orderId"=$2 OR "sourceDocumentId"=$3) FOR UPDATE',companyId,orderId,order.sourceDocumentId||orderId);
  if(postings.length!==1||postings[0].purchaseDocumentId!==order.id||stockPostings.length!==1||stockPostings[0].storeId!==storeId||stockPostings[0].orderId!==orderId||stockPostings[0].postedDocumentId!==orderId||stockPostings[0].sourceDocumentId!==(order.sourceDocumentId||orderId)||stockPostings[0].path!=="PURCHASE_ORDER")throw fail("Η ιστορική καταχώριση αποθήκης χρειάζεται έλεγχο. Δεν έγινε επαναφορά.");
@@ -92,7 +92,7 @@ export async function reopenPurchaseOrder(db,actor,orderId,input){
   await run(tx,'DELETE FROM "InvoiceStockPosting" WHERE "companyId"=$1 AND "sourceDocumentId"=$2 AND "storeId"=$3 AND "orderId"=$4',actor.companyId,data.order.sourceDocumentId||orderId,body.storeId,orderId);
   if(data.hasPack)await run(tx,'DELETE FROM "PurchaseOrderPackCorrection" WHERE "orderId"=$1 AND "companyId"=$2',orderId,actor.companyId);
   await run(tx,'UPDATE "PurchaseOrder" SET "status"=\'NEW\',"reopenVersion"=$1,"finalizedAt"=NULL,"invoicedAt"=NULL,"updatedByName"=$2,"updatedAt"=NOW() WHERE "id"=$3 AND "companyId"=$4 AND "storeId"=$5',reopenVersion,actorName,orderId,actor.companyId,body.storeId);
-  await run(tx,`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES ($1,$2,$3,NULL,$4,'PURCHASE_ORDER_REOPENED',$5::jsonb)`,crypto.randomUUID(),actor.companyId,body.storeId,actor.id,JSON.stringify({orderId,invoiceNumber:data.order.invoiceNumber,auditId,reason:body.reason,actorName,actorRole:actor.role,before:"INVOICED",after:"NEW",reopenVersion,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false}));
+  await run(tx,`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES ($1,$2,$3,NULL,$4,'PURCHASE_ORDER_REOPENED',$5::jsonb)`,crypto.randomUUID(),actor.companyId,body.storeId,actor.id,JSON.stringify({orderId,invoiceNumber:data.order.invoiceNumber,auditId,reason:body.reason,actorName,actorRole:actor.role,before:data.order.status,after:"NEW",reopenVersion,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false}));
   return result;
  },{timeout:30000});
 }
