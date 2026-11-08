@@ -4,12 +4,12 @@ import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../src/middleware/pos-purchase-order-access.js',import.meta.url),'utf8');
 const createPosPurchaseOrderAccess=new Function('prisma','requireStoreModule',source.replace(/^import .*;$/gm,'').replaceAll('export ', '')+';return createPosPurchaseOrderAccess;')({},()=>()=>{});
 
-function fixture({orders=true,posAccess=true,orderStore='A',lineOrder='one',role='EMPLOYEE'}={}){
+function fixture({orders=true,posAccess=true,orderStore='A',lineOrder='one',role='EMPLOYEE',reopenVersion=0}={}){
  const calls=[],entitlements=[];let granted=orders;
  const db={$queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});
   if(sql.includes('StoreOperatorCredential'))return values.includes('co')?[{backofficeMenu:{orders:granted},permissions:{},posAccess}]:[];
   if(sql.includes('PurchaseOrderLine'))return values.includes(lineOrder)?[{id:'line'}]:[];
-  if(sql.includes('PurchaseOrder'))return values.includes(orderStore)&&values.includes('one')?[{id:'one',storeId:orderStore}]:[];
+  if(sql.includes('PurchaseOrder'))return values.includes(orderStore)&&values.includes('one')?[{id:'one',storeId:orderStore,reopenVersion}]:[];
   throw Error(sql);
  }};
  const guard=createPosPurchaseOrderAccess(db,(req,res,next)=>{entitlements.push(req.params.storeId);next()});
@@ -48,4 +48,18 @@ test('product preparation uses existing live POS permission/module checks and gu
  const f=fixture();for(const [tail,method,body] of [['product-proposal','GET',{}],['confirm-product','POST',{barcode:''}]])assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/'+tail,method,body})).next,true);
  assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/confirm-product',method:'POST',body:{barcode:'5200000000001'}})).res.code,403);
  f.revoke();assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/confirm-product',method:'POST'})).res.code,403);
+});
+
+test('POS operators can read reopened purchases but correction stays in BackOffice',async()=>{
+ const f=fixture({reopenVersion:1,role:'MANAGER'});
+ assert.equal((await f.run({path:'/one/detail'})).next,true);
+ for(const request of [
+  {path:'/one',method:'PATCH',body:{status:'FINAL'}},
+  {path:'/one/lines',method:'POST'},
+  {path:'/one/invoice-assistant/source',baseUrl:'/api/commerce/purchase-orders'}
+ ]){
+  const result=await f.run(request);
+  assert.equal(result.res.code,403);
+  assert.equal(result.res.body.code,'POS_ORDERS_REOPEN_DENIED');
+ }
 });

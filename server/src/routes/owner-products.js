@@ -146,7 +146,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
           UNION ALL
           SELECT sup."name" AS "supplierName",3 AS priority,ord."createdAt" AS at
           FROM "PurchaseOrderLine" line JOIN "PurchaseOrder" ord ON ord."id"=line."orderId" AND ord."companyId"=${company} LEFT JOIN "Supplier" sup ON sup."id"=ord."supplierId"
-          WHERE line."productId"=p."id" AND ord."status" IN ('FINAL','INVOICED')
+          WHERE line."productId"=p."id" AND ord."status" IN ('FINAL','INVOICED') AND NOT ord."awaitingInvoice"
         ) history WHERE history."supplierName" IS NOT NULL ORDER BY history.priority,history.at DESC LIMIT 1
       ) lp ON true
       LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
@@ -177,7 +177,7 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
         LEFT JOIN "SupplierProductMapping" pm ON pm."companyId"=${company} AND pm."supplierId"=links."supplierId" AND pm."productId"=${productId}
         LEFT JOIN LATERAL (SELECT history."unitCost",history."documentDate" FROM (
           SELECT l."unitCost",d."documentDate",d."createdAt" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=links."supplierId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) AND d."status"='APPROVED'
-          UNION ALL SELECT l."unitCost",o."createdAt",o."createdAt" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=${productId} AND o."supplierId"=links."supplierId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED')
+          UNION ALL SELECT l."unitCost",o."createdAt",o."createdAt" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=${productId} AND o."supplierId"=links."supplierId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice"
         ) history ORDER BY history."documentDate" DESC,history."createdAt" DESC LIMIT 1) lp ON true
         ORDER BY links."supplierId",links.priority,s."name"`,
       prisma.$queryRaw`SELECT * FROM (
@@ -186,7 +186,7 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
         UNION ALL
         SELECT o."id",o."invoiceNumber",o."createdAt",o."supplierId",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
         FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
-        WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED') AND NOT EXISTS (
+        WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice" AND NOT EXISTS (
           SELECT 1 FROM "PurchaseDocumentLine" document_line JOIN "PurchaseDocument" document ON document."id"=document_line."purchaseDocumentId"
           WHERE document."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR document."storeId"=${scopedStoreId}) AND document."status"='APPROVED' AND document_line."productId"=${productId}
             AND (document_line."purchaseOrderLineId"=l."id" OR (document."supplierId"=o."supplierId" AND NULLIF(TRIM(document."documentNumber"),'')=NULLIF(TRIM(o."invoiceNumber"),'')))
@@ -250,7 +250,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
           WHERE l."productId"=${product.id}
           UNION ALL
           SELECT o."supplierId",o."createdAt" AS at,o."createdAt" FROM "PurchaseOrderLine" l
-          JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED')
+          JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice"
           JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=${company}
           WHERE l."productId"=${product.id}
         ) history ORDER BY history.at DESC,history."createdAt" DESC LIMIT 1`;

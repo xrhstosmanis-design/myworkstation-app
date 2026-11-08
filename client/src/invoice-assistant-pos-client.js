@@ -97,7 +97,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       const result=await api("/api/platform/invoice-learning/supplier-profile/stock-rules",{method:"PUT",body:JSON.stringify({orderId,supplierTaxId:tax,confirmSupplierTaxId,supplierName:order.supplierName||"",rules:[{supplierItemCode:code,invoiceUnit:"PACKAGE",stockUnit:"PIECE",factor}]})});
       ruleStatus.textContent=`Ο κανόνας αποθηκεύτηκε (έκδοση ${result.profileVersion}). Ελέγχεται αν υπάρχει γραμμή στο ίδιο πρόχειρο…`;
       const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
-      if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT")throw new Error("Ο κανόνας αποθηκεύτηκε, αλλά το πρόχειρο δεν είναι πλέον επεξεργάσιμο.");
+      if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT"||Number(latest.order.reopenVersion||0)!==Number(order.reopenVersion||0))throw new Error("Ο κανόνας αποθηκεύτηκε, αλλά το πρόχειρο δεν είναι πλέον επεξεργάσιμο.");
       const existing=latest.lines.filter(line=>String(line.supplierCode||"").trim().toUpperCase()===code.toUpperCase());
       if(existing.length===1)await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(existing[0].id)}`,{method:"PATCH",body:JSON.stringify({invoiceUnit:"PACKAGE",stockUnitsPerInvoiceUnit:factor})});
       else if(existing.length===0&&activePagesComplete&&rowEconomicsVerified)await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:code,description:row.description.trim().slice(0,250),quantity:number(row.quantity),unitCost:number(row.unitCost),invoiceUnit:"PACKAGE",stockUnitsPerInvoiceUnit:factor,discount1:number(row.discount1),discount2:number(row.discount2),discount3:number(row.discount3),exciseTotal:number(row.exciseTotal),vatRate:number(row.vatRate)})});
@@ -230,7 +230,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
         }
         applying=true;apply.disabled=true;let done=0;try{
           const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
-          if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT")throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
+          if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT"||Number(latest.order.reopenVersion||0)!==Number(order.reopenVersion||0))throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
           const now=new Map(latest.lines.map(line=>[line.id,line]));
           if(now.size!==lineById.size||[...lineById].some(([id,line])=>!now.has(id)||["description","quantity","unitCost","netAmount","grossAmount"].some(field=>String(now.get(id)[field]??"")!==String(line[field]??""))))throw new Error("Το πρόχειρο άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const change of chosen)if(!now.has(change.lineId)||String(now.get(change.lineId)[change.field]??"")!==String(lineById.get(change.lineId)[change.field]??""))throw new Error("Μια επιλεγμένη γραμμή άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
