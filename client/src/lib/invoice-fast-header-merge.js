@@ -1,7 +1,7 @@
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const STEFANIDIS_TAX_ID="998878583";
 
-export function mergeFastInvoiceHeaders(headers=[],{imageTotals}={}){
+export function mergeFastInvoiceHeaders(headers=[],{imageHeaders}={}){
   const available=(headers||[]).filter(Boolean);
   const supplierHeader=available.find(header=>header.supplierId||header.supplierName)||null;
   let documentHeader=available.find(header=>header.documentNumber||header.documentDate)||null;
@@ -14,14 +14,19 @@ export function mergeFastInvoiceHeaders(headers=[],{imageTotals}={}){
     if(canonical)documentHeader={...(documentHeader||{}),...canonical.header,documentNumber:canonical.digits};
     totalHeader=available.filter(header=>Number(header.totalGross||0)>0).sort((a,b)=>Number(b.totalGross)-Number(a.totalGross))[0]||null;
   }
-  let totalNeedsReview=false;
-  if(imageTotals&&!stefanidis){
-    const candidates=imageTotals.filter(header=>Number.isFinite(Number(header.totalGross))&&Number(header.totalGross)>0);
+  let totalNeedsReview=false,documentNumberNeedsReview=false;
+  if(imageHeaders&&!stefanidis){
+    const numbers=new Set(imageHeaders.map(header=>String(header.documentNumber||"").trim()).filter(number=>/\d/.test(number)));
+    documentNumberNeedsReview=numbers.size>1;
+    const documentNumber=numbers.size===1?numbers.values().next().value:"";
+    const documentDate=imageHeaders.find(header=>header.documentDate)?.documentDate||"";
+    documentHeader=documentNumber||documentDate?{documentNumber,documentDate}:null;
+    const candidates=imageHeaders.filter(header=>Number.isFinite(Number(header.totalGross))&&Number(header.totalGross)>0);
     const distinct=new Set(candidates.map(header=>Number(header.totalGross).toFixed(2)));
     const proven=candidates.filter(header=>header.totalGrossVerified===true);
     const verified=new Set(proven.map(header=>Number(header.totalGross).toFixed(2)));
     totalNeedsReview=distinct.size>1&&verified.size!==1;
     totalHeader=totalNeedsReview?null:proven[0]||candidates[0]||null;
   }
-  return {supplierHeader,documentHeader,totalHeader,totalNeedsReview,confidence:available.reduce((best,header)=>Math.max(best,Number(header.confidence||0)),0),stefanidis};
+  return {supplierHeader,documentHeader,totalHeader,totalNeedsReview,documentNumberNeedsReview,confidence:available.reduce((best,header)=>Math.max(best,Number(header.confidence||0)),0),stefanidis};
 }
