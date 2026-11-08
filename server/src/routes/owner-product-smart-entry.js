@@ -68,7 +68,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
           UNION ALL
           SELECT line."productId",sup."name" AS "supplierName",3 AS priority,ord."createdAt" AS at
           FROM candidates cp JOIN "PurchaseOrderLine" line ON line."productId"=cp."id"
-          JOIN "PurchaseOrder" ord ON ord."id"=line."orderId" AND ord."companyId"=${companyId} AND (${scopedStoreId}::text IS NULL OR ord."storeId"=${scopedStoreId}) AND ord."status" IN ('FINAL','INVOICED')
+          JOIN "PurchaseOrder" ord ON ord."id"=line."orderId" AND ord."companyId"=${companyId} AND (${scopedStoreId}::text IS NULL OR ord."storeId"=${scopedStoreId}) AND ord."status" IN ('FINAL','INVOICED') AND NOT ord."awaitingInvoice"
           LEFT JOIN "Supplier" sup ON sup."id"=ord."supplierId"
         ) history WHERE history."supplierName" IS NOT NULL
         ORDER BY history."productId",history.priority,history.at DESC

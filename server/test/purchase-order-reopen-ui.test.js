@@ -30,7 +30,10 @@ test('actual finalized, invoiced and reopened order editors open without mutatin
  const open=new Function('document','window','localStorage','fetch','greeceDateInput','installInvoiceProductMatcher',source+';return openOrder;')(doc,dom.window,dom.window.localStorage,fetch,()=> '2026-10-18',()=>{});
  await open(doc.querySelector('#root'),'same');assert.equal(calls.length,1);assert.ok(doc.querySelector('[data-reopen]'));doc.querySelector('.po-modal-overlay').remove();
  order={...order,status:'FINAL'};await open(doc.querySelector('#root'),'same');assert.equal(calls.length,2);assert.ok(doc.querySelector('[data-reopen]'));doc.querySelector('.po-modal-overlay').remove();
- order={...order,status:'NEW',reopenVersion:1};await open(doc.querySelector('#root'),'same');assert.equal(calls.length,3);assert.equal(doc.querySelector('[data-order-supplier]').disabled,true);assert.equal(doc.querySelector('[data-order-invoice]').disabled,true);assert.equal(doc.querySelector('[data-add-line]').disabled,false);assert.ok(doc.querySelector('[data-invoice-assistant]'));
+ order={...order,awaitingInvoice:true};await open(doc.querySelector('#root'),'same');
+ assert.ok(doc.querySelector('[data-return-to-draft]'));assert.equal(doc.querySelector('[data-reopen]'),null);
+ assert.equal(doc.querySelector('[data-invoice]').disabled,false);doc.querySelector('.po-modal-overlay').remove();
+ order={...order,status:'NEW',awaitingInvoice:false,reopenVersion:1};await open(doc.querySelector('#root'),'same');assert.equal(calls.length,4);assert.equal(doc.querySelector('[data-order-supplier]').disabled,true);assert.equal(doc.querySelector('[data-order-invoice]').disabled,true);assert.equal(doc.querySelector('[data-add-line]').disabled,false);assert.ok(doc.querySelector('[data-invoice-assistant]'));
  dom.window.close();
 });
 

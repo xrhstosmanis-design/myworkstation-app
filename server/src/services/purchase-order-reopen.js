@@ -108,8 +108,8 @@ export async function reuseReopenedPurchaseDocument(tx,order,{supplierId,invoice
  return doc.id;
 }
 
-export async function lockEditableReopenedOrder(tx,order){
+export async function lockEditablePurchaseOrder(tx,order){
  await lockInvoiceStore(tx,order.companyId,order.storeId);
  const [current]=await raw(tx,'SELECT "status","reopenVersion" FROM "PurchaseOrder" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3 FOR UPDATE',order.id,order.companyId,order.storeId);
- if(current?.status!=="NEW"||n(current.reopenVersion)!==n(order.reopenVersion))throw fail("Η επαναφερμένη αγορά άλλαξε ή οριστικοποιήθηκε. Ανανέωσε πριν τη διόρθωση.");
+ if(current?.status!=="NEW"||n(current.reopenVersion)!==n(order.reopenVersion))throw fail("Η αγορά άλλαξε ή οριστικοποιήθηκε. Ανανέωσε πριν τη διόρθωση.");
 }
