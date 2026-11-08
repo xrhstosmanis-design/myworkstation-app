@@ -6,12 +6,12 @@
 
 | Προτεραιότητα | Εργασία | Υπεύθυνος | PR / issue | Τρέχουσα κατάσταση | Επόμενο βήμα |
 | --- | --- | --- | --- | --- | --- |
-| 0 | INVOICE-OWNER-FINALIZATION-01 (#28) | Claude — πιλοτική αυτόματη εκκίνηση | #2705, #3715, #3725, #3726 | Implementation NOT VERIFIED; first write pilot failed at push auth, fix #3726 merged | Start one scoped GitHub Action, verify branch/PR output and LAB gates |
+| 0 | INVOICE-OWNER-FINALIZATION-01 (#28) | Claude — πιλοτική αυτόματη εκκίνηση | #2705, #3715, #3725, #3726 | Implementation NOT VERIFIED; first write pilot failed at push auth, fix #3726 merged | Issue #3714 exact-command dispatch /claude-invoice-28; verify actual job and Draft PR |
 | 1 | AUTO-REPORT-OBSERVABILITY-01 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #2704 | Preview verified; email delivery NOT TESTED | Verify recipients and controlled send |
 | 1 | OCR-CONFIDENCE-01 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #3706, #3709 | Code merged; hosted LAB NOT TESTED | LAB confidence and multipage checks |
 | 2 | AI-WALLET-HISTORY-02 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #3713 | Draft; LAB NOT TESTED | Scoped LAB acceptance |
-| 0 | FTEXT-STATUS-ORPHAN-01 / CMD option 9 | retained FTEXT recovery owner | #3695, #3721, #3724 | Source Windows/full CI PASS at 454e75af; conflict resolution under recheck; physical NOT TESTED | Recheck reconciled CI and independent review; approval before merge/install |
-| — | Claude automation | Συντονιστής | #3714, #3716, #3717, #3718, #3719 | Compact registry merged in #3719; isolated policy tests PASS in #3718; old central CI #9416 FAIL | Read-only Claude pilot #2 PASS per owner screenshot; invoice write pilot #3725 merged; run #42504018843 Claude step succeeded, git push auth failed; auth fix #3726 merged; one-shot workflow push trigger proposed |
+| 0 | FTEXT-STATUS-ORPHAN-01 / CMD option 9 | retained FTEXT recovery owner | #3695, #3721, #3724 | CI 454e75af PASS; new option 2/9 exclusion tested, harness repair pending current CI; physical NOT TESTED | Verify native PS5.1 and full PR CI; owner approval before merge or PC install |
+| — | Claude automation | Συντονιστής | #3714, #3716, #3717, #3718, #3719 | Compact registry merged in #3719; isolated policy tests PASS in #3718; old central CI #9416 FAIL | Read-only Claude pilot #2 PASS per owner screenshot; invoice write pilot #3725 merged; run #42504018843 Claude step succeeded, git push auth failed; auth fix #3726 merged; push trigger merged #3728 but run not observed; issue-comment trigger proposed |
 
 ## Κανόνας ενημέρωσης
 
