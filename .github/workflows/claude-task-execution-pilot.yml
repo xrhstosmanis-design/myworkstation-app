@@ -1,0 +1,56 @@
+name: Claude task execution — gated pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Owner-authorized task"
+        required: true
+        type: choice
+        options:
+          - INVOICE-OWNER-FINALIZATION-01
+          - AUTO-REPORT-OBSERVABILITY-01
+          - OCR-CONFIDENCE-01
+          - AI-WALLET-HISTORY-02
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: claude-execution-${{ inputs.task }}
+  cancel-in-progress: false
+
+jobs:
+  scoped-claude:
+    if: ${{ github.actor == 'xrhstosmanis-design' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify supported task input
+        env:
+          TASK: ${{ inputs.task }}
+        run: |
+          case "$TASK" in
+            INVOICE-OWNER-FINALIZATION-01|AUTO-REPORT-OBSERVABILITY-01|OCR-CONFIDENCE-01|AI-WALLET-HISTORY-02) ;;
+            *) echo "Unsupported task"; exit 1 ;;
+          esac
+      - name: Claude scoped implementation review (no repository writes)
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            MyWorkStation task: ${{ inputs.task }}.
+            This is the first owner-authorized Claude execution pilot.
+            Follow AGENTS.md and CHECKPOINTS/ACTIVE_WORK_2026.md.
+            Read relevant tracker/checkpoints and inspect the scoped implementation.
+            Produce one precise next coding change proposal with test plan and blockers.
+            This pilot is READ-ONLY: do not edit files, commit, push, merge, deploy,
+            send emails, mutate financial records, or print credentials/private data.
+            Keep the output short, in Greek, and do not print large files.
+          claude_args: '--allowedTools "Read,Glob,Grep" --max-turns 8'
