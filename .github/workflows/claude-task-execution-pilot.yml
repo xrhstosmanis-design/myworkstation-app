@@ -53,4 +53,4 @@ jobs:
             This pilot is READ-ONLY: do not edit files, commit, push, merge, deploy,
             send emails, mutate financial records, or print credentials/private data.
             Keep the output short, in Greek, and do not print large files.
-          claude_args: '--allowedTools "Read,Glob,Grep" --max-turns 8'
+          claude_args: '--allowedTools "Read,Glob,Grep" --max-turns 20'
