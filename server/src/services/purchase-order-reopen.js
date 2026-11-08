@@ -66,6 +66,12 @@ async function load(tx,actor,orderId,storeId){
  const stockChanges=stocks.map(s=>({productId:s.productId,name:s.productName||s.productId,sku:s.sku||"",before:n(s.currentStock),delta:-quantities.get(s.productId),after:round(n(s.currentStock)-quantities.get(s.productId))}));
  return {snapshot,version,stockChanges,hasPack,document,order};
 }
+const LINE_AUDIT_KEYS=["id","productId","description","name","sku","quantity","unit","unitPrice","unitCost","discount","netAmount","vatRate","vatAmount","grossAmount"];
+/** Compact, bounded per-line audit of what an owner reopen is about to supersede (additive; no secrets, no file bytes). */
+export function summarizeReopenLines(lines,limit=500){
+ const rows=(Array.isArray(lines)?lines:[]).slice(0,limit).map(l=>Object.fromEntries(LINE_AUDIT_KEYS.filter(k=>l?.[k]!=null).map(k=>[k,typeof l[k]==="string"?l[k].slice(0,200):l[k]])));
+ return {lineCount:Array.isArray(lines)?lines.length:0,truncated:Array.isArray(lines)&&lines.length>limit,lines:rows};
+}
 function preview(data){return {orderId:data.order.id,storeId:data.order.storeId,invoiceNumber:data.order.invoiceNumber,status:data.order.status,reopenVersion:n(data.order.reopenVersion),version:data.version,stockChanges:data.stockChanges,negativeStockCount:data.stockChanges.filter(s=>s.after<0).length,expenseDelta:-n(data.document.totalGross),paymentChanged:false,paymentCount:data.snapshot.payments.length,catalogPricesChanged:false,sourceFilesPreserved:true};}
 export async function previewPurchaseOrderReopen(db,actor,orderId,storeId){
  requireReopenActor(actor,storeId);await ensurePurchaseOrderReopenSchema(db);
@@ -92,7 +98,7 @@ export async function reopenPurchaseOrder(db,actor,orderId,input){
   await run(tx,'DELETE FROM "InvoiceStockPosting" WHERE "companyId"=$1 AND "sourceDocumentId"=$2 AND "storeId"=$3 AND "orderId"=$4',actor.companyId,data.order.sourceDocumentId||orderId,body.storeId,orderId);
   if(data.hasPack)await run(tx,'DELETE FROM "PurchaseOrderPackCorrection" WHERE "orderId"=$1 AND "companyId"=$2',orderId,actor.companyId);
   await run(tx,'UPDATE "PurchaseOrder" SET "status"=\'NEW\',"reopenVersion"=$1,"finalizedAt"=NULL,"invoicedAt"=NULL,"updatedByName"=$2,"updatedAt"=NOW() WHERE "id"=$3 AND "companyId"=$4 AND "storeId"=$5',reopenVersion,actorName,orderId,actor.companyId,body.storeId);
-  await run(tx,`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES ($1,$2,$3,NULL,$4,'PURCHASE_ORDER_REOPENED',$5::jsonb)`,crypto.randomUUID(),actor.companyId,body.storeId,actor.id,JSON.stringify({orderId,invoiceNumber:data.order.invoiceNumber,auditId,reason:body.reason,actorName,actorRole:actor.role,before:data.order.status,after:"NEW",reopenVersion,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false}));
+  await run(tx,`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES ($1,$2,$3,NULL,$4,'PURCHASE_ORDER_REOPENED',$5::jsonb)`,crypto.randomUUID(),actor.companyId,body.storeId,actor.id,JSON.stringify({orderId,invoiceNumber:data.order.invoiceNumber,auditId,reason:body.reason,actorName,actorRole:actor.role,before:data.order.status,after:"NEW",reopenVersion,stockChanges:data.stockChanges,paymentChanged:false,catalogPricesChanged:false,lineAudit:summarizeReopenLines(data.snapshot.lines)}));
   return result;
  },{timeout:30000});
 }
