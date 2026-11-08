@@ -24,7 +24,7 @@ test('Platform cash preview shows the entire long native report and only explici
  const full=beginning+'\n'+('Χειρόγραφο προς διασταύρωση, χωρίς καταλογισμό.\n'.repeat(330))+'\n'+ending;
  assert(full.length>10240);
  const reportText=()=>long?full:beginning;
- const preview=()=>({storeId:foreign?'B':'A',storeName:'Store A',date,rows:emptyRows?[]:[{sessionId:'a',fullAudit:{status:'PENDING'}}],recipients,readyToSend:!pending,text:reportText(),reportHash:'d'.repeat(64),generation:'0'});
+ const preview=()=>({storeId:foreign?'B':'A',storeName:'Store A',date,rows:emptyRows?[]:[{sessionId:'a',fullAudit:{status:'PENDING'}}],recipients,personalRecipient:'personal@example.invalid',readyToSend:!pending,text:reportText(),reportHash:'d'.repeat(64),generation:'0'});
  dom.window.prompt=()=>{throw Error('Native prompt must never be used for cash email')};
  dom.window.alert=()=>{throw Error('Native alert must never be used for full cash preview')};
  localStorage.setItem('token','synthetic');localStorage.setItem('platformUser',JSON.stringify({id:'test',fullName:'Test',email:'auditor@example.invalid'}));
@@ -39,7 +39,7 @@ test('Platform cash preview shows the entire long native report and only explici
   }else if(url.pathname.endsWith('/email-preview')){const snapshot=preview();if(delay)return new Promise(resolve=>release=()=>resolve({ok:true,status:200,text:async()=>JSON.stringify(snapshot)}));data=snapshot;}
   else if(url.pathname.endsWith('/send-email')||url.pathname.endsWith('/send-preview')){
    if(throwSend)throw Error('Synthetic network failure');
-   data=sendStatus===200?{recipients:[url.pathname.endsWith('/send-preview')?'auditor@example.invalid':'owner@example.invalid'],messageId:'synthetic-no-smtp'}:{error:'Ανανέωσε την προεπισκόπηση της αναφοράς.',code:'CASH_EMAIL_PREVIEW_CHANGED'};
+   data=sendStatus===200?{recipients:[url.pathname.endsWith('/send-preview')?'personal@example.invalid':'owner@example.invalid'],messageId:'synthetic-no-smtp'}:{error:'Ανανέωσε την προεπισκόπηση της αναφοράς.',code:'CASH_EMAIL_PREVIEW_CHANGED'};
    const response={ok:sendStatus===200,status:sendStatus,text:async()=>JSON.stringify(data)};
    if(holdSend)return new Promise(resolve=>releaseSend=()=>resolve(response));return response;
   }else if(url.pathname==='/api/platform/cash-control/shortages')return new Promise(resolve=>releaseExport=()=>resolve({ok:false,status:503,text:async()=>JSON.stringify({error:'Synthetic export unavailable'})}));
@@ -82,12 +82,13 @@ test('Platform cash preview shows the entire long native report and only explici
 
   await click(button('Δοκιμή στο email μου'));
   assert.equal(shown()?.textContent,beginning);
-  assert.match(document.querySelector('#cash-email-preview-recipients').textContent,/auditor@example.invalid/);assert.doesNotMatch(document.querySelector('#cash-email-preview-recipients').textContent,/owner@example.invalid/);
+  assert.match(document.querySelector('#cash-email-preview-recipients').textContent,/personal@example.invalid/);assert.doesNotMatch(document.querySelector('#cash-email-preview-recipients').textContent,/owner@example.invalid/);
   assert.equal(posts().length,1,'self preview does not transmit before Send');
   await click(button('Αποστολή δοκιμής'));
   assert.equal(posts().length,2);
   assert.match(posts()[1].path,/\/send-preview$/);
   assert.equal(JSON.parse(posts()[1].body).comment,'');
+  assert.equal(JSON.parse(posts()[1].body).expectedRecipient,'personal@example.invalid');
 
   pending=true;await click(button('Προεπισκόπηση & email ιδιοκτητών'));
   assert.equal(shown()?.textContent,beginning);
