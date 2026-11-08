@@ -588,9 +588,10 @@ export default function PlatformAdminApp(){
     const key="cash-"+(mode==="owners"?"email":"preview")+":"+store.storeId;
     setCashEmailDraft(null);setBusy(key);setError("");setMessage("");
     try{
-      const preview=await api("/api/platform/cash-control/stores/"+store.storeId+"/email-preview?date="+date);
+      const preview=await api("/api/platform/cash-control/stores/"+store.storeId+"/email-preview?date="+date+(mode==="self"?"&mode=self":""));
       if(!current())return;
       if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/)||!Array.isArray(preview.rows)||!Array.isArray(preview.recipients)||preview.recipients.some(recipient=>typeof recipient!=="string"))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
+      if(mode==="self"&&(typeof preview.personalRecipient!=="string"||!preview.personalRecipient))throw new Error("Δεν βρέθηκε παραλήπτης προσωπικής δοκιμής.");
       setCashEmailDraft({...preview,mode,sequence,api,current,report:cashReport});
     }catch(err){if(current())setError(err.message)}finally{if(current())setBusy(value=>value===key?"":value)}
   };
@@ -610,7 +611,7 @@ export default function PlatformAdminApp(){
     setBusy(key);setError("");setMessage("");
     try{
       const route=draft.mode==="owners"?"send-email":"send-preview";
-      const sent=await draft.api("/api/platform/cash-control/stores/"+draft.storeId+"/"+route,{method:"POST",body:JSON.stringify({date:draft.date,comment,reportHash:draft.reportHash,generation:draft.generation})});
+      const sent=await draft.api("/api/platform/cash-control/stores/"+draft.storeId+"/"+route,{method:"POST",body:JSON.stringify({date:draft.date,comment,reportHash:draft.reportHash,generation:draft.generation,expectedRecipient:draft.mode==="self"?draft.personalRecipient:undefined})});
       if(!draft.current())return;
       setCashEmailDraft(null);
       setMessage(draft.mode==="owners"?"Η αναφορά του "+draft.storeName+" στάλθηκε σε: "+sent.recipients.join(", ")+".":"Η δοκιμαστική αναφορά στάλθηκε μόνο στο "+sent.recipients.join(", ")+".");
@@ -707,7 +708,7 @@ export default function PlatformAdminApp(){
         </div><p className="site-explanation">Ελλείμματα: {cashMoney(store.shortage)} · Πλεονάσματα: {cashMoney(store.surplus)}. Οι κανονικές κινήσεις δεν εμφανίζονται· εμφανίζονται μόνο τα περίεργα συμβάντα με την ακριβή ώρα.</p>
       </article>})}</section>}
     </section></div>}
-    {cashEmailDraft&&cashReport&&<CashEmailPreviewDialog key={cashEmailDraft.sequence} draft={cashEmailDraft} selfEmail={user?.email||""} stale={!cashEmailDraft.current()||cashEmailDraft.report!==cashReport||!cashReportMatchesSelection()} busy={cashEmailSending} onCancel={cancelCashEmailPreview} onSend={confirmCashEmail}/>}
+    {cashEmailDraft&&cashReport&&<CashEmailPreviewDialog key={cashEmailDraft.sequence} draft={cashEmailDraft} selfEmail={cashEmailDraft.personalRecipient} stale={!cashEmailDraft.current()||cashEmailDraft.report!==cashReport||!cashReportMatchesSelection()} busy={cashEmailSending} onCancel={cancelCashEmailPreview} onSend={confirmCashEmail}/>}
 
     {newOwnerCompany&&<div className="platform-modal"><form onSubmit={createOwnerCompany}><button type="button" className="modal-close" onClick={()=>setNewOwnerCompany(null)}><X/></button><h2>Νέα εταιρεία για {newOwnerCompany.fullName}</h2><p>Ξεχωριστό ΑΦΜ, κατάστημα και δεδομένα με την υπάρχουσα σύνδεση ιδιοκτήτη.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId" minLength="9" required/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setNewOwnerCompany(null)}>Ακύρωση</button><button disabled={busy==="owner-company-create"}>{busy==="owner-company-create"?"Δημιουργία…":"Δημιουργία εταιρείας"}</button></div></form></div>}
     {companyIdentityEdit&&<CompanyIdentityEditor key={companyIdentityEdit.id} company={companyIdentityEdit} request={request} onClose={()=>setCompanyIdentityEdit(null)} onSaved={()=>{setCompanyIdentityEdit(null);setMessage("Τα στοιχεία της υπάρχουσας εταιρείας αποθηκεύτηκαν.");load()}}/>}
