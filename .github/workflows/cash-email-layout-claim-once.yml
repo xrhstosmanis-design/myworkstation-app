@@ -11,6 +11,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
       - shell: bash
         run: |
           set -euo pipefail
@@ -20,7 +22,7 @@ jobs:
           from zoneinfo import ZoneInfo
           import subprocess
           now=datetime.now(ZoneInfo("Europe/Athens")).isoformat(timespec="seconds")
-          base=subprocess.check_output(["git","rev-parse","HEAD^"],text=True).strip()
+          base=subprocess.check_output(["git","rev-parse","HEAD~2"],text=True).strip()
           scope="Retained cash owner codex/cash-chat-reconciliation-20261026, coordinated by /root. Scope: owner-style cash report email from the same checked MyWorkStation data, with shift cash and POS/EFTPOS tables, applicable evidence and pending replies. Unchecked paper stays visible with its reason and does not add a delivery hold. Preserve financial HOLD and current safety gates. First preview: previously verified test store/day. No actual owner send in this scope."
           checkpoint=Path("CHECKPOINTS/CHANGES/2026-11-08-cash-owner-email-layout-claim.md")
           active=Path("CHECKPOINTS/ACTIVE_WORK_2026.md")
