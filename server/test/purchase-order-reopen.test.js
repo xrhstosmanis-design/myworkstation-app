@@ -225,3 +225,102 @@ test('cancelled purchases cannot use the normal purchase-order editor',async()=>
  assert.throws(()=>editable({status:'CANCELLED'}),e=>e.status===409);
  assert.doesNotThrow(()=>editable({status:'NEW',awaitingInvoice:false}));
 });
+
+
+test('synthetic full-stack BackOffice cancellation uses isolated HTTP and PostgreSQL without touching live records',{skip:!isolatedInvoiceDb(),timeout:60000},async()=>{
+ const f=await fixture();let server,dom;
+ try{
+  await f.finalize();
+  assert.equal(await f.stock(),13);
+  const originalEvidence=await f.preserved();
+  const {default:express,Router}=await import('express');
+  const routeSource=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder','cancelPurchaseOrder',routeSource)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
+  const app=express();app.use(express.json());
+  app.use((req,res,next)=>{
+   const role=req.headers['x-fixture-actor'];
+   req.user=role==='operator'?{...actor,tokenType:'STORE_OPERATOR'}:role==='other-store'?{...actor,storeId:'control'}:role==='other-company'?{...actor,companyId:'foreign'}:{...actor,role:'MANAGER'};
+   next();
+  });
+  app.use('/api/purchase-orders',router);
+  app.use((err,req,res,next)=>res.status(err.status||400).json({error:err.message}));
+  server=app.listen(0,'127.0.0.1');
+  await new Promise(resolve=>server.once('listening',resolve));
+  const origin='http://127.0.0.1:'+server.address().port;
+  const endpoint=origin+'/api/purchase-orders/pos';
+  const previewResponse=await fetch(endpoint+'/reopen-preview?storeId=s');
+  assert.equal(previewResponse.status,200);
+  const preview=await previewResponse.json();
+  assert.equal(preview.status,'INVOICED');
+  assert.equal(preview.lineAudit.lineCount,1);
+  assert.equal(preview.paymentCount,1);
+  assert.equal(preview.sourceFilesPreserved,true);
+  assert.equal(preview.stockChanges.length,1);
+  assert.equal(preview.stockChanges[0].delta,-3);
+  assert.equal(await f.stock(),13);
+  assert.equal(await f.preserved(),originalEvidence);
+
+  const post=async(body,role='manager')=>fetch(endpoint+'/cancel',{method:'POST',headers:{'Content-Type':'application/json','x-fixture-actor':role},body:JSON.stringify(body)});
+  assert.equal((await post({...confirmed(preview),version:'0'.repeat(64)})).status,409);
+  assert.equal((await post({...confirmed(preview),confirm:false})).status,400);
+  assert.equal((await post(confirmed(preview),'operator')).status,403);
+  assert.equal((await post(confirmed(preview),'other-store')).status,403);
+  assert.equal((await post(confirmed(preview),'other-company')).status,404);
+  assert.equal(await f.stock(),13,'denied/stale requests cannot reverse inventory');
+  assert.equal(await f.preserved(),originalEvidence,'denied/stale requests cannot alter original financial evidence');
+  assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "PurchaseOrderReopenAudit"'))[0].n,0);
+
+  const {JSDOM}=await import('jsdom');
+  dom=new JSDOM('<div id="root"></div><div id="parent"></div>',{url:'https://fixture.invalid'});
+  const doc=dom.window.document,root=doc.querySelector('#root'),parent=doc.querySelector('#parent');
+  dom.window.localStorage.setItem('user',JSON.stringify({role:'MANAGER'}));
+  const clientSource=(await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
+  let posts=0,resolvePost;const done=new Promise(resolve=>resolvePost=resolve);
+  const clientFetch=async(path,options={})=>{
+   if(options.method==='POST')posts++;
+   const response=await fetch(origin+path,{...options,headers:{...(options.headers||{}),'x-fixture-actor':'manager'}});
+   if(options.method==='POST')resolvePost(response.status);
+   return response;
+  };
+  const showCancel=new Function('document','window','localStorage','fetch','greeceDateInput','installInvoiceProductMatcher',clientSource+';return showCancel;')(doc,dom.window,dom.window.localStorage,clientFetch,()=> '2026-10-18',()=>{});
+  let refreshes=0;
+  await showCancel(root,parent,{id:'pos',storeId:'s',status:'INVOICED',awaitingInvoice:false},()=>refreshes++,()=>true);
+  const form=doc.querySelector('[data-cancel-form]');
+  assert.ok(form,'manager must see confirmation form');
+  assert.equal(form.querySelectorAll('[data-reopen-line-audit] tbody tr').length,1);
+  assert.equal(posts,0,'preview must remain read-only');
+  form.elements.reason.value='Synthetic test-only duplicate invoice cancellation';
+  form.elements.confirm.checked=true;
+  form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+  form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+  assert.equal(await done,200,'the BackOffice form must call the actual cancellation HTTP route');
+  assert.equal(posts,1,'double-submission must not create another cancellation');
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(await f.stock(),10,'three posted stock units must be reversed exactly once');
+  assert.equal(await f.preserved(),originalEvidence,'original payment, attachments, jobs and control store must be identical');
+  const [order]=await f.db.$queryRawUnsafe('SELECT "status" FROM "PurchaseOrder" WHERE "id"=$1','pos');
+  assert.equal(order.status,'CANCELLED');
+  const [document]=await f.db.$queryRawUnsafe('SELECT "status" FROM "PurchaseDocument" WHERE "id"=$1','pos');
+  assert.equal(document.status,'CANCELLED','the approved purchase projection must be cancelled');
+  const [originalDraft]=await f.db.$queryRawUnsafe('SELECT "status" FROM "PurchaseDocument" WHERE "id"=$1','d-pos');
+  assert.equal(originalDraft.status,'DRAFT','the original POS source document must remain preserved');
+  const [links]=await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "PurchaseOrderReopenMovement"');
+  assert.equal(links.n,1,'one inverse stock movement must be linked to one audit');
+  const audits=await f.db.$queryRawUnsafe('SELECT "details" FROM "StoreOperatorAudit" WHERE "eventType"=$1','PURCHASE_ORDER_CANCELLED');
+  assert.equal(audits.length,1,'one cancellation audit must be written');
+  assert.equal(audits[0].details.before,'INVOICED');
+  assert.equal(audits[0].details.after,'CANCELLED');
+  assert.equal(audits[0].details.lineAudit.lineCount,1);
+  const duplicate=await post(confirmed(preview));
+  assert.equal(duplicate.status,200);
+  assert.equal((await duplicate.json()).idempotent,true);
+  assert.equal(await f.stock(),10,'duplicate confirmation must not reverse stock twice');
+  assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "PurchaseOrderReopenMovement"'))[0].n,1);
+  assert.equal((await fetch(endpoint+'/reopen-preview?storeId=s')).status,409,'cancelled invoice must be terminal');
+  assert.equal(await f.preserved(),originalEvidence);
+ }finally{
+  if(dom)dom.window.close();
+  if(server)await new Promise(resolve=>server.close(resolve));
+  await f.close();
+ }
+});
