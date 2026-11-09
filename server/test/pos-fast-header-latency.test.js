@@ -1,3 +1,4 @@
+import {reviewFastSupplierVat} from "../src/lib/invoice-fast-vat-role.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -40,7 +41,7 @@ const fallback=()=>({supplierName:'FALLBACK SUPPLIER',supplierTaxId:'088888888',
 function createHarness({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,transportResponses=[],transportNow,transportTimeout,fastModel,generalModel,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`,timingOptions={},autoFinish=true,onResponse,pdfCount=2}={}){
  const calls=[],queries=[],requests=[],timings=[],responses=[];let walletScopes=0;
  const responseTimings=new WeakMap();
- const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:openaiConfigured?'synthetic':'',...(fastModel===undefined?{}:{OPENAI_INVOICE_FAST_MODEL:fastModel}),...(generalModel===undefined?{}:{OPENAI_INVOICE_MODEL:generalModel})}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
+ const deps={reviewFastSupplierVat,Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:openaiConfigured?'synthetic':'',...(fastModel===undefined?{}:{OPENAI_INVOICE_FAST_MODEL:fastModel}),...(generalModel===undefined?{}:{OPENAI_INVOICE_MODEL:generalModel})}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
   createFastHeaderTiming:res=>createFastHeaderTiming(res,{...timingOptions,emit:event=>{timings.push(event);responseTimings.get(res).push(event);return timingOptions.emit?.(event)}}),
   prisma:{store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null}},$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});if(durable instanceof Error)throw durable;return durable}},
   walletActivityFromRequest:(req,scope)=>{assert.equal(req.user.companyId,'company-a');assert.deepEqual(scope,{storeId:'store-a',purpose:'PAYMENT_HEADER_READ'});return {purpose:scope.purpose}},
@@ -513,4 +514,26 @@ test('actual FAST handler forwards its request-local observer to the existing Az
  assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.totalGross,12.4);assertSanitizedTimings(r.timings);
  assert.deepEqual(r.timings.filter(e=>e.stage.startsWith('azure_poll_')).map(e=>[e.stage,e.poll]),[['azure_poll_wait',1],['azure_poll_request',1]]);
  assert.equal(r.timings.find(e=>e.stage==='azure_submit').correlationId,r.timings.find(e=>e.stage==='request_total').correlationId);
+});
+
+test('FAST keeps the Azure shortcut while withholding a recipient VAT candidate',async()=>{
+ const azure={...complete(),recipientVat:'EL 099 999 999'};
+ const result=await createHarness({azure,matched:{id:'sup',name:'Catalog',taxId:'011111111'}}).execute();
+ assert.ifError(result.error);
+ assert.deepEqual(result.calls,['azure']);
+ assert.equal(result.result.supplierVatNeedsReview,true);
+ assert.equal(result.result.supplierId,'');
+ assert.equal(result.result.supplierTaxId,'');
+ assert.equal(result.result.totalGross,12.4);
+ assert.equal('recipientVat' in result.result,false);
+});
+
+test('FAST fallback also withholds an issuer VAT equal to the Azure recipient VAT',async()=>{
+ const azure={...complete(),totalGross:0,recipientVat:'088888888'};
+ const result=await createHarness({azure}).execute();
+ assert.ifError(result.error);
+ assert.deepEqual(result.calls,['azure','openai']);
+ assert.equal(result.result.supplierVatNeedsReview,true);
+ assert.equal(result.result.supplierId,'');
+ assert.equal(result.result.totalGross,24.8);
 });
