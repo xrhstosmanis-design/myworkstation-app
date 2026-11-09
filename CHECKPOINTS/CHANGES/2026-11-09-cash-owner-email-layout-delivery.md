@@ -1,0 +1,3 @@
+# 09/11/2026 — Formatted cash report inbox verification
+
+CASH-UNIFIED-AUDIT-15, retained cash owner. One explicitly approved native personal test of the 06/11 closing report was sent from MyWorkStation to the single approved personal recipient. Delivery was verified in Gmail Inbox at 15:55 Europe/Athens on 09/11/2026. The received HTML contained two tables, each with a header and three shift rows, the unread-paper reason, and the follow-up request. This is a scoped delivery and HTML-content PASS for the layout in #3745, following the production preview evidence in #3759. No owner-group send or financial finalization was performed. Financial reconciliation remains HOLD. No private addresses, report data or inbox identifiers are recorded here.
