@@ -1,5 +1,6 @@
 import {findCompetingPosDraftReview,findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {walletActivityFromRequest,walletActivityForJob} from "../services/ai-wallet-activity.js";
+import {reviewFastSupplierVat} from "../lib/invoice-fast-vat-role.js";
 import {createFastHeaderTiming} from "../lib/pos-fast-header-timing.js";
 import {invoiceAssistantPageCount} from "../lib/invoice-assistant-page-count.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
@@ -671,13 +672,15 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       // page subtotal. A positive total may use one later Azure metadata rescue.
       needsAzureMetadata=Number.isFinite(fullTotal)&&fullTotal>0&&!complete;
     }
-    let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
+    let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[],recipientVat="",azureSupplierVat="";
     // Page arithmetic cannot establish a whole-document PDF amount.
     // Keep the existing known-one-page rule for every Azure amount reuse.
     let azureCanVerifyDocumentTotal=!isPdf;
     if((!pdfHeaderPriority||needsAzureMetadata)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
-        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS,timing})));
+        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS,timing})),{includeRecipientVat:true});
+        recipientVat=parsed.recipientVat;
+        azureSupplierVat=parsed.supplier?.taxId;
         azureCanVerifyDocumentTotal=!isPdf||(!pdfHeaderPriority&&parsed.azurePageCount===1);
         azureRawText=String(parsed.rawText||"");
         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
@@ -693,10 +696,10 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         // shortcuts require a known single physical page for PDFs; otherwise
         // continue to the existing configured header fallback.
         const azureHasCompleteHeader=Boolean((azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4)&&azureHeader.documentNumber&&azureHeader.documentDate&&Number.isFinite(azureHeader.totalGross)&&azureHeader.totalGross>0);
-        if(azureHasUsefulHeader&&azureCanVerifyDocumentTotal&&(azureProductLines.length||azureHasCompleteHeader))return res.json(azureHeader);
+        if(azureHasUsefulHeader&&azureCanVerifyDocumentTotal&&(azureProductLines.length||azureHasCompleteHeader))return res.json(reviewFastSupplierVat(azureHeader,recipientVat,azureSupplierVat));
         if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
         console.warn(pdfHeaderPriority?"FAST Azure metadata rescue incomplete; reusing full-PDF header":"FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
-        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
+        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(reviewFastSupplierVat(azureHeaderFallback,recipientVat,azureSupplierVat));const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
       }catch(error){throwIfWalletError(error);
         if(String(error?.message||"").includes("δεν επέστρεψε ασφαλή βασικά στοιχεία"))throw error;
         console.error(pdfHeaderPriority?"FAST Azure metadata rescue failed; reusing full-PDF header":"FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
@@ -705,7 +708,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     }
     if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     try{if(!openaiHeaderRead)parsed=await timing.measure("openai_header",()=>callFastOpenAiHeader({prompt,filePart,timing}))}
-    catch(error){throwIfWalletError(error);if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(azureHeaderFallback);throw error}
+    catch(error){throwIfWalletError(error);if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(reviewFastSupplierVat(azureHeaderFallback,recipientVat,azureSupplierVat));throw error}
     const supplierName=String(parsed.supplierName||azureHeaderFallback?.supplierName||"");
     const supplierTaxId=String(parsed.supplierTaxId||azureHeaderFallback?.supplierTaxId||"");
     const supplier=await timing.measure("openai_supplier_match",()=>matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId}));
@@ -739,7 +742,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // a table that already proves itself against the invoice.
     const providerLines=Array.isArray(parsed.productLines)&&parsed.productLines.length?parsed.productLines:azureCandidateProductLines;
     const productLines=reconciledFastProductLines(providerLines,totalGross);
-    res.json({
+    res.json(reviewFastSupplierVat({
       confidence:Number(parsed.confidence||0),
       supplierId:supplier?.id||"",
       supplierName:supplier?.name||supplierName,
@@ -750,7 +753,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       totalGross:totalGross>0?totalGross:0,
       totalGrossVerified:!isPdf&&verifiedPayableTotal>0&&round2(verifiedPayableTotal)===totalGross,
       productLines
-    });
+    },recipientVat,parsed.supplierTaxId||azureSupplierVat));
   });
   }catch(error){next(error)}
 });

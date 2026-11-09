@@ -107,9 +107,11 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
         ?processedPages.map(page=>page.fastHeader).filter(Boolean):undefined;
       const {supplierHeader:supplierMeta,documentHeader:documentMeta,totalHeader:totalMeta,totalNeedsReview,documentNumberNeedsReview,confidence}=mergeFastInvoiceHeaders(headerResults,{imageHeaders});
       const supplierConflict=Boolean(imageHeaders&&hasConflictingFastSuppliers(imageHeaders,supplierOptions));
-      const knownSupplier=supplierConflict?null:knownSupplierFromFastHeaders(imageHeaders||headerResults,supplierOptions);
-      setSupplierNeedsReview(supplierConflict);
-      if(supplierConflict){
+      const recipientVatConflict=processedPages.some(page=>page.fastHeader?.supplierVatNeedsReview===true);
+      const supplierReview=supplierConflict||recipientVatConflict;
+      const knownSupplier=supplierReview?null:knownSupplierFromFastHeaders(imageHeaders||headerResults,supplierOptions);
+      setSupplierNeedsReview(supplierReview);
+      if(supplierReview){
         if(!manualSupplier.current)setSupplierId("");
         setSupplierCandidate({name:"",taxId:""});
       }else{
@@ -127,6 +129,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
         else if(totalMeta)setAmount(Number(totalMeta.totalGross).toFixed(2).replace(".",","));
       }
       const reviewMessages=[
+        recipientVatConflict&&"Το ΑΦΜ που διαβάστηκε συμπίπτει με του παραλήπτη. Έλεγξε το ΑΦΜ του εκδότη στο πρωτότυπο και επίλεξε προμηθευτή.",
         supplierConflict&&"Διαβάστηκαν διαφορετικά στοιχεία προμηθευτή. Έλεγξε το ΑΦΜ του εκδότη στο πρωτότυπο και επίλεξε προμηθευτή.",
         documentNumberNeedsReview&&"Διαβάστηκαν διαφορετικοί αριθμοί. Έλεγξε τον αριθμό τιμολογίου στο πρωτότυπο πριν συνεχίσεις.",
         totalNeedsReview&&"Διαβάστηκαν διαφορετικά ποσά. Έλεγξε το τελικό πληρωτέο στο πρωτότυπο πριν συνεχίσεις."
@@ -141,7 +144,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     if(!manualAmount.current)setAmount("");
     if(!manualSupplier.current)setSupplierId("");
     setSupplierCandidate({name:"",taxId:""});
-    setSupplierNeedsReview(hasConflictingFastSuppliers(next.map(page=>page.fastHeader),supplierOptions));
+    setSupplierNeedsReview(next.some(page=>page.fastHeader?.supplierVatNeedsReview===true)||hasConflictingFastSuppliers(next.map(page=>page.fastHeader),supplierOptions));
   }const foundCredit=next.some(page=>page.fastDocumentType==="CREDIT_NOTE");setCreditDetected(foundCredit);if(foundCredit)setDocumentType("CREDIT_NOTE");else if(creditDetected)setDocumentType("");if(!next.length){setSupplierNeedsReview(false);setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setDocumentType("");setMode("");setStatus("Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).")}else setStatus("Η λίστα αρχείων άλλαξε. Έλεγξε τα 4 βασικά στοιχεία με τα εναπομείναντα πρωτότυπα.")};
   const movePage=(index,direction)=>{if(busy||reading)return;const target=index+direction;if(target<0||target>=pages.length)return;const next=[...pages];[next[index],next[target]]=[next[target],next[index]];setPages(next)};
   const saveNewSupplier=async()=>{
