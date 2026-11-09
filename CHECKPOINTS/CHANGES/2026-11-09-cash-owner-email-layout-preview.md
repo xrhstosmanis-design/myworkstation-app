@@ -1,0 +1,5 @@
+# 09/11/2026 — Owner-style cash email production preview evidence
+
+CASH-UNIFIED-AUDIT-15, existing owner retained. Scope claim #3744; implementation #3745 merged as f95aea0bd4ab60ae54c4643c4374e79b48cf9b05. Exact PR CI 42519687366 and post-merge CI 42521497052 passed. Render deployment dep-dboes8bl550s739h8260 reached LIVE at revision 5ba8cf64828311d5d58023f7845a342d446d5e01.
+
+Production owner preview was opened on the previously selected closing day, 2026-11-06. The formatted document contained two rendered tables, with three shifts plus a header in each. It showed the cash and handoff table, the POS–EFTPOS table, an explicit reason for an unread handwritten attachment, and the reply request. This is a scoped production preview PASS. The operator performed no send, so delivery and inbox rendering of this layout remain NOT TESTED. Earlier personal inbox delivery remains scoped to the previous layout. The underlying financial reconciliation remains HOLD. No addresses, amounts, names or report body are recorded here.
