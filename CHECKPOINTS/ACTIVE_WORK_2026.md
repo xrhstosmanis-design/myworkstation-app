@@ -36,3 +36,5 @@
 09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / QR/PIN Enter and +1 per scan. Retained owner /root. [Scope and next steps](CHANGES/2026-11-09-inventory-link-scan.md). Separate LAB acceptance pending.
 
 Source `5cfa4d9d` published on the scoped branch. Synthetic handler check verified repeated and alternate barcode, different-item protection, one save on repeated Enter, additive total and reset. Exact PR CI and physical scanner LAB remain pending.
+
+09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / [QR/PIN count correction](CHANGES/2026-11-09-inventory-link-correction.md). Retained owner /root. CI and LAB pending.
