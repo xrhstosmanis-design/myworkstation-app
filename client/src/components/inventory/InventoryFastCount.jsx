@@ -37,6 +37,9 @@ export default function InventoryFastCount({ api, current, reload, setError, del
   const displayBarcode = line => barcodes(line)[0] || "";
   const barcodeRef = useRef(null);
   const quantityRef = useRef(null);
+  const lookupSequence = useRef(0);
+  const [verifiedMissing, setVerifiedMissing] = useState("");
+  useEffect(() => () => { lookupSequence.current++; }, [current.id, locked]);
   const [lookup, setLookup] = useState("");
   const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState("");
@@ -112,11 +115,27 @@ export default function InventoryFastCount({ api, current, reload, setError, del
     });
   };
 
-  const find = (event) => {
+  const find = async (event) => {
     event?.preventDefault();
     if (!canCount || locked || saving) return;
     const term = lookup.trim();
     if (!term) return barcodeRef.current?.focus();
+    setVerifiedMissing("");
+    if (delegated?.onLookup) {
+      const request = ++lookupSequence.current;
+      setSelected(null);
+      setMatches([]);
+      try {
+        const found = await delegated.onLookup(current.id, term);
+        if (request !== lookupSequence.current || found === null) return;
+        if (found.length === 1) return choose(found[0]);
+        if (found.length > 1) return setMatches(found.slice(0, 12));
+        setVerifiedMissing(term);
+      } catch (error) {
+        if (request === lookupSequence.current) setError(error.message);
+        return;
+      }
+    }
     const candidates = (current.lines || []).filter((line) =>
       matchesGreekSearch(term, [line.name, line.sku, ...barcodes(line)]),
     );
@@ -249,7 +268,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
                   disabled={locked || saving}
                   ref={barcodeRef}
                   value={lookup}
-                  onChange={(event) => { setLookup(event.target.value); setSelected(null); setMatches([]); }}
+                  onChange={(event) => { lookupSequence.current++; setVerifiedMissing(""); setLookup(event.target.value); setSelected(null); setMatches([]); }}
                   placeholder="Barcode, SKU ή περιγραφή"
                   autoComplete="off"
                 />
@@ -293,16 +312,23 @@ export default function InventoryFastCount({ api, current, reload, setError, del
               {matches.map((line) => <button key={line.id} disabled={locked || saving} onClick={() => choose(line)}><b>{line.name}</b><small>{displayBarcode(line) || line.sku || "—"}</small></button>)}
             </div>
           )}
-          {(!delegated || delegated.canCreateProduct) && !selected && lookup.trim() && matches.length === 0 && (
+          {(!delegated || (delegated.canCreateProduct && (!delegated.onLookup || verifiedMissing === lookup.trim()))) && !selected && lookup.trim() && matches.length === 0 && (
             <button type="button" className="inv2-new-product" onClick={createProduct}>+ Καταχώρηση νέου είδους με αυτό το barcode</button>
           )}
         </section>
       )}
 
-      {delegated && !canCount && <label>Αναζήτηση είδους<input aria-label="Αναζήτηση είδους" value={lookup} disabled={locked} onChange={event => setLookup(event.target.value)} /></label>}
+      {delegated && !canCount && <label>Αναζήτηση είδους<input aria-label={delegated.pagination ? "Αναζήτηση στη σελίδα" : "Αναζήτηση είδους"} value={lookup} disabled={locked} onChange={event => setLookup(event.target.value)} /></label>}
+      {delegated?.pagination && (delegated.pagination.hasPrevious || delegated.pagination.hasNext) && (
+        <nav aria-label="Σελίδες γραμμών απογραφής">
+          <button type="button" disabled={locked || saving || !delegated.pagination.hasPrevious} onClick={delegated.pagination.onPrevious}>Προηγούμενες γραμμές</button>
+          <span>Σελίδα γραμμών {delegated.pagination.page}</span>
+          <button type="button" disabled={locked || saving || !delegated.pagination.hasNext} onClick={delegated.pagination.onNext}>Επόμενες γραμμές</button>
+        </nav>
+      )}
       <div className="inv2-list-tools">
         <b>{showAll ? "Όλα τα είδη απογραφής" : "Καταμετρημένα είδη"}</b>
-        <span>{(delegated || current.scopeType === "FREE") ? `${countedLines.length} καταμετρημένα είδη` : `${countedLines.length} από ${current.lines.length} καταμετρήθηκαν`}</span>
+        <span>{(delegated || current.scopeType === "FREE") ? `${countedLines.length} καταμετρημένα είδη${delegated?.pagination ? " στη σελίδα" : ""}` : `${countedLines.length} από ${current.lines.length} καταμετρήθηκαν`}</span>
         <button type="button" disabled={locked} onClick={() => setShowAll((value) => !value)}>{showAll ? "Μόνο καταμετρημένα" : "Εμφάνιση όλων"}</button>
       </div>
       {canBulkZero && current.status === "DRAFT" && (

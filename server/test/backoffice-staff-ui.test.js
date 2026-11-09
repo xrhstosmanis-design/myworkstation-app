@@ -44,6 +44,41 @@ test('personal inventory page navigation clears old detail, uses scoped cursors 
   assert.ok(calls.some(x=>x.path.endsWith('?after=first')));
  }finally{await m.close()}
 });
+test('personal detail pages and barcode lookup remain scoped to the open stocktake',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const draft={id:'draft',storeId:'a1',name:'Paged draft',status:'DRAFT'};
+ const first={id:'line-1',name:'First page item',barcodes:['111'],countedQuantity:null};
+ const second={id:'line-2',name:'Second page item',barcodes:['000123'],countedQuantity:null};
+ const base='/api/backoffice-staff/inventory/stores/a1/stocktakes';
+ const api=async(path,options={})=>{
+  assert.equal(options.method||'GET','GET');
+  if(path.endsWith('/me'))return identity;
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  if(path===base)return {storeId:'a1',stocktakes:[draft]};
+  if(path===base+'/draft?paged=1')return {...draft,lines:[first],nextCursor:first.id};
+  if(path===base+'/draft?paged=1&after=line-1'||path===base+'/draft?paged=1&code=000123')return {...draft,lines:[second],nextCursor:null};
+  assert.fail(path);
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Απογραφή').click());
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+  await m.act(async()=>document.querySelector('.inv2-history-open').click());
+  const table=()=>document.querySelector('.inv2-table-wrap').textContent;
+  assert.match(table(),/First page item/);
+  assert.doesNotMatch(table(),/Second page item/);
+  await m.act(async()=>button('Επόμενες γραμμές').click());
+  assert.match(table(),/Second page item/);
+  assert.equal(button('Επόμενες γραμμές').disabled,true);
+  await m.act(async()=>button('Προηγούμενες γραμμές').click());
+  assert.match(table(),/First page item/);
+  const input=document.querySelector('input[placeholder="Barcode, SKU ή περιγραφή"]');
+  await m.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'000123');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  await m.act(async()=>input.closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  assert.match(document.querySelector('.inv2-work').textContent,/Second page item/);
+ }finally{await m.close()}
+});
 test('actual personal workspace wires the independent theory flag and does not invent a difference for an uncounted row',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace');
  const calls=[],row={id:'st',storeId:'a1',name:'Theory-only draft',status:'DRAFT',lines:[{id:'line',name:'Not counted',sku:'NC',barcodes:[],countedQuantity:null,expectedQuantity:'7',countVersion:0}]};
@@ -431,7 +466,7 @@ test('read-only personal inventory loads only the selected redacted endpoints an
   if(path==='/api/backoffice-staff/me')return {...identity,stores:[{...identity.stores[0],capabilities:['inventory.read']}]};
   assert.equal(options.headers['x-backoffice-store-id'],'a1');
   if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes')return {storeId:'a1',stocktakes:[{id:'st',name:'Readonly draft',status:'DRAFT'}]};
-  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes/st')return {id:'st',storeId:'a1',name:'Readonly draft',status:'DRAFT',lines:[{id:'l',name:'Water',sku:'W',barcodes:['11111111'],countVersion:2,countedQuantity:'4'}]};
+  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes/st?paged=1')return {id:'st',storeId:'a1',name:'Readonly draft',status:'DRAFT',lines:[{id:'l',name:'Water',sku:'W',barcodes:['11111111'],countVersion:2,countedQuantity:'4'}]};
   assert.fail('Unexpected native Owner or foreign read: '+path);
  };
  const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
@@ -441,7 +476,7 @@ test('read-only personal inventory loads only the selected redacted endpoints an
   await m.act(async()=>button('Readonly draft').click());
   assert.match(document.querySelector('.inv2-work tbody').textContent,/Water/);assert.equal(document.querySelector('.inv2-fast-entry'),null);assert.equal(document.querySelector('input[name="name"]'),null);assert.equal(document.querySelector('input[name="reason"]'),null);assert.equal(document.querySelector('button[title="Διόρθωση"]'),null);
   for(const text of ['Απόθεμα','Διαφορά','Αξία κόστους','Νέα απογραφή','Οριστικοποίηση'])assert.ok(!document.querySelector('.inv2').textContent.includes(text));
-  assert.deepEqual(calls.map(c=>c.path),['/api/backoffice-staff/me','/api/backoffice-staff/inventory/stores/a1/stocktakes','/api/backoffice-staff/inventory/stores/a1/stocktakes/st']);
+  assert.deepEqual(calls.map(c=>c.path),['/api/backoffice-staff/me','/api/backoffice-staff/inventory/stores/a1/stocktakes','/api/backoffice-staff/inventory/stores/a1/stocktakes/st?paged=1']);
  }finally{await m.close()}
 });
 
@@ -585,7 +620,7 @@ test('personal inventory opens the existing store-scoped new-product card withou
   if(options.method&&options.method!=='GET'){writes.push({path,options});throw Error('No state-changing call expected');}
   if(path==='/api/backoffice-staff/me')return staff;
   if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes')return {storeId:'a1',stocktakes:[current]};
-  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes/draft-a')return current;
+  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes/draft-a?paged=1'||path==='/api/backoffice-staff/inventory/stores/a1/stocktakes/draft-a?paged=1&code=5200123456789')return current;
   if(path.includes('/new-card/options'))return {categories:[],brands:[],vatDepartments:[],suppliers:[],supplierCodes:[]};
   return {};
  };
@@ -596,6 +631,8 @@ test('personal inventory opens the existing store-scoped new-product card withou
   await m.act(async()=>document.querySelector('.inv2-history-open').click());
   const input=document.querySelector('input[placeholder="Barcode, SKU ή περιγραφή"]');assert.ok(input);
   await m.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'5200123456789');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  assert.equal(document.querySelector('.inv2-new-product'),null);
+  await m.act(async()=>input.closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
   const create=document.querySelector('.inv2-new-product');assert.ok(create);
   await m.act(async()=>create.click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,80)));
   const dialog=document.querySelector('[role="dialog"][aria-label="Νέο είδος · Πλήρης καρτέλα"]');assert.ok(dialog,'existing full product card must open');
