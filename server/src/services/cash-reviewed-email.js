@@ -59,6 +59,31 @@ function reportTable(title,headers,rows){
    headers.map(h=>'<th scope="col" style="'+cell+';background:#f1f5f9">'+escape(h)+'</th>').join('')+
    '</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(v=>'<td style="'+cell+'">'+escape(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
 }
+const evidenceHeadings=new Map([
+ ['ΣΤΟΙΧΕΙΑ ΠΟΥ ΕΛΕΓΧΘΗΚΑΝ','Στοιχεία που ελέγχθηκαν'],
+ ['ΑΝΑΛΥΤΙΚΑ ΑΠΟΤΕΛΕΣΜΑΤΑ ΑΝΑ ΒΑΡΔΙΑ','Αναλυτικά αποτελέσματα ανά βάρδια'],
+ ['ΧΕΙΡΟΓΡΑΦΑ ΚΑΙ ΠΑΡΑΣΤΑΤΙΚΑ ΑΠΟ ΤΟ ΤΣΑΤ','Χειρόγραφα και παραστατικά'],
+ ['ΕΛΕΓΧΟΣ ΣΥΜΒΑΝΤΩΝ — ΑΛΛΑΓΕΣ ΤΙΜΩΝ ΚΑΙ ΕΚΠΤΩΣΕΙΣ','Αλλαγές τιμών και εκπτώσεις'],
+ ['ΣΥΜΒΑΝΤΑ ΚΑΙ ΠΩΛΗΣΕΙΣ ΑΠΟ ΑΡΧΕΙΑ KIOSK','Συμβάντα και πωλήσεις Kiosk'],
+]);
+function renderCashEmailEvidence(text){
+ const blocks=[];
+ let lines=[];
+ const flush=()=>{
+   if(lines.some(Boolean))blocks.push('<div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escape(lines.join('\n').trim())+'</div>');
+   lines=[];
+ };
+ for(const line of text.split('\n')){
+   const heading=evidenceHeadings.get(line);
+   const shift=line.startsWith('ΒΑΡΔΙΑ · ');
+   if(heading||shift){
+     flush();
+     blocks.push(shift?'<h4>'+escape(line.slice('ΒΑΡΔΙΑ · '.length))+'</h4>':'<h3>'+escape(heading)+'</h3>');
+   }else lines.push(line);
+ }
+ flush();
+ return blocks.join('');
+}
 function cashEmailHtml(report,text){
  const rows=report.rows;
  const pending=rows.some(row=>row.fullAudit?.pendingChecks?.length||(!row.reviewed&&row.status!=='NOT_APPLICABLE'))||
@@ -77,7 +102,7 @@ function cashEmailHtml(report,text){
    ' · Κλεισμένες βάρδιες: '+rows.length+'</p>'+
    reportTable('Μετρητά και παραδόσεις',['Βάρδια','Χειριστής','Ώρες','Αρχική διαφορά','Υπόλοιπο ελέγχου','Κατάσταση'],cash)+
    reportTable('Κάρτες POS–EFTPOS',['Βάρδια','Χειριστής','Διαφορά','Κατάσταση'],cards)+
-   '<h3>Αναλυτικά ευρήματα και τεκμήρια</h3><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escape(details)+'</div>'+followUp+'</div>';
+   '<h3>Αναλυτικά ευρήματα και τεκμήρια</h3>'+renderCashEmailEvidence(details)+followUp+'</div>';
 }
 
 export function renderReviewedCashEmail({evidence,companyId,storeId,storeName,date,comment='',previewOnly=false}){
