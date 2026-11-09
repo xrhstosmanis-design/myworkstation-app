@@ -1,3 +1,21 @@
+## 07/11/2026 — CASH-ADJACENT-COUNT-21 / LIMITED NATIVE LIVE UI PASS / REMAINING SCOPE OPEN
+
+Same retained cash owner; no transfer. The owner explicitly redirected the approved read-only acceptance to a live store. One native Platform SuperAdmin desktop Chrome invocation of «Αυτόματος έλεγχος χωρίς χρέωση» was recorded at 14:34:50 UTC / 16:34:50 Europe/Athens for closing day 2026-11-06, on healthy revision `5606b18cc591cb6682dbe54f3aa0fb7e01c0cf91`. It returned HOLD: 3 checked/pending shifts, 3 cash-difference rows, 0 card differences, 0 numeric allocation proposals and 3 ambiguous candidates. Paper coverage was partial: 51 unresolved lines, 48 unread attachments, 0 pending readings and 1 requiring review. Attachment counters cover the available selected-store collection, not exclusively the selected day.
+
+The 3 visible cash rows, 3 ambiguity lines and 9 pending-reply texts matched before/after; visible review history remained 0 → 0. The UI displayed completion without chargeable reading or financial entry. No paid-reader, review/offset, financial mutation or email action was performed by the operator. This proves the observed UI completion and conservative presentation only. Canonical reportHash, database/ledger invariance, independent control-state effects and provider/billing telemetry were NOT MEASURED. Exact response latency was not measured.
+
+This observation supersedes the earlier authentication block and no-charge-button AWAITING LAB status for this single native flow. No LAB action was performed after the owner's live-store redirection. Other roles/devices/periods, switch/race behavior, successful manual-review summary invalidation and nonambiguous allocation remain outside this hosted observation. Source/evidence accuracy, missing handwritten and expense evidence, final reconciliation and financial approval remain OPEN. Both CASH-ADJACENT-COUNT-21 and parent CASH-UNIFIED-AUDIT-15 remain OPEN/ASSIGNED to the same owner. Preserve the separate 04/11 basic/full saved-reading PASS.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-06-cash-automatic-review.md. Sanitized receipt: CHECKPOINTS/EVIDENCE/cash-automatic-review-20261106/live-ui-acceptance-20261107.json. No real-store/employee names, amounts, business identifiers, raw responses or screenshots are added to this receipt.
+
+### Current continuation
+
+Source PR #3683 and release receipt #3699 are merged; their delivery/CI history below remains historical evidence. Current main/runtime 5606b18c retains the approved cash implementation. Health was independently observed at 2026-11-07T14:35:27.562792Z, between the before/action record and the after snapshot at 14:36:08.152Z. The earlier 06/11 login timeout no longer blocks the observed flow.
+
+The remaining next action is evidence reconciliation under the same cash owner: establish which available originals apply to the selected shifts and resolve the remaining documented ambiguities before financial approval. Broader authorized hosted coverage remains separate. Do not repeat this successful single UI invocation merely to reproduce a record, and do not infer DB/provider effects from the displayed completion message.
+
+This documentation-only continuation synchronizes checkpoint, active list, verified-use manual, remaining roadmap, tracker and its two PDF locations. It changes no runtime behavior and does not require deployment.
+
 # 06/11/2026 — Task 5 automatic cash audit / retained owner / review continuation
 
 ## Current delivery status — 06/11/2026, installation verified / AWAITING LAB

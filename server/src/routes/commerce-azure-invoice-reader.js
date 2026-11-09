@@ -146,7 +146,7 @@ export async function callAzure({contentData,mimeType,timeoutMs=0,timing}){
   throw new Error("AZURE_TIMEOUT");
   });
 }
-export function normalizeAzure(payload){
+export function normalizeAzure(payload,{includeRecipientVat=false}={}){
   const result=payload?.analyzeResult||{};
   const doc=result.documents?.[0]||{};
   const f=doc.fields||{};
@@ -161,7 +161,7 @@ export function normalizeAzure(payload){
   const headerConf=[f.VendorName?.confidence,f.VendorTaxId?.confidence,f.InvoiceId?.confidence,f.InvoiceDate?.confidence,f.InvoiceTotal?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const aiConfidence=Math.round((lineConf.concat(headerConf).reduce((a,b)=>a+b,0)/(lineConf.length+headerConf.length||1))*10)/10;
   const lines=productLines.map(line=>({text:line.rawText||[line.code,line.description,line.quantity,line.unit,line.unitCost,line.netAmount].filter(Boolean).join(" "),confidence:line.confidence}));
-  return {aiConfidence,supplier,documentNumber,documentDate,totalGross,rawText:String(result.content||""),lines,productLines,azureDocumentIntelligence:true,azureModel:MODEL_ID,azureApiVersion:API_VERSION,azureDocumentConfidence:pct(doc.confidence),azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
+  return {aiConfidence,supplier,...(includeRecipientVat?{recipientVat:fieldText(f.CustomerTaxId)}:{}),documentNumber,documentDate,totalGross,rawText:String(result.content||""),lines,productLines,azureDocumentIntelligence:true,azureModel:MODEL_ID,azureApiVersion:API_VERSION,azureDocumentConfidence:pct(doc.confidence),azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
 }
 
 router.get("/ai-reader/azure-status",requireCompanyModule("AI_READER"),(req,res)=>res.json({configured:configured(),provider:"AZURE_DOCUMENT_INTELLIGENCE",model:MODEL_ID,apiVersion:API_VERSION}));

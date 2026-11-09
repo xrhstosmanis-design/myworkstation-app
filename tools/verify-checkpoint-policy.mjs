@@ -1,7 +1,7 @@
 import {execFileSync} from "node:child_process";
 import {pathToFileURL} from "node:url";
 
-const ACTIVE_LIST="CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md";
+const ACTIVE_LIST="CHECKPOINTS/ACTIVE_WORK_2026.md";
 const CHECKPOINT_PREFIX="CHECKPOINTS/CHANGES/";
 
 export function validateCheckpointFiles(files=[]){

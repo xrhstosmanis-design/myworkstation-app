@@ -73,5 +73,45 @@ try {
     } finally { if ($null -ne $job) { Stop-Job $job; Remove-Job $job }; if ($held) { $mutex.ReleaseMutex() }; $mutex.Dispose() }
     $c.storeId='test-store';$c.workFolder='C:\';$c | ConvertTo-Json | Set-Content -LiteralPath $config -Encoding UTF8
     MustThrow { Get-FtextConfig $config } 'Drive root must be rejected.'
+    # Native regression for CMD option 9: only exact, stale, nonfiscal STATUS.
+    $recoveryRoot=Join-Path $root 'recovery'
+    New-Item -ItemType Directory -Path $recoveryRoot | Out-Null
+    $recoveryCfg=Join-Path $root 'recovery-config.json'
+    $rc=[ordered]@{companyId='test-company';storeId='test-store';terminalPos='TEST-POS-01';serialNumber=$serial;workFolder=$recoveryRoot}
+    $rc | ConvertTo-Json | Set-Content -LiteralPath $recoveryCfg -Encoding UTF8
+    $oldId=[Guid]::NewGuid().ToString('N')
+    $markerPath=Join-Path $recoveryRoot '.mws-ftext-status.json'
+    $pendingPath=Join-Path $recoveryRoot ('mws-status-'+$oldId+'.pending')
+    $resultPath=Join-Path $recoveryRoot ('mws-status-'+$oldId+'.res')
+    $m=[ordered]@{id=$oldId;command='STATUS';companyId=$rc.companyId;storeId=$rc.storeId;terminalPos=$rc.terminalPos;serialNumber=$serial;createdAt=[DateTime]::UtcNow.AddMinutes(-6).ToString('o')}
+    [IO.File]::WriteAllText($markerPath,($m | ConvertTo-Json -Compress))
+    [IO.File]::WriteAllBytes($pendingPath,$enc.GetBytes(('RESULT_FILENAME|'+$resultPath+[char]13+[char]10+'STATUS'+[char]13+[char]10)))
+    $cash=Join-Path $recoveryRoot '.mws-ftext-cash.json'
+    [IO.File]::WriteAllText($cash,'unresolved')
+    MustThrow { Invoke-FtextOrphanStatusRecovery -ConfigPath $recoveryCfg } 'Unresolved fiscal evidence did not block recovery.'
+    Remove-Item -LiteralPath $cash
+    $m.createdAt=[DateTime]::UtcNow.ToString('o')
+    [IO.File]::WriteAllText($markerPath,($m | ConvertTo-Json -Compress))
+    MustThrow { Invoke-FtextOrphanStatusRecovery -ConfigPath $recoveryCfg } 'Recent STATUS was recovered.'
+    $m.createdAt=[DateTime]::UtcNow.AddMinutes(-6).ToString('o')
+    [IO.File]::WriteAllText($markerPath,($m | ConvertTo-Json -Compress))
+    [IO.File]::WriteAllBytes($resultPath,$enc.GetBytes($valid))
+    MustThrow { Invoke-FtextOrphanStatusRecovery -ConfigPath $recoveryCfg } 'Late original STATUS result was ignored.'
+    Remove-Item -LiteralPath $resultPath
+    [IO.File]::WriteAllText((Join-Path $recoveryRoot 'other.pending'),'unrelated')
+    MustThrow { Invoke-FtextOrphanStatusRecovery -ConfigPath $recoveryCfg } 'Unrelated pending input was ignored.'
+    Remove-Item -LiteralPath (Join-Path $recoveryRoot 'other.pending')
+    $markerBytes=[IO.File]::ReadAllBytes($markerPath)
+    $pendingBytes=[IO.File]::ReadAllBytes($pendingPath)
+    $recovered=Invoke-FtextOrphanStatusRecovery -ConfigPath $recoveryCfg
+    Assert ($recovered.state -ceq 'ISOLATED') 'Stale original STATUS not isolated.'
+    Assert (-not (Test-Path -LiteralPath $markerPath) -and -not (Test-Path -LiteralPath $pendingPath)) 'Original pending inputs remain.'
+    Assert ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $recovered.archivePath 'original-.mws-ftext-status.json'))) -ceq [Convert]::ToBase64String($markerBytes)) 'Original marker bytes changed.'
+    Assert ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $recovered.archivePath ('original-mws-status-'+$oldId+'.pending')))) -ceq [Convert]::ToBase64String($pendingBytes)) 'Original unpublished bytes changed.'
+    $recheck=Invoke-FtextOrphanStatusRecovery -ConfigPath $recoveryCfg
+    Assert ($recheck.state -ceq 'NO_ACTION') 'Duplicate isolation was not stopped.'
+    MustThrow { Invoke-FtextStatus -ConfigPath $recoveryCfg -TimeoutSeconds 1 } 'Fresh STATUS did not wait for a real device result.'
+    $newMarker=Get-Content -LiteralPath $markerPath -Raw | ConvertFrom-Json
+    Assert ($newMarker.id -cne $oldId -and $newMarker.command -ceq 'STATUS') 'Fresh STATUS has wrong identity or command.'
     Write-Host "FTEXT STATUS isolated tests: $passed PASS"
 } finally { Remove-Item -LiteralPath $root -Recurse -Force }

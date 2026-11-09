@@ -1,3 +1,4 @@
+import {reviewFastSupplierVat} from "../src/lib/invoice-fast-vat-role.js";
 /**
  * Actual FAST route + production footer parsers, wallet error guard, existing
  * table-return predicate and actual Responses wrapper. Network, Azure
@@ -48,7 +49,7 @@ async function run({azure={...complete(),azurePageCount:2},openai=fallback(),ope
   const timings=[];
   const calls=[],requests=[],queries=[],transportRequests=[],originalAzure=snapshot(azure),originalDurable=structuredClone(durable);
   const sum=lines=>round2(lines.reduce((n,line)=>n+Number(line.grossAmount||0),0));
-  const deps={
+  const deps={reviewFastSupplierVat,
     Buffer,crypto,round2,
     createFastHeaderTiming:res=>createFastHeaderTiming(res,{...timingOptions,emit:event=>{timings.push(event);return timingOptions.emit?.(event)}}),
     process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:azureConfigured?'https://synthetic.invalid':'',AZURE_DOCUMENT_INTELLIGENCE_KEY:azureConfigured?'synthetic':'',OPENAI_API_KEY:openaiConfigured?'synthetic':''}},

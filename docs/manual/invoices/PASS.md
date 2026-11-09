@@ -1,3 +1,19 @@
+## 09/11/2026 — FAST issuer and recipient VAT review (#3756)
+
+In LAB BackOffice, open Payments → Supplier Invoice → New Invoice. If the issuer candidate equals the recipient VAT identified in the same reading, the form leaves supplier selection blank and asks you to verify the original. Select the verified issuer manually. See `CHECKPOINTS/CHANGES/2026-11-09-invoice-3756-hosted-lab.md`.
+
+## 08/11/2026 — FAST supplier VAT review (#3750)
+
+In LAB BackOffice, open Payments → Supplier Invoice → New Invoice. When two photos give conflicting supplier identities, the form leaves the automatic choice blank and asks you to check the issuer VAT on the original. Select the verified supplier manually. A lone OCR VAT remains a candidate. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3750-hosted-lab.md`.
+
+## 08/11/2026 — FAST invoice number review (#3740)
+
+In the LAB BackOffice, open Payments → Supplier Invoice → New Invoice. For the synthetic photo pair with the same printed number, the form filled that number. For a pair with conflicting readings, the number stayed blank and the form asked for verification against the original. Compare the displayed header with the original before continuing. A single candidate can still be misread. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3740-hosted-lab.md`.
+
+## 08/11/2026 — FAST invoice photo payable review (#3733)
+
+In the LAB BackOffice, open Payments → Supplier Invoice → New Invoice and select the two images of the same invoice. A uniquely supported payable was filled in either selection order. When the read returned conflicting totals without unique evidence, the amount stayed blank and the form asked the operator to check the printed payable. Compare the displayed header with the original before continuing. This acceptance covers synthetic header reads only. Physical POS and real-photo repeatability remain open. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3733-hosted-lab.md`.
+
 ## 06/11/2026 — K01: 1 αρχείο / 2 φυσικές σελίδες PDF και τέσσερα πεδία, περιορισμένο hosted PASS
 
 Ελεγμένος ρόλος: Platform owner / Super Admin υποστήριξης, desktop Cloud Chrome, εταιρεία MYWORKSTATION LAB και κατάστημα ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Η δοκιμή δεν επεκτείνει δικαιώματα και δεν πιστοποιεί άλλους ρόλους, mobile ή φυσικό POS. Κανονική είσοδος διαχειριστή: https://myworkstation-app.onrender.com/platform-admin.

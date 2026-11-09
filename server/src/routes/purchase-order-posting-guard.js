@@ -1,3 +1,4 @@
+import {applyPackStockCorrectionInTransaction} from "./purchase-order-unresolved-guard.js";
 import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {assertReopenedIdentity,reuseReopenedPurchaseDocument} from "../services/purchase-order-reopen.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertInvoiceStockAvailable,recordInvoiceStockPosting} from "../lib/invoice-common-draft.js";
@@ -166,7 +167,10 @@ router.delete("/:orderId",async(req,res,next)=>{
 router.patch("/:orderId",async(req,res,next)=>{
   try{
     const requestedStatus=req.body?.status;
-    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED")return next();
+    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED"&&!(requestedStatus==="NEW"&&req.body.returnForCorrection===true))return next();
+    if(requestedStatus==="NEW"||requestedStatus==="INVOICED"){
+      if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Η διόρθωση και η τελική τιμολόγηση γίνονται από εξουσιοδοτημένο χρήστη στο BackOffice."});
+    }
     if(!(req.user?.staffAccess===true&&req.staffGrant?.capability==='invoices.approve')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Δεν έχεις δικαίωμα οριστικοποίησης αγορών."});
 
     const companyId=req.user.companyId;
@@ -174,6 +178,7 @@ router.patch("/:orderId",async(req,res,next)=>{
     const result=await prisma.$transaction(async tx=>{
       const scopes=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} LIMIT 1`;
       if(!scopes[0])throw Object.assign(new Error("Δεν βρέθηκε η παραγγελία."),{status:404});
+      if(req.user?.storeId&&String(req.user.storeId)!==scopes[0].storeId)throw Object.assign(new Error("Η αγορά ανήκει σε άλλο κατάστημα."),{status:403});
       if(req.user?.staffAccess===true)await requireStaffAction(tx,req,scopes[0].storeId,'invoices.approve');
       await lockInvoiceStore(tx,companyId,scopes[0].storeId);
       const rows=await tx.$queryRaw`
@@ -182,11 +187,20 @@ router.patch("/:orderId",async(req,res,next)=>{
         FOR UPDATE`;
       const found=rows[0];
       if(!found){const error=new Error("Δεν βρέθηκε η παραγγελία.");error.status=404;throw error}
+      if(found.status==="CANCELLED")throw Object.assign(new Error("Η ακυρωμένη αγορά παραμένει κλειδωμένη και δεν μπορεί να οριστικοποιηθεί ξανά."),{status:409});
       if(n(found.reopenVersion)>0){if(req.body?.expectedReopenVersion!==n(found.reopenVersion))throw Object.assign(new Error("Η αγορά έχει επαναφερθεί για διόρθωση. Ανανέωσε πριν την οριστικοποίηση."),{status:409});assertReopenedIdentity(found,req.body||{});}
+      if(requestedStatus==="NEW"){
+        if(found.status==="NEW")return {ok:true,idempotent:true,status:"NEW"};
+        if(found.status!=="FINAL"||!found.awaitingInvoice)throw Object.assign(new Error("Χρησιμοποίησε την ελεγχόμενη επαναφορά καταχωρισμένης αγοράς."),{status:409});
+        await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='NEW',"awaitingInvoice"=FALSE,"finalizedAt"=NULL,"updatedByName"=${actor},"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+        return {ok:true,status:"NEW"};
+      }
       if(found.status==="INVOICED")return {ok:true,idempotent:true,status:"INVOICED"};
       if(requestedStatus==="INVOICED"&&found.status!=="FINAL"){
         const error=new Error("Η παραγγελία πρέπει πρώτα να οριστικοποιηθεί.");error.status=409;throw error;
       }
+      if(requestedStatus==="FINAL"&&found.awaitingInvoice)return {ok:true,idempotent:true,status:"FINAL",awaitingInvoice:true};
+
       // The approved document is necessarily visible to duplicateDetails.
       // A repeat FINAL for its own posting is idempotent, not a second invoice.
       if(requestedStatus==="FINAL"&&found.status==="FINAL"){
@@ -221,7 +235,19 @@ router.patch("/:orderId",async(req,res,next)=>{
         return {ok:true,idempotent:true,status:"FINAL",purchaseDocumentId:existingPosting.purchaseDocumentId};
       }
 
-      if(requestedStatus==="FINAL"&&!existingPosting){
+      const deferredPosting=requestedStatus==="INVOICED"&&found.awaitingInvoice===true;
+      const linkedDraft=found.sourceType==="POS_OCR_DRAFT"&&found.sourceDocumentId
+        ? (await tx.$queryRaw`SELECT "id","documentType","status","totalGross" FROM "PurchaseDocument"
+          WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "storeId"=${found.storeId}
+            AND "purchaseOrderId"=${found.id} FOR UPDATE`)[0]
+        : null;
+      if(requestedStatus==="FINAL"&&found.status==="NEW"&&found.sourceType==="POS_OCR_DRAFT"&&
+          (!linkedDraft||linkedDraft.status!=="DRAFT"))
+        throw Object.assign(new Error("Δεν επιβεβαιώθηκε το ενεργό πρωτότυπο τιμολογίου."),{status:409});
+      const awaitingInvoice=requestedStatus==="FINAL"&&found.status==="NEW"&&!existingPosting&&linkedDraft?.documentType==="INVOICE"&&linkedDraft.status==="DRAFT";
+      if(deferredPosting&&(existingPosting||linkedDraft?.documentType!=="INVOICE"||linkedDraft.status!=="DRAFT"))
+        throw Object.assign(new Error("Η πηγή ή η καταχώριση του τιμολογίου άλλαξε. Ανανέωσε τον έλεγχο."),{status:409});
+      if(awaitingInvoice||(requestedStatus==="FINAL"&&!existingPosting)||deferredPosting){
         const commonSource=found.sourceDocumentId||found.id;
         await assertInvoiceStockAvailable(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,allowReopenedOrder:true});
         const lines=await tx.$queryRaw`
@@ -229,6 +255,22 @@ router.patch("/:orderId",async(req,res,next)=>{
           WHERE l."orderId"=${found.id}
           ORDER BY l."createdAt",l."id"`;
         if(!lines.length){const error=new Error("Δεν μπορεί να οριστικοποιηθεί αγορά χωρίς είδη.");error.status=409;throw error}
+
+        if(awaitingInvoice){
+          await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL',"awaitingInvoice"=TRUE,
+            "supplierId"=${effectiveSupplierId},"invoiceNumber"=${effectiveInvoiceNumber},"description"=${effectiveDescription},
+            "updatedByName"=${actor},"finalizedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+          return {ok:true,status:"FINAL",awaitingInvoice:true};
+        }
+        if(deferredPosting){
+          if(lines.some(line=>!line.productId&&n(line.quantity)>0&&(n(line.unitCost)>0||n(line.grossAmount)>0)||line.invoiceUnit==="PACKAGE"&&n(line.stockUnitsPerInvoiceUnit)<=0))
+            throw Object.assign(new Error("Ολοκλήρωσε την αντιστοίχιση ειδών και συσκευασιών πριν την Τιμολόγηση."),{status:409});
+          const gross=Math.round((lines.reduce((sum,line)=>sum+n(line.grossAmount),0)+Number.EPSILON)*100)/100;
+          const printedTotal=Math.round((n(linkedDraft.totalGross)+Number.EPSILON)*100)/100;
+          if(printedTotal>0&&Math.abs(Math.round((gross-printedTotal)*100))>5&&
+              (req.totalMismatchOverride?.linesTotal!==gross||req.totalMismatchOverride?.invoiceTotal!==printedTotal))
+            throw Object.assign(new Error("Το σύνολο του τιμολογίου άλλαξε. Ανανέωσε και έλεγξε ξανά."),{status:409,code:"INVOICE_TOTAL_MISMATCH"});
+        }
 
         const linkedCredit=found.sourceDocumentId?await tx.$queryRaw`SELECT "id","documentType","status","totalGross" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "purchaseOrderId"=${found.id} FOR UPDATE`:[];
         if(linkedCredit[0]?.documentType==="CREDIT_NOTE"){
@@ -328,6 +370,14 @@ router.patch("/:orderId",async(req,res,next)=>{
             "status"='FINAL',"updatedByName"=${actor},"finalizedAt"=COALESCE("finalizedAt",NOW()),"updatedAt"=NOW()
           WHERE "id"=${found.id} AND "companyId"=${companyId}`;
         await recordInvoiceStockPosting(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,postedDocumentId:purchaseDocumentId,path:"PURCHASE_ORDER"});
+        if(deferredPosting){
+          const packStockCorrection=await applyPackStockCorrectionInTransaction(tx,{
+            orderId:found.id,companyId,userId:req.user.id,userName:actor,expectedReopenVersion:n(found.reopenVersion),req
+          });
+          await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='INVOICED',"awaitingInvoice"=FALSE,
+            "invoicedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+          return {ok:true,status:"INVOICED",purchaseDocumentId,postedProducts:stockByProduct.size,packStockCorrection};
+        }
         return {ok:true,status:"FINAL",purchaseDocumentId,postedProducts:stockByProduct.size};
       }
 

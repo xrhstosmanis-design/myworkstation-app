@@ -1,3 +1,4 @@
+import { recognizeLocalInvoice } from "../../lib/local-invoice-ocr.mjs";
 import DocumentCameraFocus from "./DocumentCameraFocus.jsx";
 import useCameraAcquisition from "./useCameraAcquisition.js";
 import {captureCameraFrame} from "../../lib/camera-acquisition.js";
@@ -68,61 +69,13 @@ function collectLines(data) {
       confidence: Math.round(Number(data?.confidence) || 0),
     }));
 }
-async function pdfPreview(file) {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).toString();
-  const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() })
-    .promise;
-  const page = await pdf.getPage(1),
-    viewport = page.getViewport({ scale: 2 }),
-    canvas = document.createElement("canvas");
-  canvas.width = Math.ceil(viewport.width);
-  canvas.height = Math.ceil(viewport.height);
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport })
-    .promise;
-  return {
-    source: canvas.toDataURL("image/jpeg", 0.92),
-    pageCount: pdf.numPages,
-    pdfNote:
-      pdf.numPages > 1
-        ? `Το OCR διάβασε την πρώτη σελίδα από ${pdf.numPages}. Αν χρειαστεί AI, ελέγχεται το αρχικό PDF.`
-        : "Αναγνώστηκε η πρώτη σελίδα του PDF.",
-  };
-}
 async function localOcr(file) {
   const dataUrl = await readFile(file);
-  let source = file,
-    pageCount = null,
-    pdfNote = null;
-  if (file.type === "application/pdf") {
-    const preview = await pdfPreview(file);
-    source = preview.source;
-    pageCount = preview.pageCount;
-    pdfNote = preview.pdfNote;
-  }
-  const { createWorker } = await import("tesseract.js"),
-    worker = await createWorker("ell+eng");
-  let result;
-  try {
-    result = await worker.recognize(source);
-  } finally {
-    await worker.terminate();
-  }
   return {
     dataUrl,
     filename: file.name || "timologio.jpg",
     mimeType: file.type || "image/jpeg",
-    confidence: Math.max(
-      0,
-      Math.min(100, Math.round(Number(result?.data?.confidence) || 0)),
-    ),
-    rawText: result?.data?.text || "",
-    lines: collectLines(result?.data || {}),
-    pageCount,
-    pdfNote,
+    ...await recognizeLocalInvoice(file, collectLines),
   };
 }
 function localMeta(rawText, suppliers = []) {
