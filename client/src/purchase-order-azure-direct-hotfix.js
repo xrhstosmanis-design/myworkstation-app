@@ -1,4 +1,6 @@
 const apiFetch=window.fetch.bind(window);
+const nativeIntakes=new WeakSet();
+const directReads=new WeakSet();
 const authHeaders=()=>{const token=localStorage.getItem("token")||sessionStorage.getItem("storeOperatorToken");return {"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}};
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const eur=v=>Number(v||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:4});
@@ -14,7 +16,39 @@ function context(target){const panel=target?.closest?.("section"),modal=target?.
 async function persistJob({storeId,file,dataUrl,readerData,lines,panel,modal}){const confidence=Number(readerData?.aiConfidence||0);const result={aiConfidence:confidence,supplier:readerData?.supplier||{},documentNumber:readerData?.documentNumber||"",documentDate:readerData?.documentDate||"",totalGross:Number(readerData?.totalGross||0),rawText:"",lines:lines.map(x=>({text:x.rawText||x.description,confidence:x.confidence})),productLines:lines,azureDocumentIntelligence:readerData?.provider==="AZURE_DOCUMENT_INTELLIGENCE",reader:"INVOICE_LEARNING_READER"};const job=await request("/api/commerce/ai-reader/jobs","POST",{storeId,filename:file.name||"invoice.jpg",mimeType:file.type||"image/jpeg",dataUrl,localConfidence:0,result});const jobId=String(job.id||"");if(!jobId)throw new Error("Η ανάγνωση ολοκληρώθηκε αλλά δεν δημιουργήθηκε job εισαγωγής.");await request(`/api/commerce/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,"PUT",{source:"AZURE_DOCUMENT_INTELLIGENCE",productLines:lines});modal.dataset.invoiceJobId=jobId;modal.dataset.invoiceProductLines=String(lines.length);panel.dataset.azureJobId=jobId;return jobId}
 async function readWithInvoiceLearning(file,dataUrl){return request("/api/platform/invoice-learning/ai-recheck","POST",{filename:file.name||"invoice.jpg",mimeType:file.type||"image/jpeg",fileData:dataUrl,ocrRows:[],ocrConfidence:0})}
 async function processFile(file,target){const {panel,modal,form}=context(target);if(!panel||!modal||!form)return;const storeId=String(form.querySelector('[name="storeId"]')?.value||"");if(!storeId){status(panel,"Επίλεξε πρώτα Κατάστημα.",true);return}const create=panel.querySelector("[data-create-invoice]"),results=panel.querySelector("[data-invoice-results]"),note=panel.querySelector("[data-lines-note]");if(create)create.disabled=true;try{status(panel,"MyWorkStation Invoice Learning: ανάγνωση πρωτότυπου τιμολογίου…");const dataUrl=await readFile(file);panel.dataset.azureFileData=dataUrl;panel.dataset.azureFilename=file.name||"invoice.jpg";panel.dataset.azureMime=file.type||"image/jpeg";const data=await readWithInvoiceLearning(file,dataUrl);const lines=(Array.isArray(data.productLines)?data.productLines:[]).map(toCommerceLine).filter(x=>x.description&&x.quantity>0);if(!lines.length)throw new Error("Το Invoice Learning δεν επέστρεψε γραμμές προϊόντων.");if(results)results.hidden=false;selectSupplier(form,data);setValue(form.querySelector('[name="invoiceNumber"]'),data.documentNumber);setValue(panel.querySelector("[data-doc-date]"),data.documentDate);if(Number(data.totalGross||0)>0)setValue(panel.querySelector("[data-doc-total]"),Number(data.totalGross).toFixed(2));const provider=data.provider==="AZURE_DOCUMENT_INTELLIGENCE"?"Azure Document Intelligence":"OpenAI";setValue(panel.querySelector("[data-confidence]"),`${Number(data.aiConfidence||0).toFixed(0)}% • ${provider}`);setValue(form.querySelector('[name="description"]'),`Τιμολόγιο από ${file.name} — Αναγνώριση τιμολογίου`);render(panel,lines);if(note)note.textContent=`✓ Invoice Learning αναγνώρισε ${lines.length} γραμμές προϊόντων.`;status(panel,`✓ Invoice Learning διάβασε ${lines.length} προϊόντα. Αποθήκευση για την παραγγελία…`);await persistJob({storeId,file,dataUrl,readerData:data,lines,panel,modal});if(create)create.disabled=false;status(panel,`✓ Έτοιμο: ίδια ανάγνωση με το Invoice Learning • ${lines.length} προϊόντα.`)}catch(e){if(create)create.disabled=true;status(panel,e.message||"Αποτυχία Invoice Learning ανάγνωσης.",true)}}
-async function rerunAI(target){const {panel}=context(target);const dataUrl=String(panel?.dataset.azureFileData||""),filename=String(panel?.dataset.azureFilename||"invoice.jpg"),mimeType=String(panel?.dataset.azureMime||"image/jpeg");if(!dataUrl){status(panel,"Ανέβασε ξανά το τιμολόγιο.",true);return}const blob=await fetch(dataUrl).then(r=>r.blob());const file=new File([blob],filename,{type:mimeType});processFile(file,target)}
+async function rerunAI(target){const {panel}=context(target);const dataUrl=String(panel?.dataset.azureFileData||""),filename=String(panel?.dataset.azureFilename||"invoice.jpg"),mimeType=String(panel?.dataset.azureMime||"image/jpeg");if(!dataUrl){status(panel,"Ανέβασε ξανά το τιμολόγιο.",true);return}const blob=await fetch(dataUrl).then(r=>r.blob());const file=new File([blob],filename,{type:mimeType});return processFile(file,target)}
 async function createOrder(target){const {panel,modal,form}=context(target);const jobId=String(panel?.dataset.azureJobId||modal?.dataset.invoiceJobId||"");if(!jobId){status(panel,"Δεν υπάρχει ενεργή ανάγνωση για δημιουργία παραγγελίας.",true);return}const supplierId=String(form.querySelector('[name="supplierId"]')?.value||""),documentNumber=String(form.querySelector('[name="invoiceNumber"]')?.value||"").trim(),documentDate=panel.querySelector("[data-doc-date]")?.value||null,totalGross=Number(String(panel.querySelector("[data-doc-total]")?.value||"").replace(",","."));if(!supplierId||!documentNumber||!(totalGross>0)){status(panel,"Επιβεβαίωσε προμηθευτή, αριθμό τιμολογίου και σύνολο.",true);return}const button=panel.querySelector("[data-create-invoice]");if(button)button.disabled=true;try{status(panel,"Δημιουργία πρόχειρης παραγγελίας…");const data=await request(`/api/commerce/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,"POST",{supplierId,documentNumber,documentDate,totalGross,settlementMode:"CREDIT",note:`BackOffice εισαγωγή τιμολογίου ${documentNumber} — Αναγνώριση τιμολογίου`});status(panel,"✓ Η παραγγελία δημιουργήθηκε. Δεν ενημερώθηκε stock.");const orderId=data.purchaseOrderId||data.orderId;if(orderId)sessionStorage.setItem("mws:last-imported-purchase-order",orderId);setTimeout(()=>{modal.closest(".po-modal-overlay")?.remove();document.querySelector(".purchase-orders-suite [data-po-refresh]")?.click()},600)}catch(e){if(button)button.disabled=false;status(panel,e.message,true)}}
-document.addEventListener("change",event=>{const input=event.target;if(!input?.matches?.("[data-pdf-file],[data-image-file]"))return;event.stopImmediatePropagation();const file=input.files?.[0];if(file)processFile(file,input)},true);
-document.addEventListener("click",event=>{const ai=event.target?.closest?.("[data-ai]");if(ai){event.preventDefault();event.stopImmediatePropagation();rerunAI(ai);return}const create=event.target?.closest?.("[data-create-invoice]");if(create){event.preventDefault();event.stopImmediatePropagation();createOrder(create)}},true);
+document.addEventListener("change",event=>{
+  const input=event.target;
+  if(!input?.matches?.("[data-pdf-file],[data-image-file]")||!input.files?.length)return;
+  const {panel}=context(input);
+  if(!panel||nativeIntakes.has(panel))return;
+  if(directReads.has(panel)){
+    event.stopImmediatePropagation();
+    status(panel,"Περίμενε να ολοκληρωθεί η ανάγνωση πριν επιλέξεις νέα αρχεία.",true);
+    return;
+  }
+  if(input.files.length>1){
+    nativeIntakes.add(panel);
+    return;
+  }
+  event.stopImmediatePropagation();
+  readDirectly(panel,()=>processFile(input.files[0],input));
+},true);
+
+function readDirectly(panel,read){
+  directReads.add(panel);
+  Promise.resolve().then(read).catch(error=>status(panel,error.message,true)).finally(()=>directReads.delete(panel));
+}
+
+document.addEventListener("click",event=>{
+  const action=event.target?.closest?.("[data-ai],[data-create-invoice]");
+  if(!action)return;
+  const {panel}=context(action);
+  if(!panel||nativeIntakes.has(panel)||!panel.dataset.azureFileData)return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if(directReads.has(panel))return;
+  if(action.matches("[data-ai]"))readDirectly(panel,()=>rerunAI(action));
+  else createOrder(action);
+},true);

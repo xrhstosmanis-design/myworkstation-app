@@ -25,7 +25,7 @@ export function mergeFastInvoiceHeaders(headers=[],{imageHeaders}={}){
     const distinct=new Set(candidates.map(header=>Number(header.totalGross).toFixed(2)));
     const proven=candidates.filter(header=>header.totalGrossVerified===true);
     const verified=new Set(proven.map(header=>Number(header.totalGross).toFixed(2)));
-    totalNeedsReview=distinct.size>1&&verified.size!==1;
+    totalNeedsReview=(distinct.size>1&&verified.size!==1)||(candidates.length===1&&verified.size===0);
     totalHeader=totalNeedsReview?null:proven[0]||candidates[0]||null;
   }
   return {supplierHeader,documentHeader,totalHeader,totalNeedsReview,documentNumberNeedsReview,confidence:available.reduce((best,header)=>Math.max(best,Number(header.confidence||0)),0),stefanidis};

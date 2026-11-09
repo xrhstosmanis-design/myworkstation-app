@@ -127,6 +127,7 @@ export default function InventoryV2Center({
           body: JSON.stringify({
             displayName: f.get("displayName"),
             zoneId: f.get("zoneId") || null,
+            allowFinalize: f.get("allowFinalize") === "on",
             expiresMinutes: 480,
             maxUses: 10,
           }),
@@ -597,6 +598,7 @@ export default function InventoryV2Center({
                       </option>
                     ))}
                   </select>
+                  <label><input type="checkbox" name="allowFinalize" /> Δικαίωμα οριστικοποίησης (μόνο για όλες τις ζώνες)</label>
                   <button>Έκδοση πρόσβασης</button>
                   {grant && (
                     <section className="inv2-grant-result">

@@ -14537,3 +14537,7 @@ Scope remains OPEN / AWAITING MEASURED LAB. Single next action: identify an elig
 ## INVOICE-OWNER-FINALIZATION-01 / #28 / Two-page assistant reopen / Hosted LAB scope
 
 Retained #28 owner, continuation of #3727 and merged checkpoint #3752. Isolated service checks 2/2 PASS, mounted UI 7/7 PASS, local Chromium verified two distinct synthetic JPEG pages in order. Hosted LAB NOT TESTED. One synthetic two-photo invoice in MYWORKSTATION LAB only. Verify the same order reopens and both originals display in order, and record any exact error. Scope excludes live customer invoices, payments, invoicing, supplier profiles and stock posting.
+
+## INVOICE-OWNER-FINALIZATION-01 / #28 / BackOffice multi-photo dispatch correction
+
+Retained #28 owner, continuation of #3753. Hosted LAB observed one of two selected synthetic JPEGs dispatched by the capture listener, 1.24 instead of the printed 2.48. No draft was created. Scope: preserve single-file intake and delegate multi-photo read, retry and draft creation to the existing multi-page flow. No production invoice, payment, stock posting or supplier profile changes. Source CI and hosted LAB verification pending.
