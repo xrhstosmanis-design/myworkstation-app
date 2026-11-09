@@ -1,3 +1,7 @@
+## 09/11/2026 — FAST issuer and recipient VAT review (#3756)
+
+In LAB BackOffice, open Payments → Supplier Invoice → New Invoice. If the issuer candidate equals the recipient VAT identified in the same reading, the form leaves supplier selection blank and asks you to verify the original. Select the verified issuer manually. See `CHECKPOINTS/CHANGES/2026-11-09-invoice-3756-hosted-lab.md`.
+
 ## 08/11/2026 — FAST supplier VAT review (#3750)
 
 In LAB BackOffice, open Payments → Supplier Invoice → New Invoice. When two photos give conflicting supplier identities, the form leaves the automatic choice blank and asks you to check the issuer VAT on the original. Select the verified supplier manually. A lone OCR VAT remains a candidate. See `CHECKPOINTS/CHANGES/2026-11-08-invoice-3750-hosted-lab.md`.
