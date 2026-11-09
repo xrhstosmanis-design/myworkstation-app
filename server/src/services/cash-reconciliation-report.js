@@ -111,6 +111,27 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
 }
 const money=cents=>cents===null?'άγνωστο':(Math.abs(cents)/100).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
 const signedResult=cents=>cents===null?'Άγνωστη διαφορά':cents<0?'Έλλειμμα '+money(cents):cents>0?'Πλεόνασμα '+money(cents):'Χωρίς διαφορά';
+const cashAuditEventLabels=new Map([
+  ['RETURN','Επιστροφή πώλησης'],
+  ['RETURN_ITEMS','Μερική επιστροφή ειδών'],
+  ['DUPLICATE_BLOCKED','Το POS μπλόκαρε πιθανή διπλή καταχώριση'],
+]);
+
+const cashAuditEventTime=event=>new Date(event.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'});
+function cashAuditEventSummary(events){
+  const replays=events.filter(event=>event.code==='AUDIT_IDEMPOTENT_REPLAY');
+  const actionable=events.filter(event=>event.code!=='AUDIT_IDEMPOTENT_REPLAY');
+  const lines=actionable.slice(0,30).map(event=>{
+    const label=cashAuditEventLabels.get(event.code.replace(/^AUDIT_/,''))||'Συμβάν χωρίς διαθέσιμη περιγραφή';
+    return `${cashAuditEventTime(event)} · ${label}${event.afterClose?' · μετά το κλείσιμο':''}. Ελέγξτε την αντίστοιχη κίνηση στο ημερολόγιο της βάρδιας.`;
+  });
+  if(actionable.length>30)lines.push(`Εμφανίζονται 30 από ${actionable.length} συμβάντα. Τα υπόλοιπα είναι διαθέσιμα στα τεκμήρια της βάρδιας.`);
+  if(replays.length){
+    const times=replays.length===1?cashAuditEventTime(replays[0]):cashAuditEventTime(replays[0])+' έως '+cashAuditEventTime(replays.at(-1));
+    lines.push(`${times} · Επαναλήψεις αιτήματος καταχώρισης POS: ${replays.length}. Το σύστημα επέστρεψε τις υπάρχουσες πωλήσεις. Από τις επαναλήψεις αυτές δεν προκύπτει δεύτερη χρέωση.`);
+  }
+  return lines;
+}
 export function reconciliationText(report){
   assertCalculatedCashResult(report);
   assertCashIssues(report);
@@ -127,8 +148,14 @@ export function reconciliationText(report){
       lines.push(row.fullAudit.status==='FINAL'?`ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ · ${row.operatorName}: ${signedResult(row.fullAudit.remainingCents)}.`:`Πλήρης έλεγχος · ${row.operatorName}: ${row.fullAudit.status==='NOT_APPLICABLE'?'δεν εφαρμόζεται':row.fullAudit.status==='AWAITING_NEXT_SHIFT'?'αναμονή επόμενης βάρδιας':'εκκρεμεί διασταύρωση'}.`);
       if(row.fullAudit.pendingChecks.length)lines.push(`Ευρήματα: συμβάντα ${row.fullCoverage.events.unresolvedCount}, πιθανές διπλές συναλλαγές ${row.fullCoverage.duplicates.unresolvedCount}, χειρόγραφα ${row.fullCoverage.papers.unresolvedCount}, παραστατικά ${row.fullCoverage.expenses.unresolvedCount}.`);
       if(row.fullAudit.pendingChecks.length)lines.push('Εκκρεμούν: '+row.fullAudit.pendingChecks.map(c=>pendingLabels[c]).join(', ')+'.');
-      for(const event of (row.fullEvidence?.events?.findings||[]).slice(0,30))lines.push(`Συμβάν ${event.code} · ${new Date(event.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'})} · αναφορά ${event.eventId}${event.afterClose?' · μετά το κλείσιμο':''}. Παραμένει προς διευκρίνιση.`);
-      for(const finding of (row.fullEvidence?.duplicates?.findings||[]).slice(0,30))if(finding.code==='SALE_LINE_DUPLICATE_CANDIDATE')lines.push(`Πιθανή διπλή συναλλαγή εντός 1 λεπτού: ${finding.transactions.map(t=>t.receiptNumber||t.saleId).join(' / ')} · απόσταση ${finding.secondsApart} δευτερολέπτων. Δεν επιβάλλεται αυτόματη χρέωση.`);
+      lines.push(...cashAuditEventSummary(row.fullEvidence?.events?.findings||[]));
+      for(const finding of (row.fullEvidence?.duplicates?.findings||[]).slice(0,30)){
+        if(finding.code!=='SALE_LINE_DUPLICATE_CANDIDATE')continue;
+        const times=finding.transactions.map(t=>t.occurredAt?cashAuditEventTime(t):null).filter(Boolean);
+        const receipts=finding.transactions.map(t=>t.receiptNumber).filter(Boolean);
+        const cents=exactCents(finding.amount);
+        lines.push(`Πιθανή επανάληψη πώλησης εντός 1 λεπτού${times.length?' · '+times.join(' / '):''}${cents!==null?' · '+money(cents)+' ανά πώληση':''} · απόσταση ${finding.secondsApart} δευτερολέπτων${receipts.length?' · αποδείξεις '+receipts.join(' / '):''}. Ελέγξτε τις δύο πωλήσεις στο POS για να επιβεβαιώσετε αν ήταν χωριστές αγορές.`);
+      }
     }
     if(row.openedAt&&row.closedAt){const clock=v=>new Date(v).toLocaleTimeString('el-GR',{timeZone:'Europe/Athens',hour:'2-digit',minute:'2-digit',hour12:false});lines.push(`Ώρες βάρδιας ${row.operatorName}: ${clock(row.openedAt)}–${clock(row.closedAt)}.`);}
     if(row.status==='NOT_APPLICABLE')lines.push(`${row.day} · ${row.shiftLabel} · ${row.operatorName}: δεν εφαρμόζεται έλεγχος μετρητών.`);
