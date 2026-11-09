@@ -8,16 +8,16 @@ import {lockDraftInventoryStocktake} from '../lib/inventory-stocktake-draft.js';
 const router=Router();
 const roles=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const failure=(message,status=409)=>Object.assign(new Error(message),{status});
-async function access(req){
+async function access(req,db=prisma){
  const user=req.user;
  const counter=user?.tokenType==='INVENTORY_COUNTER';
  if(!counter&&!roles.has(user?.role)&&!user?.isSuperAdmin)throw failure('Η δημιουργία είδους απαιτεί πρόσβαση απογραφής ή διαχειριστή.',403);
  if(counter&&(!user.permissions?.includes('INVENTORY_COUNT')||!user.grantId))throw failure('Η πρόσβαση απογραφής δεν είναι ενεργή.',403);
- const rows=await prisma.$queryRaw`SELECT "id","companyId","storeId","status" FROM "Stocktake" WHERE "id"=${req.params.stocktakeId} AND "companyId"=${user.companyId} LIMIT 1`;
+ const rows=await db.$queryRaw`SELECT "id","companyId","storeId","status" FROM "Stocktake" WHERE "id"=${req.params.stocktakeId} AND "companyId"=${user.companyId} LIMIT 1`;
  const st=rows[0];if(!inventoryStocktakeScopeAllowed(user,st))throw failure('Δεν βρέθηκε η απογραφή.',404);
  if(st.status!=='DRAFT')throw failure('Η απογραφή δεν είναι ανοικτή.');
  if(counter){
-  const grants=await prisma.$queryRaw`SELECT "id" FROM "InventoryAccessGrant" WHERE "id"=${user.grantId} AND "stocktakeId"=${st.id} AND "revokedAt" IS NULL AND "expiresAt">NOW() AND "zoneId" IS NOT DISTINCT FROM ${user.zoneId||null}::text LIMIT 1`;
+  const grants=await db.$queryRaw`SELECT "id" FROM "InventoryAccessGrant" WHERE "id"=${user.grantId} AND "stocktakeId"=${st.id} AND "revokedAt" IS NULL AND "expiresAt">NOW() AND "zoneId" IS NOT DISTINCT FROM ${user.zoneId||null}::text LIMIT 1`;
   if(!grants.length)throw failure('Η πρόσβαση απογραφής δεν είναι ενεργή.',403);
  }
  return st;
@@ -59,4 +59,47 @@ router.post('/stocktakes/:stocktakeId/products',async(req,res,next)=>{
   res.status(201).json(result);
  }catch(e){if(e?.code==='P2010'&&e?.meta?.code==='23505')return res.status(409).json({error:'Το barcode ή ο κωδικός υπάρχει ήδη. Ανανέωσε την απογραφή πριν συνεχίσεις.'});next(e)}
 });
+const existingBarcodeSchema=z.string().trim().min(3).max(80);
+const existingBarcodeProducts=(db,st,barcode)=>db.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",p."salePrice",sp."active" AS "storeActive",sp."currentStock"
+ FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${st.storeId}
+ WHERE p."companyId"=${st.companyId} AND p."active"=true
+ AND EXISTS (SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${barcode})
+ ORDER BY p."id" LIMIT 2`;
+
+router.get('/stocktakes/:stocktakeId/existing-barcode-product',async(req,res,next)=>{
+ try{
+  const st=await access(req);
+  const barcode=existingBarcodeSchema.parse(req.query.barcode);
+  const rows=await existingBarcodeProducts(prisma,st,barcode);
+  if(rows.length>1)throw failure('Υπάρχουν πολλές καρτέλες με αυτό το barcode. Ζήτησε έλεγχο από το BackOffice.');
+  const product=rows[0];
+  if(product?.storeActive===false)throw failure('Η καρτέλα είναι απενεργοποιημένη στο κατάστημα. Ζήτησε έλεγχο από το BackOffice.');
+  res.json(product?.storeActive===null?{id:product.id,name:product.name,sku:product.sku}:null);
+ }catch(e){next(e)}
+});
+
+router.post('/stocktakes/:stocktakeId/existing-barcode-product',async(req,res,next)=>{
+ try{
+  const st=await access(req);
+  const {barcode,productId}=z.object({barcode:existingBarcodeSchema,productId:z.string().min(1)}).strict().parse(req.body);
+  const zoneId=req.user.tokenType==='INVENTORY_COUNTER'?req.user.zoneId||null:null;
+  await prisma.$transaction(async tx=>{
+   await lockDraftInventoryStocktake(tx,st);
+   await access(req,tx);
+   const rows=await existingBarcodeProducts(tx,st,barcode);
+   const product=rows[0];
+   if(rows.length!==1||product.id!==productId||product.storeActive===false)throw failure('Η καρτέλα δεν μπορεί να προστεθεί. Ανανέωσε την αναζήτηση.');
+   await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active")
+    VALUES (${crypto.randomUUID()},${st.storeId},${productId},${Number(product.salePrice??0)},0,true)
+    ON CONFLICT ("storeId","productId") DO NOTHING`;
+   const [storeProduct]=await tx.$queryRaw`SELECT "active","currentStock" FROM "StoreProduct" WHERE "storeId"=${st.storeId} AND "productId"=${productId} FOR UPDATE`;
+   if(!storeProduct?.active)throw failure('Η καρτέλα είναι απενεργοποιημένη στο κατάστημα.');
+   await tx.$executeRaw`INSERT INTO "StocktakeLine" ("id","stocktakeId","productId","expectedQuantity","unitCost","zoneId")
+    VALUES (${crypto.randomUUID()},${st.id},${productId},${Number(storeProduct.currentStock??0)},${Number(product.costPrice??0)},${zoneId})
+    ON CONFLICT ("stocktakeId","productId") DO NOTHING`;
+  });
+  res.json({productId});
+ }catch(e){next(e)}
+});
+
 export default router;
