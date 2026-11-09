@@ -20,7 +20,7 @@ async function rerunAI(target){const {panel}=context(target);const dataUrl=Strin
 async function createOrder(target){const {panel,modal,form}=context(target);const jobId=String(panel?.dataset.azureJobId||modal?.dataset.invoiceJobId||"");if(!jobId){status(panel,"Δεν υπάρχει ενεργή ανάγνωση για δημιουργία παραγγελίας.",true);return}const supplierId=String(form.querySelector('[name="supplierId"]')?.value||""),documentNumber=String(form.querySelector('[name="invoiceNumber"]')?.value||"").trim(),documentDate=panel.querySelector("[data-doc-date]")?.value||null,totalGross=Number(String(panel.querySelector("[data-doc-total]")?.value||"").replace(",","."));if(!supplierId||!documentNumber||!(totalGross>0)){status(panel,"Επιβεβαίωσε προμηθευτή, αριθμό τιμολογίου και σύνολο.",true);return}const button=panel.querySelector("[data-create-invoice]");if(button)button.disabled=true;try{status(panel,"Δημιουργία πρόχειρης παραγγελίας…");const data=await request(`/api/commerce/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,"POST",{supplierId,documentNumber,documentDate,totalGross,settlementMode:"CREDIT",note:`BackOffice εισαγωγή τιμολογίου ${documentNumber} — Αναγνώριση τιμολογίου`});status(panel,"✓ Η παραγγελία δημιουργήθηκε. Δεν ενημερώθηκε stock.");const orderId=data.purchaseOrderId||data.orderId;if(orderId)sessionStorage.setItem("mws:last-imported-purchase-order",orderId);setTimeout(()=>{modal.closest(".po-modal-overlay")?.remove();document.querySelector(".purchase-orders-suite [data-po-refresh]")?.click()},600)}catch(e){if(button)button.disabled=false;status(panel,e.message,true)}}
 document.addEventListener("change",event=>{
   const input=event.target;
-  if(!input?.matches?.("[data-pdf-file],[data-image-file]")||!input.files?.length)return;
+  if(!input?.matches?.("[data-pdf-file],[data-image-file],[data-invoice-pages-file]")||!input.files?.length)return;
   const {panel}=context(input);
   if(!panel||nativeIntakes.has(panel))return;
   if(directReads.has(panel)){
@@ -28,10 +28,11 @@ document.addEventListener("change",event=>{
     status(panel,"Περίμενε να ολοκληρωθεί η ανάγνωση πριν επιλέξεις νέα αρχεία.",true);
     return;
   }
-  if(input.files.length>1){
+  if(input.matches("[data-invoice-pages-file]")){
     nativeIntakes.add(panel);
     return;
   }
+  if(input.files.length>1)return;
   event.stopImmediatePropagation();
   readDirectly(panel,()=>processFile(input.files[0],input));
 },true);
