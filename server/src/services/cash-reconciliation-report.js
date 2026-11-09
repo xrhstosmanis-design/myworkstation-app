@@ -142,7 +142,18 @@ export function reconciliationText(report){
   const lines=['ΕΛΕΓΧΟΣ ΤΑΜΕΙΩΝ MYWORKSTATION',`${report.storeName} · ${report.period.from} έως ${report.period.to}`,'','ΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ'+(signature?' — '+signature:'')];
   if(report.rows.some(row=>['PENDING','AWAITING_NEXT_SHIFT'].includes(row.fullAudit?.status)))lines.push('Η αναφορά δημιουργήθηκε αυτόματα από το MyWorkStation. Για την ολοκλήρωση της διασταύρωσης χρειάζεται έλεγχος και διευκρίνιση από τον υπεύθυνο ή τον ιδιοκτήτη, με τα διαθέσιμα παραστατικά.');
   if(!report.rows.length)lines.push('Δεν βρέθηκαν κλεισμένες βάρδιες στην επιλεγμένη περίοδο.');
+  const fullRows=report.rows.filter(row=>row.fullAudit);
+  if(fullRows.length){
+    lines.push('','ΣΤΟΙΧΕΙΑ ΠΟΥ ΕΛΕΓΧΘΗΚΑΝ',`Κλεισμένες βάρδιες στην αναφορά: ${report.rows.length}. Η παρακάτω κάλυψη αφορά τα διαθέσιμα στοιχεία της εφαρμογής.`);
+    for(const [key,label] of [['events','Συμβάντα και αλλαγές τιμών'],['duplicates','Πωλήσεις για έλεγχο επαναλήψεων'],['papers','Χειρόγραφα και συνημμένα'],['expenses','Έξοδα και παραστατικά']]){
+      const covered=fullRows.filter(row=>row.fullCoverage[key].status==='COMPLETE').length;
+      lines.push(`${label} · πλήρης διαθέσιμη κάλυψη σε ${covered} από ${fullRows.length} βάρδιες.`);
+    }
+    lines.push('Η κάλυψη πηγών δεν σημαίνει ότι επιβεβαιώθηκαν τα ευρήματα. Οι διαφορές και οι εκκρεμότητες εμφανίζονται ανά βάρδια.');
+    lines.push('','ΑΝΑΛΥΤΙΚΑ ΑΠΟΤΕΛΕΣΜΑΤΑ ΑΝΑ ΒΑΡΔΙΑ');
+  }
   for(const row of report.rows){
+    if(fullRows.length)lines.push('',`ΒΑΡΔΙΑ · ${row.day||'άγνωστη ημερομηνία'} · ${row.shiftLabel} · ${row.operatorName}`);
     if(row.fullAudit){
       const pendingLabels={SOURCE_COVERAGE:'κάλυψη πηγών',CASH_ARITHMETIC:'συμφωνία κινήσεων μετρητών',OPERATOR_IDENTITY:'ταυτότητα χειριστή',RESULT_ELIGIBILITY:'επιλεξιμότητα αποτελέσματος',CARD_ARITHMETIC:'συμφωνία καρτών',HANDOFF:'παραδόσεις ταμείου',AWAITING_NEXT_SHIFT:'κλείσιμο επόμενης βάρδιας',AUDIT_OPEN_ISSUES:'ανοικτά αριθμητικά ερωτήματα',EVENTS:'συμβάντα και αλλαγές τιμών',DUPLICATES:'πιθανές διπλές συναλλαγές',PAPERS:'χειρόγραφα του τσατ',EXPENSES:'παραστατικά εξόδων'};
       lines.push(row.fullAudit.status==='FINAL'?`ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ · ${row.operatorName}: ${signedResult(row.fullAudit.remainingCents)}.`:`Πλήρης έλεγχος · ${row.operatorName}: ${row.fullAudit.status==='NOT_APPLICABLE'?'δεν εφαρμόζεται':row.fullAudit.status==='AWAITING_NEXT_SHIFT'?'αναμονή επόμενης βάρδιας':'εκκρεμεί διασταύρωση'}.`);
