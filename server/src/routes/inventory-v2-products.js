@@ -8,16 +8,16 @@ import {lockDraftInventoryStocktake} from '../lib/inventory-stocktake-draft.js';
 const router=Router();
 const roles=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const failure=(message,status=409)=>Object.assign(new Error(message),{status});
-async function access(req){
+async function access(req,db=prisma){
  const user=req.user;
  const counter=user?.tokenType==='INVENTORY_COUNTER';
  if(!counter&&!roles.has(user?.role)&&!user?.isSuperAdmin)throw failure('Η δημιουργία είδους απαιτεί πρόσβαση απογραφής ή διαχειριστή.',403);
  if(counter&&(!user.permissions?.includes('INVENTORY_COUNT')||!user.grantId))throw failure('Η πρόσβαση απογραφής δεν είναι ενεργή.',403);
- const rows=await prisma.$queryRaw`SELECT "id","companyId","storeId","status" FROM "Stocktake" WHERE "id"=${req.params.stocktakeId} AND "companyId"=${user.companyId} LIMIT 1`;
+ const rows=await db.$queryRaw`SELECT "id","companyId","storeId","status" FROM "Stocktake" WHERE "id"=${req.params.stocktakeId} AND "companyId"=${user.companyId} LIMIT 1`;
  const st=rows[0];if(!inventoryStocktakeScopeAllowed(user,st))throw failure('Δεν βρέθηκε η απογραφή.',404);
  if(st.status!=='DRAFT')throw failure('Η απογραφή δεν είναι ανοικτή.');
  if(counter){
-  const grants=await prisma.$queryRaw`SELECT "id" FROM "InventoryAccessGrant" WHERE "id"=${user.grantId} AND "stocktakeId"=${st.id} AND "revokedAt" IS NULL AND "expiresAt">NOW() AND "zoneId" IS NOT DISTINCT FROM ${user.zoneId||null}::text LIMIT 1`;
+  const grants=await db.$queryRaw`SELECT "id" FROM "InventoryAccessGrant" WHERE "id"=${user.grantId} AND "stocktakeId"=${st.id} AND "revokedAt" IS NULL AND "expiresAt">NOW() AND "zoneId" IS NOT DISTINCT FROM ${user.zoneId||null}::text LIMIT 1`;
   if(!grants.length)throw failure('Η πρόσβαση απογραφής δεν είναι ενεργή.',403);
  }
  return st;
@@ -85,6 +85,7 @@ router.post('/stocktakes/:stocktakeId/existing-barcode-product',async(req,res,ne
   const zoneId=req.user.tokenType==='INVENTORY_COUNTER'?req.user.zoneId||null:null;
   await prisma.$transaction(async tx=>{
    await lockDraftInventoryStocktake(tx,st);
+   await access(req,tx);
    const rows=await existingBarcodeProducts(tx,st,barcode);
    const product=rows[0];
    if(rows.length!==1||product.id!==productId||product.storeActive===false)throw failure('Η καρτέλα δεν μπορεί να προστεθεί. Ανανέωσε την αναζήτηση.');
