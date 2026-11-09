@@ -1,3 +1,4 @@
+import {inventoryDetailQuery,personalInventoryDetailPage} from '../services/backoffice-staff-inventory-detail.js';
 import {captureInventoryRead,verifyInventoryRead,personalInventoryLine} from '../services/backoffice-staff-inventory-read.js';
 import {inventoryListCursor,personalInventoryListPage} from '../services/backoffice-staff-inventory-list.js';
 import {Router} from 'express';
@@ -78,6 +79,12 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     const stocktake=(await db.$queryRaw`SELECT "id","name","status","scopeType","finalizedAt" FROM "Stocktake" WHERE "id"=${stocktakeId} AND "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "inventoryVersion"=2 AND ("status"='DRAFT' OR (${canReadFinalized} AND "status"='FINALIZED')) LIMIT 1`)[0];
     if(!stocktake)throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε διαθέσιμη απογραφή στο κατάστημα.');
     const onlyCounted=stocktake.scopeType==='FREE'&&stocktake.status==='FINALIZED';
+    const query=inventoryDetailQuery(req.query);
+    if(query){
+      const page=await personalInventoryDetailPage(db,req.user,stocktakeId,onlyCounted,read.visibility.expected,query);
+      await verifyInventoryRead(db,req.user,storeId,read);
+      return res.json({storeId,id:stocktake.id,name:stocktake.name,status:stocktake.status,scopeType:stocktake.scopeType,finalizedAt:stocktake.finalizedAt,...page});
+    }
     const lines=await db.$queryRaw`SELECT sl."id",sl."productId",p."name",p."sku",sl."expectedQuantity",sl."countedQuantity",sl."countVersion",sl."recountRequired",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."createdAt") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${req.user.companyId} WHERE sl."stocktakeId"=${stocktakeId} AND (${onlyCounted}=false OR sl."countedQuantity" IS NOT NULL) ORDER BY p."name",sl."id" LIMIT 10001`;
     if(lines.length>10000)throw staffError(503,'STAFF_LIMIT','Η απογραφή υπερβαίνει το όριο της προσωπικής προβολής.');
     await verifyInventoryRead(db,req.user,storeId,read);
