@@ -1,3 +1,4 @@
+import {reviewFastSupplierVat} from "../src/lib/invoice-fast-vat-role.js";
 /**
  * Actual FAST route + production footer parsers, wallet error guard, existing
  * table-return predicate and actual Responses wrapper. Network, Azure
@@ -49,7 +50,7 @@ function sharedHarness({cases,now,emit}={}){
  let handler;
  const traces=new WeakMap(),allEvents=[],calls=[],queries=[],responses=[];
  const keyOf=data=>Buffer.from(String(data).split(',')[1],'base64').toString();
- const deps={
+ const deps={reviewFastSupplierVat,
   Buffer,crypto,round2,FAST_AZURE_HEADER_TIMEOUT_MS:20000,POS_STORED_LINES_TOLERANCE:.05,
   process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:'synthetic'}},
   console:{warn(){},error(){}},
