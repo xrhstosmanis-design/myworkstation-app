@@ -59,4 +59,46 @@ router.post('/stocktakes/:stocktakeId/products',async(req,res,next)=>{
   res.status(201).json(result);
  }catch(e){if(e?.code==='P2010'&&e?.meta?.code==='23505')return res.status(409).json({error:'Το barcode ή ο κωδικός υπάρχει ήδη. Ανανέωσε την απογραφή πριν συνεχίσεις.'});next(e)}
 });
+const existingBarcodeSchema=z.string().trim().min(3).max(80);
+const existingBarcodeProducts=(db,st,barcode)=>db.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",p."salePrice",sp."active" AS "storeActive",sp."currentStock"
+ FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${st.storeId}
+ WHERE p."companyId"=${st.companyId} AND p."active"=true
+ AND EXISTS (SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${barcode})
+ ORDER BY p."id" LIMIT 2`;
+
+router.get('/stocktakes/:stocktakeId/existing-barcode-product',async(req,res,next)=>{
+ try{
+  const st=await access(req);
+  const barcode=existingBarcodeSchema.parse(req.query.barcode);
+  const rows=await existingBarcodeProducts(prisma,st,barcode);
+  if(rows.length>1)throw failure('Υπάρχουν πολλές καρτέλες με αυτό το barcode. Ζήτησε έλεγχο από το BackOffice.');
+  const product=rows[0];
+  if(product?.storeActive===false)throw failure('Η καρτέλα είναι απενεργοποιημένη στο κατάστημα. Ζήτησε έλεγχο από το BackOffice.');
+  res.json(product?.storeActive===null?{id:product.id,name:product.name,sku:product.sku}:null);
+ }catch(e){next(e)}
+});
+
+router.post('/stocktakes/:stocktakeId/existing-barcode-product',async(req,res,next)=>{
+ try{
+  const st=await access(req);
+  const {barcode,productId}=z.object({barcode:existingBarcodeSchema,productId:z.string().min(1)}).strict().parse(req.body);
+  const zoneId=req.user.tokenType==='INVENTORY_COUNTER'?req.user.zoneId||null:null;
+  await prisma.$transaction(async tx=>{
+   await lockDraftInventoryStocktake(tx,st);
+   const rows=await existingBarcodeProducts(tx,st,barcode);
+   const product=rows[0];
+   if(rows.length!==1||product.id!==productId||product.storeActive===false)throw failure('Η καρτέλα δεν μπορεί να προστεθεί. Ανανέωσε την αναζήτηση.');
+   await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active")
+    VALUES (${crypto.randomUUID()},${st.storeId},${productId},${Number(product.salePrice??0)},0,true)
+    ON CONFLICT ("storeId","productId") DO NOTHING`;
+   const [storeProduct]=await tx.$queryRaw`SELECT "active","currentStock" FROM "StoreProduct" WHERE "storeId"=${st.storeId} AND "productId"=${productId} FOR UPDATE`;
+   if(!storeProduct?.active)throw failure('Η καρτέλα είναι απενεργοποιημένη στο κατάστημα.');
+   await tx.$executeRaw`INSERT INTO "StocktakeLine" ("id","stocktakeId","productId","expectedQuantity","unitCost","zoneId")
+    VALUES (${crypto.randomUUID()},${st.id},${productId},${Number(storeProduct.currentStock??0)},${Number(product.costPrice??0)},${zoneId})
+    ON CONFLICT ("stocktakeId","productId") DO NOTHING`;
+  });
+  res.json({productId});
+ }catch(e){next(e)}
+});
+
 export default router;
