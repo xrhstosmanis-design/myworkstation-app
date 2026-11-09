@@ -9,6 +9,7 @@ const StoreCloudPage=React.lazy(()=>import('./cloud/StoreCloudPage.jsx'));
 const InventoryArchivePanel=React.lazy(()=>import('./commerce/InventoryArchivePanel.jsx'));
 const InventoryNewProductCard=React.lazy(()=>import('./commerce/InventoryNewProductCard.jsx'));
 import {greeceDateInput} from '../../../shared/greece-time.mjs';
+import {targetStocktakeForSavedProduct,shouldRefreshStocktakeAfterAttach} from '../../../shared/inventory-stocktake-product-origin.mjs';
 import BackofficeStores from './backoffice/BackofficeStores.jsx';
 import BackofficeShell from './backoffice/BackofficeShell.jsx';
 import {Building2,LayoutDashboard,LogOut} from 'lucide-react';
@@ -63,6 +64,26 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
     if(own!==scope.current||n!==sequence.current||selectedStocktakeId.current!==stocktakeId)return null;
     if(result.storeId!==storeId||result.id!==stocktakeId||!Array.isArray(result.lines))throw Error('Δεν επιβεβαιώθηκε η αναζήτηση.');
     return result.lines;
+  };
+
+  const attachCreatedInventoryProduct=async(result,origin)=>{
+    const own=origin?.scope;
+    if(own!==scope.current||origin?.storeId!==storeId)return;
+    const stocktakeId=targetStocktakeForSavedProduct(origin,{storeId,scope:scope.current,savedStoreId:result?.storeId,selectedStocktakeId:selectedStocktakeId.current});
+    if(!result?.id||!stocktakeId||sending.current){
+      setStocktakeMessage('Το είδος δημιουργήθηκε, αλλά δεν επιβεβαιώθηκε σύνδεση με την αρχική απογραφή. Έλεγξε τη γραμμή πριν επαναλάβεις.');
+      return;
+    }
+    sending.current=true;setBusy(true);setStocktakeMessage('Το νέο είδος αποθηκεύτηκε. Ελέγχεται η ασφαλής σύνδεση στην αρχική απογραφή…');
+    try{
+      const attached=await scoped(`/api/inventory-v2/stocktakes/${encodeURIComponent(stocktakeId)}/lines`,{method:'POST',body:JSON.stringify({productId:result.id})});
+      if(own!==scope.current)return;
+      if(attached?.ok!==true||!attached.lineId)throw Error('Δεν επιβεβαιώθηκε η γραμμή απογραφής.');
+      if(shouldRefreshStocktakeAfterAttach(stocktakeId,selectedStocktakeId.current))await open(stocktakeId);
+      if(own===scope.current)setStocktakeMessage(attached.existing?'Το είδος υπάρχει ήδη στην αρχική απογραφή· δεν προστέθηκε δεύτερη γραμμή.':'Το νέο είδος συνδέθηκε με την αρχική απογραφή χωρίς καταμετρημένη ποσότητα.');
+    }catch(e){
+      if(own===scope.current)setStocktakeMessage('Το είδος δημιουργήθηκε, αλλά η σύνδεση με την αρχική απογραφή δεν επιβεβαιώθηκε: '+(e.message||'άγνωστο σφάλμα')+'. Έλεγξε την απογραφή πριν επαναλάβεις.');
+    }finally{sending.current=false;if(own===scope.current)setBusy(false)}
   };
   const mutateStocktake=async request=>{
     if(sending.current)return;sending.current=true;setBusy(true);setError('');setStocktakeMessage('');setStocktakeOperation(request);
@@ -124,7 +145,7 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
         onPrevious:()=>open(detail.id,detailPages.slice(0,-1)),
         onNext:()=>detail.nextCursor&&open(detail.id,[...detailPages,detail.nextCursor])
       }:null,onLookup:lookupInventoryLine,canCreate:capabilities.includes('inventory.create'),canCount:capabilities.includes('inventory.count'),canCreateProduct:capabilities.includes('products.create')&&capabilities.includes('inventory.count'),onCreateProduct:barcode=>{const trimmed=String(barcode||'').trim();if(trimmed&&detail?.id&&detail.status==='DRAFT'&&selectedStocktakeId.current===detail.id&&!busy&&!productBusy&&!moduleWriting.current&&!sending.current&&!pending&&!stocktakeOperation&&inventoryNewOrigin===null&&capabilities.includes('products.create')&&capabilities.includes('inventory.count')){setInventoryNewOrigin(Object.freeze({barcode:trimmed,stocktakeId:detail.id,storeId,scope:scope.current}))}},canFinalize:capabilities.includes('inventory.finalize'),canSeeExpected:capabilities.includes('inventory.expected.read'),canClear:capabilities.includes('inventory.clear'),canBulkZero:capabilities.includes('inventory.bulk-zero'),canDelete:capabilities.includes('inventory.delete'),onClear:request=>mutateStocktake({...request,kind:'CLEAR'}),onBulkZero:request=>mutateStocktake({...request,kind:'BULK_ZERO'}),onDelete:stocktakeId=>mutateStocktake({kind:'DELETE',stocktakeId,body:{clientEventId:crypto.randomUUID(),confirmed:true}}),locked:busy||productBusy||inventoryNewOrigin!==null||Boolean(pending||stocktakeOperation),onLoad:load,onOpen:open,onNew:()=>{selectedStocktakeId.current=null;setInventoryNewOrigin(null);setDetail(null);setError('')},onCount:count,setError,createForm:createInventoryForm,finalizationForm:finalizeInventoryForm}}/></React.Suspense>}
-      {view==='inventory'&&selected&&inventoryNewOrigin&&detail?.status==='DRAFT'&&detail.id===inventoryNewOrigin.stocktakeId&&inventoryNewOrigin.storeId===storeId&&inventoryNewOrigin.scope===scope.current&&capabilities.includes('products.create')&&capabilities.includes('inventory.count')&&<React.Suspense fallback={<p role="status">Φόρτωση καρτέλας νέου είδους…</p>}><InventoryNewProductCard key={storeId+':'+inventoryNewOrigin.stocktakeId+':'+inventoryNewOrigin.barcode} api={scoped} storeId={storeId} initialBarcode={inventoryNewOrigin.barcode} lookupAllowed={false} allowOpeningStock={false} onBusyChange={setProductBusy} onClose={()=>setInventoryNewOrigin(null)} onSaved={()=>{const origin=inventoryNewOrigin;setInventoryNewOrigin(null);setCatalogVersion(v=>v+1);if(origin?.scope===scope.current&&origin.storeId===storeId&&selectedStocktakeId.current===origin.stocktakeId)setStocktakeMessage('Το νέο είδος αποθηκεύτηκε. Δεν προστέθηκε στην απογραφή και δεν καταχωρήθηκε ποσότητα· η σύνδεση απαιτεί ξεχωριστή επιβεβαίωση.')}}/></React.Suspense>}
+      {view==='inventory'&&selected&&inventoryNewOrigin&&detail?.status==='DRAFT'&&detail.id===inventoryNewOrigin.stocktakeId&&inventoryNewOrigin.storeId===storeId&&inventoryNewOrigin.scope===scope.current&&capabilities.includes('products.create')&&capabilities.includes('inventory.count')&&<React.Suspense fallback={<p role="status">Φόρτωση καρτέλας νέου είδους…</p>}><InventoryNewProductCard key={storeId+':'+inventoryNewOrigin.stocktakeId+':'+inventoryNewOrigin.barcode} api={scoped} storeId={storeId} initialBarcode={inventoryNewOrigin.barcode} lookupAllowed={false} allowOpeningStock={false} onBusyChange={setProductBusy} onClose={()=>setInventoryNewOrigin(null)} onSaved={result=>{const origin=inventoryNewOrigin;setInventoryNewOrigin(null);setCatalogVersion(v=>v+1);void attachCreatedInventoryProduct(result,origin)}}/></React.Suspense>}
       {view==='cash'&&selected&&capabilities.includes('cash.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ελέγχου ταμείων…</p>}><CashControlPanel key={storeId} api={scoped} store={selected} readOnly from={from} to={to} onFrom={setFrom} onTo={setTo}/></React.Suspense>}{busy&&<p role="status">Φόρτωση…</p>}{error&&<p role="alert">{error}</p>}{stocktakeMessage&&<p role="status">{stocktakeMessage}</p>}
       {['CLEAR','BULK_ZERO','DELETE'].includes(stocktakeOperation?.kind)&&<button type="button" disabled={busy} onClick={()=>mutateStocktake(stocktakeOperation)}>Επαλήθευση ίδιας ενέργειας</button>}
       {stocktakeOperation?.kind==='CREATE'&&<button type="button" disabled={busy} onClick={()=>mutateStocktake(stocktakeOperation)}>Επαλήθευση ίδιας δημιουργίας</button>}

@@ -43,6 +43,42 @@ for(const [path,body] of cases)test('actual stale DRAFT request cannot mutate af
   const result=await routes(prisma)(path,request(body));
   assert.equal(result.status,409);assert.equal(writes,0);assert.equal(lineReads,0);
 });
+
+test('stocktake line admission rejects store-inactive product without any write',async()=>{
+ const st={id:'take',companyId:'company',storeId:'store',status:'DRAFT'};
+ let writes=0;
+ const tx={$queryRaw:async strings=>{
+   const sql=strings.join('?');
+   if(sql.includes('FROM "Stocktake"')&&sql.includes('FOR UPDATE'))return [{id:'take',status:'DRAFT'}];
+   if(sql.includes('FROM "Product" p JOIN "StoreProduct" sp'))return sql.includes('sp."active"=true')?[]:[{id:'extra',costPrice:1,currentStock:2}];
+   if(sql.includes('INSERT INTO "StocktakeLine"')){writes++;return [{id:'wrong-line'}]};
+   if(sql.includes('FROM "StocktakeLine"'))return [{id:'wrong-line'}];
+   throw Error('Unexpected SQL: '+sql);
+ },$executeRaw:async()=>{writes++;throw Error('Unexpected write')}};
+ const prisma={$queryRaw:async()=>[st],$transaction:fn=>fn(tx)};
+ const result=await routes(prisma)('post/stocktakes/:stocktakeId/lines',request({productId:'extra'}));
+ assert.equal(result.status,404);assert.equal(writes,0);
+});
+
+test('active store-product attachment returns existing line ID on replay without extra stock/count write',async()=>{
+ const st={id:'take',companyId:'company',storeId:'store',status:'DRAFT'};
+ let storedLine=null,insertAttempts=0,otherWrites=0;
+ const tx={$queryRaw:async strings=>{
+   const sql=strings.join('?');
+   if(sql.includes('FROM "Stocktake"')&&sql.includes('FOR UPDATE'))return [{id:'take',status:'DRAFT'}];
+   if(sql.includes('FROM "Product" p JOIN "StoreProduct" sp')){assert.match(sql,/sp\."active"=true/);return [{id:'extra',costPrice:1,currentStock:2}]};
+   if(sql.includes('INSERT INTO "StocktakeLine"')){insertAttempts++;if(storedLine)return [];storedLine='inserted-line';return [{id:storedLine}]};
+   if(sql.includes('SELECT "id" FROM "StocktakeLine"'))return storedLine?[{id:storedLine}]:[];
+   throw Error('Unexpected SQL: '+sql);
+ },$executeRaw:async()=>{otherWrites++;throw Error('Unexpected write')}};
+ const prisma={$queryRaw:async()=>[st],$transaction:fn=>fn(tx)};
+ const invoke=routes(prisma),data=request({productId:'extra'});
+ const first=await invoke('post/stocktakes/:stocktakeId/lines',data);
+ const replay=await invoke('post/stocktakes/:stocktakeId/lines',data);
+ assert.equal(first.status,201,first.error?.message);assert.deepEqual(first.result,{ok:true,lineId:'inserted-line',existing:false});
+ assert.equal(replay.status,200,replay.error?.message);assert.deepEqual(replay.result,{ok:true,lineId:'inserted-line',existing:true});
+ assert.equal(insertAttempts,2);assert.equal(otherWrites,0);
+});
 const isolated=()=>{try{const url=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(url.hostname)&&/test/i.test(url.pathname)}catch{return false}};
 const gate=()=>{let resolve;const promise=new Promise(r=>{resolve=r});return {promise,resolve}};
 test('native PostgreSQL serializes actual draft handlers with finalization and preserves guards',{skip:!isolated()},async()=>{
