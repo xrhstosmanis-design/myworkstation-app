@@ -32,7 +32,7 @@ test("previous photo candidates are used even when only an added page was read",
   assert.equal(result.totalHeader,payable);
 });
 
-test("equal amounts and a single candidate remain available",()=>{
+test("equal amounts and a single verified candidate remain available",()=>{
   assert.equal(merge([subtotal,{totalGross:"120.00"}]).totalHeader,subtotal);
   assert.equal(merge([{totalGross:0},payable]).totalHeader,payable);
 });
@@ -48,4 +48,14 @@ test("the existing balanced payable proof ignores an unrelated receipt or balanc
   assert.equal(recoverBalancedInvoicePayable("ΚΑΘΑΡΗ ΑΞΙΑ 400,00 ΦΠΑ 96,00 ΠΛΗΡΩΤΕΟ 496,00 ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ 19,00"),496);
   assert.equal(recoverBalancedInvoicePayable("ΚΑΘΑΡΗ ΑΞΙΑ 400,00 ΦΠΑ 96,00 ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ ΠΛΗΡΩΤΕΟ 496,00"),0);
   assert.equal(recoverBalancedInvoicePayable("ΚΑΘΑΡΗ ΑΞΙΑ 400,00 ΦΠΑ 96,00 ΠΛΗΡΩΤΕΟ 120,00"),0);
+});
+
+test("a lone unverified amount in a multi-image read requires review",()=>{
+  for(const pages of [[subtotal,{}],[{},subtotal],[subtotal]]){
+    const result=merge(pages);
+    assert.equal(result.totalHeader,null);
+    assert.equal(result.totalNeedsReview,true);
+  }
+  assert.equal(merge([{},{}]).totalNeedsReview,false);
+  assert.equal(mergeFastInvoiceHeaders([subtotal]).totalHeader,subtotal);
 });

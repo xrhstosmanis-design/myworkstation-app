@@ -132,7 +132,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
         recipientVatConflict&&"Το ΑΦΜ που διαβάστηκε συμπίπτει με του παραλήπτη. Έλεγξε το ΑΦΜ του εκδότη στο πρωτότυπο και επίλεξε προμηθευτή.",
         supplierConflict&&"Διαβάστηκαν διαφορετικά στοιχεία προμηθευτή. Έλεγξε το ΑΦΜ του εκδότη στο πρωτότυπο και επίλεξε προμηθευτή.",
         documentNumberNeedsReview&&"Διαβάστηκαν διαφορετικοί αριθμοί. Έλεγξε τον αριθμό τιμολογίου στο πρωτότυπο πριν συνεχίσεις.",
-        totalNeedsReview&&"Διαβάστηκαν διαφορετικά ποσά. Έλεγξε το τελικό πληρωτέο στο πρωτότυπο πριν συνεχίσεις."
+        totalNeedsReview&&"Δεν επιβεβαιώθηκε το τελικό πληρωτέο από τις φωτογραφίες. Έλεγξε το ποσό στο πρωτότυπο πριν συνεχίσεις."
       ].filter(Boolean);
       if(reviewMessages.length){setStatus(reviewMessages.join(" "));return}
       const foundSupplier=Boolean(knownSupplier||(!initial&&supplierId)),baseComplete=Boolean((documentMeta?.documentNumber||documentNumber)&&(documentMeta?.documentDate||documentDate)&&Number(totalMeta?.totalGross||num(amount))>0);
