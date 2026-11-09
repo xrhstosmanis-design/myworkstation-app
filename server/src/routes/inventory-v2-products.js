@@ -44,7 +44,7 @@ router.post('/stocktakes/:stocktakeId/products',async(req,res,next)=>{
    if(!category.length)throw failure('Η κατηγορία δεν είναι έγκυρη.',400);
    const vats=await tx.$queryRaw`SELECT "id","vatRate" FROM "ManagementVatDepartment" WHERE "id"=${body.vatDepartmentId} AND "companyId"=${st.companyId} AND "active"=true LIMIT 1`;
    if(!vats.length)throw failure('Το τμήμα ΦΠΑ δεν είναι έγκυρο.',400);
-   const existing=await tx.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "barcode"=${body.barcode} LIMIT 1`;
+   const existing=await tx.$queryRaw`SELECT pb."productId" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE pb."barcode"=${body.barcode} AND p."companyId"=${st.companyId} LIMIT 1`;
    if(existing.length)throw failure('Το barcode υπάρχει ήδη. Χρησιμοποίησε σύνδεση με υπάρχον είδος.');
    const next=await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS next FROM "Product" WHERE "companyId"=${st.companyId}`;
    const productId=crypto.randomUUID(),lineId=crypto.randomUUID(),sku=String(next[0]?.next||10001);
