@@ -1,3 +1,7 @@
+## 2026-11-10 — STORE-CATALOG-APPEND-XLSX / ASSIGNED
+
+Owner /root; implementation branch `feat/store-catalog-append-3811`; issue #3811. Add new products to an existing store catalog from Excel with multiple barcodes per product and VAT department validation. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-10-store-catalog-append.md`. Source and LAB pending.
+
 ## 2026-11-10T16:29:46.257Z — CASH-UNIFIED-AUDIT-15 / COMPLETE EVIDENCE CLAIM
 
 Retained cash owner `codex/cash-chat-reconciliation-20261026`. Source `fix/cash-complete-evidence-20261110`. Scope and acceptance: [checkpoint](../../CHECKPOINTS/CHANGES/2026-11-10-cash-complete-evidence-claim.md). NOT TESTED. Financial HOLD remains open.
