@@ -1,0 +1,3 @@
+# 10/11/2026 — Linked return evidence in cash report
+
+CASH-UNIFIED-AUDIT-15, retained owner, continuation of the #3744 owner-report scope. The partial return writer records the same reversal and original sale identities in both the POS action and the operator audit. The scoped cash report now projects the recorded product, quantity, amount, method, reason and RBS status at entry, and omits the companion operator line only on an exact pair of identities within the same shift. Unmatched evidence stays visible. No amounts, fiscal status, approval or financial result are changed. The 06/11 financial result remains HOLD. Exact-head CI and production verification are pending.
