@@ -156,3 +156,23 @@ test('verified paper headings render as information while unknown or metadata-on
  }
  const forged=structuredClone(report);forged.paperEvidence.items[0].status='UNRESOLVED';assert.throws(()=>reconciliationText(forged),/coverage changed/);
 });
+
+test('one documented return is shown for two linked audit records, never matched by timestamp alone',()=>{
+ const source=fullFixture(),row=source.sessions.get('a');
+ const event={occurredAt:'2026-10-21T10:00:00.000Z',sessionId:'a',
+  returnDetails:{saleId:'returned-sale',originalSaleId:'original-sale',reason:'Λάθος χειριστή',
+   refundCents:300,method:'CASH',fiscalPendingAtEntry:true,items:[{name:'Δοκιμαστικό είδος',quantity:1}]}};
+ row.fullEvidence.events.findings=[
+  {...event,eventId:'action',code:'AUDIT_RETURN_ITEMS'},
+  {...event,eventId:'operator',code:'AUDIT_POS_INTERNAL_RETURN_PENDING_RBS'},
+  {...event,eventId:'independent',code:'AUDIT_POS_INTERNAL_RETURN_PENDING_RBS',
+   returnDetails:{...event.returnDetails,saleId:'another-return',reason:'Άλλη αιτία'}},
+ ];
+ const report=projectReconciliation(source,[]);
+ assert.equal((report.text.match(/Μερική επιστροφή ειδών/g)||[]).length,2);
+ assert.equal((report.text.match(/Λάθος χειριστή/g)||[]).length,1);
+ assert.match(report.text,/3,00.*μετρητά.*1 × Δοκιμαστικό είδος.*εκκρεμούσε φορολογική επιστροφή RBS/);
+ assert.match(report.text,/Άλλη αιτία/);
+ assert.doesNotMatch(report.text,/returned-sale|original-sale|another-return/);
+ assert.equal(report.rows[0].remainingCents,-8700);
+});
