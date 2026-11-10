@@ -59,7 +59,7 @@ async function applyPackStockCorrection(input){
   return prisma.$transaction(tx=>applyPackStockCorrectionInTransaction(tx,input));
 }
 
-export async function applyPackStockCorrectionInTransaction(tx,{orderId,companyId,userId,userName,expectedReopenVersion=0,req}){
+export async function applyPackStockCorrectionInTransaction(tx,{orderId,companyId,userId,userName,expectedReopenVersion=0,req,excludedStockLineIds=new Set()}){
     const scope=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} LIMIT 1`;
     if(!scope[0])throw Object.assign(new Error("Δεν βρέθηκε η αγορά."),{status:404});
     if(req?.user?.staffAccess===true)await requireStaffAction(tx,req,scope[0].storeId,'invoices.approve');
@@ -98,7 +98,7 @@ export async function applyPackStockCorrectionInTransaction(tx,{orderId,companyI
     }
 
     const lines=await tx.$queryRaw`
-      SELECT "productId","description","quantity","netAmount","exciseTotal","stockUnitsPerInvoiceUnit"
+      SELECT "id","productId","description","quantity","netAmount","exciseTotal","stockUnitsPerInvoiceUnit"
       FROM "PurchaseOrderLine"
       WHERE "orderId"=${orderId} AND "productId" IS NOT NULL
       ORDER BY "createdAt","id"`;
@@ -111,8 +111,11 @@ export async function applyPackStockCorrectionInTransaction(tx,{orderId,companyI
       const pack=stockPackSize(row.description,row.stockUnitsPerInvoiceUnit);
       const stockQty=financialQty*pack.size;
       const current=byProduct.get(productId)||{postedQty:0,stockQty:0,net:0,excise:0,details:[]};
-      current.postedQty+=financialQty;
-      current.stockQty+=stockQty;
+      if(!excludedStockLineIds.has(row.id)){
+        current.postedQty+=financialQty;
+        current.stockQty+=stockQty;
+      }
+      current.costStockQty=(current.costStockQty||0)+stockQty;
       current.net+=n(row.netAmount);
       current.excise+=n(row.exciseTotal);
       current.details.push(`${row.description}: ${financialQty} ΚΒ × ${pack.size} = ${stockQty} ΤΜΧ (${pack.rule})`);
@@ -122,7 +125,7 @@ export async function applyPackStockCorrectionInTransaction(tx,{orderId,companyI
     const audit=[];
     for(const [productId,agg] of byProduct){
       const delta=agg.stockQty-agg.postedQty;
-      const pieceCost=agg.stockQty>0?(agg.net+agg.excise)/agg.stockQty:0;
+      const pieceCost=agg.costStockQty>0?(agg.net+agg.excise)/agg.costStockQty:0;
       if(Math.abs(delta)>0.000001){
         await tx.$executeRaw`
           UPDATE "StoreProduct"

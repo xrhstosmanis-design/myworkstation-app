@@ -23,6 +23,7 @@
 | — | PLATFORM-COMPANY-LAYOUT-02 | Συντονιστής | #3734 | Chromium layout fixture PASS στα 1920, 1024 και 390 px. `wholesale-isolated-lab` PASS στο CI #9481 | Πλήρες CI στο νέο commit και έλεγχος με σύνδεση πριν από δημοσίευση. [Checkpoint](CHANGES/2026-11-08-platform-company-layout-compact.md) |
 
 | 1 | INVENTORY-RECONCILIATION-01 | retained /root | #3693, #3696, #3645 | FREE comparison candidate reconciled; existing LAB pair insufficient for multi-code acceptance | Exact native CI, then validate bounded two-code LAB fixture |
+| — | Invoice stock selection after stocktake | Συντονιστής | #28 | Δύο απομονωμένα σενάρια τιμολόγησης και ακύρωσης πέρασαν | Πλήρες CI και λειτουργικός έλεγχος στο υπάρχον LAB. [Checkpoint](CHANGES/2026-11-10-invoice-stock-selection.md) |
 
 ## Κανόνας ενημέρωσης
 
