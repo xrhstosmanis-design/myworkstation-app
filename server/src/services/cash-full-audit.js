@@ -55,7 +55,8 @@ function returnEvidence(event){
   const name=clean(item?.description);
   return name&&Number.isFinite(item?.quantity)&&item.quantity>0?[{name,quantity:item.quantity}]:[];
  }):[];
- return {returnDetails:{saleId:clean(saleId),originalSaleId:clean(originalSaleId),reason:clean(event.reason||details.reason),
+ const identity=value=>typeof value==='string'&&value.length<=240?value:'';
+ return {returnDetails:{saleId:identity(saleId),originalSaleId:identity(originalSaleId),reason:clean(event.reason||details.reason),
   refundCents:refundCents>=0?refundCents:null,method:['CASH','CARD','IRIS'].includes(details.refundMethod)?details.refundMethod:null,
   fiscalPendingAtEntry:details.fiscalPending===true,items}};
 }
