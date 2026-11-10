@@ -1,3 +1,7 @@
+## 2026-11-10T16:04:40.010Z — INVENTORY-PRODUCT-CREATE-EVENTS
+
+ASSIGNED — Codex / `fix/inventory-product-create-events`. Scope: expose existing inventory PRODUCT_CREATE events in Central Events with store, date and actor filters. Local syntax and mocked checks passed. LAB not tested. PR pending.
+
 ## 2026-11-08T22:16:55+02:00 — CASH-UNIFIED-AUDIT-15 / OWNER EMAIL LAYOUT CLAIM
 
 Retained cash owner codex/cash-chat-reconciliation-20261026, coordinated by /root. Scope: owner-style cash report email from the same checked MyWorkStation data, with shift cash and POS/EFTPOS tables, applicable evidence and pending replies. Unchecked paper stays visible with its reason and does not add a delivery hold. Preserve financial HOLD and current safety gates. First preview: previously verified test store/day. No actual owner send in this scope.
