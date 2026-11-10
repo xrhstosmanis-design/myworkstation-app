@@ -103,6 +103,16 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
    if(line.kind==='OTHER'&&line.amountText===null&&line.quantityText===null&&line.timeText===null&&headerLabels.has(normalized(line.label).replace(/\s*:\s*/g,':'))){items.push({...detail,status:'INFORMATIONAL',reason:'VERIFIED_DOCUMENT_HEADER'});return;}
    const time=printedTime(line.timeText);
    if(!time){items.push({...detail,status:'UNRESOLVED',reason:'LINE_TIME_UNREADABLE'});return;}
+   // Compare only an explicitly identified face-value total, not fees,
+   // settlement, OKTO, or an unqualified prepaid aggregate.
+   if(line.kind==='PREPAID'&&/^(?:ΣΥΝΟΛΟ ΑΞΙΑΣ ΚΑΡΤΩΝ NETLINK|NETLINK ΣΥΝΟΛΟ ΑΞΙΑΣ ΚΑΡΤΩΝ|NETLINK FACE VALUE TOTAL)$/.test(normalized(line.label).replace(/:$/,''))){
+    const boundaries=all.filter(({session})=>session.status==='CLOSED'&&operatorMatches(extraction.operatorText,session.openedByName)&&sameTime(time,session.closedAt,extraction.documentDate));
+    const original=boundaries[0],recorded=original?.netlinkEvidence;
+    if(boundaries.length===1&&selected.has(original.session.id)&&recorded?.completedCount>0&&recorded.reviewCount===0&&Number.isSafeInteger(recorded.amountCents)&&Number.isSafeInteger(line.amountCents-recorded.amountCents)){
+     items.push({...detail,sessionId:original.session.id,sourceHash:original.sourceHash,evidenceBasis:'SHIFT_TOTAL',recordedAmountCents:recorded.amountCents,status:'UNRESOLVED',reason:'NETLINK_SUBTOTAL_COMPARISON'});
+     return;
+    }
+   }
    const candidates=[],eftposBoundaries=[];
    const explicitEftposTotal=line.kind==='EFTPOS'&&/^(?:ΣΥΝΟΛΟ EFTPOS|EFTPOS TOTAL|TOTAL EFTPOS)$/.test(normalized(line.label).replace(/:$/,''));
    for(const original of all){
