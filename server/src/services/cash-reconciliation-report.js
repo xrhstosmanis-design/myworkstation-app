@@ -173,7 +173,10 @@ export function reconciliationText(report){
     if(row.fullAudit){
       const pendingLabels={SOURCE_COVERAGE:'κάλυψη πηγών',CASH_ARITHMETIC:'συμφωνία κινήσεων μετρητών',OPERATOR_IDENTITY:'ταυτότητα χειριστή',RESULT_ELIGIBILITY:'επιλεξιμότητα αποτελέσματος',CARD_ARITHMETIC:'συμφωνία καρτών',HANDOFF:'παραδόσεις ταμείου',AWAITING_NEXT_SHIFT:'κλείσιμο επόμενης βάρδιας',AUDIT_OPEN_ISSUES:'ανοικτά αριθμητικά ερωτήματα',EVENTS:'συμβάντα και αλλαγές τιμών',DUPLICATES:'πιθανές διπλές συναλλαγές',PAPERS:'χειρόγραφα του τσατ',EXPENSES:'παραστατικά εξόδων'};
       lines.push(row.fullAudit.status==='FINAL'?`ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ · ${row.operatorName}: ${signedResult(row.fullAudit.remainingCents)}.`:`Πλήρης έλεγχος · ${row.operatorName}: ${row.fullAudit.status==='NOT_APPLICABLE'?'δεν εφαρμόζεται':row.fullAudit.status==='AWAITING_NEXT_SHIFT'?'αναμονή επόμενης βάρδιας':'εκκρεμεί διασταύρωση'}.`);
-      if(row.fullAudit.pendingChecks.length)lines.push(`Ευρήματα: συμβάντα ${row.fullCoverage.events.unresolvedCount}, πιθανές διπλές συναλλαγές ${row.fullCoverage.duplicates.unresolvedCount}, χειρόγραφα ${row.fullCoverage.papers.unresolvedCount}, παραστατικά ${row.fullCoverage.expenses.unresolvedCount}.`);
+      if(row.fullAudit.pendingChecks.length){
+        const shiftPaperLines=(report.paperEvidence?.items||[]).filter(item=>item.status==='UNRESOLVED'&&item.sessionId===row.sessionId).length;
+        lines.push(`Ευρήματα: συμβάντα ${row.fullCoverage.events.unresolvedCount}, πιθανές διπλές συναλλαγές ${row.fullCoverage.duplicates.unresolvedCount}, γραμμές χειρογράφων προς έλεγχο με σύνδεση στη βάρδια ${shiftPaperLines}, παραστατικά ${row.fullCoverage.expenses.unresolvedCount}.`);
+      }
       if(row.fullAudit.pendingChecks.length)lines.push('Εκκρεμούν: '+row.fullAudit.pendingChecks.map(c=>pendingLabels[c]).join(', ')+'.');
       lines.push(...cashAuditEventSummary(row.fullEvidence?.events?.findings||[]));
       for(const finding of (row.fullEvidence?.duplicates?.findings||[]).slice(0,30)){
@@ -205,6 +208,11 @@ export function reconciliationText(report){
   }
   if(report.paperEvidence){
     lines.push('','ΧΕΙΡΟΓΡΑΦΑ ΚΑΙ ΠΑΡΑΣΤΑΤΙΚΑ ΑΠΟ ΤΟ ΤΣΑΤ');
+    const selectedShifts=new Set(report.rows.map(row=>row.sessionId));
+    const unassigned=report.paperEvidence.items.filter(item=>item.status==='UNRESOLVED'&&!selectedShifts.has(item.sessionId));
+    if(unassigned.length){
+      lines.push(`Εκκρεμείς καταχωρίσεις χειρογράφων χωρίς αντιστοίχιση σε επιλεγμένη βάρδια: ${unassigned.length}. Καταγράφονται μία φορά σε επίπεδο καταστήματος. Η ημερομηνία ανεβάσματος δεν αρκεί για αντιστοίχιση.`);
+    }
     lines.push(report.paperEvidence.coverage.discoveryComplete?'Εξετάστηκαν όλα τα διαθέσιμα υποστηριζόμενα συνημμένα του καταστήματος στην τρέχουσα αναζήτηση.':'Η κάλυψη των συνημμένων παραμένει περιορισμένη.');
     const candidateFields={openingOperational:'αρχικό ταμείο',actualOperational:'τελικό ταμείο',cardSales:'POS',eftposTotal:'EFTPOS',expenses:'σύνολο εξόδων'};
     if((report.paperEvidence.shiftCandidates?.length||0)>30)lines.push(`Εμφανίζονται 30 από ${report.paperEvidence.shiftCandidates.length} προτεινόμενες βάρδιες. Όλες παραμένουν μη επιβεβαιωμένες.`);
