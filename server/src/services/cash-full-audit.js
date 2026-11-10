@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {automaticCashAuditSchema} from './cash-automatic-audit.js';
 import {cashArithmeticIsCurrent,canAutomaticallyCalculate} from './cash-automatic-result.js';
-import {hash} from './cash-reconciliation-contract.js';
+import {exactCents,hash} from './cash-reconciliation-contract.js';
 import {partitionCashAuditEvents} from './cash-audit-association.js';
 
 const sha=z.string().regex(/^[a-f0-9]{64}$/),cents=z.number().int().safe();
@@ -42,6 +42,23 @@ export function assertFullCashAudit({row,coverage,fullAudit}){
 
 const instant=value=>value==null?NaN:new Date(value).getTime();
 const suspicious=type=>/CANCEL|RETURN|VOID|REVERSE|REFUND|DELETE|OVERRIDE|REOPEN|AFTER_CLOSE|DUPLICATE|REPLAY|BLOCKED|DELAY|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(type||''));
+function returnEvidence(event){
+ const action=event.actionType==='RETURN_ITEMS';
+ const internal=event.eventType==='POS_INTERNAL_RETURN_PENDING_RBS';
+ if(!action&&!internal)return {};
+ const details=event.details||{};
+ const saleId=action?event.saleId:details.reversalSaleId;
+ const originalSaleId=action?event.relatedSaleId:details.originalSaleId;
+ const clean=value=>typeof value==='string'?value.replace(/\s+/g,' ').trim().slice(0,240):'';
+ const refundCents=exactCents(details.refund);
+ const items=Array.isArray(details.items)?details.items.slice(0,100).flatMap(item=>{
+  const name=clean(item?.description);
+  return name&&Number.isFinite(item?.quantity)&&item.quantity>0?[{name,quantity:item.quantity}]:[];
+ }):[];
+ return {returnDetails:{saleId:clean(saleId),originalSaleId:clean(originalSaleId),reason:clean(event.reason||details.reason),
+  refundCents:refundCents>=0?refundCents:null,method:['CASH','CARD','IRIS'].includes(details.refundMethod)?details.refundMethod:null,
+  fiscalPendingAtEntry:details.fiscalPending===true,items}};
+}
 export const fullCashEventLimit=2000;
 // Execute inside the caller's existing selected-store snapshot. No bootstrap,
 // external request or update is performed. A late event needs an identity link;
@@ -71,7 +88,7 @@ export async function readFullCashEventEvidence(db,scope,session,transactions=[]
    // copied onto every earlier employee. In-shift ambiguity remains visible.
    const ambiguous=part.unassigned.filter(e=>instant(e.createdAt)<=closed);
    unassignedCount+=ambiguous.length;
-   for(const e of part.linked)findings.push({code:'AUDIT_'+(e.actionType||e.eventType),source:sources[index],eventId:e.id,sessionId:id,saleId:e.saleId||null,relatedSaleId:e.relatedSaleId||null,occurredAt:new Date(e.createdAt).toISOString(),afterClose:instant(e.createdAt)>closed,requiresReview:true});
+   for(const e of part.linked)findings.push({code:'AUDIT_'+(e.actionType||e.eventType),source:sources[index],eventId:e.id,sessionId:id,saleId:e.saleId||null,relatedSaleId:e.relatedSaleId||null,occurredAt:new Date(e.createdAt).toISOString(),afterClose:instant(e.createdAt)>closed,requiresReview:true,...returnEvidence(e)});
   }
   return {status:'AVAILABLE',findings,unassignedCount,excludedCount,linkedCount,financialAdjustmentCents:0,evidenceHash:hash({scope:{companyId:scope.companyId,storeId:scope.storeId,sessionId:id},openedAt:from,closedAt:session.closedAt,groups,transactions:transactions.map(t=>({id:t.id,sessionId:t.sessionId,type:t.type,description:t.description,saleId:t.saleId})),partitioned})};
  }catch{return empty('UNAVAILABLE');}
