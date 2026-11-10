@@ -58,9 +58,11 @@ test('actual catalog SQL in isolated PostgreSQL preserves complete membership, a
   const {PrismaClient}=await import('@prisma/client'),db=new PrismaClient();
   try{await db.$transaction(async tx=>{
     for(const sql of [
-      'CREATE TEMP TABLE "Product"("id" text PRIMARY KEY,"companyId" text,"sku" text,"name" text,"vatRate" numeric,"salePrice" numeric,"active" boolean,"categoryId" text,"masterProductId" text,"freeSalePrice" boolean,"negativeStockWarning" boolean,"isSet" boolean,"isRecipe" boolean) ON COMMIT DROP',
-      'CREATE TEMP TABLE "StoreProduct"("storeId" text,"productId" text,"active" boolean,"salePrice" numeric,"currentStock" numeric,PRIMARY KEY("storeId","productId")) ON COMMIT DROP',
+      'CREATE TEMP TABLE "Product"("id" text PRIMARY KEY,"companyId" text,"sku" text,"name" text,"vatRate" numeric,"salePrice" numeric,"active" boolean,"categoryId" text,"subcategoryId" text,"masterProductId" text,"freeSalePrice" boolean,"negativeStockWarning" boolean,"isSet" boolean,"isRecipe" boolean) ON COMMIT DROP',
+      'CREATE TEMP TABLE "StoreProduct"("storeId" text,"productId" text,"active" boolean,"salePrice" numeric,"currentStock" numeric,"costPriceOverride" numeric,"categoryIdOverride" text,"subcategoryIdOverride" text,"vatDepartmentIdOverride" text,PRIMARY KEY("storeId","productId")) ON COMMIT DROP',
       'CREATE TEMP TABLE "ProductCategory"("id" text PRIMARY KEY,"name" text) ON COMMIT DROP',
+      'CREATE TEMP TABLE "ProductSubcategory"("id" text PRIMARY KEY,"name" text) ON COMMIT DROP',
+      'CREATE TEMP TABLE "ManagementVatDepartment"("id" text PRIMARY KEY,"companyId" text,"vatRate" numeric) ON COMMIT DROP',
       'CREATE TEMP TABLE "ProductBarcode"("productId" text,"barcode" text,"salePrice" numeric,PRIMARY KEY("productId","barcode")) ON COMMIT DROP',
       'CREATE TEMP TABLE "MasterProduct"("id" text PRIMARY KEY,"sourceCode" text,"name" text,"active" boolean) ON COMMIT DROP',
       'CREATE TEMP TABLE "MasterProductBarcode"("masterProductId" text,"barcode" text) ON COMMIT DROP',
