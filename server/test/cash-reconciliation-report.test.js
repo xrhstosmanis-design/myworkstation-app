@@ -176,3 +176,12 @@ test('one documented return is shown for two linked audit records, never matched
  assert.doesNotMatch(report.text,/returned-sale|original-sale|another-return/);
  assert.equal(report.rows[0].remainingCents,-8700);
 });
+
+
+test('reports separately corroborated EFTPOS shift totals and identifies missing slip verification',()=>{
+ const source=fullFixture();
+ assert.match(projectReconciliation(source,[]).text,/Απόκομμα EFTPOS: δεν υπάρχει επαληθευμένο σύνολο/);
+ source.paperEvidence.items.push({sourceId:'eftpos',line:0,filename:'eftpos.png',status:'MATCHED',kind:'EFTPOS',sessionId:'a',transactionId:null,evidenceBasis:'SHIFT_TOTAL',amountCents:11800,reason:'UNIQUE_RECORDED_CORROBORATION'});
+ const result=projectReconciliation(source,[]);
+ assert.match(result.text,/Απόκομμα EFTPOS · eftpos\.png · αναγνωσμένο σύνολο 118,00\s€ · καταχωρισμένο EFTPOS 118,00\s€ · διαφορά 0,00\s€/);
+});
