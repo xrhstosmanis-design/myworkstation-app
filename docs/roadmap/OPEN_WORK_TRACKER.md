@@ -1,3 +1,7 @@
+## 2026-11-10 — OWNER-SHIFT-TIME-FILTER / ASSIGNED
+
+Owner /root. Add time to the existing From/To shift report filters using Europe/Athens, with the current local time prefilled in From on each opening. Keep existing whole-day presets and report semantics. Source and LAB pending.
+
 ## 2026-11-10T20:29:41.105Z — MYDATA-DRAFT-PREFILL / ASSIGNED
 
 Codex / `fix/mydata-draft-prefill`. Scope: deterministic XML and verified PDF packaging lines into myDATA review drafts, bulk pieces selection, purchase inventory units and per-piece cost. Existing duplicate/payment work stays separately assigned. Local checkpoint `35d7e8c`; full CI and existing LAB acceptance pending.
