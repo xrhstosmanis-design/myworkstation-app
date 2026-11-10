@@ -178,3 +178,15 @@ test('Diadochou-sized 37 attachment metadata set fits 100 MiB without loading or
  assert.equal(boundAutomaticPaperDiscovery(tooLarge).status,'UNAVAILABLE');
  assert.equal(boundAutomaticPaperDiscovery({...metadata,sources:Array.from({length:51},(_,i)=>({...sources[0],sourceId:String(i),sizeBytes:1}))}).status,'UNAVAILABLE');
 });
+
+
+test('compares explicit Netlink face value against a unique shift subtotal without settling the result',()=>{
+ const counted={...original,netlinkEvidence:{completedCount:2,reviewCount:0,amountCents:11800}};
+ const slip=label=>({...source,reading:{...reading,extraction:normalizePaper({...raw,dateText:'02/11/2026',documentDate:'2026-11-02',lines:[{...raw.lines[0],kind:'PREPAID',label,timeText:'05:58',amountText:'119,00'}]})}});
+ const result=project({sessions:new Map([['night',counted]]),papers:[slip('Σύνολο αξίας καρτών Netlink')]});
+ assert.equal(result.items[0].reason,'NETLINK_SUBTOTAL_COMPARISON');
+ assert.equal(result.items[0].recordedAmountCents,11800);
+ assert.equal(result.items[0].status,'UNRESOLVED');
+ assert.equal(result.financialAdjustmentCents,0);
+ assert.notEqual(project({sessions:new Map([['night',counted]]),papers:[slip('Σύνολο αξίας καρτών OKTO')]}).items[0].reason,'NETLINK_SUBTOTAL_COMPARISON');
+});
