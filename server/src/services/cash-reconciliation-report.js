@@ -118,11 +118,27 @@ const cashAuditEventLabels=new Map([
 ]);
 
 const cashAuditEventTime=event=>new Date(event.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'});
+function cashReturnKey(event){
+  const r=event.returnDetails;
+  return r?.saleId&&r.originalSaleId?JSON.stringify([event.sessionId,r.saleId,r.originalSaleId]):null;
+}
+function cashReturnDescription(event){
+  const r=event.returnDetails;
+  if(!r)return null;
+  const method={CASH:'μετρητά',CARD:'κάρτα',IRIS:'IRIS'}[r.method];
+  const items=r.items.slice(0,8).map(item=>`${item.quantity} × ${item.name}`);
+  return ['Μερική επιστροφή ειδών',r.refundCents===null?null:money(r.refundCents),method,...items,
+    r.items.length>items.length?`και ${r.items.length-items.length} ακόμη γραμμές`:null,
+    r.reason?'Αιτιολογία: '+r.reason:null,
+    r.fiscalPendingAtEntry?'Κατά την καταχώριση εκκρεμούσε φορολογική επιστροφή RBS':null].filter(Boolean).join(' · ');
+}
 function cashAuditEventSummary(events){
   const replays=events.filter(event=>event.code==='AUDIT_IDEMPOTENT_REPLAY');
-  const actionable=events.filter(event=>event.code!=='AUDIT_IDEMPOTENT_REPLAY');
+  const actionReturns=new Set(events.filter(event=>event.code==='AUDIT_RETURN_ITEMS').map(cashReturnKey).filter(Boolean));
+  const actionable=events.filter(event=>event.code!=='AUDIT_IDEMPOTENT_REPLAY'&&
+    !(event.code==='AUDIT_POS_INTERNAL_RETURN_PENDING_RBS'&&actionReturns.has(cashReturnKey(event))));
   const lines=actionable.slice(0,30).map(event=>{
-    const label=cashAuditEventLabels.get(event.code.replace(/^AUDIT_/,''))||'Συμβάν χωρίς διαθέσιμη περιγραφή';
+    const label=cashReturnDescription(event)||cashAuditEventLabels.get(event.code.replace(/^AUDIT_/,''))||'Συμβάν χωρίς διαθέσιμη περιγραφή';
     return `${cashAuditEventTime(event)} · ${label}${event.afterClose?' · μετά το κλείσιμο':''}. Ελέγξτε την αντίστοιχη κίνηση στο ημερολόγιο της βάρδιας.`;
   });
   if(actionable.length>30)lines.push(`Εμφανίζονται 30 από ${actionable.length} συμβάντα. Τα υπόλοιπα είναι διαθέσιμα στα τεκμήρια της βάρδιας.`);
