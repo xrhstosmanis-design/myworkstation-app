@@ -129,6 +129,7 @@ export default function InventoryV2Center({
             zoneId: f.get("zoneId") || null,
             allowFinalize: f.get("allowFinalize") === "on",
             allowWarehouse: f.get("allowWarehouse") === "on",
+            allowWarehouseEdit: f.get("allowWarehouseEdit") === "on",
             expiresMinutes: 480,
             maxUses: 10,
           }),
@@ -601,6 +602,7 @@ export default function InventoryV2Center({
                   </select>
                   <label><input type="checkbox" name="allowFinalize" /> Δικαίωμα οριστικοποίησης (μόνο για όλες τις ζώνες)</label>
                   <label><input type="checkbox" name="allowWarehouse" /> Προβολή αποθήκης καταστήματος (όλες οι ζώνες)</label>
+                  <label><input type="checkbox" name="allowWarehouseEdit" /> Επεξεργασία ειδών μόνο στο κατάστημα του συνδέσμου</label>
                   <button>Έκδοση πρόσβασης</button>
                   {grant && (
                     <section className="inv2-grant-result">

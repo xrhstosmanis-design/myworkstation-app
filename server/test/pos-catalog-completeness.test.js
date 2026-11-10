@@ -58,9 +58,11 @@ test('actual catalog SQL in isolated PostgreSQL preserves complete membership, a
   const {PrismaClient}=await import('@prisma/client'),db=new PrismaClient();
   try{await db.$transaction(async tx=>{
     for(const sql of [
-      'CREATE TEMP TABLE "Product"("id" text PRIMARY KEY,"companyId" text,"sku" text,"name" text,"vatRate" numeric,"salePrice" numeric,"active" boolean,"categoryId" text,"masterProductId" text,"freeSalePrice" boolean,"negativeStockWarning" boolean,"isSet" boolean,"isRecipe" boolean) ON COMMIT DROP',
-      'CREATE TEMP TABLE "StoreProduct"("storeId" text,"productId" text,"active" boolean,"salePrice" numeric,"currentStock" numeric,PRIMARY KEY("storeId","productId")) ON COMMIT DROP',
+      'CREATE TEMP TABLE "Product"("id" text PRIMARY KEY,"companyId" text,"sku" text,"name" text,"vatRate" numeric,"salePrice" numeric,"active" boolean,"categoryId" text,"masterProductId" text,"freeSalePrice" boolean,"negativeStockWarning" boolean,"isSet" boolean,"isRecipe" boolean,"subcategoryId" text) ON COMMIT DROP',
+      'CREATE TEMP TABLE "StoreProduct"("storeId" text,"productId" text,"active" boolean,"salePrice" numeric,"currentStock" numeric,"costPriceOverride" numeric,"categoryIdOverride" text,"subcategoryIdOverride" text,"vatDepartmentIdOverride" text,PRIMARY KEY("storeId","productId")) ON COMMIT DROP',
       'CREATE TEMP TABLE "ProductCategory"("id" text PRIMARY KEY,"name" text) ON COMMIT DROP',
+      'CREATE TEMP TABLE "ProductSubcategory"("id" text PRIMARY KEY,"name" text) ON COMMIT DROP',
+      'CREATE TEMP TABLE "ManagementVatDepartment"("id" text PRIMARY KEY,"companyId" text,"vatRate" numeric) ON COMMIT DROP',
       'CREATE TEMP TABLE "ProductBarcode"("productId" text,"barcode" text,"salePrice" numeric,PRIMARY KEY("productId","barcode")) ON COMMIT DROP',
       'CREATE TEMP TABLE "MasterProduct"("id" text PRIMARY KEY,"sourceCode" text,"name" text,"active" boolean) ON COMMIT DROP',
       'CREATE TEMP TABLE "MasterProductBarcode"("masterProductId" text,"barcode" text) ON COMMIT DROP',
@@ -80,13 +82,20 @@ test('actual catalog SQL in isolated PostgreSQL preserves complete membership, a
     await tx.$executeRaw`UPDATE "Product" SET "masterProductId"='master' WHERE "id"='p26656'`;
     await tx.$executeRaw`INSERT INTO "MasterProductBarcode" VALUES ('master','5201004022158'),('master','5201004022159'),('master','5201004022160')`;
     await tx.$executeRaw`INSERT INTO "StorePosLayout" VALUES ('store',${JSON.stringify(layout)}::jsonb,7,NOW())`;
+    await tx.$executeRaw`INSERT INTO "StoreProduct" ("storeId","productId","active","salePrice","currentStock") VALUES ('control','p26656',true,2.50,4)`;
+    await tx.$executeRaw`INSERT INTO "ProductCategory" VALUES ('local-category','Local category')`;
+    await tx.$executeRaw`INSERT INTO "ProductSubcategory" VALUES ('local-subcategory','Local subcategory')`;
+    await tx.$executeRaw`INSERT INTO "ManagementVatDepartment" VALUES ('local-vat','company',13)`;
+    await tx.$executeRaw`UPDATE "StoreProduct" SET "vatDepartmentIdOverride"='local-vat',"categoryIdOverride"='local-category',"subcategoryIdOverride"='local-subcategory' WHERE "storeId"='store' AND "productId"='p26656'`;
     const before=await tx.$queryRawUnsafe('SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"');
     const prisma={$queryRaw:tx.$queryRaw.bind(tx),$queryRawUnsafe:tx.$queryRawUnsafe.bind(tx),store:{findFirst:async({where})=>where.companyId==='company'&&['store','control'].includes(where.id)?{id:where.id,companyId:'company'}:null}};
     const run=handlers(prisma);
     for(const kind of kinds){
       const result=await run(kind);assert.equal(result.products.length,26656);assert.equal(result.lifecycle.generation,"0");assert.deepEqual(result.layout,layout);
-      assert.equal(new Set(result.products.map(p=>p.id)).size,26656);assert.equal(result.products[0].id,'p00001');assert.equal(result.products.at(-1).id,'p26656');
-      const index=createPosScanCatalog(result.products),target=index.exact('5201004022158',{complete:true});assert.equal(target.id,'p26656');assert.equal(target.salePrice,1.25);assert.equal(target.vatRate,24);assert.equal(target.currentStock,-2.5);
+      assert.equal(new Set(result.products.map(p=>p.id)).size,26656);assert.ok(result.products.some(p=>p.id==='p00001'));assert.ok(result.products.some(p=>p.id==='p26656'));
+      const index=createPosScanCatalog(result.products),target=index.exact('5201004022158',{complete:true});assert.equal(target.id,'p26656');assert.equal(target.salePrice,1.25);assert.equal(target.vatRate,13);assert.equal(target.currentStock,-2.5);
+      assert.equal(target.categoryName,'Local category');
+      if(kind!=='older')assert.equal(target.subcategoryName,'Local subcategory');
       assert.equal(index.exact('5201004022160',{complete:true}).id,'p00001');
       if(kind!=='older'){
         assert.equal(target.sourceCode,'M-CODE');assert.ok(target.barcodes.includes('5201004022159'));
@@ -96,7 +105,10 @@ test('actual catalog SQL in isolated PostgreSQL preserves complete membership, a
         else assert.equal(index.exact('5201004022159',{complete:true}).id,'p26656');
       }
       else assert.equal(target.barcodeOptions[0].salePrice,1.75);
-      const control=await run(kind,{companyId:'company'},'control');assert.deepEqual(control.products.map(p=>p.id),['controlonly']);
+      const control=await run(kind,{companyId:'company'},'control');assert.deepEqual(control.products.map(p=>p.id).sort(),['controlonly','p26656']);
+      const sameProduct=control.products.find(p=>p.id==='p26656');
+      assert.equal(sameProduct.vatRate,24);assert.equal(sameProduct.salePrice,2.50);
+      assert.notEqual(sameProduct.categoryName,'Local category');
       await assert.rejects(run(kind,{companyId:'other'}),e=>e.status===404);
       await assert.rejects(run(kind,{companyId:'company',tokenType:'STORE_OPERATOR',storeId:'control'}),e=>e.status===403);
     }

@@ -68,31 +68,31 @@ router.get("/",async(req,res,next)=>{
       SELECT COUNT(*)::int AS count
       FROM "StoreProduct" sp
       JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
-      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
-      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId")
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       WHERE sp."storeId"=${storeId}
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
-        AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${subcategory}::text IS NULL OR COALESCE(sc."name",CASE WHEN sp."categoryIdOverride" IS NULL THEN mp."subcategoryName" END,'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
     `;
     const total=Number(countRows[0]?.count||0);
 
     const rows=await prisma.$queryRaw`
-      SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."vatDepartmentId",vd."description" AS "vatDepartmentName",p."costPrice",p."active" AS "productActive",
+      SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",CASE WHEN sp."vatDepartmentIdOverride" IS NULL THEN p."vatRate" ELSE vd."vatRate" END AS "vatRate",COALESCE(sp."vatDepartmentIdOverride",p."vatDepartmentId") AS "vatDepartmentId",vd."description" AS "vatDepartmentName",COALESCE(sp."costPriceOverride",p."costPrice") AS "costPrice",p."active" AS "productActive",
         p."createdAt",p."updatedAt",p."eDeliveryEnabled",p."efoodEnabled",p."woltEnabled",p."publishStock",p."publishPrices",p."efoodPrice",p."woltPrice",
-        c."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "brandName",
+        c."name" AS "categoryName",COALESCE(sc."name",CASE WHEN sp."categoryIdOverride" IS NULL THEN mp."subcategoryName" END) AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "brandName",
         sp."active" AS "storeActive",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",sp."minStock",(SELECT bs."bakedQuantity" FROM "StoreBakedBalance" bs WHERE bs."companyId"=p."companyId" AND bs."storeId"=sp."storeId" AND bs."productId"=p."id" AND bs."enabled"=TRUE) AS "bakedStock",
         pb."barcode",lp."unitCost" AS "lastPurchasePrice",lp."documentDate" AS "lastPurchaseAt",COALESCE(lp."supplierName",linkedSupplier."name") AS "supplierName",lp."documentNumber" AS "lastPurchaseDocument",
         ap."averagePurchasePrice",COALESCE(sa."sales15Qty",0) AS "sales15Qty",sa."lastSaleAt"
       FROM "StoreProduct" sp
       JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
-      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
-      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId")
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
-      LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=p."vatDepartmentId" AND vd."companyId"=${companyId}
+      LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=COALESCE(sp."vatDepartmentIdOverride",p."vatDepartmentId") AND vd."companyId"=${companyId}
       LEFT JOIN "ManagementProductCompany" pc ON pc."id"=p."productCompanyId" AND pc."companyId"=${companyId}
       LEFT JOIN LATERAL (
         SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1
@@ -136,7 +136,7 @@ router.get("/",async(req,res,next)=>{
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
-        AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${subcategory}::text IS NULL OR COALESCE(sc."name",CASE WHEN sp."categoryIdOverride" IS NULL THEN mp."subcategoryName" END,'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
       ORDER BY p."name",p."sku" NULLS LAST
       LIMIT ${pageSize} OFFSET ${offset}
@@ -163,12 +163,12 @@ router.get("/",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT DISTINCT COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ') AS name
         FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
-        LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+        LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId")
         WHERE sp."storeId"=${storeId} ORDER BY name`,
       prisma.$queryRaw`
-        SELECT DISTINCT COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ') AS name
+        SELECT DISTINCT COALESCE(sc."name",CASE WHEN sp."categoryIdOverride" IS NULL THEN mp."subcategoryName" END,'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ') AS name
         FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
-        LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+        LEFT JOIN "ProductSubcategory" sc ON sc."id"=CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END
         LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
         WHERE sp."storeId"=${storeId} ORDER BY name`,
       prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,

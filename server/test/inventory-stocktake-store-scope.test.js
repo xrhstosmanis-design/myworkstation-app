@@ -19,7 +19,7 @@ test('stocktake authorization retains central company scope and strict existing 
   assert.equal(inventoryStoreScopeAllowed({storeId:'store'},'control'),false);assert.equal(inventoryStoreScopeAllowed({},'store'),true);assert.equal(inventoryStoreScopeAllowed({},''),false);
 });
 test('actual store-bound Inventory2.0 handlers reject foreign store before reads/writes beyond access lookup',async()=>{
-  const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs)]));
+  const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete','patch'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs)]));
   let queries=0,writes=0,transactions=0;
   const prisma={$queryRaw:async()=>{queries++;return [{id:'take',companyId:'company',storeId:'store',status:'DRAFT'}]},$executeRaw:async()=>{writes++;return 1},$transaction:async()=>{transactions++;throw Error('foreign transaction must not start')},store:{findFirst:async()=>{throw Error('foreign store lookup must not run')}}};
   for(const file of ['inventory-v2.js','inventory-v2-import.js','inventory-v2-audit.js']){
