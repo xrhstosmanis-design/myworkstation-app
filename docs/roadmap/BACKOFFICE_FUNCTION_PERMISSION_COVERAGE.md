@@ -99,7 +99,7 @@ Installed shared UI: BackofficeShell/BackofficeStores, native StoreCloudPage shi
 | Τιμές και τιμοκατάλογοι | STORE | read, edit, bulk-edit, import, export, print | NOT INTEGRATED |
 | Προσφορές | STORE | read, create, edit, activate, delete | NOT INTEGRATED |
 | Αποθήκη και κινήσεις | STORE | read, receive, adjust, waste, reverse, import, export, print | NOT INTEGRATED |
-| Απογραφή | STORE | read, count, clear, bulk-zero, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.count, inventory.clear, inventory.bulk-zero, inventory.delete, inventory.create, inventory.finalize |
+| Απογραφή | STORE | read, history.read, expected.read, count, clear, bulk-zero, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.history.read, inventory.expected.read, inventory.count, inventory.clear, inventory.bulk-zero, inventory.delete, inventory.create, inventory.finalize |
 | Μεταφορές αποθήκης | STORE | read, create, approve, dispatch, receive, cancel, export, print | NOT INTEGRATED |
 | Συνταγές | COMPANY | read, create, edit, delete, produce, export | NOT INTEGRATED |
 | Ψησίματα και παραγωγή | STORE | read, create, finalize, cancel, configure, export | NOT INTEGRATED |
