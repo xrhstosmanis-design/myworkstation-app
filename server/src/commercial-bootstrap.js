@@ -76,6 +76,16 @@ const statements=[
   ADD COLUMN IF NOT EXISTS "vatDepartmentIdOverride" TEXT,
   ADD COLUMN IF NOT EXISTS "categoryIdOverride" TEXT,
   ADD COLUMN IF NOT EXISTS "subcategoryIdOverride" TEXT`,
+`CREATE TABLE IF NOT EXISTS "InventoryWarehouseEditAudit" (
+  "id" TEXT PRIMARY KEY,
+  "storeId" TEXT NOT NULL,
+  "productId" TEXT NOT NULL,
+  "stocktakeId" TEXT NOT NULL,
+  "grantId" TEXT NOT NULL,
+  "before" JSONB NOT NULL,
+  "after" JSONB NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)`,
 
 `CREATE TABLE IF NOT EXISTS "Supplier" (
   "id" TEXT NOT NULL,
