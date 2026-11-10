@@ -56,3 +56,5 @@ Personal inventory detail pages and stocktake-wide exact barcode/SKU lookup. Fro
 10/11/2026 — QR/PIN selection displays current store stock from a read-only, scoped line endpoint. CI and LAB pending.
 
 10/11/2026 — Store warehouse browsing implemented with explicit owner opt-in, scoped read-only search and paging. Price/taxonomy editing remains pending. CI and LAB pending.
+
+10/11/2026 — Draft #3786 includes scoped grant, atomic five-field edit with before/after audit, editor, inventory cost/category and store POS checkout VAT/category integration. Remaining consumer review and exact two-store LAB pending. No release.
