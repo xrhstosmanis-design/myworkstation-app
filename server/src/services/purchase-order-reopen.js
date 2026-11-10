@@ -44,9 +44,22 @@ async function load(tx,actor,orderId,storeId){
  const documentLines=await raw(tx,'SELECT * FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=ANY($1::text[]) ORDER BY "id" FOR UPDATE',documentIds);
  if(lines.length>2500||documentLines.length>5000)throw fail("Το μεγάλο παραστατικό χρειάζεται χωριστό έλεγχο.");
  const movements=await raw(tx,`SELECT m.* FROM "StockMovement" m WHERE $1::text IS NOT NULL AND m."storeId"=$2 AND m."sourceType"='PURCHASE_ORDER' AND m."sourceId"=$3 AND NOT EXISTS (SELECT 1 FROM "PurchaseOrderReopenMovement" r WHERE r."movementId"=m."id") ORDER BY m."id" FOR UPDATE OF m`,companyId,storeId,orderId);
- if(!movements.length||movements.length>10000||movements.some(m=>!["PURCHASE","PURCHASE_PACK_CORRECTION"].includes(m.movementType)||!Number.isFinite(n(m.quantity))||n(m.quantity)<0))throw fail("Δεν επιβεβαιώθηκαν οι αρχικές κινήσεις και οι μετατροπές συσκευασίας. Δεν έγινε επαναφορά.");
+ if(movements.length>10000||movements.some(m=>!["PURCHASE","PURCHASE_PACK_CORRECTION"].includes(m.movementType)||!Number.isFinite(n(m.quantity))||n(m.quantity)<0))throw fail("Δεν επιβεβαιώθηκαν οι αρχικές κινήσεις και οι μετατροπές συσκευασίας. Δεν έγινε επαναφορά.");
  const expectedBase=new Map(),postedBase=new Map();
  for(const line of documentLines.filter(l=>l.purchaseDocumentId===order.id&&l.productId))expectedBase.set(line.productId,round((expectedBase.get(line.productId)||0)+n(line.quantity)));
+ const selectionAudit=await tableExists(tx,"StoreOperatorAudit")?await raw(tx,`SELECT "details" FROM "StoreOperatorAudit" WHERE "companyId"=$1 AND "storeId"=$2 AND "eventType"='INVOICE_STOCK_LINES_EXCLUDED' AND "details"->>'orderId'=$3 AND "details"->>'purchaseDocumentId'=$3 AND "details"->>'reopenVersion'=$4 ORDER BY "id" LIMIT 2`,companyId,storeId,orderId,String(n(order.reopenVersion))):[];
+ if(selectionAudit.length){
+  const excluded=selectionAudit[0].details?.excludedStockLineIds;
+  if(selectionAudit.length!==1||!Array.isArray(excluded)||!excluded.length||new Set(excluded).size!==excluded.length)throw fail("Δεν επιβεβαιώθηκαν οι εξαιρέσεις αποθήκης.");
+  const linesById=new Map(lines.map(line=>[line.id,line]));
+  for(const id of excluded){
+   const line=linesById.get(id);
+   if(!line?.productId||!expectedBase.has(line.productId))throw fail("Δεν επιβεβαιώθηκαν οι εξαιρέσεις αποθήκης.");
+   const remaining=round(expectedBase.get(line.productId)-n(line.quantity));
+   expectedBase.set(line.productId,remaining);
+  }
+  for(const [productId,quantity] of expectedBase)if(quantity===0)expectedBase.delete(productId);
+ }else if(!movements.length)throw fail("Δεν επιβεβαιώθηκαν οι αρχικές κινήσεις αποθήκης.");
  for(const m of movements.filter(m=>m.movementType==="PURCHASE"))postedBase.set(m.productId,round((postedBase.get(m.productId)||0)+n(m.quantity)));
  if(expectedBase.size!==postedBase.size||[...expectedBase].some(([productId,qty])=>!Number.isFinite(qty)||Math.abs(qty-(postedBase.get(productId)??NaN))>0.00001||!postedBase.has(productId)))throw fail("Οι αρχικές κινήσεις δεν συμφωνούν με τις καταχωρημένες γραμμές. Δεν έγινε επαναφορά.");
  const quantities=new Map();for(const m of movements)quantities.set(m.productId,round((quantities.get(m.productId)||0)+n(m.quantity)));
@@ -55,13 +68,14 @@ async function load(tx,actor,orderId,storeId){
  const hasPack=await tableExists(tx,"PurchaseOrderPackCorrection");
  const pack=hasPack?await raw(tx,'SELECT * FROM "PurchaseOrderPackCorrection" WHERE "orderId"=$1 AND "companyId"=$2 FOR UPDATE',orderId,companyId):[];
  if(pack.length){let details;try{details=JSON.parse(pack[0].details)}catch{throw fail("Η μετατροπή συσκευασίας δεν έχει ολοκληρωθεί.")}
+  if(selectionAudit.length&&Array.isArray(details))details=details.filter(row=>row.stockQty!==0||row.postedQty!==0||row.delta!==0);
   if(!Array.isArray(details)||details.length!==quantities.size||details.some(row=>!quantities.has(row.productId)||!Number.isFinite(n(row.stockQty))||Math.abs(n(row.stockQty)-quantities.get(row.productId))>0.00001))throw fail("Οι κινήσεις συσκευασίας δεν συμφωνούν με το καταγεγραμμένο ιστορικό.");
  }
  const adjustments=await tableExists(tx,"PurchaseDocumentAdjustment")?await raw(tx,'SELECT "id","status" FROM "PurchaseDocumentAdjustment" WHERE "companyId"=$1 AND "purchaseDocumentId"=ANY($2::text[]) AND "status"=\'APPROVED\' ORDER BY "id" FOR UPDATE',companyId,documentIds):[];
  if(adjustments.length)throw fail("Υπάρχει εγκεκριμένη επιστροφή ή προσαρμογή. Χρειάζεται πρώτα έλεγχος της συνδεδεμένης πράξης.");
  const paymentIds=documents.map(d=>d.paymentTransactionId).filter(Boolean);
  const payments=await raw(tx,`SELECT "id","storeId","supplierId","type","amount","occurredAt","invoiceDocumentNumber","attachmentFilename","reversedAt" FROM "StoreTransaction" WHERE "companyId"=$1 AND "storeId"=$2 AND ("id"=ANY($3::text[]) OR "attachmentFilename"=ANY($4::text[])) ORDER BY "id" FOR SHARE`,companyId,storeId,paymentIds,documentIds);
- const snapshot={order,postings,stockPostings,documents,lines,documentLines,movements,stocks,pack,payments};
+ const snapshot={order,postings,stockPostings,documents,lines,documentLines,movements,stocks,pack,payments,...(selectionAudit.length?{selectionAudit}:{})};
  const version=crypto.createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
  const stockChanges=stocks.map(s=>({productId:s.productId,name:s.productName||s.productId,sku:s.sku||"",before:n(s.currentStock),delta:-quantities.get(s.productId),after:round(n(s.currentStock)-quantities.get(s.productId))}));
  return {snapshot,version,stockChanges,hasPack,document,order};
