@@ -108,3 +108,10 @@ test('large admitted Diadochou-like set validates only seven cached originals, n
  assert.equal(f.calls.filter(c=>c[0]==='source').length,7,'do not fetch 30 raw unread/uncertain originals');
  assert.equal(out.papers.every(p=>p.reading.extraction===undefined||p.reading.status==='EXTRACTED_UNVERIFIED'),true);
 });
+
+test('keeps the stored failure reason without exposing extraction from an unresolved reading',async()=>{
+ const attachment=source(1),sources=[attachment];
+ const states=new Map([[attachment.checksum,{status:'REQUIRES_REVIEW',reason:'READING_UNCERTAIN',extraction:{lines:[]}}]]);
+ const result=await run(fixture(sources,{states}),limited(sources));
+ assert.deepEqual(result.papers[0].reading,{status:'REQUIRES_REVIEW',reason:'READING_UNCERTAIN'});
+});

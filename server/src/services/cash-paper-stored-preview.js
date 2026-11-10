@@ -46,7 +46,7 @@ export async function readStoredCashPaperPreview({repository,scope,discovery,adm
           }
         }else if(['NOT_READ','PENDING','REQUIRES_REVIEW'].includes(stored?.status)){
           // No raw extraction may escape through a non-extracted status.
-          reading={status:stored.status,...(typeof stored.sourceKey==='string'?{sourceKey:stored.sourceKey}:{})};
+          reading={status:stored.status,...(typeof stored.sourceKey==='string'?{sourceKey:stored.sourceKey}:{}),...(typeof stored.reason==='string'?{reason:stored.reason}:{})};
         }
       }catch{}
     }
