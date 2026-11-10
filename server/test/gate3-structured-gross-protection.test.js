@@ -37,3 +37,14 @@ test('ambiguous row arithmetic is never promoted to verified OCR',()=>{
   assert.notEqual(line.grossRecoveredFromNetAndVat,true);
   assert.equal(line.sourceColumnsVerified,false);
 });
+
+test('distinct invoice rows with the same supplier code retain their own prices',()=>{
+  const lines=finalizeV244ProductLines([
+    {code:'LAB-RIZ-20261022-4',description:'LAB STILL WATER',quantity:1,unitCost:1,netAmount:1,grossAmount:1.24,vatRate:24},
+    {code:'LAB-RIZ-20261022-4',description:'LAB SPARKLING WATER',quantity:1,unitCost:1.5,netAmount:1.5,grossAmount:1.86,vatRate:24}
+  ]);
+  assert.deepEqual(lines.map(({description,unitCost,grossAmount})=>[description,unitCost,grossAmount]),[
+    ['LAB STILL WATER',1,1.24],
+    ['LAB SPARKLING WATER',1.5,1.86]
+  ]);
+});

@@ -7,7 +7,29 @@ const text=(value,max)=>String(value||'').replace(/\s+/g,' ').trim().slice(0,max
 const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleUpperCase('el-GR').replace(/[^A-ZΑ-Ω0-9]/g,'');
 const codeOf=x=>String(x?.code||'').trim()||(String(x?.rawText||'').match(/^\s*(\d{5,14})\b/)||[])[1]||'';
 const descOf=x=>norm(x?.description||x?.rawText||'');
-function originalFor(lines,out){if(out.sourceRow!==undefined){const exact=(lines||[]).filter(x=>x.sourceRow===out.sourceRow&&x.sourceTable===out.sourceTable&&x.sourcePage===out.sourcePage&&x.sourceFileIndex===out.sourceFileIndex),hit=exact.find(x=>x.sourceColumnsVerified)||exact[0];if(hit)return hit;}const code=codeOf(out);if(code){const hits=(lines||[]).filter(x=>codeOf(x)===code),hit=hits.find(x=>x.sourceColumnsVerified)||hits[0];if(hit)return hit;}const d=descOf(out);if(!d)return null;const hits=(lines||[]).filter(x=>{const od=descOf(x);return od&&(od===d||od.includes(d)||d.includes(od))});return hits.find(x=>x.sourceColumnsVerified)||hits[0]||null;}
+function originalFor(lines,out){
+  const sources=lines||[];
+  const preferred=matches=>matches.find(line=>line.sourceColumnsVerified)||matches[0];
+  if(out.sourceRow!==undefined){
+    const exact=preferred(sources.filter(line=>line.sourceRow===out.sourceRow&&line.sourceTable===out.sourceTable&&line.sourcePage===out.sourcePage&&line.sourceFileIndex===out.sourceFileIndex));
+    if(exact)return exact;
+  }
+  const code=codeOf(out),description=descOf(out);
+  if(code){
+    const matches=sources.filter(line=>codeOf(line)===code);
+    if(matches.length===1)return matches[0];
+    if(matches.length>1){
+      // One supplier code can appear on different physical invoice lines.
+      const exact=matches.filter(line=>description&&descOf(line)===description);
+      return preferred(exact)||null;
+    }
+  }
+  if(!description)return null;
+  return preferred(sources.filter(line=>{
+    const candidate=descOf(line);
+    return candidate&&(candidate===description||candidate.includes(description)||description.includes(candidate));
+  }))||null;
+}
 function structuredIsSane(x){const q=n(x?.quantity),u=n(x?.unitCost),net=n(x?.netAmount),gross=n(x?.grossAmount),vat=n(x?.vatRate),factor=[x?.discount1,x?.discount2,x?.discount3].reduce((f,d)=>f*(1-n(d)/100),1);if(!(q>0&&u>0))return false;if(!x?.sourceColumnsVerified&&[x?.discount1,x?.discount2,x?.discount3].some(d=>n(d)>95))return false;if(net>0&&Math.abs(q*u*factor-net)>Math.max(0.05,net*0.02))return false;if(net>0&&gross>0){if(gross+0.05<net)return false;const expected=net*(1+Math.max(0,vat)/100);if(vat>0&&Math.abs(expected-gross)>Math.max(0.08,gross*0.03))return false;}return true;}
 function grossCopiedFromNet(x){const q=n(x?.quantity),u=n(x?.unitCost),net=n(x?.netAmount),gross=n(x?.grossAmount),vat=n(x?.vatRate),factor=[x?.discount1,x?.discount2,x?.discount3].reduce((f,d)=>f*(1-n(d)/100),1);return q>0&&u>0&&net>0&&vat>0&&vat<=24&&Math.abs(gross-net)<=.02&&Math.abs(q*u*factor-net)<=Math.max(.05,net*.02)&&![x?.discount1,x?.discount2,x?.discount3].some(d=>n(d)>95);}
 export function finalizeV244ProductLines(lines){const base=finalizeBase(lines||[]);return base.map(out=>{const original=originalFor(lines,out);if(!original)return out;if(!structuredIsSane(original)){
