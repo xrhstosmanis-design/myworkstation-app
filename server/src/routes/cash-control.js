@@ -515,7 +515,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     if(req.user?.staffAccess===true&&String(session.terminalPos||'MAIN').toUpperCase()!==await requestTerminal(req))throw Object.assign(new Error('Επίλεξε το ταμείο της βάρδιας.'),{status:403});
     const authentication=await verifyShiftCloseCredential(tx,req.user,session,body);
     if(!authentication.ok)return {authFailed:authentication};
-    const pendingInvoices=await checkClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session,acknowledged:body.pendingInvoiceAcknowledged,expectedFingerprint:body.pendingInvoiceFingerprint});
+    const pendingInvoices=await checkClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session});
     if(pendingInvoices.confirmationRequired)return {pendingInvoiceConfirmationRequired:true,pendingInvoices};
     // KAT_SAFE_VAULT_CLOSE_ALERT_V1
     const previousSafe=money(session.openingSafe),safeDelta=Number((body.safe-previousSafe).toFixed(2)),safeReason=String(body.safeReason||"").trim();
@@ -545,7 +545,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
   if(closeResult.authFailed)return res.status(closeResult.authFailed.status).json({code:closeResult.authFailed.code,error:closeResult.authFailed.error});
-  if(closeResult.pendingInvoiceConfirmationRequired)return res.status(409).json({code:"MISSING_INVOICES_CONFIRMATION_REQUIRED",error:"Υπάρχουν εκκρεμότητες τιμολογίων. Ανέβασε τώρα ή επιβεβαίωσε κλείσιμο με καταγεγραμμένες εκκρεμότητες.",pendingInvoices:closeResult.pendingInvoices});
+  if(closeResult.pendingInvoiceConfirmationRequired)return res.status(409).json({code:"MISSING_INVOICES_CONFIRMATION_REQUIRED",error:"Υπάρχουν εκκρεμότητες τιμολογίων. Σύνδεσε τα παραστατικά με τις υπάρχουσες πληρωμές πριν κλείσεις τη βάρδια.",pendingInvoices:closeResult.pendingInvoices});
   if(closeResult.recountRequired)return res.status(409).json({code:"SHIFT_RECOUNT_REQUIRED",error:`Βρέθηκε έλλειμμα ${Number(closeResult.shortage).toFixed(2)} €. Θέλεις να ξαναμετρήσεις; Πάτησε ΝΑΙ για επανακαταμέτρηση ή ΟΧΙ για κλείσιμο της βάρδιας με καταγεγραμμένο έλλειμμα. Η απόπειρα και τα ποσά καταγράφηκαν στα Συμβάντα.`,...closeResult});
   const {closed,storeId,safeChange,attendanceSync}=closeResult;
   const [store,owners]=await Promise.all([prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})]);
