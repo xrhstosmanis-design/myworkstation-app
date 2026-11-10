@@ -1,3 +1,5 @@
+import {createInvoiceStockExclusionEmailScheduler} from "./services/invoice-stock-exclusion-email.js";
+import {createAutomaticReportSmtpTransport} from "./services/mail.js";
 import attendedRemoteRoutes from './routes/attended-remote.js';
 import ftextRoutes from './routes/ftext-v1.js';
 import {storeLifecycleErrors} from "./middleware/store-lifecycle-errors.js";
@@ -385,12 +387,17 @@ const automaticReportDispatcher=createAutomaticReportDispatcher({db:prisma,activ
 const automaticReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:automaticReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain});
 const monthlyInventoryCaptureJobs=createMonthlyInventoryCaptureJobs(prisma);
 const monthlyInventoryCaptureScheduler=createMonthlyInventoryCaptureScheduler({jobs:monthlyInventoryCaptureJobs,work:backgroundDrain});
+const invoiceStockEmailScheduler=createInvoiceStockExclusionEmailScheduler({
+  db:prisma,work:backgroundDrain,
+  send:({companyId,storeId,...message})=>createAutomaticReportSmtpTransport({companyId,storeId}).sendMail(message)
+});
 const server=app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
   startWorkforceAutoOutWorker();
   automaticReportScheduler.start();
+  invoiceStockEmailScheduler.start();
   monthlyInventoryCaptureScheduler.start();
 });
 shutdown.install(server);

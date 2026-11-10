@@ -118,11 +118,27 @@ const cashAuditEventLabels=new Map([
 ]);
 
 const cashAuditEventTime=event=>new Date(event.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'});
+function cashReturnKey(event){
+  const r=event.returnDetails;
+  return r?.saleId&&r.originalSaleId?JSON.stringify([event.sessionId,r.saleId,r.originalSaleId]):null;
+}
+function cashReturnDescription(event){
+  const r=event.returnDetails;
+  if(!r)return null;
+  const method={CASH:'μετρητά',CARD:'κάρτα',IRIS:'IRIS'}[r.method];
+  const items=r.items.slice(0,8).map(item=>`${item.quantity} × ${item.name}`);
+  return ['Μερική επιστροφή ειδών',r.refundCents===null?null:money(r.refundCents),method,...items,
+    r.items.length>items.length?`και ${r.items.length-items.length} ακόμη γραμμές`:null,
+    r.reason?'Αιτιολογία: '+r.reason:null,
+    r.fiscalPendingAtEntry?'Κατά την καταχώριση εκκρεμούσε φορολογική επιστροφή RBS':null].filter(Boolean).join(' · ');
+}
 function cashAuditEventSummary(events){
   const replays=events.filter(event=>event.code==='AUDIT_IDEMPOTENT_REPLAY');
-  const actionable=events.filter(event=>event.code!=='AUDIT_IDEMPOTENT_REPLAY');
+  const actionReturns=new Set(events.filter(event=>event.code==='AUDIT_RETURN_ITEMS').map(cashReturnKey).filter(Boolean));
+  const actionable=events.filter(event=>event.code!=='AUDIT_IDEMPOTENT_REPLAY'&&
+    !(event.code==='AUDIT_POS_INTERNAL_RETURN_PENDING_RBS'&&actionReturns.has(cashReturnKey(event))));
   const lines=actionable.slice(0,30).map(event=>{
-    const label=cashAuditEventLabels.get(event.code.replace(/^AUDIT_/,''))||'Συμβάν χωρίς διαθέσιμη περιγραφή';
+    const label=cashReturnDescription(event)||cashAuditEventLabels.get(event.code.replace(/^AUDIT_/,''))||'Συμβάν χωρίς διαθέσιμη περιγραφή';
     return `${cashAuditEventTime(event)} · ${label}${event.afterClose?' · μετά το κλείσιμο':''}. Ελέγξτε την αντίστοιχη κίνηση στο ημερολόγιο της βάρδιας.`;
   });
   if(actionable.length>30)lines.push(`Εμφανίζονται 30 από ${actionable.length} συμβάντα. Τα υπόλοιπα είναι διαθέσιμα στα τεκμήρια της βάρδιας.`);
@@ -157,7 +173,10 @@ export function reconciliationText(report){
     if(row.fullAudit){
       const pendingLabels={SOURCE_COVERAGE:'κάλυψη πηγών',CASH_ARITHMETIC:'συμφωνία κινήσεων μετρητών',OPERATOR_IDENTITY:'ταυτότητα χειριστή',RESULT_ELIGIBILITY:'επιλεξιμότητα αποτελέσματος',CARD_ARITHMETIC:'συμφωνία καρτών',HANDOFF:'παραδόσεις ταμείου',AWAITING_NEXT_SHIFT:'κλείσιμο επόμενης βάρδιας',AUDIT_OPEN_ISSUES:'ανοικτά αριθμητικά ερωτήματα',EVENTS:'συμβάντα και αλλαγές τιμών',DUPLICATES:'πιθανές διπλές συναλλαγές',PAPERS:'χειρόγραφα του τσατ',EXPENSES:'παραστατικά εξόδων'};
       lines.push(row.fullAudit.status==='FINAL'?`ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ · ${row.operatorName}: ${signedResult(row.fullAudit.remainingCents)}.`:`Πλήρης έλεγχος · ${row.operatorName}: ${row.fullAudit.status==='NOT_APPLICABLE'?'δεν εφαρμόζεται':row.fullAudit.status==='AWAITING_NEXT_SHIFT'?'αναμονή επόμενης βάρδιας':'εκκρεμεί διασταύρωση'}.`);
-      if(row.fullAudit.pendingChecks.length)lines.push(`Ευρήματα: συμβάντα ${row.fullCoverage.events.unresolvedCount}, πιθανές διπλές συναλλαγές ${row.fullCoverage.duplicates.unresolvedCount}, χειρόγραφα ${row.fullCoverage.papers.unresolvedCount}, παραστατικά ${row.fullCoverage.expenses.unresolvedCount}.`);
+      if(row.fullAudit.pendingChecks.length){
+        const shiftPaperLines=(report.paperEvidence?.items||[]).filter(item=>item.status==='UNRESOLVED'&&item.sessionId===row.sessionId).length;
+        lines.push(`Ευρήματα: συμβάντα ${row.fullCoverage.events.unresolvedCount}, πιθανές διπλές συναλλαγές ${row.fullCoverage.duplicates.unresolvedCount}, γραμμές χειρογράφων προς έλεγχο με σύνδεση στη βάρδια ${shiftPaperLines}, παραστατικά ${row.fullCoverage.expenses.unresolvedCount}.`);
+      }
       if(row.fullAudit.pendingChecks.length)lines.push('Εκκρεμούν: '+row.fullAudit.pendingChecks.map(c=>pendingLabels[c]).join(', ')+'.');
       lines.push(...cashAuditEventSummary(row.fullEvidence?.events?.findings||[]));
       for(const finding of (row.fullEvidence?.duplicates?.findings||[]).slice(0,30)){
@@ -189,6 +208,11 @@ export function reconciliationText(report){
   }
   if(report.paperEvidence){
     lines.push('','ΧΕΙΡΟΓΡΑΦΑ ΚΑΙ ΠΑΡΑΣΤΑΤΙΚΑ ΑΠΟ ΤΟ ΤΣΑΤ');
+    const selectedShifts=new Set(report.rows.map(row=>row.sessionId));
+    const unassigned=report.paperEvidence.items.filter(item=>item.status==='UNRESOLVED'&&!selectedShifts.has(item.sessionId));
+    if(unassigned.length){
+      lines.push(`Εκκρεμείς καταχωρίσεις χειρογράφων χωρίς αντιστοίχιση σε επιλεγμένη βάρδια: ${unassigned.length}. Καταγράφονται μία φορά σε επίπεδο καταστήματος. Η ημερομηνία ανεβάσματος δεν αρκεί για αντιστοίχιση.`);
+    }
     lines.push(report.paperEvidence.coverage.discoveryComplete?'Εξετάστηκαν όλα τα διαθέσιμα υποστηριζόμενα συνημμένα του καταστήματος στην τρέχουσα αναζήτηση.':'Η κάλυψη των συνημμένων παραμένει περιορισμένη.');
     const candidateFields={openingOperational:'αρχικό ταμείο',actualOperational:'τελικό ταμείο',cardSales:'POS',eftposTotal:'EFTPOS',expenses:'σύνολο εξόδων'};
     if((report.paperEvidence.shiftCandidates?.length||0)>30)lines.push(`Εμφανίζονται 30 από ${report.paperEvidence.shiftCandidates.length} προτεινόμενες βάρδιες. Όλες παραμένουν μη επιβεβαιωμένες.`);

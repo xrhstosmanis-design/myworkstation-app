@@ -29,6 +29,12 @@ async function ensureSchema(){
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrderPosting_company_idx" ON "PurchaseOrderPosting" ("companyId","postedAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PurchaseOrderPosting_fingerprint_key" ON "PurchaseOrderPosting" ("companyId","documentFingerprint") WHERE "documentFingerprint" IS NOT NULL`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceStockExclusionEmail" (
+        "companyId" TEXT NOT NULL, "storeId" TEXT NOT NULL, "orderId" TEXT NOT NULL,
+        "reopenVersion" INTEGER NOT NULL, "payload" JSONB NOT NULL,
+        "attempts" INTEGER NOT NULL DEFAULT 0, "nextAttemptAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "sentAt" TIMESTAMPTZ, PRIMARY KEY ("companyId","storeId","orderId","reopenVersion")
+      )`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" (
         "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,
@@ -312,11 +318,21 @@ router.patch("/:orderId",async(req,res,next)=>{
             VALUES (${id()},${purchaseDocumentId},${row.productId},${row.description},${n(row.quantity)},'PIECE',${n(row.unitCost)},${n(row.netAmount)},${n(row.vatRate)},${n(row.vatAmount)},${n(row.grossAmount)})`;
         }
 
+        const excludedStockLines=req.body?.excludeStockLineIds;
+        if(excludedStockLines!==undefined&&(!deferredPosting||!Array.isArray(excludedStockLines)||excludedStockLines.some(lineId=>typeof lineId!=="string"||!lines.some(line=>line.id===lineId&&line.productId)))){
+          throw Object.assign(new Error("Η επιλογή αποθήκης περιέχει μη έγκυρες γραμμές τιμολογίου."),{status:400});
+        }
+        const excludedStockLineIds=new Set(excludedStockLines);
         const stockByProduct=new Map();
         for(const row of lines){
           if(!row.productId)continue;
-          const current=stockByProduct.get(row.productId)||{quantity:0,net:0,excise:0,supplierCode:null,proposedSalePrice:0};
+          const current=stockByProduct.get(row.productId)||{quantity:0,net:0,excise:0,stockQuantity:0,stockNet:0,stockExcise:0,supplierCode:null,proposedSalePrice:0};
           current.quantity+=n(row.quantity);
+          if(!excludedStockLineIds.has(row.id)){
+            current.stockQuantity+=n(row.quantity);
+            current.stockNet+=n(row.netAmount);
+            current.stockExcise+=n(row.exciseTotal);
+          }
           current.net+=n(row.netAmount);
           current.excise+=n(row.exciseTotal);
           if(row.supplierCode)current.supplierCode=row.supplierCode;
@@ -326,16 +342,16 @@ router.patch("/:orderId",async(req,res,next)=>{
 
         for(const [productId,agg] of stockByProduct){
           const landedUnitCost=agg.quantity>0?(agg.net+agg.excise)/agg.quantity:0;
-          await tx.$executeRaw`
+          if(agg.stockQuantity!==0||agg.proposedSalePrice>0)await tx.$executeRaw`
             INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock")
-            VALUES (${id()},${found.storeId},${productId},${agg.proposedSalePrice>0?agg.proposedSalePrice:null},${agg.quantity})
+            VALUES (${id()},${found.storeId},${productId},${agg.proposedSalePrice>0?agg.proposedSalePrice:null},${agg.stockQuantity})
             ON CONFLICT ("storeId","productId") DO UPDATE SET
               "currentStock"="StoreProduct"."currentStock"+EXCLUDED."currentStock",
               "salePrice"=COALESCE(EXCLUDED."salePrice","StoreProduct"."salePrice"),
               "updatedAt"=NOW()`;
-          await tx.$executeRaw`
+          if(agg.stockQuantity!==0)await tx.$executeRaw`
             INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId")
-            VALUES (${id()},${found.storeId},${productId},'PURCHASE',${agg.quantity},${landedUnitCost},'PURCHASE_ORDER',${found.id},${`Οριστικοποίηση αγοράς ${effectiveInvoiceNumber||found.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
+            VALUES (${id()},${found.storeId},${productId},'PURCHASE',${agg.stockQuantity},${(agg.stockNet+agg.stockExcise)/agg.stockQuantity},'PURCHASE_ORDER',${found.id},${`Οριστικοποίηση αγοράς ${effectiveInvoiceNumber||found.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
           await tx.$executeRaw`
             UPDATE "Product" SET
               "costPrice"=${landedUnitCost},
@@ -371,8 +387,26 @@ router.patch("/:orderId",async(req,res,next)=>{
           WHERE "id"=${found.id} AND "companyId"=${companyId}`;
         await recordInvoiceStockPosting(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,postedDocumentId:purchaseDocumentId,path:"PURCHASE_ORDER"});
         if(deferredPosting){
+          if(excludedStockLineIds.size){
+            const [store]=await tx.$queryRaw`SELECT "name" FROM "Store" WHERE "id"=${found.storeId} AND "companyId"=${companyId}`;
+            const [supplier]=await tx.$queryRaw`SELECT "name" FROM "Supplier" WHERE "id"=${effectiveSupplierId} AND "companyId"=${companyId}`;
+            const excludedLines=lines.filter(line=>excludedStockLineIds.has(line.id)).map(line=>({
+              code:line.supplierCode||line.productId,description:line.description,
+              quantity:n(line.quantity),unit:line.invoiceUnit==="PACKAGE"?"ΚΙΒ":"ΤΜΧ"
+            }));
+            const payload={
+              orderId:found.id,invoiceNumber:effectiveInvoiceNumber,storeName:store?.name||found.storeId,
+              supplierName:supplier?.name,actorName:actor,postedAt:new Date().toISOString(),
+              stockLineCount:lines.filter(line=>line.productId&&!excludedStockLineIds.has(line.id)).length,excludedLines
+            };
+            await tx.$executeRaw`INSERT INTO "InvoiceStockExclusionEmail" ("companyId","storeId","orderId","reopenVersion","payload")
+              VALUES (${companyId},${found.storeId},${found.id},${n(found.reopenVersion)},${JSON.stringify(payload)}::jsonb)
+              ON CONFLICT ("companyId","storeId","orderId","reopenVersion") DO NOTHING`;
+            await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+              VALUES (${id()},${companyId},${found.storeId},${req.user.operatorId||null},${req.user.id},'INVOICE_STOCK_LINES_EXCLUDED',${JSON.stringify({orderId:found.id,purchaseDocumentId,reopenVersion:n(found.reopenVersion),excludedStockLineIds:[...excludedStockLineIds]})}::jsonb)`;
+          }
           const packStockCorrection=await applyPackStockCorrectionInTransaction(tx,{
-            orderId:found.id,companyId,userId:req.user.id,userName:actor,expectedReopenVersion:n(found.reopenVersion),req
+            orderId:found.id,companyId,userId:req.user.id,userName:actor,expectedReopenVersion:n(found.reopenVersion),req,excludedStockLineIds
           });
           await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='INVOICED',"awaitingInvoice"=FALSE,
             "invoicedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;

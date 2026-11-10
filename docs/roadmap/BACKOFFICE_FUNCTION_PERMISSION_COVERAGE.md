@@ -1,3 +1,9 @@
+## 10/11/2026 — Personal inventory detail paging: scoped LAB observation
+
+PR #3770 replaced the 10,000-line refusal in the paged personal client with detail pages of up to 200 lines. PR #3792 records the existing LAB and lab31 observation: 200 → 1 → 200, off-page exact SKU and barcode selection, no quantity submitted. Physical scanner and an actual >10,000-line fixture were not tested. The 200+ stocktake-list hosted case is separate and remains open.
+
+This changes the personal read path, with existing inventory.read and scope checks and no new capability key. The canonical persisted grant list in shared/backoffice-staff.mjs contains 23 keys; candidate actions below are not executable grants. CENTRAL-BACKOFFICE-ACCESS-01 remains open for all-functions coverage.
+
 ## 04/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / INVENTORY LIST PAGINATION INSTALLED / HOSTED ACCEPTANCE OPEN
 
 Same retained owner; receipt branch docs/backoffice-list-release-20261104. Source PR3626 final head d36e08b517d37eaba5913f8ff26743ba710389b1/tree b6ca98cd747c620028d792b4d7903b300db05278 merged6088b7b2d1eb1b404205f15e93a7503bfcea268b. Before-source claim3625 was green/main before edits. This engineering receipt supersedes the historical SOURCE CANDIDATE/AWAITING CI status below for this bounded batch only.
@@ -93,7 +99,7 @@ Installed shared UI: BackofficeShell/BackofficeStores, native StoreCloudPage shi
 | Τιμές και τιμοκατάλογοι | STORE | read, edit, bulk-edit, import, export, print | NOT INTEGRATED |
 | Προσφορές | STORE | read, create, edit, activate, delete | NOT INTEGRATED |
 | Αποθήκη και κινήσεις | STORE | read, receive, adjust, waste, reverse, import, export, print | NOT INTEGRATED |
-| Απογραφή | STORE | read, count, clear, bulk-zero, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.count, inventory.clear, inventory.bulk-zero, inventory.delete, inventory.create, inventory.finalize |
+| Απογραφή | STORE | read, history.read, expected.read, count, clear, bulk-zero, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.history.read, inventory.expected.read, inventory.count, inventory.clear, inventory.bulk-zero, inventory.delete, inventory.create, inventory.finalize |
 | Μεταφορές αποθήκης | STORE | read, create, approve, dispatch, receive, cancel, export, print | NOT INTEGRATED |
 | Συνταγές | COMPANY | read, create, edit, delete, produce, export | NOT INTEGRATED |
 | Ψησίματα και παραγωγή | STORE | read, create, finalize, cancel, configure, export | NOT INTEGRATED |

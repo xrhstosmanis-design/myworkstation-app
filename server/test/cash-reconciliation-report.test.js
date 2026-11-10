@@ -14,7 +14,7 @@ const confirmation=(row,id='confirm',sequence=2)=>({id,sequence,actorName:'Χρ�
 test('joint handwritten candidates render as unverified with ledger date provenance and cannot close finality',()=>{
  const source=fullFixture();source.paperEvidence.coverage.complete=false;source.paperEvidence.items=[{status:'UNRESOLVED',reason:'DOCUMENT_DATE_UNREADABLE',line:null}];
  source.paperEvidence.shiftCandidates=[{filename:'synthetic.jpg',fromLine:0,toLine:3,operatorName:'Synthetic Operator',terminalPos:'MAIN',candidateDate:'2026-10-21',dateBasis:'LEDGER_DAY_MONTH_CANDIDATE',selected:true,proof:[{field:'openingOperational',amountCents:10000},{field:'cardSales',amountCents:2200}]}];
- const before=projectReconciliation(source,[]);assert.match(before.text,/Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ/);assert.match(before.text,/έτος από την υποψήφια καταχωρισμένη βάρδια, όχι από το χειρόγραφο/);assert.match(before.text,/αρχικό ταμείο 100,00/);assert.match(before.text,/POS 22,00/);assert.doesNotMatch(before.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ/);assert.equal(before.rows[0].fullAudit.status,'PENDING');assert.equal(before.rows[0].reviewed,false);
+ const before=projectReconciliation(source,[]);assert.match(before.text,/χωρίς αντιστοίχιση σε επιλεγμένη βάρδια: 1/);assert.match(before.text,/γραμμές χειρογράφων προς έλεγχο με σύνδεση στη βάρδια 0/);assert.match(before.text,/Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ/);assert.match(before.text,/έτος από την υποψήφια καταχωρισμένη βάρδια, όχι από το χειρόγραφο/);assert.match(before.text,/αρχικό ταμείο 100,00/);assert.match(before.text,/POS 22,00/);assert.doesNotMatch(before.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ/);assert.equal(before.rows[0].fullAudit.status,'PENDING');assert.equal(before.rows[0].reviewed,false);
  source.paperEvidence.shiftCandidates[0].proof[1].amountCents=2300;assert.notEqual(projectReconciliation(source,[]).reportHash,before.reportHash);
  source.paperEvidence.shiftCandidates=Array.from({length:31},()=>structuredClone(source.paperEvidence.shiftCandidates[0]));const limited=projectReconciliation(source,[]);assert.match(limited.text,/Εμφανίζονται 30 από 31 προτεινόμενες/);assert.equal(limited.text.split('Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ').length-1,30);
 });
@@ -155,4 +155,24 @@ test('verified paper headings render as information while unknown or metadata-on
   if(reason==='NO_FINANCIAL_DOCUMENT_LINES')assert.match(pending.text,/Χρειάζεται διευκρίνιση.*δεν αναγνωρίστηκαν οικονομικές γραμμές/);
  }
  const forged=structuredClone(report);forged.paperEvidence.items[0].status='UNRESOLVED';assert.throws(()=>reconciliationText(forged),/coverage changed/);
+});
+
+test('one documented return is shown for two linked audit records, never matched by timestamp alone',()=>{
+ const source=fullFixture(),row=source.sessions.get('a');
+ const event={occurredAt:'2026-10-21T10:00:00.000Z',sessionId:'a',
+  returnDetails:{saleId:'returned-sale',originalSaleId:'original-sale',reason:'Λάθος χειριστή',
+   refundCents:300,method:'CASH',fiscalPendingAtEntry:true,items:[{name:'Δοκιμαστικό είδος',quantity:1}]}};
+ row.fullEvidence.events.findings=[
+  {...event,eventId:'action',code:'AUDIT_RETURN_ITEMS'},
+  {...event,eventId:'operator',code:'AUDIT_POS_INTERNAL_RETURN_PENDING_RBS'},
+  {...event,eventId:'independent',code:'AUDIT_POS_INTERNAL_RETURN_PENDING_RBS',
+   returnDetails:{...event.returnDetails,saleId:'another-return',reason:'Άλλη αιτία'}},
+ ];
+ const report=projectReconciliation(source,[]);
+ assert.equal((report.text.match(/Μερική επιστροφή ειδών/g)||[]).length,2);
+ assert.equal((report.text.match(/Λάθος χειριστή/g)||[]).length,1);
+ assert.match(report.text,/3,00.*μετρητά.*1 × Δοκιμαστικό είδος.*εκκρεμούσε φορολογική επιστροφή RBS/);
+ assert.match(report.text,/Άλλη αιτία/);
+ assert.doesNotMatch(report.text,/returned-sale|original-sale|another-return/);
+ assert.equal(report.rows[0].remainingCents,-8700);
 });
