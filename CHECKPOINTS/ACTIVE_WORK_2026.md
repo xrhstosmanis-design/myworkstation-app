@@ -25,6 +25,7 @@
 | 1 | INVENTORY-RECONCILIATION-01 | retained /root | #3693, #3696, #3645 | FREE/FREE two-code comparison, PDF and XLSX: scoped LAB PASS | Cross-code identity, physical warehouse/time and verified originals remain open |
 | — | Invoice stock selection after stocktake | Συντονιστής | #28 | Δύο απομονωμένα σενάρια τιμολόγησης και ακύρωσης πέρασαν | Πλήρες CI και λειτουργικός έλεγχος στο υπάρχον LAB. [Checkpoint](CHANGES/2026-11-10-invoice-stock-selection.md) |
 | — | Invoice stock exclusion email | Συντονιστής | #3785 | Local queue and retry simulation | Full CI and LAB SMTP pending. [Checkpoint](CHANGES/2026-11-10-invoice-stock-exclusion-email.md) |
+| — | INVENTORY-CATALOG-XLSX-01 | /root | #3798, #3801 | [Ανάθεση](CHANGES/2026-11-10-inventory-catalog-xlsx.md) · LAB NOT TESTED | Δημοσίευση ανάθεσης στο main, μετά υλοποίηση XLSX και δοκιμή στο υπάρχον LAB |
 
 ## Κανόνας ενημέρωσης
 
