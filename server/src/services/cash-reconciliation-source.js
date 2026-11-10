@@ -10,6 +10,8 @@ import {readStoredCashPaperPreview} from './cash-paper-stored-preview.js';
 import {readCashReviewEvidence} from './cash-review-evidence.js';
 import {readFullCashEventEvidence} from './cash-full-audit.js';
 
+import {readCashNetlinkShiftEvidence} from './cash-netlink-shift-evidence.js';
+
 export const cashReconciliationSourceLimit=200;
 export async function readReconciliationSession(db,scope,id,rule,eventCollector){
   const rows=await db.$queryRaw`SELECT s."id",s."companyId",s."storeId",s."terminalPos",s."status",s."openedBy",s."openedByName",s."shiftLabel",s."openedAt",s."closedAt",s."variance",s."cardVariance",s."openingOperational",s."actualOperational",s."updatedAt",to_jsonb(s) AS "automaticSnapshot",to_jsonb(n) AS "nextSession",to_jsonb(p) AS "previousSession",current_setting('transaction_isolation') AS "sourceIsolation" FROM "CashShiftSession" s LEFT JOIN LATERAL (
@@ -82,6 +84,10 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
       if(!events.has(source.session.id))throw new Error('Incomplete cash event batch');
       source.eventSales=events.get(source.session.id);
     }
+  }
+  if(scope.includeNetlink===true){
+    const netlink=await readCashNetlinkShiftEvidence(db,scope,selectedIds);
+    for(const id of selectedIds)sessions.get(id).netlinkEvidence=netlink.get(id)??null;
   }
   let paperEvidence;
   if(scope.fullAudit===true){

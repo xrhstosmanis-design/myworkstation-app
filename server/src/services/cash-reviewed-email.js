@@ -14,7 +14,7 @@ const checked=e=>{
 // Its full findings remain in the preview, fingerprint and delivered report.
 const provisionalReadinessReport=report=>{
  const view={...report,rows:report.rows.map(row=>{
-  const cash={...row};delete cash.fullEvidence;delete cash.fullCoverage;delete cash.fullAudit;return cash;
+  const cash={...row};delete cash.fullEvidence;delete cash.fullCoverage;delete cash.fullAudit;delete cash.netlinkEvidence;return cash;
  })};
  delete view.paperEvidence;
  view.text=reconciliationText(view);
@@ -26,7 +26,7 @@ export function createReviewedCashEmailReader({db,authorize,repository}){
   const admission=authorize||(await import('../routes/cash-papers.js')).authorizeCashPaper;
   const repo=repository||(await import('./cash-reconciliation-repository.js')).createCashReconciliationRepository(db);
   try{
-   const {scope}=await admission(db,user,storeId);scope.generation=await repo.generation(scope);scope.fullAudit=true;
+   const {scope}=await admission(db,user,storeId);scope.generation=await repo.generation(scope);scope.fullAudit=true;scope.includeNetlink=true;
    const report=await repo.read(scope,parsed.data);
    const fresh=await admission(db,user,storeId);
    if(fresh.scope.companyId!==scope.companyId||fresh.scope.storeId!==scope.storeId||await repo.generation(scope)!==scope.generation)fail();

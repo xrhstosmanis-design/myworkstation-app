@@ -1,3 +1,4 @@
+import {allocateCatalogSkus} from './inventory-acharnon-source.js';
 import crypto from "crypto";
 import {validateSourceDepartments} from "./inventory-source-workbook.js";
 
@@ -23,6 +24,10 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
   if(sourceProfile?.name==='ACHARNON_CATALOG_V1'){
     sourceProfile.assertTarget(companyId,storeId);
     rows=await sourceProfile.allocateSkus(tx,companyId,storeId,rows);
+  }
+  if(sourceProfile?.appendOnly===true){
+    sourceProfile.assertTarget(companyId,storeId);
+    rows=await allocateCatalogSkus(tx,companyId,rows);
   }
   for(const c of categories)categoryMap.set(c.name,c.id);
   for(const s of subcategories)subcategoryMap.set(`${s.categoryName}\0${s.name}`,s.id);
