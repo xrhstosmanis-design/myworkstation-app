@@ -19,7 +19,7 @@ const cases=[
 const request=(body,user={})=>({user:{id:'owner',role:'OWNER',companyId:'company',fullName:'Virtual owner',...user},params:{stocktakeId:'take',lineId:'line'},query:{},body});
 function routes(prisma) {
   const handlers=new Map();
-  const Router=()=>Object.fromEntries(['get','post','delete'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs)]));
+  const Router=()=>Object.fromEntries(['get','post','delete','patch'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs)]));
   for(const file of ['inventory-v2.js','inventory-v2-import.js']) {
     const source=fs.readFileSync(new URL('../src/routes/'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'');
     new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed',source)(Router,z,crypto,prisma,{},()=>{},finalizeInventoryStocktake,lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed);
@@ -94,7 +94,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
       'CREATE TABLE "Store"("id" text primary key,"name" text)',
       'CREATE TABLE "Stocktake"("id" text primary key,"companyId" text,"storeId" text,"name" text,"status" text,"scopeType" text,"scopeJson" jsonb,"liveDuringTrading" bool,"recountPolicy" text,"startedAt" timestamp,"finalizedAt" timestamp,"finalizedByUserId" text,"snapshotJson" jsonb,"inventoryVersion" int default 2,"updatedAt" timestamp)',
       'CREATE TABLE "StocktakeLine"("id" text primary key,"stocktakeId" text,"productId" text,"zoneId" text,"expectedQuantity" numeric,"countedQuantity" numeric,"unitCost" numeric,"recountRequired" bool default false,"countVersion" int default 0,"countedByUserId" text,"countedAt" timestamp,"countSource" text,"updatedAt" timestamp,unique("stocktakeId","productId"))',
-      'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"currentStock" numeric,"active" bool,"updatedAt" timestamp,primary key("storeId","productId"))',
+      'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"currentStock" numeric,"active" bool,"updatedAt" timestamp,"costPriceOverride" numeric,"categoryIdOverride" text,"subcategoryIdOverride" text,"vatDepartmentIdOverride" text,primary key("storeId","productId"))',
       'CREATE TABLE "Product"("id" text primary key,"companyId" text,"sku" text,"name" text,"costPrice" numeric,"active" bool)',
       'CREATE TABLE "ProductBarcode"("id" text primary key,"productId" text,"barcode" text unique,"unitMultiplier" numeric,"createdAt" timestamp,"updatedAt" timestamp)',
       'CREATE TABLE "StockMovement"("id" text primary key,"storeId" text,"productId" text,"movementType" text,"quantity" numeric,"unitCost" numeric,"sourceType" text,"sourceId" text,"note" text,"createdByUserId" text)',
