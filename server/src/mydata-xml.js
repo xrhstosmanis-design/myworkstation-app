@@ -21,3 +21,23 @@ export function invoiceSummary(invoiceXml){
   const totalNet=number(tag(summary,"totalNetValue")),totalVat=number(tag(summary,"totalVatAmount"));
   return {mark:clean(tag(invoiceXml,"mark")),uid:clean(tag(invoiceXml,"uid")),issuerVat:clean(tag(issuer,"vatNumber")),counterpartVat:clean(tag(counterpart,"vatNumber")),series:clean(tag(header,"series")),documentNumber:clean(tag(header,"aa")),issueDate:clean(tag(header,"issueDate")),invoiceType:clean(tag(header,"invoiceType")),currency:clean(tag(header,"currency"))||"EUR",totalNet,totalVat,totalGross:number(tag(summary,"totalGrossValue"))||(totalNet+totalVat)};
 }
+
+export function invoiceDetailLines(invoiceXml) {
+  const decimal = (xml, name) => {
+    const value = clean(tag(xml, name));
+    if (!value || !/^[+-]?\d+(?:[.,]\d+)?$/.test(value)) return null;
+    const parsed = Number(value.replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  return [...String(invoiceXml || "").matchAll(/<(?:[A-Za-z0-9_-]+:)?invoiceDetails(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z0-9_-]+:)?invoiceDetails>/gi)].map(([, xml]) => ({
+    lineNumber: decimal(xml, "lineNumber"),
+    itemCode: clean(tag(xml, "itemCode")),
+    description: clean(tag(xml, "itemDescr")),
+    quantity: decimal(xml, "quantity"),
+    measurementUnit: decimal(xml, "measurementUnit"),
+    measurementUnitTitle: clean(tag(xml, "otherMeasurementUnitTitle")),
+    netValue: decimal(xml, "netValue"),
+    vatCategory: decimal(xml, "vatCategory"),
+    vatAmount: decimal(xml, "vatAmount"),
+  }));
+}

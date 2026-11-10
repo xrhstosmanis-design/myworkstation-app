@@ -327,9 +327,13 @@ router.patch("/:orderId",async(req,res,next)=>{
         for(const row of lines){
           if(!row.productId)continue;
           const current=stockByProduct.get(row.productId)||{quantity:0,net:0,excise:0,stockQuantity:0,stockNet:0,stockExcise:0,supplierCode:null,proposedSalePrice:0};
-          current.quantity+=n(row.quantity);
+          const stockUnits = row.invoiceUnit === "PACKAGE" ? n(row.stockUnitsPerInvoiceUnit) : 1;
+          if (!Number.isInteger(stockUnits) || stockUnits < 1)
+            throw Object.assign(new Error("Έλεγξε τα τεμάχια ανά συσκευασία."), {status:409});
+          const stockQuantity = n(row.quantity) * stockUnits;
+          current.quantity+=stockQuantity;
           if(!excludedStockLineIds.has(row.id)){
-            current.stockQuantity+=n(row.quantity);
+            current.stockQuantity+=stockQuantity;
             current.stockNet+=n(row.netAmount);
             current.stockExcise+=n(row.exciseTotal);
           }

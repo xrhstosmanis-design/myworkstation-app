@@ -1,6 +1,7 @@
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,attachInboundToExistingDraft} from "./lib/invoice-common-draft.js";
 import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
 import crypto from "node:crypto";
+import {invoiceDetailLines} from "./mydata-xml.js";
 
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
 export function originalDownloadUrl(xml,issuerVat){
@@ -81,6 +82,29 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
 }
 
 
+// The verified provider PDF can include zero-value carton supplies absent from XML.
+export function pdfPackagingLines(rawText, xmlLines) {
+  if (!xmlLines.length || xmlLines.some(line => !line.itemCode && line.netValue === 0)) return [];
+  const normalizeCode = value => value.replace(/[\s\u00ad]/g, "").toUpperCase();
+  const known = new Set(xmlLines.filter(line => line.itemCode).map(line => normalizeCode(line.itemCode)));
+  const candidates = new Map();
+  const rows = /(?:^|\n)[ \t]*(\d{5}\s*-\s*\d{1,3}(?:\s*-\s*\d{3})?)[ \t]*\n\s*(Χ\s*\/\s*Κ[\s\S]{1,230}?)\n[ \t]*(\d+(?:[,.]\d{2})?)[ \t]*\n\s*ΤΕΜΑΧΙΟ\s+0[,.]00\s+(?:ΤΕΜΑΧΙΟ\s+)?H87(?:\s+0[,.]00){9}\s+24\s+0(?=\s|$)/gu;
+  for (const [, code, label, printedQuantity] of String(rawText || "").matchAll(rows)) {
+    const itemCode = normalizeCode(code);
+    const quantity = Number(printedQuantity.replace(",", "."));
+    if (known.has(itemCode) || !Number.isSafeInteger(quantity) || quantity < 1) continue;
+    if (candidates.has(itemCode)) {
+      candidates.set(itemCode, null);
+      continue;
+    }
+    candidates.set(itemCode, {
+      itemCode, quantity, measurementUnit: 1, netValue: 0, vatAmount: 0, vatCategory: 1,
+      description: label.replace(/^Χ\s*\/\s*Κ/u, "Χ/Κ").replace(/\s+/g, " ").trim(),
+    });
+  }
+  return [...candidates.values()].filter(Boolean);
+}
+
 // Reuse the existing invoice-assistant draft contract, with explicit myDATA provenance.
 // Only draft shells are created here. Printed rows are proposed and confirmed inside the assistant.
 async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled){
@@ -109,6 +133,39 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   if(!job)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${inbox[0].attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true})}::jsonb,${userId})`;
   await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","purchaseOrderId") VALUES (${documentId},${companyId},${storeId},${supplierId},${String(row.invoiceType).startsWith("5.")?"CREDIT_NOTE":"INVOICE"},${number},${new Date(row.issueDate)},0,0,${Number(row.totalGross)},'POS_OCR_DRAFT','DRAFT',${userId},${orderId})`;
   await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${companyId},${storeId},${supplierId},'NEW',${number},${"myDATA • MARK "+row.mark+" — Ανάγνωση από βοηθό — ΠΡΟΣ ΕΛΕΓΧΟ"},${userId},'Λήψη myDATA','Λήψη myDATA','POS_OCR_DRAFT',${documentId})`;
+  const xmlLines = invoiceDetailLines(row.rawPayload?.xml);
+  const lines = [...xmlLines, ...pdfPackagingLines(job?.resultJson?.rawText, xmlLines)];
+  const vatRates = new Map([[1,24],[2,13],[3,6],[4,17],[5,9],[6,4]]);
+  const isCarton = line => line.measurementUnit === 7
+    && /^(κιβώτιο|κιβωτια|κιβώτια|κιβ\.?|κβ\.?|carton)$/iu.test(line.measurementUnitTitle || "");
+  const supplierCodes = [...new Set(lines.map(line => line.itemCode).filter(Boolean))];
+  const mappings = supplierId && supplierCodes.length ? await tx.$queryRaw`
+    SELECT m."supplierItemCode",m."unitsPerPackage",sp."productId"
+    FROM "SupplierProductMapping" m
+    LEFT JOIN "Product" p ON p."id"=m."productId" AND p."companyId"=m."companyId" AND p."active"
+    LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} AND sp."active"
+    WHERE m."companyId"=${companyId} AND m."supplierId"=${supplierId}
+      AND m."supplierItemCode"=ANY(${supplierCodes}::text[]) AND m."confirmedAt" IS NOT NULL` : [];
+  const byCode = new Map(mappings.map(mapping => [mapping.supplierItemCode, mapping]));
+  const unitsFor = line => line.measurementUnit === 1 ? 1 : isCarton(line) ? Number(byCode.get(line.itemCode)?.unitsPerPackage || 0) : undefined;
+  const prepared = lines.length > 0 && lines.every(line => line.description && line.description.length <= 250
+    && Number.isInteger(unitsFor(line)) && unitsFor(line) >= 1 && unitsFor(line) <= 100000 && line.quantity > 0 && line.netValue !== null
+    && line.netValue >= 0 && line.vatAmount !== null && line.vatAmount >= 0
+    && vatRates.has(line.vatCategory));
+  const cents = amount => Math.round(Number(amount) * 100);
+  const sumsMatch = ["netValue", "vatAmount"].every((key, index) =>
+    lines.reduce((sum, line) => sum + cents(line[key]), 0) === cents(index ? row.totalVat : row.totalNet));
+  if (prepared && sumsMatch && cents(row.totalNet) + cents(row.totalVat) === cents(row.totalGross)) {
+    for (const line of lines) {
+      const unitCost = line.netValue / line.quantity;
+      await tx.$executeRaw`INSERT INTO "PurchaseOrderLine"
+        ("id","orderId","productId","supplierCode","description","quantity","unitCost","initialUnitCost",
+         "invoiceUnit","stockUnitsPerInvoiceUnit","vatRate","netAmount","vatAmount","grossAmount")
+        VALUES (${crypto.randomUUID()},${orderId},${byCode.get(line.itemCode)?.productId ?? null},${line.itemCode},${line.description},${line.quantity},
+          ${unitCost},${unitCost},${isCarton(line) ? 'PACKAGE' : 'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},
+          ${(cents(line.netValue) + cents(line.vatAmount)) / 100})`;
+    }
+  }
   await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"stage"='MYDATA_DRAFT_READY',"status"='AWAITING_APPROVAL',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,mydataDraftOrderId:orderId})}::jsonb,"updatedAt"=NOW() WHERE "id"=${jobId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
   await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό"},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
   await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataDraftOrderId:orderId,mydataDraftDocumentId:documentId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
