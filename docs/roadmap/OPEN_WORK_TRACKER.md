@@ -1,3 +1,7 @@
+## 2026-11-10T16:04:40.010Z — INVENTORY-PRODUCT-CREATE-EVENTS
+
+ASSIGNED — Codex / `fix/inventory-product-create-events`. Scope: expose existing inventory PRODUCT_CREATE events in Central Events with store, date and actor filters. Local syntax and mocked checks passed. LAB not tested. PR pending.
+
 ## 2026-11-10T18:03:36+02:00 — INVENTORY-CATALOG-XLSX-01 / ASSIGNED BEFORE SOURCE
 
 Owner /root; branch `feat/inventory-catalog-xlsx-20261110`; issue [#3798](https://github.com/xrhstosmanis-design/myworkstation-app/issues/3798); checkpoint `CHECKPOINTS/CHANGES/2026-11-10-inventory-catalog-xlsx.md`.

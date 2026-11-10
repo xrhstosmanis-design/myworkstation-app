@@ -1,9 +1,3 @@
-## 2026-11-10T18:03:36+02:00 — INVENTORY-CATALOG-XLSX-01 / ASSIGNED BEFORE SOURCE
-
-Owner /root; branch `feat/inventory-catalog-xlsx-20261110`; issue [#3798](https://github.com/xrhstosmanis-design/myworkstation-app/issues/3798); checkpoint `CHECKPOINTS/CHANGES/2026-11-10-inventory-catalog-xlsx.md`.
-
-Scope: true XLSX from the current store's product catalog, either all products across pages or checked products across pages. Preserve existing action selection, store scope and read permissions. Include text SKU and all barcode aliases, description, category/subcategory, VAT department, retail price and current stock. Independent of INVENTORY-RECONCILIATION-01 count reports and review. Validate in existing LAB, then check Acharnon 309 read-only. Source and LAB pending.
-
 ## 07/11/2026 22:24:54 UTC - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW AND CANCEL / SCOPED LIVE PASS
 
 Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. PR #3711 merged as ff4665eb8ec4b7b572ac65d792a788e48657a051; exact PR CI 42417280001 and main CI 42418343730 passed all five jobs. Guarded deploy 42419487430 / job 128544666223 succeeded; actual health confirmed the exact revision at 07/11 22:14:28.5241665 UTC.
