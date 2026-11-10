@@ -4,6 +4,7 @@ import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {z} from "zod";
 import crypto from "crypto";
+import XLSX from "xlsx";
 
 export function createInventoryArchiveRouter({db=prisma,scope=null}={}){
 const prisma=db;
@@ -13,7 +14,7 @@ const n=value=>Number(value||0);
 
 function requireAccess(req,res,next){
   if(scope?.kind==='POS_INVENTORY')return next();
-  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='products.read')return next();
+  if(req.user?.staffAccess===true&&(req.method==='GET'||(req.method==='POST'&&req.path==='/export-xlsx'))&&req.staffGrant?.capability==='products.read')return next();
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Το Αρχείο ειδών είναι διαθέσιμο μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
@@ -45,6 +46,47 @@ router.post("/stock-transfer",async(req,res,next)=>{
     const destination=await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${body.destinationStoreId} AND "productId"=${body.productId} LIMIT 1`;
     res.status(201).json({ok:true,transferId,sourceStock:result.sourceStock,destinationStock:n(destination[0]?.currentStock),message:"Η μεταφορά ολοκληρώθηκε και γράφτηκε μία φορά και στα δύο καταστήματα."});
   }catch(error){if(error?.statusCode)return res.status(error.statusCode).json({error:error.message});next(error)}
+});
+
+router.post("/export-xlsx",async(req,res,next)=>{
+  try{
+    const request=z.object({
+      storeId:z.string().trim().min(1),
+      productIds:z.array(z.string().min(1).max(100)).min(1).max(20000).optional()
+    }).safeParse(req.body);
+    if(!request.success)return res.status(400).json({error:"Μη έγκυρη επιλογή ειδών για εξαγωγή."});
+    const {storeId,productIds}=request.data;
+    const companyId=req.user.companyId;
+    const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
+    if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,storeId,'products.read');
+    const ids=productIds?[...new Set(productIds)]:null;
+    const rows=await prisma.$queryRaw`
+      SELECT p."sku",p."name",c."name" AS category,
+        COALESCE(sc."name",mp."subcategoryName") AS subcategory,vd."description" AS department,
+        p."vatRate",COALESCE(sp."salePrice",p."salePrice",0) AS price,
+        COALESCE(sp."currentStock",0) AS stock,p."active" AND sp."active" AS active,
+        ARRAY(SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id"
+          ORDER BY pb."createdAt",pb."barcode") AS barcodes
+      FROM "StoreProduct" sp
+      JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
+      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=p."vatDepartmentId" AND vd."companyId"=${companyId}
+      WHERE sp."storeId"=${storeId} AND (${ids}::text[] IS NULL OR p."id"=ANY(${ids}::text[]))
+      ORDER BY p."name",p."id"
+    `;
+    if(ids&&rows.length!==ids.length)return res.status(409).json({error:"Η επιλογή περιέχει είδη που δεν ανήκουν πλέον στο κατάστημα. Ανανέωσε την επιλογή."});
+    const workbook=XLSX.utils.book_new();
+    const sheet=XLSX.utils.aoa_to_sheet([
+      ["Εσωτερικός κωδικός","Barcodes","Περιγραφή","Κατηγορία","Υποκατηγορία","Τμήμα ΦΠΑ","ΦΠΑ %","Λιανική","Απόθεμα","Κατάσταση"],
+      ...rows.map(row=>[String(row.sku??""),row.barcodes.join(", "),row.name,row.category,row.subcategory,
+        row.department,row.vatRate==null?null:n(row.vatRate),n(row.price),n(row.stock),row.active?"Ενεργό":"Ανενεργό"])
+    ]);
+    XLSX.utils.book_append_sheet(workbook,sheet,"Αποθήκη");
+    res.set("Cache-Control","no-store").json({xlsx:XLSX.write(workbook,{type:"base64",bookType:"xlsx",compression:true})});
+  }catch(error){next(error)}
 });
 
 router.get("/",async(req,res,next)=>{
