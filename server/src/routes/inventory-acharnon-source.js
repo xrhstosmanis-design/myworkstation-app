@@ -24,7 +24,6 @@ export async function allocateAcharnonSkus(db,companyId,storeId,rows){
 }
 
 export async function allocateCatalogSkus(db,companyId,rows){
- await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId+':product-sku'}))`;
  const result=await db.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS next FROM "Product" WHERE "companyId"=${companyId}`;
  const value=String(result[0]?.next??'');
  if(!/^\d+$/.test(value))fail('Δεν επιβεβαιώθηκε η επόμενη εσωτερική αρίθμηση.',409);

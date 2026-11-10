@@ -45,7 +45,7 @@ export function attachCatalogAppend(workbook, rows, XLSX) {
     Object.defineProperty(row,'sourceBarcodes',{value:[primary,...codes.filter(code=>code!==primary)]});
   }
   Object.defineProperty(rows,'sourceProfile',{value:{
-    name:CATALOG_APPEND,departments:[...departments.values()],
+    name:CATALOG_APPEND,appendOnly:true,departments:[...departments.values()],
     assertTarget(companyId,storeId) {
       if (companyId!==CompanyId || storeId!==StoreId) reject('Το αρχείο αφορά άλλο κατάστημα.');
     }

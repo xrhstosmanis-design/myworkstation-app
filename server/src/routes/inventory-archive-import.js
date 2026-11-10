@@ -1,4 +1,3 @@
-import {CATALOG_APPEND} from './inventory-catalog-append.js';
 import crypto from "crypto";
 import {Router} from "express";
 import XLSX from "xlsx";
@@ -34,7 +33,7 @@ export function readWorkbook(dataUrl){
 export function normalizeRows(raw){
   return raw.map((r,index)=>{
     const acharnon=raw.sourceProfile?.name==='ACHARNON_CATALOG_V1';
-    const append=raw.sourceProfile?.name===CATALOG_APPEND;
+    const append=raw.sourceProfile?.appendOnly===true;
     const sku=(acharnon||append)?'':txt(val(r,["SKU","Κωδικός","ΚΩΔΙΚΟΣ","Εσωτ. κωδικός","Εσωτερικός κωδικός","Code"]));
     const name=txt(val(r,["Περιγραφή είδους","Περιγραφή","ΠΕΡΙΓΡΑΦΗ","Όνομα","ΟΝΟΜΑ","Name","Product"]));
     const barcode=raw.sourceProfile?.name==='KAT_CATALOG_V1'?txt(r.Barcode):txt(val(r,["Barcode","BARCODE","barcode","EAN"]));
@@ -117,7 +116,7 @@ export async function classify(companyId,rows,db=prisma){
 }
 
 export async function prepareArchiveRows(db,companyId,raw,storeId){
-  if(['KAT_CATALOG_V1','RIZAREIO_CATALOG_V1','ACHARNON_CATALOG_V1',CATALOG_APPEND].includes(raw.sourceProfile?.name))raw.sourceProfile.assertTarget(companyId,storeId);
+  if(raw.sourceProfile?.appendOnly||['KAT_CATALOG_V1','RIZAREIO_CATALOG_V1','ACHARNON_CATALOG_V1'].includes(raw.sourceProfile?.name))raw.sourceProfile.assertTarget(companyId,storeId);
   if(raw.sourceProfile?.name==='ACHARNON_CATALOG_V1')await raw.sourceProfile.assertEmptyStore(db,companyId,storeId);
   if(raw.sourceProfile){
     await assertSourceCostStorage(db);

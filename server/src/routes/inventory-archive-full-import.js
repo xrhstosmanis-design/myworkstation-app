@@ -1,4 +1,3 @@
-import {CATALOG_APPEND} from './inventory-catalog-append.js';
 import {allocateCatalogSkus} from './inventory-acharnon-source.js';
 import crypto from "crypto";
 import {validateSourceDepartments} from "./inventory-source-workbook.js";
@@ -26,7 +25,7 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
     sourceProfile.assertTarget(companyId,storeId);
     rows=await sourceProfile.allocateSkus(tx,companyId,storeId,rows);
   }
-  if(sourceProfile?.name===CATALOG_APPEND){
+  if(sourceProfile?.appendOnly===true){
     sourceProfile.assertTarget(companyId,storeId);
     rows=await allocateCatalogSkus(tx,companyId,rows);
   }
