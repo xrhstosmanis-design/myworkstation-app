@@ -103,7 +103,8 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
    if(line.kind==='OTHER'&&line.amountText===null&&line.quantityText===null&&line.timeText===null&&headerLabels.has(normalized(line.label).replace(/\s*:\s*/g,':'))){items.push({...detail,status:'INFORMATIONAL',reason:'VERIFIED_DOCUMENT_HEADER'});return;}
    const time=printedTime(line.timeText);
    if(!time){items.push({...detail,status:'UNRESOLVED',reason:'LINE_TIME_UNREADABLE'});return;}
-   const candidates=[];
+   const candidates=[],eftposBoundaries=[];
+   const explicitEftposTotal=line.kind==='EFTPOS'&&/^(?:ΣΥΝΟΛΟ EFTPOS|EFTPOS TOTAL|TOTAL EFTPOS)$/.test(normalized(line.label).replace(/:$/,''));
    for(const original of all){
     const session=original.session;
     if(!operatorMatches(extraction.operatorText,session.openedByName))continue;
@@ -115,14 +116,24 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
     }else{
      if(['POS','EFTPOS'].includes(line.kind)){
       const field=line.kind==='POS'?'cardSales':'eftposTotal',amount=exactCents(original.automaticSnapshot?.[field]??session[field]);
-      if(session.status==='CLOSED'&&amount!==null&&amount===line.amountCents&&sameTime(time,session.closedAt,extraction.documentDate))candidates.push({original,transactionId:null,evidenceBasis:'SHIFT_TOTAL'});
+      if(session.status==='CLOSED'&&sameTime(time,session.closedAt,extraction.documentDate)){
+       if(explicitEftposTotal)eftposBoundaries.push({original,amount});
+       if(amount!==null&&amount===line.amountCents)candidates.push({original,transactionId:null,evidenceBasis:'SHIFT_TOTAL'});
+      }
      }
      for(const transaction of original.transactions||[]){
       if(transactionMatchesPaper(line.kind,transaction,line.amountCents)&&sameTime(time,transaction.occurredAt,extraction.documentDate))candidates.push({original,transactionId:transaction.id,evidenceBasis:'LEDGER_TRANSACTION'});
      }
     }
    }
-   if(candidates.length!==1){items.push({...detail,status:'UNRESOLVED',reason:candidates.length?'AMBIGUOUS_MATCH':'NO_MATCHING_RECORDED_MOVEMENT'});return;}
+   if(!candidates.length&&eftposBoundaries.length===1){
+    const {original,amount}=eftposBoundaries[0];
+    if(selected.has(original.session.id)&&amount!==null&&Number.isSafeInteger(line.amountCents)&&Number.isSafeInteger(line.amountCents-amount)){
+     items.push({...detail,sessionId:original.session.id,sourceHash:original.sourceHash,evidenceBasis:'SHIFT_TOTAL',recordedAmountCents:amount,status:'UNRESOLVED',reason:'EFTPOS_TOTAL_DIFFERS'});
+     return;
+    }
+   }
+   if(candidates.length!==1){items.push({...detail,status:'UNRESOLVED',reason:candidates.length||eftposBoundaries.length>1?'AMBIGUOUS_MATCH':'NO_MATCHING_RECORDED_MOVEMENT'});return;}
    const match=candidates[0];
    items.push({...detail,sessionId:match.original.session.id,transactionId:match.transactionId,evidenceBasis:match.evidenceBasis,sourceHash:match.original.sourceHash,status:selected.has(match.original.session.id)?'MATCHED':'OUT_OF_PERIOD',reason:selected.has(match.original.session.id)?'UNIQUE_RECORDED_CORROBORATION':'CONTEXT_SHIFT_ONLY'});
   });

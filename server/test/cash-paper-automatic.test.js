@@ -71,6 +71,15 @@ test('runner revalidates current bytes before using cached reading and never dis
 test('printed POS and EFTPOS shift totals require exact closing date/time and retain their evidence basis',()=>{
  const totalSource=(kind,change={})=>({...source,reading:{...reading,extraction:normalizePaper({...raw,dateText:'02/11/2026',documentDate:'2026-11-02',lines:[{...raw.lines[0],kind,timeText:'05:58',amountText:kind==='POS'?'120,00':'118,00',...change}]})}});
  const counted={...original,automaticSnapshot:{cardSales:'120.00',eftposTotal:'118.00'}};
+ const mismatch=totalSource('EFTPOS',{label:'Σύνολο EFTPOS',amountText:'119,00'});
+ const report=project({sessions:new Map([['night',counted]]),papers:[mismatch]});
+ assert.equal(report.items[0].reason,'EFTPOS_TOTAL_DIFFERS');
+ assert.equal(report.items[0].status,'UNRESOLVED');
+ assert.equal(report.items[0].sessionId,'night');
+ assert.equal(report.items[0].recordedAmountCents,11800);
+ assert.equal(report.financialAdjustmentCents,0);
+ const duplicate={...counted,session:{...counted.session,id:'other'}};
+ assert.notEqual(project({sessions:new Map([['night',counted],['other',duplicate]]),papers:[mismatch]}).items[0].reason,'EFTPOS_TOTAL_DIFFERS');
  for(const kind of ['POS','EFTPOS']){
   const out=project({sessions:new Map([['night',counted]]),papers:[totalSource(kind)]});assert.equal(out.items[0].status,'MATCHED');assert.equal(out.items[0].evidenceBasis,'SHIFT_TOTAL');assert.equal(out.items[0].transactionId,null);assert.equal(out.financialAdjustmentCents,0);
   assert.equal(project({sessions:new Map([['night',counted]]),papers:[totalSource(kind,{timeText:null})]}).items[0].status,'UNRESOLVED');
