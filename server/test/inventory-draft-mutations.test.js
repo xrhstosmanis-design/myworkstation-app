@@ -190,7 +190,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     await db.$executeRaw`INSERT INTO "ProductCategory" VALUES ('cat','company',true)`;
     await db.$executeRaw`INSERT INTO "ProductSubcategory" VALUES ('sub','cat','company',true)`;
     await db.$executeRaw`INSERT INTO "ManagementVatDepartment" VALUES ('vat','company',true)`;
-    await db.$executeRaw`INSERT INTO "StoreProduct" ("storeId","productId","active","currentStock","salePrice") VALUES ('control','product',true,17,9)`;
+    await db.$executeRaw`UPDATE "StoreProduct" SET "salePrice"=9 WHERE "storeId"='control' AND "productId"='product'`;
     const editor={tokenType:'INVENTORY_COUNTER',stocktakeId:'take',storeId:'store',grantId:'warehouse:edit:test',permissions:['INVENTORY_WAREHOUSE_EDIT']};
     const values={salePrice:4.25,costPrice:2.5,vatDepartmentId:'vat',categoryId:'cat',subcategoryId:'sub'};
     const edit=async (body,user=editor)=>{
