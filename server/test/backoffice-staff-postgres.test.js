@@ -251,7 +251,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       for(const sql of [
         'ALTER TABLE "Product" ADD COLUMN "costPrice" numeric DEFAULT 0, ADD COLUMN "active" boolean DEFAULT true, ADD COLUMN "categoryId" text',
         'ALTER TABLE "Stocktake" ADD COLUMN "createdByUserId" text REFERENCES "User"("id"), ADD COLUMN "finalizedByUserId" text REFERENCES "User"("id"), ADD COLUMN "updatedAt" timestamptz DEFAULT now()',
-        'CREATE TABLE "StoreProduct" ("storeId" text,"productId" text,"currentStock" numeric,"active" boolean DEFAULT true,"updatedAt" timestamptz DEFAULT now(),PRIMARY KEY("storeId","productId"))',
+        'CREATE TABLE "StoreProduct" ("storeId" text,"productId" text,"currentStock" numeric,"active" boolean DEFAULT true,"updatedAt" timestamptz DEFAULT now(),"costPriceOverride" numeric,"categoryIdOverride" text,"subcategoryIdOverride" text,"vatDepartmentIdOverride" text,PRIMARY KEY("storeId","productId"))',
         'ALTER TABLE "StockMovement" ADD COLUMN "storeId" text, ADD COLUMN "productId" text, ADD COLUMN "movementType" text, ADD COLUMN "unitCost" numeric, ADD COLUMN "sourceType" text, ADD COLUMN "sourceId" text, ADD COLUMN "note" text, ADD COLUMN "createdByUserId" text REFERENCES "User"("id")'
       ])await db.$executeRawUnsafe(sql);
       await db.$executeRaw`INSERT INTO "StoreProduct" ("storeId","productId","currentStock") VALUES ('a1','pa',10),('a2','pa',42)`;
