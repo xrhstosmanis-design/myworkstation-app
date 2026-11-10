@@ -44,6 +44,7 @@ auditEventLabels.TABLE_ORDER_SENT="Αποστολή παραγγελίας τρ�
 auditEventLabels.TABLE_ORDER_ROUND_SENT="Αποστολή νέου γύρου τραπεζιού";
 auditEventLabels.TABLE_PREPARATION_READY="Ολοκλήρωση παρασκευής τραπεζιού";
 const operatorLifecycleEvents=new Set(["OPERATOR_CREATED","OPERATOR_PROFILE_UPDATED","OPERATOR_PIN_CHANGED","OPERATOR_PIN_RANDOMIZED","OPERATOR_DEACTIVATED","OPERATOR_LOGIN_PIN","OPERATOR_LOGIN_CARD","OPERATOR_LOGOUT"]);
+auditEventLabels.PRODUCT_CREATE="Δημιουργία νέου είδους";
 const greekAuditEventLabel=eventType=>auditExtraLabels[eventType]||auditEventLabels[eventType]||"Άλλη καταγεγραμμένη κίνηση";
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
 const invoiceAuditDescription=(eventType,details={})=>{
@@ -290,6 +291,27 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const diningAreaIds=[...new Set(operatorRows.map(row=>row.details?.areaId).filter(Boolean))];
     const diningAreaRows=diningAreaIds.length?await prisma.$queryRaw`SELECT "id","name" FROM "DiningArea" WHERE "id"=ANY(${diningAreaIds}::text[]) AND (${companyId}::text IS NULL OR "companyId"=${companyId})`:[];
     const diningAreaNames=new Map(diningAreaRows.map(row=>[row.id,row.name]));
+    const boundInventoryStore=req.user.storeId||null;
+    const creationRows=await prisma.$queryRaw`
+      SELECT e."id",e."companyId",e."storeId",e."createdAt",e."actorId",e."actorName",e."source",
+        s."name" AS "storeName",p."name" AS "productName",p."sku"
+      FROM "InventoryCountEvent" e
+      JOIN "Store" s ON s."id"=e."storeId" AND s."companyId"=e."companyId"
+      LEFT JOIN "StocktakeLine" l ON l."id"=e."lineId" AND l."stocktakeId"=e."stocktakeId"
+      LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=e."companyId"
+      WHERE e."eventType"='PRODUCT_CREATE'
+        AND (${companyId}::text IS NULL OR e."companyId"=${companyId})
+        AND (${storeId}::text IS NULL OR e."storeId"=${storeId})
+        AND (${boundInventoryStore}::text IS NULL OR e."storeId"=${boundInventoryStore})
+        AND e."createdAt">=${from} AND e."createdAt"<${to}
+        AND (${text}::text IS NULL OR e."actorName" ILIKE ${text} OR p."name" ILIKE ${text} OR p."sku" ILIKE ${text})
+      ORDER BY e."createdAt" DESC,e."id" DESC LIMIT 10000`;
+    const creationItems=creationRows.map(({productName,sku,source,...row})=>({
+      ...row,eventType:"PRODUCT_CREATE",amount:null,terminalPos:"BACKOFFICE",
+      sourceType:"InventoryCountEvent",
+      description:[greekAuditEventLabel("PRODUCT_CREATE"),productName,sku].filter(Boolean).join(" · "),
+      details:{productName,sku,source},
+    }));
     const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),financialDetails:{amount:n(r.amount)},sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
@@ -359,11 +381,11 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       return {companyId:r.companyId,id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:operatorLifecycle||diningDescription?0:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:safeLifecycleDetails||details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
     const stockItems=stockRows.map(r=>{const quantity=n(r.quantity),eventType=r.movementType==="MANUAL_ADJUSTMENT"?"STOCK_MANUAL_ADJUSTMENT":`STOCK_${r.movementType}`;return {companyId:r.companyId,productId:r.productId,id:r.id,createdAt:r.createdAt,eventType,amount:null,description:`${r.note||greekAuditEventLabel(eventType)} · ${r.productName} · SKU ${r.sku||"—"} · ${quantity>=0?"IN":"OUT"} ${Math.abs(quantity)}`,supplierId:null,supplierName:null,shiftId:null,actorId:r.actorId,actorName:r.actorName||r.actorId||"—",subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:"BACKOFFICE",financialDetails:{productName:r.productName,sku:r.sku,quantity,unitCost:n(r.unitCost),movementType:r.movementType,sourceType:r.sourceType,sourceId:r.sourceId},sourceType:"StockMovement",paymentSource:"AUDIT_EVENT"}});
-    const eventTypeQuery=String(eventType||"").toLocaleLowerCase("el-GR"),eventTypeMatches=row=>!eventTypeQuery||(row.eventType===eventType)||row.eventType.toLocaleLowerCase("el-GR").includes(eventTypeQuery)||greekAuditEventLabel(row.eventType).toLocaleLowerCase("el-GR").includes(eventTypeQuery),operatorQuery=String(operatorId||"").toLocaleLowerCase("el-GR"),operatorMatches=row=>!operatorQuery||(row.actorId===operatorId)||String(row.actorId||"").toLocaleLowerCase("el-GR").includes(operatorQuery)||String(row.actorName||"").toLocaleLowerCase("el-GR").includes(operatorQuery),terminalQuery=String(terminalPos||"").toUpperCase(),terminalMatches=row=>!terminalQuery||(row.terminalPos===terminalPos)||String(row.terminalPos||"").toUpperCase().includes(terminalQuery),inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems,...stockItems].filter(row=>inTime(row)&&operatorMatches(row)&&terminalMatches(row)&&eventTypeMatches(row)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
+    const eventTypeQuery=String(eventType||"").toLocaleLowerCase("el-GR"),eventTypeMatches=row=>!eventTypeQuery||(row.eventType===eventType)||row.eventType.toLocaleLowerCase("el-GR").includes(eventTypeQuery)||greekAuditEventLabel(row.eventType).toLocaleLowerCase("el-GR").includes(eventTypeQuery),operatorQuery=String(operatorId||"").toLocaleLowerCase("el-GR"),operatorMatches=row=>!operatorQuery||(row.actorId===operatorId)||String(row.actorId||"").toLocaleLowerCase("el-GR").includes(operatorQuery)||String(row.actorName||"").toLocaleLowerCase("el-GR").includes(operatorQuery),terminalQuery=String(terminalPos||"").toUpperCase(),terminalMatches=row=>!terminalQuery||(row.terminalPos===terminalPos)||String(row.terminalPos||"").toUpperCase().includes(terminalQuery),inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems,...stockItems,...creationItems].filter(row=>inTime(row)&&operatorMatches(row)&&terminalMatches(row)&&eventTypeMatches(row)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
     const companies=superAdmin?await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`:[];
     const stores=superAdmin?await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (${companyId}::text IS NULL OR "companyId"=${companyId}) ORDER BY "name"`:[];
     const readableItems=(await enrichAuditSaleItems(prisma,items,{companyId,storeId})).map(auditReadableRecord);
-    res.json({items:readableItems,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement",videoAccessAllowed:await hasVideoAccess(req),superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
+    res.json({items:readableItems,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement + InventoryCountEvent",videoAccessAllowed:await hasVideoAccess(req),superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
   }catch(error){next(error)}
 });
 
