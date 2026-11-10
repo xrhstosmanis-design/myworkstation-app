@@ -19,7 +19,7 @@ const cases=[
 const request=(body,user={})=>({user:{id:'owner',role:'OWNER',companyId:'company',fullName:'Virtual owner',...user},params:{stocktakeId:'take',lineId:'line'},query:{},body});
 function routes(prisma) {
   const handlers=new Map();
-  const Router=()=>Object.fromEntries(['get','post','delete'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs)]));
+  const Router=()=>Object.fromEntries(['get','post','delete','patch'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs)]));
   for(const file of ['inventory-v2.js','inventory-v2-import.js']) {
     const source=fs.readFileSync(new URL('../src/routes/'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'');
     new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed',source)(Router,z,crypto,prisma,{},()=>{},finalizeInventoryStocktake,lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed);
@@ -94,7 +94,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
       'CREATE TABLE "Store"("id" text primary key,"name" text)',
       'CREATE TABLE "Stocktake"("id" text primary key,"companyId" text,"storeId" text,"name" text,"status" text,"scopeType" text,"scopeJson" jsonb,"liveDuringTrading" bool,"recountPolicy" text,"startedAt" timestamp,"finalizedAt" timestamp,"finalizedByUserId" text,"snapshotJson" jsonb,"inventoryVersion" int default 2,"updatedAt" timestamp)',
       'CREATE TABLE "StocktakeLine"("id" text primary key,"stocktakeId" text,"productId" text,"zoneId" text,"expectedQuantity" numeric,"countedQuantity" numeric,"unitCost" numeric,"recountRequired" bool default false,"countVersion" int default 0,"countedByUserId" text,"countedAt" timestamp,"countSource" text,"updatedAt" timestamp,unique("stocktakeId","productId"))',
-      'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"currentStock" numeric,"active" bool,"updatedAt" timestamp,primary key("storeId","productId"))',
+      'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"currentStock" numeric,"active" bool,"updatedAt" timestamp,"costPriceOverride" numeric,"categoryIdOverride" text,"subcategoryIdOverride" text,"vatDepartmentIdOverride" text,primary key("storeId","productId"))',
       'CREATE TABLE "Product"("id" text primary key,"companyId" text,"sku" text,"name" text,"costPrice" numeric,"active" bool)',
       'CREATE TABLE "ProductBarcode"("id" text primary key,"productId" text,"barcode" text unique,"unitMultiplier" numeric,"createdAt" timestamp,"updatedAt" timestamp)',
       'CREATE TABLE "StockMovement"("id" text primary key,"storeId" text,"productId" text,"movementType" text,"quantity" numeric,"unitCost" numeric,"sourceType" text,"sourceId" text,"note" text,"createdByUserId" text)',
@@ -178,5 +178,35 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     assert.equal((await invoke('get/zones',request({}))).result.length,2);
     assert.deepEqual((await invoke('get/zones',request({},{storeId:'store'}))).result.map(x=>x.id),['z1']);
     assert.deepEqual((await invoke('get/zones',{...request({},{storeId:'store'}),query:{storeId:'control'}})).result,[]);
+    // Exercise the actual warehouse writer against two stores sharing a product.
+    await db.$executeRaw`ALTER TABLE "Product" ADD "salePrice" numeric, ADD "vatDepartmentId" text, ADD "categoryId" text, ADD "subcategoryId" text`;
+    await db.$executeRaw`ALTER TABLE "StoreProduct" ADD "salePrice" numeric`;
+    await db.$executeRaw`CREATE TABLE "InventoryAccessGrant" ("id" text PRIMARY KEY,"stocktakeId" text,"zoneId" text,"revokedAt" timestamptz,"expiresAt" timestamptz)`;
+    await db.$executeRaw`CREATE TABLE "ProductCategory" ("id" text,"companyId" text,"active" boolean)`;
+    await db.$executeRaw`CREATE TABLE "ProductSubcategory" ("id" text,"categoryId" text,"companyId" text,"active" boolean)`;
+    await db.$executeRaw`CREATE TABLE "ManagementVatDepartment" ("id" text,"companyId" text,"active" boolean)`;
+    await db.$executeRaw`CREATE TABLE "InventoryWarehouseEditAudit" ("id" text PRIMARY KEY,"storeId" text,"productId" text,"stocktakeId" text,"grantId" text,"before" jsonb,"after" jsonb)`;
+    await db.$executeRaw`INSERT INTO "InventoryAccessGrant" VALUES ('warehouse:edit:test','take',NULL,NULL,NOW()+interval '1 hour')`;
+    await db.$executeRaw`INSERT INTO "ProductCategory" VALUES ('cat','company',true)`;
+    await db.$executeRaw`INSERT INTO "ProductSubcategory" VALUES ('sub','cat','company',true)`;
+    await db.$executeRaw`INSERT INTO "ManagementVatDepartment" VALUES ('vat','company',true)`;
+    await db.$executeRaw`UPDATE "StoreProduct" SET "salePrice"=9 WHERE "storeId"='control' AND "productId"='product'`;
+    const editor={tokenType:'INVENTORY_COUNTER',stocktakeId:'take',storeId:'store',grantId:'warehouse:edit:test',permissions:['INVENTORY_WAREHOUSE_EDIT']};
+    const values={salePrice:4.25,costPrice:2.5,vatDepartmentId:'vat',categoryId:'cat',subcategoryId:'sub'};
+    const edit=async (body,user=editor)=>{
+      const req=request(body,user);req.params.productId='product';
+      return invoke('patch/stocktakes/:stocktakeId/warehouse/:productId',req);
+    };
+    assert.equal((await edit(values,{...editor,permissions:[]})).status,403);
+    assert.equal((await edit({...values,subcategoryId:'wrong'})).status,400);
+    assert.equal((await edit(values)).status,200);
+    const [target,control]=await db.$queryRaw`SELECT * FROM "StoreProduct" WHERE "productId"='product' ORDER BY "storeId" DESC`;
+    assert.deepEqual([Number(target.salePrice),Number(target.costPriceOverride),target.vatDepartmentIdOverride,target.categoryIdOverride,target.subcategoryIdOverride],[4.25,2.5,'vat','cat','sub']);
+    assert.deepEqual([Number(control.salePrice),control.costPriceOverride,control.vatDepartmentIdOverride,control.categoryIdOverride,control.subcategoryIdOverride],[9,null,null,null,null]);
+    const audit=await db.$queryRaw`SELECT "storeId","after" FROM "InventoryWarehouseEditAudit"`;
+    assert.deepEqual(audit,[{storeId:'store',after:values}]);
+    await db.$executeRaw`UPDATE "InventoryAccessGrant" SET "revokedAt"=NOW()`;
+    assert.equal((await edit(values)).status,403);
+
   }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

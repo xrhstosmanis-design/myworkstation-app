@@ -62,6 +62,8 @@ export default function InventoryMobileApp({stocktakeId,api}){
   useEffect(()=>()=>{cameraStream?.getTracks().forEach(track=>track.stop())},[cameraStream]);
   const save=async event=>{event?.preventDefault();if(busy||savingRef.current||!selected||quantity===""||!Number.isFinite(Number(quantity)))return;if(!online)return setError("Δεν υπάρχει σύνδεση. Η καταχώρηση δεν αποθηκεύτηκε.");savingRef.current=true;setBusy(true);setError("");try{const total=(correcting?0:n(selected.countedQuantity))+Number(quantity);await request(`/api/inventory-v2/stocktakes/${encodeURIComponent(stocktakeId)}/count`,{method:"POST",body:JSON.stringify({lineId:selected.id,quantity:total,expectedVersion:selected.countVersion,clientEventId:eventId(),deviceId:deviceId(),source:"QR_PIN"})});setMessage(`${selected.name}: σύνολο ${total}`);await load();setCorrecting(false);setQ("");setSelected(null);setQuantity("");setMatches([]);setTimeout(()=>searchRef.current?.focus())}catch(e){setError(e.message);await load().catch(()=>{})}finally{savingRef.current=false;setBusy(false)}};
   const [warehouse,setWarehouse]=useState(null);
+  const [warehouseEdit,setWarehouseEdit]=useState(null);
+  const warehouseSaving=useRef(false);
   const [warehouseQuery,setWarehouseQuery]=useState("");
   const [warehouseBusy,setWarehouseBusy]=useState(false);
   const [warehouseError,setWarehouseError]=useState("");
@@ -73,6 +75,24 @@ export default function InventoryMobileApp({stocktakeId,api}){
       setWarehouse({...result,q,page});
     }catch(e){setWarehouse(null);setWarehouseError(e.message)}
     finally{setWarehouseBusy(false)}
+  };
+  const saveWarehouse=async event=>{
+    event.preventDefault();
+    if(warehouseSaving.current||!warehouseEdit||!warehouse?.editOptions||!data?.canEditWarehouse)return;
+    const fields=new FormData(event.currentTarget);
+    warehouseSaving.current=true;
+    setWarehouseBusy(true);
+    setWarehouseError("");
+    try{
+      await request(`/api/inventory-v2/stocktakes/${encodeURIComponent(stocktakeId)}/warehouse/${encodeURIComponent(warehouseEdit.id)}`,{
+        method:"PATCH",
+        body:JSON.stringify({salePrice:Number(fields.get("salePrice")),costPrice:Number(fields.get("costPrice")),
+          vatDepartmentId:fields.get("vatDepartmentId"),categoryId:warehouseEdit.categoryId,subcategoryId:warehouseEdit.subcategoryId||null})
+      });
+      setWarehouseEdit(null);
+      await searchWarehouse(warehouse.q,warehouse.page);
+    }catch(e){setWarehouseError(e.message)}
+    finally{warehouseSaving.current=false;setWarehouseBusy(false)}
   };
   if(!token&&!api)return <main className="inventory-mobile login"><form onSubmit={redeem}><Barcode size={42}/><h1>MyWorkStation Inventory</h1><p>Προσωρινή πρόσβαση μόνο στη συγκεκριμένη απογραφή και ζώνη.</p><label>PIN 6 ψηφίων<input inputMode="numeric" pattern="[0-9]{6}" maxLength="6" value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} autoFocus required/></label>{error&&<div className="inv-error">{error}</div>}<button disabled={busy||pin.length!==6}><LogIn/> {busy?"Έλεγχος…":"Είσοδος στην απογραφή"}</button></form></main>;
   const finalize=async()=>{
@@ -96,14 +116,26 @@ export default function InventoryMobileApp({stocktakeId,api}){
     <h2>Αποθήκη · {data.storeName}</h2>
     <form onSubmit={e=>{e.preventDefault();searchWarehouse(warehouseQuery)}}>
       <label>Αναζήτηση αποθήκης<input value={warehouseQuery} onChange={e=>setWarehouseQuery(e.target.value)} placeholder="Barcode, κωδικός ή περιγραφή" maxLength={120}/></label>
-      <button disabled={warehouseBusy}>Προβολή ειδών</button>
+      <button disabled={warehouseBusy||!!warehouseEdit}>Προβολή ειδών</button>
     </form>
     {warehouseError&&<p role="alert">{warehouseError}</p>}
+    {warehouseEdit&&warehouse?.editOptions&&<form onSubmit={saveWarehouse} key={warehouseEdit.id}>
+      <fieldset disabled={warehouseBusy}>
+        <legend>{warehouseEdit.name} · μόνο {data.storeName}</legend>
+        <label>Λιανική<input name="salePrice" type="number" min="0" max="99999999.9999" step="0.0001" required defaultValue={warehouseEdit.salePrice??""}/></label>
+        <label>Τιμή αγοράς<input name="costPrice" type="number" min="0" max="99999999.9999" step="0.0001" required defaultValue={warehouseEdit.costPrice??""}/></label>
+        <label>Τμήμα ΦΠΑ<select name="vatDepartmentId" required defaultValue={warehouseEdit.vatDepartmentId??""}><option value="">Επιλογή</option>{warehouse.editOptions.vats.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
+        <label>Κατηγορία<select required value={warehouseEdit.categoryId??""} onChange={e=>setWarehouseEdit({...warehouseEdit,categoryId:e.target.value,subcategoryId:null})}><option value="">Επιλογή</option>{warehouse.editOptions.categories.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
+        <label>Υποκατηγορία<select value={warehouseEdit.subcategoryId??""} onChange={e=>setWarehouseEdit({...warehouseEdit,subcategoryId:e.target.value||null})}><option value="">Χωρίς υποκατηγορία</option>{warehouse.editOptions.subcategories.filter(option=>option.categoryId===warehouseEdit.categoryId).map(option=><option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
+        <button>Αποθήκευση όλων</button>
+        <button type="button" onClick={()=>setWarehouseEdit(null)}>Ακύρωση</button>
+      </fieldset>
+    </form>}
     {warehouse&&<section className="inv-list">
       {warehouse.rows.length===0&&<p>Δεν βρέθηκαν είδη.</p>}
-      {warehouse.rows.map(row=><article key={row.id}><div><b>{row.name}</b><small>{row.sku}</small></div><div>Στοκ {row.currentStock}<br/>Λιανική {row.salePrice==null?"—":new Intl.NumberFormat("el-GR",{style:"currency",currency:"EUR"}).format(row.salePrice)}</div></article>)}
-      <button type="button" disabled={warehouseBusy||warehouse.page<=1} onClick={()=>searchWarehouse(warehouse.q,warehouse.page-1)}>Προηγούμενη</button>
-      <button type="button" disabled={warehouseBusy||!warehouse.hasMore} onClick={()=>searchWarehouse(warehouse.q,warehouse.page+1)}>Επόμενη</button>
+      {warehouse.rows.map(row=><article key={row.id}><div><b>{row.name}</b><small>{row.sku}</small></div><div>Στοκ {row.currentStock}<br/>Λιανική {row.salePrice==null?"—":new Intl.NumberFormat("el-GR",{style:"currency",currency:"EUR"}).format(row.salePrice)}</div>{data.canEditWarehouse&&warehouse.editOptions&&<button type="button" disabled={warehouseBusy||!!warehouseEdit} onClick={()=>{setWarehouseError("");setWarehouseEdit(row)}}>Επεξεργασία</button>}</article>)}
+      <button type="button" disabled={warehouseBusy||!!warehouseEdit||warehouse.page<=1} onClick={()=>searchWarehouse(warehouse.q,warehouse.page-1)}>Προηγούμενη</button>
+      <button type="button" disabled={warehouseBusy||!!warehouseEdit||!warehouse.hasMore} onClick={()=>searchWarehouse(warehouse.q,warehouse.page+1)}>Επόμενη</button>
     </section>}
   </section>}<section className="inv-progress"><i style={{width:`${total?counted.length/total*100:0}%`}}/></section><section className="inv-mobile-fast"><label><input type="checkbox" checked={scanEach} disabled={!!selected||busy||scannerOpen} onChange={e=>{setScanEach(e.target.checked);setQ("");setMatches([]);searchRef.current?.focus()}}/> +1 ανά σάρωση</label><form onSubmit={find}><label><b>1. Σκάναρε barcode ή αναζήτησε είδος</b><span><Search/><input ref={searchRef} disabled={correcting} value={q} onChange={e=>{setQ(e.target.value);if(!scanEach)setSelected(null);setMatches([])}} placeholder="Barcode, SKU ή προϊόν" autoFocus/><button disabled={correcting}>{scanEach?"+1 τεμάχιο":"Αναζήτηση"}</button><button type="button" className="inv-camera-button" disabled={correcting} onClick={startScanner}><Camera/> Σάρωση με κάμερα</button></span></label><label><b>{correcting?"2. Σωστό συνολικό πλήθος":"2. Νέα ποσότητα που βρήκες"}</b><span><input ref={quantityRef} type="number" min="0" step="0.001" value={quantity} disabled={!selected} onChange={e=>setQuantity(e.target.value)} onKeyDown={event=>{
     if(event.key!=="Enter"||event.nativeEvent.isComposing)return;

@@ -9,7 +9,7 @@ import {lockDraftInventoryStocktake} from '../src/lib/inventory-stocktake-draft.
 
 test('actual finalization rejects missing/blank/oversize cause without starting a transaction',async()=>{
   let transactions=0,passedReason;
-  const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete'].map(m=>[m,(p,...hs)=>handlers.set(m+p,hs)]));
+  const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete','patch'].map(m=>[m,(p,...hs)=>handlers.set(m+p,hs)]));
   const prisma={$queryRaw:async()=>[{id:'take',companyId:'company',storeId:'store',status:'DRAFT'}],$transaction:async fn=>{transactions++;await fn({})}};
   const source=fs.readFileSync(new URL('../src/routes/inventory-v2.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'');
   new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed',source)(Router,z,crypto,prisma,{},()=>{},async(_tx,_st,_actor,reason)=>{passedReason=reason},lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed);
