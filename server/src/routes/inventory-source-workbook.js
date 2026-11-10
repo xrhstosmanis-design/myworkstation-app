@@ -1,3 +1,4 @@
+import {attachCatalogAppend,CATALOG_APPEND} from './inventory-catalog-append.js';
 import {attachKatWorkbook,validateKatDepartments} from './inventory-kat-source.js';
 import {attachRizareioWorkbook,validateRizareioDepartments} from './inventory-rizareio-source.js';
 import {attachAcharnonWorkbook,validateAcharnonDepartments} from './inventory-acharnon-source.js';
@@ -14,6 +15,7 @@ const requiredDepartments=[
 // This explicit source profile does not broaden the legacy Diadochou mappings.
 // Only the import sheet participates; review/excluded/reference sheets never do.
 export function attachSourceWorkbook(workbook,raw,XLSX){
+  if(workbook.SheetNames[0]==='STORE_CATALOG_APPEND')return attachCatalogAppend(workbook,raw,XLSX);
   if(workbook.SheetNames[0]==='ACHARNON_IMPORT')return attachAcharnonWorkbook(workbook,raw,XLSX);
   if(workbook.SheetNames[0]==='RIZAREIO_IMPORT')return attachRizareioWorkbook(workbook,raw,XLSX);
   if(workbook.SheetNames[0]==='ΚΑΤ_IMPORT')return attachKatWorkbook(workbook,raw,XLSX);
@@ -57,6 +59,13 @@ export function attachSourceWorkbook(workbook,raw,XLSX){
 
 export function validateSourceDepartments(profile,departments){
   if(!profile)return;
+  if(profile.name===CATALOG_APPEND){
+    for(const expected of profile.departments){
+      const matches=departments.filter(d=>d.description===expected.description);
+      if(matches.length!==1||matches[0].active!==true||matches[0].vatRate==null||Number(matches[0].vatRate)!==expected.vatRate)fail(`Το τμήμα ΦΠΑ ${expected.description} δεν συμφωνεί με το κατάστημα.`);
+    }
+    return;
+  }
   if(profile.name==='ACHARNON_CATALOG_V1')return validateAcharnonDepartments(profile,departments);
   if(profile.name==='RIZAREIO_CATALOG_V1')return validateRizareioDepartments(profile,departments);
   if(profile.name==='KAT_CATALOG_V1')return validateKatDepartments(profile,departments);

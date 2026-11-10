@@ -1,3 +1,4 @@
+import {CATALOG_APPEND} from './inventory-catalog-append.js';
 import crypto from "crypto";
 import {Router} from "express";
 import XLSX from "xlsx";
@@ -33,7 +34,8 @@ export function readWorkbook(dataUrl){
 export function normalizeRows(raw){
   return raw.map((r,index)=>{
     const acharnon=raw.sourceProfile?.name==='ACHARNON_CATALOG_V1';
-    const sku=acharnon?'':txt(val(r,["SKU","Κωδικός","ΚΩΔΙΚΟΣ","Εσωτ. κωδικός","Εσωτερικός κωδικός","Code"]));
+    const append=raw.sourceProfile?.name===CATALOG_APPEND;
+    const sku=(acharnon||append)?'':txt(val(r,["SKU","Κωδικός","ΚΩΔΙΚΟΣ","Εσωτ. κωδικός","Εσωτερικός κωδικός","Code"]));
     const name=txt(val(r,["Περιγραφή είδους","Περιγραφή","ΠΕΡΙΓΡΑΦΗ","Όνομα","ΟΝΟΜΑ","Name","Product"]));
     const barcode=raw.sourceProfile?.name==='KAT_CATALOG_V1'?txt(r.Barcode):txt(val(r,["Barcode","BARCODE","barcode","EAN"]));
     const categoryName=txt(val(r,["Κατηγορία","ΚΑΤΗΓΟΡΙΑ","Category"]));
@@ -58,7 +60,7 @@ export function normalizeRows(raw){
     const discountC=num(val(r,["Εκπτ. Γ"]));
     if(raw.sourceProfile){
       if(!sourceDefinition)errors.push(`Άγνωστο τμήμα ΦΠΑ ${sourceDepartment}`);
-      if(sourceDefinition&&Number(r["Τμήμα ταμειακής"])!==sourceDefinition.cashRegisterDepartment)errors.push("Το τμήμα ταμειακής διαφωνεί με την πηγή");
+      if(!append&&sourceDefinition&&Number(r["Τμήμα ταμειακής"])!==sourceDefinition.cashRegisterDepartment)errors.push("Το τμήμα ταμειακής διαφωνεί με την πηγή");
       if(sourceVatCode&&sourceVatCode!==sourceDefinition?.legacyVatCode)errors.push("Ο κωδικός ΦΠΑ διαφωνεί με το τμήμα της πηγής");
       if(explicitVat===null||explicitVat!==vatRate)errors.push("Λείπει ή διαφωνεί το ποσοστό ΦΠΑ της πηγής");
       if(stock!==0)errors.push("Η πρώτη εισαγωγή απαιτεί αρχικό απόθεμα 0");
@@ -115,7 +117,7 @@ export async function classify(companyId,rows,db=prisma){
 }
 
 export async function prepareArchiveRows(db,companyId,raw,storeId){
-  if(['KAT_CATALOG_V1','RIZAREIO_CATALOG_V1','ACHARNON_CATALOG_V1'].includes(raw.sourceProfile?.name))raw.sourceProfile.assertTarget(companyId,storeId);
+  if(['KAT_CATALOG_V1','RIZAREIO_CATALOG_V1','ACHARNON_CATALOG_V1',CATALOG_APPEND].includes(raw.sourceProfile?.name))raw.sourceProfile.assertTarget(companyId,storeId);
   if(raw.sourceProfile?.name==='ACHARNON_CATALOG_V1')await raw.sourceProfile.assertEmptyStore(db,companyId,storeId);
   if(raw.sourceProfile){
     await assertSourceCostStorage(db);
