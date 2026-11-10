@@ -29,6 +29,12 @@ async function ensureSchema(){
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrderPosting_company_idx" ON "PurchaseOrderPosting" ("companyId","postedAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PurchaseOrderPosting_fingerprint_key" ON "PurchaseOrderPosting" ("companyId","documentFingerprint") WHERE "documentFingerprint" IS NOT NULL`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceStockExclusionEmail" (
+        "companyId" TEXT NOT NULL, "storeId" TEXT NOT NULL, "orderId" TEXT NOT NULL,
+        "reopenVersion" INTEGER NOT NULL, "payload" JSONB NOT NULL,
+        "attempts" INTEGER NOT NULL DEFAULT 0, "nextAttemptAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "sentAt" TIMESTAMPTZ, PRIMARY KEY ("companyId","storeId","orderId","reopenVersion")
+      )`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" (
         "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,
@@ -382,6 +388,20 @@ router.patch("/:orderId",async(req,res,next)=>{
         await recordInvoiceStockPosting(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,postedDocumentId:purchaseDocumentId,path:"PURCHASE_ORDER"});
         if(deferredPosting){
           if(excludedStockLineIds.size){
+            const [store]=await tx.$queryRaw`SELECT "name" FROM "Store" WHERE "id"=${found.storeId} AND "companyId"=${companyId}`;
+            const [supplier]=await tx.$queryRaw`SELECT "name" FROM "Supplier" WHERE "id"=${effectiveSupplierId} AND "companyId"=${companyId}`;
+            const excludedLines=lines.filter(line=>excludedStockLineIds.has(line.id)).map(line=>({
+              code:line.supplierCode||line.productId,description:line.description,
+              quantity:n(line.quantity),unit:line.invoiceUnit==="PACKAGE"?"ΚΙΒ":"ΤΜΧ"
+            }));
+            const payload={
+              orderId:found.id,invoiceNumber:effectiveInvoiceNumber,storeName:store?.name||found.storeId,
+              supplierName:supplier?.name,actorName:actor,postedAt:new Date().toISOString(),
+              stockLineCount:lines.filter(line=>line.productId&&!excludedStockLineIds.has(line.id)).length,excludedLines
+            };
+            await tx.$executeRaw`INSERT INTO "InvoiceStockExclusionEmail" ("companyId","storeId","orderId","reopenVersion","payload")
+              VALUES (${companyId},${found.storeId},${found.id},${n(found.reopenVersion)},${JSON.stringify(payload)}::jsonb)
+              ON CONFLICT ("companyId","storeId","orderId","reopenVersion") DO NOTHING`;
             await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
               VALUES (${id()},${companyId},${found.storeId},${req.user.operatorId||null},${req.user.id},'INVOICE_STOCK_LINES_EXCLUDED',${JSON.stringify({orderId:found.id,purchaseDocumentId,reopenVersion:n(found.reopenVersion),excludedStockLineIds:[...excludedStockLineIds]})}::jsonb)`;
           }

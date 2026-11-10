@@ -14,7 +14,7 @@ const confirmation=(row,id='confirm',sequence=2)=>({id,sequence,actorName:'Χρ�
 test('joint handwritten candidates render as unverified with ledger date provenance and cannot close finality',()=>{
  const source=fullFixture();source.paperEvidence.coverage.complete=false;source.paperEvidence.items=[{status:'UNRESOLVED',reason:'DOCUMENT_DATE_UNREADABLE',line:null}];
  source.paperEvidence.shiftCandidates=[{filename:'synthetic.jpg',fromLine:0,toLine:3,operatorName:'Synthetic Operator',terminalPos:'MAIN',candidateDate:'2026-10-21',dateBasis:'LEDGER_DAY_MONTH_CANDIDATE',selected:true,proof:[{field:'openingOperational',amountCents:10000},{field:'cardSales',amountCents:2200}]}];
- const before=projectReconciliation(source,[]);assert.match(before.text,/Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ/);assert.match(before.text,/έτος από την υποψήφια καταχωρισμένη βάρδια, όχι από το χειρόγραφο/);assert.match(before.text,/αρχικό ταμείο 100,00/);assert.match(before.text,/POS 22,00/);assert.doesNotMatch(before.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ/);assert.equal(before.rows[0].fullAudit.status,'PENDING');assert.equal(before.rows[0].reviewed,false);
+ const before=projectReconciliation(source,[]);assert.match(before.text,/χωρίς αντιστοίχιση σε επιλεγμένη βάρδια: 1/);assert.match(before.text,/γραμμές χειρογράφων προς έλεγχο με σύνδεση στη βάρδια 0/);assert.match(before.text,/Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ/);assert.match(before.text,/έτος από την υποψήφια καταχωρισμένη βάρδια, όχι από το χειρόγραφο/);assert.match(before.text,/αρχικό ταμείο 100,00/);assert.match(before.text,/POS 22,00/);assert.doesNotMatch(before.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ/);assert.equal(before.rows[0].fullAudit.status,'PENDING');assert.equal(before.rows[0].reviewed,false);
  source.paperEvidence.shiftCandidates[0].proof[1].amountCents=2300;assert.notEqual(projectReconciliation(source,[]).reportHash,before.reportHash);
  source.paperEvidence.shiftCandidates=Array.from({length:31},()=>structuredClone(source.paperEvidence.shiftCandidates[0]));const limited=projectReconciliation(source,[]);assert.match(limited.text,/Εμφανίζονται 30 από 31 προτεινόμενες/);assert.equal(limited.text.split('Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ').length-1,30);
 });
@@ -175,4 +175,13 @@ test('one documented return is shown for two linked audit records, never matched
  assert.match(report.text,/Άλλη αιτία/);
  assert.doesNotMatch(report.text,/returned-sale|original-sale|another-return/);
  assert.equal(report.rows[0].remainingCents,-8700);
+});
+
+
+test('reports separately corroborated EFTPOS shift totals and identifies missing slip verification',()=>{
+ const source=fullFixture();
+ assert.match(projectReconciliation(source,[]).text,/Απόκομμα EFTPOS: δεν υπάρχει επαληθευμένο σύνολο/);
+ source.paperEvidence.items.push({sourceId:'eftpos',line:0,filename:'eftpos.png',status:'MATCHED',kind:'EFTPOS',sessionId:'a',transactionId:null,evidenceBasis:'SHIFT_TOTAL',amountCents:11800,reason:'UNIQUE_RECORDED_CORROBORATION'});
+ const result=projectReconciliation(source,[]);
+ assert.match(result.text,/Απόκομμα EFTPOS · eftpos\.png · αναγνωσμένο σύνολο 118,00\s€ · καταχωρισμένο EFTPOS 118,00\s€ · διαφορά 0,00\s€/);
 });

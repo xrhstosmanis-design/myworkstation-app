@@ -81,7 +81,7 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&(path==='/api/commerce/documents/inbox/archive'||/^\/api\/commerce\/documents\/inbox\/[^/]+\/file$/.test(path)))return 'invoices.read';
   if(method==='GET'&&/^\/api\/(?:transactions|cash)\/stores\/[^/]+\/overview$/.test(path))return 'sales.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/sales\/recent$/.test(path))return 'sales.read';
-  if(method==='GET'&&path==='/api/inventory-archive')return 'products.read';
+  if((method==='GET'&&path==='/api/inventory-archive')||(method==='POST'&&path==='/api/inventory-archive/export-xlsx'))return 'products.read';
   if(method==='GET'&&path==='/api/owner-products/new-card/options')return 'products.create';
   if(method==='POST'&&path==='/api/owner-products/new-card')return 'products.create';
   if(method==='GET'&&path==='/api/backoffice-staff/me')return 'SESSION';

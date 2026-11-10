@@ -1,3 +1,17 @@
+## 2026-11-10T16:29:46.257Z — CASH-UNIFIED-AUDIT-15 / COMPLETE EVIDENCE CLAIM
+
+Retained cash owner `codex/cash-chat-reconciliation-20261026`. Source `fix/cash-complete-evidence-20261110`. Scope and acceptance: [checkpoint](../../CHECKPOINTS/CHANGES/2026-11-10-cash-complete-evidence-claim.md). NOT TESTED. Financial HOLD remains open.
+
+## 2026-11-10T16:04:40.010Z — INVENTORY-PRODUCT-CREATE-EVENTS
+
+ASSIGNED — Codex / `fix/inventory-product-create-events`. Scope: expose existing inventory PRODUCT_CREATE events in Central Events with store, date and actor filters. Local syntax and mocked checks passed. LAB not tested. PR pending.
+
+## 2026-11-10T18:03:36+02:00 — INVENTORY-CATALOG-XLSX-01 / ASSIGNED BEFORE SOURCE
+
+Owner /root; branch `feat/inventory-catalog-xlsx-20261110`; issue [#3798](https://github.com/xrhstosmanis-design/myworkstation-app/issues/3798); checkpoint `CHECKPOINTS/CHANGES/2026-11-10-inventory-catalog-xlsx.md`.
+
+Scope: true XLSX from the current store's product catalog, either all products across pages or checked products across pages. Preserve existing action selection, store scope and read permissions. Include text SKU and all barcode aliases, description, category/subcategory, VAT department, retail price and current stock. Independent of INVENTORY-RECONCILIATION-01 count reports and review. Validate in existing LAB, then check Acharnon 309 read-only. Source and LAB pending.
+
 ## 2026-11-08T22:16:55+02:00 — CASH-UNIFIED-AUDIT-15 / OWNER EMAIL LAYOUT CLAIM
 
 Retained cash owner codex/cash-chat-reconciliation-20261026, coordinated by /root. Scope: owner-style cash report email from the same checked MyWorkStation data, with shift cash and POS/EFTPOS tables, applicable evidence and pending replies. Unchecked paper stays visible with its reason and does not add a delivery hold. Preserve financial HOLD and current safety gates. First preview: previously verified test store/day. No actual owner send in this scope.

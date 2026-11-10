@@ -173,7 +173,10 @@ export function reconciliationText(report){
     if(row.fullAudit){
       const pendingLabels={SOURCE_COVERAGE:'κάλυψη πηγών',CASH_ARITHMETIC:'συμφωνία κινήσεων μετρητών',OPERATOR_IDENTITY:'ταυτότητα χειριστή',RESULT_ELIGIBILITY:'επιλεξιμότητα αποτελέσματος',CARD_ARITHMETIC:'συμφωνία καρτών',HANDOFF:'παραδόσεις ταμείου',AWAITING_NEXT_SHIFT:'κλείσιμο επόμενης βάρδιας',AUDIT_OPEN_ISSUES:'ανοικτά αριθμητικά ερωτήματα',EVENTS:'συμβάντα και αλλαγές τιμών',DUPLICATES:'πιθανές διπλές συναλλαγές',PAPERS:'χειρόγραφα του τσατ',EXPENSES:'παραστατικά εξόδων'};
       lines.push(row.fullAudit.status==='FINAL'?`ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ · ${row.operatorName}: ${signedResult(row.fullAudit.remainingCents)}.`:`Πλήρης έλεγχος · ${row.operatorName}: ${row.fullAudit.status==='NOT_APPLICABLE'?'δεν εφαρμόζεται':row.fullAudit.status==='AWAITING_NEXT_SHIFT'?'αναμονή επόμενης βάρδιας':'εκκρεμεί διασταύρωση'}.`);
-      if(row.fullAudit.pendingChecks.length)lines.push(`Ευρήματα: συμβάντα ${row.fullCoverage.events.unresolvedCount}, πιθανές διπλές συναλλαγές ${row.fullCoverage.duplicates.unresolvedCount}, χειρόγραφα ${row.fullCoverage.papers.unresolvedCount}, παραστατικά ${row.fullCoverage.expenses.unresolvedCount}.`);
+      if(row.fullAudit.pendingChecks.length){
+        const shiftPaperLines=(report.paperEvidence?.items||[]).filter(item=>item.status==='UNRESOLVED'&&item.sessionId===row.sessionId).length;
+        lines.push(`Ευρήματα: συμβάντα ${row.fullCoverage.events.unresolvedCount}, πιθανές διπλές συναλλαγές ${row.fullCoverage.duplicates.unresolvedCount}, γραμμές χειρογράφων προς έλεγχο με σύνδεση στη βάρδια ${shiftPaperLines}, παραστατικά ${row.fullCoverage.expenses.unresolvedCount}.`);
+      }
       if(row.fullAudit.pendingChecks.length)lines.push('Εκκρεμούν: '+row.fullAudit.pendingChecks.map(c=>pendingLabels[c]).join(', ')+'.');
       lines.push(...cashAuditEventSummary(row.fullEvidence?.events?.findings||[]));
       for(const finding of (row.fullEvidence?.duplicates?.findings||[]).slice(0,30)){
@@ -192,6 +195,18 @@ export function reconciliationText(report){
       if(row.status==='RECHECK_REQUIRED')lines.push('Απαιτείται επανέλεγχος των κινήσεων ή των συνδεδεμένων στοιχείων.');
     }
     lines.push(`POS–EFTPOS: ${row.cardCents===null?'δεν υπάρχουν πλήρη στοιχεία':row.cardCents===0?'χωρίς διαφορά':'διαφορά '+(row.cardCents>0?'+':'−')+money(row.cardCents)}.`);
+    if(report.paperEvidence){
+      const slips=report.paperEvidence.items.filter(item=>item.sessionId===row.sessionId&&item.kind==='EFTPOS'&&(item.status==='MATCHED'||item.reason==='EFTPOS_TOTAL_DIFFERS')&&item.evidenceBasis==='SHIFT_TOTAL'&&Number.isSafeInteger(item.amountCents));
+      if(!slips.length)lines.push('Απόκομμα EFTPOS: δεν υπάρχει επαληθευμένο σύνολο αποκόμματος για τη βάρδια.');
+      for(const slip of slips){
+        if(slip.reason==='EFTPOS_TOTAL_DIFFERS'){
+          const difference=slip.amountCents-slip.recordedAmountCents;
+          lines.push(`Απόκομμα EFTPOS · ${slip.filename||'Συνημμένο'} · αναγνωσμένο σύνολο ${money(slip.amountCents)} · καταχωρισμένο EFTPOS ${money(slip.recordedAmountCents)} · διαφορά ${difference<0?'−':'+'}${money(difference)} (απόκομμα μείον σύστημα). Εκκρεμεί επιβεβαίωση.`);
+          continue;
+        }
+        lines.push(`Απόκομμα EFTPOS · ${slip.filename||'Συνημμένο'} · αναγνωσμένο σύνολο ${money(slip.amountCents)} · καταχωρισμένο EFTPOS ${money(slip.amountCents)} · διαφορά ${money(0)}. Συμφωνία με το καταχωρισμένο σύνολο της βάρδιας.`);
+      }
+    }
     if(row.automaticAudit?.irisCents)lines.push('Εκκρεμεί ο διαχωρισμός IRIS από το παραπάνω καταχωρισμένο σύνολο καρτών.');
     for(const finding of row.expenseFindings||[]){
       const amount=money(finding.amountCents),when=finding.occurredAt?new Date(finding.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'short',hour12:false}):'χωρίς ώρα';
@@ -205,11 +220,20 @@ export function reconciliationText(report){
   }
   if(report.paperEvidence){
     lines.push('','ΧΕΙΡΟΓΡΑΦΑ ΚΑΙ ΠΑΡΑΣΤΑΤΙΚΑ ΑΠΟ ΤΟ ΤΣΑΤ');
+    const selectedShifts=new Set(report.rows.map(row=>row.sessionId));
+    const unassigned=report.paperEvidence.items.filter(item=>item.status==='UNRESOLVED'&&!selectedShifts.has(item.sessionId));
+    if(unassigned.length){
+      lines.push(`Εκκρεμείς καταχωρίσεις χειρογράφων χωρίς αντιστοίχιση σε επιλεγμένη βάρδια: ${unassigned.length}. Καταγράφονται μία φορά σε επίπεδο καταστήματος. Η ημερομηνία ανεβάσματος δεν αρκεί για αντιστοίχιση.`);
+    }
     lines.push(report.paperEvidence.coverage.discoveryComplete?'Εξετάστηκαν όλα τα διαθέσιμα υποστηριζόμενα συνημμένα του καταστήματος στην τρέχουσα αναζήτηση.':'Η κάλυψη των συνημμένων παραμένει περιορισμένη.');
+    const coverage=report.paperEvidence.coverage;
+    if(Number.isSafeInteger(coverage.sourceCount)&&Number.isSafeInteger(coverage.readCount)){
+      lines.push(`Αποθηκευμένη ανάγνωση διαθέσιμη για ${coverage.readCount} από ${coverage.sourceCount} συνημμένα που βρέθηκαν. Η ανάγνωση από μόνη της δεν επιβεβαιώνει ποσό ή βάρδια.`);
+    }
     const candidateFields={openingOperational:'αρχικό ταμείο',actualOperational:'τελικό ταμείο',cardSales:'POS',eftposTotal:'EFTPOS',expenses:'σύνολο εξόδων'};
     if((report.paperEvidence.shiftCandidates?.length||0)>30)lines.push(`Εμφανίζονται 30 από ${report.paperEvidence.shiftCandidates.length} προτεινόμενες βάρδιες. Όλες παραμένουν μη επιβεβαιωμένες.`);
     for(const candidate of (report.paperEvidence.shiftCandidates||[]).slice(0,30))lines.push(`Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ · ${candidate.filename} · γραμμές ${candidate.fromLine+1}–${candidate.toLine+1} · ${candidate.operatorName||'χωρίς όνομα'} · ${candidate.terminalPos} · ${candidate.candidateDate}${candidate.dateBasis==='LEDGER_DAY_MONTH_CANDIDATE'?' (έτος από την υποψήφια καταχωρισμένη βάρδια, όχι από το χειρόγραφο)':''}${candidate.selected?'':' · εκτός επιλεγμένης περιόδου'} · συμφωνούν: ${candidate.proof.map(field=>candidateFields[field.field]+' '+money(field.amountCents)).join(', ')}. Δεν αποτελεί επιβεβαίωση ποσών ή τελικό αποτέλεσμα.`);
-    const reasons={VERIFIED_DOCUMENT_HEADER:'επαληθευμένη επικεφαλίδα εγγράφου',NO_FINANCIAL_DOCUMENT_LINES:'δεν αναγνωρίστηκαν οικονομικές γραμμές',REPEATED_LINE_MATCH:'περισσότερες γραμμές χρησιμοποιούν την ίδια κίνηση και χρειάζονται έλεγχο',SOURCE_LINE_LIMIT:'συμπληρώθηκε το όριο γραμμών και δεν επιβεβαιώθηκε πλήρης κάλυψη',DOCUMENT_NOTES_REQUIRE_REVIEW:'υπάρχουν σημειώσεις της ανάγνωσης που χρειάζονται έλεγχο',CURRENT_SOURCE_UNAVAILABLE:'το πρωτότυπο χρειάζεται επανέλεγχο',NOT_READ:'δεν έχει διαβαστεί',PENDING:'αναμονή προηγούμενης ανάγνωσης',REQUIRES_REVIEW:'η ανάγνωση χρειάζεται έλεγχο',INVALID_SOURCE:'μη διαθέσιμο πρωτότυπο',INVALID_READING:'μη επιβεβαιωμένη ανάγνωση',DOCUMENT_DATE_UNREADABLE:'δεν διαβάστηκε πλήρης ημερομηνία',PRINTED_DATE_OUTSIDE_SELECTED_SHIFTS:'η αναγραφόμενη ημερομηνία είναι εκτός περιόδου',NO_DOCUMENT_LINES:'δεν αναγνωρίστηκαν γραμμές',UNCERTAIN_LINE:'ασαφή στοιχεία γραμμής',LINE_TIME_UNREADABLE:'δεν διαβάστηκε σαφής ώρα',AMBIGUOUS_MATCH:'περισσότερες από μία πιθανές αντιστοιχίσεις',NO_MATCHING_RECORDED_MOVEMENT:'δεν βρέθηκε αντίστοιχη καταχωρισμένη κίνηση',UNIQUE_RECORDED_CORROBORATION:'μοναδική συμφωνία με καταχωρισμένα στοιχεία',CONTEXT_SHIFT_ONLY:'αφορά βάρδια εκτός επιλεγμένης περιόδου'};
+    const reasons={VERIFIED_DOCUMENT_HEADER:'επαληθευμένη επικεφαλίδα εγγράφου',NO_FINANCIAL_DOCUMENT_LINES:'δεν αναγνωρίστηκαν οικονομικές γραμμές',REPEATED_LINE_MATCH:'περισσότερες γραμμές χρησιμοποιούν την ίδια κίνηση και χρειάζονται έλεγχο',SOURCE_LINE_LIMIT:'συμπληρώθηκε το όριο γραμμών και δεν επιβεβαιώθηκε πλήρης κάλυψη',DOCUMENT_NOTES_REQUIRE_REVIEW:'υπάρχουν σημειώσεις της ανάγνωσης που χρειάζονται έλεγχο',CURRENT_SOURCE_UNAVAILABLE:'το πρωτότυπο χρειάζεται επανέλεγχο',NOT_READ:'δεν έχει διαβαστεί (δεν έχει καταγραφεί αίτημα ανάγνωσης για αυτό το συνημμένο)',PENDING:'καταγράφηκε αίτημα ανάγνωσης αλλά δεν υπάρχει αποθηκευμένο αποτέλεσμα',REQUIRES_REVIEW:'δεν επιβεβαιώθηκε η κατάσταση του πρωτοτύπου ή της ανάγνωσης',EFTPOS_TOTAL_DIFFERS:'το σύνολο του αποκόμματος διαφέρει από το καταχωρισμένο EFTPOS',READING_UNCERTAIN:'έγινε προσπάθεια ανάγνωσης χωρίς αποθηκευμένο αξιοποιήσιμο αποτέλεσμα',INVALID_INTENT:'δεν επαληθεύτηκε η εγγραφή του αιτήματος ανάγνωσης',INVALID_COMPLETION:'δεν επαληθεύτηκε η εγγραφή ολοκλήρωσης της ανάγνωσης',INVALID_SOURCE:'μη διαθέσιμο πρωτότυπο',INVALID_READING:'μη επιβεβαιωμένη ανάγνωση',DOCUMENT_DATE_UNREADABLE:'δεν διαβάστηκε πλήρης ημερομηνία',PRINTED_DATE_OUTSIDE_SELECTED_SHIFTS:'η αναγραφόμενη ημερομηνία είναι εκτός περιόδου',NO_DOCUMENT_LINES:'δεν αναγνωρίστηκαν γραμμές',UNCERTAIN_LINE:'ασαφή στοιχεία γραμμής',LINE_TIME_UNREADABLE:'δεν διαβάστηκε σαφής ώρα',AMBIGUOUS_MATCH:'περισσότερες από μία πιθανές αντιστοιχίσεις',NO_MATCHING_RECORDED_MOVEMENT:'δεν βρέθηκε αντίστοιχη καταχωρισμένη κίνηση',UNIQUE_RECORDED_CORROBORATION:'μοναδική συμφωνία με καταχωρισμένα στοιχεία',CONTEXT_SHIFT_ONLY:'αφορά βάρδια εκτός επιλεγμένης περιόδου'};
     if(report.paperEvidence.items.length>100)lines.push(`Εμφανίζονται 100 από ${report.paperEvidence.items.length} γραμμές. Οι υπόλοιπες περιλαμβάνονται στον έλεγχο κάλυψης.`);
     for(const item of report.paperEvidence.items.slice(0,100))lines.push(`${item.status==='MATCHED'?'Συμφωνεί με καταχωρισμένη κίνηση':item.status==='OUT_OF_PERIOD'?'Εκτός επιλεγμένων βαρδιών':item.status==='INFORMATIONAL'?'Πληροφορία εγγράφου':'Χρειάζεται διευκρίνιση'} · ${item.filename||'Συνημμένο'}${item.uploadedAt?' (ανέβηκε '+new Date(item.uploadedAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'})+')':''} · γραμμή ${item.line===null?'—':item.line+1}${item.label?' · '+item.label:''}${item.date?' · ημερομηνία εγγράφου '+item.date:''}${item.timeText?' · ώρα '+item.timeText:''}${Number.isSafeInteger(item.amountCents)?' · '+money(item.amountCents):''}${item.transactionId?' · κίνηση '+item.transactionId:''} · ${reasons[item.reason]||'χρειάζεται διευκρίνιση'}${item.note?' · '+item.note:''}.`);
   }
