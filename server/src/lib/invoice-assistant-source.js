@@ -35,7 +35,16 @@ export async function loadInvoiceAssistantSource(db,companyId,orderId,context={}
     }
     return {document,pages:receiptPages};
   }
-  const ids=[job.id,...(Array.isArray(job.resultJson?.posHandoff?.pageJobIds)?job.resultJson.posHandoff.pageJobIds:[]).filter(id=>id!==job.id)].slice(0,5);
+  const handoffIds=job.resultJson?.posHandoff?.pageJobIds;
+  // BackOffice intake links secondary jobs directly to the draft, without a POS handoff.
+  const secondaryIds=Array.isArray(handoffIds)&&handoffIds.length
+    ?handoffIds
+    :(await db.$queryRaw`
+      SELECT "id" FROM "AiReaderJob"
+      WHERE "companyId"=${companyId} AND "storeId"=${document.storeId}
+        AND "purchaseDocumentId"=${document.id} AND "status"='MERGED_PAGE'
+        AND "id"<>${job.id} ORDER BY "createdAt","id" LIMIT 4`).map(page=>page.id);
+  const ids=[...new Set([job.id,...secondaryIds])].slice(0,5);
   const pages=[];
   for(const pageId of ids){
     const rows=await db.$queryRaw`SELECT a."filename",a."mimeType",a."contentData"
