@@ -68,13 +68,14 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     row.reviewNote=row.reviewed?lastConfirmation.data.note||null:null;
     row.day=row.closedAt?cashReportRowDay(row.closedAt):null;
     row.expenseFindings=original.expenseFindings||[];
+    if(original.netlinkEvidence!==undefined)row.netlinkEvidence=original.netlinkEvidence;
     if(original.eventSales)row.eventSales=original.eventSales;
     if(automatic.has(id))row.automaticAudit=automatic.get(id);
     row.transactions=original.transactions.slice(0,30);row.transactionsLimited=original.transactions.length>30;
     row.nextSessionId=original.session.nextSession?.id||null;row.previousSessionId=original.session.previousSession?.id||null;
   }
   const selected=source.selectedIds.map(id=>rows.get(id));
-  const sourceReportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.automaticAudit?{automaticAudit:r.automaticAudit}:{}),...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
+  const sourceReportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.automaticAudit?{automaticAudit:r.automaticAudit}:{}),...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{}),...(r.netlinkEvidence!==undefined?{netlinkEvidence:r.netlinkEvidence}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
   const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
   const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
@@ -206,6 +207,11 @@ export function reconciliationText(report){
         }
         lines.push(`Απόκομμα EFTPOS · ${slip.filename||'Συνημμένο'} · αναγνωσμένο σύνολο ${money(slip.amountCents)} · καταχωρισμένο EFTPOS ${money(slip.amountCents)} · διαφορά ${money(0)}. Συμφωνία με το καταχωρισμένο σύνολο της βάρδιας.`);
       }
+    }
+    if(row.netlinkEvidence!==undefined){
+      const netlink=row.netlinkEvidence;
+      if(!netlink)lines.push('Netlink: δεν βρέθηκαν καταχωρίσεις με ασφαλή σύνδεση στη βάρδια.');
+      else lines.push(`Netlink · ${netlink.completedCount} ολοκληρωμένες συναλλαγές · καταχωρισμένη αξία καρτών ${money(netlink.amountCents)} · ${netlink.reviewCount} καταχωρίσεις προς έλεγχο. Εκκρεμεί διασταύρωση με το απόκομμα Netlink.`);
     }
     if(row.automaticAudit?.irisCents)lines.push('Εκκρεμεί ο διαχωρισμός IRIS από το παραπάνω καταχωρισμένο σύνολο καρτών.');
     for(const finding of row.expenseFindings||[]){

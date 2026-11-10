@@ -185,3 +185,17 @@ test('reports separately corroborated EFTPOS shift totals and identifies missing
  const result=projectReconciliation(source,[]);
  assert.match(result.text,/Απόκομμα EFTPOS · eftpos\.png · αναγνωσμένο σύνολο 118,00\s€ · καταχωρισμένο EFTPOS 118,00\s€ · διαφορά 0,00\s€/);
 });
+
+
+test('shows recorded Netlink amounts per shift without claiming slip verification',()=>{
+ const source=fullFixture(),shift=source.sessions.get('a');
+ shift.netlinkEvidence=null;
+ const missing=projectReconciliation(source,[]);
+ assert.match(missing.text,/Netlink: δεν βρέθηκαν καταχωρίσεις με ασφαλή σύνδεση/);
+ shift.netlinkEvidence={completedCount:2,reviewCount:1,amountCents:3000};
+ const report=projectReconciliation(source,[]);
+ assert.match(report.text,/Netlink · 2 ολοκληρωμένες συναλλαγές · καταχωρισμένη αξία καρτών 30,00\s€ · 1 καταχωρίσεις προς έλεγχο/);
+ assert.match(report.text,/Εκκρεμεί διασταύρωση με το απόκομμα Netlink/);
+ assert.notEqual(report.reportHash,missing.reportHash);
+ assert.equal(report.rows[0].remainingCents,missing.rows[0].remainingCents);
+});
