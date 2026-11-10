@@ -1,3 +1,7 @@
+## 2026-11-10T20:29:41.105Z — MYDATA-DRAFT-PREFILL / ASSIGNED
+
+Codex / `fix/mydata-draft-prefill`. Scope: deterministic XML and verified PDF packaging lines into myDATA review drafts, bulk pieces selection, purchase inventory units and per-piece cost. Existing duplicate/payment work stays separately assigned. Local checkpoint `35d7e8c`; full CI and existing LAB acceptance pending.
+
 ## 2026-11-10 — STORE-CATALOG-APPEND-XLSX / ASSIGNED
 
 Owner /root; implementation branch `feat/store-catalog-append-3811`; issue #3811. Add new products to an existing store catalog from Excel with multiple barcodes per product and VAT department validation. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-10-store-catalog-append.md`. Source and LAB pending.
