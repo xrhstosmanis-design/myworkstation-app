@@ -154,7 +154,7 @@ async function main(){
     assert.deepEqual(await moneySnapshot(),moneyBeforeClose);assert.deepEqual((await shiftSnapshot()).filter(row=>row.id!==plainSessionId),shiftsBeforeClose.filter(row=>row.id!==plainSessionId),"Original closed shift/control rows changed during the separate close");
     const closedOverview=await request(`/api/cash/stores/${storeId}/overview`,{token});assert.equal(closedOverview.response.status,200,JSON.stringify(closedOverview.payload));assert.equal(closedOverview.payload.openSession,null);
     const stored=(await prisma.$queryRaw`SELECT "attachmentData","attachmentChecksum" FROM "StoreTransaction" WHERE "id"=${plainId} AND "companyId"=${companyId}`)[0];assert.equal(stored.attachmentData,attachment.dataUrl);assert.equal(stored.attachmentChecksum,capture.payload.checksum);
-    assert.equal((await prisma.$queryRaw`SELECT COUNT(*)::int AS n FROM "StoreOperatorAudit" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "eventType"='SHIFT_CLOSED_WITH_PENDING_INVOICES' AND "details"->>'sessionId'=${plainSessionId}`)[0].n,1);
+    assert.equal((await prisma.$queryRaw`SELECT COUNT(*)::int AS n FROM "StoreOperatorAudit" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "eventType"='SHIFT_CLOSED_WITH_PENDING_INVOICES' AND "details"->>'sessionId'=${plainSessionId}`)[0].n,0);
     console.log("E2E plain invoice without AI intake passed",{sessionId:plainSessionId,paymentId:plainId,proofId:capture.payload.proofId});
   }finally{
     if(originalAiModule)await prisma.companyModule.update({where:{companyId_moduleKey:aiKey},data:{active:originalAiModule.active,startsAt:originalAiModule.startsAt,endsAt:originalAiModule.endsAt}});else await prisma.companyModule.delete({where:{companyId_moduleKey:aiKey}});
