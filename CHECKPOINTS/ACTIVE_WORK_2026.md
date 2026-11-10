@@ -1,7 +1,5 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
-10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
-
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
@@ -26,6 +24,8 @@
 
 | 1 | INVENTORY-RECONCILIATION-01 | retained /root | #3693, #3696, #3645 | FREE comparison candidate reconciled; existing LAB pair insufficient for multi-code acceptance | Exact native CI, then validate bounded two-code LAB fixture |
 | — | Invoice stock selection after stocktake | Συντονιστής | #28 | Δύο απομονωμένα σενάρια τιμολόγησης και ακύρωσης πέρασαν | Πλήρες CI και λειτουργικός έλεγχος στο υπάρχον LAB. [Checkpoint](CHANGES/2026-11-10-invoice-stock-selection.md) |
+
+10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
 
 ## Κανόνας ενημέρωσης
 
