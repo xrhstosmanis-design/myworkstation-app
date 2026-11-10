@@ -48,6 +48,7 @@ const decode=value=>{try{const result=decodeURIComponent(value);if(!result||resu
 export function inventoryAction(method,path){
  const m=String(method).toUpperCase(),p=String(path).replace(/\/$/,'')||'/';
  if(m==='GET'&&p==='/access')return {kind:'access'};
+ if(m==='POST'&&p==='/archive/export-xlsx')return {kind:'export-xlsx',family:'archive',path:'/export-xlsx'};
  if(m==='GET'&&p==='/archive')return {kind:'archive',family:'archive',path:'/'};
  if(m==='GET'&&p==='/suppliers')return {kind:'suppliers'};
  if(m==='POST'&&/^\/archive\/import(?:-preview)?$/.test(p))return {kind:p.endsWith('-preview')?'import-preview':'import',family:'import',path:p.slice(8),write:!p.endsWith('-preview')};
