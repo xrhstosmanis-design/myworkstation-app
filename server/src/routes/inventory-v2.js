@@ -71,6 +71,45 @@ router.get("/stocktakes/:stocktakeId/lines/:lineId/current-stock",async(req,res,
   res.set("Cache-Control","no-store").json({currentStock:line.currentStock==null?null:n(line.currentStock)});
  }catch(e){next(e)}
 });
+router.patch("/stocktakes/:stocktakeId/warehouse/:productId",async(req,res,next)=>{
+ try{
+  const user=req.user;
+  const st=await stocktakeAccess(req,req.params.stocktakeId);
+  if(!st)return res.status(404).json({error:"Δεν βρέθηκε η απογραφή."});
+  if(user.tokenType!=="INVENTORY_COUNTER"||user.zoneId||user.companyId!==st.companyId||user.storeId!==st.storeId||user.stocktakeId!==st.id||!user.permissions?.includes("INVENTORY_WAREHOUSE_EDIT")||! /^(?:finalize:)?warehouse:edit:/.test(user.grantId||""))
+    return res.status(403).json({error:"Ο σύνδεσμος δεν επιτρέπει επεξεργασία αποθήκης."});
+  const price=z.number().finite().min(0).max(99999999.9999);
+  const key=z.string().trim().min(1).max(120);
+  const values=z.object({salePrice:price,costPrice:price,vatDepartmentId:key,categoryId:key,subcategoryId:key.nullable()}).strict().parse(req.body);
+  const productId=req.params.productId;
+  await prisma.$transaction(async tx=>{
+   const [grant]=await tx.$queryRaw`SELECT "id" FROM "InventoryAccessGrant" WHERE "id"=${user.grantId}
+    AND "stocktakeId"=${st.id} AND "zoneId" IS NULL AND "revokedAt" IS NULL AND "expiresAt">NOW() FOR UPDATE`;
+   if(!grant)throw Object.assign(new Error("Η πρόσβαση αποθήκης δεν είναι ενεργή."),{status:403});
+   await lockDraftInventoryStocktake(tx,st);
+   const [options]=await tx.$queryRaw`SELECT
+    EXISTS(SELECT 1 FROM "ProductCategory" WHERE "id"=${values.categoryId} AND "companyId"=${st.companyId} AND "active") AS category,
+    EXISTS(SELECT 1 FROM "ManagementVatDepartment" WHERE "id"=${values.vatDepartmentId} AND "companyId"=${st.companyId} AND "active") AS vat,
+    (${values.subcategoryId}::text IS NULL OR EXISTS(SELECT 1 FROM "ProductSubcategory" WHERE "id"=${values.subcategoryId}
+     AND "categoryId"=${values.categoryId} AND "companyId"=${st.companyId} AND "active")) AS subcategory`;
+   if(!options.category||!options.vat||!options.subcategory)throw Object.assign(new Error("Μη έγκυρη κατηγορία, υποκατηγορία ή τμήμα ΦΠΑ."),{status:400});
+   const [before]=await tx.$queryRaw`SELECT COALESCE(sp."salePrice",p."salePrice") AS "salePrice",
+    COALESCE(sp."costPriceOverride",p."costPrice") AS "costPrice",COALESCE(sp."vatDepartmentIdOverride",p."vatDepartmentId") AS "vatDepartmentId",
+    COALESCE(sp."categoryIdOverride",p."categoryId") AS "categoryId",
+    CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END AS "subcategoryId"
+    FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${st.companyId}
+    WHERE sp."storeId"=${st.storeId} AND sp."productId"=${productId} AND sp."active" AND p."active" FOR UPDATE OF sp`;
+   if(!before)throw Object.assign(new Error("Το είδος δεν είναι ενεργό σε αυτό το κατάστημα."),{status:404});
+   await tx.$executeRaw`UPDATE "StoreProduct" SET "salePrice"=${values.salePrice},"costPriceOverride"=${values.costPrice},
+    "vatDepartmentIdOverride"=${values.vatDepartmentId},"categoryIdOverride"=${values.categoryId},
+    "subcategoryIdOverride"=${values.subcategoryId},"updatedAt"=NOW()
+    WHERE "storeId"=${st.storeId} AND "productId"=${productId}`;
+   await tx.$executeRaw`INSERT INTO "InventoryWarehouseEditAudit" ("id","storeId","productId","stocktakeId","grantId","before","after")
+    VALUES (${id()},${st.storeId},${productId},${st.id},${grant.id},${JSON.stringify(before)}::jsonb,${JSON.stringify(values)}::jsonb)`;
+  });
+  res.json({ok:true});
+ }catch(e){next(e)}
+});
 router.get("/stocktakes/:stocktakeId/warehouse",async(req,res,next)=>{
  try{
   const user=req.user;
