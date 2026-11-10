@@ -64,3 +64,8 @@ Personal inventory detail pages and stocktake-wide exact barcode/SKU lookup. Fro
 ## INVENTORY-PRODUCT-CREATE-EVENTS
 
 Assigned to `fix/inventory-product-create-events`. Central Events shows historical inventory PRODUCT_CREATE records with store, date and operator filters. Local syntax and mocked query/mapping checks passed. LAB and production lookup pending. See [change checkpoint](CHANGES/inventory-product-create-events.md).
+
+
+## MYDATA-DRAFT-PREFILL
+
+Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pending. See [checkpoint](CHANGES/mydata-draft-prefill.md).
