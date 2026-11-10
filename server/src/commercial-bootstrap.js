@@ -71,6 +71,11 @@ const statements=[
 `CREATE UNIQUE INDEX IF NOT EXISTS "StoreProduct_storeId_productId_key" ON "StoreProduct"("storeId","productId")`,
 `CREATE INDEX IF NOT EXISTS "StoreProduct_storeId_idx" ON "StoreProduct"("storeId")`,
 `CREATE INDEX IF NOT EXISTS "StoreProduct_productId_idx" ON "StoreProduct"("productId")`,
+`ALTER TABLE "StoreProduct"
+  ADD COLUMN IF NOT EXISTS "costPriceOverride" DECIMAL(12,4) CHECK ("costPriceOverride" >= 0),
+  ADD COLUMN IF NOT EXISTS "vatDepartmentIdOverride" TEXT,
+  ADD COLUMN IF NOT EXISTS "categoryIdOverride" TEXT,
+  ADD COLUMN IF NOT EXISTS "subcategoryIdOverride" TEXT`,
 
 `CREATE TABLE IF NOT EXISTS "Supplier" (
   "id" TEXT NOT NULL,
