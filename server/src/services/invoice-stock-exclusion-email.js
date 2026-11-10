@@ -4,7 +4,7 @@ export function buildInvoiceStockExclusionEmail(notice){
   const store=singleLine(notice.storeName);
   const excluded=notice.excludedLines;
   const date=new Intl.DateTimeFormat("el-GR",{
-    dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens"
+    dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens",hourCycle:"h23"
   }).format(new Date(notice.postedAt));
   const order=singleLine(notice.invoiceNumber||notice.orderId);
   return {
