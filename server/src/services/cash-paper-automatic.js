@@ -75,7 +75,7 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
   const uploaded=source?.references?.[0]?.uploadedAt,uploadedDate=uploaded?new Date(uploaded):null;
   const base={filename:String(source?.references?.[0]?.filename||'Συνημμένο').replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,180),uploadedAt:uploadedDate&&Number.isFinite(+uploadedDate)?uploadedDate.toISOString():null,sourceId:source?.sourceId||null,checksum:source?.checksum||null,sourceKey:source?.reading?.sourceKey||null,readingHash:source?.reading?.extraction?hash(source.reading.extraction):null};
   if(!validSource(source)||source.reading?.status!=='EXTRACTED_UNVERIFIED'){
-   items.push({...base,line:null,status:'UNRESOLVED',reason:source.reading?.status||'INVALID_SOURCE'});continue;
+   items.push({...base,line:null,status:'UNRESOLVED',reason:source.reading?.reason||source.reading?.status||'INVALID_SOURCE'});continue;
   }
   let extraction;try{const value=source.reading.extraction;extraction=normalizePaper({dateText:value.dateText,documentDate:value.documentDate,operatorText:value.operatorText,shiftText:value.shiftText,notes:value.notes,lines:value.lines.map(({kind,label,amountText,quantityText,timeText,uncertain})=>({kind,label,amountText,quantityText,timeText,uncertain}))});}catch{items.push({...base,line:null,status:'UNRESOLVED',reason:'INVALID_READING'});continue;}
   readCount++;
