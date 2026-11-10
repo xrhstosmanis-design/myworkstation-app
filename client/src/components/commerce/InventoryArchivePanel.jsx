@@ -78,7 +78,9 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
     :[...new Set([...ids,...data.items.map(row=>row.productId)])]);
   const toggleOne=id=>{
     setSelection(ids=>ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
-    if(exportIds===null)setSelected(current=>current?.productId===id?null:(data.items.find(item=>item.productId===id)||null));
+    if(exportIds!==null)return;
+    const row=data.items.find(item=>item.productId===id);
+    setSelected(current=>current?.productId===id?null:(row||null));
   };
   const exportCatalog=async productIds=>{
     const generation=newCardGeneration.current;
