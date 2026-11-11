@@ -115,14 +115,18 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   const jobs=await tx.$queryRaw`SELECT "id","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "attachmentId"=${inbox[0].attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
   const job=jobs[0];
   const common=await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId);
-  if(common)return common;
+  if(common && (!row.rawPayload?.mydataDraftOrderId || common.purchaseOrderId!==row.rawPayload.mydataDraftOrderId))return common;
   if(job?.purchaseDocumentId||row.rawPayload?.mydataDraftOrderId){
     const orders=await tx.$queryRaw`SELECT o."id",o."status",o."supplierId" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId" WHERE d."id"=${job?.purchaseDocumentId||row.rawPayload.mydataDraftDocumentId} AND o."companyId"=${companyId} AND o."storeId"=${storeId} LIMIT 1 FOR UPDATE OF o`;
     if(!orders[0])throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
     if(orders[0].status!=="NEW")throw error("Το παραστατικό έχει ήδη προχωρήσει. Ελέγξτε την υπάρχουσα αγορά.");
     if(row.rawPayload?.mydataDraftOrderId===orders[0].id && inbox[0].status==="IN_REVIEW"){
       const existingLines=await tx.$queryRaw`SELECT 1 FROM "PurchaseOrderLine" WHERE "orderId"=${orders[0].id} LIMIT 1`;
-      if(!existingLines.length)await prefillReviewDraft(tx,row,job,companyId,storeId,orders[0].id,orders[0].supplierId);
+      if(!existingLines.length){
+        const filled=await prefillReviewDraft(tx,row,job,companyId,storeId,orders[0].id,orders[0].supplierId);
+        await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('automaticPrefillChecked',true) WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "inboxId"=${inboxId}`;
+        if(!filled)await tx.$executeRaw`UPDATE "DocumentInbox" SET "note"=${"myDATA • MARK "+row.mark+" • Χρειάζεται έλεγχος γραμμών XML, συσκευασίας ή συνόλων."},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+      }
     }
     return {reused:true,downloaded:false,jobId:job?.id,purchaseOrderId:orders[0].id};
   }
@@ -178,5 +182,7 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
           ${unitCost},${unitCost},${isCarton(line) ? 'PACKAGE' : 'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},
           ${(cents(line.netValue) + cents(line.vatAmount)) / 100})`;
     }
+    return true;
   }
+  return false;
 }
