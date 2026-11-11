@@ -302,7 +302,7 @@ router.patch("/:orderId",async(req,res,next)=>{
           return {ok:true,status:"FINAL",documentType:"CREDIT_NOTE",purchaseDocumentId:credit.id,postedProducts:lines.length,supplierBalanceChange:-gross,cashMovement:false};
         }
 
-        const totalNet=lines.reduce((sum,row)=>sum+n(row.netAmount),0);
+        const totalNet=lines.reduce((sum,row)=>sum+n(row.netAmount)+n(row.exciseTotal),0);
         const totalVat=lines.reduce((sum,row)=>sum+n(row.vatAmount),0);
         const totalGross=lines.reduce((sum,row)=>sum+n(row.grossAmount),0);
         const purchaseDocumentId=found.id;
@@ -315,7 +315,7 @@ router.patch("/:orderId",async(req,res,next)=>{
         for(const row of lines){
           await tx.$executeRaw`
             INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount")
-            VALUES (${id()},${purchaseDocumentId},${row.productId},${row.description},${n(row.quantity)},'PIECE',${n(row.unitCost)},${n(row.netAmount)},${n(row.vatRate)},${n(row.vatAmount)},${n(row.grossAmount)})`;
+            VALUES (${id()},${purchaseDocumentId},${row.productId},${row.description},${n(row.quantity)},'PIECE',${n(row.unitCost)},${n(row.netAmount)+n(row.exciseTotal)},${n(row.vatRate)},${n(row.vatAmount)},${n(row.grossAmount)})`;
         }
 
         const excludedStockLines=req.body?.excludeStockLineIds;
