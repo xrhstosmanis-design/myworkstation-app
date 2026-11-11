@@ -870,18 +870,35 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     let documentNumber=String(req.body?.documentNumber||"").trim().slice(0,80);const documentDate=normalizeIntakeDate(req.body?.documentDate);
     const totalGross=round2(intakeNumber(req.body?.totalGross));
     const documentType=req.body?.documentType;
-    const pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
+    let pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
     if(!["INVOICE","CREDIT_NOTE"].includes(documentType)||documentType==="INVOICE"&&pages.some(page=>page?.documentType==="CREDIT_NOTE"))return res.status(409).json({error:"Ο τύπος παραστατικού δεν συμφωνεί με την ανάγνωση. Δεν έγινε καταχώριση ή πληρωμή.",code:"POS_DOCUMENT_TYPE_CONFLICT"});
     if(documentType==="CREDIT_NOTE"&&(req.body?.settlementMode!=="CREDIT"||req.body?.paymentTransactionId))return res.status(409).json({error:"Το πιστωτικό συμψηφίζεται με το υπόλοιπο του προμηθευτή, χωρίς πληρωμή POS.",code:"POS_CREDIT_NOTE_PAYMENT_FORBIDDEN"});
     let settlementMode=req.body?.settlementMode==="PAID"?"PAID":"CREDIT";
     let paymentTransactionId=req.body?.paymentTransactionId?String(req.body.paymentTransactionId).slice(0,180):null;
-    if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||!pages.length)return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
+    if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||(!pages.length&&req.body?.useStoredPaymentAttachment!==true))return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
     const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
     const supplierRows=await prisma.$queryRaw`SELECT "id","taxId" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;
     const supplier=supplierRows[0];if(!supplier)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
     const pendingScope={companyId,storeId,user:req.user,terminalPos:req.user.terminalPos||"MAIN"};
+    if(req.body?.useStoredPaymentAttachment===true){
+      if(pages.length||documentType!=="INVOICE"||settlementMode!=="PAID"||!paymentTransactionId)
+        return res.status(400).json({error:"Επίλεξε υπάρχουσα πληρωμή για χρήση του αποθηκευμένου αρχείου."});
+      const rows=await prisma.$queryRaw`
+        SELECT t."attachmentData",t."attachmentMimeType",t."attachmentFilename"
+        FROM "StoreTransaction" t
+        WHERE t."id"=${paymentTransactionId} AND t."companyId"=${companyId} AND t."storeId"=${storeId}
+          AND t."supplierId"=${supplierId} AND t."type"='SUPPLIER_PAYMENT' AND t."amount">0 AND t."reversedAt" IS NULL
+          AND (${req.user.tokenType!=="STORE_OPERATOR"} OR t."actorId"=${req.user.id})
+        LIMIT 1`;
+      const attachment=rows[0];
+      const mimeType=attachment?.attachmentMimeType;
+      if(!attachment?.attachmentData?.length||!["application/pdf","image/jpeg","image/png","image/webp"].includes(mimeType))
+        return res.status(409).json({error:"Δεν βρέθηκε διαθέσιμο αρχείο στην επιλεγμένη πληρωμή. Ανέβασε φωτογραφία ή PDF."});
+      pages=[{filename:attachment.attachmentFilename||"timologio",mimeType,
+        dataUrl:attachment.attachmentData,documentType}];
+    }
     if(!req.body?.expectedPendingInvoice&&documentType==="INVOICE"){
       const candidate=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber});
       const expected=candidate?await pendingIntentForPayment(prisma,pendingScope,candidate.id):null;

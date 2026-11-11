@@ -183,6 +183,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     if(documentType==="CREDIT_NOTE")creditSubmitting.current=true;
     setBusy(true);
     let stage="DUPLICATE CHECK";
+    let recordedPaymentId=null;
     try{
       const directCredit=documentType==="CREDIT_NOTE"&&creditSelection?.mode!=="BALANCE";
       let attempt=null;
@@ -217,6 +218,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
           if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
         }
       }
+      recordedPaymentId=effectiveMode==="PAID"?paymentTransactionId:null;
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
       const handoff=attempt?.handoff||await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:selectedInboxId,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
@@ -239,6 +241,12 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       onCompleted?.();
     }catch(error){
       const detail=error?.message||"Η καταχώριση απέτυχε.";
+      if(recordedPaymentId&&stage==="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER"){
+        setMessage?.(`Η πληρωμή του τιμολογίου ${documentNumber.trim()} έχει καταχωριστεί. Δεν επιβεβαιώθηκε συνδεδεμένο πρόχειρο. Μην καταχωρίσεις νέα πληρωμή.`);
+        onChanged?.();
+        onCompleted?.();
+        return;
+      }
       setStatus(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ: ${stage}. ${detail}`);
       setMessage?.(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ ${stage}: ${detail}`);
       setBusy(false);

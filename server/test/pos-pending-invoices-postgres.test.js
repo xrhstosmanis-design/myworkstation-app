@@ -214,7 +214,7 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    await db.$executeRaw`UPDATE "AiReaderJob" SET "status"='REJECTED' WHERE "resultJson"->'posHandoff'->>'paymentTransactionId'=${original.transaction.id}`;assert.equal((await post('/fast-handoff',upload)).body.code,'PENDING_INVOICE_REVIEW_REQUIRED');await db.$executeRaw`UPDATE "AiReaderJob" SET "status"='POS_DRAFT_READY' WHERE "resultJson"->'posHandoff'->>'paymentTransactionId'=${original.transaction.id}`;
   });
   await t.test('close acknowledgement is fresh, read-only until CLOSED, and deleted source cannot be resurrected',async()=>{
-   const session={id:'shift',terminalPos:'P1'};const pending=await db.$transaction(tx=>checkClosePendingInvoices(tx,{...scope,session,acknowledged:false}));assert.equal(pending.confirmationRequired,true);const ack=await db.$transaction(tx=>checkClosePendingInvoices(tx,{...scope,session,acknowledged:true,expectedFingerprint:pending.fingerprint}));assert.equal(ack.confirmationRequired,false);
+   const session={id:'shift',terminalPos:'P1'};const pending=await db.$transaction(tx=>checkClosePendingInvoices(tx,{...scope,session,acknowledged:false}));assert.equal(pending.confirmationRequired,true);const ack=await db.$transaction(tx=>checkClosePendingInvoices(tx,{...scope,session,acknowledged:true,expectedFingerprint:pending.fingerprint}));assert.equal(ack.confirmationRequired,true);
    const plainLate=await createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'PLAIN-LATE-9909',idempotencyKey:'plain-late-key'});
    const race=await createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'CLOSE-9999',idempotencyKey:'close-race-upload-key'}),p=page();p.dataUrl='data:application/pdf;base64,'+Buffer.from('%PDF-1.4\n'+'CLOSE-9999 original '.repeat(20)+'%%EOF').toString('base64');
    let locked,release;const held=new Promise(r=>locked=r),gate=new Promise(r=>release=r);
@@ -263,9 +263,21 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    const stale=await post(closePath,{...closeBody,drawer:5,pendingInvoiceAcknowledged:true,pendingInvoiceFingerprint:firstSnapshot.fingerprint});assert.equal(stale.status,409,JSON.stringify(stale));assert.equal(stale.body.code,'MISSING_INVOICES_CONFIRMATION_REQUIRED');assert.equal(await financial(),changedBefore);assert.equal(attendanceCalls,0);assert.equal(await audits(),0);
    const fresh=await checkClosePendingInvoices(db,{...scope,session,acknowledged:false});assert.equal(fresh.count,2);assert.notEqual(fresh.fingerprint,firstSnapshot.fingerprint);
    const ledgerBefore=await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`,controlBefore=await db.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "id"='control'`,acknowledged={...closeBody,drawer:5,pendingInvoiceAcknowledged:true,pendingInvoiceFingerprint:fresh.fingerprint};
-   const results=await Promise.all([post(closePath,acknowledged),post(closePath,acknowledged)]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409],JSON.stringify(results));const closed=results.find(r=>r.status===200);assert.equal(closed.body.status,'CLOSED');assert.equal(Number(closed.body.variance),0);assert.equal(attendanceCalls,1);assert.equal(mailCalls,0);assert.equal(await audits(),2);
-   assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`,ledgerBefore);assert.deepEqual(await db.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "id"='control'`,controlBefore);assert.equal((await db.$queryRaw`SELECT COUNT(*)::int n FROM "TestAttendance" WHERE "sessionId"='http-close' AND "eventType"='OUT'`)[0].n,1);
-   const pendingAudit=(await db.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "eventType"='SHIFT_CLOSED_WITH_PENDING_INVOICES' AND "details"->>'sessionId'='http-close'`)[0];assert.equal(pendingAudit.details.pendingCount,2);assert.equal(pendingAudit.details.pendingFingerprint,fresh.fingerprint);assert.equal((await post(closePath,acknowledged)).status,409);assert.equal(attendanceCalls,1);assert.equal(await audits(),2);assert.equal((await readPendingInvoices(db,{...scope,sessionId:'http-close'})).count,2,'ACK never resolves missing content');
+   const results=await Promise.all([post(closePath,acknowledged),post(closePath,acknowledged)]);assert.deepEqual(results.map(r=>r.status),[409,409],JSON.stringify(results));assert.equal(attendanceCalls,0);assert.equal(mailCalls,0);assert.equal(await audits(),0);
+   assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`,ledgerBefore);assert.deepEqual(await db.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "id"='control'`,controlBefore);assert.equal((await db.$queryRaw`SELECT COUNT(*)::int n FROM "TestAttendance" WHERE "sessionId"='http-close' AND "eventType"='OUT'`)[0].n,0);
+   assert.equal((await readPendingInvoices(db,{...scope,sessionId:"http-close"})).count,2,"Acknowledgement never resolves missing content");
+  });
+  await t.test('fast POS payment without a draft blocks only its own shift',async()=>{
+   const session={id:'fast-pos-shift',terminalPos:'P1'};
+   await db.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","invoiceDocumentNumber","actorId","occurredAt")
+    VALUES ('fast-no-draft','c','s',${session.id},'SUPPLIER_PAYMENT',2.50,'Τιμολόγιο FAST-92101 — Γρήγορη καταχώριση POS','sup','FAST-92101','u',NOW())`;
+   const pending=await checkClosePendingInvoices(db,{...scope,session});
+   assert.equal(pending.count,1);
+   assert.equal(pending.rows[0].status,'FAST_PAYMENT_WITHOUT_DRAFT');
+   assert.equal(pending.confirmationRequired,true);
+   assert.equal((await checkClosePendingInvoices(db,{...scope,session:{...session,id:'unrelated-shift'}})).count,0);
+   await db.$executeRaw`UPDATE "StoreTransaction" SET "reversedAt"=NOW() WHERE "id"='fast-no-draft'`;
+   assert.equal((await checkClosePendingInvoices(db,{...scope,session})).count,0);
   });
   await t.test('legacy optional AI schema keeps known sources in review and plain pending/close/capture fully usable',async()=>{
    // Reduce only this fixture's random owned schema after every rich-graph case.
@@ -278,7 +290,7 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    const created=await createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'LEGACY-PLAIN-3001',idempotencyKey:'legacy-plain-key',deferredInvoice:{documentDate:'2026-10-26',sessionId:'legacy-plain'}}),session={id:'legacy-plain',terminalPos:'P1'},scoped={...scope,sessionId:session.id};
    const pending=await readPendingInvoices(db,scoped);assert.equal(pending.count,1);assert.equal(pending.rows[0].status,'AWAITING_INVOICE');const closeBody={closeCredentialMethod:'PIN',pin:'2468',cashSales:0,cardSales:0,eftposTotal:0,expenses:0,drawer:7.5,custody:0,coins:0,safe:0};
    const missing=await post('/api/cash/sessions/legacy-plain/close',closeBody);assert.equal(missing.status,409);assert.equal(missing.body.code,'MISSING_INVOICES_CONFIRMATION_REQUIRED');const snapshot=await checkClosePendingInvoices(db,{...scope,session,acknowledged:false});
-   const closed=await post('/api/cash/sessions/legacy-plain/close',{...closeBody,pendingInvoiceAcknowledged:true,pendingInvoiceFingerprint:snapshot.fingerprint});assert.equal(closed.status,200,JSON.stringify(closed));assert.equal((await readPendingInvoices(db,scoped)).count,1);
+   const closed=await post('/api/cash/sessions/legacy-plain/close',{...closeBody,pendingInvoiceAcknowledged:true,pendingInvoiceFingerprint:snapshot.fingerprint});assert.equal(closed.status,409,JSON.stringify(closed));assert.equal((await readPendingInvoices(db,scoped)).count,1);
    // JSON keeps every column while its SQL result type stays stable across fixture DDL.
    const before=await db.$queryRaw`SELECT "id","amount","sessionId","paymentMethod","subtractFromShift" FROM "StoreTransaction" ORDER BY "id"`,shifts=await db.$queryRaw`SELECT to_jsonb(s) AS snapshot FROM "CashShiftSession" s ORDER BY "id"`,jobs=(await db.$queryRaw`SELECT COUNT(*)::int n FROM "AiReaderJob"`)[0].n;
    const request={...plainRequest,documentNumber:'LEGACY-PLAIN-3001',paymentTransactionId:created.transaction.id,expectedPendingInvoice:{id:created.transaction.id,fingerprint:created.fingerprint}},path='/capture/s/'+created.transaction.id;

@@ -89,12 +89,12 @@ test("actual Basic/Premium QR review stays open, durable payment closes before b
   });
 });
 
-test("Premium duplicate cancellation and failed durable handoff never signal completion",async()=>{
+test("Premium duplicate cancellation stays open; recorded payment with failed handoff releases POS with a warning",async()=>{
   const Modal=await component("StorePosPaymentsModal");
   for(const duplicate of [true,false])await environment(async({React,root,click})=>{
     const f=fixture({duplicate,fail:duplicate?null:"/fast-handoff"});window.confirm=()=>false;
     await React.act(async()=>root.render(React.createElement(Modal,{...f.props,initialPaymentType:"SUPPLIER_PAYMENT"})));await click("Νέο τιμολόγιο");await click("Λήψη σελίδας από κάμερα");await click("Σάρωση QR τιμολογίου");await React.act(async()=>f.callback({getText:()=>"https://provider"}));await click("ΠΛΗΡΩΜΕΝΟ");await click("ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ");
-    assert.equal(f.closes,0);assert.equal(f.calls.filter(c=>c.path==="/api/transactions/stores/own"&&c.options?.method==="POST").length,duplicate?0:1);if(!duplicate)assert.ok(f.messages.some(x=>x.includes("fixture save failed")));
+    assert.equal(f.closes,duplicate?0:1);assert.equal(f.calls.filter(c=>c.path==="/api/transactions/stores/own"&&c.options?.method==="POST").length,duplicate?0:1);if(!duplicate)assert.ok(f.messages.some(x=>x.includes("Δεν επιβεβαιώθηκε συνδεδεμένο πρόχειρο")));
   });
 });
 

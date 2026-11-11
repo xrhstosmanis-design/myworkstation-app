@@ -85,32 +85,45 @@ async function withCloseForm(run,{write=async()=>({variance:0}),overview=()=>({o
 
 const pending={count:3,missingCount:1,uploadedCount:1,reviewCount:1,fingerprint:'a'.repeat(64),rows:[]};
 const view=p=>({openSession:{id:'shift',openingSafe:0},suggestedOpening:{safe:0},pendingInvoices:p});
-test('mounted pending ACK gates close and strips credential on decision; counts/status are accurate',async()=>{
+test('mounted pending invoices block close without acknowledgement; counts/status are accurate',async()=>{
  await withCloseForm(async({act,input,choose,submit,writes,closed})=>{
   await choose('PIN');await input(document.querySelector('[name="shift-close-pin"]'),'2468');
   assert.equal(document.querySelector('.cash-submit').disabled,true);assert.match(document.body.textContent,/Προς ανέβασμα: 1/);assert.match(document.body.textContent,/Απαιτούν έλεγχο: 1/);
-  await act(async()=>document.querySelector('section[aria-label] input').click());assert.equal(document.querySelector('[name="shift-close-pin"]').value,'');
-  await input(document.querySelector('[name="shift-close-pin"]'),'1357');await submit();assert.equal(writes[0].pendingInvoiceAcknowledged,true);assert.equal(writes[0].pendingInvoiceFingerprint,pending.fingerprint);assert.equal(writes[0].pin,'1357');assert.equal(closed.length,1);
+  assert.equal(document.querySelector('section[aria-label] input[type=checkbox]'),null);
+  await submit();assert.equal(writes.length,0);assert.equal(closed.length,0);
  },{overview:()=>view(pending)});
 });
-test('actual stale409 refreshes fingerprint, keeps count confirmation and requires new ACK and credential',async()=>{
+test('actual stale409 refreshes pending state, keeps count confirmation and blocks close',async()=>{
  let current=null;
  await withCloseForm(async({act,input,choose,submit,writes,closed})=>{
   await choose('PIN');await input(document.querySelector('[name="shift-close-pin"]'),'2468');await submit();
   assert.equal(document.querySelector('[name="shift-close-pin"]').value,'');assert.equal(document.querySelector('.cash-form input[type="checkbox"]').checked,true);assert.equal(document.querySelector('input[required]').value,'0');
-  assert.equal(document.querySelector('section[aria-label] input').checked,false);assert.equal(writes.length,1);
-  await act(async()=>document.querySelector('section[aria-label] input').click());await input(document.querySelector('[name="shift-close-pin"]'),'1357');await submit();assert.equal(writes[1].pendingInvoiceFingerprint,pending.fingerprint);assert.equal(closed.length,1);
+  assert.equal(document.querySelector('section[aria-label] input[type=checkbox]'),null);assert.equal(writes.length,1);
+  await input(document.querySelector('[name="shift-close-pin"]'),'1357');await submit();assert.equal(writes.length,1);assert.equal(closed.length,0);
  },{overview:()=>view(current),write:async(body,index)=>{if(index===1){current=pending;throw Object.assign(new Error('changed'),{code:'MISSING_INVOICES_CONFIRMATION_REQUIRED'})}return {variance:0}}});
 });
 
-test('forced shortage keeps counts after pending409 and requires new ACK plus fresh PIN with current EFTPOS',async()=>{
+test('forced shortage keeps counts after pending409 and blocks forced closure while invoices are pending',async()=>{
  let current=null;
  await withCloseForm(async({act,input,choose,submit,writes,closed})=>{
   await choose('PIN');await input(document.querySelector('[name="shift-close-pin"]'),'2468');await submit();
   assert.ok(document.querySelector('.close-shortage'));assert.equal(document.querySelector('[name="shift-close-pin"]').value,'');
   await input(document.querySelector('[name="shift-close-pin"]'),'1357');await act(async()=>document.querySelector('.close-shortage').click());
-  assert.equal(writes.length,2);assert.equal(writes[1].forceCloseWithShortage,true);assert.equal(document.querySelector('.cash-form input[type="checkbox"]').checked,true);assert.equal(document.querySelector('input[required]').value,'0');assert.equal(document.querySelector('[name="shift-close-pin"]').value,'');assert.equal(document.querySelector('section[aria-label] input').checked,false);assert.equal(document.querySelector('.close-shortage').disabled,true);
-  await act(async()=>document.querySelector('section[aria-label] input').click());await input(document.querySelector('input[required]'),'4.25');await input(document.querySelector('[name="shift-close-pin"]'),'8642');await act(async()=>document.querySelector('.close-shortage').click());
-  assert.equal(writes.length,3);assert.equal(writes[2].forceCloseWithShortage,true);assert.equal(writes[2].pin,'8642');assert.equal(writes[2].cardCode,undefined);assert.equal(writes[2].eftposTotal,4.25);assert.equal(writes[2].pendingInvoiceAcknowledged,true);assert.equal(writes[2].pendingInvoiceFingerprint,pending.fingerprint);assert.equal(closed.length,1);
+  assert.equal(writes.length,2);assert.equal(writes[1].forceCloseWithShortage,true);assert.equal(document.querySelector('.cash-form input[type="checkbox"]').checked,true);assert.equal(document.querySelector('input[required]').value,'0');assert.equal(document.querySelector('[name="shift-close-pin"]').value,'');assert.equal(document.querySelector('section[aria-label] input[type=checkbox]'),null);assert.equal(document.querySelector('.close-shortage').disabled,true);
+  await input(document.querySelector('[name="shift-close-pin"]'),'8642');await act(async()=>document.querySelector('.close-shortage').click());
+  assert.equal(writes.length,2);assert.equal(closed.length,0);
  },{overview:()=>view(current),write:async(body,index)=>{if(index===1)throw Error('Βρέθηκε έλλειμμα — επανακαταμέτρηση');if(index===2){current=pending;throw Object.assign(Error('changed pending'),{code:'MISSING_INVOICES_CONFIRMATION_REQUIRED'})}return {variance:-1}}});
+});
+
+test('shift recovery sends the existing payment to invoice handoff without a payment write',async()=>{
+ let current={...pending,count:1,rows:[{...row,status:'FAST_PAYMENT_WITHOUT_DRAFT'}]};
+ await withCloseForm(async({input,choose,writes})=>{
+  await input(document.querySelector('input[type=date]'),'2026-10-26');
+  await choose('Χρήση αποθηκευμένου αρχείου');
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].paymentTransactionId,row.id);
+  assert.equal(writes[0].useStoredPaymentAttachment,true);
+  assert.equal(writes[0].settlementMode,'PAID');
+  assert.equal(document.querySelector('input[type=date]'),null);
+ },{overview:()=>view(current),write:async()=>{current=null;return {draftReady:true}}});
 });

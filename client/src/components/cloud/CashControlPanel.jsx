@@ -110,13 +110,14 @@ export default function CashControlPanel({api,store,readOnly=false,from,to,onFro
     try{
       const fresh=await api(`/api/cash/stores/${encodeURIComponent(context.storeId)}/overview`);
       if(!current()||fresh?.store?.id!==context.storeId||fresh?.openSession?.id!==context.sessionId)return;
-      const pending=fresh.pendingInvoices||{count:0,fingerprint:null};
-      const pendingInvoiceAcknowledged=pending.count>0?window.confirm(`Υπάρχουν ${pending.count} εκκρεμότητες τιμολογίων της βάρδιας (${pending.missingCount||0} προς ανέβασμα, ${pending.uploadedCount||0} ανεβασμένα προς σύνδεση/έλεγχο).\n\nΟΚ: κλείσιμο με καταγεγραμμένες εκκρεμότητες.\nΑκύρωση: ανέβασμα τώρα από «Εκκρεμότητες τιμολογίων», χωρίς νέα πληρωμή.`):false;
-      if(pending.count>0&&!pendingInvoiceAcknowledged){setMessage("Ανέβασε το πρωτότυπο από τις εκκρεμότητες και μετά συνέχισε το κλείσιμο.");return;}
+      if(fresh.pendingInvoices?.count>0){
+        setError("Η βάρδια δεν μπορεί να κλείσει μέχρι να συνδεθούν τα εκκρεμή παραστατικά με τις πληρωμές τους.");
+        return;
+      }
       const result=await api(`/api/cash/sessions/${data.openSession.id}/close`,{method:"POST",body:JSON.stringify({
         cashSales:number(closeForm.cashSales),cardSales:number(closeForm.cardSales),eftposTotal:number(closeForm.eftposTotal),expenses:number(closeForm.expenses),
         drawer:number(closeForm.drawer),custody:number(closeForm.custody),coins:number(closeForm.coins),
-        safe:number(closeForm.safe),note:closeForm.note,pendingInvoiceAcknowledged,pendingInvoiceFingerprint:pending.fingerprint||undefined
+        safe:number(closeForm.safe),note:closeForm.note
       })});
       if(!current())return;
       setMessage(`Η βάρδια έκλεισε. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);

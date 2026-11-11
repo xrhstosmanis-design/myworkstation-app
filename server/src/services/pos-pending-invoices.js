@@ -194,7 +194,8 @@ async function readPendingInvoiceRows(db,scope,full=false){
 // Private SQL core: its only callers establish personal or opaque service scope.
 async function readPendingInvoiceRowsCore(db,scope,full=false){
  const capability=await pendingProbe(db,scope);
- if(!capability.hasIntents)return {capability,value:{count:0,missingCount:0,uploadedCount:0,reviewCount:0,digest:'d41d8cd98f00b204e9800998ecf8427e',rows:[]}};
+ const includeFastPayments=Boolean(scope.sessionAll&&scope.sessionId&&capability.full);
+ if(!capability.hasIntents&&!includeFastPayments)return {capability,value:{count:0,missingCount:0,uploadedCount:0,reviewCount:0,digest:'d41d8cd98f00b204e9800998ecf8427e',rows:[]}};
  const actor=operator(scope.user)&&!scope.sessionAll?scope.user.id:null,terminal=operator(scope.user)&&!scope.sessionAll?scope.terminalPos:null,sessionId=scope.sessionId||null;
  const jobRows=capability.jobs?Prisma.sql`SELECT "id","attachmentId","purchaseDocumentId","status","resultJson"->'posHandoff' AS h,"resultJson"->'mydataPosReceipt' AS r FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`:Prisma.sql`SELECT NULL::text AS "id",NULL::text AS "attachmentId",NULL::text AS "purchaseDocumentId",NULL::text AS "status",NULL::jsonb AS h,NULL::jsonb AS r WHERE FALSE`;
  const sourceFacts=capability.full?Prisma.sql`
@@ -254,6 +255,20 @@ async function readPendingInvoiceRowsCore(db,scope,full=false){
  const metadataLimits=full?Prisma.sql`, pending_count AS MATERIALIZED (SELECT COUNT(*) AS n FROM pending), metadata_limits AS MATERIALIZED (SELECT COUNT(*) AS n,COALESCE(bool_and(${bounded}),TRUE) AS valid,COALESCE(SUM(CASE WHEN (SELECT n<=20000 FROM pending_count) AND ${bounded} THEN octet_length(${metadataRow}::text)+1 ELSE 0 END),0) AS bytes FROM pending)`:Prisma.sql``;
  const metadataFlags=full?Prisma.sql`,(SELECT valid FROM metadata_limits) AS "_snapshotMetadataValid",(SELECT bytes::text FROM metadata_limits) AS "_snapshotBytes"`:Prisma.sql``;
  const rowSelection=full?Prisma.sql`CASE WHEN (SELECT n<=20000 AND valid AND bytes<=4193280 FROM metadata_limits) THEN (SELECT jsonb_agg(to_jsonb(p)-'occurredAt' ORDER BY p."occurredAt",p."id") FROM (SELECT ${projection} FROM pending ORDER BY "occurredAt","id" LIMIT 20001) p) ELSE '[]'::jsonb END`:Prisma.sql`(SELECT jsonb_agg(p ORDER BY p."occurredAt",p."id") FROM (SELECT * FROM pending ORDER BY "occurredAt","id" LIMIT 50) p)`;
+ // Fast POS can commit the payment before the invoice handoff succeeds.
+ const fastPayments=includeFastPayments?Prisma.sql`
+ UNION ALL
+ SELECT t."id",t."supplierId",t."supplierName",t."amount",t."actorName",t."occurredAt",
+ t."invoiceDocumentNumber",NULL::text,t."sessionId",${scope.terminalPos}::text,
+ md5(t."id"||':'||COALESCE(t."attachmentChecksum",'')),'FAST_PAYMENT_WITHOUT_DRAFT'
+ FROM "StoreTransaction" t
+ WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${sessionId}
+ AND t."type"='SUPPLIER_PAYMENT' AND t."amount">0 AND t."reversedAt" IS NULL
+ AND NULLIF(t."invoiceDocumentNumber",'') IS NOT NULL AND t."description" LIKE '% — Γρήγορη καταχώριση POS'
+ AND NOT EXISTS(SELECT 1 FROM intents i WHERE i."id"=t."id")
+ AND NOT EXISTS(SELECT 1 FROM document_chains d WHERE d."paymentTransactionId"=t."id"
+ AND d."status" IN ('DRAFT','APPROVED') AND d."orderStatus" IN ('NEW','FINAL','INVOICED'))
+ `:Prisma.sql``;
  const result=await db.$queryRaw(Prisma.sql`WITH scoped_audits AS MATERIALIZED (
  SELECT "eventType","actorId","details" FROM "StoreOperatorAudit" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "eventType" IN (${EVENT},${CAPTURE_EVENT},'PURCHASE_ORDER_DELETED')
  ), intents AS MATERIALIZED (
@@ -282,7 +297,8 @@ async function readPendingInvoiceRowsCore(db,scope,full=false){
  SELECT "id","supplierId","supplierName","amount","actorName","occurredAt",details->>'documentNumber' AS "documentNumber",details->>'documentDate' AS "documentDate",details->>'contextSessionId' AS "sessionId",details->>'terminalPos' AS "terminalPos",details->>'fingerprint' AS fingerprint,
  CASE WHEN NOT "paymentValid" OR tombstoned OR "sourceCount">1 OR "capturePresent" OR ${Boolean(capability.jobTable&&!capability.jobs)} OR COALESCE("sourceBroken",FALSE) THEN 'REVIEW_REQUIRED' WHEN "sourcePresent" THEN 'UPLOADED_AWAITING_REVIEW' ELSE 'AWAITING_INVOICE' END AS status
  FROM decisions WHERE NOT ("paymentValid" AND NOT tombstoned AND (COALESCE("captureValid",FALSE) OR ("sourceCount"=1 AND COALESCE("sourceValid",FALSE))))
- ) ${metadataLimits} SELECT COUNT(*)::int AS count,COUNT(*) FILTER (WHERE status='AWAITING_INVOICE')::int AS "missingCount",COUNT(*) FILTER (WHERE status='UPLOADED_AWAITING_REVIEW')::int AS "uploadedCount",COUNT(*) FILTER (WHERE status='REVIEW_REQUIRED')::int AS "reviewCount",md5(COALESCE(string_agg("id"||':'||fingerprint||':'||status,',' ORDER BY "id"),'')) AS digest,
+ ${fastPayments}
+ ) ${metadataLimits} SELECT COUNT(*)::int AS count,COUNT(*) FILTER (WHERE status='AWAITING_INVOICE')::int AS "missingCount",COUNT(*) FILTER (WHERE status='UPLOADED_AWAITING_REVIEW')::int AS "uploadedCount",COUNT(*) FILTER (WHERE status IN ('REVIEW_REQUIRED','FAST_PAYMENT_WITHOUT_DRAFT'))::int AS "reviewCount",md5(COALESCE(string_agg("id"||':'||fingerprint||':'||status,',' ORDER BY "id"),'')) AS digest,
  ${rowSelection} AS rows ${metadataFlags} FROM pending`);
  return {capability,value:result[0]||{count:0,digest:'',rows:[]}};
 }
@@ -321,9 +337,9 @@ async function readPendingInvoiceSnapshotCore(db,readRows){
  return {period:'ALL_MONTHS',coverage:{complete:capability.full===true,unavailable:capability.full===true?[]:['PENDING_SOURCE_SCHEMA_INCOMPLETE'],sourceLimit:20000},counts,rows,fingerprint:hash([count,value.digest])};
 }
 
-export async function checkClosePendingInvoices(tx,{companyId,storeId,user,session,acknowledged,expectedFingerprint}){
+export async function checkClosePendingInvoices(tx,{companyId,storeId,user,session}){
  const snapshot=await readPendingInvoices(tx,{companyId,storeId,user,sessionId:session.id,terminalPos:session.terminalPos,sessionAll:true});
- return {...snapshot,confirmationRequired:snapshot.count>0&&(!acknowledged||expectedFingerprint!==snapshot.fingerprint)};
+ return {...snapshot,confirmationRequired:snapshot.count>0};
 }
 export async function recordClosePendingInvoices(tx,{companyId,storeId,user,session,snapshot}){
  if(!snapshot?.count)return;
