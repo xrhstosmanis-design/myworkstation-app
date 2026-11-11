@@ -45,3 +45,19 @@ export async function learnVerifiedInvoiceQrSupplier(database, {
       "lastVerifiedAt"=NOW()`;
   return true;
 }
+
+// Reuse a previously verified issuer name across the company's stores when
+// a later provider response omits the display name. Never infer identity from
+// the name: issuer VAT is still verified against the current invoice XML.
+export async function learnedInvoiceQrSupplierName(database, {companyId,supplierVat,format}) {
+  const vat=String(supplierVat||"").replace(/^EL/i,"");
+  if(!companyId||!/^\d{9}$/.test(vat)||!FORMATS.has(format)
+    ||!database||typeof database.$queryRaw!=="function"
+    ||typeof database.$executeRawUnsafe!=="function")return null;
+  await ensureSchema(database);
+  const matches=await database.$queryRaw`
+    SELECT "supplierName" FROM "InvoiceQrSupplierLearning"
+    WHERE "companyId"=${companyId} AND "supplierVat"=${vat}
+      AND "providerFormat"=${format} LIMIT 1`;
+  return String(matches[0]?.supplierName||"").trim()||null;
+}
