@@ -148,6 +148,26 @@ async function performSync(req){
     originalsFailed++;
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
+  const canPrepareDraft=Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY")));
+  if(canPrepareDraft){
+    const emptyDrafts=await prisma.$queryRaw`
+      SELECT m."inboxId" FROM "MyDataInboundDocument" m
+      JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+      JOIN "PurchaseOrder" o ON o."id"=m."rawPayload"->>'mydataDraftOrderId' AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
+      WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id}
+        AND i."attachmentId" IS NOT NULL AND i."status"='IN_REVIEW' AND o."status"='NEW'
+        AND m."rawPayload"->>'automaticPrefillChecked' IS DISTINCT FROM 'true'
+        AND NOT EXISTS (SELECT 1 FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id")
+      ORDER BY m."fetchedAt",m."id" LIMIT 10`;
+    for(const item of emptyDrafts){
+      try{
+        await acquireOriginal(prisma,req.user.companyId,store.id,item.inboxId,req.user.id,true);
+      }catch{
+        // A transient failure leaves the draft eligible for the next sync.
+        continue;
+      }
+    }
+  }
   const message=created.length?`${created.length} νέα παραστατικά μπήκαν στα Πρόχειρα.`:fetched===0?"Η ΑΑΔΕ δεν επέστρεψε εισερχόμενα παραστατικά για αυτή τη σύνδεση και αυτό το διάστημα ΜΑΡΚ.":`Η ΑΑΔΕ επέστρεψε ${fetched} παραστατικά: ${duplicates} υπήρχαν ήδη, ${ignoredVat} δεν ταίριαξαν με το ΑΦΜ εταιρείας, ${missingMark} δεν είχαν ΜΑΡΚ. Δεν δημιουργήθηκε πρόχειρο.`;
   return {ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,originalsDownloaded,originalsFailed,stockUpdated:false,fiscalTransmission:false,message:message+` Πρωτότυπα PDF: ${originalsDownloaded} λήψεις, ${originalsFailed} σε αναμονή/έλεγχο.`};
 }
