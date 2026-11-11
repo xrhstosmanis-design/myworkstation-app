@@ -10,7 +10,8 @@ export function canonicalAadeInvoiceQr(value){
   if(!input||input.length>4096||/[\u0000-\u0020\u007f]/.test(input)||/%(?![0-9a-fA-F]{2})/.test(input))return null;
   let url;try{url=new URL(input)}catch{return null}
   if(url.protocol!=="https:"||url.hostname!=="mydatapi.aade.gr"||url.pathname!=="/myDATA/TimologioQR/QRInfo"||url.username||url.password||url.port||url.hash||!(url.search.startsWith("?q=")&&new RegExp("^[A-Za-z0-9%+/=]+$").test(url.search.slice(3))))return null;
-  return url.searchParams.get("q")?url.href:null;
+  const token=url.searchParams.get("q");
+  return token&&/[A-Za-z0-9]/.test(token)?url.href:null;
 }
 
 export async function readStoredMyDataQr(database,{companyId,storeId,recipientVat,value},deps={}){
