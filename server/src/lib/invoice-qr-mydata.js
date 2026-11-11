@@ -1,5 +1,5 @@
 import {inboxHeader,selectedInboxRow,verifiedInboxPdf} from "./pos-inbox-original.js";
-import {invoiceSummary} from "../mydata-xml.js";
+import {invoiceIssuerName} from "../mydata-xml.js";
 
 const fail=(message,status=409)=>Object.assign(new Error(message),{status});
 
@@ -29,7 +29,7 @@ export async function readStoredMyDataQr(database,{companyId,storeId,recipientVa
   const row=await readRow(database,companyId,storeId,matches[0].inboxId);
   // The official received XML can provide the issuer name even before a
   // supplier is added to the catalog. No supplier is created by a scan.
-  const supplierName=row.supplierName||invoiceSummary(row.rawPayload?.xml||"").issuerName||"";
+  const supplierName=row.supplierName||invoiceIssuerName(row.rawPayload?.xml)||"";
   const header=inboxHeader({...row,supplierName},recipientVat);
   const pdf=await readPdf(row,row.contentData);
   return {
