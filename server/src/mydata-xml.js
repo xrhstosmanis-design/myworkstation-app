@@ -41,3 +41,8 @@ export function invoiceDetailLines(invoiceXml) {
     vatAmount: decimal(xml, "vatAmount"),
   }));
 }
+
+// A verified myDATA issuer name is presentation evidence, never a supplier ID.
+export function invoiceIssuerName(invoiceXml) {
+  return clean(tag(tag(String(invoiceXml || ""), "issuer") || "", "name"));
+}
