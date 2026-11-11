@@ -43,6 +43,26 @@ router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS
   res.json(await acquireOriginal(prisma,req.user.companyId,store.id,req.params.inboxId,req.user.id,true));
 }catch(error){next(error)}});
 
+router.post("/documents/mydata/orders/:orderId/prefill",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{
+  if(!canSync(req))return res.status(403).json({error:"Η συμπλήρωση επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
+  const companyId=req.user.companyId,storeId=String(req.body?.storeId||""),orderId=req.params.orderId;
+  await ensureSchema();
+  const rows=await prisma.$queryRaw`
+    SELECT m."inboxId" FROM "MyDataInboundDocument" m
+    JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+    JOIN "PurchaseOrder" o ON o."id"=m."rawPayload"->>'mydataDraftOrderId' AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
+    WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND o."id"=${orderId}
+      AND o."status"='NEW' AND i."status"='IN_REVIEW' AND i."attachmentId" IS NOT NULL
+    LIMIT 2`;
+  if(rows.length!==1)return res.status(409).json({error:"Δεν βρέθηκε μοναδικό ανοιχτό πρόχειρο myDATA με συνημμένο πρωτότυπο."});
+  const result=await acquireOriginal(prisma,companyId,storeId,rows[0].inboxId,req.user.id,true,async()=>{
+    throw syncError("Το συνημμένο πρωτότυπο δεν είναι πλέον διαθέσιμο.",409);
+  });
+  if(result.reconciliationRequired||result.purchaseOrderId!==orderId)return res.json({reconciliationRequired:true});
+  const counts=await prisma.$queryRaw`SELECT COUNT(*)::int AS "lineCount" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND o."storeId"=${storeId}`;
+  res.json({lineCount:counts[0].lineCount});
+}catch(error){next(error)}});
+
 router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   if(!canSync(req)&&!(req.user.staffAccess===true&&req.staffGrant?.capability==='invoices.read'))return res.status(403).json({error:"Το αρχείο επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
   const store=await prisma.store.findFirst({where:{id:String(req.query.storeId||""),companyId:req.user.companyId},select:{id:true,name:true}});
