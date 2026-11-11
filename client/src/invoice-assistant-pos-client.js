@@ -1,3 +1,4 @@
+import {allocateInvoiceExcisePerPiece} from "../../shared/invoice-excise-allocation.mjs";
 import {mountInvoiceProducts} from './invoice-assistant-products.js';
 import {invoicePrintedRounding} from "../../shared/invoice-printed-rounding.mjs";
 import {invoiceQuantityConfirmation} from "../../shared/invoice-quantity-review.mjs";
@@ -177,7 +178,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       ruleProduct.onchange=()=>{const selected=ruleProduct.value===""?null:working[Number(ruleProduct.value)];if(selected)overlay.querySelector("[data-rule-factor]").value=number(selected.stockUnitsPerInvoiceUnit)>1?selected.stockUnitsPerInvoiceUnit:"24"};
       const printedArea=overlay.querySelector("[data-printed]");
       proposals.after(apply);
-      printedArea.innerHTML=`${result.pagesComplete?"":`<p role="alert" style="background:#fff0d5;border:2px solid #b75300;padding:12px;font-weight:800">${esc((result.pageWarning||"Ο βοηθός δεν επιβεβαίωσε την πληρότητα του τιμολογίου.").replace("Οι προτάσεις δεν εφαρμόζονται.",""))} Για μεταφορά στο πρόχειρο, έλεγξε όλες τις σελίδες του πρωτοτύπου και επιβεβαίωσε όταν πατήσεις «Έγκριση & μεταφορά στα πρόχειρα».</p>`}<div data-quantity-review hidden style="background:#fff0d5;border:2px solid #b75300;padding:12px"><p data-quantity-warning></p><label><input type="checkbox" data-confirm-quantity> Έλεγξα όλες τις γραμμές στο πρωτότυπο και επιβεβαιώνω τις ποσότητές τους, παρά τη διαφορά με το συνολικό πλήθος του εντύπου.</label></div><h3>Τιμολόγιο προς έλεγχο · ${working.length} γραμμές</h3><p>Διόρθωσε τα πεδία στον πίνακα. Οι αλλαγές μένουν εδώ μέχρι να επιλέξεις γραμμή και να πατήσεις εφαρμογή.${working.some(line=>number(line.unitDiscountAmount)>0)?" Η Έκπτωση 1 είναι το ισοδύναμο ποσοστό της τυπωμένης έκπτωσης ανά τεμάχιο, προσαρμοσμένο στη στρογγυλοποιημένη καθαρή αξία της ίδιας γραμμής. Έλεγξε την τυπωμένη έκπτωση στη φωτογραφία.":""}</p>${working.length?`<label style="display:block;margin:8px 0;font-weight:700"><input type="checkbox" data-select-all> Επιλογή όλων των γραμμών που έλεγξα στη φωτογραφία</label><button type="button" data-confirm-one-unit style="padding:11px 15px;margin:8px 0;border:1px solid #18506b;border-radius:8px;font-weight:700">Επιλεγμένα: 1 πακέτο = 1 τεμάχιο αποθήκης</button><button type="button" data-bulk-piece>Επιλεγμένες γραμμές: τεμ.</button>${editableTable(working)}`:"Δεν αναγνωρίστηκαν γραμμές."}<div data-apply-slot style="margin:10px 0"></div><p data-apply-status role="status" style="font-weight:700;color:#18506b"></p><p data-working-total style="font-weight:800"></p><div data-detailed-totals></div>`;
+      printedArea.innerHTML=`${result.pagesComplete?"":`<p role="alert" style="background:#fff0d5;border:2px solid #b75300;padding:12px;font-weight:800">${esc((result.pageWarning||"Ο βοηθός δεν επιβεβαίωσε την πληρότητα του τιμολογίου.").replace("Οι προτάσεις δεν εφαρμόζονται.",""))} Για μεταφορά στο πρόχειρο, έλεγξε όλες τις σελίδες του πρωτοτύπου και επιβεβαίωσε όταν πατήσεις «Έγκριση & μεταφορά στα πρόχειρα».</p>`}<div data-quantity-review hidden style="background:#fff0d5;border:2px solid #b75300;padding:12px"><p data-quantity-warning></p><label><input type="checkbox" data-confirm-quantity> Έλεγξα όλες τις γραμμές στο πρωτότυπο και επιβεβαιώνω τις ποσότητές τους, παρά τη διαφορά με το συνολικό πλήθος του εντύπου.</label></div><h3>Τιμολόγιο προς έλεγχο · ${working.length} γραμμές</h3><p>Διόρθωσε τα πεδία στον πίνακα. Οι αλλαγές μένουν εδώ μέχρι να επιλέξεις γραμμή και να πατήσεις εφαρμογή.${working.some(line=>number(line.unitDiscountAmount)>0)?" Η Έκπτωση 1 είναι το ισοδύναμο ποσοστό της τυπωμένης έκπτωσης ανά τεμάχιο, προσαρμοσμένο στη στρογγυλοποιημένη καθαρή αξία της ίδιας γραμμής. Έλεγξε την τυπωμένη έκπτωση στη φωτογραφία.":""}</p>${working.length?`<label style="display:block;margin:8px 0;font-weight:700"><input type="checkbox" data-select-all> Επιλογή όλων των γραμμών που έλεγξα στη φωτογραφία</label><button type="button" data-confirm-one-unit style="padding:11px 15px;margin:8px 0;border:1px solid #18506b;border-radius:8px;font-weight:700">Επιλεγμένα: 1 πακέτο = 1 τεμάχιο αποθήκης</button><button type="button" data-bulk-piece>Επιλεγμένες γραμμές: τεμ.</button>${editableTable(working)}<fieldset data-excise-review hidden><legend>ΕΦΚ που δεν αναγράφεται ανά γραμμή</legend><p>Επίλεξε μόνο τα είδη στα οποία αφορά ο φόρος και έλεγξε τα τεμάχια ανά συσκευασία.</p><label>Ποσό ΕΦΚ προ ΦΠΑ (€) <input data-excise-amount inputmode="decimal"></label> <button type="button" data-allocate-excise>Επιμερισμός ανά τεμάχιο</button> <button type="button" data-undo-excise hidden>Αναίρεση επιμερισμού</button></fieldset>`:"Δεν αναγνωρίστηκαν γραμμές."}<div data-apply-slot style="margin:10px 0"></div><p data-apply-status role="status" style="font-weight:700;color:#18506b"></p><p data-working-total style="font-weight:800"></p><div data-detailed-totals></div>`;
       printedArea.querySelector("[data-apply-slot]").appendChild(apply);
       const applyNote=printedArea.querySelector("[data-apply-status]");
       const setApplyStatus=message=>{status.textContent=message;applyNote.textContent=message};
@@ -188,6 +189,73 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       const refreshQuantity=()=>{const state=quantityState();printedArea.querySelector("[data-quantity-review]").hidden=!state.required;printedArea.querySelector("[data-quantity-warning]").textContent=`Οι ποσότητες των γραμμών αθροίζουν ${state.sum}, ενώ το έντυπο αναφέρει συνολικά ${result.printedQuantityTotal}. Επίλεξε όλες τις γραμμές που έλεγξες και επιβεβαίωσε τη διαφορά.`;apply.disabled=applying||state.required&&!state.allowed;};
       quantityBox.addEventListener("change",refreshQuantity);
       const refreshTotal=()=>{const amounts=working.map(rowAmounts);const net=working.reduce((sum,line,index)=>sum+amounts[index].net+number(line.exciseTotal),0);const vat=amounts.reduce((sum,row)=>sum+row.vat,0);const gross=amounts.reduce((sum,row)=>sum+row.gross,0);workingTotal.textContent=`Καθαρό με ΕΦΚ ${euro(net)} € + ΦΠΑ ${euro(vat)} € = ${euro(gross)} € · τυπωμένο ${printedTotal===null?"μη αναγνώσιμο":`${euro(printedTotal)} €`} · διαφορά ${printedTotal===null?"—":`${euro(Math.abs(gross-printedTotal))} €`}`;const taxGroups=new Map();working.forEach((line,index)=>{const rate=number(line.vatRate),group=taxGroups.get(rate)||{net:0,vat:0};group.net+=amounts[index].net+number(line.exciseTotal);group.vat+=amounts[index].vat;taxGroups.set(rate,group)});printedArea.querySelector("[data-detailed-totals]").innerHTML=`<div style="background:#eef4f7;padding:12px;border-radius:8px"><b>Σύνολα τιμολογίου</b><div>Σύνολο ποσότητας παραστατικού: <b>${euro(working.reduce((sum,line)=>sum+number(line.quantity),0))}</b></div>${[...taxGroups].sort((a,b)=>a[0]-b[0]).map(([rate,group])=>`<div>Καθαρή αξία ΦΠΑ ${esc(rate)}%: ${euro(group.net)} € · ΦΠΑ: ${euro(group.vat)} €</div>`).join("")}<div>Καθαρή αξία: <b>${euro(net)} €</b> · ΦΠΑ: <b>${euro(vat)} €</b></div><div style="background:#daf3e5;padding:8px;margin-top:6px;font-size:20px;font-weight:800">Πληρωτέο ${euro(gross)} €</div></div>`;apply.hidden=working.length===0;refreshQuantity()};
+      let exciseAllocationReady=null;
+      const exciseReview=printedArea.querySelector("[data-excise-review]");
+      if(exciseReview){
+        const amountInput=exciseReview.querySelector("[data-excise-amount]");
+        const allocateButton=exciseReview.querySelector("[data-allocate-excise]");
+        const undoButton=exciseReview.querySelector("[data-undo-excise]");
+        const grossOf=lines=>lines.reduce((sum,line)=>sum+rowAmounts(line).gross,0);
+        exciseReview.hidden=printedTotal===null||printedTotal-grossOf(working)<=0.05||
+          working.some(line=>number(line.exciseTotal)!==0);
+        const selectedIndexes=()=>[...printedArea.querySelectorAll("[data-edit-select]:checked")]
+          .map(box=>Number(box.dataset.editSelect));
+        const replaceRow=(index,line)=>{
+          working[index]=line;
+          printedArea.querySelector(`[data-row="${index}"][data-field="exciseTotal"]`).value=line.exciseTotal;
+          for(const [name,value] of Object.entries(rowAmounts(line))){
+            const cell=printedArea.querySelector(`[data-${name}="${index}"]`);
+            if(cell)cell.textContent=euro(value);
+          }
+        };
+        allocateButton.onclick=()=>{
+          try{
+            const indexes=selectedIndexes();
+            if(!indexes.length)throw new Error("Επίλεξε τις γραμμές στις οποίες αφορά ο ΕΦΚ.");
+            const before=indexes.map(index=>({...working[index]}));
+            const rates=new Set(before.map(line=>number(line.vatRate)));
+            if(rates.size!==1||![6,13,24].includes([...rates][0])||
+                before.some(line=>!validPrinted(line,true)||(line.invoiceUnit==="PIECE"&&number(line.stockUnitsPerInvoiceUnit)!==1))){
+              throw new Error("Έλεγξε τις αξίες, τον κοινό συντελεστή ΦΠΑ και τα τεμάχια των επιλεγμένων γραμμών.");
+            }
+            const allocation=allocateInvoiceExcisePerPiece(number(amountInput.value),before.map(line=>({
+              stockQuantity:number(line.quantity)*number(line.stockUnitsPerInvoiceUnit),
+              netAmount:rowAmounts(line).net,
+              exciseTotal:number(line.exciseTotal)
+            })));
+            const after=before.map((line,index)=>{
+              const updated={...line,exciseTotal:allocation[index].exciseTotal.toFixed(2)};
+              return {...updated,grossAmount:rowAmounts(updated).gross.toFixed(2)};
+            });
+            const preview=working.slice();
+            indexes.forEach((index,position)=>{preview[index]=after[position]});
+            if(Math.abs(grossOf(preview)-printedTotal)>0.05){
+              throw new Error("Ο επιμερισμός δεν συμφωνεί με το τυπωμένο πληρωτέο. Έλεγξε το ποσό ΕΦΚ και τις γραμμές.");
+            }
+            indexes.forEach((index,position)=>replaceRow(index,after[position]));
+            const applied=after.map(line=>JSON.stringify(line));
+            exciseAllocationReady=()=>{
+              const selected=new Set(selectedIndexes());
+              return indexes.every((index,position)=>selected.has(index)&&JSON.stringify(working[index])===applied[position]);
+            };
+            allocateButton.disabled=true;
+            undoButton.hidden=false;
+            undoButton.onclick=()=>{
+              indexes.forEach((index,position)=>{
+                const line={...working[index],exciseTotal:before[position].exciseTotal};
+                replaceRow(index,{...line,grossAmount:rowAmounts(line).gross.toFixed(2)});
+              });
+              exciseAllocationReady=null;
+              allocateButton.disabled=false;
+              undoButton.hidden=true;
+              refreshTotal();
+              setApplyStatus("Ο επιμερισμός ΕΦΚ αναιρέθηκε.");
+            };
+            refreshTotal();
+            setApplyStatus(`Επιμερίστηκαν ${euro(number(amountInput.value))} € ΕΦΚ σε ${indexes.length} γραμμές. Έλεγξε τα σύνολα και πάτησε έγκριση για μεταφορά στο πρόχειρο.`);
+          }catch(error){setApplyStatus(error.message)}
+        };
+      }
       refreshTotal();
       printedArea.querySelector("[data-select-all]")?.addEventListener("change",event=>{printedArea.querySelectorAll("[data-edit-select]").forEach(box=>box.checked=event.target.checked);refreshQuantity()});
       printedArea.querySelector("[data-confirm-one-unit]")?.addEventListener("click",()=>{
@@ -217,6 +285,10 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       proposals.innerHTML=`${valid.length||extra.length?`<h3>Άλλες προτάσεις για το πρόχειρο</h3><p>Επίλεξε μόνο όσα επιβεβαιώνεις στη φωτογραφία.</p>`:""}${valid.map((change,index)=>{const line=lineById.get(change.lineId);return `<label style="display:block;background:#fff9dc;border-left:4px solid #c48009;margin:6px 0;padding:9px"><input type="checkbox" data-change="${index}"> <b>${esc(line.description)} · ${esc(labels[change.field])}</b><br><small>Τώρα: ${esc(line[change.field]??"—")} → Πρόταση: ${esc(change.value)}</small><br><small>${esc(change.reason)}</small></label>`}).join("")}${extra.map((line,index)=>`<label style="display:block;background:#ffe8e6;margin:6px 0;padding:9px"><input type="checkbox" data-delete="${index}"> Διαγραφή από πρόχειρο: ${esc(line.description)} · ${euro(line.grossAmount)} € <small>(δεν αντιστοιχίστηκε στο έντυπο· επιβεβαίωσε ότι δεν υπάρχει σε άλλη σελίδα)</small></label>`).join("")}`;
       apply.hidden=working.length===0;apply.onclick=async()=>{
         if(applying)return;
+        if(exciseAllocationReady&&!exciseAllocationReady()){
+          setApplyStatus("Άλλαξαν οι γραμμές ή η επιλογή του επιμερισμού ΕΦΚ. Κάνε αναίρεση και υπολόγισέ τον ξανά.");
+          return;
+        }
         if(!quantityState().allowed){setApplyStatus("Επίλεξε όλες τις γραμμές που έλεγξες και επιβεβαίωσε τη διαφορά συνολικής ποσότητας πριν από την εφαρμογή.");return}
         const currentGross=working.reduce((sum,line)=>sum+rowAmounts(line).gross,0);
         if(printedTotal===null||Math.abs(currentGross-printedTotal)>0.05){setApplyStatus("Οι υπολογισμένες γραμμές δεν συμφωνούν με το τυπωμένο πληρωτέο εντός 0,05 €. Διόρθωσε πρώτα τις αξίες.");return}
