@@ -117,9 +117,13 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   const common=await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId);
   if(common)return common;
   if(job?.purchaseDocumentId||row.rawPayload?.mydataDraftOrderId){
-    const orders=await tx.$queryRaw`SELECT o."id",o."status" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId" WHERE d."id"=${job?.purchaseDocumentId||row.rawPayload.mydataDraftDocumentId} AND o."companyId"=${companyId} AND o."storeId"=${storeId} LIMIT 1`;
+    const orders=await tx.$queryRaw`SELECT o."id",o."status",o."supplierId" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId" WHERE d."id"=${job?.purchaseDocumentId||row.rawPayload.mydataDraftDocumentId} AND o."companyId"=${companyId} AND o."storeId"=${storeId} LIMIT 1 FOR UPDATE OF o`;
     if(!orders[0])throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
     if(orders[0].status!=="NEW")throw error("Το παραστατικό έχει ήδη προχωρήσει. Ελέγξτε την υπάρχουσα αγορά.");
+    if(row.rawPayload?.mydataDraftOrderId===orders[0].id && inbox[0].status==="IN_REVIEW"){
+      const existingLines=await tx.$queryRaw`SELECT 1 FROM "PurchaseOrderLine" WHERE "orderId"=${orders[0].id} LIMIT 1`;
+      if(!existingLines.length)await prefillReviewDraft(tx,row,job,companyId,storeId,orders[0].id,orders[0].supplierId);
+    }
     return {reused:true,downloaded:false,jobId:job?.id,purchaseOrderId:orders[0].id};
   }
   if(!["RECEIVED","IN_REVIEW"].includes(inbox[0].status))throw error("Το παραστατικό έχει ήδη ελεγχθεί.");
@@ -133,9 +137,17 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   if(!job)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${inbox[0].attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true})}::jsonb,${userId})`;
   await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","purchaseOrderId") VALUES (${documentId},${companyId},${storeId},${supplierId},${String(row.invoiceType).startsWith("5.")?"CREDIT_NOTE":"INVOICE"},${number},${new Date(row.issueDate)},0,0,${Number(row.totalGross)},'POS_OCR_DRAFT','DRAFT',${userId},${orderId})`;
   await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${companyId},${storeId},${supplierId},'NEW',${number},${"myDATA • MARK "+row.mark+" — Ανάγνωση από βοηθό — ΠΡΟΣ ΕΛΕΓΧΟ"},${userId},'Λήψη myDATA','Λήψη myDATA','POS_OCR_DRAFT',${documentId})`;
+  await prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierId);
+  await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"stage"='MYDATA_DRAFT_READY',"status"='AWAITING_APPROVAL',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,mydataDraftOrderId:orderId})}::jsonb,"updatedAt"=NOW() WHERE "id"=${jobId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό"},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataDraftOrderId:orderId,mydataDraftDocumentId:documentId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  return {reused:true,downloaded:false,jobId,purchaseOrderId:orderId};
+}
+
+async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierId){
   const xmlLines = invoiceDetailLines(row.rawPayload?.xml);
   const lines = [...xmlLines, ...pdfPackagingLines(job?.resultJson?.rawText, xmlLines)];
-  const vatRates = new Map([[1,24],[2,13],[3,6],[4,17],[5,9],[6,4]]);
+  const vatRates = new Map([[1,24],[2,13],[3,6],[4,17],[5,9],[6,4],[7,0]]);
   const isCarton = line => line.measurementUnit === 7
     && /^(κιβώτιο|κιβωτια|κιβώτια|κιβ\.?|κβ\.?|carton)$/iu.test(line.measurementUnitTitle || "");
   const supplierCodes = [...new Set(lines.map(line => line.itemCode).filter(Boolean))];
@@ -151,7 +163,8 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   const prepared = lines.length > 0 && lines.every(line => line.description && line.description.length <= 250
     && Number.isInteger(unitsFor(line)) && unitsFor(line) >= 1 && unitsFor(line) <= 100000 && line.quantity > 0 && line.netValue !== null
     && line.netValue >= 0 && line.vatAmount !== null && line.vatAmount >= 0
-    && vatRates.has(line.vatCategory));
+    && vatRates.has(line.vatCategory)
+    && (line.vatCategory !== 7 || line.vatAmount === 0));
   const cents = amount => Math.round(Number(amount) * 100);
   const sumsMatch = ["netValue", "vatAmount"].every((key, index) =>
     lines.reduce((sum, line) => sum + cents(line[key]), 0) === cents(index ? row.totalVat : row.totalNet));
@@ -166,8 +179,4 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
           ${(cents(line.netValue) + cents(line.vatAmount)) / 100})`;
     }
   }
-  await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"stage"='MYDATA_DRAFT_READY',"status"='AWAITING_APPROVAL',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,mydataDraftOrderId:orderId})}::jsonb,"updatedAt"=NOW() WHERE "id"=${jobId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
-  await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό"},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
-  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataDraftOrderId:orderId,mydataDraftDocumentId:documentId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
-  return {reused:true,downloaded:false,jobId,purchaseOrderId:orderId};
 }
