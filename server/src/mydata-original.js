@@ -124,7 +124,7 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
       const existingLines=await tx.$queryRaw`SELECT 1 FROM "PurchaseOrderLine" WHERE "orderId"=${orders[0].id} LIMIT 1`;
       if(!existingLines.length){
         const filled=await prefillReviewDraft(tx,row,job,companyId,storeId,orders[0].id,orders[0].supplierId);
-        await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('automaticPrefillChecked',true) WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "inboxId"=${inboxId}`;
+        await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('automaticPrefillChecked',true,'packagingPrefillChecked',true) WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "inboxId"=${inboxId}`;
         if(!filled)await tx.$executeRaw`UPDATE "DocumentInbox" SET "note"=${"myDATA • MARK "+row.mark+" • Χρειάζεται έλεγχος γραμμών XML, συσκευασίας ή συνόλων."},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
       }
     }
@@ -153,7 +153,7 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
   const lines = [...xmlLines, ...pdfPackagingLines(job?.resultJson?.rawText, xmlLines)];
   const vatRates = new Map([[1,24],[2,13],[3,6],[4,17],[5,9],[6,4],[7,0]]);
   const isCarton = line => line.measurementUnit === 7
-    && /^(κιβώτιο|κιβωτια|κιβώτια|κιβ\.?|κβ\.?|carton)$/iu.test(line.measurementUnitTitle || "");
+    && /^(κιβώτιο|κιβωτια|κιβώτια|κυτίο|κυτιο|κυτία|κυτια|κιβ\.?|κβ\.?|carton)$/iu.test(line.measurementUnitTitle || "");
   const supplierCodes = [...new Set(lines.map(line => line.itemCode).filter(Boolean))];
   const mappings = supplierId && supplierCodes.length ? await tx.$queryRaw`
     SELECT m."supplierItemCode",m."unitsPerPackage",sp."productId"
@@ -163,9 +163,11 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
     WHERE m."companyId"=${companyId} AND m."supplierId"=${supplierId}
       AND m."supplierItemCode"=ANY(${supplierCodes}::text[]) AND m."confirmedAt" IS NOT NULL` : [];
   const byCode = new Map(mappings.map(mapping => [mapping.supplierItemCode, mapping]));
-  const unitsFor = line => line.measurementUnit === 1 ? 1 : isCarton(line) ? Number(byCode.get(line.itemCode)?.unitsPerPackage || 0) : undefined;
+  const unitsFor = line => line.measurementUnit === 1 ? 1
+    : isCarton(line) ? Number(byCode.get(line.itemCode)?.unitsPerPackage || 0)
+    : line.measurementUnit === 7 ? 0 : undefined;
   const prepared = lines.length > 0 && lines.every(line => line.description && line.description.length <= 250
-    && Number.isInteger(unitsFor(line)) && unitsFor(line) >= 1 && unitsFor(line) <= 100000 && line.quantity > 0 && line.netValue !== null
+    && Number.isInteger(unitsFor(line)) && unitsFor(line) >= 0 && unitsFor(line) <= 100000 && line.quantity > 0 && line.netValue !== null
     && line.netValue >= 0 && line.vatAmount !== null && line.vatAmount >= 0
     && vatRates.has(line.vatCategory)
     && (line.vatCategory !== 7 || line.vatAmount === 0));
@@ -179,7 +181,7 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
         ("id","orderId","productId","supplierCode","description","quantity","unitCost","initialUnitCost",
          "invoiceUnit","stockUnitsPerInvoiceUnit","vatRate","netAmount","vatAmount","grossAmount")
         VALUES (${crypto.randomUUID()},${orderId},${byCode.get(line.itemCode)?.productId ?? null},${line.itemCode},${line.description},${line.quantity},
-          ${unitCost},${unitCost},${isCarton(line) ? 'PACKAGE' : 'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},
+          ${unitCost},${unitCost},${line.measurementUnit === 7 ? 'PACKAGE' : 'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},
           ${(cents(line.netValue) + cents(line.vatAmount)) / 100})`;
     }
     return true;
