@@ -83,6 +83,25 @@ async function ensureVat(tx,companyId,rate){
 async function ensureTenantProduct(tx,companyId,master,targetStores){
   const existing=await tx.$queryRaw`SELECT "id","salePrice" FROM "Product" WHERE "companyId"=${companyId} AND "masterProductId"=${master.id} LIMIT 1`;
   let productId=existing[0]?.id,createdProduct=false,activatedMappings=0;
+  if (!productId) {
+    const [sameSku] = await tx.$queryRaw`
+      SELECT p."id", p."masterProductId", EXISTS (
+        SELECT 1 FROM "ProductBarcode" pb
+        JOIN "MasterProductBarcode" mb ON mb."barcode" = pb."barcode"
+        WHERE pb."productId" = p."id" AND mb."masterProductId" = ${master.id}
+          AND mb."scanEnabled" = true
+      ) AS "matchingBarcode"
+      FROM "Product" p WHERE p."companyId" = ${companyId} AND p."sku" = ${master.sourceCode}
+    `;
+    if (sameSku) {
+      if (sameSku.masterProductId !== null || !sameSku.matchingBarcode) {
+        const error = new Error(`Ο κωδικός «${master.sourceCode}» χρησιμοποιείται ήδη από διαφορετικό είδος.`);
+        error.status = 409;
+        throw error;
+      }
+      productId = sameSku.id;
+    }
+  }
   if(!productId){
     const categoryId=await ensureCategory(tx,companyId,master.categoryName),subcategoryId=await ensureSubcategory(tx,companyId,categoryId,master.subcategoryName),vatDepartmentId=await ensureVat(tx,companyId,master.vatRate);
     productId=uid();const salePrice=Number(master.defaultRetailPrice||0),costPrice=Number(master.defaultCostPrice||0),vatRate=Number(master.vatRate||0),verified=master.vatVerified===true;
