@@ -262,6 +262,9 @@ router.patch("/:orderId",async(req,res,next)=>{
           ORDER BY l."createdAt",l."id"`;
         if(!lines.length){const error=new Error("Δεν μπορεί να οριστικοποιηθεί αγορά χωρίς είδη.");error.status=409;throw error}
 
+        if(lines.some(line=>line.invoiceUnit==="PACKAGE"&&line.stockUnitsPerInvoiceUnit!=null&&n(line.stockUnitsPerInvoiceUnit)===0))
+          throw Object.assign(new Error("Επιβεβαίωσε τα τεμάχια ανά κιβώτιο πριν την οριστικοποίηση ή την τιμολόγηση."),{status:409});
+
         if(awaitingInvoice){
           await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL',"awaitingInvoice"=TRUE,
             "supplierId"=${effectiveSupplierId},"invoiceNumber"=${effectiveInvoiceNumber},"description"=${effectiveDescription},
