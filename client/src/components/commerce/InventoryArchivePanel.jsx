@@ -31,6 +31,24 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   const [scrollX,setScrollX]=useState(0),[scrollMax,setScrollMax]=useState(0);
   useEffect(()=>{const el=tableRef.current;if(!el)return;const update=()=>{setScrollMax(Math.max(0,el.scrollWidth-el.clientWidth));setScrollX(el.scrollLeft)};update();const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(update):null;observer?.observe(el);window.addEventListener("resize",update);el.addEventListener("scroll",update);return()=>{observer?.disconnect();window.removeEventListener("resize",update);el.removeEventListener("scroll",update)}},[]);
   const moveHorizontal=value=>{if(tableRef.current){tableRef.current.scrollLeft=Number(value);setScrollX(Number(value))}};
+  const [duplicates, setDuplicates] = useState(null);
+  const duplicateRequest = useRef(0);
+  useEffect(() => {
+    duplicateRequest.current++;
+    setDuplicates(null);
+  }, [storeId]);
+
+  async function checkDuplicates() {
+    const request = ++duplicateRequest.current;
+    setDuplicates({loading:true});
+    try {
+      const result = await api(`/api/inventory-archive/duplicates?storeId=${encodeURIComponent(storeId)}`);
+      if (request === duplicateRequest.current) setDuplicates(result);
+    } catch (error) {
+      if (request === duplicateRequest.current) setDuplicates({error:error.message});
+    }
+  }
+
   const archiveGeneration=useRef(0);
   const openingProductRef=useRef("");
   const cardScopeRef=useRef(storeId);cardScopeRef.current=storeId;
@@ -239,6 +257,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
       {!loading&&!data.items.length&&<div className="ia-empty">Δεν βρέθηκαν είδη με τα συγκεκριμένα κριτήρια.</div>}
     </div></div><footer className="ia-totals"><span>Σελίδα: {data.items.length} είδη</span><b>Stock {qty(pageTotals.stock)}</b><b>Λιανική {money(pageTotals.retailStockValue)}</b><b>Κόστος {money(pageTotals.costStockValue)}</b></footer></section>
     <footer className="ia-toolbar"><label className="ia-horizontal-control"><ChevronLeft/><span>Οριζόντια κύλιση</span><input aria-label="Οριζόντια κύλιση ειδών" type="range" min="0" max={scrollMax} value={scrollX} onChange={e=>moveHorizontal(e.target.value)}/><ChevronRight/></label><div className="ia-toolbar-actions"><button onClick={onClose}><X/>Κλείσιμο</button>
+      {!operatorMode && <button type="button" disabled={!storeId} onClick={checkDuplicates}>Έλεγχος διπλοεγγραφών</button>}
       <button disabled={!storeId||loading||exporting} onClick={()=>exportCatalog()}><FileSpreadsheet/>Excel όλων των ειδών</button>
       {exportIds===null
         ?<button disabled={!storeId||loading||exporting} onClick={()=>setExportIds([...checked])}>Επιλογή ειδών για Excel</button>
@@ -248,6 +267,21 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
 
 
 
+    {duplicates && <Modal title="Έλεγχος διπλοεγγραφών" wide onClose={() => {
+      duplicateRequest.current++;
+      setDuplicates(null);
+    }}>
+      <div className="ia-merge-body">
+        <p>Έλεγχος ενεργών ειδών στο επιλεγμένο κατάστημα. Η ίδια περιγραφή χρειάζεται επιβεβαίωση.</p>
+        {duplicates.loading && <p role="status">Γίνεται έλεγχος…</p>}
+        {duplicates.error && <p role="alert">{duplicates.error}</p>}
+        {duplicates.groups?.length === 0 && <p>Δεν βρέθηκαν πιθανές διπλοεγγραφές.</p>}
+        {duplicates.groups?.map(group => <section key={`${group.kind}:${group.value}`}>
+          <h4>{{BARCODE:"Ίδιο barcode", SKU:"Ίδιος κωδικός", NAME:"Ίδια περιγραφή"}[group.kind]} · {group.value}</h4>
+          <ul>{group.items.map(item => <li key={item.id}>{item.name} · SKU {item.sku || "—"} · Στοκ {qty(item.stock)}</li>)}</ul>
+        </section>)}
+      </div>
+    </Modal>}
     {modal==="merge"&&merge&&<Modal title={`Συγχώνευση ${checked.length} ειδών σε ένα`} onClose={()=>!loading&&setModal(null)} wide><div className="ia-merge-body">{error&&<div role="alert">{error}</div>}<p>Κράτησε μία καρτέλα με το όνομα, SKU, τιμή και κατηγορίες της. Τα barcode μεταφέρονται σε αυτήν και τα αποθέματα αθροίζονται. Οι παλιές καρτέλες απενεργοποιούνται, διατηρώντας το ιστορικό πωλήσεων και παραστατικών τους.</p><p>Η ανοιχτή βάρδια επιτρέπεται. Ελέγχονται οι εκκρεμότητες των επιλεγμένων ειδών. Μετά τη συγχώνευση, ανανέωσε τον κατάλογο στα POS· αν κάποιο παλιό καλάθι περιέχει συγχωνευμένο είδος, πρόσθεσέ το ξανά.</p><label>Είδος που θα κρατηθεί<select value={merge.targetId} disabled={loading} onChange={e=>setMerge(x=>({...x,targetId:e.target.value,preview:null,confirmed:false}))}><option value="">— Επίλεξε καρτέλα —</option>{data.items.filter(r=>checked.includes(r.productId)).map(r=><option key={r.productId} value={r.productId}>{r.sku} · {r.name} · {money(r.salePrice)}</option>)}</select></label><button onClick={previewMerge} disabled={loading||!merge.targetId}>Προεπισκόπηση συγχώνευσης</button>
       {merge.preview&&<><table><thead><tr><th>Είδος</th><th>Ενέργεια</th><th>Λιανική</th><th>Απόθεμα</th></tr></thead><tbody>{merge.preview.rows.map(r=><tr key={r.id}><td>{r.sku} · {r.name}</td><td>{r.id===merge.targetId?"Διατήρηση":"Αρχειοθέτηση"}</td><td>{money(r.salePrice)}</td><td>{qty(r.currentStock)}</td></tr>)}</tbody></table><p><b>Τελικό απόθεμα: {qty(merge.preview.combinedStock)}</b></p><p>Barcode: {merge.preview.barcodes.map(b=>`${b.barcode}${b.salePrice==null?"":` (${money(b.salePrice)})`}`).join(", ")||"Δεν υπάρχουν"}</p>{merge.preview.blockers.length>0?<div role="alert">{merge.preview.blockers.map((b,i)=><p key={i}>{b}</p>)}</div>:<><label>Αιτιολογία<input value={merge.reason} onChange={e=>setMerge(x=>({...x,reason:e.target.value}))} maxLength="300"/></label><label className="check"><input type="checkbox" checked={merge.confirmed} onChange={e=>setMerge(x=>({...x,confirmed:e.target.checked}))}/>Έλεγξα ότι είναι το ίδιο προϊόν και επιβεβαιώνω την καρτέλα που κρατάω.</label></>}</>}
       </div><div className="ia-modal-actions"><button onClick={()=>setModal(null)} disabled={loading}>Επιστροφή</button><button className="primary" onClick={confirmMerge} disabled={loading||!merge.preview||merge.preview.blockers.length>0||!merge.confirmed||merge.reason.trim().length<3}>Επιβεβαίωση συγχώνευσης</button></div></Modal>}
