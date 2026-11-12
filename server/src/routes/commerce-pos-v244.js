@@ -15,7 +15,7 @@ import {ensureInvoiceCommonDraftSchema,assertNoUnresolvedInbound,lockInvoiceStor
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain,allowActiveInvoiceDrainRequest} from "../server-shutdown.js";
 import crypto from "crypto";
-import {findMyDataPurchase,attachMyDataPosReceipt} from "../lib/mydata-pos-receipt.js";
+import {findMyDataPurchase,attachMyDataPosReceipt,hasMyDataPurchaseLines} from "../lib/mydata-pos-receipt.js";
 import {prepareSelectedInbox,queueEmptyInboxRead} from "../lib/pos-inbox-original.js";
 import jwt from "jsonwebtoken";
 import {Router} from "express";
@@ -804,7 +804,7 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
       const existing=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId,documentNumber:myDataPurchase.purchaseNumber});
       if(existing)assertReusableInvoicePayment(existing,{companyId,storeId,supplierId,supplierTaxId,documentNumber:myDataPurchase.purchaseNumber,totalGross:intakeNumber(req.body.totalGross)});
       if((myDataPurchase.paymentTransactionId&&myDataPurchase.paymentTransactionId!==existing?.id)||(myDataPurchase.settlementMode==="PAID"&&!existing))return res.status(409).json({error:"Η υπάρχουσα αγορά έχει πληρωμή που χρειάζεται έλεγχο. Δεν έγινε νέα χρέωση."});
-      return res.json({ok:true,duplicate:false,myDataMatched:true,canonicalDocumentNumber:myDataPurchase.purchaseNumber,purchaseDocumentId:myDataPurchase.documentId,paymentTransactionId:existing?.id||null,paymentReused:Boolean(existing)});
+      return res.json({ok:true,duplicate:false,myDataMatched:true,canonicalDocumentNumber:myDataPurchase.purchaseNumber,purchaseDocumentId:myDataPurchase.documentId,hasProductLines:await hasMyDataPurchaseLines(prisma,myDataPurchase),paymentTransactionId:existing?.id||null,paymentReused:Boolean(existing)});
     }
     const payment=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber});
     if(payment)assertReusableInvoicePayment(payment,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,totalGross:intakeNumber(req.body.totalGross)});
@@ -875,7 +875,8 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     if(documentType==="CREDIT_NOTE"&&(req.body?.settlementMode!=="CREDIT"||req.body?.paymentTransactionId))return res.status(409).json({error:"Το πιστωτικό συμψηφίζεται με το υπόλοιπο του προμηθευτή, χωρίς πληρωμή POS.",code:"POS_CREDIT_NOTE_PAYMENT_FORBIDDEN"});
     let settlementMode=req.body?.settlementMode==="PAID"?"PAID":"CREDIT";
     let paymentTransactionId=req.body?.paymentTransactionId?String(req.body.paymentTransactionId).slice(0,180):null;
-    if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||(!pages.length&&req.body?.useStoredPaymentAttachment!==true))return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
+    const useExistingMyData = documentType === "INVOICE" && settlementMode === "PAID" && !pages.length && typeof req.body?.existingMyDataDocumentId === "string" && Boolean(req.body.existingMyDataDocumentId) && req.body?.useStoredPaymentAttachment !== true;
+    if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||(!pages.length&&!useExistingMyData&&req.body?.useStoredPaymentAttachment!==true))return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
     const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
@@ -899,7 +900,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
       pages=[{filename:attachment.attachmentFilename||"timologio",mimeType,
         dataUrl:attachment.attachmentData,documentType}];
     }
-    if(!req.body?.expectedPendingInvoice&&documentType==="INVOICE"){
+    if(!useExistingMyData&&!req.body?.expectedPendingInvoice&&documentType==="INVOICE"){
       const candidate=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber});
       const expected=candidate?await pendingIntentForPayment(prisma,pendingScope,candidate.id):null;
       if(expected){if(paymentTransactionId&&paymentTransactionId!==candidate.id)return res.status(409).json({error:"Η επιλεγμένη εκκρεμότητα δεν είναι η αρχική πληρωμή."});req.body.expectedPendingInvoice=expected;req.body.paymentTransactionId=candidate.id;req.body.settlementMode="PAID";}
@@ -934,6 +935,9 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     await ensureInvoiceCommonDraftSchema(prisma);
     await assertNoUnresolvedInbound(prisma,receiptIdentity);
     const myDataPurchase=await findMyDataPurchase(prisma,receiptIdentity);
+    if (useExistingMyData && (myDataPurchase?.documentId !== req.body.existingMyDataDocumentId || !await hasMyDataPurchaseLines(prisma,myDataPurchase))) {
+      return res.status(409).json({error:"Το επιλεγμένο τιμολόγιο myDATA άλλαξε ή δεν έχει είδη. Ανέβασε φωτογραφία ή PDF."});
+    }
     const paymentNumber=myDataPurchase?.purchaseNumber||documentNumber;
     const existingPayment=documentType==="INVOICE"?await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber:paymentNumber}):null;
     if(existingPayment){
