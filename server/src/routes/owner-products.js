@@ -4,6 +4,7 @@ import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
 import XLSX from "xlsx";
+import { efoodLeafletPrices } from "../bundle-promotion-pricing.js";
 import {prisma} from "../prisma.js";
 import {createScopedPromotionBatch} from "./price-catalog-promotion-guard.js";
 import {parsePromotionDate} from "../promotion-time.js";
@@ -443,6 +444,59 @@ router.get("/:productId/price-history",requireCompanyModule("INVENTORY"),async(r
     const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId}) AND h."productId"=${req.params.productId} ORDER BY h."createdAt" DESC LIMIT 100`;
     res.json(rows);
   }catch(error){next(error)}
+});
+
+router.get("/promotions/efood-xlsx", requireCompanyModule("INVENTORY"), async (req, res, next) => {
+  try {
+    const user = req.user;
+    const storeId = typeof req.query.storeId === "string" ? req.query.storeId : "";
+    if (!user?.companyId || user.staffAccess || scope || user.tokenType === "STORE_OPERATOR" ||
+        !(user.isSuperAdmin || ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(user.role)) ||
+        (user.storeId && user.storeId !== storeId)) {
+      return res.status(403).json({error:"Δεν έχεις πρόσβαση στις προσφορές του καταστήματος."});
+    }
+    const store = await ownedStore(user.companyId, storeId);
+    if (!store) return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+
+    const rows = await prisma.$queryRaw`
+      SELECT p.sku, p.name, p."efoodPrice", COALESCE(sp."salePrice", p."salePrice") AS "storePrice",
+             pr.name AS "promotionName", pr."offerMode", pr."offerPrice", pr."discountPercent",
+             pr."discountAmount", pr."validFrom", pr."validUntil"
+      FROM "PriceCatalogPromotionStore" ps
+      JOIN "PriceCatalogPromotion" pr ON pr.id = ps."promotionId" AND pr."companyId" = ps."companyId"
+      JOIN "Product" p ON p.id = pr."productId" AND p."companyId" = pr."companyId"
+      JOIN "StoreProduct" sp ON sp."productId" = p.id AND sp."storeId" = ps."storeId"
+      WHERE ps."companyId" = ${user.companyId} AND ps."storeId" = ${storeId}
+        AND pr.active AND pr."promotionType" = 'LEAFLET'
+        AND pr."validFrom" <= NOW() AND (pr."validUntil" IS NULL OR pr."validUntil" >= NOW())
+        AND p.active AND sp.active AND p."efoodEnabled"
+      ORDER BY p.name, pr."validFrom", pr.id
+    `;
+    const headers = ["SKU","Είδος","Προσφορά","Τιμή καταστήματος","Προσφορά καταστήματος",
+      "Τιμή efood","Έκπτωση ανά τεμάχιο","Τελική τιμή efood","Από","Έως"];
+    const workbook = XLSX.utils.book_new();
+    const exportRows = [];
+    const skipped = [];
+    for (const row of rows) {
+      const prices = efoodLeafletPrices(row);
+      if (!prices) {
+        skipped.push([row.sku,row.name,"Ελλιπής τιμή ή μη έγκυρη έκπτωση για efood"]);
+        continue;
+      }
+      exportRows.push([row.sku,row.name,row.promotionName,Number(row.storePrice),prices.storeOffer,
+        Number(row.efoodPrice),prices.discount,prices.finalPrice,row.validFrom.toISOString(),row.validUntil?.toISOString() || ""]);
+    }
+    XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([headers,...exportRows]),"Προσφορές efood");
+    if (skipped.length) {
+      XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["SKU","Είδος","Αιτία"],...skipped]),"Προς έλεγχο");
+    }
+    res.set("Cache-Control","no-store").json({
+      xlsx:XLSX.write(workbook,{type:"base64",bookType:"xlsx",compression:true}),
+      exported:exportRows.length, skipped:skipped.length,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/promotions/list",requireCompanyModule("INVENTORY"),async(req,res,next)=>{

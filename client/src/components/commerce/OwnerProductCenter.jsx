@@ -557,6 +557,32 @@ export default function OwnerProductCenter({
     }
   };
 
+  const [efoodExportStore, setEfoodExportStore] = useState("");
+  async function exportEfoodPromotions(event) {
+    event.preventDefault();
+    clearStatus();
+    setBusy(true);
+    try {
+      const {xlsx, exported, skipped} = await api(
+        `/api/owner-products/promotions/efood-xlsx?storeId=${encodeURIComponent(efoodExportStore)}`
+      );
+      const bytes = Uint8Array.from(atob(xlsx), character => character.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], {
+        type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "prosfores-efood.xlsx";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage(`Εξήχθησαν ${exported} προσφορές efood.${skipped ? ` Προς έλεγχο: ${skipped}.` : ""}`);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const loadPromotions = async () => {
     clearStatus();
     setBusy(true);
@@ -2173,6 +2199,15 @@ export default function OwnerProductCenter({
           </section>
           <section className="op-box">
             <h3>Προσφορές</h3>
+            <form className="op-form" onSubmit={exportEfoodPromotions}>
+              <label>Κατάστημα για Excel efood
+                <select value={efoodExportStore} onChange={event => setEfoodExportStore(event.target.value)} required>
+                  <option value="">Επίλεξε κατάστημα</option>
+                  {activeStores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
+                </select>
+              </label>
+              <button disabled={busy || !efoodExportStore}>Excel ενεργών προσφορών efood</button>
+            </form>
             <div className="promo-list">
               {promotions.map((p) => (
                 <article key={p.id}>
