@@ -26,7 +26,7 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
   invalidate();busy=true;select.disabled=true;createButton.disabled=true;previewButton.disabled=true;
   let supplierId='';
   try{
-   const lookup=await api(`/api/commerce/vat-lookup?storeId=${encodeURIComponent(order.storeId)}&taxId=${issuerVat}`);
+   const lookup=await api(`/api/commerce/vat-lookup?storeId=${encodeURIComponent(order.storeId)}&taxId=${issuerVat}&localOnly=1`);
    if(!alive())return;
    const supplier=lookup.existingSupplier||await api('/api/commerce/suppliers',{method:'POST',body:JSON.stringify({name:issuerName,taxId:issuerVat})});
    if(!alive())return;
