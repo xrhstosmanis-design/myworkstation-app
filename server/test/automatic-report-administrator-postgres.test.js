@@ -71,6 +71,30 @@ test('native administrative address/grant/policy are atomic, scoped, revocable a
    await assert.rejects(run(()=>management(broken).authorizeAdministratorRecipient({...scope,storeId:'rollback'},input)),/synthetic commit failure/);
    for(const name of ['AutomaticReportRecipient','AutomaticReportRecipientConsent','AutomaticReportAutomationGrant','AutomaticReportDispatchPolicy'])assert.equal((await a.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "${name}" WHERE "storeId"='rollback'`))[0].n,0,name);
   });
+  await t.test('history HTTP response combines SMTP evidence and legacy invoice rows for the selected store',async()=>{
+   await a.$executeRaw`CREATE TABLE "InvoiceStockExclusionEmail" (
+    "companyId" TEXT, "storeId" TEXT, "orderId" TEXT, "reopenVersion" INTEGER,
+    "attempts" INTEGER, "sentAt" TIMESTAMPTZ, "payload" JSONB)`;
+   const notice=JSON.stringify({postedAt:'2026-11-01T07:00:00.000Z',invoiceNumber:'LAB-42',actorName:'private-actor'});
+   await a.$executeRaw`INSERT INTO "InvoiceStockExclusionEmail" VALUES
+    ('c','s','invoice',0,1,NULL,${notice}::jsonb),
+    ('foreign','control','outside',0,0,NULL,${notice}::jsonb)`;
+   const report=JSON.stringify({completedAt:now.toISOString(),messageId:'<synthetic@example.invalid>',input:{frequency:'MONTHLY',recipient:'private@example.invalid'}});
+   await a.$executeRaw`INSERT INTO "AutomaticReportDeliverySlot" VALUES
+    ('slot','c','s',1,'ACCEPTED',NULL,${report}::jsonb),
+    ('other-store','c','race',1,'ACCEPTED',NULL,${report}::jsonb)`;
+   const url=`http://127.0.0.1:${server.address().port}/companies/c/stores/s/`;
+   const response=await fetch(url);
+   assert.equal(response.status,200);
+   const {history}=await response.json();
+   assert.deepEqual(history.map(row=>[row.type,row.status,row.messageId]),[
+    ['CASH','ACCEPTED','<synthetic@example.invalid>'],
+    ['INVOICE_STOCK_EXCLUSION','RETRY_PENDING',null]
+   ]);
+   assert.equal(history[1].invoiceNumber,'LAB-42');
+   assert.doesNotMatch(JSON.stringify(history),/private-|private@|other-store|outside/);
+   assert.equal((await fetch(url,{headers:{'x-test-user':'owner'}})).status,403);
+  });
   assert.equal(mail,0);assert.deepEqual(await a.$queryRaw`SELECT * FROM "BusinessControl"`,[{id:'unaffected',cash:777,stock:555}]);
   for(const name of ['AutomaticReportRecipient','AutomaticReportRecipientConsent','AutomaticReportAutomationGrant','AutomaticReportDispatchPolicy','AutomaticReportPayload','AutomaticReportDeliverySlot'])assert.equal((await a.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "${name}" WHERE "storeId"='control'`))[0].n,0,name);
  }finally{if(server){server.closeAllConnections();await new Promise(r=>server.close(r))}await Promise.all([a.$disconnect(),b.$disconnect()]);try{if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
