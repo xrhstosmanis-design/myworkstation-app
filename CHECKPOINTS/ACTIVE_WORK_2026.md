@@ -75,6 +75,8 @@ Assigned to `fix/inventory-product-create-events`. Central Events shows historic
 
 ## MYDATA-DRAFT-PREFILL
 
+Create missing supplier from verified myDATA invoice fields. [Checkpoint](CHANGES/mydata-draft-create-supplier.md).
+
 Show the XML issuer name on unlinked myDATA drafts. [Checkpoint](CHANGES/mydata-draft-issuer-name.md).
 
 Unconfirmed packaging remains in the draft for correction. [Checkpoint](CHANGES/mydata-unconfirmed-packaging.md). CI and production validation pending.
