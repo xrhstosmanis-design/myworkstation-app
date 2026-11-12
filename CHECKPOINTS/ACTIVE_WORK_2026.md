@@ -94,3 +94,5 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 11/11/2026 — Inventory Archive duplicate scan by selected store. See CHECKPOINTS/CHANGES/2026-11-11-inventory-duplicate-check.md.
 
 12/11/2026 — Inventory Archive: start product merge directly from duplicate results. See CHECKPOINTS/CHANGES/2026-11-12-inventory-merge-duplicates.md.
+
+12/11/2026 — Πληρωμή POS με υπάρχον παραστατικό myDATA. CI και LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-12-pos-pay-existing-mydata.md).

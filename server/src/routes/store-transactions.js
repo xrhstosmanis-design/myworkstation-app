@@ -1,3 +1,4 @@
+import { findMyDataPurchase, hasMyDataPurchaseLines } from "../lib/mydata-pos-receipt.js";
 import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import {requireStaffAction} from '../services/backoffice-staff-access.js';
@@ -294,6 +295,7 @@ const transactionSchema=z.object({
   supplierName:z.string().trim().max(180).optional().nullable(),
   supplierId:z.string().optional().nullable(),
   invoiceDocumentNumber:z.string().trim().min(1).max(80).optional().nullable(),
+  existingMyDataDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   deferredInvoice:z.object({documentDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),sessionId:z.string().trim().min(1).max(180)}).optional(),
   evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().nullable(),
   purchaseDocumentId:z.string().trim().min(1).max(180).optional().nullable(),
@@ -1051,6 +1053,9 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
+  if (body.existingMyDataDate && (body.type !== "SUPPLIER_PAYMENT" || body.amount <= 0 || body.evidenceMode !== "DOCUMENT" || !body.purchaseDocumentId || !body.supplierId || !body.invoiceDocumentNumber || body.deferredInvoice)) {
+    return res.status(400).json({error:"Χρειάζεται επιλογή απλήρωτου τιμολογίου myDATA για αυτή την πληρωμή."});
+  }
   if(body.expenseCategoryId&&(body.type!=="OTHER_EXPENSE"||body.deferredInvoice))return res.status(400).json({error:"Η κατηγορία εξόδου επιτρέπεται μόνο στα λοιπά έξοδα χωρίς αναβολή τιμολογίου."});
   if(body.deferredInvoice){
     const result=await createPendingInvoicePayment(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos:await requestTerminal(req)},body);
@@ -1170,6 +1175,12 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       if(duplicate[0])return {duplicate:duplicate[0],rows:null};
       const review=Number(body.amount)>0?await findExistingInvoicePaymentReview(tx,{companyId:req.user.companyId,storeId:store.id,supplierId:body.supplierId,supplierTaxId,documentNumber:body.invoiceDocumentNumber||invoiceReference,totalGross:body.amount}):null;
       if(review)return {review,rows:null};
+      if (body.existingMyDataDate) {
+        const match = await findMyDataPurchase(tx, {companyId:req.user.companyId,storeId:store.id,supplierId:body.supplierId,supplierTaxId,documentNumber:body.invoiceDocumentNumber,documentDate:body.existingMyDataDate,totalGross:body.amount});
+        if (match?.documentId !== purchaseDocument?.id || !match || match.paymentTransactionId || match.settlementMode === "PAID" || match.resultJson?.mydataPosReceipt?.receivedAt || match.rawPayload?.mydataPosReceipt?.receivedAt || !await hasMyDataPurchaseLines(tx,match)) {
+          throw Object.assign(new Error("Το τιμολόγιο myDATA άλλαξε. Έλεγξε το παραστατικό πριν την πληρωμή."), {status:409});
+        }
+      }
       return {duplicate:null,rows:await insertTransaction(tx)};
     };
     const outcome=tx===prisma?await prisma.$transaction(checkInvoicePayment):await checkInvoicePayment(tx);
