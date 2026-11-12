@@ -29,6 +29,9 @@ test('new actions remain explicit, dependency-closed and absent from every exist
  for(const kind of ['RETURN','VOID','CANCELLED',null])assert.equal(staffRequestCapability('POST','/api/store-pos/stores/a1/sales/sale/reverse',{kind}),null);
  assert.equal(staffRequestCapability('PATCH','/api/purchase-orders/order',{status:'FINAL'}),'invoices.approve');
  assert.equal(staffRequestCapability('PATCH','/api/purchase-orders/order',{description:'edit'}),'invoices.edit');
+ assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/lines',{productId:'existing'}),'invoices.edit');
+ assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/lines',{description:'unmatched'}),null);
+ assert.equal(staffRequestCapability('GET','/api/commerce/purchase-orders/order/catalog-matches'),'invoices.edit');
  assert.equal(staffRequestCapability('POST','/api/transactions/stores/a1',expense),'payments.expense');
  for(const body of [{...expense,type:'SALE_CASH'},{...expense,amount:-2},{...expense,deferredInvoice:{}},{...expense,evidenceMode:'LEGACY'}])assert.equal(staffRequestCapability('POST','/api/transactions/stores/a1',body),null);
 });

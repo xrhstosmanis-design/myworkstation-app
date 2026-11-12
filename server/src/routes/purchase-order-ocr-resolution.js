@@ -170,6 +170,10 @@ router.get("/:orderId/ocr-lines",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/:orderId/catalog-matches",(req,res,next)=>{
+  if(req.user?.staffAccess!==true)return res.sendStatus(404);
+  return createInvoiceCatalogLookup(prisma)(req,res,next);
+});
 router.get("/:orderId/ocr-lines/:lineId/catalog-matches",createInvoiceCatalogLookup(prisma));
 
 router.get("/:orderId/ocr-lines/:lineId/options",async(req,res,next)=>{try{

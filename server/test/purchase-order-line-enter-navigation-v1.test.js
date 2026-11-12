@@ -32,7 +32,8 @@ test("the current invoice lines remain visible and refresh after every entry", (
   assert.match(source, /function entryLinesGrid\(data\)/);
   assert.match(source, /data-entry-lines/);
   assert.match(source, /Γραμμές τιμολογίου/);
-  assert.match(source, /await refreshEntryLines\(\);form\.reset\(\)/);
+  const addForm = source.slice(source.indexOf('function addLine('), source.indexOf('function enhanceDiscountEditor('));
+  assert.match(addForm, /await api\([^\n]*\{method:"POST"[^\n]*\}\)\}\);form\.reset\(\);products=\[\];[^\n]*await refreshEntryLines\(\)/);
 });
 
 test("live invoice lines are fully editable in the large entry workspace", () => {

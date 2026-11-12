@@ -214,6 +214,7 @@ test('actual invoice editor separates read, edit and approval controls and locks
    assert.equal(document.querySelector('[data-po-store]').disabled,true);assert.equal(document.querySelector('[data-po-new]'),null);
    await m.act(async()=>document.querySelector('[data-po-open]').click());
    for(const selector of ['[data-invoice-assistant]','[data-reopen]','[data-email]','[data-product-card]','[data-barcodes]'])assert.equal(document.querySelector(selector),null);
+   assert.equal(Boolean(document.querySelector('[data-add-line]')),action==='invoices.edit');
    assert.equal(Boolean(document.querySelector('[data-line-edit]')),action==='invoices.edit');assert.equal(Boolean(document.querySelector('[data-finalize]')),action==='invoices.approve');
    assert.equal(calls.some(c=>c.options.method),false,'opening an invoice must never auto-repair, recover or post');
    if(action){

@@ -72,6 +72,8 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&(path==='/api/purchase-orders/report'||/^\/api\/purchase-orders\/[^/]+\/detail$/.test(path)))return 'invoices.read';
   if(method==='GET'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/ocr-lines\/[^/]+\/catalog-matches$/.test(path))return 'invoices.edit';
   if(method==='PATCH'&&/^\/api\/purchase-orders\/[^/]+$/.test(path))return (['FINAL','INVOICED'].includes(body.status)||body.status==='NEW'&&body.returnForCorrection===true)?'invoices.approve':body.status===undefined?'invoices.edit':null;
+  if(method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/lines$/.test(path)&&typeof body.productId==='string'&&body.productId.trim())return 'invoices.edit';
+  if(method==='GET'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/catalog-matches$/.test(path))return 'invoices.edit';
   if(['PATCH','DELETE'].includes(method)&&/^\/api\/purchase-orders\/[^/]+\/lines\/[^/]+$/.test(path))return 'invoices.edit';
   if(method==='DELETE'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/count\/[^/]+$/.test(path))return 'inventory.clear';
   if(method==='POST'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/count\/bulk-zero$/.test(path))return 'inventory.bulk-zero';
