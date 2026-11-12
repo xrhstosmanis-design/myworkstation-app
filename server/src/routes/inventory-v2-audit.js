@@ -1,4 +1,4 @@
-import {inventoryStocktakeScopeAllowed} from "../lib/inventory-stocktake-scope.js";
+import {inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed} from "../lib/inventory-stocktake-scope.js";
 import {createInventoryReconciliationHandler,createInventoryReviewHandler} from "../services/inventory-reconciliation-handler.js";
 import { Router } from "express";
 import { prisma } from "../prisma.js";
@@ -42,6 +42,69 @@ const requireLossDetection = async (req, res, stocktake) => {
   });
   return false;
 };
+router.post("/stocktakes/valuation-report", async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (user?.staffAccess || user?.tokenType === "INVENTORY_COUNTER" ||
+        !(roles.has(user?.role) || user?.isSuperAdmin)) {
+      return res.status(403).json({error:"Δεν έχεις πρόσβαση στην αποτίμηση απογραφών."});
+    }
+    const {storeId, stocktakeIds} = req.body || {};
+    if (typeof storeId !== "string" || !inventoryStoreScopeAllowed(user, storeId) ||
+        !Array.isArray(stocktakeIds) || stocktakeIds.length < 1 || stocktakeIds.length > 200 ||
+        stocktakeIds.some(id => typeof id !== "string" || !id || id.length > 128)) {
+      return res.status(400).json({error:"Επίλεξε κατάστημα και έως 200 απογραφές του."});
+    }
+    const ids = [...new Set(stocktakeIds)];
+    const report = await prisma.$transaction(async tx => {
+      const stocktakes = await tx.$queryRaw`
+        SELECT id, name, status, "startedAt", "finalizedAt" FROM "Stocktake"
+        WHERE "companyId" = ${user.companyId} AND "storeId" = ${storeId}
+          AND "inventoryVersion" = 2 AND status IN ('DRAFT','FINALIZED')
+          AND id = ANY(${ids}::text[])
+        ORDER BY "startedAt", id
+      `;
+      if (stocktakes.length !== ids.length) return null;
+      const items = await tx.$queryRaw`
+        WITH latest AS (
+          SELECT DISTINCT ON (sl."productId")
+            sl."productId", sl."stocktakeId", sl."countedAt", sl."countedQuantity", sl."unitCost"
+          FROM "StocktakeLine" sl JOIN "Stocktake" st ON st.id = sl."stocktakeId"
+          WHERE sl."stocktakeId" = ANY(${ids}::text[]) AND sl."countedQuantity" IS NOT NULL
+          ORDER BY sl."productId", COALESCE(sl."countedAt", st."startedAt") DESC,
+                   st."startedAt" DESC, sl.id DESC
+        ), valued AS (
+          SELECT p.id, p.sku, p.name, l."stocktakeId", l."countedAt",
+                 l."countedQuantity" AS quantity,
+                 COALESCE(sp."salePrice", p."salePrice") AS "salePrice",
+                 CASE WHEN l."unitCost" > 0 THEN l."unitCost" END AS "unitCost"
+          FROM latest l JOIN "Product" p ON p.id = l."productId" AND p."companyId" = ${user.companyId}
+          LEFT JOIN "StoreProduct" sp ON sp."productId" = p.id AND sp."storeId" = ${storeId}
+        )
+        SELECT *, CASE WHEN quantity = 0 THEN 0 ELSE round(quantity * "salePrice", 2) END AS "retailValue",
+                  CASE WHEN quantity = 0 THEN 0 ELSE round(quantity * "unitCost", 2) END AS "costValue"
+        FROM valued ORDER BY name, id
+      `;
+      const store = await tx.store.findFirst({where:{id:storeId,companyId:user.companyId},select:{name:true}});
+      if (!store) return null;
+      const finalized = stocktakes.every(s => s.status === "FINALIZED" && s.finalizedAt);
+      return {
+        storeName:store.name, stocktakes, items,
+        startedAt:stocktakes[0].startedAt,
+        completedAt:finalized ? stocktakes.reduce((latest, s) => s.finalizedAt > latest ? s.finalizedAt : latest, stocktakes[0].finalizedAt) : null,
+        retailTotal:items.reduce((sum, item) => sum + Math.round(n(item.retailValue) * 100), 0) / 100,
+        costTotal:items.reduce((sum, item) => sum + Math.round(n(item.costValue) * 100), 0) / 100,
+        missingRetail:items.filter(item => item.retailValue === null).length,
+        missingCost:items.filter(item => item.costValue === null).length,
+      };
+    }, {isolationLevel:"RepeatableRead"});
+    if (!report) return res.status(404).json({error:"Δεν βρέθηκαν όλες οι επιλεγμένες απογραφές στο κατάστημα."});
+    res.json(report);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Existing count/read grants do not confer cost or loss-investigation access.
 router.get("/stocktakes/:stocktakeId/reconciliation", createInventoryReconciliationHandler({db:prisma,access,requireLossDetection}));
 router.post("/stocktakes/:stocktakeId/reconciliation/reviews",createInventoryReviewHandler({db:prisma,access,requireLossDetection}));
