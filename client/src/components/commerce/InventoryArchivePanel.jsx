@@ -21,6 +21,33 @@ const newCardBlank=()=>({name:"",sku:"",description:"",categoryId:"",subcategory
 
 function Modal({title,children,onClose,wide=false,className=""}){return <div className="ia-modal-backdrop"><section className={`ia-modal ${wide?"wide":""} ${className}`} ><header><b>{title}</b><button onClick={onClose}><X/></button></header>{children}</section></div>}
 
+function DuplicateGroup({group, canMerge, onMerge}) {
+  const [selectedIds, setSelectedIds] = useState(() =>
+    group.items.length <= 4 ? group.items.map(item => item.id) : []
+  );
+  const label = {BARCODE:"Ίδιο barcode", SKU:"Ίδιος κωδικός", NAME:"Ίδια περιγραφή"}[group.kind];
+
+  return <section>
+    <h4>{label} · {group.value}</h4>
+    <ul>{group.items.map(item => <li key={item.id}>
+      <label>
+        {canMerge && <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={event => {
+          const checked = event.target.checked;
+          setSelectedIds(ids => checked ? [...ids, item.id] : ids.filter(id => id !== item.id));
+        }}/>}
+        {item.name} · SKU {item.sku || "—"} · Στοκ {qty(item.stock)}
+      </label>
+    </li>)}</ul>
+    {canMerge && <>
+      {group.items.length > 4 && <p>Επίλεξε 2 έως 4 είδη για συγχώνευση.</p>}
+      <button type="button" disabled={selectedIds.length < 2 || selectedIds.length > 4}
+        onClick={() => onMerge(group.items.filter(item => selectedIds.includes(item.id)))}>
+        Συγχώνευση επιλεγμένων
+      </button>
+    </>}
+  </section>;
+}
+
 export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null}){
   const operatorMode=operatorCapabilities!==null;
   const can=key=>!operatorMode||operatorCapabilities[key]===true;
@@ -138,15 +165,22 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
     return {...current,draft:{...current.draft,name:product.name||current.draft.name,...(category?{categoryId:category.id,categoryName:category.name,subcategoryId:subcategory?.id||"",subcategoryName:subcategory?.name||""}:{}),...(brand?{productCompanyId:brand.id,productCompanyName:brand.name}:{})}};
   });
 
-  const openMerge=()=>{setError("");setMerge({targetId:"",preview:null,reason:"",confirmed:false,requestId:crypto.randomUUID()});setModal("merge")};
+  const startMerge = (items, fromDuplicates = false) => {
+    if (readOnly || operatorMode || loading || items.length < 2 || items.length > 4) return;
+    setError("");
+    setMerge({items, fromDuplicates, targetId:"", preview:null, reason:"", confirmed:false, requestId:crypto.randomUUID()});
+    setModal("merge");
+  };
+  const openMerge = () => startMerge(data.items.filter(row => checked.includes(row.productId))
+    .map(row => ({id:row.productId, sku:row.sku, name:row.name, salePrice:row.salePrice})));
   const previewMerge=async()=>{
     if(!merge?.targetId)return setError("Επίλεξε την καρτέλα που θα κρατηθεί.");
-    const scope=storeId;setLoading(true);setError("");try{const result=await api("/api/owner-products/merge/preview",{method:"POST",body:JSON.stringify({storeId,productIds:checked,targetId:merge.targetId})});if(cardScopeRef.current===scope)setMerge(x=>x?({...x,preview:result,confirmed:false}):x)}catch(e){if(cardScopeRef.current===scope)setError(e.message)}finally{if(cardScopeRef.current===scope)setLoading(false)}
+    const scope=storeId;setLoading(true);setError("");try{const result=await api("/api/owner-products/merge/preview",{method:"POST",body:JSON.stringify({storeId,productIds:merge.items.map(item=>item.id),targetId:merge.targetId})});if(cardScopeRef.current===scope)setMerge(x=>x?({...x,preview:result,confirmed:false}):x)}catch(e){if(cardScopeRef.current===scope)setError(e.message)}finally{if(cardScopeRef.current===scope)setLoading(false)}
   };
   const confirmMerge=async()=>{
     if(mergeSavingRef.current||!merge?.preview||!merge.confirmed||merge.reason.trim().length<3)return;
     const scope=storeId;mergeSavingRef.current=true;setLoading(true);setError("");
-    try{const result=await api("/api/owner-products/merge/confirm",{method:"POST",body:JSON.stringify({storeId,productIds:checked,targetId:merge.targetId,requestId:merge.requestId,previewHash:merge.preview.previewHash,confirm:true,reason:merge.reason.trim()})});if(cardScopeRef.current!==scope)return;setModal(null);setMerge(null);setChecked([]);await load();setMessage(`Συγχωνεύτηκαν ${result.merged} είδη στην επιλεγμένη καρτέλα. Ανανέωσε τους καταλόγους POS.`)}catch(e){if(cardScopeRef.current===scope)setError(e.message)}finally{mergeSavingRef.current=false;if(cardScopeRef.current===scope)setLoading(false)}
+    try{const result=await api("/api/owner-products/merge/confirm",{method:"POST",body:JSON.stringify({storeId,productIds:merge.items.map(item=>item.id),targetId:merge.targetId,requestId:merge.requestId,previewHash:merge.preview.previewHash,confirm:true,reason:merge.reason.trim()})});if(cardScopeRef.current!==scope)return;setModal(null);setMerge(null);setChecked([]);if(merge.fromDuplicates)await checkDuplicates();await load();setMessage(`Συγχωνεύτηκαν ${result.merged} είδη στην επιλεγμένη καρτέλα. Ανανέωσε τους καταλόγους POS.`)}catch(e){if(cardScopeRef.current===scope)setError(e.message)}finally{mergeSavingRef.current=false;if(cardScopeRef.current===scope)setLoading(false)}
   };
 
   const openBulk=()=>{setBulk({...bulkBlank(),requestId:crypto.randomUUID()});setError("");setModal("bulk")};
@@ -267,7 +301,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
 
 
 
-    {duplicates && <Modal title="Έλεγχος διπλοεγγραφών" wide onClose={() => {
+    {duplicates && modal!=="merge" && <Modal title="Έλεγχος διπλοεγγραφών" wide onClose={() => {
       duplicateRequest.current++;
       setDuplicates(null);
     }}>
@@ -276,13 +310,12 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
         {duplicates.loading && <p role="status">Γίνεται έλεγχος…</p>}
         {duplicates.error && <p role="alert">{duplicates.error}</p>}
         {duplicates.groups?.length === 0 && <p>Δεν βρέθηκαν πιθανές διπλοεγγραφές.</p>}
-        {duplicates.groups?.map(group => <section key={`${group.kind}:${group.value}`}>
-          <h4>{{BARCODE:"Ίδιο barcode", SKU:"Ίδιος κωδικός", NAME:"Ίδια περιγραφή"}[group.kind]} · {group.value}</h4>
-          <ul>{group.items.map(item => <li key={item.id}>{item.name} · SKU {item.sku || "—"} · Στοκ {qty(item.stock)}</li>)}</ul>
-        </section>)}
+        {duplicates.groups?.map(group => <DuplicateGroup key={`${group.kind}:${group.value}`}
+          group={group} canMerge={!readOnly && !operatorMode && !loading}
+          onMerge={items => startMerge(items, true)}/>)}
       </div>
     </Modal>}
-    {modal==="merge"&&merge&&<Modal title={`Συγχώνευση ${checked.length} ειδών σε ένα`} onClose={()=>!loading&&setModal(null)} wide><div className="ia-merge-body">{error&&<div role="alert">{error}</div>}<p>Κράτησε μία καρτέλα με το όνομα, SKU, τιμή και κατηγορίες της. Τα barcode μεταφέρονται σε αυτήν και τα αποθέματα αθροίζονται. Οι παλιές καρτέλες απενεργοποιούνται, διατηρώντας το ιστορικό πωλήσεων και παραστατικών τους.</p><p>Η ανοιχτή βάρδια επιτρέπεται. Ελέγχονται οι εκκρεμότητες των επιλεγμένων ειδών. Μετά τη συγχώνευση, ανανέωσε τον κατάλογο στα POS· αν κάποιο παλιό καλάθι περιέχει συγχωνευμένο είδος, πρόσθεσέ το ξανά.</p><label>Είδος που θα κρατηθεί<select value={merge.targetId} disabled={loading} onChange={e=>setMerge(x=>({...x,targetId:e.target.value,preview:null,confirmed:false}))}><option value="">— Επίλεξε καρτέλα —</option>{data.items.filter(r=>checked.includes(r.productId)).map(r=><option key={r.productId} value={r.productId}>{r.sku} · {r.name} · {money(r.salePrice)}</option>)}</select></label><button onClick={previewMerge} disabled={loading||!merge.targetId}>Προεπισκόπηση συγχώνευσης</button>
+    {modal==="merge"&&merge&&<Modal title={`Συγχώνευση ${merge.items.length} ειδών σε ένα`} onClose={()=>!loading&&setModal(null)} wide><div className="ia-merge-body">{error&&<div role="alert">{error}</div>}<p>Κράτησε μία καρτέλα με το όνομα, SKU, τιμή και κατηγορίες της. Τα barcode μεταφέρονται σε αυτήν και τα αποθέματα αθροίζονται. Οι παλιές καρτέλες απενεργοποιούνται, διατηρώντας το ιστορικό πωλήσεων και παραστατικών τους.</p><p>Η ανοιχτή βάρδια επιτρέπεται. Ελέγχονται οι εκκρεμότητες των επιλεγμένων ειδών. Μετά τη συγχώνευση, ανανέωσε τον κατάλογο στα POS· αν κάποιο παλιό καλάθι περιέχει συγχωνευμένο είδος, πρόσθεσέ το ξανά.</p><label>Είδος που θα κρατηθεί<select value={merge.targetId} disabled={loading} onChange={e=>setMerge(x=>({...x,targetId:e.target.value,preview:null,confirmed:false}))}><option value="">— Επίλεξε καρτέλα —</option>{merge.items.map(item=><option key={item.id} value={item.id}>{item.sku} · {item.name}{item.salePrice==null?"":` · ${money(item.salePrice)}`}</option>)}</select></label><button onClick={previewMerge} disabled={loading||!merge.targetId}>Προεπισκόπηση συγχώνευσης</button>
       {merge.preview&&<><table><thead><tr><th>Είδος</th><th>Ενέργεια</th><th>Λιανική</th><th>Απόθεμα</th></tr></thead><tbody>{merge.preview.rows.map(r=><tr key={r.id}><td>{r.sku} · {r.name}</td><td>{r.id===merge.targetId?"Διατήρηση":"Αρχειοθέτηση"}</td><td>{money(r.salePrice)}</td><td>{qty(r.currentStock)}</td></tr>)}</tbody></table><p><b>Τελικό απόθεμα: {qty(merge.preview.combinedStock)}</b></p><p>Barcode: {merge.preview.barcodes.map(b=>`${b.barcode}${b.salePrice==null?"":` (${money(b.salePrice)})`}`).join(", ")||"Δεν υπάρχουν"}</p>{merge.preview.blockers.length>0?<div role="alert">{merge.preview.blockers.map((b,i)=><p key={i}>{b}</p>)}</div>:<><label>Αιτιολογία<input value={merge.reason} onChange={e=>setMerge(x=>({...x,reason:e.target.value}))} maxLength="300"/></label><label className="check"><input type="checkbox" checked={merge.confirmed} onChange={e=>setMerge(x=>({...x,confirmed:e.target.checked}))}/>Έλεγξα ότι είναι το ίδιο προϊόν και επιβεβαιώνω την καρτέλα που κρατάω.</label></>}</>}
       </div><div className="ia-modal-actions"><button onClick={()=>setModal(null)} disabled={loading}>Επιστροφή</button><button className="primary" onClick={confirmMerge} disabled={loading||!merge.preview||merge.preview.blockers.length>0||!merge.confirmed||merge.reason.trim().length<3}>Επιβεβαίωση συγχώνευσης</button></div></Modal>}
 
