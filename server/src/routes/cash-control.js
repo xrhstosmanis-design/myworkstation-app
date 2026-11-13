@@ -304,19 +304,6 @@ router.get("/stores/:storeId/shift-status",route(async(req,res)=>{
   res.json(result);
 }));
 
-router.get("/stores/:storeId/close-context",route(async(req,res)=>{
-  const {storeId}=req.params,{companyId}=req.user;
-  if(req.user.staffAccess!==true||req.user.storeId!==storeId) return res.sendStatus(403);
-  await requireStaffGrant(prisma,req.user,storeId,'shifts.close');
-  if(!String(req.get('x-mws-terminal-pos')||'').trim())return res.sendStatus(400);
-  const terminalPos=await requestTerminal(req);
-  const [session]=await prisma.$queryRaw`SELECT "id","openingSafe","openingOperational" FROM "CashShiftSession" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
-  const pendingInvoices=session?await readPendingInvoices(prisma,{companyId,storeId,user:req.user,terminalPos,sessionId:session.id,sessionAll:true}):null;
-  const totals=session?await authoritativeShiftTotals(prisma,companyId,storeId,session.id):null;
-  await requireStaffGrant(prisma,req.user,storeId,'shifts.close');
-  res.json({openSession:session?normalize(session):null,pendingInvoices,summaryBySession:session?{[session.id]:{cashSales:totals.cashSales,cardSales:totals.cardSales,expensesTotal:totals.expenses}}:{}});
-}));
-
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
   await ensurePosSaleSafetySchema();
@@ -336,6 +323,19 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   }
   const pendingInvoices=openSession&&(req.user.tokenType!=="STORE_OPERATOR"||openSession.openedBy===req.user.id)?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
   const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
+}));
+
+router.get("/stores/:storeId/close-context",route(async(req,res)=>{
+  const {storeId}=req.params,{companyId}=req.user;
+  if(req.user.staffAccess!==true||req.user.storeId!==storeId) return res.sendStatus(403);
+  await requireStaffGrant(prisma,req.user,storeId,'shifts.close');
+  if(!String(req.get('x-mws-terminal-pos')||'').trim())return res.sendStatus(400);
+  const terminalPos=await requestTerminal(req);
+  const [session]=await prisma.$queryRaw`SELECT "id","openingSafe","openingOperational" FROM "CashShiftSession" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
+  const pendingInvoices=session?await readPendingInvoices(prisma,{companyId,storeId,user:req.user,terminalPos,sessionId:session.id,sessionAll:true}):null;
+  const totals=session?await authoritativeShiftTotals(prisma,companyId,storeId,session.id):null;
+  await requireStaffGrant(prisma,req.user,storeId,'shifts.close');
+  res.json({openSession:session?normalize(session):null,pendingInvoices,summaryBySession:session?{[session.id]:{cashSales:totals.cashSales,cardSales:totals.cardSales,expensesTotal:totals.expenses}}:{}});
 }));
 
 router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{

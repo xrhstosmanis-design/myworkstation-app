@@ -16,7 +16,7 @@ export default function StoreShiftClosePanel({api,store,onClosed,backoffice=fals
  const [showPendingUpload,setShowPendingUpload]=useState(false);
  const clearCredential=()=>{setCardCode("");setPin("")};
  const changeCredentialMethod=method=>{clearCredential();setCameraOpen(false);setCloseCredentialMethod(method)};
- const overviewPath=`/api/cash/stores/${store.id}/${closeOnly?"close-context":"overview"}`;
+ const overviewPath=closeOnly?`/api/cash/stores/${store.id}/close-context`:`/api/cash/stores/${store.id}/overview`;
  const load=async()=>{setLoading(true);setData(null);setError("");setCountConfirmed(false);clearCredential();setCameraOpen(false);setCloseCredentialMethod("CARD");setShortageDecision(null);setShowPendingUpload(false);try{const [overview,accessData]=await Promise.all([api(overviewPath),backoffice?Promise.resolve({shiftClosePolicy:{showExpectedAmounts:true}}):api(`/api/store-pos/stores/${store.id}/access`).catch(()=>({}))]);setClosePolicy(policy=>({...policy,...(accessData?.shiftClosePolicy||{})}));if(overview.openSession){
   const ledger=closeOnly?overview:await api(`/api/transactions/stores/${store.id}/overview`);
   const summary=ledger.summaryBySession?.[overview.openSession.id];
