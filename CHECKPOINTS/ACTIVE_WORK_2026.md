@@ -153,3 +153,9 @@ Continues #3645 in draft #3852. The audit resolves direct approval, local OCR co
 Continues #3852 LAB acceptance. Expose the existing stock approval action for a standalone OCR draft in the selected store. See [checkpoint](CHANGES/2026-11-13-standalone-ocr-draft-approval.md).
 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / independent payment history right. [Checkpoint](CHANGES/2026-11-13-manager-payment-read-independent.md). CI and LAB pending.
+
+### Διασταύρωση CI και αλλαγών του main — 13/11/2026
+
+- #3841 · Το workflow του main με σταθερές εκδόσεις PostgreSQL 16/18 πέρασε 5/5 στο [CI #9775 του #3838](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43374661572). Το #3841 είναι 23 commits πίσω και έχει κοινή αλλαγή με το main στο `inventory-reconciliation-source.js`. Εκκρεμούν έλεγχος συμβατότητας σε branch από main και CI με τις σταθερές εκδόσεις.
+- #3858 και #3827 · Η κοινή αλλαγή με το main περιορίζεται σε αυτό το μητρώο. Στο #3771 έχουν αλλάξει και τα τέσσερα αρχεία υλοποίησης QR/PIN.
+- #3860 · [CI #9826 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500865390) στο `060e096a`. Ο κοινός κανόνας παραμένει στο draft.
