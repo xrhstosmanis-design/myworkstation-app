@@ -163,3 +163,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ### Δοκιμαστική εφαρμογή του #3841 στο main — 13/11/2026
 
 Τα επτά αρχεία κώδικα και δοκιμών του #3841 εφαρμόστηκαν προσωρινά στο περιεχόμενο του main με μοναδική αντιστοίχιση ανά τμήμα diff. Διατηρήθηκαν οι νεότερες αλλαγές στο `inventory-reconciliation-source.js`. Πέρασαν 6/6 έλεγχοι σύνταξης JavaScript. Εκκρεμούν μεταγλώττιση JSX, συνδυασμένο CI και hosted LAB. Ο κλάδος του #3841 διατηρήθηκε στην τρέχουσα έκδοση.
+
+### Δοκιμαστικός κλάδος CI για #3841 — 13/11/2026
+
+Άνοιξε το [draft #3861](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3861) με commit `b4f57a3b` από το main `d8b278b2`. Επιβεβαιώθηκαν τα επτά αρχεία της αλλαγής και τα δύο checkpoints. Χρησιμοποιείται το workflow του main με τις σταθερές εκδόσεις PostgreSQL. Εκκρεμούν CI και LAB.
