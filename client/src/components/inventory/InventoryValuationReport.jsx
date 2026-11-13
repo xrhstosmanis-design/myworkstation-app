@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 const date = value => value ? new Intl.DateTimeFormat("el-GR", {
-  dateStyle: "short", timeStyle: "short", timeZone: "Europe/Athens",
+  dateStyle: "short", timeStyle: "short", hour12: false, timeZone: "Europe/Athens",
 }).format(new Date(value)) : "—";
 const money = value => value == null ? "Άγνωστο" : new Intl.NumberFormat("el-GR", {
   style: "currency", currency: "EUR",

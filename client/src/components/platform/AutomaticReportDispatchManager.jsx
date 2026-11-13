@@ -3,6 +3,37 @@ import React,{useEffect,useRef,useState} from 'react';
 const frequencies=[['DAILY','Ημερήσια'],['WEEKLY','Εβδομαδιαία'],['MONTHLY','Μηνιαία']];
 const stamp=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false}):'—';
 
+const deliveryStatus={
+ ACCEPTED:'Αποδεκτό από τον διακομιστή email', PENDING:'Σε αναμονή',
+ CLAIMED:'Σε αναμονή', ATTEMPTING:'Αποστολή σε εξέλιξη',
+ UNKNOWN:'Αβέβαιο αποτέλεσμα', RETRY_PENDING:'Αναμονή επόμενης προσπάθειας'
+};
+const deliveryFailure={
+ RECIPIENT_UNAVAILABLE:'Δεν βρέθηκε μοναδικός παραλήπτης',
+ RECIPIENT_LOOKUP_ERROR:'Αποτυχία αναζήτησης παραλήπτη',
+ SMTP_ERROR:'Σφάλμα αποστολής email',
+ SMTP_UNCONFIRMED:'Ο διακομιστής email δεν επιβεβαίωσε αποδοχή'
+};
+
+function DeliveryHistory({history}){
+ return <>
+  <h4>Ιστορικό αυτόματων email</h4>
+  <p>Η αποδοχή από τον διακομιστή email καταγράφεται εδώ. Η παράδοση στο γραμματοκιβώτιο παραμένει ανεπιβεβαίωτη.</p>
+  {history.length===0?<p>Δεν υπάρχουν καταγεγραμμένες αποστολές για αυτό το κατάστημα.</p>:
+   <div style={{overflowX:'auto'}}><table>
+    <thead><tr><th scope="col">Ώρα</th><th scope="col">Τύπος email</th><th scope="col">Κατάσταση</th><th scope="col">Αναγνωριστικό email</th></tr></thead>
+    <tbody>{history.map(row=><tr key={row.type+':'+row.id}>
+     <td>{stamp(row.at)}</td>
+     <td>{row.type==='INVOICE_STOCK_EXCLUSION'
+      ? ['Είδη τιμολογίου εκτός αποθήκης',row.invoiceNumber].filter(Boolean).join(' · ')
+      : [frequencies.find(([value])=>value===row.frequency)?.[1],'αναφορά ταμείου'].filter(Boolean).join(' ')}</td>
+     <td>{deliveryStatus[row.status]||'Άγνωστη κατάσταση'}{deliveryFailure[row.failure]&&<div>{deliveryFailure[row.failure]}</div>}</td>
+     <td style={{overflowWrap:'anywhere'}}>{row.messageId||'—'}</td>
+    </tr>)}</tbody>
+   </table></div>}
+ </>;
+}
+
 export default function AutomaticReportDispatchManager({company,store,request}){
  const scope=`${company.id}:${store.id}`,current=useRef(scope),sequence=useRef(0);
  current.current=scope;
@@ -11,7 +42,7 @@ export default function AutomaticReportDispatchManager({company,store,request}){
  const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/report-dispatch`;
  const load=async()=>{
   const id=++sequence.current,captured=scope;setBusy(true);setError('');
-  try{const result=await request(path);if(id===sequence.current&&captured===current.current){setData(result);if(result.policy?.allowedFrequencies?.length)setSelected(result.policy.allowedFrequencies)}}
+  try{const result=await request(path);if(id===sequence.current&&captured===current.current){setData({scope:captured,result});if(result.policy?.allowedFrequencies?.length)setSelected(result.policy.allowedFrequencies)}}
   catch(e){if(id===sequence.current&&captured===current.current)setError(e.message)}
   finally{if(id===sequence.current&&captured===current.current)setBusy(false)}
  };
@@ -24,7 +55,8 @@ export default function AutomaticReportDispatchManager({company,store,request}){
  };
  const token=(id,kind)=>tokens[`${id}:${kind}`]||'';
  const setToken=(id,kind,value)=>setTokens(old=>({...old,[`${id}:${kind}`]:value}));
- const policy=data?.policy,grant=data?.grant;
+ const storeData=data?.scope===scope?data.result:null;
+ const policy=storeData?.policy,grant=storeData?.grant;
  const authorize=(address,entry)=>mutate('/recipients/authorize',{
   email:address,...(entry?{recipientId:entry.recipient.recipientId}:{}),expectedRecipientVersion:entry?.recipient.version||0,
   expectedAuthorizationRevision:entry?.consent?.revision||0,expectedGrantRevision:grant?.revision||0,expectedPolicyRevision:policy?.revision||0,
@@ -34,11 +66,11 @@ export default function AutomaticReportDispatchManager({company,store,request}){
   <h3>Αυτόματες αποστολές</h3>
   <p>Κατάστημα: <strong>{store.name}</strong>. Οι αναφορές είναι προσωρινές· δεν αποτελούν οικονομική πιστοποίηση ή χρέωση εργαζομένου.</p>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
-  {!data&&!error&&<p>Ανάγνωση κατάστασης αποστολών…</p>}
-  {data?.schemaReady===false&&<p>Η προετοιμασία αυτόματων αποστολών δεν έχει ολοκληρωθεί. Οι χειροκίνητες αποστολές παραμένουν διαθέσιμες.</p>}
-  {data?.schemaReady===true&&<>
-   <p><strong>{data.activation?.enabled&&policy?.dispatchEnabled&&grant?.active&&grant.activationEpoch===data.activation.epoch?'Η αποστολή έχει ενεργοποιηθεί για επιλέξιμες περιόδους.':'Η αυτόματη αποστολή είναι κλειστή ή αναμένει ενεργοποίηση.'}</strong></p>
-   <p>Δεν αποστέλλονται παλιές ή ελλιπείς περίοδοι. Έναρξη επιτρεπόμενης περιόδου από {stamp(grant?.notBefore||data.activation?.notBefore)}. Οι αβέβαιες αποστολές δεν επαναλαμβάνονται αυτόματα.</p>
+  {!storeData&&!error&&<p>Ανάγνωση κατάστασης αποστολών…</p>}
+  {storeData?.schemaReady===false&&<p>Η προετοιμασία αυτόματων αποστολών δεν έχει ολοκληρωθεί. Οι χειροκίνητες αποστολές παραμένουν διαθέσιμες.</p>}
+  {storeData?.schemaReady===true&&<>
+   <p><strong>{storeData.activation?.enabled&&policy?.dispatchEnabled&&grant?.active&&grant.activationEpoch===storeData.activation.epoch?'Η αποστολή έχει ενεργοποιηθεί για επιλέξιμες περιόδους.':'Η αυτόματη αποστολή είναι κλειστή ή αναμένει ενεργοποίηση.'}</strong></p>
+   <p>Δεν αποστέλλονται παλιές ή ελλιπείς περίοδοι. Έναρξη επιτρεπόμενης περιόδου από {stamp(grant?.notBefore||storeData.activation?.notBefore)}. Οι αβέβαιες αποστολές δεν επαναλαμβάνονται αυτόματα.</p>
    <fieldset disabled={busy}>
     <legend>Περίοδοι και άδεια αποστολής</legend>
     {frequencies.map(([value,label])=><label key={value} style={{display:'inline-block',marginRight:16}}><input type="checkbox" checked={selected.includes(value)} onChange={e=>setSelected(old=>e.target.checked?[...old,value]:old.filter(x=>x!==value))}/>{label}</label>)}
@@ -51,14 +83,14 @@ export default function AutomaticReportDispatchManager({company,store,request}){
     <legend>Παραλήπτες αυτόματων αναφορών</legend>
     <p>Ως Super Admin καταχώρισε το email και πάτησε «Αποθήκευση και ενεργοποίηση». Με αυτή την ενέργεια εγκρίνεις την αποστολή των αναφορών αυτού του καταστήματος στον συγκεκριμένο παραλήπτη, για τις επιλεγμένες περιόδους. Δεν απαιτείται πρόσκληση ή κωδικός. Οι αυτόματες αναφορές χρησιμοποιούν την ίδια αποθηκευμένη λίστα παραληπτών.</p>
     <label>Νέο email<input aria-label="Νέο email αυτόματων αναφορών" type="email" maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label>
-    <button type="button" disabled={!email||!selected.length} onClick={()=>authorize(email,data.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase()))}>Αποθήκευση και ενεργοποίηση</button>
+    <button type="button" disabled={!email||!selected.length} onClick={()=>authorize(email,storeData.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase()))}>Αποθήκευση και ενεργοποίηση</button>
     <details><summary>Προαιρετική πρόσκληση παραλήπτη</summary>
-    <button type="button" disabled={!email||!selected.length} onClick={()=>{const existing=data.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase())?.recipient;mutate('/invitations',{email,expectedVersion:existing?.version||0,...(existing?{recipientId:existing.recipientId}:{}),allowedFrequencies:selected},r=>r.alreadyConfirmed?'Η υπάρχουσα έγκριση του παραλήπτη διατηρήθηκε. Δεν στάλθηκε νέα πρόσκληση.':'Η πρόσκληση στάλθηκε. Ο παραλήπτης επιβεβαιώνει από το email του.')}}>Αποθήκευση email</button>
+    <button type="button" disabled={!email||!selected.length} onClick={()=>{const existing=storeData.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase())?.recipient;mutate('/invitations',{email,expectedVersion:existing?.version||0,...(existing?{recipientId:existing.recipientId}:{}),allowedFrequencies:selected},r=>r.alreadyConfirmed?'Η υπάρχουσα έγκριση του παραλήπτη διατηρήθηκε. Δεν στάλθηκε νέα πρόσκληση.':'Η πρόσκληση στάλθηκε. Ο παραλήπτης επιβεβαιώνει από το email του.')}}>Αποθήκευση email</button>
     <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
-    <button type="button" disabled={!email||data.recipients?.filter(x=>!x.recipient.revokedAt).length>=5} onClick={()=>mutate('/recipients',{email,expectedVersion:0},'Ο παραλήπτης προστέθηκε χωρίς επιβεβαίωση.','PUT')}>Προσθήκη παραλήπτη</button>
+    <button type="button" disabled={!email||storeData.recipients?.filter(x=>!x.recipient.revokedAt).length>=5} onClick={()=>mutate('/recipients',{email,expectedVersion:0},'Ο παραλήπτης προστέθηκε χωρίς επιβεβαίωση.','PUT')}>Προσθήκη παραλήπτη</button>
     </details>
     </details>
-    {(data.recipients||[]).map(({recipient:r,consent,authorization,authorizationBasis})=><div key={r.recipientId} style={{padding:'14px 0',borderTop:'1px solid #e2e8f0'}}>
+    {(storeData.recipients||[]).map(({recipient:r,consent,authorization,authorizationBasis})=><div key={r.recipientId} style={{padding:'14px 0',borderTop:'1px solid #e2e8f0'}}>
      <strong>{r.email}</strong> · {r.revokedAt?'Ανακλημένος':authorizationBasis==='SUPER_ADMIN'||authorization?.basis==='SUPER_ADMIN'?(authorization?.basis==='SUPER_ADMIN'?<>Εγκεκριμένο από Super Admin · {stamp(authorization.authorizedAt)}</>:<>Χωρίς ενεργή έγκριση από Super Admin</>):<>{r.verifiedAt?'Επιβεβαιωμένο email':'Μη επιβεβαιωμένο email'} · {consent?.active?'Ενεργή συγκατάθεση':'Χωρίς ενεργή συγκατάθεση'}</>}
      {!r.revokedAt&&<>
       <button type="button" disabled={!selected.length} onClick={()=>authorize(r.email,{recipient:r,consent})}>Έγκριση και ενεργοποίηση</button>
@@ -81,6 +113,7 @@ export default function AutomaticReportDispatchManager({company,store,request}){
     </div>)}
    </fieldset>
   </>}
+  {storeData&&<DeliveryHistory history={storeData.history||[]}/>}
   <button type="button" disabled={busy} onClick={load}>Ανανέωση κατάστασης αποστολών</button>
  </section>;
 }

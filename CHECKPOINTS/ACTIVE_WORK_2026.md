@@ -11,11 +11,11 @@
 | 0 | POS shift close with invoice draft recovery | Current POS work | — | [Local candidate](CHANGES/2026-11-10-pos-shift-invoice-draft-guard.md), focused 19 PASS and isolated native PostgreSQL 24 PASS | CI and existing LAB validation |
 | 0 | INVOICE-OWNER-FINALIZATION-01 (#28) | Εγκεκριμένη υλοποίηση / παράλληλος πιλότος Claude | #2705, #3715, #3725, #3726, #3727, #3728, #3729 | [Υλοποίηση #3727](CHANGES/2026-11-08-invoice-owner-posting.md), 81 τοπικοί έλεγχοι. Χωριστός πιλότος Claude | 5.959 δοκιμές server πέρασαν. Διορθώθηκε το fixture του καταλόγου. Νέο CI και LAB πριν από πραγματικό παραστατικό; Claude preview lineAudit #3731 merged (CI PASS); BackOffice lineAudit UI #3737 merged (CI PASS, LAB NOT TESTED); Claude workflow scope fix #3741 MERGED (CI PASS); [server cancel step](CHANGES/2026-11-08-invoice-owner-finalization-cancel.md) Claude native-DB 11/11 on initial commit; coordinator added terminal CANCELLED guards and tests; #3743 exact-head CI #9501 PASS; LAB NOT TESTED; BackOffice owner cancel dialog UI #3746 Draft, exact-head CI/LAB pending |
 | 0 | INVOICE-OWNER-FINALIZATION-01 / Two-page assistant reopen | Retained #28 owner | #3727 | [Isolated test 2/2 PASS](CHANGES/2026-11-08-invoice-assistant-reopen-two-page-isolated.md) | Hosted LAB pending |
-| 0 | INVOICE-OWNER-FINALIZATION-01 / BackOffice multi-photo intake | Retained #28 owner | #3775 | [Dispatch correction](CHANGES/2026-11-09-backoffice-multi-photo-dispatch-fix.md) | Hosted selector and same draft reopen passed; second photo missing in Assistant; loader deployed; hosted replay exposed legacy create interceptor; [#3790 hosted: 2/2 read, draft creation rejected](CHANGES/2026-11-10-backoffice-invoice-reviewed-source.md); [#3804 hosted: draft and return verified, second photo missing](CHANGES/2026-11-10-backoffice-invoice-page-transport.md); [#3807 hosted LAB PASS: both originals after return](CHANGES/2026-11-10-backoffice-invoice-two-page-lab-pass.md); [repeated-code price correction](CHANGES/2026-11-10-invoice-repeated-code-line-prices.md) awaiting CI and LAB |
+| 0 | INVOICE-OWNER-FINALIZATION-01 / BackOffice multi-photo intake | Retained #28 owner | #3775 | [Dispatch correction](CHANGES/2026-11-09-backoffice-multi-photo-dispatch-fix.md) | Hosted selector and same draft reopen passed; second photo missing in Assistant; loader deployed; hosted replay exposed legacy create interceptor; [#3790 hosted: 2/2 read, draft creation rejected](CHANGES/2026-11-10-backoffice-invoice-reviewed-source.md); [#3804 hosted: draft and return verified, second photo missing](CHANGES/2026-11-10-backoffice-invoice-page-transport.md); [#3807 hosted LAB PASS: both originals after return](CHANGES/2026-11-10-backoffice-invoice-two-page-lab-pass.md); [repeated-code price correction](CHANGES/2026-11-10-invoice-repeated-code-line-prices.md) [LAB preview PASS](CHANGES/2026-11-12-invoice-repeated-code-lab-pass.md) |
 | 1 | AUTO-REPORT-OBSERVABILITY-01 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #2704 | Preview verified; email delivery NOT TESTED | Verify recipients and controlled send |
 | 1 | OCR-CONFIDENCE-01 | υπάρχουσα ανάθεση — επιβεβαίωση tracker | #3706, #3709 | Code merged; hosted LAB NOT TESTED | LAB confidence and multipage checks |
 | 2 | INVOICE-HEADER-LATENCY / σύγκρουση ποσών σε φωτογραφίες | /root | #3688, #3732, #3733 | Hosted LAB PASS for payable order and review prompt | Physical POS, real-photo repeatability, invoice number and issuer VAT remain open |
-| 2 | INVOICE-HEADER-LATENCY / μοναδικό ανεπιβεβαίωτο πληρωτέο | /root | #3688, #3773, #3776 | Local safeguard; full CI pending | Fresh LAB and real-photo retest |
+| 2 | INVOICE-HEADER-LATENCY / μοναδικό ανεπιβεβαίωτο πληρωτέο | /root | #3688, #3777, #3787 | VAT table payable check implemented and tested locally | Awaiting CI and real-photo LAB retest |
 | 2 | INVOICE-HEADER-LATENCY / αριθμός από πολλαπλές φωτογραφίες | /root | #3688, #3739, #3740 | Hosted LAB PASS for number agreement and conflict review | Single candidate proof, real-photo accuracy, issuer VAT and physical POS remain open |
 | 2 | INVOICE-HEADER-LATENCY / ΑΦΜ προμηθευτή από φωτογραφίες | /root | #3688, #3748, #3750 | Hosted LAB PASS for VAT agreement and conflict review | Lone candidate, real photos and physical POS remain open |
 | 2 | INVOICE-HEADER-LATENCY / ΑΦΜ εκδότη και παραλήπτη | /root | #3688, #3755, #3756 | Hosted LAB PASS for same-VAT review and distinct-VAT control | Unknown or unrelated VAT misread, real photos and physical POS remain open |
@@ -31,7 +31,7 @@
 | — | INVENTORY-CATALOG-XLSX-01 | /root | #3798, #3801 | [Ανάθεση](CHANGES/2026-11-10-inventory-catalog-xlsx.md) · Υλοποίηση σε branch, LAB NOT TESTED | CI και δοκιμή XLSX όλων/επιλεγμένων στο υπάρχον LAB |
 | — | STORE-CATALOG-APPEND-XLSX | /root | #3811 | Implementation candidate · LAB NOT TESTED | Verify in CI and existing LAB |
 | — | OWNER-SHIFT-TIME-FILTER | /root | — | Assigned · LAB NOT TESTED | Add optional hours to the date range and verify in LAB |
-| 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | ASSIGNED · read-only baseline recorded | [Claim](CHANGES/2026-11-12-email-delivery-history-claim.md) · SMTP evidence and history |
+| 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
 
 ## Κανόνας ενημέρωσης
 
@@ -75,6 +75,8 @@ Assigned to `fix/inventory-product-create-events`. Central Events shows historic
 
 ## MYDATA-DRAFT-PREFILL
 
+Create missing supplier from verified myDATA invoice fields. [Checkpoint](CHANGES/mydata-draft-create-supplier.md).
+
 Show the XML issuer name on unlinked myDATA drafts. [Checkpoint](CHANGES/mydata-draft-issuer-name.md).
 
 Unconfirmed packaging remains in the draft for correction. [Checkpoint](CHANGES/mydata-unconfirmed-packaging.md). CI and production validation pending.
@@ -93,4 +95,8 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 
 12/11/2026 — Inventory Archive: start product merge directly from duplicate results. See CHECKPOINTS/CHANGES/2026-11-12-inventory-merge-duplicates.md.
 
-12/11/2026 — Consolidated valuation across selected stocktakes for one store. See CHECKPOINTS/CHANGES/2026-11-12-inventory-valuation.md.
+12/11/2026 — Πληρωμή POS με υπάρχον παραστατικό myDATA. CI και LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-12-pos-pay-existing-mydata.md).
+
+12/11/2026 — Export active efood offers per store using the in-store euro discount. See CHECKPOINTS/CHANGES/2026-11-12-efood-offer-export.md.
+
+13/11/2026 — Consolidated inventory valuation: report across selected stocktakes with 24-hour Greek timestamps. See CHECKPOINTS/CHANGES/2026-11-12-inventory-valuation.md.

@@ -39,6 +39,16 @@ export function recoverVatSummaryInvoiceTotal(rawText){
   return 0;
 }
 
+// The VAT table may serialize column headings first, followed by a single
+// row. Require the printed gross to agree with the explicit payable.
+const tableMoney=String.raw`((?:\d{1,3}(?:\.\d{3})+|\d+)[,.]\d{2})`;
+const vatHeading=String.raw`Φ\.? ?Π\.? ?Α\.?`;
+const vatTableRow=new RegExp(
+  String.raw`(?:^| )ΚΑΘΑΡΗ ΑΞΙΑ ${vatHeading} ΑΞΙΑ ${vatHeading} ΣΥΝΟΛ\.? ΑΞΙΑ `+
+  String.raw`${tableMoney} (\d{1,2}[,.]\d{2}) ${tableMoney} ${tableMoney}(?= |$)`,
+  "g"
+);
+
 // A receipt printed below an invoice can have a different collected amount.
 // Trust an invoice PAYABLE only when the preceding invoice footer independently
 // shows NET + VAT = PAYABLE. Never infer an amount from the receipt section.
@@ -55,6 +65,12 @@ export function recoverBalancedInvoicePayable(rawText){
     const net=[...prefix.matchAll(/(?:Κ ΑΞΙΑ|ΚΑΘΑΡΗ ΑΞΙΑ|NET VALUE|NET AMOUNT)\s*:?[ ]*((?:\d{1,3}(?:[. ]\d{3})+|\d+)[,.]\d{2})/g)].at(-1);
     const vat=[...prefix.matchAll(/(?:ΑΞΙΑ ΦΠΑ|ΦΠΑ|VAT)\s*:?[ ]*((?:\d{1,3}(?:[. ]\d{3})+|\d+)[,.]\d{2})/g)].at(-1);
     if(net&&vat&&candidates.length>=2&&gross>0&&Math.abs(money(net[1])+money(vat[1])-gross)<=.011)return gross;
+    const rows=[...prefix.matchAll(vatTableRow)];
+    if(rows.length===1){
+      const [,netText,rateText,vatText,grossText]=rows[0];
+      const netAmount=money(netText),rate=money(rateText),vatAmount=money(vatText);
+      if(gross>0&&money(grossText)===gross&&Math.abs(netAmount+vatAmount-gross)<=.011&&Math.abs(netAmount*rate/100-vatAmount)<=.011)return gross;
+    }
   }
   return 0;
 }

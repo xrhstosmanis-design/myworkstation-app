@@ -31,6 +31,11 @@ export async function findMyDataPurchase(db,{companyId,storeId,supplierId,suppli
   return row;
 }
 
+export async function hasMyDataPurchaseLines(db, match) {
+  const [row] = await db.$queryRaw`SELECT EXISTS (SELECT 1 FROM "PurchaseOrderLine" WHERE "orderId"=${match.orderId}) AS "hasLines"`;
+  return row?.hasLines === true;
+}
+
 // Payment is made by the existing POS payment route. This helper only links its receipt.
 export async function attachMyDataPosReceipt(prisma,identity,pages,payment,user){
   await ensureInvoiceCommonDraftSchema(prisma);
@@ -39,6 +44,9 @@ export async function attachMyDataPosReceipt(prisma,identity,pages,payment,user)
     const match=await findMyDataPurchase(tx,identity);if(!match)throw fail("Η αγορά myDATA άλλαξε πριν από τη σύνδεση. Η υπάρχουσα πληρωμή διατηρείται για έλεγχο.");
     const orders=await tx.$queryRaw`SELECT "status" FROM "PurchaseOrder" WHERE "id"=${match.orderId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} FOR UPDATE`;
     const documents=await tx.$queryRaw`SELECT "status","paymentTransactionId","settlementMode","totalGross" FROM "PurchaseDocument" WHERE "id"=${match.documentId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} FOR UPDATE`;
+    if (!pages.length && (!payment || !await hasMyDataPurchaseLines(tx, match))) {
+      throw fail("Ανέβασε φωτογραφία ή PDF του τιμολογίου για να συνεχίσεις.");
+    }
     if(!orders[0]||!documents[0]||!["DRAFT","APPROVED"].includes(documents[0].status)||!["NEW","FINAL","INVOICED"].includes(orders[0].status)||Math.abs(Number(documents[0].totalGross)-Number(identity.totalGross))>.050001)throw fail("Η αγορά άλλαξε. Απαιτείται ανανέωση χωρίς νέα πληρωμή.");
     if(payment){
       const rows=await tx.$queryRaw`SELECT t.*,s."taxId" AS "supplierTaxId" FROM "StoreTransaction" t JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId" WHERE t."id"=${payment.id} AND t."companyId"=${identity.companyId} AND t."storeId"=${identity.storeId} FOR UPDATE OF t`;

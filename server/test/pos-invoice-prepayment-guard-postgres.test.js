@@ -1,3 +1,4 @@
+import {hasMyDataPurchaseLines} from '../src/lib/mydata-pos-receipt.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,7 +42,7 @@ function actualPrecheck(f,{myDataPurchase=null,observeGuards=()=>{}}={}){
   cleanTaxId:v=>String(v||'').replace(/\D/g,''),normalizeIntakeDate:v=>v==null?null:String(v).slice(0,10),intakeNumber:Number,crypto,
   ensureV244IntakeSchema:noop,ensureFastHandoffSchema:noop,ensureInvoiceCommonDraftSchema:noop,assertNoUnresolvedInbound:noop,
   unpaidMyDataHeaderReview:forbidden,prepareSelectedInbox:forbidden,assertExpectedPendingInvoice:forbidden,invoicePageManifest:forbidden,
-  findMyDataPurchase:async()=>myDataPurchase,findInvoicePayment,assertReusableInvoicePayment,
+  findMyDataPurchase:async()=>myDataPurchase,hasMyDataPurchaseLines,findInvoicePayment,assertReusableInvoicePayment,
   findCompetingPosDraftReview:async(...args)=>{observeGuards('draft');return findCompetingPosDraftReview(...args)},
   findExistingInvoicePaymentReview:async(...args)=>{observeGuards('payment');return findExistingInvoicePaymentReview(...args)},
   findUnlinkedMyDataOriginal:async()=>null};
@@ -103,9 +104,9 @@ test('native stale prechecks and concurrent direct payment posts with different 
 test('native first unpaid canonical myDATA keeps its earlier precheck return and is not evidence of an existing payment',native,async()=>{
  const f=await fixture({pos:false,mydata:true,payment:false});try{
   const before=await snapshot(f),number='21-ΤΔΑ 6836',observed=[];
-  const purchase={documentId:'d-mydata',purchaseNumber:number,status:'DRAFT',settlementMode:'CREDIT',paymentTransactionId:null,resultJson:{},rawPayload:{}};
+  const purchase={documentId:'d-mydata',orderId:'mydata',purchaseNumber:number,status:'DRAFT',settlementMode:'CREDIT',paymentTransactionId:null,resultJson:{},rawPayload:{}};
   const precheck=await actualPrecheck(f,{myDataPurchase:purchase,observeGuards:x=>observed.push(x)})({...identity,documentNumber:number});
-  assert.equal(precheck.status,200);assert.equal(precheck.body.myDataMatched,true);assert.equal(precheck.body.paymentReused,false);assert.equal(precheck.body.paymentTransactionId,null);
+  assert.equal(precheck.status,200);assert.equal(precheck.body.myDataMatched,true);assert.equal(precheck.body.hasProductLines,false);assert.equal(precheck.body.paymentReused,false);assert.equal(precheck.body.paymentTransactionId,null);
   assert.deepEqual(observed,[],'existing canonical first-payment branch precedes uncertain duplicate reviews');assert.deepEqual(await snapshot(f),before);
   const outcome=await f.db.$transaction(actualPaymentClosure(f,{supplierId:'sup',invoiceDocumentNumber:number,amount:3.39}));
   assert.equal(outcome.review,undefined);assert.equal(outcome.rows.length,1,'an unpaid draft alone never blocks the first real payment');
