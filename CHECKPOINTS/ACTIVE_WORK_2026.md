@@ -52,6 +52,11 @@
 - Email και απόδοση · #3827: [CI #9735 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43104586861) στο `9fd6067e`, η εγγραφή του branch αναφέρει ακόμη CI PENDING. Παραμένει μη mergeable. Εκκρεμούν οι μετρήσεις LAB και το τεκμήριο παραλαβής email.
 - Τιμολόγια και POS · Ο κλάδος του #3844 έχει το ενεργό μητρώο. Εκκρεμεί εγγραφή του ελέγχου QR POS με τεκμήριο LAB.
 
+### Διασταύρωση νεότερων τεκμηρίων — 13/11/2026
+
+- Τιμολόγια · Το [#3853](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3853) είναι merged. [CI #9805 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43485507790) στο `d815bee1`. Η διαγραφή του κωδικού προμηθευτή κατά την αποθήκευση barcode τεκμηριώνεται στο [checkpoint](CHANGES/2026-11-13-invoice-clear-supplier-code.md). Για τα τρία είδη χρειάζεται έλεγχος της πραγματικής αντιστοίχισης και του αποθηκευμένου barcode ανά γραμμή. Η συγχώνευση του κώδικα δεν τεκμηριώνει τις τρεις καταχωρίσεις.
+- Συντονισμός · [CI #9824 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500322685) στο `98ae7b95`. Ο έλεγχος ταξινόμησης και οι δύο έλεγχοι Windows πέρασαν. Τα `build-and-test` και `wholesale-isolated-lab` παραλείφθηκαν. Η καταγραφή στο main και οι ενημερώσεις από τις υπόλοιπες σελίδες παραμένουν προς επιβεβαίωση.
+
 ## Κανόνας ενημέρωσης
 
 10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
