@@ -460,8 +460,8 @@ router.get("/promotions/efood-xlsx", requireCompanyModule("INVENTORY"), async (r
 
     const rows = await prisma.$queryRaw`
       SELECT p.sku, p.name, p."efoodPrice", COALESCE(sp."salePrice", p."salePrice") AS "storePrice",
-             pr.name AS "promotionName", pr."offerMode", pr."offerPrice", pr."discountPercent",
-             pr."discountAmount", pr."validFrom", pr."validUntil"
+             pr.name AS "promotionName", pr."offerMode"::text, pr."offerPrice", pr."discountPercent",
+             pr."discountAmount", pr."validFrom", pr."validUntil", p."efoodEnabled"
       FROM "PriceCatalogPromotionStore" ps
       JOIN "PriceCatalogPromotion" pr ON pr.id = ps."promotionId" AND pr."companyId" = ps."companyId"
       JOIN "Product" p ON p.id = pr."productId" AND p."companyId" = pr."companyId"
@@ -469,8 +469,23 @@ router.get("/promotions/efood-xlsx", requireCompanyModule("INVENTORY"), async (r
       WHERE ps."companyId" = ${user.companyId} AND ps."storeId" = ${storeId}
         AND pr.active AND pr."promotionType" = 'LEAFLET'
         AND pr."validFrom" <= NOW() AND (pr."validUntil" IS NULL OR pr."validUntil" >= NOW())
-        AND p.active AND sp.active AND p."efoodEnabled"
-      ORDER BY p.name, pr."validFrom", pr.id
+        AND p.active AND sp.active
+      UNION ALL
+      SELECT p.sku, p.name, p."efoodPrice", COALESCE(sp."salePrice", p."salePrice") AS "storePrice",
+             pr.name AS "promotionName",
+             CASE pr."promotionType" WHEN 'PERCENT' THEN 'DISCOUNT_PERCENT' ELSE 'FIXED_PRICE' END AS "offerMode",
+             pr."fixedPrice" AS "offerPrice", pr."percentOff" AS "discountPercent",
+             NULL AS "discountAmount", pr."startsAt" AS "validFrom", pr."endsAt" AS "validUntil",
+             p."efoodEnabled"
+      FROM "PromotionStore" ps
+      JOIN "Promotion" pr ON pr.id = ps."promotionId"
+      JOIN "Product" p ON p.id = pr."productId" AND p."companyId" = pr."companyId"
+      JOIN "StoreProduct" sp ON sp."productId" = p.id AND sp."storeId" = ps."storeId"
+      WHERE pr."companyId" = ${user.companyId} AND ps."storeId" = ${storeId}
+        AND pr.active AND pr."promotionType" IN ('PERCENT', 'FIXED_PRICE')
+        AND pr."startsAt" <= NOW() AND (pr."endsAt" IS NULL OR pr."endsAt" >= NOW())
+        AND p.active AND sp.active
+      ORDER BY name, "validFrom", sku
     `;
     const headers = ["SKU","Είδος","Προσφορά","Τιμή καταστήματος","Προσφορά καταστήματος",
       "Τιμή efood","Έκπτωση ανά τεμάχιο","Τελική τιμή efood","Από","Έως"];
@@ -478,6 +493,10 @@ router.get("/promotions/efood-xlsx", requireCompanyModule("INVENTORY"), async (r
     const exportRows = [];
     const skipped = [];
     for (const row of rows) {
+      if (!row.efoodEnabled) {
+        skipped.push([row.sku,row.name,"Το είδος δεν είναι ενεργό στο efood"]);
+        continue;
+      }
       const prices = efoodLeafletPrices(row);
       if (!prices) {
         skipped.push([row.sku,row.name,"Ελλιπής τιμή ή μη έγκυρη έκπτωση για efood"]);
