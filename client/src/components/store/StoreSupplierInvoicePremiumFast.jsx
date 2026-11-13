@@ -203,12 +203,13 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
         duplicateCheck=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:proposal.canonicalDocumentNumber,documentDate:submittedDocumentDate,totalGross:num(amount),dataUrl:fileDataUrl})});
         if(duplicateCheck?.myDataHeaderReviewRequired||!(duplicateCheck?.myDataMatched||duplicateCheck?.myDataHeaderMatched)||duplicateCheck?.myDataHeaderMatched&&duplicateCheck.myDataMark!==proposal.myDataMark)throw new Error("Η αντιστοίχιση άλλαξε. Δεν ξεκίνησε νέα πληρωμή· έλεγξε ξανά το πρωτότυπο.");
       }
-      const useExistingMyData = !pages.length;
+      const hasSourceUpload = pages.length > 0 && !selectedInboxId;
+      const useExistingMyData = mode === "PAID" && Boolean(duplicateCheck?.myDataMatched && duplicateCheck.hasProductLines) && !hasSourceUpload;
+      if ((!pages.length && !useExistingMyData) || (mode === "PAID" && selectedInboxId && !useExistingMyData)) {
+        setStatus("Ανέβασε φωτογραφία ή PDF του τιμολογίου για να συνεχίσεις.");
+        return;
+      }
       if (useExistingMyData) {
-        if (!duplicateCheck?.myDataMatched || !duplicateCheck.hasProductLines) {
-          setStatus("Ανέβασε φωτογραφία ή PDF του τιμολογίου για να συνεχίσεις.");
-          return;
-        }
         if (!duplicateCheck.paymentReused && !window.confirm(`Χρήση του τιμολογίου myDATA ${duplicateCheck.canonicalDocumentNumber} ως παραστατικό για την πληρωμή ${num(amount).toFixed(2)} €;`)) return;
       }
       if(duplicateCheck?.paymentReused&&!window.confirm(`Το τιμολόγιο ${documentNumber.trim()} έχει ήδη πληρωθεί (${num(amount).toFixed(2)} €). Δεν θα καταχωριστεί ξανά πληρωμή ή πίστωση.\n\nΝα συνεχίσουμε με σύνδεση της υπάρχουσας πληρωμής;`)){
@@ -221,7 +222,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
         if(!paymentTransactionId){
           stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";
           setStatus("Καταχώριση πληρωμής στη βάρδια…");
-          const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,invoiceDocumentNumber:submittedDocumentNumber,description:`Τιμολόγιο ${documentNumber.trim()} — Γρήγορη καταχώριση POS`,evidenceMode:useExistingMyData?"DOCUMENT":"NO_DOCUMENT",purchaseDocumentId:useExistingMyData?duplicateCheck.purchaseDocumentId:undefined,existingMyDataDate:useExistingMyData?submittedDocumentDate:undefined,paymentSource,paymentMethod,idempotencyKey:key,attachment:file?{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}:null})});
+          const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,invoiceDocumentNumber:submittedDocumentNumber,description:`Τιμολόγιο ${documentNumber.trim()} — Γρήγορη καταχώριση POS`,evidenceMode:useExistingMyData?"DOCUMENT":"NO_DOCUMENT",purchaseDocumentId:useExistingMyData?duplicateCheck.purchaseDocumentId:undefined,existingMyDataDate:useExistingMyData?submittedDocumentDate:undefined,paymentSource,paymentMethod,idempotencyKey:key,attachment:!useExistingMyData&&file?{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}:null})});
           paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
           if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
         }
@@ -229,7 +230,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       recordedPaymentId=effectiveMode==="PAID"?paymentTransactionId:null;
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=attempt?.handoff||await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:selectedInboxId,existingMyDataDocumentId:useExistingMyData?duplicateCheck.purchaseDocumentId:undefined,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
+      const handoff=attempt?.handoff||await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:useExistingMyData?undefined:selectedInboxId,existingMyDataDocumentId:useExistingMyData?duplicateCheck.purchaseDocumentId:undefined,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:(useExistingMyData?[]:pages).map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       if(directCredit){
         attempt.handoff=handoff;
         stage="ΑΡΝΗΤΙΚΗ ΠΛΗΡΩΜΗ ΠΙΣΤΩΤΙΚΟΥ";
