@@ -116,6 +116,8 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 
 Continues #3645 in draft #3852. The audit resolves direct approval, local OCR confirmation and credit postings to the purchase document in the selected company and store. Purchase orders resolve through their own source document. Local reconciliation tests passed 18/18 and isolated SQL join checks passed 9/9. Native CI and hosted LAB acceptance are pending. Physical receipt timestamps and verified originals remain open.
 
-## 2026-11-13 — Standalone local OCR draft approval
+13/11/2026 — Διόρθωση εκκαθάρισης κωδικού γραμμής τιμολογίου κατά την αποθήκευση barcode. [Checkpoint](CHANGES/2026-11-13-invoice-clear-supplier-code.md).
 
+
+## 2026-11-13 — Standalone local OCR draft approval
 Continues #3852 LAB acceptance. Expose the existing stock approval action for a standalone OCR draft in the selected store. See [checkpoint](CHANGES/2026-11-13-standalone-ocr-draft-approval.md).
