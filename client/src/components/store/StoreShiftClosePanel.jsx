@@ -8,7 +8,7 @@ import "../cloud/cash-control.css";
 const n=v=>Number(String(v??0).replace(",","."))||0;
 const money=v=>n(v).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 
-export default function StoreShiftClosePanel({api,store,onClosed,backoffice=false}){
+export default function StoreShiftClosePanel({api,store,onClosed,backoffice=false,closeOnly=false}){
  const [cardCode,setCardCode]=useState(""),[pin,setPin]=useState(""),[closeCredentialMethod,setCloseCredentialMethod]=useState("CARD"),[cameraOpen,setCameraOpen]=useState(false);
  const [data,setData]=useState(null),[closePolicy,setClosePolicy]=useState({showExpectedAmounts:false,notifyShortage:true,showShortageAmount:true,notifySurplus:false}),[countConfirmed,setCountConfirmed]=useState(false);
  const [form,setForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"",expenses:"0",drawer:"",custody:"",coins:"",safe:"",note:""});
@@ -16,8 +16,9 @@ export default function StoreShiftClosePanel({api,store,onClosed,backoffice=fals
  const [showPendingUpload,setShowPendingUpload]=useState(false);
  const clearCredential=()=>{setCardCode("");setPin("")};
  const changeCredentialMethod=method=>{clearCredential();setCameraOpen(false);setCloseCredentialMethod(method)};
- const load=async()=>{setLoading(true);setData(null);setError("");setCountConfirmed(false);clearCredential();setCameraOpen(false);setCloseCredentialMethod("CARD");setShortageDecision(null);setShowPendingUpload(false);try{const [overview,accessData]=await Promise.all([api(`/api/cash/stores/${store.id}/overview`),backoffice?Promise.resolve({shiftClosePolicy:{showExpectedAmounts:true}}):api(`/api/store-pos/stores/${store.id}/access`).catch(()=>({}))]);setClosePolicy(policy=>({...policy,...(accessData?.shiftClosePolicy||{})}));if(overview.openSession){
-  const ledger=await api(`/api/transactions/stores/${store.id}/overview`);
+ const overviewPath=`/api/cash/stores/${store.id}/${closeOnly?"close-context":"overview"}`;
+ const load=async()=>{setLoading(true);setData(null);setError("");setCountConfirmed(false);clearCredential();setCameraOpen(false);setCloseCredentialMethod("CARD");setShortageDecision(null);setShowPendingUpload(false);try{const [overview,accessData]=await Promise.all([api(overviewPath),backoffice?Promise.resolve({shiftClosePolicy:{showExpectedAmounts:true}}):api(`/api/store-pos/stores/${store.id}/access`).catch(()=>({}))]);setClosePolicy(policy=>({...policy,...(accessData?.shiftClosePolicy||{})}));if(overview.openSession){
+  const ledger=closeOnly?overview:await api(`/api/transactions/stores/${store.id}/overview`);
   const summary=ledger.summaryBySession?.[overview.openSession.id];
   if(!summary||![summary.cashSales,summary.cardSales,summary.expensesTotal].every(value=>typeof value==="number"&&Number.isFinite(value))){
    throw new Error("Δεν φορτώθηκαν τα σύνολα της επιλεγμένης βάρδιας. Πάτησε Ανανέωση πριν συνεχίσεις.");
@@ -29,7 +30,7 @@ export default function StoreShiftClosePanel({api,store,onClosed,backoffice=fals
  const credentialReady=backoffice||(closeCredentialMethod==="PIN"?/^\d{4,8}$/.test(pin):Boolean(cardCode.trim()));
  const credentialPayload=()=>backoffice?{}:closeCredentialMethod==="PIN"?{closeCredentialMethod:"PIN",pin}:{closeCredentialMethod:"CARD",cardCode};
  const pending=data?.pendingInvoices;
- const refreshPending=async()=>{clearCredential();const overview=await api(`/api/cash/stores/${store.id}/overview`);if(overview.openSession?.id!==data?.openSession?.id){await load();return overview}setData(overview);return overview};
+ const refreshPending=async()=>{clearCredential();const overview=await api(overviewPath);if(overview.openSession?.id!==data?.openSession?.id){await load();return overview}setData(overview);return overview};
  const handlePendingError=async err=>{if(err.code!=="MISSING_INVOICES_CONFIRMATION_REQUIRED")return false;clearCredential();try{await refreshPending();setError("Οι εκκρεμότητες τιμολογίων ενημερώθηκαν. Σύνδεσε τα εκκρεμή παραστατικά και δώσε ξανά κάρτα ή PIN.")}catch(refreshError){setError(refreshError.message)}return true};
  const set=(key,value)=>setForm(f=>({...f,[key]:value}));
  const finish=closed=>{clearCredential();if(backoffice){onClosed?.();void load();return;}const variance=n(closed?.variance);if(variance>.009&&closePolicy.notifySurplus)window.alert(closePolicy.showShortageAmount?`ΠΛΕΟΝΑΣΜΑ ΒΑΡΔΙΑΣ\n\nΚαταγράφηκε πλεόνασμα ${money(variance)}.`:"Καταγράφηκε πλεόνασμα βάρδιας.");onClosed?.();setTimeout(()=>{const exit=[...document.querySelectorAll("button")].find(button=>/^Έξοδος$/i.test(String(button.textContent||"").trim()));exit?.click()},0)};

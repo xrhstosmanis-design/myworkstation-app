@@ -703,3 +703,27 @@ test('personal inventory opens the existing store-scoped new-product card withou
   assert.ok(stockInput);assert.equal(stockInput.disabled,true,'opening stock is always disabled in inventory entry');
  }finally{await m.close()}
 });
+
+test('close-only staff can open the counted shift form without reading sales history',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['shifts.close']}]};
+  if(path==='/api/backoffice-staff/shifts/stores/a1/terminals')return {storeId:'a1',terminals:['POS2']};
+  assert.equal(path,'/api/cash/stores/a1/close-context');
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  assert.equal(options.headers['x-mws-terminal-pos'],'POS2');
+  return {openSession:{id:'shift',openingOperational:10,openingSafe:0},summaryBySession:{shift:{cashSales:23,cardSales:31,expensesTotal:2}}};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Κατάστημα"]');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  assert.equal(button('Πωλήσεις και βάρδιες'),undefined);
+  await m.act(async()=>button('Κλείσιμο βάρδιας').click());
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Ταμείο"]');s.value='POS2';s.dispatchEvent(new Event('change',{bubbles:true}));});
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  assert.match(document.body.textContent,/Κλείσιμο & Παράδοση βάρδιας/);
+  assert.ok([...document.querySelectorAll('input')].some(el=>el.readOnly&&el.value==='23'));
+  assert.ok(calls.every(x=>!x.options.method&&!x.path.includes('/transactions/')));
+ }finally{await m.close()}
+});
