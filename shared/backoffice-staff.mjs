@@ -18,7 +18,7 @@ export const staffPermissionSections=Object.freeze([
     {key:'shifts.close',label:'Κλείσιμο βάρδιας με καταμέτρηση',description:'Κλείνει βάρδια του επιλεγμένου ταμείου με πραγματική καταμέτρηση, EFTPOS και καταγραφή διαφορών. Δεν επιτρέπει διοικητικό κλείσιμο χωρίς καταμέτρηση.'}
   ]},
   {key:'payments',label:'Πληρωμές',actions:[
-    {key:'payments.read',label:'Προβολή στοιχείων πληρωμών',description:'Βλέπει προμηθευτές και διαθέσιμα παραστατικά του επιλεγμένου καταστήματος.',requires:['sales.read']},
+    {key:'payments.read',label:'Προβολή στοιχείων πληρωμών',description:'Βλέπει ιστορικό τραπεζικών μεταφορών, προμηθευτές και διαθέσιμα παραστατικά του επιλεγμένου καταστήματος.'},
     {key:'payments.supplier',label:'Καταχώριση πληρωμής προμηθευτή',description:'Πληρωμή ανοικτών τιμολογίων ή έναντι με αποδεικτικό ή ρητή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.expense',label:'Καταχώριση εξόδου',description:'Καταχωρίζει θετικό έξοδο με αιτιολογία και παραστατικό ή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.cash',label:'Πληρωμή από μετρητά βάρδιας',description:'Επιτρέπει αφαίρεση της πληρωμής από την ανοικτή βάρδια του επιλεγμένου ταμείου.',requires:['payments.read','sales.read']}
