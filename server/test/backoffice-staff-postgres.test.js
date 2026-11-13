@@ -382,7 +382,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
         {id:'transfer-a',occurredAt:'2026-11-13T12:00:00.000Z',amount:12.4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'PENDING_REVIEW',documentNumbers:['INV-A']},
         {id:'transfer-c',occurredAt:'2026-11-13T11:00:00.000Z',amount:4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'CANCELLED',documentNumbers:[]}
       ]);
-      assert.equal((await request(path,{token,storeId:'a1'})).status,403);
+      assert.equal((await request(path,{token,storeId:'a1'})).status,401);
       assert.equal((await request('/api/backoffice-staff/payments/stores/a2',{...options,storeId:'a2'})).status,403);
       beforeTransferRead=()=>db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["sales.read"]'::jsonb WHERE "userId"=${manager.id}`;
       assert.equal((await request(path,options)).status,403);
