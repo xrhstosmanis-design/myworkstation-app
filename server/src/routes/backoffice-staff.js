@@ -14,6 +14,43 @@ const failure=(res,error)=>{
   const safe=error?.code?.startsWith('STAFF_')||['MODULE_DISABLED','LICENSE_INACTIVE'].includes(error?.code);
   return res.status(safe?error.status||403:503).json({error:safe?error.message:'Η λειτουργία δεν είναι διαθέσιμη. Ανανέωσε πριν επαναλάβεις ενέργεια.',code:safe?error.code:'STAFF_UNAVAILABLE'});
 };
+async function readRecentBankTransfers(db,companyId,storeId){
+  try{
+    const rows=await db.$queryRaw`
+      SELECT t."id",t."occurredAt",t."amount",t."supplierName",t."type",
+        CASE WHEN t."reversedAt" IS NOT NULL THEN 'CANCELLED'
+          ELSE COALESCE(s."status",e."status") END AS "status",
+        ARRAY(
+          SELECT DISTINCT numbers."documentNumber"
+          FROM (
+            SELECT NULLIF(t."invoiceDocumentNumber",'') AS "documentNumber"
+            UNION ALL
+            SELECT NULLIF(d."documentNumber",'')
+            FROM "SupplierPaymentAllocation" a
+            JOIN "PurchaseDocument" d ON d."id"=a."purchaseDocumentId"
+              AND d."companyId"=t."companyId" AND d."storeId"=t."storeId"
+            WHERE a."settlementId"=s."id" AND a."companyId"=t."companyId"
+          ) numbers
+          WHERE numbers."documentNumber" IS NOT NULL
+          ORDER BY numbers."documentNumber" LIMIT 50
+        ) AS "documentNumbers"
+      FROM "StoreTransaction" t
+      LEFT JOIN "SupplierPaymentSettlement" s ON t."type"='SUPPLIER_PAYMENT'
+        AND s."transactionId"=t."id" AND s."companyId"=t."companyId" AND s."storeId"=t."storeId"
+      LEFT JOIN "OtherExpenseReview" e ON t."type"='OTHER_EXPENSE'
+        AND e."transactionId"=t."id" AND e."companyId"=t."companyId" AND e."storeId"=t."storeId"
+      WHERE t."companyId"=${companyId} AND t."storeId"=${storeId}
+        AND t."paymentMethod"='BANK_TRANSFER' AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
+      ORDER BY t."occurredAt" DESC,t."id" DESC LIMIT 50
+    `;
+    return rows.map(row=>({...row,amount:Number(row.amount)}));
+  }catch(error){
+    // Payment ledger compatibility tables can be created lazily by the canonical writers.
+    // Do not bootstrap them from this read or present an unavailable ledger as empty.
+    if(error?.code==='P2010'&&['42P01','42703'].includes(error?.meta?.code))return null;
+    throw error;
+  }
+}
 export function createBackofficeStaffRouter({db,authenticate,issueSession,repository=createCashReconciliationRepository(db)}){
   const router=Router();
   router.use((_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next()});
@@ -60,8 +97,9 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     const suppliers=await db.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name" LIMIT 2001`;
     const purchaseDocuments=await db.$queryRaw`SELECT "id","supplierId","documentNumber","documentDate","totalGross","status" FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "status" IN ('DRAFT','APPROVED') ORDER BY "documentDate" DESC,"id" LIMIT 500`;
     if(suppliers.length>2000)throw staffError(503,'STAFF_LIMIT');
+    const recentBankTransfers=await readRecentBankTransfers(db,req.user.companyId,storeId);
     await requireStaffGrant(db,req.user,storeId,'payments.read');
-    res.json({storeId,suppliers,purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross)}))});
+    res.json({storeId,suppliers,purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross)})),recentBankTransfers});
   }catch(error){failure(res,error)}});
   router.get('/inventory/stores/:storeId/stocktakes',async(req,res)=>{try{
     const {storeId}=req.params;

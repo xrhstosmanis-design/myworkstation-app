@@ -108,3 +108,5 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 13/11/2026 — Ρητή έναρξη ανάγνωσης φωτογραφιών στο χειροκίνητο πρόχειρο. [Checkpoint](CHANGES/2026-11-13-manual-order-photo-explicit-read.md).
 
 13/11/2026 — Τυπωμένη καθαρή αξία στο χειροκίνητο πρόχειρο. [Checkpoint](CHANGES/2026-11-13-manual-invoice-printed-rounding.md).
+
+13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / delegated bank transfer history. [Checkpoint](CHANGES/2026-11-13-manager-payment-history-implementation.md), PR #3851. CI passed before synchronization; hosted LAB pending.

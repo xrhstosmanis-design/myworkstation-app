@@ -70,11 +70,12 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     const fileEnd=commerceSource.indexOf('\nrouter.get("/ai-reader/status",',fileStart);
     assert.ok(fileStart>=0&&fileEnd>fileStart);let fileHandlers;
     new Function('router','requireCompanyModule','prisma','requireStaffGrant',commerceSource.slice(fileStart,fileEnd))({get:(_path,...handlers)=>{fileHandlers=handlers}},()=> (_req,_res,next)=>next(),db,requireStaffGrant);
-    let beforeInventoryRead,beforeInventoryList;
+    let beforeInventoryRead,beforeInventoryList,beforeTransferRead;
     const staffReadDb=new Proxy(db,{get(target,key){
       if(key==='$queryRaw')return async(strings,...values)=>{
         if(beforeInventoryList&&strings.join('?').includes('FROM "Stocktake" s')){const run=beforeInventoryList;beforeInventoryList=null;await run()}
         if(beforeInventoryRead&&strings.join('?').includes('FROM "StocktakeLine"')){const run=beforeInventoryRead;beforeInventoryRead=null;await run()}
+        if(beforeTransferRead&&strings.join('?').includes('FROM "StoreTransaction" t')){const run=beforeTransferRead;beforeTransferRead=null;await run()}
         return target.$queryRaw(strings,...values);
       };
       const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
@@ -319,8 +320,8 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     });
     await t.test('native delegated supplier settlement stays pending, requires its separate cash right and never duplicates a payment',async()=>{
       for(const sql of [
-        'CREATE TABLE "Supplier" ("id" text PRIMARY KEY,"companyId" text,"name" text,"active" boolean DEFAULT true)',
-        'CREATE TABLE "PurchaseDocument" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"documentNumber" text,"totalGross" numeric,"status" text,"settlementMode" text)',
+        'CREATE TABLE "Supplier" ("id" text PRIMARY KEY,"companyId" text,"name" text,"taxId" text,"active" boolean DEFAULT true)',
+        'CREATE TABLE "PurchaseDocument" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"documentNumber" text,"documentDate" timestamptz,"totalGross" numeric,"status" text,"settlementMode" text)',
         'CREATE TABLE "SupplierPaymentSettlement" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"transactionId" text,"supplierId" text,"status" text,"paymentMethod" text,"paidAt" timestamptz,"note" text,"createdBy" text REFERENCES "User"("id"),"createdByName" text)',
         'CREATE TABLE "SupplierPaymentAllocation" ("id" text PRIMARY KEY,"companyId" text,"settlementId" text,"purchaseDocumentId" text,"amount" numeric)'
       ])await db.$executeRawUnsafe(sql);
@@ -342,6 +343,50 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const settlement=(await db.$queryRaw`SELECT * FROM "SupplierPaymentSettlement"`)[0];assert.equal(settlement.status,'PENDING_REVIEW');assert.equal(settlement.createdBy,created.id);
       assert.equal((await invoke()).status,409);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count),before+1);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "SupplierPaymentSettlement"`)[0].count),1);
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='a2'`)[0].currentStock),42);
+    });
+    await t.test('delegated transfer history shows recorded status only for the selected store, with no payment mutation',async()=>{
+      const username='transfer.history.fixture';
+      const grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['sales.read','payments.read']}];
+      const manager=await createStaffAccount(db,owner,{...input,username,grants});
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
+      assert.equal(login.status,200);
+      await db.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentNumber","status") VALUES
+        ('transfer-invoice','a','a1','supplier-a','INV-A','APPROVED'),
+        ('transfer-invoice-peer','a','a2','supplier-a','INV-PEER','APPROVED'),
+        ('transfer-invoice-foreign','b','b1','supplier-b','INV-FOREIGN','APPROVED')`;
+      await db.$executeRaw`INSERT INTO "SupplierPaymentAllocation" ("id","companyId","settlementId","purchaseDocumentId","amount") VALUES
+        ('transfer-allocation-a','a','transfer-review-a','transfer-invoice',12.4),
+        ('transfer-allocation-peer','a','transfer-review-a','transfer-invoice-peer',1),
+        ('transfer-allocation-foreign','a','transfer-review-a','transfer-invoice-foreign',1)`;
+      await db.$executeRaw`
+        INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","amount","paymentMethod","supplierName","occurredAt","reversedAt","attachmentData") VALUES
+        ('transfer-a','a','a1','SUPPLIER_PAYMENT',12.40,'BANK_TRANSFER','Synthetic','2026-11-13T12:00Z',NULL,'private-proof'),
+        ('transfer-b','a','a1','OTHER_EXPENSE',3.50,'BANK_TRANSFER',NULL,'2026-11-13T12:00Z',NULL,NULL),
+        ('transfer-c','a','a1','SUPPLIER_PAYMENT',4.00,'BANK_TRANSFER','Synthetic','2026-11-13T11:00Z',NOW(),NULL),
+        ('transfer-card','a','a1','SUPPLIER_PAYMENT',7,'CORPORATE_CARD','Synthetic','2026-11-13T13:00Z',NULL,NULL),
+        ('transfer-peer','a','a2','SUPPLIER_PAYMENT',8,'BANK_TRANSFER','Peer','2026-11-13T13:00Z',NULL,NULL),
+        ('transfer-foreign','b','b1','SUPPLIER_PAYMENT',9,'BANK_TRANSFER','Foreign','2026-11-13T13:00Z',NULL,NULL)
+      `;
+      await db.$executeRaw`
+        INSERT INTO "SupplierPaymentSettlement" ("id","companyId","storeId","transactionId","supplierId","status","note") VALUES
+        ('transfer-review-a','a','a1','transfer-a','supplier-a','PENDING_REVIEW','private-review'),
+        ('transfer-review-c','a','a1','transfer-c','supplier-a','CONFIRMED',NULL)
+      `;
+      await db.$executeRaw`INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status") VALUES ('transfer-review-b','a','a1','transfer-b','DISCREPANCY')`;
+      const snapshot=async()=>JSON.stringify(await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`);
+      const before=await snapshot(),path='/api/backoffice-staff/payments/stores/a1',options={token:login.data.token,storeId:'a1'};
+      const result=await request(path,options);
+      assert.equal(result.status,200,JSON.stringify(result.data));
+      assert.deepEqual(result.data.recentBankTransfers,[
+        {id:'transfer-b',occurredAt:'2026-11-13T12:00:00.000Z',amount:3.5,supplierName:null,type:'OTHER_EXPENSE',status:'DISCREPANCY',documentNumbers:[]},
+        {id:'transfer-a',occurredAt:'2026-11-13T12:00:00.000Z',amount:12.4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'PENDING_REVIEW',documentNumbers:['INV-A']},
+        {id:'transfer-c',occurredAt:'2026-11-13T11:00:00.000Z',amount:4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'CANCELLED',documentNumbers:[]}
+      ]);
+      assert.equal((await request(path,{token,storeId:'a1'})).status,401);
+      assert.equal((await request('/api/backoffice-staff/payments/stores/a2',{...options,storeId:'a2'})).status,403);
+      beforeTransferRead=()=>db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["sales.read"]'::jsonb WHERE "userId"=${manager.id}`;
+      assert.equal((await request(path,options)).status,403);
+      assert.equal(await snapshot(),before);
     });
     await t.test('independent inventory actions enforce live scoped authority, atomic versions, exact replay, audit and protected controls',async()=>{
       await db.$executeRawUnsafe('CREATE TABLE "WorkforceAuditLog" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"actorUserId" text,"action" text,"entityType" text,"entityId" text,"afterJson" jsonb,"createdAt" timestamptz)');
