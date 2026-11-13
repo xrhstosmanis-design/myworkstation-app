@@ -166,4 +166,4 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 ### Δοκιμαστικός κλάδος CI για #3841 — 13/11/2026
 
-Άνοιξε το [draft #3861](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3861) με commit `b4f57a3b` από το main `d8b278b2`. Επιβεβαιώθηκαν τα επτά αρχεία της αλλαγής και τα δύο checkpoints. Χρησιμοποιείται το workflow του main με τις σταθερές εκδόσεις PostgreSQL. Εκκρεμούν CI και LAB.
+Άνοιξε το [draft #3861](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3861) με commit `b4f57a3b` από το main `d8b278b2`. Επιβεβαιώθηκαν τα επτά αρχεία της αλλαγής και τα δύο checkpoints. Χρησιμοποιήθηκε το workflow του main με τις σταθερές εκδόσεις PostgreSQL. [CI #9828 PASS (5/5)](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43501988091), μαζί με το build-and-test. Εκκρεμεί δοκιμή του ίδιου commit στο υπάρχον LAB.
