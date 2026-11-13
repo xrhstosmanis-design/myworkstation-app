@@ -27,7 +27,7 @@ const bankTransferStatus={
   DISCREPANCY:"Ασυμφωνία προς έλεγχο",
   CANCELLED:"Ακυρωμένη"
 };
-const bankTransferDate=new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens"});
+const bankTransferDate=new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens",hour12:false});
 const storedUser=()=>{try{return JSON.parse(localStorage.getItem("user")||"null")}catch{return null}};
 const safeKey=()=>`owner-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 
