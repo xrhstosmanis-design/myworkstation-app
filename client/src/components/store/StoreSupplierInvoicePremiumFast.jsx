@@ -205,7 +205,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       }
       const hasSourceUpload = pages.length > 0 && !selectedInboxId;
       const useExistingMyData = mode === "PAID" && Boolean(duplicateCheck?.myDataMatched && duplicateCheck.hasProductLines) && !hasSourceUpload;
-      if ((!pages.length && !useExistingMyData) || (mode === "PAID" && selectedInboxId && !useExistingMyData)) {
+      if ((!pages.length && !useExistingMyData) || (mode === "PAID" && selectedInboxId && (duplicateCheck?.myDataMatched || duplicateCheck?.myDataHeaderMatched) && !useExistingMyData)) {
         setStatus("Ανέβασε φωτογραφία ή PDF του τιμολογίου για να συνεχίσεις.");
         return;
       }
@@ -230,7 +230,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       recordedPaymentId=effectiveMode==="PAID"?paymentTransactionId:null;
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=attempt?.handoff||await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:useExistingMyData?undefined:selectedInboxId,existingMyDataDocumentId:useExistingMyData?duplicateCheck.purchaseDocumentId:undefined,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:(useExistingMyData?[]:pages).map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
+      const handoff=attempt?.handoff||await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:useExistingMyData?undefined:selectedInboxId,existingMyDataDocumentId:useExistingMyData?duplicateCheck.purchaseDocumentId:undefined,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:useExistingMyData?[]:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       if(directCredit){
         attempt.handoff=handoff;
         stage="ΑΡΝΗΤΙΚΗ ΠΛΗΡΩΜΗ ΠΙΣΤΩΤΙΚΟΥ";
