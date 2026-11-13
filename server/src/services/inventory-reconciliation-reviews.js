@@ -1,7 +1,7 @@
 import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-access.js';
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {readInventoryReconciliationBase} from './inventory-reconciliation-source.js';
-import {readInventoryReviewState} from './inventory-reconciliation-review-source.js';
+import {readInventoryReusableLinks,readInventoryReviewState} from './inventory-reconciliation-review-source.js';
 import {normalizeReviewRequest,projectInventoryReviews,reviewEntity,reviewError,reviewHash,reviewId,reviewKey,reviewLimit,reviewRequestHash} from './inventory-reconciliation-review-contract.js';
 
 export async function requireInventoryReviewActor(tx,actor,scope){
@@ -40,7 +40,7 @@ function validateReviewAction(base,state,action){
   const rows=new Map(base.rows.map(x=>[x.productId,x]));
   if(action.kind==='LINK'){
     if(action.productIds.some(id=>!rows.has(id)))throw reviewError('INVENTORY_REVIEW_PRODUCT_SCOPE');
-    if(state.active.some(r=>r.request.action.kind==='LINK'&&reviewHash(r.request.action.productIds)===reviewHash(action.productIds)&&r.request.action.canonicalProductId===action.canonicalProductId))throw reviewError('INVENTORY_REVIEW_ALREADY_LINKED');
+    if(state.active.some(r=>r.request.action.kind==='LINK'&&(!action.reuseInStore||r.request.action.reuseInStore)&&reviewHash(r.request.action.productIds)===reviewHash(action.productIds)&&r.request.action.canonicalProductId===action.canonicalProductId))throw reviewError('INVENTORY_REVIEW_ALREADY_LINKED');
   }else if(action.kind==='CORRECTION'){
     if(!rows.has(action.productId)||rows.get(action.productId).difference===null)throw reviewError('INVENTORY_REVIEW_UNCOMPUTABLE','Η αρχική διαφορά δεν υπολογίζεται. Διόρθωσε πρώτα τα ελλιπή στοιχεία.');
     if(state.active.some(r=>r.request.action.kind==='CORRECTION'&&r.request.action.productId===action.productId&&r.request.action.quantity===action.quantity&&r.request.action.evidence===action.evidence))throw reviewError('INVENTORY_REVIEW_DUPLICATE_CORRECTION');
@@ -72,7 +72,21 @@ export async function applyInventoryReview(db,actor,current,input){
     if(state.head!==request.head)throw reviewError('INVENTORY_REVIEW_STALE_HEAD');
     if(state.records.length>=reviewLimit)throw reviewError('INVENTORY_REVIEW_LIMIT');
     const base=await readInventoryReconciliationBase(tx,current,request.previousStocktakeId);
-    const projected=projectInventoryReviews(base,state);
+    const reusableLinks=await readInventoryReusableLinks(tx,scope);
+    const projected=projectInventoryReviews(base,state,reusableLinks);
+    if(request.action.kind==='LINK'){
+      const action=request.action;
+      const activeLinks=[...reusableLinks,...state.active];
+      const conflicting=activeLinks.some(({request:{action:existing}})=>
+        existing.kind==='LINK'&&(action.reuseInStore||existing.reuseInStore)&&
+        existing.canonicalProductId!==action.canonicalProductId&&
+        existing.productIds.some(productId=>action.productIds.includes(productId))
+      );
+      if(conflicting)throw reviewError('INVENTORY_REUSABLE_IDENTITY_CONFLICT','Υπάρχει ενεργή σύνδεση με διαφορετικό κύριο κωδικό.');
+      if(action.reuseInStore&&reusableLinks.some(({request:{action:existing}})=>
+        reviewHash(existing.productIds)===reviewHash(action.productIds)
+      ))throw reviewError('INVENTORY_REVIEW_ALREADY_LINKED');
+    }
     if(base.generation!==request.generation||projected.fingerprint!==request.expectedFingerprint)throw reviewError('INVENTORY_REVIEW_SOURCE_CHANGED');
     validateReviewAction(base,state,request.action);
     // Original count rows/events are immutable after finalization. Re-read the

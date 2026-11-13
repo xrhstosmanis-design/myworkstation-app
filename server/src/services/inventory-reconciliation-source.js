@@ -1,7 +1,7 @@
 import {reconcileInventory} from './inventory-reconciliation.js';
 import {createHash} from 'node:crypto';
 import {readLifecycleGeneration} from './store-lifecycle-generation.js';
-import {readInventoryReviewState} from './inventory-reconciliation-review-source.js';
+import {readInventoryReusableLinks,readInventoryReviewState} from './inventory-reconciliation-review-source.js';
 import {projectInventoryReviews} from './inventory-reconciliation-review-contract.js';
 import {readInventorySourceEvidence} from './inventory-reconciliation-evidence-source.js';
 const fail = (message,status=409) => {throw Object.assign(new Error(message),{status});};
@@ -66,6 +66,8 @@ export async function readInventoryReconciliation(db, current, previousId = null
   return db.$transaction(async tx => {
     const base=await readInventoryReconciliationBase(tx,current,previousId);
     const scope={companyId:base.current.companyId,storeId:base.current.storeId,generation:base.generation,previousId:base.previous.id,currentId:base.current.id};
-    return projectInventoryReviews(base,await readInventoryReviewState(tx,scope));
+    const state=await readInventoryReviewState(tx,scope);
+    const reusableLinks=state.available?await readInventoryReusableLinks(tx,scope):[];
+    return projectInventoryReviews(base,state,reusableLinks);
   },{isolationLevel:'RepeatableRead',maxWait:5000,timeout:20000});
 }

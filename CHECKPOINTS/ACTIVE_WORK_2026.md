@@ -125,3 +125,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / independent payment history right. [Checkpoint](CHANGES/2026-11-13-manager-payment-read-independent.md). CI and LAB pending.
 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / independent shift close. [Checkpoint](CHANGES/2026-11-13-manager-shift-close-context.md), PR #3855. LAB pending.
+
+13/11/2026 — #3841: δοκιμαστική εφαρμογή των αλλαγών απογραφής στο main `d8b278b2`, με τις σταθερές εκδόσεις PostgreSQL του main. CI και LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-12-inventory-reusable-identity-projection.md).
