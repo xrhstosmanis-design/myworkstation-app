@@ -1,4 +1,12 @@
 export async function loadInvoiceAssistantSource(db,companyId,orderId,context={}){
+  if(context.manualPhotos){
+    const orders=await db.$queryRaw`
+      SELECT o."id",o."storeId",o."invoiceNumber" AS "documentNumber",o."supplierId",NULL AS "totalGross"
+      FROM "PurchaseOrder" o WHERE o."id"=${orderId} AND o."companyId"=${companyId}
+        AND o."storeId"=${context.storeId} AND o."status"='NEW' AND NOT o."awaitingInvoice"
+        AND o."sourceType" IS NULL AND o."sourceDocumentId" IS NULL LIMIT 1`;
+    return orders.length?{document:orders[0],pages:context.manualPhotos}:null;
+  }
   const docs=await db.$queryRaw`
     SELECT d."id",d."storeId",d."documentNumber",d."totalGross",COALESCE(o."supplierId",d."supplierId") AS "supplierId"
     FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId"
