@@ -713,7 +713,7 @@ test('close-only staff can open the counted shift form without reading sales his
   assert.equal(path,'/api/cash/stores/a1/close-context');
   assert.equal(options.headers['x-backoffice-store-id'],'a1');
   assert.equal(options.headers['x-mws-terminal-pos'],'POS2');
-  return {openSession:{id:'shift',openingOperational:10,openingSafe:0},summaryBySession:{shift:{cashSales:23,cardSales:31,expensesTotal:2}}};
+  return {openSession:{id:'shift',openingOperational:10,openingSafe:0},summaryBySession:{shift:{cashSales:23,cardSales:31,expensesTotal:2,transferIn:9,transferOut:3}}};
  };
  const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
  try{
@@ -724,6 +724,7 @@ test('close-only staff can open the counted shift form without reading sales his
   await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
   assert.match(document.body.textContent,/Κλείσιμο & Παράδοση βάρδιας/);
   assert.ok([...document.querySelectorAll('input')].some(el=>el.readOnly&&el.value==='23'));
+  assert.ok([...document.querySelectorAll('input')].some(el=>el.readOnly&&el.value==='37'));
   assert.ok(calls.every(x=>!x.options.method&&!x.path.includes('/transactions/')));
  }finally{await m.close()}
 });

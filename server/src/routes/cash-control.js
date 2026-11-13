@@ -335,7 +335,7 @@ router.get("/stores/:storeId/close-context",route(async(req,res)=>{
   const pendingInvoices=session?await readPendingInvoices(prisma,{companyId,storeId,user:req.user,terminalPos,sessionId:session.id,sessionAll:true}):null;
   const totals=session?await authoritativeShiftTotals(prisma,companyId,storeId,session.id):null;
   await requireStaffGrant(prisma,req.user,storeId,'shifts.close');
-  res.json({openSession:session?normalize(session):null,pendingInvoices,summaryBySession:session?{[session.id]:{cashSales:totals.cashSales,cardSales:totals.cardSales,expensesTotal:totals.expenses}}:{}});
+  res.json({openSession:session?normalize(session):null,pendingInvoices,summaryBySession:session?{[session.id]:{cashSales:totals.cashSales,cardSales:totals.cardSales,expensesTotal:totals.expenses,transferIn:totals.transferIn,transferOut:totals.transferOut}}:{}});
 }));
 
 router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
