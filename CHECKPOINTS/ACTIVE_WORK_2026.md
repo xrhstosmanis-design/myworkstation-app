@@ -102,3 +102,5 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 13/11/2026 — Consolidated inventory valuation: report across selected stocktakes with 24-hour Greek timestamps. See CHECKPOINTS/CHANGES/2026-11-12-inventory-valuation.md.
 
 13/11/2026 — POS: επιβεβαίωση πληρωμής με υπάρχον τιμολόγιο myDATA και επαληθευμένο προμηθευτή. [Checkpoint](CHANGES/2026-11-13-pos-mydata-existing-document-supplier.md).
+
+13/11/2026 — Φωτογραφίες και βοηθός στο χειροκίνητο πρόχειρο παραγγελίας. [Checkpoint](CHANGES/2026-11-13-manual-purchase-invoice-photos.md).
