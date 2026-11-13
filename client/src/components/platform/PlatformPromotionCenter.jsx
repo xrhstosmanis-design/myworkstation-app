@@ -10,8 +10,40 @@ export default function PlatformPromotionCenter(){
   const [toolbar,setToolbar]=useState(null),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[done,setDone]=useState("");
   const [catalog,setCatalog]=useState({rows:[],categories:[],subcategories:[]}),[promotionList,setPromotionList]=useState([]),[analysis,setAnalysis]=useState({items:[],totals:{}}),[targets,setTargets]=useState([]),[query,setQuery]=useState(""),[category,setCategory]=useState(""),[subcategory,setSubcategory]=useState("");
   const [products,setProducts]=useState([]),[giftProducts,setGiftProducts]=useState([]),[stores,setStores]=useState([]),[type,setType]=useState("LEAFLET"),[offerMode,setOfferMode]=useState("DISCOUNT_PERCENT"),[discount,setDiscount]=useState("10"),[discountAmount,setDiscountAmount]=useState("0.50"),[offerPrice,setOfferPrice]=useState(""),[saleQty,setSaleQty]=useState("1"),[bonusQty,setBonusQty]=useState("1"),[validFrom,setValidFrom]=useState(localNow()),[validUntil,setValidUntil]=useState("");
+  const [efoodStoreIds, setEfoodStoreIds] = useState([]);
+  const [efoodStoreId, setEfoodStoreId] = useState("");
+  const efoodStores = targets.flatMap(company =>
+    (company.stores || []).filter(store => efoodStoreIds.includes(store.id))
+      .map(store => ({ ...store, companyName: company.name }))
+  );
+
+  async function exportEfood() {
+    setError("");
+    setDone("");
+    setBusy(true);
+    try {
+      const { xlsx, exported, skipped } = await api(
+        `/api/platform/master-catalog/bulk/promotions/efood-xlsx?storeId=${encodeURIComponent(efoodStoreId)}`
+      );
+      const bytes = Uint8Array.from(atob(xlsx), character => character.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "prosfores-efood.xlsx";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setDone(`Εξήχθησαν ${exported} προσφορές efood.${skipped ? ` Προς έλεγχο: ${skipped}.` : ""}`);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   useEffect(()=>{const resolve=()=>setToolbar(document.querySelector(".platform-title-actions"));resolve();const t=setInterval(resolve,500);return()=>clearInterval(t)},[]);
-  const load=async()=>{setBusy(true);setError("");try{const p=new URLSearchParams();if(query.trim())p.set("q",query.trim());if(category)p.set("category",category);if(subcategory)p.set("subcategory",subcategory);const [c,t,l,a]=await Promise.all([api(`/api/platform/master-catalog/bulk/products?${p}`),api("/api/platform/master-catalog/bulk/targets"),api("/api/platform/master-catalog/bulk/promotions"),api("/api/platform/master-catalog/bulk/promotions/analysis")]);setCatalog(c);setPromotionList(l.items||[]);setTargets(t.companies||[]);setProducts(ids=>ids.filter(id=>(c.rows||[]).some(r=>r.id===id)));setAnalysis(a)}catch(e){setError(e.message)}finally{setBusy(false)}};
+  const load=async()=>{setBusy(true);setError("");try{const p=new URLSearchParams();if(query.trim())p.set("q",query.trim());if(category)p.set("category",category);if(subcategory)p.set("subcategory",subcategory);const [c,t,l,a]=await Promise.all([api(`/api/platform/master-catalog/bulk/products?${p}`),api("/api/platform/master-catalog/bulk/targets"),api("/api/platform/master-catalog/bulk/promotions"),api("/api/platform/master-catalog/bulk/promotions/analysis")]);setCatalog(c);setPromotionList(l.items||[]);setTargets(t.companies||[]);setEfoodStoreIds(t.efoodStoreIds||[]);setProducts(ids=>ids.filter(id=>(c.rows||[]).some(r=>r.id===id)));setAnalysis(a)}catch(e){setError(e.message)}finally{setBusy(false)}};
   useEffect(()=>{if(open)load()},[open]);
   const toggleProduct=id=>setProducts(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
   const toggleStore=id=>setStores(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
@@ -22,6 +54,18 @@ export default function PlatformPromotionCenter(){
   const toggleVisible=()=>setProducts(visibleAll?products.filter(id=>!(catalog.rows||[]).some(r=>r.id===id)):[...new Set([...products,...(catalog.rows||[]).map(r=>r.id)])]);
   const launcher=toolbar?createPortal(<button onClick={()=>setOpen(true)}><Gift/>Προσφορές & Δώρα</button>,toolbar):null;
   return <>{launcher}{open&&<div className="platform-promo-overlay"><section className="platform-promo-modal"><header><div><small>SUPER ADMIN</small><h2>Κεντρικές Προσφορές & Δώρα</h2><p>Επίλεξε προϊόντα και ακριβώς τα καταστήματα όπου θα ισχύει η ενέργεια.</p></div><button onClick={()=>setOpen(false)}><XCircle/></button></header>{error&&<div className="pp-alert error">{error}</div>}{done&&<div className="pp-alert success">{done}</div>}
+    <div className="pp-controls">
+      <label>Κατάστημα για Excel efood
+        <select value={efoodStoreId} onChange={event => setEfoodStoreId(event.target.value)}>
+          <option value="">Επιλογή καταστήματος</option>
+          {efoodStores.map(store => <option key={store.id} value={store.id}>{store.companyName} · {store.name}</option>)}
+        </select>
+      </label>
+      <button type="button" onClick={exportEfood} disabled={busy || !efoodStores.some(store => store.id === efoodStoreId)}>
+        Excel ενεργών προσφορών efood
+      </button>
+      {!busy && !efoodStores.length && <small>Δεν υπάρχουν καταστήματα με ενεργά είδη και τιμές efood.</small>}
+    </div>
     <div className="pp-existing"><div className="pp-title"><b>Υπάρχουσες προσφορές</b><span>{promotionList.length}</span></div>{promotionList.slice(0,100).map(p=><div className="pp-existing-row" key={p.id}><span><b>{p.productName||"Προϊόν"}</b><small>{p.sku||"—"} · {p.promotionType==="GIFT"?"Δώρο":"Προσφορά"} · {p.companyName||"Εταιρεία"}</small></span><span>{p.offerPrice===null||p.offerPrice===undefined?"—":`${Number(p.offerPrice).toFixed(2)} €`} {p.discountPercent?`(-${Number(p.discountPercent).toFixed(2)}%)`:""}</span><span>{p.active?"Ενεργή":"Ανενεργή"}</span><small>{(p.stores||[]).map(s=>s.name).join(", ")||"Χωρίς κατάστημα"}</small></div>)}</div><div className="pp-analysis"><b>Ανάλυση προσφορών από νέες πωλήσεις</b><span>Πωλήσεις {Number(analysis.totals?.salesAmount||0).toFixed(2)} € · Εκπτώσεις {Number(analysis.totals?.discountAmount||0).toFixed(2)} € · Επιστροφές {Number(analysis.totals?.returnedAmount||0).toFixed(2)} €</span><small>{analysis.note}</small></div><div className="pp-controls"><select value={type} onChange={e=>setType(e.target.value)}><option value="LEAFLET">Προσφορά</option><option value="GIFT">Δώρο</option></select>{type==="LEAFLET"?<><select value={offerMode} onChange={e=>setOfferMode(e.target.value)}><option value="DISCOUNT_PERCENT">Έκπτωση %</option><option value="DISCOUNT_AMOUNT">Έκπτωση ποσού</option><option value="FIXED_PRICE">Σταθερή τιμή</option></select>{offerMode==="DISCOUNT_PERCENT"?<label>Έκπτωση %<input type="number" min="0" max="100" value={discount} onChange={e=>setDiscount(e.target.value)}/></label>:offerMode==="DISCOUNT_AMOUNT"?<label>Έκπτωση €<input type="number" min="0.01" step="0.01" value={discountAmount} onChange={e=>setDiscountAmount(e.target.value)}/></label>:<label>Τιμή προσφοράς<input type="number" min="0" step="0.01" value={offerPrice} onChange={e=>setOfferPrice(e.target.value)}/></label>}</>:<><label>Αγορά τεμαχίων<input type="number" min="1" value={saleQty} onChange={e=>setSaleQty(e.target.value)}/></label><label>Δώρο τεμαχίων<input type="number" min="1" value={bonusQty} onChange={e=>setBonusQty(e.target.value)}/></label></>}<label>Από<input lang="en-GB" type="datetime-local" value={validFrom} onChange={e=>setValidFrom(e.target.value)}/></label><label>Έως<input lang="en-GB" type="datetime-local" value={validUntil} onChange={e=>setValidUntil(e.target.value)}/></label></div>
     <div className="pp-search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Περιγραφή, κωδικός ή barcode"/><select value={category} onChange={e=>{setCategory(e.target.value);setSubcategory("")}}><option value="">Όλες οι κατηγορίες</option>{(catalog.categories||[]).map(x=><option key={x}>{x}</option>)}</select><select value={subcategory} onChange={e=>setSubcategory(e.target.value)}><option value="">Όλες οι υποκατηγορίες</option>{(catalog.subcategories||[]).map(x=><option key={x}>{x}</option>)}</select><button onClick={load} disabled={busy}>Αναζήτηση</button></div>
     <div className="pp-grid"><div className="pp-products"><div className="pp-title"><label><input type="checkbox" checked={visibleAll} onChange={toggleVisible}/> Βασικά προϊόντα</label><b>{products.length} προϊόντα</b></div>{(catalog.rows||[]).map(r=><label className="pp-product" key={r.id}><input type="checkbox" checked={products.includes(r.id)} onChange={()=>toggleProduct(r.id)}/><span><b>{r.name}</b><small>{r.sourceCode} · {r.categoryName||"Χωρίς κατηγορία"}{r.subcategoryName?` → ${r.subcategoryName}`:""}</small></span><strong>{r.defaultRetailPrice===null?"—":`${Number(r.defaultRetailPrice).toFixed(2)} €`}</strong></label>)}</div><div className="pp-stores"><div className="pp-title"><b>Καταστήματα</b><span>{stores.length} επιλεγμένα</span></div>{targets.map(c=><div className="pp-company" key={c.id}><button type="button" onClick={()=>toggleCompany(c)}><b>{c.name}</b><small>Όλα / κανένα</small></button>{(c.stores||[]).map(s=><label key={s.id}><input type="checkbox" checked={stores.includes(s.id)} onChange={()=>toggleStore(s.id)}/><span>{s.name}<small>{s.city||""}</small></span></label>)}</div>)}</div></div>{type==="GIFT"&&<div className="pp-products" style={{marginTop:12,maxHeight:"34vh"}}><div className="pp-title"><b>Επιτρεπόμενα δώρα — μόνο αυτά θα βλέπει το POS</b><span>{giftProducts.length}</span></div>{(catalog.rows||[]).map(r=><label className="pp-product" key={`gift-${r.id}`}><input type="checkbox" checked={giftProducts.includes(r.id)} onChange={()=>setGiftProducts(current=>current.includes(r.id)?current.filter(id=>id!==r.id):[...current,r.id])}/><span><b>{r.name}</b><small>{r.sourceCode} · {r.categoryName||"Χωρίς κατηγορία"}</small></span></label>)}</div>}
