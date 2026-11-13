@@ -114,7 +114,7 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 
 ## 2026-11-13 — Inventory audit purchase document links
 
-Continues #3645 in draft #3852. The audit resolves direct approval, local OCR confirmation and credit postings to the purchase document in the selected company and store. Purchase orders resolve through their own source document. Local reconciliation tests passed 18/18 and isolated SQL join checks passed 9/9. Native CI and hosted LAB acceptance are pending. Physical receipt timestamps and verified originals remain open.
+PRs #3852 and #3856 merged. Scoped hosted LAB PASS on fbc7167: standalone OCR approval linked the purchase document to the +2 movement in inventory reconciliation (8 → 10, zero net difference). Physical receipt time and verified original remain open. [Checkpoint](CHANGES/2026-11-13-inventory-receipt-lab-pass.md).
 
 13/11/2026 — Διόρθωση εκκαθάρισης κωδικού γραμμής τιμολογίου κατά την αποθήκευση barcode. [Checkpoint](CHANGES/2026-11-13-invoice-clear-supplier-code.md).
 
