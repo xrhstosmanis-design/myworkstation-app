@@ -83,12 +83,12 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
   }catch(error){failure(res,error)}});
   router.post('/admin/accounts',async(req,res)=>{try{res.status(201).json(await createStaffAccount(db,req.user,req.body))}catch(error){failure(res,error)}});
   router.put('/admin/accounts/:userId',async(req,res)=>{try{res.json(await updateStaffAccount(db,req.user,req.params.userId,req.body))}catch(error){failure(res,error)}});
-  router.get('/sales/stores/:storeId/terminals',async(req,res)=>{try{
+  for(const [section,capability] of [['sales','sales.read'],['shifts','shifts.close']])router.get(`/${section}/stores/:storeId/terminals`,async(req,res)=>{try{
     const {storeId}=req.params;if(storeId!==req.user.storeId)throw staffError();
-    await requireStaffGrant(db,req.user,storeId,'sales.read');
+    await requireStaffGrant(db,req.user,storeId,capability);
     const rows=await db.$queryRaw`SELECT DISTINCT "terminalPos" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} ORDER BY "terminalPos" LIMIT 101`;
     if(rows.length>100)throw staffError(503,'STAFF_LIMIT');
-    await requireStaffGrant(db,req.user,storeId,'sales.read');
+    await requireStaffGrant(db,req.user,storeId,capability);
     res.json({storeId,terminals:[...new Set(['MAIN',...rows.map(row=>row.terminalPos).filter(Boolean)])]});
   }catch(error){failure(res,error)}});
   router.get('/payments/stores/:storeId',async(req,res)=>{try{

@@ -22,7 +22,7 @@ function policy(){
 }
 test('new actions remain explicit, dependency-closed and absent from every existing role preset',()=>{
  for(const key of ['invoices.edit','invoices.approve','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']){
-  const rights=changeStaffCapability([],key,true);assert.ok(validStaffCapabilities(rights));assert.ok(rights.length>1);
+  const rights=changeStaffCapability([],key,true);assert.ok(validStaffCapabilities(rights));if(key==='shifts.close')assert.deepEqual(rights,[key]);else assert.ok(rights.length>1);
   for(const profile of Object.values(staffProfiles))assert.equal(profile.capabilities.includes(key),false);
  }
  assert.equal(staffRequestCapability('POST','/api/store-pos/stores/a1/sales/sale/reverse',{kind:'CANCEL'}),'sales.cancel');
