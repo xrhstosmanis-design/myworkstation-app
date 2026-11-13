@@ -346,7 +346,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     });
     await t.test('delegated transfer history shows recorded status only for the selected store, with no payment mutation',async()=>{
       const username='transfer.history.fixture';
-      const grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['sales.read','payments.read']}];
+      const grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['payments.read']}];
       const manager=await createStaffAccount(db,owner,{...input,username,grants});
       const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
       assert.equal(login.status,200);
@@ -375,6 +375,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       await db.$executeRaw`INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status") VALUES ('transfer-review-b','a','a1','transfer-b','DISCREPANCY')`;
       const snapshot=async()=>JSON.stringify(await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`);
       const before=await snapshot(),path='/api/backoffice-staff/payments/stores/a1',options={token:login.data.token,storeId:'a1'};
+      assert.equal((await request('/api/backoffice-staff/sales/stores/a1/terminals',options)).status,403);
       const result=await request(path,options);
       assert.equal(result.status,200,JSON.stringify(result.data));
       assert.deepEqual(result.data.recentBankTransfers,[
