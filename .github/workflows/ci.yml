@@ -222,7 +222,8 @@ jobs:
       - name: Prepare server sources and generate Prisma client
         run: npm run build:server
       - name: Build the actual PostgreSQL 18 recovery image
-        run: docker build --file ops/backup/Dockerfile --tag mws-lifecycle-recovery:ci .
+        # Use the PostgreSQL 18 image verified by the recovery suite on main.
+        run: docker build --build-arg POSTGRES_IMAGE=postgres:18-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b --file ops/backup/Dockerfile --tag mws-lifecycle-recovery:ci .
       - name: Use matching native PostgreSQL 16 recovery tools
         run: |
           if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ]; then
