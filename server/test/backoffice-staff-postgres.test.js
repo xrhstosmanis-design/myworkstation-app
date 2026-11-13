@@ -350,6 +350,14 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const manager=await createStaffAccount(db,owner,{...input,username,grants});
       const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
       assert.equal(login.status,200);
+      await db.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentNumber","status") VALUES
+        ('transfer-invoice','a','a1','supplier-a','INV-A','APPROVED'),
+        ('transfer-invoice-peer','a','a2','supplier-a','INV-PEER','APPROVED'),
+        ('transfer-invoice-foreign','b','b1','supplier-b','INV-FOREIGN','APPROVED')`;
+      await db.$executeRaw`INSERT INTO "SupplierPaymentAllocation" ("id","companyId","settlementId","purchaseDocumentId","amount") VALUES
+        ('transfer-allocation-a','a','transfer-review-a','transfer-invoice',12.4),
+        ('transfer-allocation-peer','a','transfer-review-a','transfer-invoice-peer',1),
+        ('transfer-allocation-foreign','a','transfer-review-a','transfer-invoice-foreign',1)`;
       await db.$executeRaw`
         INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","amount","paymentMethod","supplierName","occurredAt","reversedAt","attachmentData") VALUES
         ('transfer-a','a','a1','SUPPLIER_PAYMENT',12.40,'BANK_TRANSFER','Synthetic','2026-11-13T12:00Z',NULL,'private-proof'),
@@ -370,9 +378,9 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const result=await request(path,options);
       assert.equal(result.status,200,JSON.stringify(result.data));
       assert.deepEqual(result.data.recentBankTransfers,[
-        {id:'transfer-b',occurredAt:'2026-11-13T12:00:00.000Z',amount:3.5,supplierName:null,type:'OTHER_EXPENSE',status:'DISCREPANCY'},
-        {id:'transfer-a',occurredAt:'2026-11-13T12:00:00.000Z',amount:12.4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'PENDING_REVIEW'},
-        {id:'transfer-c',occurredAt:'2026-11-13T11:00:00.000Z',amount:4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'CANCELLED'}
+        {id:'transfer-b',occurredAt:'2026-11-13T12:00:00.000Z',amount:3.5,supplierName:null,type:'OTHER_EXPENSE',status:'DISCREPANCY',documentNumbers:[]},
+        {id:'transfer-a',occurredAt:'2026-11-13T12:00:00.000Z',amount:12.4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'PENDING_REVIEW',documentNumbers:['INV-A']},
+        {id:'transfer-c',occurredAt:'2026-11-13T11:00:00.000Z',amount:4,supplierName:'Synthetic',type:'SUPPLIER_PAYMENT',status:'CANCELLED',documentNumbers:[]}
       ]);
       assert.equal((await request(path,{token,storeId:'a1'})).status,403);
       assert.equal((await request('/api/backoffice-staff/payments/stores/a2',{...options,storeId:'a2'})).status,403);
