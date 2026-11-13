@@ -121,3 +121,12 @@ PRs #3852 and #3856 merged. Scoped hosted LAB PASS on fbc7167: standalone OCR ap
 
 ## 2026-11-13 — Standalone local OCR draft approval
 Continues #3852 LAB acceptance. Expose the existing stock approval action for a standalone OCR draft in the selected store. See [checkpoint](CHANGES/2026-11-13-standalone-ocr-draft-approval.md).
+
+## 13/11/2026 — Συνέχεια αναθέσεων απογραφής
+
+Η συνέχεια της προηγούμενης σελίδας καταγράφεται εδώ, με σύντομα checkpoints και συνδέσμους στα τεκμήρια.
+
+- #3858 · Η αρχική τεκμηρίωση παραλαβής (commit `2b16af97`) πέρασε το [CI #9820](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43494757215). Hosted LAB PASS μόνο για την έγκριση standalone OCR και την αντίστοιχη κίνηση αγοράς +2 (8 → 10, μηδενική διαφορά). Το PR είναι draft.
+- #3841 · Η [επανεκτέλεση CI #9770](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43300522469) στο `3acf060c` ολοκληρώθηκε με 4/5 πράσινα jobs. Το `build-and-test` ανέφερε οκτώ αποτυχίες TAP, συμπεριλαμβανομένης μίας ένθετης δοκιμής, στον έλεγχο επαναφοράς PostgreSQL. Το GitHub αναφέρει ότι το draft δεν είναι mergeable. Επόμενο βήμα: σύγκριση με το τρέχον main και απομόνωση των αποτυχιών πριν από νέο CI και αποδοχή στο υπάρχον LAB.
+- #3771 · [CI #9573](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42631870100) PASS στο `81afd657`. Το GitHub αναφέρει ότι το PR δεν είναι mergeable. Εκκρεμούν συμβατότητα με το τρέχον main και δοκιμή οριστικοποίησης QR/PIN στο υπάρχον LAB.
+- Full Audit · Εκκρεμούν η επαλήθευση του αποθηκευμένου πρωτοτύπου myDATA και η καταγραφή της πραγματικής ώρας παραλαβής. Η ώρα της κίνησης αποθήκης δεν τεκμηριώνει την ώρα φυσικής παραλαβής.
