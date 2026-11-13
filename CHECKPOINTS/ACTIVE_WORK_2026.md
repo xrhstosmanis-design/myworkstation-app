@@ -33,6 +33,18 @@
 | — | OWNER-SHIFT-TIME-FILTER | /root | — | Assigned · LAB NOT TESTED | Add optional hours to the date range and verify in LAB |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
 
+## Κεντρικός συντονισμός σελίδων — 13/11/2026
+
+Η παρούσα σελίδα συντονισμού αναλαμβάνει τη συνέχεια του «Ελέγχου αναθέσεων εκκρεμοτήτων». Οι υπεύθυνοι των ήδη ανατεθειμένων εργασιών παραμένουν στις εγγραφές τους στο OPEN_WORK_TRACKER.
+
+**Υποχρεωτικό για όλες τις ανατεθειμένες σελίδες:** Κάθε σελίδα καταγράφει την πρόοδο στο `CHECKPOINTS/ACTIVE_WORK_2026.md` στον κλάδο εργασίας της και τη συμπεριλαμβάνει στο PR της. Μετά από κάθε ουσιαστικό βήμα γράφει σύντομη ενημέρωση με ώρα Ελλάδας, όνομα σελίδας, εργασία, υπεύθυνο και branch, αποτέλεσμα ανά δοκιμή (PASS / FAIL / NOT TESTED), σύνδεσμο και ακριβές commit για CI ή LAB, εκκρεμότητα και επόμενο βήμα. Τα αναλυτικά τεκμήρια συνδέονται από `CHECKPOINTS/CHANGES/`. Ο συντονιστής διασταυρώνει τις ενημερώσεις και επιλύει επικαλύψεις. Αλλαγή υπευθύνου απαιτεί ονομασμένη παράδοση και ενημέρωση του OPEN_WORK_TRACKER. Ένα PASS καλύπτει το σενάριο που δοκιμάστηκε.
+
+| Ομάδα από την προηγούμενη σελίδα | Επιβεβαιωμένη κατάσταση | Επόμενο βήμα |
+| --- | --- | --- |
+| Τιμολόγια και POS | [#3844](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3844) merged, 3/3 τοπικοί έλεγχοι αντιστοίχισης. [#3822](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3822) merged για κενά πρόχειρα myDATA. | Επιβεβαίωση του QR POS σε υπάρχον LAB με επαληθευμένο παραστατικό και τεκμήριο. |
+| Απογραφή | [#3841](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3841) draft, CI 4/5 με αποτυχίες PostgreSQL restore. [#3771](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3771) CI PASS στο `81afd657`, εκκρεμεί συγχρονισμός με main. [#3858](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3858) draft με τεκμήριο LAB για κίνηση αγοράς +2. | Απομόνωση αποτυχιών, συγχρονισμός, δοκιμές στο υπάρχον LAB. Full Audit: επαλήθευση πρωτοτύπου myDATA και πραγματικής ώρας φυσικής παραλαβής. |
+| Email και απόδοση | [#3793](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3793) και [#3834](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3834) merged. [#3827](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3827) ανοικτό για polling, SQL και μετρήσεις HTTP. | Τεκμήριο πραγματικής παραλαβής email και μετρήσεις πριν/μετά στο υπάρχον LAB. |
+
 ## Κανόνας ενημέρωσης
 
 10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
