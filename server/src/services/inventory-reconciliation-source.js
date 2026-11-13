@@ -43,8 +43,10 @@ export async function readInventoryReconciliationBase(tx, current, previousId = 
       LEFT JOIN "User" u ON u."id"=sm."createdByUserId" AND u."companyId"=${fresh.companyId}
       LEFT JOIN "PurchaseOrder" po ON po."id"=sm."sourceId" AND po."companyId"=${fresh.companyId} AND po."storeId"=${fresh.storeId}
         AND sm."sourceType"='PURCHASE_ORDER'
-      LEFT JOIN "PurchaseDocument" d ON d."id"=COALESCE(po."sourceDocumentId",sm."sourceId") AND d."companyId"=${fresh.companyId} AND d."storeId"=${fresh.storeId}
-        AND sm."sourceType" IN ('PURCHASE_DOCUMENT','PURCHASE_ORDER')
+      LEFT JOIN "PurchaseDocument" d ON d."id"=CASE
+        WHEN sm."sourceType"='PURCHASE_ORDER' THEN po."sourceDocumentId"
+        WHEN sm."sourceType" IN ('PURCHASE_DOCUMENT','PURCHASE_APPROVAL','AI_READER_CONFIRM','CREDIT_NOTE_APPROVAL') THEN sm."sourceId"
+        END AND d."companyId"=${fresh.companyId} AND d."storeId"=${fresh.storeId}
       WHERE sm."storeId"=${fresh.storeId} AND sm."createdAt">=${previous.startedAt} AND sm."createdAt"<=${fresh.finalizedAt}
         AND EXISTS (SELECT 1 FROM "StocktakeLine" l WHERE l."productId"=sm."productId" AND l."stocktakeId" IN (${fresh.id},${previous.id})
           AND (NOT ${freePair} OR l."countedQuantity" IS NOT NULL))
