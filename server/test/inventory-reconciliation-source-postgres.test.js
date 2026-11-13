@@ -55,6 +55,14 @@ test('native read-only two-stocktake SQL/HTTP: scope, count boundary, exports, f
     await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES ('doc','c','s','2026-09-01','LATE-1','2026-10-01 06:30')`);
     await db.$executeRaw`UPDATE "StockMovement" SET "sourceType"='PURCHASE_ORDER',"sourceId"='order' WHERE "id"='purchase'`;
     const late=await readInventoryReconciliation(db,current);assert.ok(late.rows[0].findings.includes('LATE_DOCUMENT'));assert.equal(late.rows[0].movements.find(x=>x.id==='purchase').documentNumber,'LATE-1');
+    for (const sourceType of ['PURCHASE_APPROVAL', 'AI_READER_CONFIRM', 'CREDIT_NOTE_APPROVAL', 'PURCHASE_ORDER', 'PRODUCT_CARD']) {
+      await db.$executeRaw`UPDATE "StockMovement" SET "sourceType"=${sourceType},"sourceId"='doc' WHERE "id"='purchase'`;
+      const linked = await readInventoryReconciliation(db,current);
+      const movement = linked.rows[0].movements.find(x=>x.id==='purchase');
+      const directDocumentSource = ['PURCHASE_APPROVAL', 'AI_READER_CONFIRM', 'CREDIT_NOTE_APPROVAL'].includes(sourceType);
+      assert.equal(movement.documentNumber, directDocumentSource ? 'LATE-1' : null);
+      assert.equal(movement.physicalAt, null);
+    }
     await db.$executeRaw`ALTER TABLE "Stocktake" ADD COLUMN "scopeType" text`;
     await db.$executeRaw`UPDATE "Stocktake" SET "scopeType"='FREE' WHERE "id" IN ('old','new')`;
     await db.$executeRaw`UPDATE "StocktakeLine" SET "unitCost"=2 WHERE "id"='b'`;

@@ -110,3 +110,8 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 13/11/2026 — Τυπωμένη καθαρή αξία στο χειροκίνητο πρόχειρο. [Checkpoint](CHANGES/2026-11-13-manual-invoice-printed-rounding.md).
 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / delegated bank transfer history. [Checkpoint](CHANGES/2026-11-13-manager-payment-history-implementation.md), PR #3851. CI passed before synchronization; hosted LAB pending.
+
+
+## 2026-11-13 — Inventory audit purchase document links
+
+Continues #3645 in draft #3852. The audit resolves direct approval, local OCR confirmation and credit postings to the purchase document in the selected company and store. Purchase orders resolve through their own source document. Local reconciliation tests passed 18/18 and isolated SQL join checks passed 9/9. Native CI and hosted LAB acceptance are pending. Physical receipt timestamps and verified originals remain open.
