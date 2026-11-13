@@ -47,7 +47,7 @@ test("normalizes full AADE supplier identity",async()=>{
 test("official AADE lookup bypasses the local supplier shortcut and distinguishes upstream failure",()=>{
   const route=fs.readFileSync(new URL("../src/routes/commerce-vat-lookup.js",import.meta.url),"utf8");
   const supplier=fs.readFileSync(new URL("../../client/src/components/commerce/installSupplierControlSuite.js",import.meta.url),"utf8");
-  assert.match(route,/existing&&!official/);
+  assert.match(route,/existing&&\(!official\|\|localOnly\)/);
   assert.match(route,/if\(!aade\.ok\)return res\.status\(502\)/);
   assert.match(route,/if\(!result\.valid\)return res\.status\(502\)/);
   assert.match(supplier,/vat-lookup\?official=1&taxId=/);
