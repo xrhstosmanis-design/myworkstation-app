@@ -57,6 +57,12 @@
 - Τιμολόγια · Το [#3853](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3853) είναι merged. [CI #9805 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43485507790) στο `d815bee1`. Η διαγραφή του κωδικού προμηθευτή κατά την αποθήκευση barcode τεκμηριώνεται στο [checkpoint](CHANGES/2026-11-13-invoice-clear-supplier-code.md). Για τα τρία είδη χρειάζεται έλεγχος της πραγματικής αντιστοίχισης και του αποθηκευμένου barcode ανά γραμμή. Η συγχώνευση του κώδικα δεν τεκμηριώνει τις τρεις καταχωρίσεις.
 - Συντονισμός · [CI #9824 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500322685) στο `98ae7b95`. Ο έλεγχος ταξινόμησης και οι δύο έλεγχοι Windows πέρασαν. Τα `build-and-test` και `wholesale-isolated-lab` παραλείφθηκαν. Η καταγραφή στο main και οι ενημερώσεις από τις υπόλοιπες σελίδες παραμένουν προς επιβεβαίωση.
 
+### Οριστικοποίηση τιμολογίου και διάγνωση CI — 13/11/2026
+
+- Τιμολόγια · Ο ιδιοκτήτης επιβεβαίωσε από τη σελίδα «διορθώσεις τιμολογίων κτλπ» ότι οριστικοποίησε το τιμολόγιο και είναι ΟΚ. Η οριστικοποίηση κλείνει ως επιβεβαίωση χειριστή. Δεν υπάρχει ανεξάρτητο τεκμήριο για τις τρεις τιμές barcode ανά γραμμή.
+- Απογραφή · Η διασταύρωση των workflow στο `3acf060c` (#3841) και στο `main` έδειξε διαφορά στο βήμα recovery: το branch χτίζει το image από το προεπιλεγμένο Dockerfile, ενώ το main περνά σταθερό digest PostgreSQL 18 και σταθερό digest για την υπηρεσία PostgreSQL 16. Ο επόμενος έλεγχος είναι CI με το workflow του main ώστε να διαπιστωθεί αν υποχωρούν οι αποτυχίες restore του #9770, πριν από την αποδοχή στο LAB. Η αιτία δεν έχει επιβεβαιωθεί με εκτέλεση.
+- Συντονισμός · [CI #9825 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500654258) στο `34896706` του #3860. Το PR έχει mergeable status και παραμένει draft.
+
 ## Κανόνας ενημέρωσης
 
 10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
