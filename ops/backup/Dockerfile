@@ -1,4 +1,5 @@
-FROM postgres:18-alpine
+ARG POSTGRES_IMAGE=postgres:18-alpine
+FROM ${POSTGRES_IMAGE}
 
 RUN apk add --no-cache aws-cli curl openssl python3
 

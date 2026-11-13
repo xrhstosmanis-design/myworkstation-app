@@ -13,6 +13,7 @@ import "./inventory-v2-center.css";
 import InventoryMobileApp from "./InventoryMobileApp.jsx";
 import InventoryFastCount from "./InventoryFastCount.jsx";
 import { inventoryUnitCost } from "./inventory-cost.js";
+import InventoryValuationReport from "./InventoryValuationReport.jsx";
 import InventoryReconciliationPanel from "./InventoryReconciliationPanel.jsx";
 const num = (v) => Number(v || 0),
   euro = (v) => v===null||v===undefined?'Άγνωστο':`${num(v).toFixed(2)} €`;
@@ -46,6 +47,7 @@ export default function InventoryV2Center({
   const storeId = delegated ? delegated.storeId : ownerStoreId;
   const locked = Boolean(delegated?.locked||reviewLocked);
   const finalizingRef = useRef(false);
+  const [showValuation, setShowValuation] = useState(false);
   const [mobileView,setMobileView]=useState(false);
   // Keep the display filter while a detail refresh temporarily unmounts FastCount.
   const [countFilterByStocktake,setCountFilterByStocktake]=useState({});
@@ -70,6 +72,7 @@ export default function InventoryV2Center({
       if(reviewLockRef.current){setError('Επαλήθευσε πρώτα την ενέργεια ελέγχου απογραφής.');return;}
       if (delegated) return locked ? undefined : delegated.onOpen(id);
       const result = await api(`/api/inventory-v2/stocktakes/${id}`);
+      setShowValuation(false);
       setCurrent(result);
       setInvestigation(null);
       if (result.status === "FINALIZED") {
@@ -521,6 +524,9 @@ export default function InventoryV2Center({
           )}
           </>}
           <h4>Απογραφές</h4>
+          {!delegated && <button type="button" disabled={locked} onClick={() => setShowValuation(value => !value)}>
+            {showValuation ? "Κλείσιμο συγκεντρωτικής αναφοράς" : "Συγκεντρωτική αναφορά"}
+          </button>}
           {delegated?.listLoaded && !stocktakes.length && <p>Δεν υπάρχουν διαθέσιμες απογραφές στο κατάστημα.</p>}
           <div className="inv2-history">
             {stocktakes.map((s) => (
@@ -539,6 +545,7 @@ export default function InventoryV2Center({
             <button type="button" disabled={locked||!delegated.pagination.hasNext} onClick={delegated.pagination.onNext}>Επόμενες απογραφές</button>
           </nav>}
         </aside>
+        {!delegated && showValuation ? <InventoryValuationReport api={api} stocktakes={stocktakes} storeId={storeId}/> :
         <section className="op-box inv2-work">
           {current ? (
             <>
@@ -649,7 +656,7 @@ export default function InventoryV2Center({
           ) : (
             <div className="empty">Επίλεξε ή ξεκίνησε απογραφή.</div>
           )}
-        </section>
+        </section>}
       </div>
     </div>
   );
