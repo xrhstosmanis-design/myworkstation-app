@@ -11,7 +11,7 @@ test('inventory is default off, strict boolean, never a stock grant',()=>{
  assert.equal(inventoryCapabilities().read,false);assert.equal(inventoryCapabilities({inventoryPos:'true'}).read,false);assert.equal(scope.capabilities.stock,false);
 });
 test('exact action admission rejects every stock and unknown route regardless of method',()=>{
- for(const path of ['/products/P/stock-adjustment','/products/P/destruction','/products/P/supplier-return','/products/merge/preview','/products/merge/confirm','/archive/stock-transfer','/products/stocktakes/S/finalize','/products/smart-entry','/products/activate','/products/P/card/extra','/products/P%2fQ/details'])for(const method of ['GET','POST','PATCH','DELETE'])assert.throws(()=>inventoryAction(method,path),undefined,path);
+ for(const path of ['/products/P/stock-adjustment','/products/P/destruction','/products/P/supplier-return','/archive/stock-transfer','/products/stocktakes/S/finalize','/products/smart-entry','/products/activate','/products/P/card/extra','/products/P%2fQ/details'])for(const method of ['GET','POST','PATCH','DELETE'])assert.throws(()=>inventoryAction(method,path),undefined,path);
  for(const [method,path] of [['GET','/archive'],['GET','/products/P/details'],['PATCH','/products/P/card'],['POST','/products/new-card'],['DELETE','/products/P/set-items/link']])assert.ok(inventoryAction(method,path));
 });
 test('own store, related objects and no-stock payload are checked independently of UI',()=>{
@@ -80,4 +80,16 @@ test('barcode transfer and priced SET changes require retail rights independentl
  const restricted={...scope,capabilities:inventoryCapabilities({...rights,changeRetail:false})};
  for(const [kind,body] of [['barcode-transfer',{}],['set-items',{salePrice:null}],['bulk',{setItem:{relatedProductId:'Q',salePrice:2}}]])assert.throws(()=>assertInventoryPayload(restricted,{kind,write:true},{},body),{code:'POS_INVENTORY_ACTION_DENIED'});
  assertInventoryPayload(restricted,{kind:'recipe-items',write:true},{},{ingredientProductId:'Q',quantity:1});
+});
+
+test('POS duplicate merges require a separate grant and stay in the operator store',()=>{
+ const granted={...scope,capabilities:inventoryCapabilities({...rights,inventoryMerge:true})};
+ assert.equal(inventoryCapabilities({inventoryMerge:true}).merge,false);
+ for(const path of ['/products/merge/preview','/products/merge/confirm']){
+  const action=inventoryAction('POST',path);
+  assert.throws(()=>assertInventoryPayload(scope,action,{},{storeId:'S'}));
+  assert.throws(()=>assertInventoryPayload(granted,action,{},{storeId:'OTHER'}));
+  assert.doesNotThrow(()=>assertInventoryPayload(granted,action,{},{storeId:'S'}));
+  assert.throws(()=>inventoryAction('GET',path));
+ }
 });
