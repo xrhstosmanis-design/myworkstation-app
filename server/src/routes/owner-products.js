@@ -13,7 +13,8 @@ import {requireCompanyModule as defaultRequireCompanyModule} from "../middleware
 export function createOwnerProductsRouter({db=prisma,scope=null}={}){
 const prisma=db;
 const scopedStoreId=scope?.storeId||null;
-const requireCompanyModule=key=>scope?.kind==='POS_INVENTORY'?(_req,_res,next)=>next():defaultRequireCompanyModule(key);
+const staffCatalogStoreId=scope?.kind==='STAFF_PRODUCT_CARD'?scopedStoreId:null;
+const requireCompanyModule=key=>scope?(_req,_res,next)=>next():defaultRequireCompanyModule(key);
 const router=Router();
 const uid=()=>crypto.randomUUID();
 const money=value=>value===null||value===undefined?null:Number(value);
@@ -150,9 +151,11 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
           WHERE line."productId"=p."id" AND ord."status" IN ('FINAL','INVOICED') AND NOT ord."awaitingInvoice"
         ) history WHERE history."supplierName" IS NOT NULL ORDER BY history.priority,history.at DESC LIMIT 1
       ) lp ON true
-      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
+      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${staffCatalogStoreId}::text IS NULL OR sp."storeId"=${staffCatalogStoreId})
       LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${company}
-      WHERE p."companyId"=${company} AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like})
+      WHERE p."companyId"=${company} AND (${staffCatalogStoreId}::text IS NULL OR sp."id" IS NOT NULL)
+        AND (${String(req.query.productId||"")} = '' OR p."id"=${String(req.query.productId||"")})
+        AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like})
       GROUP BY p."id",c."name",sc."name",pc."name",mp."brandName",lp."supplierName" ORDER BY p."name" LIMIT 500`;
     res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
     res.setHeader("Pragma","no-cache");
