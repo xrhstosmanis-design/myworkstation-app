@@ -1,3 +1,7 @@
+import {prisma} from '../prisma.js';
+import {businessQuestionPeriod} from './assistant-business-period.js';
+import {readDailyTurnover, dailyTurnoverAnswer} from './daily-turnover-report.js';
+import {normalizeBusinessText} from '../../../shared/assistant-business.mjs';
 import {walletActivityFromRequest} from "./ai-wallet-activity.js";
 import {reviewedCashTool,readAssistantReviewedCash} from './assistant-reviewed-cash.js';
 import {assistantHistoryTurnMetadata} from './assistant-history-turns.js';
@@ -37,7 +41,7 @@ export async function readCanonicalOwnerCash(req,date,scope,{fetchImpl=fetch,por
   return {...evidence,scope:"OWNER_SELECTED_STORE",companyId:scope.companyId,storeId:scope.storeId,storeName:scope.storeName};
 }
 
-export function createOwnerAssistantHandlers({authorize,historyTurns=null,readCash=readCanonicalOwnerCash,readReviewedCash=readAssistantReviewedCash,readSales=readCanonicalOwnerSales,readStock=readCanonicalOwnerStock,readConsumption=readAssistantConsumption,readBusiness=readAssistantBusiness,authorizePersonnel=async(req,scope)=>{const access=await requirePersonnelPackage(req,scope.storeId,PERSONNEL_BASIC);if(access.store.companyId!==scope.companyId)changed();},authorizeSalesStores=authorizeOwnerSalesStores,readSalesStores=readAssistantSalesStores,requestProvider,providerConfigured=()=>true,makeSignal=()=>AbortSignal.timeout(60000)}){
+export function createOwnerAssistantHandlers({authorize,historyTurns=null,readTurnover=(period,scope)=>readDailyTurnover(prisma,{...scope,...period}),readCash=readCanonicalOwnerCash,readReviewedCash=readAssistantReviewedCash,readSales=readCanonicalOwnerSales,readStock=readCanonicalOwnerStock,readConsumption=readAssistantConsumption,readBusiness=readAssistantBusiness,authorizePersonnel=async(req,scope)=>{const access=await requirePersonnelPackage(req,scope.storeId,PERSONNEL_BASIC);if(access.store.companyId!==scope.companyId)changed();},authorizeSalesStores=authorizeOwnerSalesStores,readSalesStores=readAssistantSalesStores,requestProvider,providerConfigured=()=>true,makeSignal=()=>AbortSignal.timeout(60000)}){
   const permittedTools=async(req,scope)=>{const tools=[];for(const [domainTools,moduleKey] of [[[ownerCashTool],"CASH_CONTROL"],[[...assistantProductTools,salesStoresTool,consumptionTool],"INVENTORY"]]){try{const current=await authorize(req,{requiredModules:[moduleKey]});if(!sameScope(scope,current))changed();tools.push(...domainTools)}catch(e){if(e.code!=="MODULE_DISABLED")throw e}}if(!scope.supportPreview&&req.body?.readScope!=='own_stores'&&req.query?.readScope!=='own_stores'&&tools.some(t=>t.name===ownerCashTool.name)){try{for(const module of ['CASH_CONTROL','STORE_CHAT','AI_READER'])if(!sameScope(scope,await authorize(req,{requiredModules:[module]})))changed();tools.push(reviewedCashTool)}catch(e){if(e.code!=='MODULE_DISABLED')throw e}}if(tools.length)tools.push(businessTool);return tools};
   const status=async(req,res,next)=>{try{const query=z.object({readScope:z.enum(["selected_store","own_stores"]).default("selected_store")}).strict().parse(req.query||{});const scope=await authorize(req,{requiredModules:[]});const tools=await permittedTools(req,scope);const salesScopeKey=query.readScope==="own_stores"?salesAccessKey(await authorizeSalesStores(req,true)):null;const historyStatus=historyTurns?.status?await historyTurns.status(req,scope):{};res.json({available:tools.length>0,scope,supported:tools.map(tool=>tool.name),salesScopeKey,readOnly:true,...historyStatus,walletRuntimeEnabled:process.env.AI_OWNER_WALLET_ENABLED==='true'})}catch(e){next(e)}};
   const ask=async(req,res,next)=>{
@@ -47,6 +51,29 @@ export function createOwnerAssistantHandlers({authorize,historyTurns=null,readCa
       const turn=body.conversation?await historyTurns.begin(req,body.conversation,body.question):null;if(turn)body.history=turn.history;
       const tools=toolsForAssistantQuestion(assistantEffectiveQuestion(body.question,body.history),await permittedTools(req,scope)),required=new Set();let salesAccess=null,personnelRequired=false;
       if(!tools.length)throw Object.assign(new Error("Δεν υπάρχει ενεργή υποστηριζόμενη αναφορά για το κατάστημα."),{status:403,code:"MODULE_DISABLED"});
+      const normalized = normalizeBusinessText(body.question);
+      if (/τζιρ/.test(normalized) && /ανα (?:ημερ|μερ)|μεταβολ|αυξησ|μειωσ/.test(normalized)) {
+        if (body.readScope !== 'selected_store') {
+          throw Object.assign(new Error('Επίλεξε ένα κατάστημα για τη μεταβολή τζίρου.'), {status:400});
+        }
+        const verifyTurnover = async () => {
+          const current = await authorize(req,{requiredModules:['INVENTORY','CASH_CONTROL']});
+          if (!sameScope(scope,current)) changed();
+        };
+        await verifyTurnover();
+        const period = businessQuestionPeriod(body.question);
+        const report = period ? await readTurnover(period,scope) : null;
+        await verifyTurnover();
+        const answer = report ? dailyTurnoverAnswer(report,scope.storeName) : {
+          answer:'Για ποιο διάστημα θέλεις τη μεταβολή τζίρου;',
+          highlights:[],
+          limitations:'',
+        };
+        const checked = {...answer,evidence:[],scope,readOnly:true,generatedAt:new Date().toISOString()};
+        const historyReceipt = turn ? await turn.finish(checked,[]) : null;
+        if (turn) await verifyTurnover();
+        return res.json({...checked,...(historyReceipt ? {historyReceipt} : {})});
+      }
       if(!providerConfigured())return res.status(503).json({error:"Η υπάρχουσα σύνδεση AI δεν είναι διαθέσιμη.",code:"AI_PROVIDER_NOT_CONFIGURED"});
       const signal=makeSignal(),today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
       const verify=async()=>{signal.throwIfAborted();if(personnelRequired)await authorizePersonnel(req,scope);const current=await authorize(req,{requiredModules:[...required]});if(!sameScope(scope,current))changed();if(salesAccess&&salesAccessKey(await authorizeSalesStores(req,body.readScope==="own_stores"))!==salesAccessKey(salesAccess))changed();return current};
