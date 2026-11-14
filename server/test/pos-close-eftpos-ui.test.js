@@ -11,10 +11,15 @@ test('mounted close form requires deliberate EFTPOS including zero before either
  const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StoreShiftClosePanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react/jsx-runtime'],loader:{'.css':'empty'}}),m={exports:{}};
  new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
  const root=createRoot(document.getElementById('root')),writes=[];
- const api=async(path,opts={})=>{if(opts.method){writes.push(JSON.parse(opts.body));throw Error('Ξαναμετρήσεις: έλλειμμα')}if(path.endsWith('/access'))return {shiftClosePolicy:{}};if(path.includes('/transactions/'))return {summary:{}};return {openSession:{id:'shift',openingSafe:0},suggestedOpening:{safe:0}}};
+ let totalsAvailable=false;
+ const api=async(path,opts={})=>{if(opts.method){writes.push(JSON.parse(opts.body));throw Error('Ξαναμετρήσεις: έλλειμμα')}if(path.endsWith('/access'))return {shiftClosePolicy:{}};if(path.includes('/transactions/'))return totalsAvailable?{summaryBySession:{shift:{cashSales:0,cardSales:0,expensesTotal:0}}}:{summary:{cashSales:100,cardSales:50,expensesTotal:0}};return {openSession:{id:'shift',openingSafe:0},suggestedOpening:{safe:0}}};
  const input=async(el,value)=>act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));el.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});
  try{
   await act(async()=>{root.render(React.createElement(m.exports.default,{api,store:{id:'s'}}));await new Promise(r=>setTimeout(r,20))});
+  assert.match(document.querySelector('[role="alert"]').textContent,/Δεν φορτώθηκαν τα σύνολα/);
+  assert.equal(document.querySelector("form"),null);assert.equal(writes.length,0);
+  totalsAvailable=true;
+  await act(async()=>{document.querySelector('[role="alert"] button').click()});
   await act(async()=>{document.querySelector('input[type="checkbox"]').click()});
   const eft=document.querySelector('input[required]'),card=document.querySelector('[name="shift-work-card"]'),submit=document.querySelector('.cash-submit'),form=document.querySelector('form');
   await input(card,'FIXTURE-CARD');assert.equal(eft.value,'');assert.equal(submit.disabled,true);
