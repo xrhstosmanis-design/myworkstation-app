@@ -33,6 +33,36 @@
 | — | OWNER-SHIFT-TIME-FILTER | /root | — | Assigned · LAB NOT TESTED | Add optional hours to the date range and verify in LAB |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
 
+## Κεντρικός συντονισμός σελίδων — 13/11/2026
+
+Η παρούσα σελίδα συντονισμού αναλαμβάνει τη συνέχεια του «Ελέγχου αναθέσεων εκκρεμοτήτων». Οι υπεύθυνοι των ήδη ανατεθειμένων εργασιών παραμένουν στις εγγραφές τους στο OPEN_WORK_TRACKER.
+
+**Υποχρεωτικό για όλες τις ανατεθειμένες σελίδες:** Κάθε σελίδα καταγράφει την πρόοδο στο `CHECKPOINTS/ACTIVE_WORK_2026.md` στον κλάδο εργασίας της και τη συμπεριλαμβάνει στο PR της. Μετά από κάθε ουσιαστικό βήμα γράφει σύντομη ενημέρωση με ώρα Ελλάδας, όνομα σελίδας, εργασία, υπεύθυνο και branch, αποτέλεσμα ανά δοκιμή (PASS / FAIL / NOT TESTED), σύνδεσμο και ακριβές commit για CI ή LAB, εκκρεμότητα και επόμενο βήμα. Τα αναλυτικά τεκμήρια συνδέονται από `CHECKPOINTS/CHANGES/`. Ο συντονιστής διασταυρώνει τις ενημερώσεις και επιλύει επικαλύψεις. Αλλαγή υπευθύνου απαιτεί ονομασμένη παράδοση και ενημέρωση του OPEN_WORK_TRACKER. Ένα PASS καλύπτει το σενάριο που δοκιμάστηκε.
+
+| Ομάδα από την προηγούμενη σελίδα | Επιβεβαιωμένη κατάσταση | Επόμενο βήμα |
+| --- | --- | --- |
+| Τιμολόγια και POS | [#3844](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3844) merged, 3/3 τοπικοί έλεγχοι αντιστοίχισης. [#3822](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3822) merged για κενά πρόχειρα myDATA. | Επιβεβαίωση του QR POS σε υπάρχον LAB με επαληθευμένο παραστατικό και τεκμήριο. |
+| Απογραφή | [#3841](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3841) draft, CI 4/5 με αποτυχίες PostgreSQL restore. [#3771](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3771) CI PASS στο `81afd657`, εκκρεμεί συγχρονισμός με main. [#3858](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3858) draft με τεκμήριο LAB για κίνηση αγοράς +2. | Απομόνωση αποτυχιών, συγχρονισμός, δοκιμές στο υπάρχον LAB. Full Audit: επαλήθευση πρωτοτύπου myDATA και πραγματικής ώρας φυσικής παραλαβής. |
+| Email και απόδοση | [#3793](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3793) και [#3834](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3834) merged. [#3827](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3827) ανοικτό για polling, SQL και μετρήσεις HTTP. | Τεκμήριο πραγματικής παραλαβής email και μετρήσεις πριν/μετά στο υπάρχον LAB. |
+
+### Πρώτος έλεγχος συντονισμού — 13/11/2026 22:18 ώρα Ελλάδας
+
+- Κεντρικός συντονισμός · [PR #3860](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3860): [CI #9823 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43499363517) στο `ee6627a0`. Εκκρεμεί ενσωμάτωση του κοινού κανόνα στο main και επιβεβαίωση ενημερώσεων από τους υπεύθυνους.
+- Απογραφή · #3841: [CI #9770 FAIL](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43300522469) στο `3acf060c`, με αποτυχίες PostgreSQL restore. Το GitHub τώρα το δείχνει mergeable. #3771: [CI #9573 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42631870100) στο `81afd657`, παραμένει μη mergeable. #3858: τεκμήριο LAB στο branch, εκκρεμεί CI στο `83619dd0`.
+- Email και απόδοση · #3827: [CI #9735 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43104586861) στο `9fd6067e`, η εγγραφή του branch αναφέρει ακόμη CI PENDING. Παραμένει μη mergeable. Εκκρεμούν οι μετρήσεις LAB και το τεκμήριο παραλαβής email.
+- Τιμολόγια και POS · Ο κλάδος του #3844 έχει το ενεργό μητρώο. Εκκρεμεί εγγραφή του ελέγχου QR POS με τεκμήριο LAB.
+
+### Διασταύρωση νεότερων τεκμηρίων — 13/11/2026
+
+- Τιμολόγια · Το [#3853](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3853) είναι merged. [CI #9805 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43485507790) στο `d815bee1`. Η διαγραφή του κωδικού προμηθευτή κατά την αποθήκευση barcode τεκμηριώνεται στο [checkpoint](CHANGES/2026-11-13-invoice-clear-supplier-code.md). Για τα τρία είδη χρειάζεται έλεγχος της πραγματικής αντιστοίχισης και του αποθηκευμένου barcode ανά γραμμή. Η συγχώνευση του κώδικα δεν τεκμηριώνει τις τρεις καταχωρίσεις.
+- Συντονισμός · [CI #9824 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500322685) στο `98ae7b95`. Ο έλεγχος ταξινόμησης και οι δύο έλεγχοι Windows πέρασαν. Τα `build-and-test` και `wholesale-isolated-lab` παραλείφθηκαν. Η καταγραφή στο main και οι ενημερώσεις από τις υπόλοιπες σελίδες παραμένουν προς επιβεβαίωση.
+
+### Οριστικοποίηση τιμολογίου και διάγνωση CI — 13/11/2026
+
+- Τιμολόγια · Ο ιδιοκτήτης επιβεβαίωσε από τη σελίδα «διορθώσεις τιμολογίων κτλπ» ότι οριστικοποίησε το τιμολόγιο και είναι ΟΚ. Η οριστικοποίηση κλείνει ως επιβεβαίωση χειριστή. Δεν υπάρχει ανεξάρτητο τεκμήριο για τις τρεις τιμές barcode ανά γραμμή.
+- Απογραφή · Η διασταύρωση των workflow στο `3acf060c` (#3841) και στο `main` έδειξε διαφορά στο βήμα recovery: το branch χτίζει το image από το προεπιλεγμένο Dockerfile, ενώ το main περνά σταθερό digest PostgreSQL 18 και σταθερό digest για την υπηρεσία PostgreSQL 16. Ο επόμενος έλεγχος είναι CI με το workflow του main ώστε να διαπιστωθεί αν υποχωρούν οι αποτυχίες restore του #9770, πριν από την αποδοχή στο LAB. Η αιτία δεν έχει επιβεβαιωθεί με εκτέλεση.
+- Συντονισμός · [CI #9825 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500654258) στο `34896706` του #3860. Το PR έχει mergeable status και παραμένει draft.
+
 ## Κανόνας ενημέρωσης
 
 10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
@@ -125,3 +155,43 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / independent payment history right. [Checkpoint](CHANGES/2026-11-13-manager-payment-read-independent.md). CI and LAB pending.
 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / independent shift close. [Checkpoint](CHANGES/2026-11-13-manager-shift-close-context.md), PR #3855. LAB pending.
+
+### Διασταύρωση CI και αλλαγών του main — 13/11/2026
+
+- #3841 · Το workflow του main με σταθερές εκδόσεις PostgreSQL 16/18 πέρασε 5/5 στο [CI #9775 του #3838](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43374661572). Το #3841 είναι 23 commits πίσω και έχει κοινή αλλαγή με το main στο `inventory-reconciliation-source.js`. Εκκρεμούν έλεγχος συμβατότητας σε branch από main και CI με τις σταθερές εκδόσεις.
+- #3858 και #3827 · Η κοινή αλλαγή με το main περιορίζεται σε αυτό το μητρώο. Στο #3771 έχουν αλλάξει και τα τέσσερα αρχεία υλοποίησης QR/PIN.
+- #3860 · [CI #9826 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500865390) στο `060e096a`. Ο κοινός κανόνας παραμένει στο draft.
+
+### Δοκιμαστική εφαρμογή του #3841 στο main — 13/11/2026
+
+Τα επτά αρχεία κώδικα και δοκιμών του #3841 εφαρμόστηκαν προσωρινά στο περιεχόμενο του main με μοναδική αντιστοίχιση ανά τμήμα diff. Διατηρήθηκαν οι νεότερες αλλαγές στο `inventory-reconciliation-source.js`. Πέρασαν 6/6 έλεγχοι σύνταξης JavaScript. Εκκρεμούν μεταγλώττιση JSX, συνδυασμένο CI και hosted LAB. Ο κλάδος του #3841 διατηρήθηκε στην τρέχουσα έκδοση.
+
+### Δοκιμαστικός κλάδος CI για #3841 — 13/11/2026
+
+Άνοιξε το [draft #3861](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3861) με commit `b4f57a3b` από το main `d8b278b2`. Επιβεβαιώθηκαν τα επτά αρχεία της αλλαγής και τα δύο checkpoints. Χρησιμοποιήθηκε το workflow του main με τις σταθερές εκδόσεις PostgreSQL. [CI #9828 PASS (5/5)](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43501988091), μαζί με το build-and-test. Εκκρεμεί δοκιμή του ίδιου commit στο υπάρχον LAB.
+
+- Έλεγχος Render για #3861 · NOT TESTED στο LAB. Το `myworkstation-app` είναι live στο `d8b278b2`. Το `b4f57a3b` δεν βρέθηκε στους πρόσφατους ελέγχους deploy των διαθέσιμων υπηρεσιών. Τα ενεργά απομονωμένα LAB εξυπηρετούν POS UI και χονδρική. Για hosted αποδοχή χρειάζεται διαθέσιμη έκδοση `b4f57a3b` σε εγκεκριμένο μη παραγωγικό στόχο με δοκιμαστικά δεδομένα απογραφής.
+
+- #3861 · Επανέλεγχος στο ακριβές `b4f57a3b`: `node --test server/test/inventory-reconciliation-reviews.test.js` με Zod 3.24.2, **11/11 PASS**. Επιβεβαιώθηκαν επαναχρησιμοποίηση σε επόμενη σύγκριση, ανάκληση και όρια καταστήματος/γενιάς. Το `render.yaml` του commit δηλώνει την παραγωγική εφαρμογή, όχι ξεχωριστό inventory LAB. Η λειτουργική δοκιμή στο φιλοξενούμενο LAB παραμένει NOT TESTED.
+
+- 14/11/2026 · #3858 συγχρονίστηκε με main `d8b278b2`, με διατήρηση των έξι αρχείων τεκμηρίωσης και των νεότερων εγγραφών του μητρώου. [CI #9830 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43561772567) στο `32e69a07`. Hosted LAB PASS για standalone OCR και κίνηση αγοράς +2. Η πραγματική ώρα παραλαβής και το αποθηκευμένο πρωτότυπο myDATA παραμένουν ανοικτά.
+
+- 14/11/2026 · #3827 συγχρονίστηκε με main `d8b278b2`. Διατηρήθηκαν τα οκτώ αρχεία του PR και οι εγγραφές του main. [CI #9832 PASS (5/5)](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43562848857) στο `afaa555b`. Εκκρεμούν μετρήσεις polling και καθυστέρησης HTTP στο υπάρχον LAB και έλεγχος SQL indexes. Τα indexes δεν εφαρμόστηκαν από αυτή την εργασία.
+
+- 14/11/2026 · Οριστικοποίηση QR/PIN: το [#3774](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3774) αντικατέστησε το #3771 και συγχωνεύτηκε με `40aaf29f`. Επιβεβαιώθηκε ότι το commit περιλαμβάνεται στο τρέχον main και ότι το [CI #9579 πέρασε](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42634405981) στο `fdb2cbec`. Οι σχετικές αλλαγές υπάρχουν στα τέσσερα αρχεία υλοποίησης του main. Η παλαιότερη εκκρεμότητα συγχρονισμού #3771 κλείνει ως αντικατασταθείσα. Παραμένει ανοικτή η τεκμηριωμένη δοκιμή στο υπάρχον LAB για ρητή εξουσιοδότηση όλων των ζωνών και συνδέσμους μόνο για καταμέτρηση.
+
+- 14/11/2026 · #3774 hosted LAB: το Render είναι live στο `d8b278b2`, το οποίο περιλαμβάνει την οριστικοποίηση QR/PIN. Το MyWorkStation επέστρεψε «Η προβολή Backoffice διακόπηκε» λόγω ανενεργής συνεδρίας και το Άνοιγμα Backoffice επέστρεψε στην ίδια οθόνη. NOT TESTED για σύνδεσμο μόνο καταμέτρησης και σύνδεσμο με ρητή οριστικοποίηση. Επόμενο βήμα: επανασύνδεση στο δοκιμαστικό Backoffice και επιβεβαίωση των δύο περιπτώσεων αποκλειστικά στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ.
+
+- 14/11/2026 · #3827: στοχευμένος επανέλεγχος στο `afaa555b`, **4/4 PASS**. Επιβεβαιώθηκαν η επιβράδυνση polling μόνο για το αναμενόμενο 503 κλειστού καταστήματος, οι συγκεντρωτικές μετρήσεις καθυστέρησης χωρίς IDs καταστημάτων και η συνέχιση του API σε αστοχία καταγραφής. Hosted LAB και μετρήσεις με SQL indexes παραμένουν ανοικτά.
+
+- 14/11/2026 · Τιμολόγια POS #3844: επιβεβαιώθηκε [CI #9780 PASS 5/5](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43418378210) στο `ca93cab0` και συγχώνευση. Εκκρεμεί δοκιμή στο υπάρχον LAB για επιβεβαιωμένο myDATA, ελλιπή στοιχεία και αίτημα φωτογραφίας/PDF. Χρησιμοποιείται δοκιμαστικό παραστατικό.
+- 14/11/2026 · Email #3834: επιβεβαιώθηκε [CI #9758 PASS 5/5](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43292527704) στο `14dabfa9` και συγχώνευση. Οι δοκιμές με συνθετικές εγγραφές καλύπτουν ιστορικό ανά κατάστημα και έλεγχο ρόλων. Εκκρεμεί λειτουργική δοκιμή στο LAB και τεκμήριο παραλαβής στο γραμματοκιβώτιο.
+
+### Εκκρεμότητες για κλείσιμο συντονισμού — 14/11/2026
+
+| Εργασία | Κριτήριο κλεισίματος | Κατάσταση |
+| --- | --- | --- |
+| Κοινός κανόνας #3860 | Ενσωμάτωση στο main και μία καταγραφή από κάθε ομάδα στο ενεργό μητρώο | Η αλλαγή αφορά μόνο το ενεργό μητρώο. CI PASS στο προηγούμενο commit. Εκκρεμεί έγκριση συγχώνευσης. |
+| Παραλαβή OCR #3858 | Ενσωμάτωση τεκμηρίωσης για το συγκεκριμένο σενάριο | Hosted LAB PASS για 8 → 10, PURCHASE +2 και διαφορά 0. Χωριστές εκκρεμότητες Full Audit: πραγματική ώρα παραλαβής και επαλήθευση πρωτοτύπου myDATA. |
+| Απογραφή #3861 / #3774 | Έλεγχος ομαδοποίησης και ανάκλησης στο LAB για #3861, καθώς και των δύο δικαιωμάτων συνδέσμου QR/PIN για #3774 | #3861 CI 5/5 και 11/11 στοχευμένες δοκιμές. Εκκρεμούν διαθέσιμο build #3861 στο υπάρχον LAB και ενεργή συνεδρία Backoffice για #3774. |
+| POS #3844 / Email #3834 / Απόδοση #3827 | Δοκιμή POS myDATA, συσχέτιση δοκιμαστικού email με παραλαβή και μετρήσεις στο LAB | Τα CI πέρασαν. Στη στοχευμένη αναζήτηση του συνδεδεμένου Gmail δεν βρέθηκε σχετικό τεκμήριο παραλαβής. |
