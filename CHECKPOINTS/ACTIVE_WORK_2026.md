@@ -6,7 +6,6 @@
 
 | Προτεραιότητα | Εργασία | Υπεύθυνος | PR / issue | Τρέχουσα κατάσταση | Επόμενο βήμα |
 | --- | --- | --- | --- | --- | --- |
-| 1 | SERVER-PERFORMANCE-01 / Polling, SQL, API latency | Συντονιστής | #3827 (draft) | [Candidate](CHANGES/2026-11-11-server-performance.md) · CI PENDING · LAB NOT TESTED · indexes NOT APPLIED | Πλήρες CI, υπάρχον LAB, έγκριση πριν merge/SQL παραγωγής |
 | 1 | Προσθήκη γραμμής από υπεύθυνο | /root | #3828 | Ενεργό στο Render · LAB PASS για προσθήκη σε πρόχειρο | [Αποτέλεσμα δοκιμής](CHANGES/2026-11-12-staff-invoice-add-line.md) |
 | 1 | POS-MYDATA-QR-LEARNING-01 | Ενεργός χειρισμός τιμολογίων POS / myDATA | #3823 | [Κεντρική εκμάθηση επαληθευμένου QR ανά εταιρεία, ΑΦΜ προμηθευτή και τύπο παρόχου](CHANGES/2026-11-11-pos-mydata-qr-learning.md) · source candidate, όχι εγκατεστημένο / LAB NOT TESTED | Πλήρες CI, επαλήθευση στο υπάρχον LAB και δοκιμή πραγματικού scanner χωρίς νέα πληρωμή |\n| 1 | Επιμερισμός ΕΦΚ ανά τεμάχιο | Τιμολόγια προμηθευτών | #3820 | [Τοπικός έλεγχος προεπισκόπησης, καταχώρισης και περιθωρίου](CHANGES/2026-11-11-invoice-excise-per-piece.md) | Πλήρες CI και φιλοξενούμενη δοκιμή |
 | 0 | POS shift close with invoice draft recovery | Current POS work | — | [Local candidate](CHANGES/2026-11-10-pos-shift-invoice-draft-guard.md), focused 19 PASS and isolated native PostgreSQL 24 PASS | CI and existing LAB validation |
@@ -192,7 +191,23 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 | Εργασία | Κριτήριο κλεισίματος | Κατάσταση |
 | --- | --- | --- |
-| Κοινός κανόνας #3860 | Ενσωμάτωση στο main και μία καταγραφή από κάθε ομάδα στο ενεργό μητρώο | Ο κανόνας συγχωνεύτηκε στο main με `b0855031`. Εκκρεμεί μία καταγραφή από κάθε ομάδα. |
+| Κοινός κανόνας #3860 | Ενσωμάτωση στο main και μία καταγραφή από κάθε ομάδα στο ενεργό μητρώο | Η αλλαγή αφορά μόνο το ενεργό μητρώο. CI PASS στο προηγούμενο commit. Εκκρεμεί έγκριση συγχώνευσης. |
 | Παραλαβή OCR #3858 | Ενσωμάτωση τεκμηρίωσης για το συγκεκριμένο σενάριο | Hosted LAB PASS για 8 → 10, PURCHASE +2 και διαφορά 0. Χωριστές εκκρεμότητες Full Audit: πραγματική ώρα παραλαβής και επαλήθευση πρωτοτύπου myDATA. |
 | Απογραφή #3861 / #3774 | Έλεγχος ομαδοποίησης και ανάκλησης στο LAB για #3861, καθώς και των δύο δικαιωμάτων συνδέσμου QR/PIN για #3774 | #3861 CI 5/5 και 11/11 στοχευμένες δοκιμές. Εκκρεμούν διαθέσιμο build #3861 στο υπάρχον LAB και ενεργή συνεδρία Backoffice για #3774. |
 | POS #3844 / Email #3834 / Απόδοση #3827 | Δοκιμή POS myDATA, συσχέτιση δοκιμαστικού email με παραλαβή και μετρήσεις στο LAB | Τα CI πέρασαν. Στη στοχευμένη αναζήτηση του συνδεδεμένου Gmail δεν βρέθηκε σχετικό τεκμήριο παραλαβής. |
+
+## 2026-11-14 — Markup σε πρόχειρα myDATA
+
+Υπολογισμός markup κατά την προβολή αντιστοιχισμένων γραμμών. [Checkpoint](CHANGES/2026-11-14-mydata-draft-markup.md).
+
+## 2026-11-14 — Φίλτρα και διπλοεγγραφές στην Αποθήκη POS
+
+[Checkpoint](CHANGES/2026-11-14-pos-warehouse-duplicate-filters.md).
+
+## 2026-11-14 — Συγχώνευση ειδών και φίλτρα στην Αποθήκη POS
+
+[Checkpoint](CHANGES/2026-11-14-front-pos-warehouse-merge.md).
+
+| 1 | SERVER-PERFORMANCE-01 / Polling, SQL, API latency | Συντονιστής | #3827 (draft) | [Candidate](CHANGES/2026-11-11-server-performance.md) · CI PENDING · LAB NOT TESTED · indexes NOT APPLIED | Πλήρες CI, υπάρχον LAB, έγκριση πριν merge/SQL παραγωγής |
+
+| Κοινός κανόνας #3860 | Ενσωμάτωση στο main και μία καταγραφή από κάθε ομάδα στο ενεργό μητρώο | Ο κανόνας συγχωνεύτηκε στο main με `b0855031`. Εκκρεμεί μία καταγραφή από κάθε ομάδα. |
