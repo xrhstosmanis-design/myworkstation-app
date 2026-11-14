@@ -216,6 +216,10 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 [Checkpoint](CHANGES/2026-11-14-pos-warehouse-vat-margin.md).
 
+## 2026-11-14 — Καρτέλα είδους και πλοήγηση υπευθύνου
+
+[Checkpoint](CHANGES/2026-11-14-staff-item-card.md).
+
 ## 13/11/2026 — Συνέχεια αναθέσεων απογραφής
 
 Η συνέχεια της προηγούμενης σελίδας καταγράφεται εδώ, με σύντομα checkpoints και συνδέσμους στα τεκμήρια.
