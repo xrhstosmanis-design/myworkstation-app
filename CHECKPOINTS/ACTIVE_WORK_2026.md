@@ -268,6 +268,16 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - 2026-11-14 · Ημερήσια μεταβολή τζίρου Διαδόχου στον Βοηθό και στη μηνιαία αναφορά · branch `feat/monthly-turnover-report` · NOT TESTED στο LAB. [Checkpoint](CHANGES/2026-11-14-monthly-turnover-report.md)
 
+13/11/2026 — #3841: δοκιμαστική εφαρμογή των αλλαγών απογραφής στο main `d8b278b2`, με τις σταθερές εκδόσεις PostgreSQL του main. CI και LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-12-inventory-reusable-identity-projection.md).
+
+- #3861 · Στοχευμένος επανέλεγχος πηγής του `28a212b9`: 12/12 PASS. Περιλαμβάνει εκτέλεση του πραγματικού SQL επιλογής ιστορικού πάνω σε απομονωμένο PGlite με συνθετικό `WorkforceAuditLog`. Επιβεβαιώθηκαν η επαναχρησιμοποίηση, η ανάκληση, η εξαίρεση του αρχικού ζεύγους και η απομόνωση ανά κατάστημα και γενιά. Hosted LAB παραμένει ανοικτό μέχρι να είναι διαθέσιμη εκεί η δοκιμαστική έκδοση.
+
+| 1 | SERVER-PERFORMANCE-01 / Polling, SQL, API latency | Συντονιστής | #3827 (draft) | [Candidate](CHANGES/2026-11-11-server-performance.md) · CI PENDING · LAB NOT TESTED · indexes NOT APPLIED | Πλήρες CI, υπάρχον LAB, έγκριση πριν merge/SQL παραγωγής |
+
+- #3827 · Η διόρθωση του ελέγχου FAST POS για τυχαίο UUID επαληθεύτηκε με 4 στοχευμένους ελέγχους. Εκκρεμούν CI μετά τον συγχρονισμό και φιλοξενούμενη δοκιμή LAB.
+
+- #3827 · Τοπικό SQL benchmark σε απομονωμένο PGlite με 100.000 συνθετικές γραμμές ανά πίνακα. Με ισοδύναμους indexes, CloudAudit και FTEXT πέρασαν από `Seq Scan + Sort` σε `Index Only Scan`. Ενδεικτικά μία εκτέλεση ανά query: CloudAudit 541 → 12 shared hit blocks (12,962 → 0,214 ms), FTEXT 690 → 1 (12,573 → 0,072 ms). Επιβεβαιώθηκε επιπλέον σε τοπικό PGlite ότι τα δύο ακριβή `CREATE INDEX CONCURRENTLY IF NOT EXISTS` του PR εκτελούνται χωριστά, μπορούν να επαναληφθούν και αφήνουν δύο έγκυρους indexes. Εκκρεμούν μετρήσεις και έλεγχος παράλληλου φορτίου στο υπάρχον LAB. Το #3861 περιμένει διαθέσιμο build στο LAB για έλεγχο επαναχρησιμοποίησης και ανάκλησης.
+
 ## 2026-11-14 — Πλήρης καρτέλα υπευθύνου
 
 [Checkpoint](CHANGES/2026-11-14-staff-full-product-card.md).

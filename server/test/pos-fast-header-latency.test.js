@@ -362,7 +362,9 @@ function assertSanitizedTimings(events){
   if(event.stage==='azure_poll_wait'||event.stage==='azure_poll_request')assert.ok(Number.isInteger(event.poll)&&event.poll>=1&&event.poll<=30);
  }
  assert.equal(new Set(events.map(event=>event.correlationId)).size,1,'one correlation per request');
- assert.doesNotMatch(JSON.stringify(events),/SYNTHETIC|synthetic|company-a|store-a|supplier-a|SYN-42|FB-43|099999999|088888888|secret|data:|base64|filename|taxId|totalGross|documentNumber|Authorization/i);
+ // Random UUIDs can contain digit sequences from the synthetic fixtures.
+ const eventsWithoutRandomIds=events.map(({correlationId,...event})=>event);
+ assert.doesNotMatch(JSON.stringify(eventsWithoutRandomIds),/SYNTHETIC|synthetic|company-a|store-a|supplier-a|SYN-42|FB-43|099999999|088888888|secret|data:|base64|filename|taxId|totalGross|documentNumber|Authorization/i);
 }
 const stageOutcomes=events=>events.map(({stage,outcome,attempt})=>[stage,outcome,...(attempt===undefined?[]:[attempt])]);
 const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done});return {promise,resolve}};
