@@ -1,3 +1,5 @@
+import {dailyTurnoverAnswer} from "./daily-turnover-report.js";
+import {summarizeDailyTurnover} from "./daily-turnover-summary.js";
 import {renderReviewedCashEmail} from './cash-reviewed-email.js';
 import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import { normalizeReportRecipients, reportRecipientListSchema } from "./report-recipients.js";
@@ -176,6 +178,27 @@ export async function sendTestEmail(){
     html:`<h2>MyWorkStation</h2><p>Η ασφαλής σύνδεση email λειτουργεί.</p><p><strong>Ημερομηνία δοκιμής:</strong> ${sentAt.toISOString()}</p>`
   });
   return {messageId:result.messageId,sentAt:sentAt.toISOString(),recipient:config.testRecipient};
+}
+
+export async function sendMonthlyTurnoverTestEmail(scope){
+  const {testRecipient}=requireMailConfig();
+  const dailyTotals=new Map([["2026-11-01",10000],["2026-11-02",12000],["2026-11-03",9000]]);
+  const summary=summarizeDailyTurnover({
+    fromDay:"2026-11-01",
+    toDay:"2026-11-03",
+    dailyTotals,
+  });
+  const report=dailyTurnoverAnswer({status:"AVAILABLE",...summary},"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ");
+  const to=testRecipient.toLowerCase();
+  const result=await createAutomaticReportSmtpTransport(scope).sendMail({
+    to,
+    subject:"LAB · ΔΟΚΙΜΗ ΜΗΝΙΑΙΑΣ ΑΝΑΦΟΡΑΣ ΤΖΙΡΟΥ",
+    text:["Δοκιμαστικά δεδομένα.",report.answer,...report.highlights,report.limitations].join("\n\n"),
+  });
+  if(result.accepted?.length!==1 || result.accepted[0]!==to || result.rejected?.length!==0 || result.pending?.length || !result.messageId){
+    throw new Error("LAB SMTP acceptance not confirmed");
+  }
+  return {messageId:result.messageId};
 }
 
 const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
