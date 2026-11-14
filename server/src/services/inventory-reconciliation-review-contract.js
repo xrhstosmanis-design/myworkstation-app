@@ -6,7 +6,7 @@ export const reviewError=(code,message='Η ενέργεια ελέγχου δε�
 const id=z.string().trim().min(1).max(120),digest=z.string().regex(/^[a-f0-9]{64}$/),generation=z.string().regex(/^(0|[1-9][0-9]{0,18})$/);
 const reason=z.string().trim().min(3).max(500),evidence=z.string().trim().min(5).max(500);
 export const reviewActionSchema=z.discriminatedUnion('kind',[
-  z.object({kind:z.literal('LINK'),productIds:z.array(id).min(2).max(20).refine(x=>new Set(x).size===x.length),canonicalProductId:id,reason,evidence}).strict(),
+  z.object({kind:z.literal('LINK'),productIds:z.array(id).min(2).max(20).refine(x=>new Set(x).size===x.length),canonicalProductId:id,reuseInStore:z.literal(true).optional(),reason,evidence}).strict(),
   z.object({kind:z.literal('CORRECTION'),productId:id,quantity:z.number().finite().min(-10000000).max(10000000).refine(x=>x!==0&&Math.abs(x*10000-Math.round(x*10000))<0.000001),reason,evidence}).strict(),
   z.object({kind:z.literal('REVOKE'),actionId:digest,reason,evidence}).strict()
 ]);
@@ -50,18 +50,30 @@ export function inventoryReviewState(rows,scope,{available=true}={}){
   return {available,head,records:parsed,active:parsed.filter(r=>r.request.action.kind!=='REVOKE'&&!revoked.has(r.id)),revoked};
 }
 const round=x=>Math.round((x+Number.EPSILON)*10000)/10000;
-export function projectInventoryReviews(base,state){
+export function projectInventoryReviews(base,state,reusableLinks=[]){
   if(!state.available)return {...base,review:{version:1,available:false,head:null,history:[]},rawFingerprint:base.fingerprint};
   const parents=new Map(base.rows.map(x=>[x.productId,x.productId])),find=id=>{
     let current=id;const path=[];while(parents.get(current)!==current){const next=parents.get(current);if(next===undefined)throw reviewError('INVENTORY_REVIEW_SOURCE_CHANGED');path.push(current);current=next;}for(const key of path)parents.set(key,current);return current;
   };
-  for(const r of state.active.filter(x=>x.request.action.kind==='LINK')){
+  const applicableLinks=reusableLinks.filter(({request:{action}})=>
+    action.productIds.includes(action.canonicalProductId)&&
+    parents.has(action.canonicalProductId)&&
+    action.productIds.filter(id=>parents.has(id)).length>=2
+  ).map(link=>({
+    ...link,
+    request:{...link.request,action:{
+      ...link.request.action,
+      productIds:link.request.action.productIds.filter(id=>parents.has(id))
+    }}
+  }));
+  const active=[...applicableLinks,...state.active];
+  for(const r of active.filter(x=>x.request.action.kind==='LINK')){
     const a=r.request.action;
     if(a.productIds.some(id=>!parents.has(id)))throw reviewError('INVENTORY_REVIEW_SOURCE_CHANGED');
     for(const id of a.productIds)parents.set(find(id),find(a.canonicalProductId));
   }
   const linksByRoot=new Map(),correctionsByRoot=new Map();
-  for(const r of state.active){const a=r.request.action;
+  for(const r of active){const a=r.request.action;
     if(a.kind==='CORRECTION'&&!parents.has(a.productId))throw reviewError('INVENTORY_REVIEW_SOURCE_CHANGED');
     const root=find(a.kind==='LINK'?a.canonicalProductId:a.productId),map=a.kind==='LINK'?linksByRoot:correctionsByRoot;
     if(!map.has(root))map.set(root,[]);map.get(root).push(r);
@@ -99,6 +111,6 @@ export function projectInventoryReviews(base,state){
   const history=state.records.map(r=>({id:r.id,requestId:r.request.requestId,actorId:r.actorId,actorName:r.actorName,createdAt:r.createdAt,action:r.request.action,active:activeIds.has(r.id),basisFingerprint:r.basisFingerprint}));
   const report={...base,version:2,initialSummary:base.summary,summary,groups,rawFingerprint:base.fingerprint,
     costMethod:'Για επιβεβαιωμένη ομάδα ίδιου προϊόντος χρησιμοποιείται το αποθηκευμένο κόστος της νεότερης απογραφής του ρητά επιλεγμένου κύριου κωδικού. Άγνωστο ή μηδενικό κόστος δεν αποτιμάται.',
-    coverage:{...base.coverage,identityGrouping:true,reviewedCorrections:true},review:{version:1,available:true,head:state.head,history}};
+    coverage:{...base.coverage,identityGrouping:true,reviewedCorrections:true},review:{version:1,available:true,head:state.head,history,reusedLinkIds:applicableLinks.map(link=>link.id)}};
   report.fingerprint=reviewHash([base.fingerprint,report.version,state.head,groups,summary,report.costMethod]);return report;
 }

@@ -28,12 +28,13 @@ export default function InventoryReviewControls({api,report,stocktakeId,storeId,
     if(kind==='LINK'){
       if(!first||!second||first===second){setError('Επίλεξε δύο διαφορετικούς κωδικούς.');return;}
       action={...action,productIds:[first,second],canonicalProductId:String(form.get('canonical')||first)};
+      if(form.has('reuseInStore'))action.reuseInStore=true;
     }else if(kind==='CORRECTION'){
       const raw=String(form.get('quantity')||'').trim(),quantity=Number(raw),productId=String(form.get('product')||'');
       if(!raw||!Number.isFinite(quantity)||quantity===0||Math.abs(quantity)>10000000||Math.abs(quantity*10000-Math.round(quantity*10000))>0.000001||!productId){setError('Συμπλήρωσε είδος και μη μηδενική διόρθωση με έως 4 δεκαδικά.');return;}
       action={...action,productId,quantity};
     }else action={...action,actionId:revokeTarget};
-    if(!window.confirm('Επιβεβαιώνεις την ενέργεια για αυτή τη σύγκριση; Η ενέργεια ενημερώνει την αναφορά και το ιστορικό ελέγχου.'))return;
+    if(!window.confirm(action.reuseInStore?'Επιβεβαιώνεις ότι η σύνδεση θα εφαρμόζεται και σε άλλες συγκρίσεις αυτού του καταστήματος;':'Επιβεβαιώνεις την ενέργεια; Η ενέργεια ενημερώνει την αναφορά και το ιστορικό ελέγχου.'))return;
     const body={requestId:crypto.randomUUID(),previousStocktakeId:report.previous.id,generation:report.generation,head:report.review.head,expectedFingerprint:report.fingerprint,action};
     try{window.sessionStorage.setItem(key,JSON.stringify({version:1,body}));}catch{setError('Δεν μπορεί να διατηρηθεί με ασφάλεια η ταυτότητα της ενέργειας. Δεν στάλθηκε καταχώριση.');return;}
     pendingRef.current=body;setPending(body);send(body);
@@ -63,8 +64,9 @@ export default function InventoryReviewControls({api,report,stocktakeId,storeId,
   return <section aria-label="Επιβεβαιώσεις απογραφής">
     {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
     {pending?<div><p>Υπάρχει ενέργεια προς επαλήθευση. Διατηρείται η ίδια ταυτότητα καταχώρισης.</p><button disabled={busy} onClick={verify}>Επαλήθευση καταχώρισης</button> <button disabled={busy} onClick={()=>send(pendingRef.current)}>Επανάληψη ίδιας ενέργειας</button> <button disabled={busy} onClick={discard}>Ανανέωση και ακύρωση φόρμας</button></div>:<>
-      <p>Οι επιβεβαιώσεις ισχύουν για αυτή τη σύγκριση. Οι αρχικές καταμετρήσεις διατηρούνται. Η διόρθωση της αναφοράς είναι ξεχωριστή από καταχώριση αποθέματος.</p>
+      <p>Η επαναχρησιμοποίηση σύνδεσης ενεργοποιείται προαιρετικά. Για ανάκληση άνοιξε τη σύγκριση όπου καταχωρίστηκε. Οι αρχικές καταμετρήσεις διατηρούνται. Η διόρθωση της αναφοράς είναι ξεχωριστή από καταχώριση αποθέματος.</p>
       <details><summary>Επιβεβαίωση ίδιου φυσικού προϊόντος</summary><form onSubmit={e=>submit(e,'LINK')}>
+        <label><input type="checkbox" name="reuseInStore"/> Επαναχρησιμοποίηση σε άλλες συγκρίσεις του καταστήματος</label>
         <label>Πρώτος κωδικός <select required value={first} onChange={e=>setFirst(e.target.value)}><option value="">Επιλογή</option>{report.rows.map(r=><option key={r.productId} value={r.productId}>{r.sku} · {r.name}</option>)}</select></label>
         <label>Δεύτερος κωδικός <select required value={second} onChange={e=>setSecond(e.target.value)}><option value="">Επιλογή</option>{report.rows.map(r=><option key={r.productId} value={r.productId}>{r.sku} · {r.name}</option>)}</select></label>
         <label>Κύριος κωδικός για αποτίμηση <select name="canonical" required key={`${first}:${second}`}>{[...new Set([first,second].filter(Boolean))].map(id=><option key={id} value={id}>{report.rows.find(r=>r.productId===id)?.sku} · {report.rows.find(r=>r.productId===id)?.name}</option>)}</select></label>
