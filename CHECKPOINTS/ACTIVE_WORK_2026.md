@@ -30,7 +30,7 @@
 | — | Invoice stock exclusion email | Συντονιστής | #3785 | Local queue and retry simulation | Full CI and LAB SMTP pending. [Checkpoint](CHANGES/2026-11-10-invoice-stock-exclusion-email.md) |
 | — | INVENTORY-CATALOG-XLSX-01 | /root | #3798, #3801 | [Ανάθεση](CHANGES/2026-11-10-inventory-catalog-xlsx.md) · Υλοποίηση σε branch, LAB NOT TESTED | CI και δοκιμή XLSX όλων/επιλεγμένων στο υπάρχον LAB |
 | — | STORE-CATALOG-APPEND-XLSX | /root | #3811 | Implementation candidate · LAB NOT TESTED | Verify in CI and existing LAB |
-| — | OWNER-SHIFT-TIME-FILTER | /root | — | Assigned · LAB NOT TESTED | Add optional hours to the date range and verify in LAB |
+| — | OWNER-SHIFT-TIME-FILTER | /root | #3818 | Source reconciled with main · Owner UI LAB pending | [Checkpoint](CHANGES/2026-11-10-owner-shift-time-filter.md) |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
 
 ## Κεντρικός συντονισμός σελίδων — 13/11/2026
