@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {inventoryReviewState,normalizeReviewRequest,projectInventoryReviews,reviewEntity,reviewHash,reviewId,reviewKey,reviewRequestHash} from '../src/services/inventory-reconciliation-review-contract.js';
+import {readInventoryReusableLinks} from '../src/services/inventory-reconciliation-review-source.js';
 const scope={companyId:'c',storeId:'s',generation:'0',previousId:'old',currentId:'new'},basis='a'.repeat(64);
 const row=(productId,difference,unitCost=2)=>({productId,name:productId,sku:productId,difference,unitCost,findings:[],movements:[]});
 const base=rows=>({current:{id:'new',companyId:'c',storeId:'s'},previous:{id:'old'},rows,summary:{itemCount:rows.length},coverage:{identityGrouping:false,reviewedCorrections:false,invoiceAuditComplete:false},fingerprint:basis});
@@ -62,4 +63,33 @@ test('strict normalized requests bind the same semantic payload and reject unsaf
   assert.equal(reviewRequestHash(scope,'owner',first),reviewRequestHash(scope,'owner',second));assert.notEqual(reviewRequestHash(scope,'owner',first),reviewRequestHash(scope,'other',first));
   for(const action of [link(['a','a']),link(['a','b'],'c'),correction('p',0),correction('p',1.00001),correction('p',Infinity)])assert.throws(()=>normalizeReviewRequest({...input,action}));
   assert.throws(()=>normalizeReviewRequest({...input,actorId:'spoofed'}));
+});
+
+test('a later comparison can reuse confirmed links with its own canonical cost and original rows',()=>{
+  const origin=add([],{...link(['a','b','absent'],'a'),reuseInStore:true});
+  const source=base([row('a',-2,5),row('b',1,2)]);
+  const state=inventoryReviewState([],{...scope,currentId:'later'});
+  const confirmed=inventoryReviewState(origin,scope);
+  const projected=projectInventoryReviews(source,state,confirmed.active);
+  assert.equal(projected.groups.length,1);
+  assert.equal(projected.summary.netValue,-5);
+  assert.deepEqual(projected.rows,source.rows);
+  assert.deepEqual(projected.review.reusedLinkIds,[origin[0].id]);
+  const revoked=inventoryReviewState(add(origin,revoke(origin[0].id)),scope);
+  assert.equal(projectInventoryReviews(source,state,revoked.active).groups.length,2);
+  assert.equal(projectInventoryReviews(base([row('b',1),row('absent',-2)]),state,confirmed.active).groups.length,2);
+});
+
+test('reusable history reads the selected store generation and drops revoked or pair-only actions',async()=>{
+  let origin=add([],link(['a','b']));
+  origin=add(origin,{...link(['c','d']),reuseInStore:true});
+  origin=add(origin,{...link(['e','f']),reuseInStore:true});
+  origin=add(origin,revoke(origin[1].id));
+  const selected={...scope,currentId:'later'};
+  const tx={$queryRaw:async(sql,...params)=>{
+    assert.deepEqual(params.slice(0,5),['c','s',reviewEntity,reviewKey(selected),'0']);
+    assert.match(sql.join('?'),/origin\."afterJson"->>'generation'/);
+    return origin;
+  }};
+  assert.deepEqual((await readInventoryReusableLinks(tx,selected)).map(link=>link.id),[origin[2].id]);
 });

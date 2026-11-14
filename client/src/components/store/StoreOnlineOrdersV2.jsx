@@ -1,3 +1,4 @@
+import {nextOnlineOrdersPollAt} from "../../utils/online-orders-poll.mjs";
 import React,{useEffect,useRef,useState} from "react";
 import {onlineOrderDestination,renderOnlineOrderPrint} from "../../utils/online-order-destination.js";
 import {createPortal} from "react-dom";
@@ -13,11 +14,11 @@ export default function StoreOnlineOrdersV2({api,store}){
  const [rows,setRows]=useState([]),[open,setOpen]=useState(false),[busy,setBusy]=useState(""),[error,setError]=useState(""),[pay,setPay]=useState(null),[payError,setPayError]=useState(""),[payBusy,setPayBusy]=useState(false),[headerHost,setHeaderHost]=useState(null);
  const mounted=useRef(true),scopeRef=useRef(null);
  const scopeKey=`${enabled}:${store?.id||""}`;
- if(scopeRef.current?.key!==scopeKey)scopeRef.current={key:scopeKey,disabled:false,inFlight:false};
+ if(scopeRef.current?.key!==scopeKey)scopeRef.current={key:scopeKey,disabled:false,inFlight:false,retryAt:0};
  const scope=scopeRef.current;
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false}},[]);
- const load=async()=>{if(!enabled||scopeRef.current!==scope||!mounted.current||scope.disabled||scope.inFlight)return;scope.inFlight=true;try{const r=await api(`/api/public/kat/pos/stores/${encodeURIComponent(store.id)}/orders`,{cache:"no-store"});if(!mounted.current||scopeRef.current!==scope)return;setRows(r.rows||[]);setError("")}catch(e){if(!mounted.current||scopeRef.current!==scope)return;if(e?.status===403&&/Οι Online Παραγγελίες δεν είναι ενεργές/.test(String(e.message||""))){scope.disabled=true;setRows([])}setError(e.message)}finally{scope.inFlight=false}};
- const retryLoad=()=>{scope.disabled=false;return load()};
+ const load=async()=>{if(!enabled||scopeRef.current!==scope||!mounted.current||scope.disabled||scope.inFlight||Date.now()<scope.retryAt)return;scope.inFlight=true;try{const r=await api(`/api/public/kat/pos/stores/${encodeURIComponent(store.id)}/orders`,{cache:"no-store"});if(!mounted.current||scopeRef.current!==scope)return;setRows(r.rows||[]);scope.retryAt=0;setError("")}catch(e){if(!mounted.current||scopeRef.current!==scope)return;if(e?.status===403&&/Οι Online Παραγγελίες δεν είναι ενεργές/.test(String(e.message||""))){scope.disabled=true;setRows([])}const retryAt=nextOnlineOrdersPollAt(e);if(retryAt!==null){scope.retryAt=retryAt;setRows([])}setError(e.message)}finally{scope.inFlight=false}};
+ const retryLoad=()=>{scope.disabled=false;scope.retryAt=0;return load()};
  useEffect(()=>{setRows([]);setError("");if(!enabled)return;load();const t=window.setInterval(load,7000);return()=>window.clearInterval(t)},[enabled,store?.id]);
  useEffect(()=>{if(!enabled)return;let stopped=false;const findHost=()=>{if(stopped)return;const explicit=document.querySelector('[data-online-orders-host="true"]');if(explicit){setHeaderHost(explicit);return}const storeButton=[...document.querySelectorAll('.store-pos-top button')].find(el=>/Κατάστημα/i.test(el.textContent||''));setHeaderHost(storeButton?.parentElement||null)};findHost();const timer=window.setInterval(findHost,300);return()=>{stopped=true;window.clearInterval(timer)}},[enabled,store?.id]);
  const move=async(o,s)=>{if(s==="PAY"){setPayError("");return setPay(o)}setBusy(o.id);try{const r=await api(`/api/public/kat/pos/stores/${encodeURIComponent(store.id)}/orders/${encodeURIComponent(o.id)}/status`,{method:"POST",body:JSON.stringify({status:s})});if(s==="ACCEPTED"&&r.print)printOrder(r.print);await load()}catch(e){setError(e.message)}finally{setBusy("")}};
