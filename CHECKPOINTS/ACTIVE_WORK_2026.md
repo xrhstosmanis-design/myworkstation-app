@@ -217,3 +217,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 [Checkpoint](CHANGES/2026-11-14-pos-warehouse-vat-margin.md).
 
 13/11/2026 — #3841: δοκιμαστική εφαρμογή των αλλαγών απογραφής στο main `d8b278b2`, με τις σταθερές εκδόσεις PostgreSQL του main. CI και LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-12-inventory-reusable-identity-projection.md).
+
+- #3861 · Στοχευμένος επανέλεγχος πηγής του `28a212b9`: 12/12 PASS. Περιλαμβάνει εκτέλεση του πραγματικού SQL επιλογής ιστορικού πάνω σε απομονωμένο PGlite με συνθετικό `WorkforceAuditLog`. Επιβεβαιώθηκαν η επαναχρησιμοποίηση, η ανάκληση, η εξαίρεση του αρχικού ζεύγους και η απομόνωση ανά κατάστημα και γενιά. Hosted LAB παραμένει ανοικτό μέχρι να είναι διαθέσιμη εκεί η δοκιμαστική έκδοση.
