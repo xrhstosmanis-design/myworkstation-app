@@ -1,3 +1,4 @@
+import {previewInventoryMerge,confirmInventoryMerge} from '../lib/inventory-product-merge.js';
 import {randomUUID} from "node:crypto";
 import {Router} from 'express';
 import {prisma} from '../prisma.js';
@@ -76,7 +77,11 @@ export function createPosOperatorInventoryRouter({db=prisma,prepare=async()=>{
     let response;
     if(action.kind==='access')response={status:200,data:{ok:true}};
     else if(action.kind==='suppliers')response={status:200,data:await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${scope.companyId} AND "active"=true ORDER BY "name"`};
-    else{
+    else if(action.kind==='merge-preview'||action.kind==='merge-confirm'){
+     const actor={...req.user,id:scope.actorId};
+     const merge=action.write?confirmInventoryMerge:previewInventoryMerge;
+     response={status:200,data:await merge(tx,actor,req.body,scope)};
+    }else{
      const before=action.write?await inventoryStockSnapshot(tx,scope):null;
      const delegated=Router();
      const factories=action.family==='archive'?[createInventoryArchiveRouter]:action.family==='import'?[createInventoryArchiveImportRouter]:[createOwnerProductSmartEntryRouter,createOwnerProductCompositionsRouter,createOwnerProductActionsRouter,createOwnerProductsRouter];
@@ -91,7 +96,7 @@ export function createPosOperatorInventoryRouter({db=prisma,prepare=async()=>{
      if(before)assertInventoryStockUnchanged(before,await inventoryStockSnapshot(tx,scope));
     }
     return {...response,data:{data:response.data,scope:{actorId:scope.actorId,storeId},capabilities:scope.capabilities,lifecycle}};
-   },{isolationLevel:'RepeatableRead',maxWait:5000,timeout:120000});
+   },{isolationLevel:action.kind==='merge-confirm'?'Serializable':'RepeatableRead',maxWait:5000,timeout:120000});
    res.set('Cache-Control','no-store');res.status(result.status).json(result.data);
   }catch(error){
    if(error.inventoryResponse)return res.status(error.inventoryResponse.status).json(error.inventoryResponse.data);
