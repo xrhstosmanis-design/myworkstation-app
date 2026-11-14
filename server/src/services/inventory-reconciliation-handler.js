@@ -16,7 +16,7 @@ export function createInventoryReconciliationHandler({db,access,requireLossDetec
       if (st.status !== 'FINALIZED') return res.status(409).json({error:'Ο έλεγχος απαιτεί οριστικοποιημένη απογραφή.'});
       if (!(await requireLossDetection(req,res,st))) return;
       const report = await readInventoryReconciliation(db,st,req.query.previousStocktakeId || null);
-      if(report.review?.history?.length&&req.query.reportVersion!=='2')return res.status(409).json({error:'Ανανέωσε την εφαρμογή για να δεις τις επιβεβαιωμένες διορθώσεις.'});
+      if((report.review?.history?.length||report.review?.reusedLinkIds?.length)&&req.query.reportVersion!=='2')return res.status(409).json({error:'Ανανέωσε την εφαρμογή για να δεις τις επιβεβαιωμένες διορθώσεις.'});
       report.current.storeName = st.storeName;
       report.viewerId=req.user.id;
       if(report.review)report.review.canWrite=Boolean(report.review.available&&req.user.id&&req.user.sessionId&&['OWNER','SUPER_ADMIN'].includes(req.user.role));
