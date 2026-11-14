@@ -84,6 +84,8 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   useEffect(()=>{newCardGeneration.current++;setModal(null);setEdit(null);setChecked([]);setExportIds(null);setSelected(null);setBulk(bulkBlank());setData({items:[],categories:[],subcategories:[],taxonomy:{categories:[],subcategories:[]},page:1,pages:1,total:0,totals:{}});setMerge(null);return()=>{newCardGeneration.current++}},[storeId]);
   const [data,setData]=useState({items:[],categories:[],subcategories:[],taxonomy:{categories:[],subcategories:[]},page:1,pages:1,total:0,totals:{}});
   const filtersRef=useRef(null);
+  const [vatDepartment,setVatDepartment]=useState("");
+  const [marginMin,setMarginMin]=useState(""),[marginMax,setMarginMax]=useState("");
   const [query,setQuery]=useState(""),[category,setCategory]=useState(""),[subcategory,setSubcategory]=useState(""),[status,setStatus]=useState("ACTIVE"),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100);
   const [loading,setLoading]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
   const [checked,setChecked]=useState([]),[selected,setSelected]=useState(null),[modal,setModal]=useState(null);
@@ -104,7 +106,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
     const generation=++archiveGeneration.current;
     if(!storeId)return;setLoading(true);setError("");setMessage("");
     try{
-      const params=new URLSearchParams({storeId,q:query,category,subcategory,status,...filters,page:String(nextPage),pageSize:String(pageSize)});
+      const params=new URLSearchParams({storeId,q:query,category,subcategory,status,vatDepartment,marginMin,marginMax,...filters,page:String(nextPage),pageSize:String(pageSize)});
       const result=await api(`/api/inventory-archive?${params.toString()}`);if(cardScopeRef.current!==storeId||generation!==archiveGeneration.current)return;setData(result);setPage(result.page);setChecked(ids=>ids.filter(id=>result.items.some(row=>row.productId===id)));setSelected(current=>current?result.items.find(r=>r.productId===current.productId)||null:null);
     }catch(e){if(cardScopeRef.current===storeId&&generation===archiveGeneration.current)setError(e.message)}finally{if(cardScopeRef.current===storeId&&generation===archiveGeneration.current)setLoading(false)}
   };
@@ -289,7 +291,17 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
         filtersRef.current?.querySelector("select")?.focus({preventScroll:true});
       }}>Φίλτρα</button>}
       <button onClick={()=>load()} disabled={loading}><RefreshCw/>Ανανέωση</button></div></header>
-    <section className="ia-filters" ref={filtersRef}><div className="ia-filter-title">{operatorMode ? "Φίλτρα αποθήκης" : "Κριτήρια αναζήτησης"}</div><label>Κατηγορία<select value={category} onChange={e=>{setCategory(e.target.value);setPage(1);if(operatorMode)load(1,{category:e.target.value})}}><option value="">Όλες</option>{data.categories.map(x=><option key={x}>{x}</option>)}</select></label><label>Υποκατηγορία<select value={subcategory} onChange={e=>{setSubcategory(e.target.value);setPage(1);if(operatorMode)load(1,{subcategory:e.target.value})}}><option value="">Όλες</option>{data.subcategories.map(x=><option key={x}>{x}</option>)}</select></label><form onSubmit={search}><Search/><label>Περιγραφή / SKU / Barcode<input value={query} onChange={e=>setQuery(e.target.value)}/></label><button>Αναζήτηση</button></form><label className="ia-status">Εμφάνιση<select value={status} onChange={e=>{setStatus(e.target.value);setPage(1);if(operatorMode)load(1,{status:e.target.value})}}><option value="ACTIVE">Μόνο ενεργά είδη</option><option value="ALL">Όλα τα είδη</option><option value="INACTIVE">Ανενεργά είδη</option></select></label></section>
+    <section className="ia-filters" ref={filtersRef}><div className="ia-filter-title">{operatorMode ? "Φίλτρα αποθήκης" : "Κριτήρια αναζήτησης"}</div><label>Κατηγορία<select value={category} onChange={e=>{setCategory(e.target.value);setPage(1);if(operatorMode)load(1,{category:e.target.value})}}><option value="">Όλες</option>{data.categories.map(x=><option key={x}>{x}</option>)}</select></label><label>Υποκατηγορία<select value={subcategory} onChange={e=>{setSubcategory(e.target.value);setPage(1);if(operatorMode)load(1,{subcategory:e.target.value})}}><option value="">Όλες</option>{data.subcategories.map(x=><option key={x}>{x}</option>)}</select></label><form onSubmit={search}><Search/><label>Περιγραφή / SKU / Barcode<input value={query} onChange={e=>setQuery(e.target.value)}/></label><button>Αναζήτηση</button></form><label className="ia-status">Εμφάνιση<select value={status} onChange={e=>{setStatus(e.target.value);setPage(1);if(operatorMode)load(1,{status:e.target.value})}}><option value="ACTIVE">Μόνο ενεργά είδη</option><option value="ALL">Όλα τα είδη</option><option value="INACTIVE">Ανενεργά είδη</option></select></label>{operatorMode&&<>
+      <label>Τμήμα ΦΠΑ<select value={vatDepartment} onChange={e=>{setVatDepartment(e.target.value);load(1,{vatDepartment:e.target.value})}}>
+        <option value="">Όλα</option><option value="__NONE__">Χωρίς τμήμα ΦΠΑ</option>
+        {(data.vatDepartments||[]).map(v=><option key={v.id} value={v.id}>{v.description}</option>)}
+      </select></label>
+      <form onSubmit={search}>
+        <label>Margin % από<input type="number" step="any" value={marginMin} onChange={e=>setMarginMin(e.target.value)}/></label>
+        <label>Margin % έως<input type="number" step="any" value={marginMax} onChange={e=>setMarginMax(e.target.value)}/></label>
+        <button>Εφαρμογή Margin</button>
+      </form>
+    </>}</section>
     {error&&<div className="ia-alert error">{error}</div>}{message&&<div className="ia-alert success">{message}</div>}
     <section className="ia-grid-card"><div className="ia-grid-caption"><b>Αποτελέσματα αναζήτησης</b><div className="ia-grid-meta"><span>{data.total.toLocaleString("el-GR")} είδη</span><div className="ia-caption-pagination"><button disabled={page<=1||loading} onClick={()=>load(page-1)}><ChevronLeft/></button><b>Σελίδα {page} από {data.pages}</b><button disabled={page>=data.pages||loading} onClick={()=>load(page+1)}><ChevronRight/></button></div></div></div><div className="ia-table-wrap" ref={tableRef}><div className="ia-table">
       <div className="ia-row head"><span></span><span><input type="checkbox" disabled={readOnly&&exportIds===null} checked={allVisible} onChange={toggleAll}/></span><span>Εσωτ. κωδικός</span><span>BARCODE</span><span>Περιγραφή</span><span>Τμήμα ΦΠΑ</span><span>Margin</span><span>MARKUP</span><span>Λιανική</span><span>efood</span><span>Wolt</span><span>Αποθήκη</span><span>Συν. αξία λιανικής</span><span>Συν. κόστος</span><span>Τελ. αγορά</span><span>Μέση αγορά 6μ.</span><span>Ημ/νία αγοράς</span><span>Βασικός προμηθευτής</span><span>% ΦΠΑ</span><span>Κατηγορία</span><span>Υποκατηγορία</span><span>Εταιρεία</span><span>Alarm stock</span><span>Πωλήσεις 15ημ.</span><span>Τελ. πώληση</span><span>δημοσ. e‑delivery</span><span>δημοσ. stock</span><span>δημοσ. τιμών</span><span>Ενημέρωση</span><span>ΜΜ</span><span>ID</span></div>
