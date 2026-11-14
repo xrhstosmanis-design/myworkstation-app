@@ -6,6 +6,8 @@
 
 - 2026-11-14 · Επιλογή δικαιωμάτων BackOffice ανά κατάστημα · [Checkpoint](CHANGES/2026-11-14-backoffice-store-permission-selection.md).
 
+- 2026-11-14 · Δικαίωμα επαναφοράς οριστικοποιημένου τιμολογίου · [Checkpoint](CHANGES/2026-11-14-staff-invoice-reopen.md).
+
 - 2026-11-14 · Πλήρης καρτέλα υπευθύνου · [Checkpoint](CHANGES/2026-11-14-staff-full-product-card.md).
 
 | Προτεραιότητα | Εργασία | Υπεύθυνος | PR / issue | Τρέχουσα κατάσταση | Επόμενο βήμα |
