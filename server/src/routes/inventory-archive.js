@@ -1,3 +1,4 @@
+import {Prisma} from "@prisma/client";
 import {productCardVatOptions} from '../lib/product-card-vat.js';
 import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
@@ -145,6 +146,47 @@ router.get("/",async(req,res,next)=>{
     const pageSize=Math.min(200,Math.max(25,Number.parseInt(String(req.query.pageSize||"100"),10)||100));
     const offset=(page-1)*pageSize;
 
+    const vatDepartment=z.string().trim().max(200).optional().parse(req.query.vatDepartment)||null;
+    const marginBound=z.preprocess(value=>typeof value==="string"&&value.trim()===""?undefined:value,z.coerce.number().finite().optional());
+    const bounds=z.object({marginMin:marginBound,marginMax:marginBound}).safeParse(req.query);
+    if(!bounds.success || (bounds.data.marginMin??-Infinity)>(bounds.data.marginMax??Infinity))
+      return res.status(400).json({error:"Συμπλήρωσε έγκυρο εύρος Margin."});
+    const {marginMin,marginMax}=bounds.data;
+    const filterMargin=marginMin!==undefined||marginMax!==undefined;
+    const latestCostJoin=Prisma.sql`
+      LEFT JOIN LATERAL (
+        SELECT COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
+                         WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d."id"
+                           AND sm."productId"=l."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+                         ORDER BY sm."createdAt" DESC LIMIT 1),
+                    CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END) AS "unitCost",
+               d."documentDate",d."documentNumber",sup."name" AS "supplierName"
+        FROM "PurchaseDocumentLine" l
+        JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+        LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
+        WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
+        ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
+      ) lp ON true
+    `;
+    const averageCostJoin=Prisma.sql`
+      LEFT JOIN LATERAL (
+        SELECT AVG(COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
+                             WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d2."id"
+                               AND sm."productId"=l2."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+                             ORDER BY sm."createdAt" DESC LIMIT 1),
+                            CASE WHEN l2."unit"='PACKAGE' THEN l2."unitCost"/NULLIF(l2."unitsPerPackage",0) ELSE l2."unitCost" END)) AS "averagePurchasePrice"
+        FROM "PurchaseDocumentLine" l2 JOIN "PurchaseDocument" d2 ON d2."id"=l2."purchaseDocumentId"
+        WHERE d2."companyId"=${companyId} AND d2."storeId"=${storeId} AND d2."status"='APPROVED' AND l2."productId"=p."id"
+          AND d2."documentDate">=NOW()-INTERVAL '180 days'
+      ) ap ON true
+    `;
+    const saleNet=Prisma.sql`COALESCE(sp."salePrice",p."salePrice",0)::numeric / NULLIF(1+COALESCE(p."vatRate",0)::numeric/100,0)`;
+    const cost=Prisma.sql`COALESCE(NULLIF(lp."unitCost",0),NULLIF(ap."averagePurchasePrice",0),NULLIF(p."costPrice",0),0)::numeric`;
+    const margin=Prisma.sql`ROUND(((${saleNet}-${cost}) / NULLIF(${saleNet},0))*100,2)`;
+    const marginFilter=filterMargin?Prisma.sql`AND ${saleNet}>0 AND ${cost}>0
+      AND (${marginMin??null}::numeric IS NULL OR ${margin}>=${marginMin??null})
+      AND (${marginMax??null}::numeric IS NULL OR ${margin}<=${marginMax??null})`:Prisma.empty;
+
     const countRows=await prisma.$queryRaw`
       SELECT COUNT(*)::int AS count
       FROM "StoreProduct" sp
@@ -152,11 +194,15 @@ router.get("/",async(req,res,next)=>{
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      ${filterMargin?latestCostJoin:Prisma.empty}
+      ${filterMargin?averageCostJoin:Prisma.empty}
       WHERE sp."storeId"=${storeId}
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
         AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${vatDepartment}::text IS NULL OR (${vatDepartment}='__NONE__' AND p."vatDepartmentId" IS NULL) OR p."vatDepartmentId"=${vatDepartment})
+        ${marginFilter}
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
     `;
     const total=Number(countRows[0]?.count||0);
@@ -178,35 +224,14 @@ router.get("/",async(req,res,next)=>{
       LEFT JOIN LATERAL (
         SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1
       ) pb ON true
-      LEFT JOIN LATERAL (
-        SELECT COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
-                         WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d."id"
-                           AND sm."productId"=l."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
-                         ORDER BY sm."createdAt" DESC LIMIT 1),
-                    CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END) AS "unitCost",
-               d."documentDate",d."documentNumber",sup."name" AS "supplierName"
-        FROM "PurchaseDocumentLine" l
-        JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-        LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
-        WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
-        ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
-      ) lp ON true
+      ${latestCostJoin}
       LEFT JOIN LATERAL (
         SELECT sup0."name" FROM "SupplierProductLink" spl
         JOIN "Supplier" sup0 ON sup0."id"=spl."supplierId" AND sup0."companyId"=${companyId}
         WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true
         ORDER BY spl."createdAt",spl."id" LIMIT 1
       ) linkedSupplier ON true
-      LEFT JOIN LATERAL (
-        SELECT AVG(COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
-                             WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d2."id"
-                               AND sm."productId"=l2."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
-                             ORDER BY sm."createdAt" DESC LIMIT 1),
-                            CASE WHEN l2."unit"='PACKAGE' THEN l2."unitCost"/NULLIF(l2."unitsPerPackage",0) ELSE l2."unitCost" END)) AS "averagePurchasePrice"
-        FROM "PurchaseDocumentLine" l2 JOIN "PurchaseDocument" d2 ON d2."id"=l2."purchaseDocumentId"
-        WHERE d2."companyId"=${companyId} AND d2."storeId"=${storeId} AND d2."status"='APPROVED' AND l2."productId"=p."id"
-          AND d2."documentDate">=NOW()-INTERVAL '180 days'
-      ) ap ON true
+      ${averageCostJoin}
       LEFT JOIN LATERAL (
         SELECT COALESCE(SUM(sl."quantity"),0) AS "sales15Qty",MAX(s."occurredAt") AS "lastSaleAt"
         FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId"
@@ -218,6 +243,8 @@ router.get("/",async(req,res,next)=>{
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
         AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${vatDepartment}::text IS NULL OR (${vatDepartment}='__NONE__' AND p."vatDepartmentId" IS NULL) OR p."vatDepartmentId"=${vatDepartment})
+        ${marginFilter}
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
       ORDER BY p."name",p."sku" NULLS LAST
       LIMIT ${pageSize} OFFSET ${offset}
