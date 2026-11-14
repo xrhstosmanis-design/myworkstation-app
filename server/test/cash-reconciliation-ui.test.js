@@ -59,11 +59,11 @@ test('actual Platform parent mounts the real review panel for an explicitly sele
  globalThis.fetch=async(path,options={})=>{calls.push({path,...options});assert(!options.method||options.method==='GET');const url=new URL(path,'https://isolated.invalid');let data;
   if(url.pathname==='/api/platform/overview')data={stats:{},companies:[{id:'co',name:'Company',active:true,plan:'BASIC',stores:[{id:'A',name:'Store A',active:true},{id:'B',name:'Store B',active:true}]}]};
   else if(url.pathname==='/api/platform/owners')data={owners:[]};else if(url.pathname==='/api/platform/backup-monitoring')data={configured:false};
-  else if(url.pathname==='/api/platform/cash-control/daily')data={...Object.fromEntries(url.searchParams),totals:{shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0},rows:[],stores:[]};
+  else if(url.pathname==='/api/platform/cash-control/daily')data={...Object.fromEntries(url.searchParams),storeIds:url.searchParams.get("storeIds")?.split(",")||[],totals:{shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0},rows:[],stores:[]};
   else if(url.pathname.startsWith('/api/cash-reconciliation/stores/'))data=report(url.pathname.split('/').at(-1),{from:url.searchParams.get('from'),to:url.searchParams.get('to')});else throw Error('Unexpected route '+path);
   return {ok:true,status:200,text:async()=>JSON.stringify(data)};
  };
- const click=el=>act(async()=>el.click()),select=async value=>act(async()=>{const el=document.querySelector('.cash-report-filters select');Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});
+ const click=el=>act(async()=>el.click()),select=async value=>act(async()=>{for(const el of document.querySelectorAll('.cash-report-stores input')){if(el.checked!==(el.closest('label').textContent.trim()===`Store ${value}`))el.click()};});
  try{
   await act(async()=>root.render(React.createElement(Component)));await click(button('Οικονομικά & Έλεγχοι'));await click(button('Ταμεία'));assert.equal(document.querySelector('.cash-reconciliation-panel'),null);
   await select('A');assert.ok(button('Έλεγχος με επανυπολογισμούς'));assert(!calls.some(c=>c.path.startsWith('/api/cash-reconciliation')));

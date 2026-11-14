@@ -73,3 +73,54 @@ test("long cash intervals inspect at most two shifts concurrently while retainin
   assert.equal(maximum,2);assert.deepEqual(result,rows.map(row=>row*2));
   assert.deepEqual(await mapCashReportRows([],()=>{throw Error("must not execute")}),[]);
 });
+
+const isolatedCashDatabase=(()=>{
+  try{
+    const url=new URL(process.env.DATABASE_URL);
+    return process.env.NODE_ENV==="test"&&["localhost","127.0.0.1","postgres"].includes(url.hostname)&&/test/i.test(url.pathname);
+  }catch{return false}
+})();
+
+test("PostgreSQL shortage export assigns the overnight shift to its Athens opening day",{skip:!isolatedCashDatabase},async()=>{
+  const {PrismaClient}=await import("@prisma/client");
+  const {randomUUID}=await import("node:crypto");
+  const schema="cash_night_"+randomUUID().replaceAll("-","");
+  const url=new URL(process.env.DATABASE_URL);
+  url.searchParams.set("schema",schema);
+  const admin=new PrismaClient();
+  const db=new PrismaClient({datasourceUrl:url.toString()});
+  try{
+    await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+    await db.$executeRawUnsafe('CREATE TABLE "Company" ("id" text PRIMARY KEY,"name" text)');
+    await db.$executeRawUnsafe('CREATE TABLE "Store" ("id" text PRIMARY KEY,"name" text,"companyId" text)');
+    await db.$executeRawUnsafe('CREATE TABLE "CashShiftSession" ("id" text,"storeId" text,"companyId" text,"status" text,"openedAt" timestamptz,"closedAt" timestamptz,"shiftLabel" text,"terminalPos" text,"openedByName" text,"closedByName" text,"variance" numeric,"cardVariance" numeric)');
+    await db.$executeRaw`INSERT INTO "Company" VALUES ('c','Company')`;
+    await db.$executeRaw`INSERT INTO "Store" VALUES ('a','A','c'),('b','B','c'),('other','Other','c')`;
+    await db.$executeRaw`INSERT INTO "CashShiftSession" ("id","storeId","companyId","status","openedAt","closedAt","variance","cardVariance")
+      VALUES ('night','a','c','CLOSED','2026-11-13 22:00+02','2026-11-14 06:00+02',-19,0),
+        ('morning','b','c','CLOSED','2026-11-14 06:00+02','2026-11-14 14:00+02',-4,0),
+        ('excluded','other','c','CLOSED','2026-11-13 22:00+02','2026-11-14 06:00+02',-8,0)`;
+    const source=readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
+    const start=source.indexOf('router.get("/cash-control/shortages"');
+    const end=source.indexOf('}catch(error){next(error)}});',start);
+    const route=source.slice(start,end+'}catch(error){next(error)}});'.length);
+    let handler;
+    new Function("router","prisma","z",route)({get:(_path,fn)=>{handler=fn}},db,z);
+    const search=async(date,dateBasis="SHIFT_OPENED_CALENDAR_DAY")=>{
+      let body,error;
+      await handler({query:{from:date,to:date,dateBasis,storeIds:"a,b"}},{json(value){body=value}},err=>{error=err});
+      if(error)throw error;
+      return body;
+    };
+    const opening=await search("2026-11-13");
+    assert.deepEqual(opening.rows.map(row=>[row.sessionId,row.date,row.closedAt.toISOString(),row.shortage]),[
+      ["night","2026-11-13","2026-11-14T04:00:00.000Z",19],
+    ]);
+    assert.deepEqual((await search("2026-11-14")).rows.map(row=>row.sessionId),["morning"]);
+    assert.deepEqual((await search("2026-11-14","SHIFT_CLOSED_CALENDAR_DAY")).rows.map(row=>row.sessionId),["night","morning"]);
+  }finally{
+    await db.$disconnect();
+    try{await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)}
+    finally{await admin.$disconnect()}
+  }
+});

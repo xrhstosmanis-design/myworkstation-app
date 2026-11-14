@@ -8,7 +8,7 @@ const platformApi=fs.readFileSync(new URL("../src/routes/platform-admin.js",impo
 
 test("cash report date formatter cannot be shadowed by the selected date state",()=>{
   assert.match(platformUi,/const cashReportDateLabel=value=>/);
-  assert.match(platformUi,/cashReportDateLabel\(cashReportRowDay\(row\.closedAt\)\)/);
+  assert.match(platformUi,/cashReportDateLabel\(cashReportRowDay\(row\.openedAt\)\)/);
   assert.doesNotMatch(platformUi,/const cashReportDate=value=>/);
 });
 
@@ -52,7 +52,7 @@ test("the platform report exhausts transaction, document, operator and POS audit
 });
 
 test("daily report filters by store and flags near-offset variances through the second next shift",()=>{
-  assert.match(platformUi,/Κατάστημα<select value=\{cashStoreId\}/);
+  assert.match(platformUi,/checked=\{cashStoreIds\.includes\(store\.id\)\}/);
   assert.match(platformUi,/Καθαρή διαφορά/);
   assert.match(platformApi,/storeId:z\.string\(\)\.trim\(\)\.optional/);
   assert.match(platformApi,/readCashReviewEvidence\(prisma,row\)/);
