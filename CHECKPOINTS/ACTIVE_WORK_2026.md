@@ -208,6 +208,12 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 [Checkpoint](CHANGES/2026-11-14-front-pos-warehouse-merge.md).
 
-| Κοινός κανόνας #3860 | Ενσωμάτωση στο main και μία καταγραφή από κάθε ομάδα στο ενεργό μητρώο | Ο κανόνας συγχωνεύτηκε στο main με `b0855031`. Εκκρεμεί μία καταγραφή από κάθε ομάδα. |
+## 2026-11-14 — Κουμπί φίλτρων στην Αποθήκη POS
+
+[Checkpoint](CHANGES/2026-11-14-front-pos-filter-button.md).
+
+## 2026-11-14 — Τμήμα ΦΠΑ και Margin στην Αποθήκη POS
+
+[Checkpoint](CHANGES/2026-11-14-pos-warehouse-vat-margin.md).
 
 13/11/2026 — #3841: δοκιμαστική εφαρμογή των αλλαγών απογραφής στο main `d8b278b2`, με τις σταθερές εκδόσεις PostgreSQL του main. CI και LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-12-inventory-reusable-identity-projection.md).
