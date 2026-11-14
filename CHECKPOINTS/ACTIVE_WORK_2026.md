@@ -215,3 +215,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ## 2026-11-14 — Τμήμα ΦΠΑ και Margin στην Αποθήκη POS
 
 [Checkpoint](CHANGES/2026-11-14-pos-warehouse-vat-margin.md).
+
+## 2026-11-14 — Καρτέλα είδους και πλοήγηση υπευθύνου
+
+[Checkpoint](CHANGES/2026-11-14-staff-item-card.md).
