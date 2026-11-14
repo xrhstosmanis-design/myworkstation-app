@@ -285,3 +285,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 2026-11-14 · Ημερήσιος τζίρος στον Βοηθό Super Admin · LAB FAIL στο 5827d72, τοπική διόρθωση προς επανέλεγχο. [Checkpoint](CHANGES/2026-11-14-super-admin-daily-turnover.md)
 
 - 2026-11-14 · Δοκιμαστικό SMTP τζίρου LAB · [Checkpoint](CHANGES/2026-11-14-lab-turnover-smtp.md)
+
+- 2026-11-14 · Κουμπί αποστολής τζίρου LAB · [Checkpoint](CHANGES/2026-11-14-lab-turnover-mail-ui.md)
