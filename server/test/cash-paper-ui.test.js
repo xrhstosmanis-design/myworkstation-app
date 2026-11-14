@@ -57,7 +57,7 @@ test('actual Platform parent uses its scoped request and offers papers for an em
  };
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
  const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text),click=async el=>{assert.ok(el);await act(async()=>el.click());};
- const selectStore=async value=>act(async()=>{const el=document.querySelector('.cash-report-filters select');Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});
+ const selectStore=async value=>act(async()=>{for(const el of document.querySelectorAll('.cash-report-stores input')){if(el.checked!==(el.closest('label').textContent.trim()===`Store ${value}`))el.click()};});
  try{
   await act(async()=>root.render(React.createElement(module.exports.default)));
   await click(button('Οικονομικά & Έλεγχοι'));await click(button('Ταμεία'));
@@ -65,6 +65,6 @@ test('actual Platform parent uses its scoped request and offers papers for an em
   await selectStore('A');assert.ok(button('Χειρόγραφα καταστήματος'),'empty store still has paper control');assert.equal(calls.filter(c=>c.path.startsWith('/api/cash-papers')).length,0,'mount is not an AI or discovery request');
   await click(button('Χειρόγραφα καταστήματος'));assert.equal(calls.at(-1).path,'/api/cash-papers/stores/A');assert.equal(calls.at(-1).headers.Authorization,'Bearer synthetic');
   await selectStore('B');assert.doesNotMatch(document.querySelector('.cash-paper-reading').textContent,/Δεν βρέθηκαν συνημμένα/);await click(button('Χειρόγραφα καταστήματος'));assert.equal(calls.at(-1).path,'/api/cash-papers/stores/B');
-  withRows=true;await click(button('Εμφάνιση'));assert.equal(document.querySelectorAll('.cash-paper-reading').length,1);assert.match(document.body.textContent,/Store B/);assert.equal(unexpected.length,0);assert.equal(calls.filter(c=>c.method&&c.method!=='GET').length,0);
+  withRows=true;await click(button('Αναζήτηση'));assert.equal(document.querySelectorAll('.cash-paper-reading').length,1);assert.match(document.body.textContent,/Store B/);assert.equal(unexpected.length,0);assert.equal(calls.filter(c=>c.method&&c.method!=='GET').length,0);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k];}
 });

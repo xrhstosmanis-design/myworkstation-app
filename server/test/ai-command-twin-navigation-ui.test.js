@@ -83,8 +83,8 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
    await press(document.querySelector('[aria-label="Κλείσιμο ελέγχων και αναλύσεων"]'));returned();
   });
   await t.test("EFTPOS opens existing cash report; refresh and export never broaden scope",async()=>{
-   const since=calls.length;await press(area("EFTPOS / Ταμειακές"));const s=document.querySelector(".cash-report-filters select");assert.equal(s.value,"store-b");assert.ok(s.disabled);assert.deepEqual([...s.options].map(o=>o.value),["store-b"]);
-   await press(button(".cash-report-filters button","Εμφάνιση"));await press(button(".cash-report-filters button","Excel ελλειμμάτων καταστήματος"));
+   const since=calls.length;await press(area("EFTPOS / Ταμειακές"));assert.match(document.querySelector(".cash-report-search").textContent,/Store B/);assert.equal(document.querySelector(".cash-report-stores"),null);
+   await press(button(".cash-report-filters button","Αναζήτηση"));await press(button(".cash-report-filters button","Excel ελλειμμάτων καταστήματος"));
    scoped(since,["/api/platform/cash-control/daily","/api/platform/cash-control/shortages"]);assert.ok(downloads.some(name=>name.includes("Store B")));
    await press(document.querySelector(".cash-report-dialog .modal-close"));returned();
   });
@@ -117,12 +117,15 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
    let release;pendingVideo=new Promise(r=>release=r);await press(area("Κάμερες"));await select("Store A");await act(async()=>release(reply({connection:{},cameras:[]})));assert.equal(selected(),"Store A");assert.equal(document.querySelector(".video-connection-dialog"),null);await select("Store B");
   });
   await t.test("Ordinary central entry stays unscoped and close does not reopen the Twin",async()=>{
-   await close();const since=calls.length;await press(button(".platform-action-group button","Ταμεία"));assert.ok(!document.querySelector(".cash-report-filters select").disabled);assert.equal(document.querySelector(".cash-report-filters select").value,"");assert.equal(calls.slice(since).filter(c=>c.p==="/api/platform/cash-control/daily")[0].query.has("storeId"),false);
-   const s=document.querySelector(".cash-report-filters select");assert.deepEqual([...s.options].map(o=>o.value),["","store-a","store-b"]);
-   await act(async()=>{s.value="store-a";s.dispatchEvent(new window.Event("change",{bubbles:true}))});await press(button(".cash-report-filters button","Εμφάνιση"));
-   assert.equal(calls.findLast(c=>c.p==="/api/platform/cash-control/daily").query.get("storeId"),"store-a");
-   await act(async()=>{s.value="";s.dispatchEvent(new window.Event("change",{bubbles:true}))});await press(button(".cash-report-filters button","Εμφάνιση"));
-   assert.equal(calls.findLast(c=>c.p==="/api/platform/cash-control/daily").query.has("storeId"),false);
+   await close();const since=calls.length;await press(button(".platform-action-group button","Ταμεία"));const stores=[...document.querySelectorAll(".cash-report-stores input")];
+   assert.equal(stores.length,2);
+   assert.equal(calls.slice(since).find(c=>c.p==="/api/platform/cash-control/daily").query.has("storeIds"),false);
+   await press(stores[0]);await press(stores[1]);await press(button(".cash-report-filters button","Αναζήτηση"));
+   const query=calls.findLast(c=>c.p==="/api/platform/cash-control/daily").query;
+   assert.equal(query.get("storeIds"),"store-a,store-b");
+   assert.equal(query.get("dateBasis"),"SHIFT_OPENED_CALENDAR_DAY");
+   await press(button(".cash-report-stores button","Όλα τα καταστήματα"));await press(button(".cash-report-filters button","Αναζήτηση"));
+   assert.equal(calls.findLast(c=>c.p==="/api/platform/cash-control/daily").query.has("storeIds"),false);
    await press(document.querySelector(".cash-report-dialog .modal-close"));assert.equal(document.querySelector(".ai-command-page"),null);await open();returned();
   });
   await t.test("Central Checks retains selectable scope, explicit all-store execution and ordinary close",async()=>{
