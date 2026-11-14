@@ -208,6 +208,13 @@ Production branch: `main`
 - Μετά την επιτυχή οριστικοποίηση εμφανίζεται τελική σύνοψη ειδών, συνολικής διαφοράς ποσότητας και αξίας διαφοράς, βασισμένη στην κλειδωμένη Full Audit αναφορά.
 - Επόμενο: build/CI/merge και τελικός έλεγχος κάλυψης ολόκληρης της λίστας της φωτογραφίας.
 
+### Finalization Summary — συγχωνεύτηκε / Inventory list complete
+
+- PR #321, CI #941 πράσινο, merge commit `422c421afe5f248695904d759895ce6883d2a16d`.
+- Η λίστα της φωτογραφίας καλύπτεται: Super Admin Installation Center, Device Health Dashboard, Recovery Workflows, Mobile/PWA Inventory, Inventory Zones, Live Inventory με ανοικτό κατάστημα, Finalization, Remote Installation planning, Update Management, Inventory 2.0, QR/PIN access, Multi-user Inventory, Recount και Full Inventory Audit.
+- Τα Remote Installation/Update/Recovery jobs παραμένουν σκόπιμα σε ασφαλές `PLANNED` lifecycle και απαιτούν επιβεβαίωση στο PC/rollback checkpoint. Δεν εκτελούν outbound εντολές σε RBS/EFTPOS/Netlink/fiscal provider.
+- Ακριβές επόμενο βήμα: αυριανές λειτουργικές δοκιμές στο ΚΑΤ από το σημείο που είχαν μείνει, χωρίς επανάληψη των PR #315–#321.
+
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
 1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.
