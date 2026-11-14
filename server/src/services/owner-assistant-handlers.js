@@ -1,7 +1,6 @@
 import {prisma} from '../prisma.js';
 import {businessQuestionPeriod} from './assistant-business-period.js';
-import {readDailyTurnover, dailyTurnoverAnswer} from './daily-turnover-report.js';
-import {normalizeBusinessText} from '../../../shared/assistant-business.mjs';
+import {readDailyTurnover, dailyTurnoverAnswer, isDailyTurnoverQuestion} from './daily-turnover-report.js';
 import {walletActivityFromRequest} from "./ai-wallet-activity.js";
 import {reviewedCashTool,readAssistantReviewedCash} from './assistant-reviewed-cash.js';
 import {assistantHistoryTurnMetadata} from './assistant-history-turns.js';
@@ -51,8 +50,7 @@ export function createOwnerAssistantHandlers({authorize,historyTurns=null,readTu
       const turn=body.conversation?await historyTurns.begin(req,body.conversation,body.question):null;if(turn)body.history=turn.history;
       const tools=toolsForAssistantQuestion(assistantEffectiveQuestion(body.question,body.history),await permittedTools(req,scope)),required=new Set();let salesAccess=null,personnelRequired=false;
       if(!tools.length)throw Object.assign(new Error("Δεν υπάρχει ενεργή υποστηριζόμενη αναφορά για το κατάστημα."),{status:403,code:"MODULE_DISABLED"});
-      const normalized = normalizeBusinessText(body.question);
-      if (/τζιρ/.test(normalized) && /ανα (?:ημερ|μερ)|μεταβολ|αυξησ|μειωσ/.test(normalized)) {
+      if (isDailyTurnoverQuestion(body.question)) {
         if (body.readScope !== 'selected_store') {
           throw Object.assign(new Error('Επίλεξε ένα κατάστημα για τη μεταβολή τζίρου.'), {status:400});
         }
