@@ -218,3 +218,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 [Checkpoint](CHANGES/2026-11-14-pos-warehouse-vat-margin.md).
 
 - #3827 · Η διόρθωση του ελέγχου FAST POS για τυχαίο UUID επαληθεύτηκε με 4 στοχευμένους ελέγχους. Εκκρεμούν CI μετά τον συγχρονισμό και φιλοξενούμενη δοκιμή LAB.
+
+- #3827 · Τοπικό SQL benchmark σε απομονωμένο PGlite με 100.000 συνθετικές γραμμές ανά πίνακα. Με ισοδύναμους indexes, CloudAudit και FTEXT πέρασαν από `Seq Scan + Sort` σε `Index Only Scan`. Ενδεικτικά μία εκτέλεση ανά query: CloudAudit 541 → 12 shared hit blocks (12,962 → 0,214 ms), FTEXT 690 → 1 (12,573 → 0,072 ms). Εκκρεμούν δοκιμή CONCURRENTLY και μετρήσεις με δεδομένα του υπάρχοντος LAB. Το #3861 περιμένει διαθέσιμο build στο LAB για έλεγχο επαναχρησιμοποίησης και ανάκλησης.
