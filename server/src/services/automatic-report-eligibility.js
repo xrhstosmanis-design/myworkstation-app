@@ -1,3 +1,4 @@
+import {readDailyTurnover} from './daily-turnover-report.js';
 import {createHash} from 'node:crypto';
 import {lockAutomaticReportBoundary} from './automatic-report-lock-boundary.js';
 import {automaticReportConfigurationSchema} from './automatic-report-settings.js';
@@ -52,6 +53,15 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<iso(grant.notBefore))hold();
   const preview=await readAutomaticCashPreviewInTransaction(tx,{actorId:principal.id,companyId:scope.companyId,storeId:scope.storeId,day:period.fromDay,frequency:scope.frequency,configuration,settingsVersion:settings.version,now:new Date(now)});
   if(configuration.reviewedReconciliation===true&&preview.reviewedCash?.generation!==lifecycle.generation)hold();
+  if (scope.frequency === 'MONTHLY' && scope.storeId === process.env.MONTHLY_TURNOVER_REPORT_STORE_ID) {
+    preview.dailyTurnover = await readDailyTurnover(tx, {
+      companyId: scope.companyId,
+      storeId: scope.storeId,
+      from: preview.period.fromDay,
+      to: preview.period.toDay,
+    }, new Date(now));
+    if (preview.dailyTurnover.status !== 'AVAILABLE') hold();
+  }
   const payload=buildAutomaticCashPayload({preview,companyId:scope.companyId,storeId:scope.storeId,settingsVersion:settings.version});
   if(payload.period.from!==from||payload.period.to!==to)hold();
   // Re-read activation after source work as well as independently at every start.
