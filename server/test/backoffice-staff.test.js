@@ -124,3 +124,12 @@ test('product creation after stocktake navigation does not attach to a different
   assert.equal(shouldRefreshStocktakeAfterAttach('draft-a','draft-b'),false);
   assert.equal(shouldRefreshStocktakeAfterAttach('draft-a','draft-a'),true);
 });
+
+test('posted invoice reopen requires its own store capability and never grants cancellation',()=>{
+  assert.equal(staffRequestCapability('GET','/api/purchase-orders/order/reopen-preview'),'invoices.reopen');
+  assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/reopen'),'invoices.reopen');
+  assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/cancel'),null);
+  assert.equal(staffRequestCapability('GET','/api/purchase-orders/order/reopen'),null);
+  assert.equal(validStaffCapabilities(['invoices.reopen']),false);
+  assert.equal(validStaffCapabilities(['invoices.read','invoices.reopen']),true);
+});

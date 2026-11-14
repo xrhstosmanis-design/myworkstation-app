@@ -3,6 +3,17 @@ import {z} from "zod";
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import {mappingConfirmationUserId} from "../lib/supplier-mapping-confirmation-actor.js";
 
+import {requireStaffGrant} from "./backoffice-staff-access.js";
+
+async function authorizeReopen(db,actor,storeId,allowStaff){
+ if(allowStaff&&actor?.staffAccess===true&&actor.tokenType==="BACKOFFICE_USER"){
+  if(actor.storeId!==storeId)throw fail("Επίλεξε το επιτρεπόμενο κατάστημα της παραγγελίας.",403);
+  await requireStaffGrant(db,actor,storeId,"invoices.reopen");
+  return;
+ }
+ requireReopenActor(actor,storeId);
+}
+
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]),schemas=new WeakMap();
 const fail=(message,status=409)=>Object.assign(new Error(message),{status});
 const n=v=>Number(v||0),round=v=>Math.round(v*10000)/10000;
@@ -88,8 +99,8 @@ export function summarizeReopenLines(lines,limit=500){
 }
 export function preview(data){return {orderId:data.order.id,storeId:data.order.storeId,invoiceNumber:data.order.invoiceNumber,status:data.order.status,reopenVersion:n(data.order.reopenVersion),version:data.version,stockChanges:data.stockChanges,negativeStockCount:data.stockChanges.filter(s=>s.after<0).length,expenseDelta:-n(data.document.totalGross),paymentChanged:false,paymentCount:data.snapshot.payments.length,catalogPricesChanged:false,sourceFilesPreserved:true,lineAudit:summarizeReopenLines(data.snapshot.lines)};}
 export async function previewPurchaseOrderReopen(db,actor,orderId,storeId){
- requireReopenActor(actor,storeId);await ensurePurchaseOrderReopenSchema(db);
- return db.$transaction(async tx=>{await lockInvoiceStore(tx,actor.companyId,storeId);return preview(await load(tx,actor,orderId,storeId))},{timeout:20000});
+ await authorizeReopen(db,actor,storeId,true);await ensurePurchaseOrderReopenSchema(db);
+ return db.$transaction(async tx=>{await authorizeReopen(tx,actor,storeId,true);await lockInvoiceStore(tx,actor.companyId,storeId);return preview(await load(tx,actor,orderId,storeId))},{timeout:20000});
 }
 export const cancelSchema=reopenSchema;
 export const reopenPurchaseOrder=(db,actor,orderId,input)=>transitionPurchaseOrder(db,actor,orderId,input,"NEW");
@@ -97,8 +108,9 @@ export const reopenPurchaseOrder=(db,actor,orderId,input)=>transitionPurchaseOrd
 export const cancelPurchaseOrder=(db,actor,orderId,input)=>transitionPurchaseOrder(db,actor,orderId,input,"CANCELLED");
 async function transitionPurchaseOrder(db,actor,orderId,input,target){
  const cancel=target==="CANCELLED";
- requireReopenActor(actor,input?.storeId);const body=reopenSchema.parse(input);await ensurePurchaseOrderReopenSchema(db);
+ await authorizeReopen(db,actor,input?.storeId,!cancel);const body=reopenSchema.parse(input);await ensurePurchaseOrderReopenSchema(db);
  return db.$transaction(async tx=>{
+  await authorizeReopen(tx,actor,body.storeId,!cancel);
   await lockInvoiceStore(tx,actor.companyId,body.storeId);
   const [prior]=await raw(tx,'SELECT "result" FROM "PurchaseOrderReopenAudit" WHERE "companyId"=$1 AND "storeId"=$2 AND "orderId"=$3 AND "previewVersion"=$4',actor.companyId,body.storeId,orderId,body.version);
   if(prior){const [current]=await raw(tx,'SELECT "status","reopenVersion" FROM "PurchaseOrder" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3',orderId,actor.companyId,body.storeId);if(current?.status!==target||prior.result?.status!==target||n(current.reopenVersion)!==n(prior.result.reopenVersion))throw fail("Αυτή η επαναφορά έχει ήδη ολοκληρωθεί και η παραγγελία άλλαξε ξανά. Ανανέωσε την προβολή.");return {...prior.result,idempotent:true}}
