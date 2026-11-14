@@ -5,7 +5,8 @@ import {inventorySupplierMergePlan,applyInventorySupplierMerge} from './inventor
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
 const selection=z.object({storeId:z.string().min(1),productIds:z.array(z.string().min(1)).min(2).max(4),targetId:z.string().min(1)});
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-function access(user,body){if(!user?.companyId||user.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(user.role)||(user.storeId&&user.storeId!==body.storeId))fail('Δεν επιτρέπεται η συγχώνευση στο κατάστημα.',403);if(new Set(body.productIds).size!==body.productIds.length||!body.productIds.includes(body.targetId))fail('Επίλεξε 2–4 διαφορετικά είδη και ποιο θα κρατηθεί.',400)}
+function access(user,body,scope){const operatorAllowed=user?.tokenType==='STORE_OPERATOR'&&scope?.kind==='POS_INVENTORY'&&scope.capabilities.merge===true&&scope.actorId===user.id&&scope.companyId===user.companyId&&scope.storeId===body.storeId;
+ if(!user?.companyId||(!operatorAllowed&&(user.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(user.role)))||(user.storeId&&user.storeId!==body.storeId))fail('Δεν επιτρέπεται η συγχώνευση στο κατάστημα.',403);if(new Set(body.productIds).size!==body.productIds.length||!body.productIds.includes(body.targetId))fail('Επίλεξε 2–4 διαφορετικά είδη και ποιο θα κρατηθεί.',400)}
 
 /** A posted POS source remains historical evidence, not unfinished stock work.
  * Require reciprocal identity and the actual approved posting; status alone
@@ -71,15 +72,15 @@ async function preview(tx,user,body){
  const state={storeId:body.storeId,targetId:body.targetId,rows,barcodes,suppliers,supplierPlan,mappings,blockers};
  return {rows:rows.map(r=>({...r,salePrice:Number(r.salePrice),currentStock:Number(r.currentStock||0),vatRate:Number(r.vatRate)})),barcodes:barcodes.map(b=>({barcode:b.barcode,productId:b.productId,salePrice:b.salePrice==null?null:Number(b.salePrice)})),targetId:target.id,combinedStock:stock,blockers,previewHash:hash(state),state};
 }
-export async function previewInventoryMerge(db,user,input){const body=selection.strict().parse(input);access(user,body);return db.$transaction(async tx=>{const {state,...result}=await preview(tx,user,body);return result})}
+export async function previewInventoryMerge(db,user,input,scope){const body=selection.strict().parse(input);access(user,body,scope);return db.$transaction(async tx=>{const {state,...result}=await preview(tx,user,body);return result})}
 async function serializable(db,operation){
  for(let attempt=0;;attempt++){
   try{return await db.$transaction(operation,{isolationLevel:'Serializable'})}
   catch(error){if(attempt>=2||!(error.code==='P2034'||error.code==='P2010'&&['40001','40P01'].includes(error.meta?.code)))throw error;}
  }
 }
-export async function confirmInventoryMerge(db,user,input){
- const body=selection.extend({requestId:z.string().uuid(),previewHash:z.string().length(64),confirm:z.literal(true),reason:z.string().trim().min(3).max(300)}).strict().parse(input);access(user,body);
+export async function confirmInventoryMerge(db,user,input,scope){
+ const body=selection.extend({requestId:z.string().uuid(),previewHash:z.string().length(64),confirm:z.literal(true),reason:z.string().trim().min(3).max(300)}).strict().parse(input);access(user,body,scope);
  const fingerprint=hash({...body,productIds:[...body.productIds].sort()});
  return serializable(db,async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${user.companyId+':product-sku'}))`;
@@ -94,8 +95,8 @@ export async function confirmInventoryMerge(db,user,input){
    await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=0,"active"=false,"updatedAt"=NOW() WHERE "storeId"=${body.storeId} AND "productId"=${source.id}`;
    await tx.$executeRaw`UPDATE "Product" SET "active"=false,"updatedAt"=NOW() WHERE "companyId"=${user.companyId} AND "id"=${source.id}`;
    if(quantity!==0){
-    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${randomUUID()},${body.storeId},${source.id},'ADJUSTMENT',${-quantity},${Number(source.costPrice||0)},'PRODUCT_MERGE',${mergeId+":"+source.id},${body.reason},${user.id})`;
-    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${randomUUID()},${body.storeId},${body.targetId},'ADJUSTMENT',${quantity},${Number(source.costPrice||0)},'PRODUCT_MERGE',${mergeId+":"+source.id},${body.reason},${user.id})`;
+    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${randomUUID()},${body.storeId},${source.id},'ADJUSTMENT',${-quantity},${Number(source.costPrice||0)},'PRODUCT_MERGE',${mergeId+":"+source.id},${body.reason},${user.tokenType==='STORE_OPERATOR'?null:user.id})`;
+    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${randomUUID()},${body.storeId},${body.targetId},'ADJUSTMENT',${quantity},${Number(source.costPrice||0)},'PRODUCT_MERGE',${mergeId+":"+source.id},${body.reason},${user.tokenType==='STORE_OPERATOR'?null:user.id})`;
    }
   }
   await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=${p.combinedStock},"updatedAt"=NOW() WHERE "storeId"=${body.storeId} AND "productId"=${body.targetId}`;
