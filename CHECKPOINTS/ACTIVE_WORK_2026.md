@@ -122,6 +122,10 @@ PRs #3852 and #3856 merged. Scoped hosted LAB PASS on fbc7167: standalone OCR ap
 ## 2026-11-13 — Standalone local OCR draft approval
 Continues #3852 LAB acceptance. Expose the existing stock approval action for a standalone OCR draft in the selected store. See [checkpoint](CHANGES/2026-11-13-standalone-ocr-draft-approval.md).
 
+13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / independent payment history right. [Checkpoint](CHANGES/2026-11-13-manager-payment-read-independent.md). CI and LAB pending.
+
+13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / independent shift close. [Checkpoint](CHANGES/2026-11-13-manager-shift-close-context.md), PR #3855. LAB pending.
+
 ## 13/11/2026 — Συνέχεια αναθέσεων απογραφής
 
 Η συνέχεια της προηγούμενης σελίδας καταγράφεται εδώ, με σύντομα checkpoints και συνδέσμους στα τεκμήρια.

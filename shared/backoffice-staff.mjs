@@ -15,10 +15,10 @@ export const staffPermissionSections=Object.freeze([
   {key:'sales',label:'Πωλήσεις και βάρδιες',actions:[
     {key:'sales.read',label:'Προβολή πωλήσεων και ταμείων',description:'Βλέπει πωλήσεις, κινήσεις και υπόλοιπα βαρδιών του καταστήματος.'},
     {key:'sales.cancel',label:'Ακύρωση πώλησης τρέχουσας βάρδιας',description:'Ακυρώνει μη φορολογική πώληση στην ίδια ανοικτή βάρδια, με αιτιολογία και αντίστροφη εγγραφή. Δεν επιτρέπει επιστροφή ή ακύρωση φορολογικής απόδειξης.',requires:['sales.read']},
-    {key:'shifts.close',label:'Κλείσιμο βάρδιας με καταμέτρηση',description:'Κλείνει βάρδια του επιλεγμένου ταμείου με πραγματική καταμέτρηση, EFTPOS και καταγραφή διαφορών. Δεν επιτρέπει διοικητικό κλείσιμο χωρίς καταμέτρηση.',requires:['sales.read']}
+    {key:'shifts.close',label:'Κλείσιμο βάρδιας με καταμέτρηση',description:'Κλείνει βάρδια του επιλεγμένου ταμείου με πραγματική καταμέτρηση, EFTPOS και καταγραφή διαφορών. Δεν επιτρέπει διοικητικό κλείσιμο χωρίς καταμέτρηση.'}
   ]},
   {key:'payments',label:'Πληρωμές',actions:[
-    {key:'payments.read',label:'Προβολή στοιχείων πληρωμών',description:'Βλέπει προμηθευτές και διαθέσιμα παραστατικά του επιλεγμένου καταστήματος.',requires:['sales.read']},
+    {key:'payments.read',label:'Προβολή στοιχείων πληρωμών',description:'Βλέπει ιστορικό τραπεζικών μεταφορών, προμηθευτές και διαθέσιμα παραστατικά του επιλεγμένου καταστήματος.'},
     {key:'payments.supplier',label:'Καταχώριση πληρωμής προμηθευτή',description:'Πληρωμή ανοικτών τιμολογίων ή έναντι με αποδεικτικό ή ρητή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.expense',label:'Καταχώριση εξόδου',description:'Καταχωρίζει θετικό έξοδο με αιτιολογία και παραστατικό ή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.cash',label:'Πληρωμή από μετρητά βάρδιας',description:'Επιτρέπει αφαίρεση της πληρωμής από την ανοικτή βάρδια του επιλεγμένου ταμείου.',requires:['payments.read','sales.read']}
@@ -62,6 +62,7 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if(method==='GET'&&(/^(?:\/api\/backoffice-staff\/shifts\/stores\/[^/]+\/terminals|\/api\/cash\/stores\/[^/]+\/close-context)$/.test(path)))return 'shifts.close';
   if(method==='GET'&&/^\/api\/backoffice-staff\/sales\/stores\/[^/]+\/terminals$/.test(path))return 'sales.read';
   if(method==='GET'&&/^\/api\/backoffice-staff\/payments\/stores\/[^/]+$/.test(path))return 'payments.read';
   if(method==='GET'&&/^\/api\/transactions\/stores\/[^/]+\/supplier-open-invoices$/.test(path))return 'payments.supplier';
