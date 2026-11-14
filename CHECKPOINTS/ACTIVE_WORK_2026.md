@@ -144,7 +144,7 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 
 ## 2026-11-13 — Inventory audit purchase document links
 
-Continues #3645 in draft #3852. The audit resolves direct approval, local OCR confirmation and credit postings to the purchase document in the selected company and store. Purchase orders resolve through their own source document. Local reconciliation tests passed 18/18 and isolated SQL join checks passed 9/9. Native CI and hosted LAB acceptance are pending. Physical receipt timestamps and verified originals remain open.
+PRs #3852 and #3856 merged. Scoped hosted LAB PASS on fbc7167: standalone OCR approval linked the purchase document to the +2 movement in inventory reconciliation (8 → 10, zero net difference). Physical receipt time and verified original remain open. [Checkpoint](CHANGES/2026-11-13-inventory-receipt-lab-pass.md).
 
 13/11/2026 — Διόρθωση εκκαθάρισης κωδικού γραμμής τιμολογίου κατά την αποθήκευση barcode. [Checkpoint](CHANGES/2026-11-13-invoice-clear-supplier-code.md).
 
@@ -219,3 +219,15 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ## 2026-11-14 — Καρτέλα είδους και πλοήγηση υπευθύνου
 
 [Checkpoint](CHANGES/2026-11-14-staff-item-card.md).
+
+## 13/11/2026 — Συνέχεια αναθέσεων απογραφής
+
+Η συνέχεια της προηγούμενης σελίδας καταγράφεται εδώ, με σύντομα checkpoints και συνδέσμους στα τεκμήρια.
+
+- #3858 · Η αρχική τεκμηρίωση παραλαβής (commit `2b16af97`) πέρασε το [CI #9820](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43494757215). Hosted LAB PASS μόνο για την έγκριση standalone OCR και την αντίστοιχη κίνηση αγοράς +2 (8 → 10, μηδενική διαφορά). Το PR είναι draft.
+
+- #3841 · Η [επανεκτέλεση CI #9770](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43300522469) στο `3acf060c` ολοκληρώθηκε με 4/5 πράσινα jobs. Το `build-and-test` ανέφερε οκτώ αποτυχίες TAP, συμπεριλαμβανομένης μίας ένθετης δοκιμής, στον έλεγχο επαναφοράς PostgreSQL. Το GitHub αναφέρει ότι το draft δεν είναι mergeable. Επόμενο βήμα: σύγκριση με το τρέχον main και απομόνωση των αποτυχιών πριν από νέο CI και αποδοχή στο υπάρχον LAB.
+
+- #3771 · [CI #9573](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42631870100) PASS στο `81afd657`. Το GitHub αναφέρει ότι το PR δεν είναι mergeable. Εκκρεμούν συμβατότητα με το τρέχον main και δοκιμή οριστικοποίησης QR/PIN στο υπάρχον LAB.
+
+- Full Audit · Εκκρεμούν η επαλήθευση του αποθηκευμένου πρωτοτύπου myDATA και η καταγραφή της πραγματικής ώρας παραλαβής. Η ώρα της κίνησης αποθήκης δεν τεκμηριώνει την ώρα φυσικής παραλαβής.
