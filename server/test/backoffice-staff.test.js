@@ -24,7 +24,10 @@ test('product view, creation and opening stock are independent explicit rights w
   assert.equal(staffRequestCapability('GET','/api/inventory-archive'),'products.read');
   assert.equal(staffRequestCapability('GET','/api/owner-products/new-card/options'),'products.create');
   assert.equal(staffRequestCapability('POST','/api/owner-products/new-card'),'products.create');
-  for(const [method,path] of [['PATCH','/api/owner-products/p/card'],['POST','/api/owner-products/p/stock-adjustment'],['POST','/api/inventory-archive/import'],['POST','/api/inventory-archive/stock-transfer'],['GET','/api/owner-products/catalog']])assert.equal(staffRequestCapability(method,path),null);
+  assert.equal(validStaffCapabilities(['products.edit']),false);
+  assert.deepEqual(new Set(changeStaffCapability([],'products.edit',true)),new Set(['products.read','products.edit']));
+  for(const [method,path] of [['PATCH','/api/owner-products/p/card'],['POST','/api/owner-products/p/stock-adjustment'],['GET','/api/owner-products/catalog'],['GET','/api/owner-products/p/details'],['GET','/api/owner-products/p/composition'],['POST','/api/owner-products/p/set-items'],['DELETE','/api/owner-products/p/recipe-items/item']])assert.equal(staffRequestCapability(method,path),'products.edit');
+  for(const [method,path] of [['POST','/api/inventory-archive/import'],['POST','/api/inventory-archive/stock-transfer'],['POST','/api/owner-products/merge/confirm'],['PATCH','/api/owner-products/p/delivery']])assert.equal(staffRequestCapability(method,path),null);
 });
 test('owner chooses explicit rights independently of profile without role elevation or implicit finalization',()=>{
   assert.equal(createStaffInput.parse({...account,username:'Counter.1'}).username,'counter.1');
