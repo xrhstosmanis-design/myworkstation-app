@@ -4,6 +4,8 @@
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
 
+- 2026-11-14 · Επιλογή δικαιωμάτων BackOffice ανά κατάστημα · [Checkpoint](CHANGES/2026-11-14-backoffice-store-permission-selection.md).
+
 - 2026-11-14 · Πλήρης καρτέλα υπευθύνου · [Checkpoint](CHANGES/2026-11-14-staff-full-product-card.md).
 
 | Προτεραιότητα | Εργασία | Υπεύθυνος | PR / issue | Τρέχουσα κατάσταση | Επόμενο βήμα |
