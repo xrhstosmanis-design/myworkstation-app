@@ -1319,7 +1319,9 @@ router.get("/cash-control/daily",async(req,res,next)=>{
   try{
     await ensureCashControlSchema();
     const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-    const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional(),operator:z.string().trim().max(180).optional()}).parse(req.query);
+    const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional(),storeIds:z.string().min(1).max(12000).optional(),dateBasis:z.enum(["SHIFT_CLOSED_CALENDAR_DAY","SHIFT_OPENED_CALENDAR_DAY"]).optional(),operator:z.string().trim().max(180).optional()}).parse(req.query);
+    const storeIds=filters.storeIds?.split(",")||[];
+    const byOpening=filters.dateBasis==="SHIFT_OPENED_CALENDAR_DAY";
     const {date,fromTime,toTime}=filters;
     const period=resolveCashReportPeriod(req.query,date);
     const rows=await prisma.$queryRaw`
@@ -1333,12 +1335,13 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       JOIN "Store" st ON st."id"=s."storeId"
       JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
       LEFT JOIN "StoreTransaction" t ON t."sessionId"=s."id" AND t."companyId"=s."companyId" AND t."storeId"=s."storeId"
-      WHERE s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date
+      WHERE s."status"='CLOSED' AND ((CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date
         AND (${period.sessionId}::text IS NULL OR s."id"=${period.sessionId})
         AND (${filters.operator||null}::text IS NULL OR COALESCE(s."openedByName",s."closedByName",'') ILIKE ${filters.operator?`%${filters.operator}%`:null})
         AND (${filters.storeId||null}::text IS NULL OR st."id"=${filters.storeId||null})
-        AND ((${fromTime}::time<=${toTime}::time AND date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${fromTime}::time AND ${toTime}::time)
-          OR (${fromTime}::time>${toTime}::time AND (date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${fromTime}::time OR date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${toTime}::time)))
+        AND (${storeIds.length}::int=0 OR st."id"=ANY(${storeIds}::text[]))
+        AND ((${fromTime}::time<=${toTime}::time AND date_trunc('minute',(CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::time BETWEEN ${fromTime}::time AND ${toTime}::time)
+          OR (${fromTime}::time>${toTime}::time AND (date_trunc('minute',(CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::time>=${fromTime}::time OR date_trunc('minute',(CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::time<=${toTime}::time)))
       GROUP BY c."id",c."name",st."id",st."name",s."id"
       ORDER BY c."name",st."name",s."openedAt" LIMIT 501`;
     if(rows.length>500)return res.status(422).json({error:"Το διάστημα υπερβαίνει τις 500 βάρδιες. Περιόρισε το κατάστημα ή την περίοδο· δεν εμφανίζονται μερικά σύνολα."});
@@ -1355,22 +1358,25 @@ router.get("/cash-control/daily",async(req,res,next)=>{
     const totals=normalized.reduce((sum,row)=>{sum.shifts++;sum.cashSales+=row.cashSales;sum.cardSales+=row.cardSales;sum.eftposTotal+=row.eftposTotal;sum.expenses+=row.expenses;sum.variance+=row.variance;sum.shortage+=row.variance<0?Math.abs(row.variance):0;sum.surplus+=row.variance>0?row.variance:0;sum.cardVariance+=row.cardVariance;sum.duplicateCandidates+=row.duplicateCandidates;sum.expensesWithoutDocument+=row.expensesWithoutDocument;return sum},{shifts:0,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,shortage:0,surplus:0,cardVariance:0,duplicateCandidates:0,expensesWithoutDocument:0});
     const byStore=new Map();
     for(const row of normalized){const current=byStore.get(row.storeId)||{companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0,duplicateCandidates:0};current.shifts++;current.variance+=row.variance;current.shortage+=row.variance<0?Math.abs(row.variance):0;current.surplus+=row.variance>0?row.variance:0;current.cardVariance+=row.cardVariance;current.expensesWithoutDocument+=row.expensesWithoutDocument;current.duplicateCandidates+=row.duplicateCandidates;byStore.set(row.storeId,current)}
-    res.json({date,...period,fromTime,toTime,storeId:filters.storeId||null,operator:filters.operator||null,timeZone:"Europe/Athens",rows:investigated,stores:[...byStore.values()],totals});
+    res.json({date,...period,dateBasis:filters.dateBasis||period.dateBasis,fromTime,toTime,storeIds,storeId:filters.storeId||null,operator:filters.operator||null,timeZone:"Europe/Athens",rows:investigated,stores:[...byStore.values()],totals});
   }catch(error){next(error)}
 });
 
 router.get("/cash-control/shortages",async(req,res,next)=>{try{
-  const range=z.object({from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional(),operator:z.string().trim().max(180).optional()}).parse(req.query);
+  const range=z.object({from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional(),storeIds:z.string().min(1).max(12000).optional(),dateBasis:z.enum(["SHIFT_CLOSED_CALENDAR_DAY","SHIFT_OPENED_CALENDAR_DAY"]).optional(),operator:z.string().trim().max(180).optional()}).parse(req.query);
+  const storeIds=range.storeIds?.split(",")||[];
+  const byOpening=range.dateBasis==="SHIFT_OPENED_CALENDAR_DAY";
   if(range.from>range.to)return res.status(422).json({error:"Η ημερομηνία Από πρέπει να είναι πριν από την ημερομηνία Έως."});
   const rows=await prisma.$queryRaw`
     SELECT c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",s."id" AS "sessionId",
-      (s."closedAt" AT TIME ZONE 'Europe/Athens')::date::text AS "date",s."openedAt",s."closedAt",s."shiftLabel",s."terminalPos",s."openedByName",s."closedByName",s."variance",s."cardVariance"
+      ((CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::date::text AS "date",s."openedAt",s."closedAt",s."shiftLabel",s."terminalPos",s."openedByName",s."closedByName",s."variance",s."cardVariance"
     FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
     WHERE s."status"='CLOSED' AND s."variance"<0
-      AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${range.from}::date AND ${range.to}::date
-      AND ((${range.fromTime}::time<=${range.toTime}::time AND date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${range.fromTime}::time AND ${range.toTime}::time)
-        OR (${range.fromTime}::time>${range.toTime}::time AND (date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${range.fromTime}::time OR date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${range.toTime}::time)))
+      AND ((CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::date BETWEEN ${range.from}::date AND ${range.to}::date
+      AND ((${range.fromTime}::time<=${range.toTime}::time AND date_trunc('minute',(CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::time BETWEEN ${range.fromTime}::time AND ${range.toTime}::time)
+        OR (${range.fromTime}::time>${range.toTime}::time AND (date_trunc('minute',(CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::time>=${range.fromTime}::time OR date_trunc('minute',(CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::time<=${range.toTime}::time)))
       AND (${range.storeId||null}::text IS NULL OR st."id"=${range.storeId||null})
+      AND (${storeIds.length}::int=0 OR st."id"=ANY(${storeIds}::text[]))
       AND (${range.operator||null}::text IS NULL OR COALESCE(s."openedByName",s."closedByName",'') ILIKE ${range.operator?`%${range.operator}%`:null})
     ORDER BY "date",c."name",st."name",s."openedAt"`;
   const normalized=rows.map(row=>({...row,variance:Number(row.variance||0),shortage:Math.abs(Number(row.variance||0)),cardVariance:Number(row.cardVariance||0)}));

@@ -184,3 +184,9 @@
   .platform-owner-toggle strong { font-size: 16px; }
   .platform-owner-toggle small { font-size: 13px; }
 }
+
+.cash-report-search summary{cursor:pointer;font-weight:600}
+.cash-report-stores{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;max-height:12rem;overflow:auto;padding-block:8px}
+.cash-report-stores label{display:flex;align-items:center;gap:6px}
+.cash-report-stores input[type="checkbox"]{width:auto;min-height:0}
+@media print{.cash-report-search{display:none!important}}

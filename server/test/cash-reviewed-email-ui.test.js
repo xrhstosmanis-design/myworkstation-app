@@ -35,7 +35,7 @@ test('Platform cash preview shows the entire long native report and only explici
   else if(url.pathname==='/api/platform/backup-monitoring')data={configured:false};
   else if(url.pathname==='/api/platform/cash-control/daily'){
    date=url.searchParams.get('from');const totals={shifts:1,shortage:87,surplus:0,variance:-87,cardVariance:200,expensesWithoutDocument:0};
-   data={...Object.fromEntries(url.searchParams),totals,rows:[{companyId:'co',storeId:'A',sessionId:'a',openedByName:'Χρυσάνθη',openedAt:date+'T06:00:00Z',closedAt:date+'T14:00:00Z',variance:-87,cardVariance:200,auditRule:{mode:'FULL'},duplicateCandidates:0}],stores:[{...totals,storeId:'A',storeName:'Store A',companyName:'Company'}]};
+   data={...Object.fromEntries(url.searchParams),storeIds:url.searchParams.get("storeIds")?.split(",")||[],totals,rows:[{companyId:'co',storeId:'A',sessionId:'a',openedByName:'Χρυσάνθη',openedAt:date+'T06:00:00Z',closedAt:date+'T14:00:00Z',variance:-87,cardVariance:200,auditRule:{mode:'FULL'},duplicateCandidates:0}],stores:[{...totals,storeId:'A',storeName:'Store A',companyName:'Company'}]};
   }else if(url.pathname.endsWith('/email-preview')){const snapshot=preview();if(delay)return new Promise(resolve=>release=()=>resolve({ok:true,status:200,text:async()=>JSON.stringify(snapshot)}));data={...snapshot,...(formattedOnce?{html:'<table><tr><td>Πίνακας δοκιμής</td></tr></table>'}:{})};formattedOnce=false;}
   else if(url.pathname.endsWith('/send-email')||url.pathname.endsWith('/send-preview')){
    if(throwSend)throw Error('Synthetic network failure');
@@ -48,14 +48,14 @@ test('Platform cash preview shows the entire long native report and only explici
   return {ok:true,status:200,text:async()=>JSON.stringify(data)};
  };
  const click=async el=>{assert.ok(el);await act(async()=>{el.click()})};
- const select=async value=>act(async()=>{const el=document.querySelector('.cash-report-filters select');Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});
+ const select=async value=>act(async()=>{for(const el of document.querySelectorAll('.cash-report-stores input')){if(el.checked!==(el.closest('label').textContent.trim()===`Store ${value}`))el.click()}});
  const posts=()=>calls.filter(c=>c.method==='POST'&&/\/send-(email|preview)$/.test(c.path)),shown=()=>document.querySelector('[data-testid="cash-email-full-body"]');
  const previewReads=()=>calls.filter(c=>c.path.includes('/email-preview')).length;
  const dialog=()=>document.querySelector('.cash-email-preview-dialog');
  const escape=()=>act(async()=>{document.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}))});
  try{
   await act(async()=>root.render(React.createElement(Component)));
-  await click(button('Οικονομικά & Έλεγχοι'));await click(button('Ταμεία'));await select('A');await click(button('Εμφάνιση'));
+  await click(button('Οικονομικά & Έλεγχοι'));await click(button('Ταμεία'));await select('A');await click(button('Αναζήτηση'));
   long=true;const opener=button('Προεπισκόπηση & email ιδιοκτητών');opener.focus();await click(opener);
   const frame=dialog().querySelector('iframe');
   assert.equal(frame.getAttribute('sandbox'),'');
@@ -102,7 +102,7 @@ test('Platform cash preview shows the entire long native report and only explici
   assert.equal(button('Αποστολή δοκιμής').disabled,false,'self-preview retains its existing pending-readiness permission');
   await click(button('Άκυρο'));
   pending=false;
-  long=true;emptyRows=true;await click(opener);assert.equal(shown()?.textContent,full);assert.equal(button('Αποστολή αναφοράς').disabled,true);await click(button('Αποστολή αναφοράς'));assert.equal(posts().length,2);await click(button('Άκυρο'));emptyRows=false;
+  long=true;emptyRows=true;await click(opener);assert.equal(shown(),null);assert.match(document.body.textContent,/διαφορετικές βάρδιες/);assert.equal(posts().length,2);emptyRows=false;
   recipients=[];await click(opener);assert.equal(shown()?.textContent,full);assert.equal(button('Αποστολή αναφοράς').disabled,true);assert.match(dialog().textContent,/Δεν έχουν οριστεί παραλήπτες/);await click(button('Άκυρο'));assert.equal(posts().length,2);
   recipients=[123];await click(opener);assert.equal(shown(),null);assert.match(document.body.textContent,/Ανανέωσε την προεπισκόπηση/);recipients=['owner@example.invalid'];long=false;
 
@@ -111,17 +111,16 @@ test('Platform cash preview shows the entire long native report and only explici
 
   await click(button('Προεπισκόπηση & email ιδιοκτητών'));
   assert.ok(shown());await select('B');
-  assert.equal(button('Αποστολή αναφοράς').disabled,true,'store change invalidates visible preview without sending');
-  await click(button('Άκυρο'));assert.equal(posts().length,2);
-  await select('A');await click(button('Εμφάνιση'));
-  await click(opener);const beforeRefresh=previewReads();await click(button('Εμφάνιση'));assert.equal(button('Αποστολή αναφοράς').disabled,true);assert.equal(previewReads(),beforeRefresh,'refreshing the parent report never silently replaces the preview');await click(button('Άκυρο'));assert.equal(posts().length,2);
-  await click(opener);await act(async()=>{const el=document.querySelector('.cash-report-filters input[type="date"]'),nextDay=new Date(Date.parse(date+'T12:00:00Z')+86400000).toISOString().slice(0,10);Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,nextDay);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}))});assert.equal(shown(),null,'day changes invalidate an open preview');await click(button('Εμφάνιση'));
-  await click(opener);localStorage.setItem('token','different-session');await click(button('Αποστολή αναφοράς'));assert.equal(shown(),null);assert.equal(posts().length,2,'an open preview cannot send using a different auth context');localStorage.setItem('token','synthetic');await click(button('Εμφάνιση'));
+  assert.equal(shown(),null,'store change closes the preview');assert.equal(posts().length,2);
+  await select('A');await click(button('Αναζήτηση'));
+  await click(opener);const beforeRefresh=previewReads();await click(button('Αναζήτηση'));assert.equal(button('Αποστολή αναφοράς').disabled,true);assert.equal(previewReads(),beforeRefresh,'refreshing the parent report never silently replaces the preview');await click(button('Άκυρο'));assert.equal(posts().length,2);
+  await click(opener);await act(async()=>{const el=document.querySelectorAll('.cash-report-filters input[type="date"]')[1],nextDay=new Date(Date.parse(date+'T12:00:00Z')+86400000).toISOString().slice(0,10);Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,nextDay);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}))});assert.equal(shown(),null,'day changes invalidate an open preview');await act(async()=>{const el=document.querySelectorAll('.cash-report-filters input[type="date"]')[1];Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,date);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}))});await click(button('Αναζήτηση'));
+  await click(opener);localStorage.setItem('token','different-session');await click(button('Αποστολή αναφοράς'));assert.equal(shown(),null);assert.equal(posts().length,2,'an open preview cannot send using a different auth context');localStorage.setItem('token','synthetic');await click(button('Αναζήτηση'));
   delay=true;await click(button('Προεπισκόπηση & email ιδιοκτητών'));
   assert.equal(typeof release,'function');await select('B');await act(async()=>release());
   assert.equal(shown(),null);assert.equal(posts().length,2,'late A response never opens under B');
-  delay=false;await select('A');await click(button('Εμφάνιση'));
-  delay=true;await click(opener);localStorage.setItem('token','different-session');await act(async()=>release());assert.equal(shown(),null);assert.equal(posts().length,2,'late preview data cannot open in a new auth context');delay=false;localStorage.setItem('token','synthetic');await click(button('Εμφάνιση'));
+  delay=false;await select('A');await click(button('Αναζήτηση'));
+  delay=true;await click(opener);localStorage.setItem('token','different-session');await act(async()=>release());assert.equal(shown(),null);assert.equal(posts().length,2,'late preview data cannot open in a new auth context');delay=false;localStorage.setItem('token','synthetic');await click(button('Αναζήτηση'));
   for(const failure of ['stale','network']){
    sendStatus=failure==='stale'?409:200;throwSend=failure==='network';await click(opener);const reads=previewReads(),count=posts().length,attempt=button('Αποστολή αναφοράς');await click(attempt);assert.equal(shown(),null,'failed sends preserve the existing close-draft behavior');await click(attempt);assert.equal(posts().length,count+1,'a settled failed draft cannot post again');assert.equal(previewReads(),reads,'failed sends never refresh or retry automatically');
   }

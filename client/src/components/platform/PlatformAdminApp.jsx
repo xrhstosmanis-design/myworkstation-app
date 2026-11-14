@@ -6,7 +6,6 @@ import StoreLifecyclePanel from "./StoreLifecyclePanel.jsx";
 import PlatformCompanyWorkspace from "./PlatformCompanyWorkspace.jsx";
 import CompanyIdentityEditor from "./CompanyIdentityEditor.jsx";
 import TerminalDeleteButton from "./TerminalDeleteButton.jsx";
-import CashReportPeriodFields from "./CashReportPeriodFields.jsx";
 import CashEmailPreviewDialog from "./CashEmailPreviewDialog.jsx";
 import {cashChatEvidenceLines} from "../../lib/cash-chat-evidence.js";
 import {cashReportPeriod,cashReportRowDay} from "../../lib/cash-report-period.js";
@@ -182,8 +181,6 @@ export default function PlatformAdminApp(){
   const [cashReport,setCashReport]=useState(null);
   const [cashEmailDraft,setCashEmailDraft]=useState(null);
   const [cashEmailSending,setCashEmailSending]=useState(false);
-  const [cashReportDate,setCashReportDate]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens"}).format(new Date()));
-  const [cashPeriod,setCashPeriod]=useState("DAY");
   const [cashSessionId,setCashSessionId]=useState("");
   const [cashRangeFrom,setCashRangeFrom]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens"}).format(new Date()));
   const [cashRangeTo,setCashRangeTo]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens"}).format(new Date()));
@@ -201,7 +198,8 @@ export default function PlatformAdminApp(){
   const [terminalActivationNotice,setTerminalActivationNotice]=useState(null);
   const [onlineStoreManager,setOnlineStoreManager]=useState(null);
   const [videoConnectionManager,setVideoConnectionManager]=useState(null);
-  const [cashStoreId,setCashStoreId]=useState("");
+  const [cashStoreIds,setCashStoreIds]=useState([]);
+  const cashStoreId=cashStoreIds.length===1?cashStoreIds[0]:"";
   const [deleteCompany,setDeleteCompany]=useState(null);
   const [fiscalIntegrations,setFiscalIntegrations]=useState(null);
   const [showSupplierSettlementReview,setShowSupplierSettlementReview]=useState(false);
@@ -531,27 +529,27 @@ export default function PlatformAdminApp(){
     return (data?.companies||[]).filter(row=>row.plan==="TRIAL"&&row.trialEndsAt&&new Date(row.trialEndsAt).getTime()-now<=week).length;
   },[data]);
 
-  const loadCashReport=async(date=cashReportDate,twinOrigin=aiTwinOriginRef.current?.destination==="cash"?aiTwinOriginRef.current:null)=>{
+  const loadCashReport=async(date=cashRangeFrom,twinOrigin=aiTwinOriginRef.current?.destination==="cash"?aiTwinOriginRef.current:null)=>{
     const sequence=++cashLoadSequence.current;
     setBusy("cash-report");setError("");
     try{
       const api=twinOrigin?guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:twinOrigin}),()=>currentTwinOrigin(twinOrigin)):request;
-      const range=cashReportPeriod({period:cashPeriod,date,from:cashRangeFrom,to:cashRangeTo});
-      const filters=withTwinScope({...range,...(cashSessionId?{sessionId:cashSessionId}:{}),operator:cashOperator.trim(),date,fromTime:cashFromTime,toTime:cashToTime,...(cashStoreId?{storeId:cashStoreId}:{})},twinOrigin);
+      const range=cashReportPeriod({period:"CUSTOM",date,from:cashRangeFrom,to:cashRangeTo});
+      const filters=withTwinScope({...range,dateBasis:"SHIFT_OPENED_CALENDAR_DAY",...(!twinOrigin&&cashStoreIds.length?{storeIds:cashStoreIds.join(",")} : {}),...(cashSessionId?{sessionId:cashSessionId}:{}),operator:cashOperator.trim(),date,fromTime:cashFromTime,toTime:cashToTime},twinOrigin);
       const result=await api(`/api/platform/cash-control/daily?${new URLSearchParams(filters)}`);
       if(sequence!==cashLoadSequence.current)return false;
       setCashReport(result);return true;
     }catch(err){if(twinOrigin)throw err;if(sequence===cashLoadSequence.current)setError(err.message);return false}
     finally{if(sequence===cashLoadSequence.current)setBusy("")}
   };
-  useEffect(()=>{cashLoadSequence.current++;setCashEmailDraft(null)},[cashPeriod,cashReportDate,cashRangeFrom,cashRangeTo,cashFromTime,cashToTime,cashSessionId,cashOperator]);
+  useEffect(()=>{cashLoadSequence.current++;setCashEmailDraft(null);setBusy(value=>value==="cash-report"?"":value)},[cashStoreIds,cashRangeFrom,cashRangeTo,cashFromTime,cashToTime,cashSessionId,cashOperator]);
   const cashReportMatchesSelection=()=>{
     if(!cashReport)return false;
-    try{const range=cashReportPeriod({period:cashPeriod,date:cashReportDate,from:cashRangeFrom,to:cashRangeTo});
-      return range.from===cashReport.from&&range.to===cashReport.to&&cashReport.fromTime===cashFromTime&&cashReport.toTime===cashToTime&&(cashReport.sessionId||"")===cashSessionId&&(cashReport.operator||"")===cashOperator.trim()&&(cashReport.storeId||"")===(scopeFor("cash")?.storeId||cashStoreId||"");
+    try{const range=cashReportPeriod({period:"CUSTOM",date:cashRangeFrom,from:cashRangeFrom,to:cashRangeTo});
+      return range.from===cashReport.from&&range.to===cashReport.to&&cashReport.fromTime===cashFromTime&&cashReport.toTime===cashToTime&&(cashReport.sessionId||"")===cashSessionId&&(cashReport.operator||"")===cashOperator.trim()&&(cashReport.storeId||"")===(scopeFor("cash")?.storeId||"")&&(cashReport.storeIds||[]).join(",")===(scopeFor("cash")?"":cashStoreIds.join(","));
     }catch{return false;}
   };
-  const refreshCashReport=()=>loadCashReport(cashReportDate).catch(err=>setError(err.message));
+  const refreshCashReport=()=>loadCashReport(cashRangeFrom).catch(err=>setError(err.message));
   const closeCashReport=()=>{cashLoadSequence.current++;setCashEmailDraft(null);setCashReport(null);returnFromTwin("cash")};
   const openTwinDestination=async(destination,selection)=>{
     if(!TWIN_DESTINATIONS.has(destination)||aiTwinOriginRef.current)return;
@@ -561,7 +559,7 @@ export default function PlatformAdminApp(){
     aiTwinOriginRef.current=origin;setAiTwinOrigin(origin);setAiTwinSelection(selection);setAiTwinNavigationError("");
     const {company,store}=context,api=guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:origin}),()=>currentTwinOrigin(origin));
     try{
-      if(destination==="cash"){if(!await loadCashReport(cashReportDate,origin))return}
+      if(destination==="cash"){if(!await loadCashReport(cashRangeFrom,origin))return}
       else if(destination==="video"){
         setBusy(`video:${store.id}`);
         const result=await api(`/api/platform/companies/${company.id}/stores/${store.id}/video-connection`);
@@ -581,8 +579,8 @@ export default function PlatformAdminApp(){
 
   const openCashEmailPreview=async(store,mode)=>{
     if(cashEmailSendInFlight.current)return;
-    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
-    if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το email καλύπτει μόνο πλήρη ημερολογιακή ημέρα.");
+    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Αναζήτηση πριν από εξαγωγή ή αποστολή.");
+    if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το email καλύπτει μόνο πλήρη ημερολογιακή ημέρα κλεισίματος.");
     const sequence=++cashLoadSequence.current,date=cashReport.from||cashReport.date,api=requestFor("cash"),origin=scopeFor("cash"),context=readBackofficeContext(localStorage).key;
     const current=()=>sequence===cashLoadSequence.current&&readBackofficeContext(localStorage).key===context&&(origin?currentTwinOrigin(origin):aiTwinOriginRef.current?.destination!=="cash");
     const key="cash-"+(mode==="owners"?"email":"preview")+":"+store.storeId;
@@ -592,6 +590,10 @@ export default function PlatformAdminApp(){
       if(!current())return;
       if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/)||!Array.isArray(preview.rows)||!Array.isArray(preview.recipients)||preview.recipients.some(recipient=>typeof recipient!=="string"))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
       if(mode==="self"&&(typeof preview.personalRecipient!=="string"||!preview.personalRecipient))throw new Error("Δεν βρέθηκε παραλήπτης προσωπικής δοκιμής.");
+      const visibleSessions=new Set(cashReport.rows.filter(row=>row.storeId===store.storeId).map(row=>row.sessionId));
+      if(preview.rows.length!==visibleSessions.size||preview.rows.some(row=>!visibleSessions.has(row.sessionId))){
+        throw new Error("Η αναφορά email βασίζεται στην ημέρα κλεισίματος και περιλαμβάνει διαφορετικές βάρδιες από την αναζήτηση.");
+      }
       setCashEmailDraft({...preview,mode,sequence,api,current,report:cashReport});
     }catch(err){if(current())setError(err.message)}finally{if(current())setBusy(value=>value===key?"":value)}
   };
@@ -620,11 +622,11 @@ export default function PlatformAdminApp(){
   };
 
   const downloadShortages=async store=>{
-    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
+    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Αναζήτηση πριν από εξαγωγή ή αποστολή.");
     const key=`cash-export:${store?.storeId||"all"}`;setBusy(key);setError("");
     try{
       if(cashReport?.sessionId)throw new Error("Το Excel ελλειμμάτων αφορά ολόκληρη περίοδο, όχι μεμονωμένη βάρδια.");
-      const query=new URLSearchParams({from:cashReport.from||cashReport.date,to:cashReport.to||cashReport.date,fromTime:cashReport.fromTime,toTime:cashReport.toTime,...(scopeFor("cash")?{companyId:scopeFor("cash").companyId,storeId:scopeFor("cash").storeId}:store?{storeId:store.storeId}:cashReport.storeId?{storeId:cashReport.storeId}:{}),...(cashReport.operator?{operator:cashReport.operator}:{})});
+      const query=new URLSearchParams({from:cashReport.from||cashReport.date,to:cashReport.to||cashReport.date,fromTime:cashReport.fromTime,toTime:cashReport.toTime,dateBasis:cashReport.dateBasis,...(scopeFor("cash")?{companyId:scopeFor("cash").companyId,storeId:scopeFor("cash").storeId}:store?{storeId:store.storeId}:cashReport.storeIds?.length?{storeIds:cashReport.storeIds.join(",")}:{}),...(cashReport.operator?{operator:cashReport.operator}:{})});
       const result=await requestFor("cash")(`/api/platform/cash-control/shortages?${query}`);
       const cell=value=>`"${String(value??"").replaceAll('"','""')}"`;
       const lines=[["Ημερομηνία","Άνοιγμα","Κλείσιμο","Εταιρεία","Κατάστημα","POS","Βάρδια","Χειριστής","Έλλειμμα","Διαφορά POS–EFTPOS"],...result.rows.map(row=>[row.date,athensTime(row.openedAt),athensTime(row.closedAt),row.companyName,row.storeName,row.terminalPos||"MAIN",row.shiftLabel,row.openedByName||"—",row.shortage.toFixed(2),row.cardVariance.toFixed(2)])];
@@ -691,18 +693,41 @@ export default function PlatformAdminApp(){
     {cashReport&&<div className="platform-modal"><section className="platform-security-dialog cash-report-dialog">
       <button type="button" className="modal-close" onClick={closeCashReport}><X/></button>
       <h2>Αυτόματος Έλεγχος Ταμείων</h2><p>Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια</p>
-      <div className="cash-report-filters">{scopeFor("cash")?<label>Κατάστημα<select value={scopeFor("cash").storeId} disabled><option value={scopeFor("cash").storeId}>{twinContext?.store.name||"Μη διαθέσιμο κατάστημα"}</option></select></label>:<label>Κατάστημα<select value={cashStoreId} onChange={event=>{cashLoadSequence.current++;setCashStoreId(event.target.value);setCashSessionId("")}}><option value="">Όλα τα καταστήματα</option>{(data?.companies||[]).flatMap(company=>company.stores.map(store=><option key={store.id} value={store.id}>{store.name}</option>))}</select></label>}<CashReportPeriodFields period={cashPeriod} date={cashReportDate} from={cashRangeFrom} to={cashRangeTo} onPeriod={value=>{setCashPeriod(value);setCashSessionId("")}} onDate={value=>{setCashReportDate(value);setCashSessionId("")}} onFrom={setCashRangeFrom} onTo={setCashRangeTo}/><label>Ώρα από<input type="time" value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label><label>Ώρα έως<input type="time" value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label><button onClick={refreshCashReport} disabled={busy==="cash-report"}><RefreshCw/>Εμφάνιση</button><button type="button" className="secondary" disabled={!cashReportMatchesSelection()} onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><label>Βάρδια<select value={cashSessionId} onChange={event=>setCashSessionId(event.target.value)}><option value="">Όλες οι βάρδιες περιόδου</option>{cashReport.rows.map(row=><option key={row.sessionId} value={row.sessionId}>{row.openedByName} · {cashReportRowDay(row.closedAt)} · {row.terminalPos}</option>)}</select></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label><button type="button" className="secondary" aria-label="Αρχικά ελλείμματα περιόδου (CSV)" title="Αρχικές διαφορές πριν από τους επανυπολογισμούς (CSV)" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":scopeFor("cash")?"Excel ελλειμμάτων καταστήματος":"Excel ελλειμμάτων όλων"}</button></div>
-      <p role="status">{!cashReportMatchesSelection()&&"Τα φίλτρα άλλαξαν — πάτησε Εμφάνιση. "}Εμφανιζόμενη περίοδος: {cashReport.from||cashReport.date} έως {cashReport.to||cashReport.date} · {cashReport.fromTime}–{cashReport.toTime}. Μετά από αλλαγή φίλτρων πάτησε Εμφάνιση.</p><div className="cash-report-totals"><span>Βάρδιες <b>{cashReport.totals.shifts}</b></span><span>Συνολικό έλλειμμα <b>{cashReport.totals.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b>{cashReport.totals.surplus.toFixed(2)} €</b></span><span>Καθαρή διαφορά <b className={Math.abs(cashReport.totals.variance)>.009?"bad":"ok"}>{cashReport.totals.variance.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{cashReport.totals.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{cashReport.totals.expensesWithoutDocument}</b></span></div>
+      <form className="cash-report-search" onSubmit={event=>{event.preventDefault();refreshCashReport()}}>
+        {scopeFor("cash")?<p>Κατάστημα: {twinContext?.store.name||"Μη διαθέσιμο κατάστημα"}</p>:<details>
+          <summary>{cashStoreIds.length?`Καταστήματα (${cashStoreIds.length})`:"Όλα τα καταστήματα"}</summary>
+          <div className="cash-report-stores">
+            <button type="button" className="secondary" onClick={()=>{setCashStoreIds([]);setCashSessionId("")}}>Όλα τα καταστήματα</button>
+            {(data?.companies||[]).flatMap(company=>company.stores.map(store=><label key={store.id}>
+              <input type="checkbox" checked={cashStoreIds.includes(store.id)} onChange={event=>{
+                const checked=event.target.checked;
+                setCashStoreIds(ids=>checked?[...ids,store.id]:ids.filter(id=>id!==store.id));
+                setCashSessionId("");
+              }}/>{store.name}
+            </label>))}
+          </div>
+        </details>}
+        <div className="cash-report-filters">
+          <label>Ημερομηνία από<input type="date" required value={cashRangeFrom} onChange={event=>{setCashRangeFrom(event.target.value);setCashSessionId("")}}/></label>
+          <label>Ημερομηνία έως<input type="date" required value={cashRangeTo} onChange={event=>{setCashRangeTo(event.target.value);setCashSessionId("")}}/></label>
+          <label>Ώρα από<input type="time" required value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label>
+          <label>Ώρα έως<input type="time" required value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label>
+          <button type="submit" disabled={busy==="cash-report"}><RefreshCw/>Αναζήτηση</button>
+        </div>
+        <details><summary>Περισσότερα φίλτρα</summary><div className="cash-report-filters"><label>Βάρδια<select value={cashSessionId} onChange={event=>setCashSessionId(event.target.value)}><option value="">Όλες οι βάρδιες περιόδου</option>{cashReport.rows.map(row=><option key={row.sessionId} value={row.sessionId}>{row.openedByName} · {cashReportRowDay(row.openedAt)} · {row.terminalPos}</option>)}</select></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label></div></details>
+      </form>
+      <div className="cash-report-filters"><button type="button" className="secondary" disabled={!cashReportMatchesSelection()} onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><button type="button" className="secondary" aria-label="Αρχικά ελλείμματα περιόδου (CSV)" title="Αρχικές διαφορές πριν από τους επανυπολογισμούς (CSV)" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":scopeFor("cash")?"Excel ελλειμμάτων καταστήματος":"Excel ελλειμμάτων όλων"}</button></div>
+      <p role="status">{!cashReportMatchesSelection()&&"Τα φίλτρα άλλαξαν — πάτησε Αναζήτηση. "}Εμφανιζόμενη περίοδος: {cashReport.from||cashReport.date} έως {cashReport.to||cashReport.date} · {cashReport.fromTime}–{cashReport.toTime}. Βάσει έναρξης βάρδιας.</p><div className="cash-report-totals"><span>Βάρδιες <b>{cashReport.totals.shifts}</b></span><span>Συνολικό έλλειμμα <b>{cashReport.totals.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b>{cashReport.totals.surplus.toFixed(2)} €</b></span><span>Καθαρή διαφορά <b className={Math.abs(cashReport.totals.variance)>.009?"bad":"ok"}>{cashReport.totals.variance.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{cashReport.totals.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{cashReport.totals.expensesWithoutDocument}</b></span></div>
       {(scopeFor("cash")?scopeFor("cash").storeId:cashStoreId)&&<CashPaperReadingPanel api={requestFor("cash")} storeId={scopeFor("cash")?scopeFor("cash").storeId:cashStoreId}/>}
       {(scopeFor("cash")?scopeFor("cash").storeId:cashStoreId)&&<CashReconciliationPanel api={requestFor("cash")} storeId={scopeFor("cash")?scopeFor("cash").storeId:cashStoreId} from={cashReport.from||cashReport.date} to={cashReport.to||cashReport.date}/>}
       <div className="cash-store-summaries">{(cashReport.stores||[]).map(store=><article key={store.storeId}><small>{store.companyName}</small><h3>{store.storeName}</h3><span>Βάρδιες <b>{store.shifts}</b></span><span>Έλλειμμα <b className="bad">{store.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b className="ok">{store.surplus.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{store.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{store.expensesWithoutDocument}</b></span><button type="button" className="secondary" onClick={()=>sendCashPreviewToMe(store)} disabled={busy===`cash-preview:${store.storeId}`}><Send/>{busy===`cash-preview:${store.storeId}`?"Αποστολή…":"Δοκιμή στο email μου"}</button><button type="button" onClick={()=>previewAndSendCashReport(store)} disabled={busy===`cash-email:${store.storeId}`}><Send/>{busy===`cash-email:${store.storeId}`?"Αποστολή…":"Προεπισκόπηση & email ιδιοκτητών"}</button><button type="button" className="secondary" aria-label="Αρχικά ελλείμματα καταστήματος (CSV)" title="Αρχικές διαφορές πριν από τους επανυπολογισμούς (CSV)" onClick={()=>downloadShortages(store)} disabled={busy===`cash-export:${store.storeId}`}><Download/>{busy===`cash-export:${store.storeId}`?"Δημιουργία…":"Excel ελλειμμάτων"}</button></article>)}</div>
       {cashReport.rows.length>0&&<section className="site-style-cash-reports">{(cashReport.stores||[]).map(store=>{const rows=cashReport.rows.filter(row=>row.storeId===store.storeId);const suspicious=rows.flatMap(row=>(row.investigation?.findings||[]).map(finding=>({row,finding})));const finalText=store.variance<-.009?`Έλλειμμα ${cashMoney(Math.abs(store.variance))}`:store.variance>.009?`Πλεόνασμα ${cashMoney(store.variance)}`:"Χωρίς διαφορά";return <article className="site-style-store-report" key={`site-report:${store.storeId}`}>
         <div className="site-result-head"><div><span className="result-ok">✓</span><div><h3>{rows.every(row=>row.investigation?.completed===true)?"Ο έλεγχος των βαρδιών ολοκληρώθηκε":"Προσωρινό αποτέλεσμα — εκκρεμούν έλεγχοι"}</h3><p>{store.storeName} · αναλύθηκαν {rows.length} βάρδιες</p></div></div><span className="badge positive">Πραγματική ανάλυση</span></div>
-        <div className="site-shift-table"><table><thead><tr><th>Ημερομηνία</th><th>Όνομα</th><th>Ώρες</th><th>Διαφορά</th><th>POS / EFTPOS</th><th>Αποτέλεσμα</th></tr></thead><tbody>{rows.map(row=>{const report=cashWrittenReport(row);return <tr className={report.alert?"sos-table-row":""} key={`site-row:${row.sessionId}`}><td>{cashReportDateLabel(cashReportRowDay(row.closedAt))}</td><td><strong>{row.openedByName||"Χωρίς όνομα"}</strong></td><td>{athensTime(row.openedAt)}–{athensTime(row.closedAt)}<small>{row.shiftLabel||"Βάρδια"} · {row.terminalPos||"MAIN"}</small></td><td className={row.variance<-.009?"negative":row.variance>.009?"positive":""}>{cashMoney(row.variance)}</td><td>{cashMoney(row.cardVariance)}</td><td>{report.alert&&<span className="sos-badge">SOS</span>}{cashShiftResult(row)}</td></tr>})}</tbody></table></div>
+        <div className="site-shift-table"><table><thead><tr><th>Ημερομηνία</th><th>Όνομα</th><th>Ώρες</th><th>Διαφορά</th><th>POS / EFTPOS</th><th>Αποτέλεσμα</th></tr></thead><tbody>{rows.map(row=>{const report=cashWrittenReport(row);return <tr className={report.alert?"sos-table-row":""} key={`site-row:${row.sessionId}`}><td>{cashReportDateLabel(cashReportRowDay(row.openedAt))}</td><td><strong>{row.openedByName||"Χωρίς όνομα"}</strong></td><td>{athensTime(row.openedAt)}–{athensTime(row.closedAt)}<small>{row.shiftLabel||"Βάρδια"} · {row.terminalPos||"MAIN"}</small></td><td className={row.variance<-.009?"negative":row.variance>.009?"positive":""}>{cashMoney(row.variance)}</td><td>{cashMoney(row.cardVariance)}</td><td>{report.alert&&<span className="sos-badge">SOS</span>}{cashShiftResult(row)}</td></tr>})}</tbody></table></div>
         <div className="site-written-report"><div className="site-written-head"><div><p>ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΕΛΕΓΧΟΥ</p><h3>Συνολική αναφορά ελέγχου ταμείου</h3></div><button type="button" className="secondary" onClick={()=>navigator.clipboard.writeText([`${store.storeName} — ${cashReport.from||cashReport.date} έως ${cashReport.to||cashReport.date}`,`Βάρδιες: ${rows.length}`,`Συνολικό έλλειμμα: ${cashMoney(store.shortage)}`,`Πλεόνασμα: ${cashMoney(store.surplus)}`,`POS–EFTPOS: ${cashMoney(store.cardVariance)}`,...suspicious.map(({finding})=>cashFindingLabel(finding)),...rows.map(cashReviewBalanceLabel).filter(Boolean),...rows.flatMap(row=>cashChatEvidenceLines(row.investigation?.reviewEvidence)),`Προσωρινό καθαρό αποτέλεσμα — εκκρεμεί ολοκληρωμένος έλεγχος: ${finalText}`].join("\n"))}>Αντιγραφή συνολικής αναφοράς</button></div>
           <p className="site-overall-text">{store.storeName} — {cashReport.from||cashReport.date} έως {cashReport.to||cashReport.date}. Φορτώθηκαν {rows.length} βάρδιες και τα διαθέσιμα στοιχεία ελέγχου. Οι αρχικές διαφορές παραμένουν αμετάβλητες. Εκκρεμούν έλεγχος όλων των γραμμών πώλησης, συνέχεια εκτός περιόδου και ταυτοποίηση παραλήπτη ιδιοκτήτη. Συνολικό έλλειμμα {cashMoney(store.shortage)}, πλεόνασμα {cashMoney(store.surplus)} και καθαρή διαφορά {cashMoney(store.variance)}.</p>
           <CashShiftAnalysis reportIdentity={cashReport}>
-          <h4>Ανάλυση ανά βάρδια</h4>{rows.map(row=>{const report=cashWrittenReport(row);return <article className={report.alert?"site-shift-note sos-note":"site-shift-note"} key={`note:${row.sessionId}`}><div><span>{cashReportDateLabel(cashReportRowDay(row.closedAt))}</span><strong>{row.openedByName||"Χωρίς όνομα"}</strong><small>{row.shiftLabel||"Βάρδια"} · {athensTime(row.openedAt)}–{athensTime(row.closedAt)}</small></div><div>{row.investigation?.reviewBalance&&<p>{cashReviewBalanceLabel(row)}</p>}{(row.investigation?.confirmedExplanations||[]).map(review=><p key={`explanation:${review.id}`}>Επιβεβαιωμένη εξήγηση · {cashEventTime(review.createdAt)} · {review.actorName||"—"} · {cashMoney(review.amount)} · {review.note}</p>)}{(row.investigation?.unassignedAuditEvents||[]).length>0&&<details><summary>Συμβάντα χωρίς ασφαλή σύνδεση με τη βάρδια ({row.investigation.unassignedAuditEvents.length})</summary>{row.investigation.unassignedAuditEvents.map((event,index)=><p key={`unassigned:${index}`}>{cashEventTime(event.createdAt)} · {event.actionType||event.eventType||"Συμβάν"} · απόδειξη {event.saleId||event.details?.saleId||"άγνωστη"} · αρχική {event.relatedSaleId||event.details?.originalSaleId||"άγνωστη"} · {event.actorName||"χωρίς όνομα"}. Δεν χρησιμοποιείται ως εξήγηση διαφοράς.</p>)}</details>}{row.investigation?.reviewEvidence&&<><p>Κάλυψη πωλήσεων: {{LINKED_POS_SCOPE:"Έλεγχος συνδεδεμένων πωλήσεων POS",LIMITED:"Ελλιπή στοιχεία ή υπέρβαση ορίου",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.salesStatus]||"Άγνωστη"} · συνδεδεμένες αποδείξεις: {row.investigation.reviewEvidence.checkedSales??"άγνωστο"} · παράθυρο νέου ελέγχου διαδοχικών πωλήσεων {row.investigation.reviewEvidence.duplicateWindowSeconds??"άγνωστο"}″. Συνέχεια βαρδιών: {{CONTEXT_AVAILABLE:"Διαθέσιμο πλαίσιο",AWAITING_NEXT_SHIFTS:"Αναμονή επόμενων βαρδιών",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.chainStatus]||"Άγνωστη"}. Ο πλήρης έλεγχος παραμένει προσωρινός.</p>{row.investigation.reviewEvidence.context.filter(c=>c.contextOnly).map(c=><p key={c.sessionId}>Πλαίσιο ίδιας αλυσίδας · {cashEventTime(c.openedAt)}–{cashEventTime(c.closedAt)} · {c.operator||"—"} · {c.terminalPos} · {c.sessionId} · αρχική διαφορά {c.variance==null?"άγνωστη":cashMoney(c.variance)}{!c.closedAt?" · ανοικτή βάρδια":""}</p>)}</>}{cashChatEvidenceLines(row.investigation?.reviewEvidence).map((line,index)=><p key={`chat-evidence:${row.sessionId}:${index}`}>{line}</p>)}{report.paragraphs.map((line,index)=><p key={`line:${row.sessionId}:${index}`}>{report.alert&&index===0&&<strong>SOS — </strong>}{line}</p>)}</div></article>})}
+          <h4>Ανάλυση ανά βάρδια</h4>{rows.map(row=>{const report=cashWrittenReport(row);return <article className={report.alert?"site-shift-note sos-note":"site-shift-note"} key={`note:${row.sessionId}`}><div><span>{cashReportDateLabel(cashReportRowDay(row.openedAt))}</span><strong>{row.openedByName||"Χωρίς όνομα"}</strong><small>{row.shiftLabel||"Βάρδια"} · {athensTime(row.openedAt)}–{athensTime(row.closedAt)}</small></div><div>{row.investigation?.reviewBalance&&<p>{cashReviewBalanceLabel(row)}</p>}{(row.investigation?.confirmedExplanations||[]).map(review=><p key={`explanation:${review.id}`}>Επιβεβαιωμένη εξήγηση · {cashEventTime(review.createdAt)} · {review.actorName||"—"} · {cashMoney(review.amount)} · {review.note}</p>)}{(row.investigation?.unassignedAuditEvents||[]).length>0&&<details><summary>Συμβάντα χωρίς ασφαλή σύνδεση με τη βάρδια ({row.investigation.unassignedAuditEvents.length})</summary>{row.investigation.unassignedAuditEvents.map((event,index)=><p key={`unassigned:${index}`}>{cashEventTime(event.createdAt)} · {event.actionType||event.eventType||"Συμβάν"} · απόδειξη {event.saleId||event.details?.saleId||"άγνωστη"} · αρχική {event.relatedSaleId||event.details?.originalSaleId||"άγνωστη"} · {event.actorName||"χωρίς όνομα"}. Δεν χρησιμοποιείται ως εξήγηση διαφοράς.</p>)}</details>}{row.investigation?.reviewEvidence&&<><p>Κάλυψη πωλήσεων: {{LINKED_POS_SCOPE:"Έλεγχος συνδεδεμένων πωλήσεων POS",LIMITED:"Ελλιπή στοιχεία ή υπέρβαση ορίου",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.salesStatus]||"Άγνωστη"} · συνδεδεμένες αποδείξεις: {row.investigation.reviewEvidence.checkedSales??"άγνωστο"} · παράθυρο νέου ελέγχου διαδοχικών πωλήσεων {row.investigation.reviewEvidence.duplicateWindowSeconds??"άγνωστο"}″. Συνέχεια βαρδιών: {{CONTEXT_AVAILABLE:"Διαθέσιμο πλαίσιο",AWAITING_NEXT_SHIFTS:"Αναμονή επόμενων βαρδιών",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.chainStatus]||"Άγνωστη"}. Ο πλήρης έλεγχος παραμένει προσωρινός.</p>{row.investigation.reviewEvidence.context.filter(c=>c.contextOnly).map(c=><p key={c.sessionId}>Πλαίσιο ίδιας αλυσίδας · {cashEventTime(c.openedAt)}–{cashEventTime(c.closedAt)} · {c.operator||"—"} · {c.terminalPos} · {c.sessionId} · αρχική διαφορά {c.variance==null?"άγνωστη":cashMoney(c.variance)}{!c.closedAt?" · ανοικτή βάρδια":""}</p>)}</>}{cashChatEvidenceLines(row.investigation?.reviewEvidence).map((line,index)=><p key={`chat-evidence:${row.sessionId}:${index}`}>{line}</p>)}{report.paragraphs.map((line,index)=><p key={`line:${row.sessionId}:${index}`}>{report.alert&&index===0&&<strong>SOS — </strong>}{line}</p>)}</div></article>})}
           </CashShiftAnalysis>
           <div className="site-report-total"><span>Τελικό αποτέλεσμα καταστήματος — προσωρινό έως ολοκλήρωση ελέγχων</span><strong>{finalText}</strong></div>
         </div><p className="site-explanation">Ελλείμματα: {cashMoney(store.shortage)} · Πλεονάσματα: {cashMoney(store.surplus)}. Οι κανονικές κινήσεις δεν εμφανίζονται· εμφανίζονται μόνο τα περίεργα συμβάντα με την ακριβή ώρα.</p>
