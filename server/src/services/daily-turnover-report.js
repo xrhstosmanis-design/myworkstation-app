@@ -1,6 +1,13 @@
+import {normalizeBusinessText} from '../../../shared/assistant-business.mjs';
+
 import {salesReportCalendar} from './sales-report-calendar.js';
 import {reportDayOffset} from './automatic-report-policy.js';
 import {summarizeDailyTurnover} from './daily-turnover-summary.js';
+
+export function isDailyTurnoverQuestion(question) {
+  const normalized = normalizeBusinessText(question);
+  return /τζιρ/.test(normalized) && /ανα (?:ημερ|μερ)|μεταβολ|αυξησ|μειωσ/.test(normalized);
+}
 
 export async function readDailyTurnover(db, {companyId, storeId, from, to}, now = new Date()) {
   const period = salesReportCalendar(from, to);
