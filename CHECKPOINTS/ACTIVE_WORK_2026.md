@@ -199,3 +199,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ## 2026-11-14 — Markup σε πρόχειρα myDATA
 
 Υπολογισμός markup κατά την προβολή αντιστοιχισμένων γραμμών. [Checkpoint](CHANGES/2026-11-14-mydata-draft-markup.md).
+
+## 2026-11-14 — Φίλτρα και διπλοεγγραφές στην Αποθήκη POS
+
+[Checkpoint](CHANGES/2026-11-14-pos-warehouse-duplicate-filters.md).
