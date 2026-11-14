@@ -5,7 +5,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']);
 export const staffPermissionSections=Object.freeze([
   {key:'invoices',label:'Τιμολόγια',actions:[
     {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα, τα πρωτότυπα και τις αγορές του καταστήματος.'},
@@ -25,6 +25,7 @@ export const staffPermissionSections=Object.freeze([
   ]},
   {key:'products',label:'Είδη και αποθήκη',actions:[
     {key:'products.read',label:'Προβολή ειδών',description:'Βλέπει είδη, τιμές, κόστος και απόθεμα του καταστήματος.'},
+    {key:'products.edit',label:'Επεξεργασία καρτέλας είδους',description:'Αλλάζει λιανική στο επιλεγμένο κατάστημα και περιγραφή ειδών αποκλειστικών στο κατάστημα.',requires:['products.read']},
     {key:'products.create',label:'Νέο είδος',description:'Δημιουργεί πλήρη καρτέλα στο επιλεγμένο κατάστημα.',requires:['products.read']},
     {key:'products.opening-stock',label:'Αρχικό απόθεμα νέου είδους',description:'Καταχωρίζει αρχικό απόθεμα κατά τη δημιουργία είδους.',requires:['products.read','products.create']}
   ]},
@@ -85,6 +86,7 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&/^\/api\/(?:transactions|cash)\/stores\/[^/]+\/overview$/.test(path))return 'sales.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/sales\/recent$/.test(path))return 'sales.read';
   if((method==='GET'&&path==='/api/inventory-archive')||(method==='POST'&&path==='/api/inventory-archive/export-xlsx'))return 'products.read';
+  if(['GET','PATCH'].includes(method)&&/^\/api\/owner-products\/[^/]+\/staff-card$/.test(path))return 'products.edit';
   if(method==='GET'&&path==='/api/owner-products/new-card/options')return 'products.create';
   if(method==='POST'&&path==='/api/owner-products/new-card')return 'products.create';
   if(method==='GET'&&path==='/api/backoffice-staff/me')return 'SESSION';

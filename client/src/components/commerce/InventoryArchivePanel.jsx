@@ -48,7 +48,7 @@ function DuplicateGroup({group, canMerge, onMerge}) {
   </section>;
 }
 
-export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null}){
+export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null,staffCardEdit=false}){
   const operatorMode=operatorCapabilities!==null;
   const can=key=>!operatorMode||operatorCapabilities[key]===true;
   const [operatorMenu,setOperatorMenu]=useState(null),[history,setHistory]=useState(null);
@@ -89,6 +89,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   const [query,setQuery]=useState(""),[category,setCategory]=useState(""),[subcategory,setSubcategory]=useState(""),[status,setStatus]=useState("ACTIVE"),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100);
   const [loading,setLoading]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
   const [checked,setChecked]=useState([]),[selected,setSelected]=useState(null),[modal,setModal]=useState(null);
+  const [staffCard,setStaffCard]=useState(null);
   const [merge,setMerge]=useState(null);
   const mergeSavingRef=useRef(false);
   const [bulk,setBulk]=useState(bulkBlank);
@@ -212,7 +213,20 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   };
 
   const openEdit=async row=>{
-    if(readOnly)return;
+    if(readOnly&&!staffCardEdit)return;
+    if(staffCardEdit){
+      const selectedStore=storeId,token=++newCardGeneration.current;
+      setError("");setLoading(true);
+      try{
+        const card=await api(`/api/owner-products/${encodeURIComponent(row.productId)}/staff-card`);
+        if(cardScopeRef.current===selectedStore&&token===newCardGeneration.current){
+          setStaffCard({...card,description:card.description||""});
+          setModal("staff-card");
+        }
+      }catch(e){if(cardScopeRef.current===selectedStore&&token===newCardGeneration.current)setError(e.message)}
+      finally{if(cardScopeRef.current===selectedStore&&token===newCardGeneration.current)setLoading(false)}
+      return;
+    }
     const selectedStore=storeId,token=++newCardGeneration.current;
     setSelected(row);setLoading(true);setError("");
     try{
@@ -305,7 +319,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
     {error&&<div className="ia-alert error">{error}</div>}{message&&<div className="ia-alert success">{message}</div>}
     <section className="ia-grid-card"><div className="ia-grid-caption"><b>Αποτελέσματα αναζήτησης</b><div className="ia-grid-meta"><span>{data.total.toLocaleString("el-GR")} είδη</span><div className="ia-caption-pagination"><button disabled={page<=1||loading} onClick={()=>load(page-1)}><ChevronLeft/></button><b>Σελίδα {page} από {data.pages}</b><button disabled={page>=data.pages||loading} onClick={()=>load(page+1)}><ChevronRight/></button></div></div></div><div className="ia-table-wrap" ref={tableRef}><div className="ia-table">
       <div className="ia-row head"><span></span><span><input type="checkbox" disabled={readOnly&&exportIds===null} checked={allVisible} onChange={toggleAll}/></span><span>Εσωτ. κωδικός</span><span>BARCODE</span><span>Περιγραφή</span><span>Τμήμα ΦΠΑ</span><span>Margin</span><span>MARKUP</span><span>Λιανική</span><span>efood</span><span>Wolt</span><span>Αποθήκη</span><span>Συν. αξία λιανικής</span><span>Συν. κόστος</span><span>Τελ. αγορά</span><span>Μέση αγορά 6μ.</span><span>Ημ/νία αγοράς</span><span>Βασικός προμηθευτής</span><span>% ΦΠΑ</span><span>Κατηγορία</span><span>Υποκατηγορία</span><span>Εταιρεία</span><span>Alarm stock</span><span>Πωλήσεις 15ημ.</span><span>Τελ. πώληση</span><span>δημοσ. e‑delivery</span><span>δημοσ. stock</span><span>δημοσ. τιμών</span><span>Ενημέρωση</span><span>ΜΜ</span><span>ID</span></div>
-      {data.items.map(row=><div className={`ia-row data ${selected?.productId===row.productId?"selected":""}`} key={row.productId} data-product-id={row.productId} onClick={()=>setSelected(row)}><span className="ia-edit"><button hidden={readOnly} disabled={readOnly} title="Διόρθωση είδους" onClick={e=>{e.stopPropagation();openEdit(row)}}><Edit3/></button></span><span><input type="checkbox" disabled={readOnly&&exportIds===null} checked={selection.includes(row.productId)} onChange={()=>toggleOne(row.productId)} onClick={e=>e.stopPropagation()}/></span><span className="link">{row.sku||"—"}</span><span><Barcode/>{row.barcode||"—"}</span><span className="name"><b>{row.name}</b></span><span title={row.vatDepartmentName||"Δεν έχει οριστεί Τμήμα ΦΠΑ"}>{row.vatDepartmentName||"⚠ Δεν έχει οριστεί"}</span><span className={Number(row.margin)<0?"negative":"metric"}>{pct(row.margin)}</span><span className={Number(row.markup)<0?"negative":"metric"}>{pct(row.markup)}</span><span className="metric">{money(row.salePrice)}</span><span>{money(row.efoodPrice)}</span><span>{money(row.woltPrice)}</span><span className={row.bakedStock!=null?"metric ia-baking-stock":"metric"}>{row.bakedStock!=null?<><b>Σύνολο {qty(row.currentStock)}</b><small>Άψητα {qty(row.unbakedStock)}</small><small>Ψημένα {qty(row.bakedStock)}</small></>:qty(row.currentStock)}</span><span className="metric">{money(row.retailStockValue)}</span><span>{money(row.costStockValue)}</span><span>{money(row.lastPurchasePrice)}</span><span>{money(row.averagePurchasePrice)}</span><span>{when(row.lastPurchaseAt)}</span><span className="link">{row.supplierName||"—"}</span><span>{qty(row.vatRate)}%</span><span>{row.categoryName||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ"}</span><span>{row.subcategoryName||"ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ"}</span><span>{row.brandName||"—"}</span><span>{qty(row.minStock)}</span><span className="metric">{qty(row.sales15Qty)}</span><span>{when(row.lastSaleAt)}</span><span><input type="checkbox" readOnly checked={Boolean(row.eDeliveryEnabled)}/></span><span><input type="checkbox" readOnly checked={Boolean(row.publishStock)}/></span><span><input type="checkbox" readOnly checked={Boolean(row.publishPrices)}/></span><span>{when(row.updatedAt)}</span><span>{row.unit||"—"}</span><span>{row.productId}</span></div>)}
+      {data.items.map(row=><div className={`ia-row data ${selected?.productId===row.productId?"selected":""}`} key={row.productId} data-product-id={row.productId} onClick={()=>setSelected(row)}><span className="ia-edit"><button hidden={readOnly&&!staffCardEdit} disabled={(readOnly&&!staffCardEdit)||loading} title="Διόρθωση είδους" onClick={e=>{e.stopPropagation();openEdit(row)}}><Edit3/></button></span><span><input type="checkbox" disabled={readOnly&&exportIds===null} checked={selection.includes(row.productId)} onChange={()=>toggleOne(row.productId)} onClick={e=>e.stopPropagation()}/></span><span className="link">{row.sku||"—"}</span><span><Barcode/>{row.barcode||"—"}</span><span className="name"><b>{row.name}</b></span><span title={row.vatDepartmentName||"Δεν έχει οριστεί Τμήμα ΦΠΑ"}>{row.vatDepartmentName||"⚠ Δεν έχει οριστεί"}</span><span className={Number(row.margin)<0?"negative":"metric"}>{pct(row.margin)}</span><span className={Number(row.markup)<0?"negative":"metric"}>{pct(row.markup)}</span><span className="metric">{money(row.salePrice)}</span><span>{money(row.efoodPrice)}</span><span>{money(row.woltPrice)}</span><span className={row.bakedStock!=null?"metric ia-baking-stock":"metric"}>{row.bakedStock!=null?<><b>Σύνολο {qty(row.currentStock)}</b><small>Άψητα {qty(row.unbakedStock)}</small><small>Ψημένα {qty(row.bakedStock)}</small></>:qty(row.currentStock)}</span><span className="metric">{money(row.retailStockValue)}</span><span>{money(row.costStockValue)}</span><span>{money(row.lastPurchasePrice)}</span><span>{money(row.averagePurchasePrice)}</span><span>{when(row.lastPurchaseAt)}</span><span className="link">{row.supplierName||"—"}</span><span>{qty(row.vatRate)}%</span><span>{row.categoryName||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ"}</span><span>{row.subcategoryName||"ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ"}</span><span>{row.brandName||"—"}</span><span>{qty(row.minStock)}</span><span className="metric">{qty(row.sales15Qty)}</span><span>{when(row.lastSaleAt)}</span><span><input type="checkbox" readOnly checked={Boolean(row.eDeliveryEnabled)}/></span><span><input type="checkbox" readOnly checked={Boolean(row.publishStock)}/></span><span><input type="checkbox" readOnly checked={Boolean(row.publishPrices)}/></span><span>{when(row.updatedAt)}</span><span>{row.unit||"—"}</span><span>{row.productId}</span></div>)}
       {!loading&&!data.items.length&&<div className="ia-empty">Δεν βρέθηκαν είδη με τα συγκεκριμένα κριτήρια.</div>}
     </div></div><footer className="ia-totals"><span>Σελίδα: {data.items.length} είδη</span><b>Stock {qty(pageTotals.stock)}</b><b>Λιανική {money(pageTotals.retailStockValue)}</b><b>Κόστος {money(pageTotals.costStockValue)}</b></footer></section>
     <footer className="ia-toolbar"><label className="ia-horizontal-control"><ChevronLeft/><span>Οριζόντια κύλιση</span><input aria-label="Οριζόντια κύλιση ειδών" type="range" min="0" max={scrollMax} value={scrollX} onChange={e=>moveHorizontal(e.target.value)}/><ChevronRight/></label><div className="ia-toolbar-actions"><button onClick={onClose}><X/>Κλείσιμο</button>
@@ -319,6 +333,29 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
 
 
 
+    {modal==="staff-card"&&staffCard&&<Modal title="Καρτέλα είδους" onClose={()=>!loading&&setModal(null)}>
+      <form className="ia-form-grid" onSubmit={async event=>{
+        event.preventDefault();
+        if(loading)return;
+        const selectedStore=storeId;
+        const {id,name,description,salePrice}=staffCard;
+        setLoading(true);setError("");
+        try{
+          await api(`/api/owner-products/${encodeURIComponent(id)}/staff-card`,{method:"PATCH",body:JSON.stringify({name,description,salePrice:Number(salePrice)})});
+          if(cardScopeRef.current!==selectedStore)return;
+          setModal(null);await load();setMessage("Η καρτέλα αποθηκεύτηκε.");
+        }catch(e){if(cardScopeRef.current===selectedStore)setError(e.message)}
+        finally{if(cardScopeRef.current===selectedStore)setLoading(false)}
+      }}>
+        {error&&<p role="alert">{error}</p>}
+        <label>Εσωτερικός κωδικός<input readOnly value={staffCard.sku||""}/></label>
+        <label>Όνομα<input required minLength={2} maxLength={250} readOnly={!staffCard.canEditIdentity} value={staffCard.name} onChange={e=>setStaffCard({...staffCard,name:e.target.value})}/></label>
+        <label>Περιγραφή<input maxLength={1000} readOnly={!staffCard.canEditIdentity} value={staffCard.description} onChange={e=>setStaffCard({...staffCard,description:e.target.value})}/></label>
+        <label>Λιανική καταστήματος<input type="number" min="0" max="1000000" step="0.01" required value={staffCard.salePrice} onChange={e=>setStaffCard({...staffCard,salePrice:e.target.value})}/></label>
+        {!staffCard.canEditIdentity&&<p>Η περιγραφή κοινής καρτέλας αλλάζει από την Κεντρική Διαχείριση.</p>}
+        <button type="submit" disabled={loading}>Αποθήκευση</button>
+      </form>
+    </Modal>}
     {duplicates && modal!=="merge" && <Modal title="Έλεγχος διπλοεγγραφών" wide onClose={() => {
       duplicateRequest.current++;
       setDuplicates(null);
