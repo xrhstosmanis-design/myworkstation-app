@@ -1,3 +1,4 @@
+import {summarizeDailyTurnover} from "../src/services/daily-turnover-summary.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
@@ -10,7 +11,7 @@ import {cashPreviewPeriod,reportDayOffset,reportWallTime} from "../src/services/
 // Actual source/payload/core functions, synthetic DB/start/transport only.
 // No network/SMTP/real repository/production or business action is performed.
 const wire=v=>JSON.parse(JSON.stringify(v)),recipient="report@example.com",digest=v=>createHash("sha256").update(v,"utf8").digest("hex");
-async function fixture(frequency="DAILY"){
+async function fixture(frequency="DAILY", includeTurnover=false){
   const configuration={dayStartHour:7,terminals:["MAIN"]},period=cashPreviewPeriod("2020-01-15",frequency,configuration),rows=[];
   for(let day=period.fromDay;day<=period.toDay;day=reportDayOffset(day,1)){
     const from=reportWallTime(day,7).getTime();
@@ -21,6 +22,16 @@ async function fixture(frequency="DAILY"){
     const sql=strings.join("?");if(sql.includes('FROM "CashControlStoreRule"'))return [{mode:"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:true,posEftposEnabled:true}];if(sql.includes('FROM "AutomaticReportSettings"'))return [{version:7}];return rows;
   }})};
   const preview=await readAutomaticCashPreview(db,{actorId:"sa",companyId:"c",storeId:"s",day:"2020-01-15",frequency,configuration,settingsVersion:7,now:new Date(now)});
+  if (includeTurnover) {
+    const dailyTotals = new Map();
+    for (let day = period.fromDay; day <= period.toDay; day = reportDayOffset(day, 1)) {
+      dailyTotals.set(day, dailyTotals.size === 0 ? 10000 : 12000);
+    }
+    preview.dailyTurnover = {
+      status: "AVAILABLE",
+      ...summarizeDailyTurnover({fromDay: period.fromDay, toDay: period.toDay, dailyTotals}),
+    };
+  }
   const payload=buildAutomaticCashPayload({preview:wire(preview),companyId:"c",storeId:"s",settingsVersion:7});
   const input={companyId:"c",storeId:"s",reportType:"CASH",frequency,periodFrom:payload.period.from,periodTo:payload.period.to,recipient,snapshot:{settingsVersion:7,recipientVersion:1,consentRevision:1,lifecycleGeneration:"9007199254740993",sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint:"a".repeat(64),principalId:"sa",financialFinality:"PROVISIONAL",financialReconciliationComplete:false}};
   const current={...input,checkedAt:now,companyActive:true,storeActive:true,licenseActive:true,moduleActive:true,principalAuthorized:true,recipientVerified:true,consentActive:true,dispatchEnabled:true,sourceReady:true,policyAllowsProvisional:true,maintenanceBlocked:false};
@@ -98,4 +109,14 @@ test("optional transport evidence cannot hide contradictory pending, envelope or
 test("duplicate invocation is stopped by trusted repository start transition, never by process-local invented exactly-once state",async()=>{
   const f=await fixture();let current=f.claimed;const h=harness(f,{start:async(_s,config)=>{current=startDelivery(current,{...config,current:f.current});return current}});
   assert.equal((await h.adapter.attempt(f.args)).outcome,"ACCEPTED");await assert.rejects(h.adapter.attempt(f.args),e=>["STALE_VERSION","INVALID_TRANSITION"].includes(e.code));assert.equal(h.calls.filter(c=>c.kind==="send").length,1);
+});
+
+test("monthly turnover appears in the dispatched email", async () => {
+  const f = await fixture("MONTHLY", true);
+  const h = harness(f);
+  assert.equal((await h.adapter.attempt(f.args)).outcome, "ACCEPTED");
+  const [message] = h.calls.find(call => call.kind === "send").args;
+  assert.equal(message.to, recipient);
+  assert.match(message.subject, /ΚΑΙ ΤΖΙΡΟΥ/);
+  assert.match(message.text, /2020-01-02 · 120,00\s*€ · \+20,00\s*€ \(20%\)/);
 });
