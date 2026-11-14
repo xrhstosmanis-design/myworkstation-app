@@ -4,6 +4,8 @@
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
 
+- 2026-11-14 · Πλήρης καρτέλα υπευθύνου · [Checkpoint](CHANGES/2026-11-14-staff-full-product-card.md).
+
 | Προτεραιότητα | Εργασία | Υπεύθυνος | PR / issue | Τρέχουσα κατάσταση | Επόμενο βήμα |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Προσθήκη γραμμής από υπεύθυνο | /root | #3828 | Ενεργό στο Render · LAB PASS για προσθήκη σε πρόχειρο | [Αποτέλεσμα δοκιμής](CHANGES/2026-11-12-staff-invoice-add-line.md) |
@@ -278,6 +280,4 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - #3827 · Τοπικό SQL benchmark σε απομονωμένο PGlite με 100.000 συνθετικές γραμμές ανά πίνακα. Με ισοδύναμους indexes, CloudAudit και FTEXT πέρασαν από `Seq Scan + Sort` σε `Index Only Scan`. Ενδεικτικά μία εκτέλεση ανά query: CloudAudit 541 → 12 shared hit blocks (12,962 → 0,214 ms), FTEXT 690 → 1 (12,573 → 0,072 ms). Επιβεβαιώθηκε επιπλέον σε τοπικό PGlite ότι τα δύο ακριβή `CREATE INDEX CONCURRENTLY IF NOT EXISTS` του PR εκτελούνται χωριστά, μπορούν να επαναληφθούν και αφήνουν δύο έγκυρους indexes. Εκκρεμούν μετρήσεις και έλεγχος παράλληλου φορτίου στο υπάρχον LAB. Το #3861 περιμένει διαθέσιμο build στο LAB για έλεγχο επαναχρησιμοποίησης και ανάκλησης.
 
-## 2026-11-14 — Πλήρης καρτέλα υπευθύνου
-
-[Checkpoint](CHANGES/2026-11-14-staff-full-product-card.md).
+- 2026-11-14 · Ημερήσιος τζίρος στον Βοηθό Super Admin · LAB FAIL στο 5827d72, τοπική διόρθωση προς επανέλεγχο. [Checkpoint](CHANGES/2026-11-14-super-admin-daily-turnover.md)
