@@ -242,3 +242,6 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - #3827 · Μετά τον συγχρονισμό στο `cab1e03d`, [CI #9861 PASS (5/5)](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43594705922) στο `d0c0312b`, μαζί με το `build-and-test` και τον διορθωμένο έλεγχο FAST POS. Εκκρεμούν οι μετρήσεις στο υπάρχον LAB και ο έλεγχος των προτεινόμενων SQL indexes.
 
 - #3867 · Τα φίλτρα Τμήμα ΦΠΑ και όρια Margin % στο μπροστινό POS συγχωνεύτηκαν στο main. CI 9859: success. Η αποδοχή στην οθόνη χειριστή παραμένει προς επιβεβαίωση από την ομάδα POS.
+
+- #3868 · Η ομάδα POS έχει αναλάβει την καρτέλα είδους του υπευθύνου, με πρόσβαση από το μολύβι της Αποθήκης όταν υπάρχει το δικαίωμα `products.edit`. Στο [CI #9863](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43596254970) πέρασαν 4/5 jobs. Δύο σενάρια μηνιαίας απογραφής στο `monthly-inventory-capture-routes-postgres.test.js:72` πήραν 24 αντί 23. Εκκρεμούν διόρθωση/επιβεβαίωση από τον υπεύθυνο του PR και δοκιμή με ρόλο υπευθύνου στο LAB.
+- #3869 · [CI #9864 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43596310620) στην τεκμηρίωση της αποδοχής του κουμπιού «Φίλτρα» του #3866 από τον ιδιοκτήτη στη σελίδα POS. Η αποδοχή αφορά το κουμπί.
