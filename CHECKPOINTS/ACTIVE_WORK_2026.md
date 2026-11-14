@@ -203,3 +203,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ## 2026-11-14 — Φίλτρα και διπλοεγγραφές στην Αποθήκη POS
 
 [Checkpoint](CHANGES/2026-11-14-pos-warehouse-duplicate-filters.md).
+
+## 2026-11-14 — Συγχώνευση ειδών και φίλτρα στην Αποθήκη POS
+
+[Checkpoint](CHANGES/2026-11-14-front-pos-warehouse-merge.md).
