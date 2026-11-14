@@ -1,3 +1,7 @@
+## 13/11/2026 — INVENTORY-RECONCILIATION-01 / Υπόλοιπο ελέγχου παραλαβής
+
+Εκκρεμούν η καταγραφή και τεκμηρίωση της πραγματικής ώρας φυσικής παραλαβής και η επαλήθευση του αποθηκευμένου πρωτοτύπου ανά παραστατικό στην ίδια εταιρεία και κατάστημα. Η σύνδεση οριστικοποιημένου συνθετικού OCR με την κίνηση αγοράς επαληθεύτηκε στο υπάρχον LAB μετά τα #3852 και #3856. Τεκμήριο: CHECKPOINTS/CHANGES/2026-11-13-inventory-receipt-lab-pass.md.
+
 ## 2026-11-12T08:48:44+02:00 — Email delivery history / ASSIGNED
 
 Owner /root. Implementation branch: `feat/email-delivery-history`. Scope: capture SMTP acceptance identifiers and sanitized failure reasons for invoice stock exclusion email, then expose delivery outcomes in a read-only history scoped to the authorized company and store. Existing report delivery records are the source for report status. SMTP acceptance and confirmed inbox delivery remain distinct.
