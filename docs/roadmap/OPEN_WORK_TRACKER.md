@@ -1,3 +1,9 @@
+### 15/11/2026 — INSTALL-SUPPORT-CARD-EXPORT-01 · Super Admin / επιλεγμένη καρτέλα καταστήματος σε PDF και Excel / ASSIGNED
+
+**Ανάληψη:** 2026-11-15T00:03:35+02:00 · Codex / feat/install-support-card-export-20261115. Μόνο ανάγνωση και εξαγωγή των εννέα υφιστάμενων γραμμών της καρτέλας για το ρητά επιλεγμένο κατάστημα. Διατηρούνται οι υφιστάμενες αναθέσεις INSTALL-SUPPORT, ο οδηγός βλάβης και ο διαχωρισμός εταιρειών.
+
+**Κατάσταση:** BEFORE SOURCE · LAB NOT TESTED. Επόμενο: αφού ενσωματωθεί η ανάληψη, υλοποίηση και έλεγχος PDF/XLSX με ελληνικά, όλα τα πεδία και αποκλεισμό άλλου καταστήματος. Checkpoint: CHECKPOINTS/CHANGES/2026-11-15-install-support-card-export-claim.md.
+
 ## 2026-11-12T08:48:44+02:00 — Email delivery history / ASSIGNED
 
 **13/11/2026 — INVENTORY-RECONCILIATION-01.** Scoped hosted LAB PASS on `fbc7167` for linking the approved standalone OCR purchase document to the +2 inventory movement (8 → 10; zero difference). Physical receipt time and original verification remain open. [Evidence](../../CHECKPOINTS/CHANGES/2026-11-13-inventory-receipt-lab-pass.md).

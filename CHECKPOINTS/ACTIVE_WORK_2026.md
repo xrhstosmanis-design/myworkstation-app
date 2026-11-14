@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-15 · INSTALL-SUPPORT-CARD-EXPORT-01 · Super Admin / επιλεγμένη καρτέλα καταστήματος σε PDF και Excel · ASSIGNED Codex / feat/install-support-card-export-20261115 · LAB NOT TESTED · [Ανάληψη](CHANGES/2026-11-15-install-support-card-export-claim.md).
+
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
