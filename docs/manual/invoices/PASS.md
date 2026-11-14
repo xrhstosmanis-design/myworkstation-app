@@ -495,3 +495,7 @@ Known limit: PDF assistant preview failed HTTP400 in image212128. Proposed data 
 ## BackOffice return for correction with two originals
 
 Hosted LAB verified on 10 November 2026 with #3807. In the selected store, open **Εμπορική λειτουργία → Παραγγελίες & Αγορές → Νέα παραγγελία → Σελίδες ίδιου τιμολογίου**. Select the photos in their physical order. Verify supplier, document number, lines and gross total before creating the draft. Use **Οριστικοποίηση** to send it for review. An authorized user can use **Επιστροφή για διόρθωση** and reopen **Βοηθός τιμολογίου** in that same draft. Verify that both original files appear in order and that the draft is editable. If a legacy draft shows one original, check its source files before relying on the Assistant. The LAB sample required a manual unit price correction before creation.
+
+## BackOffice — τιμές γραμμών με κοινό κωδικό προμηθευτή
+
+Στο LAB, ο εξουσιοδοτημένος χειριστής άνοιξε «Νέα παραγγελία» στο BackOffice και ανέβασε δύο φωτογραφίες από «Σελίδες ίδιου τιμολογίου». Πριν από την αποθήκευση, η φόρμα εμφάνισε αυτόματα 1,00 € και 1,50 € στις δύο διακριτές γραμμές με κοινό κωδικό προμηθευτή, και 3,10 € με ΦΠΑ. Ο έλεγχος αφορά την προεπισκόπηση του δοκιμαστικού παραστατικού. Βλ. CHECKPOINTS/CHANGES/2026-11-12-invoice-repeated-code-lab-pass.md.

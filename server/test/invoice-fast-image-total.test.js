@@ -59,3 +59,13 @@ test("a lone unverified amount in a multi-image read requires review",()=>{
   assert.equal(merge([{},{}]).totalNeedsReview,false);
   assert.equal(mergeFastInvoiceHeaders([subtotal]).totalHeader,subtotal);
 });
+
+test("a labeled VAT table row verifies the explicit payable",async()=>{
+  const {recoverBalancedInvoicePayable}=await import("../src/lib/invoice-total-reading.js");
+  const table="ΚΑΘΑΡΗ ΑΞΙΑ Φ.Π.Α. % ΑΞΙΑ Φ.Π.Α. ΣΥΝΟΛ. ΑΞΙΑ";
+  assert.equal(recoverBalancedInvoicePayable(`${table} 100,00 24,00 24,00 124,00 ΓΕΝΙΚΟ ΣΥΝΟΛΟ 124,00 ΠΛΗΡΩΤΕΟ € 124,00`),124);
+  assert.equal(recoverBalancedInvoicePayable(`${table} 100,00 0,00 0,00 100,00 ΠΛΗΡΩΤΕΟ 100,00`),100);
+  assert.equal(recoverBalancedInvoicePayable(`${table} 100,00 13,00 24,00 124,00 ΠΛΗΡΩΤΕΟ 124,00`),0);
+  assert.equal(recoverBalancedInvoicePayable(`${table} 100,00 24,00 24,00 124,00 ΠΛΗΡΩΤΕΟ 120,00`),0);
+  assert.equal(recoverBalancedInvoicePayable(`${table} 100,00 24,00 24,00 124,00 ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ ΠΛΗΡΩΤΕΟ 124,00`),0);
+});

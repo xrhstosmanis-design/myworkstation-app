@@ -1,3 +1,4 @@
+import {readEmailDeliveryHistory} from './email-delivery-history.js';
 import {z} from 'zod';
 import {createHash} from 'node:crypto';
 import {lifecycleContext} from './store-lifecycle-context.js';
@@ -57,7 +58,7 @@ export function createAutomaticReportManagement({db,activationProvider,sendVerif
    if(!rows.length)fail(404,'REPORT_STORE_NOT_FOUND');
    const [lockedActor]=await tx.$queryRaw`SELECT "id","role","sessionVersion" FROM "User" WHERE "id"=${s.actorId} FOR SHARE NOWAIT`;
    if(!lockedActor||lockedActor.role!=='SUPER_ADMIN'||lockedActor.sessionVersion!==actor.sessionVersion)fail(403,'REPORT_SUPER_ADMIN_REQUIRED');
-   if(!ready){if(write)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');const a=activationProvider();return {schemaReady:false,policy:null,grant:null,recipients:[],activation:{valid:a?.valid===true,enabled:a?.enabled===true,notBefore:a?.notBefore||null,epoch:a?.epoch||null}}}
+   if(!ready){if(write)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');const a=activationProvider();return {history:await readEmailDeliveryHistory(tx,s,false),schemaReady:false,policy:null,grant:null,recipients:[],activation:{valid:a?.valid===true,enabled:a?.enabled===true,notBefore:a?.notBefore||null,epoch:a?.epoch||null}}}
    // Parent Store lock protects absent rows; all authorization mutations follow
    // the same policy -> grant -> recipients -> consents order.
    const records=await readLockedDispatchAuthorization(tx,s);
@@ -68,7 +69,7 @@ export function createAutomaticReportManagement({db,activationProvider,sendVerif
  const invitations=createAutomaticReportInvitations({db,mutate:transaction,readAuthorization:readLockedDispatchAuthorization,schemaReady:dispatchSchemaReady,sendInvitation:sendVerification,clock});
  const api={...recipientApi,issueRecipientInvitation:invitations.issue,
   authorizeAdministratorRecipient:(scope,input)=>transaction(scope,context=>authorizeAdministratorRecipient(context,input)),
-  getDispatchManagement:scope=>transaction(scope,async({records,activation,generation})=>({schemaReady:true,policy:publicRecord(records.policy),grant:publicRecord(records.grant),recipients:records.recipients.map(({recipient,consent})=>({recipient:publicRecord(recipient),consent:publicRecord(consent),authorizationBasis:consent?.consentedBy?.startsWith(ADMINISTRATOR_AUTHORITY_PREFIX)?'SUPER_ADMIN':'RECIPIENT',authorization:reportRecipientAuthority(recipient,consent,{generation,principalId:records.grant?.principalId})})),activation:{valid:activation?.valid===true,enabled:activation?.enabled===true,notBefore:activation?.notBefore||null,epoch:activation?.epoch||null}}),false),
+  getDispatchManagement:scope=>transaction(scope,async({tx,scope:s,records,activation,generation})=>({history:await readEmailDeliveryHistory(tx,s,true),schemaReady:true,policy:publicRecord(records.policy),grant:publicRecord(records.grant),recipients:records.recipients.map(({recipient,consent})=>({recipient:publicRecord(recipient),consent:publicRecord(consent),authorizationBasis:consent?.consentedBy?.startsWith(ADMINISTRATOR_AUTHORITY_PREFIX)?'SUPER_ADMIN':'RECIPIENT',authorization:reportRecipientAuthority(recipient,consent,{generation,principalId:records.grant?.principalId})})),activation:{valid:activation?.valid===true,enabled:activation?.enabled===true,notBefore:activation?.notBefore||null,epoch:activation?.epoch||null}}),false),
   saveDispatchPolicy:(scope,input)=>transaction(scope,async({tx,scope:s,now,generation,records})=>{
    expected(records.policy?.revision,input.expectedRevision);if(typeof input.dispatchEnabled!=='boolean'||typeof input.allowsProvisional!=='boolean')fail(400,'REPORT_POLICY_INVALID');const allowed=freq(input.allowedFrequencies);
    if(input.dispatchEnabled&&(!input.allowsProvisional||!allowed.length||!records.grant?.active||allowed.some(f=>!records.grant.allowedFrequencies.includes(f))||!records.recipients.some(({recipient,consent})=>reportRecipientAuthority(recipient,consent,{generation,principalId:records.grant.principalId})&&allowed.every(f=>consent.allowedFrequencies.includes(f)))))fail(409,'REPORT_POLICY_PREREQUISITES');

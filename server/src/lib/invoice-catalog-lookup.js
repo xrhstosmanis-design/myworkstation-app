@@ -4,7 +4,8 @@ import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 export function createInvoiceCatalogLookup(db){return async(req,res,next)=>{try{
  const companyId=req.user?.companyId;
  if(!companyId)return res.status(403).json({error:'Δεν υπάρχει έγκυρη εταιρεία.'});
- const lines=await db.$queryRaw`SELECT o."storeId" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" JOIN "Store" s ON s."id"=o."storeId" AND s."companyId"=o."companyId" WHERE l."id"=${req.params.lineId} AND l."orderId"=${req.params.orderId} AND o."companyId"=${companyId} LIMIT 1`;
+ const lines=req.params.lineId?await db.$queryRaw`SELECT o."storeId" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" JOIN "Store" s ON s."id"=o."storeId" AND s."companyId"=o."companyId" WHERE l."id"=${req.params.lineId} AND l."orderId"=${req.params.orderId} AND o."companyId"=${companyId} LIMIT 1`:
+  await db.$queryRaw`SELECT o."storeId" FROM "PurchaseOrder" o WHERE o."id"=${req.params.orderId} AND o."companyId"=${companyId} AND o."storeId"=${req.user.storeId} AND o."status"='NEW' AND NOT o."awaitingInvoice" LIMIT 1`;
  const storeId=lines[0]?.storeId;
  if(req.user?.staffAccess===true){if(storeId!==req.user.storeId)return res.status(404).json({error:'Δεν βρέθηκε στο επιλεγμένο κατάστημα.'});await requireStaffGrant(db,req.user,storeId,'invoices.edit');}
  if(!storeId||req.query.storeId&&req.query.storeId!==storeId||req.user.tokenType==='STORE_OPERATOR'&&req.user.storeId!==storeId)return res.status(404).json({error:'Δεν βρέθηκε η γραμμή στο επιλεγμένο κατάστημα.'});

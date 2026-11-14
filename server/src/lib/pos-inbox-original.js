@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import {publicWalletActivity} from '../services/ai-wallet-activity.js';
 import {acquireOriginal,fetchOriginalPdf,readOriginalPdf,verifyOriginalText} from "../mydata-original.js";
-import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation} from "./invoice-common-draft.js";
+import {sameInvoiceNumber,sameInvoiceIdentityForReview,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation} from "./invoice-common-draft.js";
 
 const fail=(message,status=409)=>Object.assign(new Error(message),{status});
 export function inboxHeader(row,recipientVat){
@@ -40,14 +40,45 @@ export async function prepareSelectedInbox(db,identity,inboxId,dataUrl,user,{att
   const company=await db.company.findUnique({where:{id:identity.companyId},select:{taxId:true}});
   const header=inboxHeader(row,String(company?.taxId||"").replace(/^EL/i,"").trim());
   if(header.supplierTaxId!==identity.supplierTaxId||!sameInvoiceNumber(identity.documentNumber,row.series,row.documentNumber)||header.documentDate!==identity.documentDate||header.documentType!==identity.documentType||Math.abs(header.totalGross-Number(identity.totalGross))>.050001)throw fail("Τα στοιχεία άλλαξαν από το επιλεγμένο myDATA. Έλεγξε αριθμό, ΑΦΜ, ημερομηνία και ποσό πριν από την πληρωμή.");
-  await assertInboxSelectionUnambiguous(db,{companyId:identity.companyId,storeId:identity.storeId,inboxId});
+  const scope={companyId:identity.companyId,storeId:identity.storeId,inboxId};
+  await reviewSelectedInboxSupplier(db,scope,identity.supplierId);
   const pdf=await verifiedInboxPdf(row,dataUrl);
   if(row.attachmentId&&(row.mimeType!=="application/pdf"||row.checksum!==pdf.checksum))throw fail("Το PDF δεν είναι το αποθηκευμένο πρωτότυπο αυτού του τιμολογίου.");
+  await db.$transaction(async tx=>{
+    await lockInvoiceStore(tx,scope.companyId,scope.storeId);
+    await reviewSelectedInboxSupplier(tx,scope,identity.supplierId,true);
+  });
   if(attach){
     const acquired=await acquireOriginal(db,identity.companyId,identity.storeId,inboxId,user.tokenType==="STORE_OPERATOR"?null:user.id,true,async()=>pdf);
     if(acquired.reconciliationRequired)throw fail("Υπάρχει πρόχειρο που απαιτεί έλεγχο. Δεν δημιουργείται δεύτερο.");
   }
   return row;
+}
+
+async function reviewSelectedInboxSupplier(db,scope,supplierId,bind=false){
+  const preview=await previewInvoiceReconciliation(db,scope);
+  const [order]=preview.orders;
+  if(!preview.orders.length || (preview.orders.length===1 && order.exact && !order.supplierReviewRequired))return;
+  if(preview.orders.length!==1 || !order.isMyData || order.headerReviewRequired ||
+      order.status!=="NEW" || order.documentStatus!=="DRAFT" || order.paymentTransactionId || order.settlementMode==="PAID" ||
+      !sameInvoiceIdentityForReview(order,{documentNumber:preview.documentNumber,documentDate:preview.issueDate,documentType:preview.documentType,totalGross:preview.totalGross}) ||
+      preview.verifiedSuppliers.length!==1 || preview.verifiedSuppliers[0].id!==supplierId){
+    await assertInboxSelectionUnambiguous(db,scope);
+    return;
+  }
+  const rows=await db.$queryRaw`SELECT o."id" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d
+    ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
+    WHERE o."id"=${order.orderId} AND d."id"=${order.documentId}
+      AND o."companyId"=${scope.companyId} AND o."storeId"=${scope.storeId}
+      AND o."status"='NEW' AND d."status"='DRAFT' AND d."paymentTransactionId" IS NULL
+      AND o."supplierId" IS NULL AND d."supplierId" IS NULL
+      AND NOT EXISTS (SELECT 1 FROM "InvoiceStockPosting" p WHERE p."companyId"=o."companyId" AND (p."orderId"=o."id" OR p."sourceDocumentId"=d."id"))
+    FOR UPDATE OF o,d`;
+  if(rows.length!==1)throw fail("Η σύνδεση προμηθευτή απαιτεί έλεγχο στο BackOffice.");
+  if(!bind)return;
+  await db.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=${supplierId},"updatedAt"=NOW() WHERE "id"=${order.orderId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
+  await db.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${supplierId},"updatedAt"=NOW() WHERE "id"=${order.documentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
+  await assertInboxSelectionUnambiguous(db,scope);
 }
 
 export async function assertInboxSelectionUnambiguous(db,scope){

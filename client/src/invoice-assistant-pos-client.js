@@ -47,9 +47,9 @@ const defaultApi=async(path,options={})=>{
   return result;
 };
 
-export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null,sourceContext=null,scopeActive=null){
+export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null,sourceContext=null,scopeActive=null,manualSource=null){
   sourceContext=sourceContext?{inboxId:sourceContext.inboxId,storeId:sourceContext.storeId}:null;
-  const sourceKey=sourceContext?JSON.stringify([sourceContext.storeId,sourceContext.inboxId]):"POS";
+  const sourceKey=manualSource||(sourceContext?JSON.stringify([sourceContext.storeId,sourceContext.inboxId]):"POS");
   if(sourceContext&&(!sourceContext.inboxId||!sourceContext.storeId))throw new Error("Δεν υπάρχει έγκυρη εγγραφή myDATA και επιλεγμένο κατάστημα.");
   const sourceQuery=sourceContext?`?${new URLSearchParams({inboxId:sourceContext.inboxId,storeId:sourceContext.storeId})}`:"";
   if(restoreInvoiceAssistant(orderId,sourceKey))return;
@@ -57,8 +57,8 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   const overlay=document.createElement("div");
   if(request)overlay.dataset.posInvoiceModal="1";
   overlay.style.cssText="position:fixed;inset:0;z-index:100100;background:#102c3cbb;padding:0;display:block";
-  overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="${sourceContext?"Βοηθός τιμολογίου myDATA":"Βοηθός τιμολογίου POS"}" style="box-sizing:border-box;width:100%;height:100%;height:100dvh;background:#f7fafc;overflow:hidden;display:flex;flex-direction:column">
-    <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>${sourceContext?"Βοηθός τιμολογίου myDATA":"Βοηθός τιμολογίου POS"}</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><div class="invoice-assistant-window-actions"><button data-minimize type="button" aria-label="Ελαχιστοποίηση βοηθού">− Ελαχιστοποίηση</button><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></div></header>
+  overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="${sourceContext?"Βοηθός τιμολογίου myDATA":manualSource?"Βοηθός τιμολογίου":"Βοηθός τιμολογίου POS"}" style="box-sizing:border-box;width:100%;height:100%;height:100dvh;background:#f7fafc;overflow:hidden;display:flex;flex-direction:column">
+    <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>${sourceContext?"Βοηθός τιμολογίου myDATA":manualSource?"Βοηθός τιμολογίου":"Βοηθός τιμολογίου POS"}</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><div class="invoice-assistant-window-actions"><button data-minimize type="button" aria-label="Ελαχιστοποίηση βοηθού">− Ελαχιστοποίηση</button><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></div></header>
     <div style="display:grid;grid-template-columns:minmax(280px,35%) minmax(0,1fr);min-height:0;flex:1">
       <div style="min-height:0;overflow:auto;padding:12px;background:#e9f0f5"><div data-pages></div></div>
       <div style="min-height:0;overflow:auto;padding:16px"><p style="margin:0 0 9px">${sourceContext?"Δες το πρωτότυπο PDF myDATA":"Δες τις φωτογραφίες"}, πες τι θέλεις να διορθωθεί και έλεγξε τις προτάσεις πριν τις περάσεις στο πρόχειρο.</p>
@@ -81,7 +81,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   const syncPresets=()=>overlay.querySelectorAll("[data-rule-preset]").forEach(button=>{const selected=button.dataset.rulePreset===factorInput.value;button.setAttribute("aria-pressed",String(selected));button.style.background=selected?"#146b50":"white";button.style.color=selected?"white":"#21473e"});
   overlay.querySelectorAll("[data-rule-preset]").forEach(button=>button.addEventListener("click",()=>{factorInput.value=button.dataset.rulePreset;syncPresets()}));
   factorInput.addEventListener("input",syncPresets);
-  if(request) overlay.querySelector("[data-save-rule]").parentElement.parentElement.hidden=true;
+  if(request||manualSource) overlay.querySelector("[data-save-rule]").parentElement.parentElement.hidden=true;
   overlay.querySelector("[data-save-rule]").onclick=async()=>{
     const tax=overlay.querySelector("[data-rule-tax]").value.trim(),product=overlay.querySelector("[data-rule-product]").value.trim(),factor=Number(overlay.querySelector("[data-rule-factor]").value),ruleStatus=overlay.querySelector("[data-rule-status]");
     const confirmSupplierTaxId=!overlay.querySelector("[data-rule-identity]").hidden&&overlay.querySelector("[data-rule-confirm]").checked;
@@ -120,15 +120,15 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   let source;const history=[];let activePrintedRows=[],activePagesComplete=false,activePrintedTotal=null;
   try{
     const [result,detail]=await Promise.all([
-      api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/source${sourceQuery}`),
+      manualSource?{document:{totalGross:null},pages:manualSource.manualPhotos.map((page,index)=>({...page,index:index+1,dataUrl:page.contentData}))}:api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/source${sourceQuery}`),
       api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`)
     ]);
     if(!retainedWindow.isActive())return;
     source=result;
     overlay.querySelector("[data-rule-tax]").value=String(result.document.supplierTaxId||"");overlay.querySelector("[data-rule-identity]").hidden=/^\d{9}$/.test(String(result.document.supplierTaxId||""));
     detail.lines.forEach(line=>lineById.set(line.id,line));
-    productPreparations=mountInvoiceProducts(overlay.querySelector('[data-product-preparations]'),{api,orderId,storeId:sourceContext?.storeId||detail.order.storeId,isActive:()=>retainedWindow.isActive()&&(!scopeActive||scopeActive()),onSaved:async()=>{changed=true;const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);if(!retainedWindow.isActive())return;lineById.clear();latest.lines.forEach(line=>lineById.set(line.id,line));}});
-    productPreparations.refresh(detail);
+    if(!manualSource)productPreparations=mountInvoiceProducts(overlay.querySelector('[data-product-preparations]'),{api,orderId,storeId:sourceContext?.storeId||detail.order.storeId,isActive:()=>retainedWindow.isActive()&&(!scopeActive||scopeActive()),onSaved:async()=>{changed=true;const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);if(!retainedWindow.isActive())return;lineById.clear();latest.lines.forEach(line=>lineById.set(line.id,line));}});
+    productPreparations?.refresh(detail);
     pages.innerHTML=result.pages.map(page=>`<article style="margin-bottom:13px;background:white;padding:10px;border:1px solid #d1e1e8;border-radius:12px;box-shadow:0 3px 12px #143f6110"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Σελίδα ${page.index}: ${esc(page.filename||"φωτογραφία")}</b>${page.mimeType==="application/pdf"?"":`<div style="display:flex;gap:5px"><button type="button" data-rotate="-90" aria-label="Περιστροφή φωτογραφίας αριστερά" style="padding:6px 9px;border:1px solid #bad0dc;border-radius:7px;background:#fff;color:#143f61;cursor:pointer">↶ 90°</button><button type="button" data-rotate="90" aria-label="Περιστροφή φωτογραφίας δεξιά" style="padding:6px 9px;border:1px solid #bad0dc;border-radius:7px;background:#fff;color:#143f61;cursor:pointer">↷ 90°</button></div>`}</div><div style="overflow:auto;max-height:75vh;margin-top:8px;background:#edf2f5;border-radius:8px" data-image-viewport>${page.mimeType==="application/pdf"?`<div data-pdf-viewer data-source="${esc(page.dataUrl)}"></div>`:`<canvas data-zoom-image data-source="${esc(page.dataUrl)}" role="img" aria-label="Σελίδα ${page.index}: ${esc(page.filename||"φωτογραφία")}" style="display:block;width:100%;cursor:grab;touch-action:none"></canvas>`}</div></article>`).join("");
     const pdfHosts=pages.querySelectorAll("[data-pdf-viewer]");
     const mountInvoicePdfViewer=pdfHosts.length?(await import("./invoice-assistant-pdf-viewer.js")).mountInvoicePdfViewer:null;
@@ -146,13 +146,14 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       img.addEventListener("pointerup",endDrag);img.addEventListener("pointercancel",endDrag);
     });
     current.innerHTML=`<b>Γραμμές που έχει τώρα το POS · ${detail.lines.length} · καθαρό ${euro(detail.totals.net)} € · ΦΠΑ ${euro(detail.totals.vat)} € · πληρωτέο ${euro(detail.totals.gross)} €</b><div style="margin-top:7px">${detail.lines.map(lineHtml).join("")}</div>`;
-    status.textContent=`Προηγούμενη ανάγνωση πληρωτέου: ${euro(result.document.totalGross)} €. Επιβεβαίωσε στο έντυπο. Επίλεξε τι θα ελέγξει ο βοηθός.`;
+    status.textContent=manualSource?"Οι φωτογραφίες είναι έτοιμες. Ο έλεγχος χρησιμοποιεί τον χρεώσιμο βοηθό.":`Προηγούμενη ανάγνωση πληρωτέου: ${euro(result.document.totalGross)} €. Επιβεβαίωσε στο έντυπο. Επίλεξε τι θα ελέγξει ο βοηθός.`;
   }catch(error){status.textContent=error.message;overlay.querySelector("[data-ask]").disabled=true;return}
   overlay.querySelector("[data-ask]").onclick=async()=>{
+    if(scopeActive&&!scopeActive())return;
     const message=overlay.querySelector("[data-message]").value.trim();if(!message){status.textContent="Γράψε πρώτα τι θέλεις να ελέγξει.";return}
     const ask=overlay.querySelector("[data-ask]");ask.disabled=true;apply.hidden=true;proposals.replaceChildren();status.textContent=sourceContext?"Ο βοηθός συγκρίνει το PDF myDATA με το πρόχειρο…":"Ο βοηθός συγκρίνει τις φωτογραφίες με το πρόχειρο…";
     try{
-      const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message,history:history.slice(-12),...(sourceContext||{})})});
+      const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message,history:history.slice(-12),...(manualSource||sourceContext||{})})});
       if(!retainedWindow.isActive())return;
       history.push({role:"user",text:message},{role:"assistant",text:result.assistantMessage||""});
       overlay.querySelector("[data-history]").innerHTML=history.map(entry=>`<p style="margin:4px 0"><b>${entry.role==="user"?"Εσύ":"Βοηθός"}:</b> ${esc(entry.text)}</p>`).join("");
@@ -165,7 +166,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       const missingPhysical=result.pagesComplete?printed.filter(line=>!line.matchingLineId):[];
       const missing=missingPhysical.filter(validPrinted);
       const uncertainPhysical=printed.filter(line=>Boolean(printedReviewIssue(line)));
-      const extra=result.pagesComplete&&printed.length?[...lineById.values()].filter(line=>!matched.has(line.id)):[];
+      const extra=!manualSource&&result.pagesComplete&&printed.length?[...lineById.values()].filter(line=>!matched.has(line.id)):[];
       if(!result.pagesComplete){status.textContent=result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";apply.hidden=true}
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
       activePagesComplete=result.pagesComplete;activePrintedTotal=printedTotal;
@@ -315,7 +316,8 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
         }
         applying=true;apply.disabled=true;let done=0;try{
           const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
-          if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT"||Number(latest.order.reopenVersion||0)!==Number(order.reopenVersion||0))throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
+          if(latest.order.status!=="NEW"||(manualSource?(latest.order.sourceType||latest.order.sourceDocumentId||latest.order.awaitingInvoice||latest.order.storeId!==manualSource.storeId):latest.order.sourceType!=="POS_OCR_DRAFT")||Number(latest.order.reopenVersion||0)!==Number(order.reopenVersion||0))throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
+          if(scopeActive&&!scopeActive())throw new Error("Η παραγγελία έκλεισε ή άλλαξε το επιλεγμένο κατάστημα.");
           const now=new Map(latest.lines.map(line=>[line.id,line]));
           if(now.size!==lineById.size||[...lineById].some(([id,line])=>!now.has(id)||["description","quantity","unitCost","netAmount","grossAmount"].some(field=>String(now.get(id)[field]??"")!==String(line[field]??""))))throw new Error("Το πρόχειρο άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const change of chosen)if(!now.has(change.lineId)||String(now.get(change.lineId)[change.field]??"")!==String(lineById.get(change.lineId)[change.field]??""))throw new Error("Μια επιλεγμένη γραμμή άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
@@ -335,5 +337,5 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       status.textContent=result.pagesComplete?`Έλεγχος ολοκληρώθηκε · ${valid.length} διορθώσεις υπαρχουσών γραμμών, ${missingPhysical.length} γραμμές που λείπουν από το πρόχειρο (${missing.length} με όλα τα πεδία και βεβαιότητα), ${uncertainPhysical.length} γραμμές ΠΡΟΣ ΕΛΕΓΧΟ στον πίνακα, ${extra.length} προς έλεγχο διαγραφής. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`:result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";
     }catch(error){status.textContent=error.message}finally{ask.disabled=false}
   };
-  overlay.querySelector("[data-ask]").click();
+  if(!manualSource)overlay.querySelector("[data-ask]").click();
 }

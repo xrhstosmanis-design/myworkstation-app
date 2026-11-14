@@ -76,7 +76,7 @@ export async function enforceBackofficeStaff(db,req,res){
   }
   const paymentContext=path.match(/^\/api\/backoffice-staff\/payments\/stores\/([^/]+)$/);
   if(paymentContext&&paymentContext[1]!==storeId)throw staffError();
-  const terminals=path.match(/^\/api\/backoffice-staff\/sales\/stores\/([^/]+)\/terminals$/);
+  const terminals=path.match(/^\/api\/backoffice-staff\/(?:sales|shifts)\/stores\/([^/]+)\/terminals$/);
   if(terminals&&terminals[1]!==storeId)throw staffError();
   if(capability==='invoices.approve'&&Object.keys(req.body||{}).some(key=>!['status','expectedReopenVersion'].includes(key)&&!(key==='returnForCorrection'&&req.body.status==='NEW'&&req.body.returnForCorrection===true)))throw staffError();
   if(capability.startsWith('payments.')&&(req.body?.paymentSource==='CASH_SHIFT'||req.body?.paymentMethod==='CASH_SHIFT'||req.body?.subtractFromShift===true))await requireStaffGrant(db,user,storeId,'payments.cash');

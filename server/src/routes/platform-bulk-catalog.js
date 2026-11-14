@@ -1,3 +1,4 @@
+import { buildEfoodPromotionWorkbook } from "../efood-promotion-workbook.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -36,7 +37,12 @@ router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){ne
 router.get("/targets",async(req,res,next)=>{
   try{
     const companies=await prisma.company.findMany({where:{active:true},select:{id:true,name:true,stores:{where:{active:true},select:{id:true,name:true,city:true},orderBy:{name:"asc"}}},orderBy:{name:"asc"}});
-    res.json({companies});
+    const efoodStores = await prisma.$queryRaw`SELECT DISTINCT sp."storeId" FROM "StoreProduct" sp
+      JOIN "Store" s ON s.id = sp."storeId"
+      JOIN "Company" c ON c.id = s."companyId"
+      JOIN "Product" p ON p.id = sp."productId" AND p."companyId" = s."companyId"
+      WHERE s.active AND c.active AND sp.active AND p.active AND p."efoodEnabled" AND p."efoodPrice" > 0`;
+    res.json({companies, efoodStoreIds: efoodStores.map(row => row.storeId)});
   }catch(error){next(error)}
 });
 
@@ -158,6 +164,26 @@ const promotionSchema=z.object({
   if(body.promotionType==="GIFT"&&!body.giftMasterProductIds.length)ctx.addIssue({code:z.ZodIssueCode.custom,path:["giftMasterProductIds"],message:"Επίλεξε τουλάχιστον ένα επιτρεπόμενο προϊόν δώρου."});
 });
 const asDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?null:d};
+
+router.get("/promotions/efood-xlsx", async (req, res, next) => {
+  try {
+    const storeId = typeof req.query.storeId === "string" ? req.query.storeId : "";
+    const store = await prisma.store.findFirst({
+      where: { id: storeId, active: true, company: { active: true } },
+      select: { companyId: true },
+    });
+    if (!store) return res.status(404).json({error: "Δεν βρέθηκε ενεργό κατάστημα."});
+    const eligibleStores = await prisma.$queryRaw`SELECT DISTINCT sp."storeId" FROM "StoreProduct" sp
+      JOIN "Store" s ON s.id = sp."storeId"
+      JOIN "Company" c ON c.id = s."companyId"
+      JOIN "Product" p ON p.id = sp."productId" AND p."companyId" = s."companyId"
+      WHERE s.active AND c.active AND sp.active AND p.active AND p."efoodEnabled" AND p."efoodPrice" > 0 AND s.id = ${storeId}`;
+    if (!eligibleStores.length) return res.status(422).json({error: "Το κατάστημα δεν έχει ενεργά είδη με τιμή efood."});
+    res.set("Cache-Control", "no-store").json(await buildEfoodPromotionWorkbook(store.companyId, storeId));
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/promotions",async(req,res,next)=>{
   try{

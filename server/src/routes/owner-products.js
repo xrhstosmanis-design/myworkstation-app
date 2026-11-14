@@ -4,6 +4,7 @@ import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
 import XLSX from "xlsx";
+import { buildEfoodPromotionWorkbook } from "../efood-promotion-workbook.js";
 import {prisma} from "../prisma.js";
 import {createScopedPromotionBatch} from "./price-catalog-promotion-guard.js";
 import {parsePromotionDate} from "../promotion-time.js";
@@ -443,6 +444,24 @@ router.get("/:productId/price-history",requireCompanyModule("INVENTORY"),async(r
     const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId}) AND h."productId"=${req.params.productId} ORDER BY h."createdAt" DESC LIMIT 100`;
     res.json(rows);
   }catch(error){next(error)}
+});
+
+router.get("/promotions/efood-xlsx", requireCompanyModule("INVENTORY"), async (req, res, next) => {
+  try {
+    const user = req.user;
+    const storeId = typeof req.query.storeId === "string" ? req.query.storeId : "";
+    if (!user?.companyId || user.staffAccess || scope || user.tokenType === "STORE_OPERATOR" ||
+        !(user.isSuperAdmin || ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(user.role)) ||
+        (user.storeId && user.storeId !== storeId)) {
+      return res.status(403).json({error:"Δεν έχεις πρόσβαση στις προσφορές του καταστήματος."});
+    }
+    const store = await ownedStore(user.companyId, storeId);
+    if (!store) return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+
+    res.set("Cache-Control","no-store").json(await buildEfoodPromotionWorkbook(user.companyId, storeId));
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/promotions/list",requireCompanyModule("INVENTORY"),async(req,res,next)=>{

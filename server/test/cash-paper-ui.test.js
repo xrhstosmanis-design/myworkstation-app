@@ -10,10 +10,10 @@ test('actual mounted paper panel: explicit single read, no automatic retry, esca
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
  const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/shared/CashPaperReadingPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime']});
  const module={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);const root=createRoot(document.getElementById('root')),calls=[];
- let active='A',hold=false,release,fail=false,status='NOT_READ';const checksum='a'.repeat(64);
+ let active='A',hold=false,release,fail=false,status='NOT_READ',batch=false;const checksum='a'.repeat(64);
  const source=store=>({sourceId:store,checksum,references:[{messageId:'message-'+store,filename:'<img src=x onerror=alert(1)>'}],reading:{status}});
  const completed=store=>({storeId:store,checksum,generation:'0',status:'EXTRACTED_UNVERIFIED',extraction:{documentDate:null,dateText:'21/10',operatorText:store,shiftText:null,notes:[],lines:[{label:'<script>bad</script>',amountText:null,requiresReview:true}]}});
- const api=async(path,options={})=>{calls.push({path,...options});if(!options.method)return {storeId:active,generation:'0',sources:[source(active)]};if(fail)throw Error('Connection lost');if(hold)return new Promise(resolve=>release=()=>resolve(completed('A')));return completed(active);};
+ const api=async(path,options={})=>{calls.push({path,...options});if(!options.method)return {storeId:active,generation:'0',sources:batch?[source('first'),source('second'),source('third')]:[source(active)]};if(batch)return {...completed(active),status:'PENDING'};if(fail)throw Error('Connection lost');if(hold)return new Promise(resolve=>release=()=>resolve(completed('A')));return completed(active);};
  const render=async store=>{active=store;await act(async()=>root.render(React.createElement(module.exports.default,{api,storeId:store})));};
  const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text);
  try{
@@ -24,6 +24,13 @@ test('actual mounted paper panel: explicit single read, no automatic retry, esca
   status='NOT_READ';await render('A');await act(async()=>button('Χειρόγραφα καταστήματος').click());hold=true;await act(async()=>button('Ανάγνωση με AI').click());assert.equal(typeof release,'function');
   await render('B');await act(async()=>release());assert.doesNotMatch(document.body.textContent,/message-A|<script>bad/);
   hold=false;await act(async()=>button('Χειρόγραφα καταστήματος').click());assert.match(document.body.textContent,/message-B/);assert.equal(button('Ανάγνωση με AI').disabled,false);
+  batch=true;await act(async()=>button('Ανανέωση χειρόγραφων').click());
+  const choices=[...document.querySelectorAll('input[type=checkbox]')];
+  await act(async()=>{choices[0].click();choices[2].click();});
+  const prior=calls.length;
+  await act(async()=>button('Ανάγνωση επιλεγμένων (2)').click());
+  assert.deepEqual(calls.slice(prior).map(call=>JSON.parse(call.body).messageId),['message-first']);
+  assert.match(document.body.textContent,/Η σειρά σταμάτησε/);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k];}
 });
 

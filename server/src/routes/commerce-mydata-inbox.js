@@ -176,7 +176,7 @@ async function performSync(req){
       JOIN "PurchaseOrder" o ON o."id"=m."rawPayload"->>'mydataDraftOrderId' AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
       WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id}
         AND i."attachmentId" IS NOT NULL AND i."status"='IN_REVIEW' AND o."status"='NEW'
-        AND m."rawPayload"->>'automaticPrefillChecked' IS DISTINCT FROM 'true'
+        AND (m."rawPayload"->>'automaticPrefillChecked' IS DISTINCT FROM 'true' OR m."rawPayload"->>'packagingPrefillChecked' IS DISTINCT FROM 'true')
         AND NOT EXISTS (SELECT 1 FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id")
       ORDER BY m."fetchedAt",m."id" LIMIT 10`;
     for(const item of emptyDrafts){

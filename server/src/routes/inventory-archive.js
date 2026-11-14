@@ -89,6 +89,45 @@ router.post("/export-xlsx",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/duplicates", async (req, res, next) => {
+  try {
+    const companyId = req.user.companyId;
+    const storeId = String(req.query.storeId || "").trim();
+    if (!storeId) return res.status(400).json({error:"Δεν επιλέχθηκε κατάστημα."});
+    if (scope && scope.storeId !== storeId) return res.sendStatus(403);
+    const store = await prisma.store.findFirst({
+      where:{id:storeId,companyId,active:true}, select:{id:true}
+    });
+    if (!store) return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
+
+    const groups = await prisma.$queryRaw`
+      WITH items AS (
+        SELECT p.id, p.name, p.sku, sp."currentStock"
+        FROM "StoreProduct" sp JOIN "Product" p ON p.id = sp."productId"
+        WHERE sp."storeId" = ${storeId} AND p."companyId" = ${companyId}
+          AND p.active = true AND sp.active = true
+      ), keys AS (
+        SELECT DISTINCT i.id, 'BARCODE' AS kind, btrim(b.barcode) AS value
+        FROM items i JOIN "ProductBarcode" b ON b."productId" = i.id
+        UNION ALL
+        SELECT id, 'SKU', upper(btrim(sku)) FROM items
+        UNION ALL
+        SELECT id, 'NAME', lower(regexp_replace(btrim(name), '[[:space:]]+', ' ', 'g')) FROM items
+      )
+      SELECT k.kind, k.value, jsonb_agg(jsonb_build_object(
+        'id', i.id, 'name', i.name, 'sku', i.sku, 'stock', i."currentStock"
+      ) ORDER BY i.name, i.id) AS items
+      FROM keys k JOIN items i ON i.id = k.id
+      WHERE k.value <> ''
+      GROUP BY k.kind, k.value HAVING count(*) > 1
+      ORDER BY k.kind, k.value
+    `;
+    res.json({groups});
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/",async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;

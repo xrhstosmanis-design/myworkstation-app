@@ -159,6 +159,66 @@ test('native clear and selected-zero controls work independently of ordinary cou
   assert.equal(document.querySelector('[aria-label="Επιλογή Fixture item"]').disabled,true);
  }finally{await m.close()}
 });
+test('delegated payment history requires only payments.read and does not expose payment actions',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['payments.read']}]};
+  assert.equal(path,'/api/backoffice-staff/payments/stores/a1');
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  assert.equal(options.headers['x-mws-terminal-pos'],undefined);
+  return {storeId:'a1',suppliers:[],purchaseDocuments:[],recentBankTransfers:[
+    {id:'transfer-1',occurredAt:'2026-11-13T14:20:00Z',amount:42,supplierName:'Fixture Supplier',type:'SUPPLIER_PAYMENT',status:'PENDING_REVIEW',documentNumbers:['INV-1']},
+    {id:'transfer-2',occurredAt:'2026-11-12T11:00:00Z',amount:6,supplierName:null,type:'OTHER_EXPENSE',status:null}
+  ]};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Κατάστημα"]');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Πληρωμές').click());
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  const history=document.querySelector('[aria-label="Ιστορικό τραπεζικών μεταφορών"]');
+  assert.match(history.textContent,/Fixture Supplier.*INV-1.*42,00.*Σε αναμονή ελέγχου/);
+  assert.match(history.textContent,/Λοιπό έξοδο.*6,00.*Καταχωρισμένη/);
+  assert.equal(document.querySelector('[aria-label="Ταμείο"]'),null);
+  assert.equal(button('Πληρωμή Προμηθευτή'),undefined);
+  assert.equal(button('Λοιπά Έξοδα'),undefined);
+  await m.act(async()=>[...history.parentElement.querySelectorAll('button')].find(item=>item.textContent==='Ανανέωση').click());
+  assert.equal(calls.filter(x=>x.path.endsWith('/payments/stores/a1')).length,2);
+  assert.ok(calls.every(x=>!x.options.method));
+ }finally{await m.close()}
+});
+test('supplier bank settlement receipt remains visible when the delegated form closes',async()=>{
+ const QuickActions=await component('cloud/OwnerPaymentQuickActions'),calls=[];
+ const supplier={id:'supplier-1',name:'Fixture Supplier'};
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.includes('/backoffice-staff/payments/'))return {storeId:'a1',suppliers:[supplier],purchaseDocuments:[],recentBankTransfers:[]};
+  if(path.includes('/supplier-open-invoices?'))return {items:[{id:'doc-1',documentNumber:'INV-1',outstandingAmount:42}]};
+  if(path.endsWith('/supplier-settlements'))return {transaction:{id:'transfer-1'},status:'PENDING_REVIEW'};
+  assert.fail(path);
+ };
+ const m=await mount(QuickActions,{api,store:{id:'a1',name:'A1'},delegatedCapabilities:['payments.read','payments.supplier']});
+ try{
+  await m.act(async()=>button('Πληρωμή Προμηθευτή').click());
+  await m.act(async()=>{const s=document.querySelector('.pos-open-invoice-form select');s.value=supplier.id;s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>{
+   const input=document.querySelector('[aria-label="Ποσό για INV-1"]');
+   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'42');
+   input.dispatchEvent(new Event('input',{bubbles:true}));
+   input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  await m.act(async()=>button('Τραπεζική μεταφορά').click());
+  await m.act(async()=>button('Δηλώνω υπεύθυνα ότι παρέδωσα τα χρήματα').click());
+  await m.act(async()=>button('Καταχώριση πληρωμής προς έλεγχο').click());
+  assert.equal(document.querySelector('.pos-open-invoice-form'),null);
+  assert.match(document.body.textContent,/Fixture Supplier καταχωρίστηκε σε αναμονή ελέγχου/);
+  const posts=calls.filter(x=>x.options.method==='POST');
+  assert.equal(posts.length,1);
+  assert.equal(JSON.parse(posts[0].options.body).paymentMethod,'BANK_TRANSFER');
+  assert.equal(calls.filter(x=>x.path.includes('/backoffice-staff/payments/')).length,2);
+ }finally{await m.close()}
+});
 test('delegated expense form exposes only its granted action, requires declaration and sends one scoped stable-key pending-review input',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace'),calls=[],store={id:'a1',name:'A1'};
  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read','payments.read','payments.expense']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.includes('/backoffice-staff/payments/'))return {storeId:'a1',suppliers:[],purchaseDocuments:[]};if(options.method)return {id:'synthetic',amount:2};return {store,openSession:null}};
@@ -175,6 +235,7 @@ test('delegated expense form exposes only its granted action, requires declarati
   await m.act(async()=>form.querySelector('input[type="checkbox"]').click());await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
   const writes=calls.filter(c=>c.options.method);assert.equal(writes.length,1);const body=JSON.parse(writes[0].options.body);assert.equal(body.type,'OTHER_EXPENSE');assert.equal(body.amount,2);assert.equal(body.responsibilityAcknowledged,true);assert.equal(body.paymentSource,'EXTERNAL');assert.equal(body.paymentMethod,'CORPORATE_CARD');assert.ok(body.idempotencyKey);assert.equal(body.supplierId,null);assert.equal(writes[0].options.headers['x-backoffice-store-id'],'a1');
   await m.act(async()=>new Promise(resolve=>setTimeout(resolve,700)));
+  assert.match(document.body.textContent,/Λοιπά Έξοδα: καταχωρίστηκε/);
  }finally{await m.close()}
 });
 test('delegated cancellation is visibly reachable outside POS, uses selected terminal and never offers RETURN',async()=>{
@@ -214,6 +275,7 @@ test('actual invoice editor separates read, edit and approval controls and locks
    assert.equal(document.querySelector('[data-po-store]').disabled,true);assert.equal(document.querySelector('[data-po-new]'),null);
    await m.act(async()=>document.querySelector('[data-po-open]').click());
    for(const selector of ['[data-invoice-assistant]','[data-reopen]','[data-email]','[data-product-card]','[data-barcodes]'])assert.equal(document.querySelector(selector),null);
+   assert.equal(Boolean(document.querySelector('[data-add-line]')),action==='invoices.edit');
    assert.equal(Boolean(document.querySelector('[data-line-edit]')),action==='invoices.edit');assert.equal(Boolean(document.querySelector('[data-finalize]')),action==='invoices.approve');
    assert.equal(calls.some(c=>c.options.method),false,'opening an invoice must never auto-repair, recover or post');
    if(action){
@@ -639,5 +701,30 @@ test('personal inventory opens the existing store-scoped new-product card withou
   assert.equal(writes.length,0,'no product, quantity or stock mutation without Save');
   const stockInput=[...dialog.querySelectorAll('label')].find(x=>x.textContent.includes('Αρχικό απόθεμα'))?.querySelector('input');
   assert.ok(stockInput);assert.equal(stockInput.disabled,true,'opening stock is always disabled in inventory entry');
+ }finally{await m.close()}
+});
+
+test('close-only staff can open the counted shift form without reading sales history',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['shifts.close']}]};
+  if(path==='/api/backoffice-staff/shifts/stores/a1/terminals')return {storeId:'a1',terminals:['POS2']};
+  assert.equal(path,'/api/cash/stores/a1/close-context');
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  assert.equal(options.headers['x-mws-terminal-pos'],'POS2');
+  return {openSession:{id:'shift',openingOperational:10,openingSafe:0},summaryBySession:{shift:{cashSales:23,cardSales:31,expensesTotal:2,transferIn:9,transferOut:3}}};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Κατάστημα"]');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  assert.equal(button('Πωλήσεις και βάρδιες'),undefined);
+  await m.act(async()=>button('Κλείσιμο βάρδιας').click());
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Ταμείο"]');s.value='POS2';s.dispatchEvent(new Event('change',{bubbles:true}));});
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  assert.match(document.body.textContent,/Κλείσιμο & Παράδοση βάρδιας/);
+  assert.ok([...document.querySelectorAll('input')].some(el=>el.readOnly&&el.value==='23'));
+  assert.ok([...document.querySelectorAll('input')].some(el=>el.readOnly&&el.value==='37'));
+  assert.ok(calls.every(x=>!x.options.method&&!x.path.includes('/transactions/')));
  }finally{await m.close()}
 });
