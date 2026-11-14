@@ -230,11 +230,22 @@ router.patch("/:orderId",async(req,res,next)=>{try{
   });res.json({ok:true});
 }catch(error){next(error)}});
 
+function invoiceDisplayMarkup(line,isMyDataDraft){
+  const savedMarkup=n(line.markupPercent);
+  const retail=n(line.currentSalePrice);
+  if(!isMyDataDraft || !line.productId || line.gift || savedMarkup!==0 ||
+    n(line.proposedSalePrice)!==0 || retail<=0 || n(line.quantity)<=0 ||
+    (line.invoiceUnit==="PACKAGE" && n(line.stockUnitsPerInvoiceUnit)<=0))return savedMarkup;
+  const {grossUnit}=calc(line);
+  return grossUnit>0 ? (retail/grossUnit-1)*100 : savedMarkup;
+}
+
 router.get("/:orderId/detail",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
   if(req.user.staffAccess===true){if(found.storeId!==req.user.storeId)return res.status(404).json({error:'Δεν βρέθηκε στο επιλεγμένο κατάστημα.'});}else await repairPosOcrDisplayEconomics(found);
   const rows=await prisma.$queryRaw`SELECT l.*,p."name" AS "productName",p."sku",p."salePrice" AS "currentSalePrice",p."vatRate" AS "productVatRate",c."name" AS "categoryName",sp."currentStock",(SELECT b."barcode" FROM "ProductBarcode" b WHERE b."productId"=p."id" ORDER BY b."createdAt" LIMIT 1) AS "primaryBarcode" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId} LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${found.storeId} WHERE l."orderId"=${found.id} ORDER BY COALESCE(l."ocrSequence",l."ocrLineIndex",2147483647),l."createdAt",l."id"`;
-  const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),stockUnitsPerInvoiceUnit:r.invoiceUnit==="PACKAGE"&&r.stockUnitsPerInvoiceUnit!=null&&n(r.stockUnitsPerInvoiceUnit)===0?0:Math.max(1,n(r.stockUnitsPerInvoiceUnit)||1),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:n(r.markupPercent),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net=money2(a.net+money2(r.netAmount+r.exciseTotal));a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,found.storeId,'invoices.read',{additionalModules:['INVENTORY']});if(!found.supplierId&&/^myDATA\s*•\s*MARK\b/i.test(found.description||"")){
+  const isMyDataDraft=found.status==="NEW" && /^myDATA\s*•\s*MARK\b/i.test(found.description||"");
+  const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),stockUnitsPerInvoiceUnit:r.invoiceUnit==="PACKAGE"&&r.stockUnitsPerInvoiceUnit!=null&&n(r.stockUnitsPerInvoiceUnit)===0?0:Math.max(1,n(r.stockUnitsPerInvoiceUnit)||1),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:invoiceDisplayMarkup(r,isMyDataDraft),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net=money2(a.net+money2(r.netAmount+r.exciseTotal));a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,found.storeId,'invoices.read',{additionalModules:['INVENTORY']});if(!found.supplierId&&/^myDATA\s*•\s*MARK\b/i.test(found.description||"")){
     const [source]=await prisma.$queryRaw`SELECT m."rawPayload"->>'xml' AS xml,m."issuerVat" FROM "MyDataInboundDocument" m WHERE m."companyId"=${companyId} AND m."storeId"=${found.storeId} AND m."rawPayload"->>'mydataDraftOrderId'=${found.id} LIMIT 1`;
     if(source){
       found.mydataIssuerName=source.xml?invoiceIssuerName(source.xml)?.slice(0,250)||null:null;
