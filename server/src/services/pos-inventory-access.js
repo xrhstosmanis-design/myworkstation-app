@@ -8,7 +8,7 @@ export function inventoryCapabilities(rights={}){
   read:rights.inventoryPos===true,edit:rights.editDescription===true,
   prices:rights.changeRetail===true,barcodes:rights.addBarcode===true,
   create:rights.newProduct===true,lookup:rights.onlineBarcode===true,
-  print:rights.hidePrinter!==true,orders:false,stock:false
+  print:rights.hidePrinter!==true,orders:false,stock:false,merge:rights.inventoryPos===true&&rights.inventoryMerge===true
  };
 }
 // STORE_OPERATOR remains a credential identity. No Owner role, User id or
@@ -49,6 +49,9 @@ export function inventoryAction(method,path){
  const m=String(method).toUpperCase(),p=String(path).replace(/\/$/,'')||'/';
  if(m==='GET'&&p==='/access')return {kind:'access'};
  if(m==='POST'&&p==='/archive/export-xlsx')return {kind:'export-xlsx',family:'archive',path:'/export-xlsx'};
+ if(m==='POST'&&p==='/products/merge/preview')return {kind:'merge-preview'};
+ if(m==='POST'&&p==='/products/merge/confirm')return {kind:'merge-confirm',write:true};
+ if(m==='GET'&&p==='/archive/duplicates')return {kind:'duplicates',family:'archive',path:'/duplicates'};
  if(m==='GET'&&p==='/archive')return {kind:'archive',family:'archive',path:'/'};
  if(m==='GET'&&p==='/suppliers')return {kind:'suppliers'};
  if(m==='POST'&&/^\/archive\/import(?:-preview)?$/.test(p))return {kind:p.endsWith('-preview')?'import-preview':'import',family:'import',path:p.slice(8),write:!p.endsWith('-preview')};
@@ -65,7 +68,7 @@ export function inventoryAction(method,path){
     (m==='DELETE'&&['set-items','recipe-items'].includes(match[2])&&match[3]))){
   return {kind:match[2],family:'products',path:p.slice(9),productId:decode(match[1]),write:true};
  }
- // No prefix delegation: stocktake, merge, adjustment, destruction, returns,
+ // No prefix delegation: stocktake, adjustment, destruction, returns,
  // transfer and every unknown action stay outside this namespace.
  throw inventoryDenied('Αυτή η ενέργεια δεν επιτρέπεται από την Αποθήκη POS.');
 }
@@ -86,6 +89,7 @@ export function assertInventoryPayload(scope,action,query={},body={}){
   }
  };
  forbid(body);
+ if(action.kind==='merge-preview'||action.kind==='merge-confirm')need(scope,'merge');
  if(action.kind==='lookup')need(scope,'lookup');
  if(action.kind==='create')need(scope,'create');
  if(action.kind==='prices')need(scope,'prices');
