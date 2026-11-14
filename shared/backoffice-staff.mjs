@@ -25,7 +25,7 @@ export const staffPermissionSections=Object.freeze([
   ]},
   {key:'products',label:'Είδη και αποθήκη',actions:[
     {key:'products.read',label:'Προβολή ειδών',description:'Βλέπει είδη, τιμές, κόστος και απόθεμα του καταστήματος.'},
-    {key:'products.edit',label:'Επεξεργασία καρτέλας είδους',description:'Αλλάζει λιανική στο επιλεγμένο κατάστημα και περιγραφή ειδών αποκλειστικών στο κατάστημα.',requires:['products.read']},
+    {key:'products.edit',label:'Επεξεργασία καρτέλας είδους',description:'Επεξεργάζεται την πλήρη καρτέλα είδους. Τα κοινά στοιχεία προϊόντος ισχύουν σε όλα τα καταστήματα που το διαθέτουν.',requires:['products.read']},
     {key:'products.create',label:'Νέο είδος',description:'Δημιουργεί πλήρη καρτέλα στο επιλεγμένο κατάστημα.',requires:['products.read']},
     {key:'products.opening-stock',label:'Αρχικό απόθεμα νέου είδους',description:'Καταχωρίζει αρχικό απόθεμα κατά τη δημιουργία είδους.',requires:['products.read','products.create']}
   ]},
@@ -86,7 +86,11 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&/^\/api\/(?:transactions|cash)\/stores\/[^/]+\/overview$/.test(path))return 'sales.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/sales\/recent$/.test(path))return 'sales.read';
   if((method==='GET'&&path==='/api/inventory-archive')||(method==='POST'&&path==='/api/inventory-archive/export-xlsx'))return 'products.read';
-  if(['GET','PATCH'].includes(method)&&/^\/api\/owner-products\/[^/]+\/staff-card$/.test(path))return 'products.edit';
+  if((method==='GET'&&path==='/api/owner-products/catalog')||
+    (method==='GET'&&/^\/api\/owner-products\/[^/]+\/(?:details|composition)$/.test(path))||
+    (method==='PATCH'&&/^\/api\/owner-products\/[^/]+\/card$/.test(path))||
+    (method==='POST'&&/^\/api\/owner-products\/[^/]+\/(?:set-items|recipe-items|stock-adjustment)$/.test(path))||
+    (method==='DELETE'&&/^\/api\/owner-products\/[^/]+\/(?:set-items|recipe-items)\/[^/]+$/.test(path)))return 'products.edit';
   if(method==='GET'&&path==='/api/owner-products/new-card/options')return 'products.create';
   if(method==='POST'&&path==='/api/owner-products/new-card')return 'products.create';
   if(method==='GET'&&path==='/api/backoffice-staff/me')return 'SESSION';

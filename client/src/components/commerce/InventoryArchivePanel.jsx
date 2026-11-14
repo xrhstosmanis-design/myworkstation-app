@@ -89,7 +89,6 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   const [query,setQuery]=useState(""),[category,setCategory]=useState(""),[subcategory,setSubcategory]=useState(""),[status,setStatus]=useState("ACTIVE"),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100);
   const [loading,setLoading]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
   const [checked,setChecked]=useState([]),[selected,setSelected]=useState(null),[modal,setModal]=useState(null);
-  const [staffCard,setStaffCard]=useState(null);
   const [merge,setMerge]=useState(null);
   const mergeSavingRef=useRef(false);
   const [bulk,setBulk]=useState(bulkBlank);
@@ -214,23 +213,10 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
 
   const openEdit=async row=>{
     if(readOnly&&!staffCardEdit)return;
-    if(staffCardEdit){
-      const selectedStore=storeId,token=++newCardGeneration.current;
-      setError("");setLoading(true);
-      try{
-        const card=await api(`/api/owner-products/${encodeURIComponent(row.productId)}/staff-card`);
-        if(cardScopeRef.current===selectedStore&&token===newCardGeneration.current){
-          setStaffCard({...card,description:card.description||""});
-          setModal("staff-card");
-        }
-      }catch(e){if(cardScopeRef.current===selectedStore&&token===newCardGeneration.current)setError(e.message)}
-      finally{if(cardScopeRef.current===selectedStore&&token===newCardGeneration.current)setLoading(false)}
-      return;
-    }
     const selectedStore=storeId,token=++newCardGeneration.current;
     setSelected(row);setLoading(true);setError("");
     try{
-      const list=await api(`/api/owner-products/catalog?q=${encodeURIComponent(row.sku||row.name)}`);const product=(list||[]).find(x=>x.id===row.productId);if(!product)throw new Error("Δεν βρέθηκε η καρτέλα είδους.");
+      const list=await api(`/api/owner-products/catalog?${staffCardEdit?`productId=${encodeURIComponent(row.productId)}`:`q=${encodeURIComponent(row.sku||row.name)}`}`);const product=(list||[]).find(x=>x.id===row.productId);if(!product)throw new Error("Δεν βρέθηκε η καρτέλα είδους.");
       const details=await api(`/api/owner-products/${row.productId}/details`);
       if(token!==newCardGeneration.current||cardScopeRef.current!==selectedStore)return;
       const purchaseSupplier=details.latestSupplier||(details.purchases||[]).find(x=>x.supplierId)||null;
@@ -238,7 +224,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
       const existingSupplierCodes=(details.supplierCodes||[]).map(x=>({supplierId:x.supplierId,supplierCode:x.supplierCode||""}));
       const inferredSupplier=(details.suppliers||[]).find(x=>normalizedName(x.name)===normalizedName(supplierName));
       const supplierCodes=operatorMode&&!can("edit")?existingSupplierCodes:existingSupplierCodes.length?existingSupplierCodes:(purchaseSupplier?.supplierId?[{supplierId:purchaseSupplier.supplierId,supplierCode:""}]:(inferredSupplier?[{supplierId:inferredSupplier.id,supplierCode:""}]:[]));
-      const local=product.stores?.find(s=>s.storeId===storeId),cost=Number(product.costPrice||0),sale=Number(local?.salePrice??product.salePrice??0),metrics=priceMetrics(cost,sale);setEdit({product,draft:{name:product.name||"",sku:product.sku||"",description:product.description||"",categoryId:product.categoryId||"",subcategoryId:product.subcategoryId||"",categoryName:product.categoryName||"",subcategoryName:product.subcategoryName||"",productCompanyName:product.productCompanyName||"",supplierName,unit:product.unit||"PIECE",costPrice:String(cost),salePrice:String(sale),margin:metrics.margin.toFixed(2),markup:metrics.markup.toFixed(2),staffPrice:product.staffPrice==null?"":String(Number(product.staffPrice)),deliveryPrice:product.deliveryPrice==null?"":String(Number(product.deliveryPrice)),minOrderQuantity:product.minOrderQuantity==null?"":String(Number(product.minOrderQuantity)),capacity:product.capacity==null?"":String(Number(product.capacity)),vatRate:String(Number(product.vatRate||0)),vatDepartmentId:product.vatDepartmentId||"",vatVerified:Boolean(product.vatVerified),trackStock:product.trackStock!==false,active:(operatorMode?local?.active:product.active)!==false,allowDiscount:product.allowDiscount!==false,allowPosPriceChange:Boolean(product.allowPosPriceChange),freeSalePrice:Boolean(product.freeSalePrice),negativeStockWarning:Boolean(product.negativeStockWarning),isSet:Boolean(product.isSet),isRecipe:Boolean(product.isRecipe),discountA:String(Number(product.discountA||0)),discountB:String(Number(product.discountB||0)),discountC:String(Number(product.discountC||0)),barcodes:(product.barcodes||[]).map(x=>({barcode:x.barcode||"",unitMultiplier:String(Number(x.unitMultiplier||1)),salePrice:x.salePrice==null?"":String(Number(x.salePrice)),name:x.name||"",updatedAt:x.updatedAt})),supplierCodes}});setProductDetails(details);setEditTab("basic");setEditStock(String(Number(local?.currentStock??row.currentStock??0)));setModal("edit");
+      const local=product.stores?.find(s=>s.storeId===storeId),cost=Number(product.costPrice||0),sale=Number(local?.salePrice??product.salePrice??0),metrics=priceMetrics(cost,sale);setEdit({product,draft:{name:product.name||"",sku:product.sku||"",description:product.description||"",categoryId:product.categoryId||"",subcategoryId:product.subcategoryId||"",categoryName:product.categoryName||"",subcategoryName:product.subcategoryName||"",productCompanyName:product.productCompanyName||"",supplierName,unit:product.unit||"PIECE",costPrice:String(cost),salePrice:String(sale),margin:metrics.margin.toFixed(2),markup:metrics.markup.toFixed(2),staffPrice:product.staffPrice==null?"":String(Number(product.staffPrice)),deliveryPrice:product.deliveryPrice==null?"":String(Number(product.deliveryPrice)),minOrderQuantity:product.minOrderQuantity==null?"":String(Number(product.minOrderQuantity)),capacity:product.capacity==null?"":String(Number(product.capacity)),vatRate:String(Number(product.vatRate||0)),vatDepartmentId:product.vatDepartmentId||"",vatVerified:Boolean(product.vatVerified),trackStock:product.trackStock!==false,active:((operatorMode||staffCardEdit)?local?.active:product.active)!==false,allowDiscount:product.allowDiscount!==false,allowPosPriceChange:Boolean(product.allowPosPriceChange),freeSalePrice:Boolean(product.freeSalePrice),negativeStockWarning:Boolean(product.negativeStockWarning),isSet:Boolean(product.isSet),isRecipe:Boolean(product.isRecipe),discountA:String(Number(product.discountA||0)),discountB:String(Number(product.discountB||0)),discountC:String(Number(product.discountC||0)),barcodes:(product.barcodes||[]).map(x=>({barcode:x.barcode||"",unitMultiplier:String(Number(x.unitMultiplier||1)),salePrice:x.salePrice==null?"":String(Number(x.salePrice)),name:x.name||"",updatedAt:x.updatedAt})),supplierCodes}});setProductDetails(details);setEditTab("basic");setEditStock(String(Number(local?.currentStock??row.currentStock??0)));setModal("edit");
     }catch(e){setError(e.message)}finally{setLoading(false)}
   };
   useEffect(()=>{
@@ -267,7 +253,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
       const base=Number(edit.draft.salePrice||0);const product=edit.product;const storesPayload=(product.stores||[]).map(s=>({storeId:s.storeId,active:s.storeId===storeId?edit.draft.active:s.active!==false,salePrice:s.storeId===storeId?base:Number(s.salePrice??product.salePrice??0),minStock:s.minStock===null||s.minStock===undefined?null:Number(s.minStock)}));
       if(!storesPayload.some(s=>s.storeId===storeId))storesPayload.push({storeId,active:edit.draft.active,salePrice:base,minStock:null});
       await api(`/api/owner-products/${product.id}/card`,{method:"PATCH",body:JSON.stringify({...edit.draft,expectedBarcodeIds:(product.barcodes||[]).map(row=>row.id),categoryId:edit.draft.categoryId||null,subcategoryId:edit.draft.subcategoryId||null,costPrice:Number(edit.draft.costPrice||0),salePrice:base,staffPrice:edit.draft.staffPrice===""?null:Number(edit.draft.staffPrice),deliveryPrice:edit.draft.deliveryPrice===""?null:Number(edit.draft.deliveryPrice),minOrderQuantity:edit.draft.minOrderQuantity===""?null:Number(edit.draft.minOrderQuantity),capacity:edit.draft.capacity===""?null:Number(edit.draft.capacity),discountA:Number(edit.draft.discountA||0),discountB:Number(edit.draft.discountB||0),discountC:Number(edit.draft.discountC||0),vatRate:Number(edit.draft.vatRate||0),barcodes:edit.draft.barcodes.filter(x=>x.barcode.trim()).map(x=>({barcode:x.barcode.trim(),unitMultiplier:Number(x.unitMultiplier||1),salePrice:x.salePrice===""?null:Number(x.salePrice),name:x.name||null})),supplierCodes:edit.draft.supplierCodes.filter(x=>x.supplierId).map(x=>({supplierId:x.supplierId,supplierCode:x.supplierCode.trim()})),stores:storesPayload})});
-      const current=data.items.find(r=>r.productId===product.id)?.currentStock??0;if(!operatorMode&&Number(editStock)!==Number(current))await api(`/api/owner-products/${product.id}/stock-adjustment`,{method:"POST",body:JSON.stringify({storeId,mode:"SET",quantity:Number(editStock||0),logMovement:true})});
+      const current=product.stores?.find(s=>s.storeId===storeId)?.currentStock??data.items.find(r=>r.productId===product.id)?.currentStock??0;if(!operatorMode&&Number(editStock)!==Number(current))await api(`/api/owner-products/${product.id}/stock-adjustment`,{method:"POST",body:JSON.stringify({storeId,mode:"SET",quantity:Number(editStock||0),logMovement:true})});
       window.dispatchEvent(new CustomEvent("mws:owner-products-refresh",{detail:{productId:product.id}}));
       setModal(null);setEdit(null);setMessage("Η καρτέλα είδους αποθηκεύτηκε.");await load();
     }catch(e){setError(e.message)}finally{setLoading(false)}
@@ -333,29 +319,6 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
 
 
 
-    {modal==="staff-card"&&staffCard&&<Modal title="Καρτέλα είδους" onClose={()=>!loading&&setModal(null)}>
-      <form className="ia-form-grid" onSubmit={async event=>{
-        event.preventDefault();
-        if(loading)return;
-        const selectedStore=storeId;
-        const {id,name,description,salePrice}=staffCard;
-        setLoading(true);setError("");
-        try{
-          await api(`/api/owner-products/${encodeURIComponent(id)}/staff-card`,{method:"PATCH",body:JSON.stringify({name,description,salePrice:Number(salePrice)})});
-          if(cardScopeRef.current!==selectedStore)return;
-          setModal(null);await load();setMessage("Η καρτέλα αποθηκεύτηκε.");
-        }catch(e){if(cardScopeRef.current===selectedStore)setError(e.message)}
-        finally{if(cardScopeRef.current===selectedStore)setLoading(false)}
-      }}>
-        {error&&<p role="alert">{error}</p>}
-        <label>Εσωτερικός κωδικός<input readOnly value={staffCard.sku||""}/></label>
-        <label>Όνομα<input required minLength={2} maxLength={250} readOnly={!staffCard.canEditIdentity} value={staffCard.name} onChange={e=>setStaffCard({...staffCard,name:e.target.value})}/></label>
-        <label>Περιγραφή<input maxLength={1000} readOnly={!staffCard.canEditIdentity} value={staffCard.description} onChange={e=>setStaffCard({...staffCard,description:e.target.value})}/></label>
-        <label>Λιανική καταστήματος<input type="number" min="0" max="1000000" step="0.01" required value={staffCard.salePrice} onChange={e=>setStaffCard({...staffCard,salePrice:e.target.value})}/></label>
-        {!staffCard.canEditIdentity&&<p>Η περιγραφή κοινής καρτέλας αλλάζει από την Κεντρική Διαχείριση.</p>}
-        <button type="submit" disabled={loading}>Αποθήκευση</button>
-      </form>
-    </Modal>}
     {duplicates && modal!=="merge" && <Modal title="Έλεγχος διπλοεγγραφών" wide onClose={() => {
       duplicateRequest.current++;
       setDuplicates(null);

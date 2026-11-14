@@ -15,7 +15,7 @@ import {readInventoryNewCardOptions} from "../lib/inventory-new-card-options.js"
 export function createOwnerProductActionsRouter({db=prisma,scope=null}={}){
 const prisma=db;
 const scopedStoreId=scope?.storeId||null;
-const requireCompanyModule=key=>scope?.kind==='POS_INVENTORY'?(_req,_res,next)=>next():defaultRequireCompanyModule(key);
+const requireCompanyModule=key=>scope?(_req,_res,next)=>next():defaultRequireCompanyModule(key);
 const router=Router();
 const uid=()=>crypto.randomUUID();
 const companyId=req=>req.user?.companyId||null;
