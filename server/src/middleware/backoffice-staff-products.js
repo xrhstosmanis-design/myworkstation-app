@@ -1,4 +1,10 @@
-import {z} from 'zod';
+import {staffRequestCapability} from '../../../shared/backoffice-staff.mjs';
+import {Router} from 'express';
+import {createOwnerProductsRouter} from '../routes/owner-products.js';
+import {createOwnerProductCompositionsRouter} from '../routes/owner-product-compositions.js';
+import {createOwnerProductActionsRouter} from '../routes/owner-product-actions.js';
+import {inventoryTransactionDb,invokeInventoryRouter} from '../routes/pos-operator-inventory.js';
+import {assertInventoryObjects,assertInventoryPayload} from '../services/pos-inventory-access.js';
 import {requireStaffAction,staffError} from '../services/backoffice-staff-access.js';
 import {prisma} from '../prisma.js';
 import {createInventoryCard} from '../lib/inventory-new-card.js';
@@ -10,37 +16,35 @@ import {readInventoryNewCardOptions} from '../lib/inventory-new-card-options.js'
 // both canonical services recheck current grant/session/licence themselves.
 export function createStaffProductBridge(db){
   return async(req,res,next)=>{
-    const match=req.path.match(/^\/([^/]+)\/staff-card$/);
-    if(req.user?.staffAccess===true&&match&&req.staffGrant?.capability==='products.edit'){
+    if(req.user?.staffAccess===true&&req.staffGrant?.capability==='products.edit'){
       try{
-        const productId=decodeURIComponent(match[1]);
         const {companyId,storeId}=req.user;
-        const read=async tx=>(await tx.$queryRaw`
-          SELECT p."id",p."name",p."description",p."sku",
-            COALESCE(sp."salePrice",p."salePrice",0)::float8 AS "salePrice",
-            NOT EXISTS (SELECT 1 FROM "StoreProduct" other WHERE other."productId"=p."id" AND other."storeId"<>${storeId}) AS "canEditIdentity"
-          FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id"
-          WHERE p."id"=${productId} AND p."companyId"=${companyId} AND sp."storeId"=${storeId}
-        `)[0];
-        const found=await db.$transaction(async tx=>{
+        const scope={kind:'STAFF_PRODUCT_CARD',companyId,storeId,schemaReady:true,capabilities:{edit:true,prices:true,barcodes:true}};
+        const path=req.path;
+        if(staffRequestCapability(req.method,`/api/owner-products${path}`)!=='products.edit')throw staffError();
+        const productId=path==='/catalog'?null:decodeURIComponent(path.split('/')[1]);
+        if(path==='/catalog'&&!req.query.productId)return res.status(400).json({error:'Επίλεξε είδος.'});
+        const write=req.method!=='GET';
+        const composition=/\/(?:composition|set-items|recipe-items)(?:\/|$)/.test(path);
+        const stock=path.endsWith('/stock-adjustment');
+        const result=await db.$transaction(async raw=>{
+          const tx=inventoryTransactionDb(raw);
           await requireStaffAction(tx,req,storeId,'products.edit');
-          if(req.method==='PATCH'){
-            const body=z.object({name:z.string().trim().min(2).max(250),description:z.string().trim().max(1000),salePrice:z.number().finite().min(0).max(1000000)}).strict().parse(req.body);
-            await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${productId} AND "companyId"=${companyId} FOR UPDATE`;
-            const current=await read(tx);
-            if(!current)return null;
-            if(body.name!==current.name||body.description!==(current.description||'')){
-              if(!current.canEditIdentity)throw staffError(409,'STAFF_SHARED_PRODUCT','Η περιγραφή κοινής καρτέλας αλλάζει από την Κεντρική Διαχείριση.');
-              await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"description"=${body.description},"updatedAt"=NOW() WHERE "id"=${productId} AND "companyId"=${companyId}`;
-            }
-            if(body.salePrice!==current.salePrice){
-              await tx.$executeRaw`UPDATE "StoreProduct" SET "salePrice"=${body.salePrice},"updatedAt"=NOW() WHERE "productId"=${productId} AND "storeId"=${storeId}`;
-            }
-          }
-          return read(tx);
+          assertInventoryPayload(scope,{kind:'staff-card'},req.query,req.body);
+          if(stock&&(req.body?.storeId!==storeId||req.body?.mode!=='SET'||req.body?.logMovement!==true))throw staffError();
+          if(productId)await assertInventoryObjects(tx,scope,[...new Set([productId,req.body?.relatedProductId,req.body?.ingredientProductId].filter(Boolean))],{lock:write});
+          const delegated=Router();
+          const factory=composition?createOwnerProductCompositionsRouter:stock?createOwnerProductActionsRouter:createOwnerProductsRouter;
+          delegated.use(factory({db:tx,scope}));
+          const child=Object.create(req);
+          child.url=req.url;child.originalUrl=req.originalUrl;child.baseUrl=req.baseUrl;child.params={};
+          return invokeInventoryRouter(delegated,child);
         },{isolationLevel:'Serializable'});
-        return found?res.json(found):res.status(404).json({error:'Δεν βρέθηκε είδος στο επιλεγμένο κατάστημα.'});
-      }catch(error){return next(error)}
+        return res.status(result.status).json(result.data);
+      }catch(error){
+        if(error.inventoryResponse)return res.status(error.inventoryResponse.status).json(error.inventoryResponse.data);
+        return next(error);
+      }
     }
     if(req.user?.staffAccess!==true||req.staffGrant?.capability!=='products.create')return res.status(403).json({error:'Δεν υπάρχει δικαίωμα δημιουργίας είδους.'});
     try{
