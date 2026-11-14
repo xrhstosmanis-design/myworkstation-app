@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {staffProfiles,staffPermissionSections,changeStaffCapability} from '../../../shared/backoffice-staff.mjs';
+import {staffProfiles,staffCapabilities,staffPermissionSections,changeStaffCapability} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
 const OperatorManagementPanel=React.lazy(()=>import('./commerce/OperatorManagementPanel.jsx'));
 export default function BackofficeStaffAdmin({api}){
@@ -12,6 +12,8 @@ export default function BackofficeStaffAdmin({api}){
   const toggleStore=(storeId,on)=>setGrants(rows=>on?[...rows,{storeId,profile:'STOCKTAKER',capabilities:[]}]:rows.filter(r=>r.storeId!==storeId));
   const changeProfile=(storeId,profile)=>setGrants(rows=>rows.map(r=>r.storeId===storeId?{...r,profile}:r));
   const applyProfile=storeId=>setGrants(rows=>rows.map(r=>r.storeId===storeId?{...r,capabilities:[...staffProfiles[r.profile].capabilities]}:r));
+  const selectStoreCapabilities=(storeId,enabled)=>setGrants(rows=>rows.map(row=>
+    row.storeId===storeId?{...row,capabilities:enabled?[...staffCapabilities]:[]}:row));
   const toggleCapability=(storeId,cap,on)=>setGrants(rows=>rows.map(r=>{
     if(r.storeId!==storeId)return r;
     return {...r,capabilities:changeStaffCapability(r.capabilities,cap,on)};
@@ -42,7 +44,7 @@ export default function BackofficeStaffAdmin({api}){
       {edit.id&&<label className="staff-check"><input name="active" type="checkbox" defaultChecked={edit.active}/>Ενεργός λογαριασμός</label>}
       <fieldset><legend>Καταστήματα και δικαιώματα</legend><p>Επίλεξε κατάστημα και τα δικαιώματα που θέλεις να δώσεις. Κατάστημα χωρίς επιλεγμένα δικαιώματα δεν επιτρέπει λειτουργίες.</p>{data.stores.map(s=>{
         const grant=grants.find(g=>g.storeId===s.id);
-        return <div key={s.id} className="staff-grant"><label className="staff-check"><input type="checkbox" checked={Boolean(grant)} onChange={e=>toggleStore(s.id,e.target.checked)}/>{s.name}</label>{grant&&<><div className="staff-role-row"><label>Ρόλος<select value={grant.profile} onChange={e=>changeProfile(s.id,e.target.value)}>{Object.entries(staffProfiles).map(([key,p])=><option key={key} value={key}>{p.label}</option>)}</select></label><button type="button" onClick={()=>applyProfile(s.id)}>Εφαρμογή προτεινόμενων δικαιωμάτων ρόλου</button></div><div className="staff-permission-matrix">{staffPermissionSections.map(section=><fieldset key={section.key}><legend>{section.label}</legend>{section.actions.map(action=><label key={action.key} className="staff-check"><input type="checkbox" aria-label={`${s.name}: ${section.label} — ${action.label}`} checked={grant.capabilities.includes(action.key)} onChange={e=>toggleCapability(s.id,action.key,e.target.checked)}/><span><b>{action.label}</b><small>{action.description}</small></span></label>)}</fieldset>)}</div><p className="staff-permission-summary">{grant.capabilities.length?`${grant.capabilities.length} επιλεγμένα δικαιώματα`:'Καμία λειτουργία επιλεγμένη'}</p></>}
+        return <div key={s.id} className="staff-grant"><label className="staff-check"><input type="checkbox" checked={Boolean(grant)} onChange={e=>toggleStore(s.id,e.target.checked)}/>{s.name}</label>{grant&&<><div className="staff-role-row"><label>Ρόλος<select value={grant.profile} onChange={e=>changeProfile(s.id,e.target.value)}>{Object.entries(staffProfiles).map(([key,p])=><option key={key} value={key}>{p.label}</option>)}</select></label><button type="button" onClick={()=>applyProfile(s.id)}>Εφαρμογή προτεινόμενων δικαιωμάτων ρόλου</button></div><div className="staff-actions"><button type="button" disabled={busy||grant.capabilities.length===staffCapabilities.length} onClick={()=>selectStoreCapabilities(s.id,true)}>Επιλογή όλων των διαθέσιμων δικαιωμάτων</button><button type="button" disabled={busy||!grant.capabilities.length} onClick={()=>selectStoreCapabilities(s.id,false)}>Καθαρισμός επιλογών</button></div><div className="staff-permission-matrix">{staffPermissionSections.map(section=><fieldset key={section.key}><legend>{section.label}</legend>{section.actions.map(action=><label key={action.key} className="staff-check"><input type="checkbox" aria-label={`${s.name}: ${section.label} — ${action.label}`} checked={grant.capabilities.includes(action.key)} onChange={e=>toggleCapability(s.id,action.key,e.target.checked)}/><span><b>{action.label}</b><small>{action.description}</small></span></label>)}</fieldset>)}</div><p className="staff-permission-summary">{grant.capabilities.length?`${grant.capabilities.length} επιλεγμένα δικαιώματα`:'Καμία λειτουργία επιλεγμένη'}</p></>}
         </div>;
       })}</fieldset><div className="staff-actions"><button disabled={busy}>{busy?'Αποθήκευση…':'Αποθήκευση πρόσβασης'}</button><button type="button" disabled={busy} onClick={()=>setEdit(null)}>Ακύρωση</button></div>
     </form>}
