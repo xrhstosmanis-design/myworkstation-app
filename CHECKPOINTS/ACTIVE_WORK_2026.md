@@ -215,3 +215,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ## 2026-11-14 — Τμήμα ΦΠΑ και Margin στην Αποθήκη POS
 
 [Checkpoint](CHANGES/2026-11-14-pos-warehouse-vat-margin.md).
+
+- 2026-11-14 · Ημερήσια μεταβολή τζίρου Διαδόχου στον Βοηθό και στη μηνιαία αναφορά · branch `feat/monthly-turnover-report` · NOT TESTED στο LAB. [Checkpoint](CHANGES/2026-11-14-monthly-turnover-report.md)

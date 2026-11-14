@@ -1,3 +1,4 @@
+import {dailyTurnoverAnswer} from './daily-turnover-report.js';
 import {createHash} from "node:crypto";
 import {reconcileDeliverySlot} from "./automatic-report-delivery-lifecycle.js";
 import {automaticReviewedMailText} from "./automatic-report-cash-payload.js";
@@ -106,7 +107,13 @@ export function createAutomaticReportMailAdapter({startAttempt,sendMail}){
     // The injected transport owns its timeout; any uncertainty is terminal.
     try{
       const content=JSON.parse(args.payload.body);
-      const result=await sendMail(Object.freeze({to:r.input.recipient,subject:`ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ · ${r.input.frequency} · ${r.input.periodFrom} — ${r.input.periodTo}`,text:Object.hasOwn(content,'reviewedCash')?automaticReviewedMailText(content):args.payload.body}));
+      const cashText = Object.hasOwn(content,'reviewedCash') ? automaticReviewedMailText(content) : args.payload.body;
+      const turnover = content.dailyTurnover ? dailyTurnoverAnswer(content.dailyTurnover, content.storeName) : null;
+      const text = turnover
+        ? [turnover.answer, ...turnover.highlights, turnover.limitations, cashText].join("\n\n")
+        : cashText;
+      const subject = `ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ${turnover ? ' ΚΑΙ ΤΖΙΡΟΥ' : ''} · ${r.input.frequency} · ${r.input.periodFrom} — ${r.input.periodTo}`;
+      const result=await sendMail(Object.freeze({to:r.input.recipient,subject,text}));
       return evidence(result,r.input.recipient);
     }catch{return unknown("TRANSPORT_UNCERTAIN")}
   }});
