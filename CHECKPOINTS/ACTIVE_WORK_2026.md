@@ -6,6 +6,7 @@
 
 | Προτεραιότητα | Εργασία | Υπεύθυνος | PR / issue | Τρέχουσα κατάσταση | Επόμενο βήμα |
 | --- | --- | --- | --- | --- | --- |
+| 1 | SERVER-PERFORMANCE-01 / Polling, SQL, API latency | Συντονιστής | #3827 (draft) | [Candidate](CHANGES/2026-11-11-server-performance.md) · CI PENDING · LAB NOT TESTED · indexes NOT APPLIED | Πλήρες CI, υπάρχον LAB, έγκριση πριν merge/SQL παραγωγής |
 | 1 | Προσθήκη γραμμής από υπεύθυνο | /root | #3828 | Ενεργό στο Render · LAB PASS για προσθήκη σε πρόχειρο | [Αποτέλεσμα δοκιμής](CHANGES/2026-11-12-staff-invoice-add-line.md) |
 | 1 | POS-MYDATA-QR-LEARNING-01 | Ενεργός χειρισμός τιμολογίων POS / myDATA | #3823 | [Κεντρική εκμάθηση επαληθευμένου QR ανά εταιρεία, ΑΦΜ προμηθευτή και τύπο παρόχου](CHANGES/2026-11-11-pos-mydata-qr-learning.md) · source candidate, όχι εγκατεστημένο / LAB NOT TESTED | Πλήρες CI, επαλήθευση στο υπάρχον LAB και δοκιμή πραγματικού scanner χωρίς νέα πληρωμή |\n| 1 | Επιμερισμός ΕΦΚ ανά τεμάχιο | Τιμολόγια προμηθευτών | #3820 | [Τοπικός έλεγχος προεπισκόπησης, καταχώρισης και περιθωρίου](CHANGES/2026-11-11-invoice-excise-per-piece.md) | Πλήρες CI και φιλοξενούμενη δοκιμή |
 | 0 | POS shift close with invoice draft recovery | Current POS work | — | [Local candidate](CHANGES/2026-11-10-pos-shift-invoice-draft-guard.md), focused 19 PASS and isolated native PostgreSQL 24 PASS | CI and existing LAB validation |
@@ -208,6 +209,12 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 [Checkpoint](CHANGES/2026-11-14-front-pos-warehouse-merge.md).
 
-| 1 | SERVER-PERFORMANCE-01 / Polling, SQL, API latency | Συντονιστής | #3827 (draft) | [Candidate](CHANGES/2026-11-11-server-performance.md) · CI PENDING · LAB NOT TESTED · indexes NOT APPLIED | Πλήρες CI, υπάρχον LAB, έγκριση πριν merge/SQL παραγωγής |
+## 2026-11-14 — Κουμπί φίλτρων στην Αποθήκη POS
 
-| Κοινός κανόνας #3860 | Ενσωμάτωση στο main και μία καταγραφή από κάθε ομάδα στο ενεργό μητρώο | Ο κανόνας συγχωνεύτηκε στο main με `b0855031`. Εκκρεμεί μία καταγραφή από κάθε ομάδα. |
+[Checkpoint](CHANGES/2026-11-14-front-pos-filter-button.md).
+
+## 2026-11-14 — Τμήμα ΦΠΑ και Margin στην Αποθήκη POS
+
+[Checkpoint](CHANGES/2026-11-14-pos-warehouse-vat-margin.md).
+
+- #3827 · Η διόρθωση του ελέγχου FAST POS για τυχαίο UUID επαληθεύτηκε με 4 στοχευμένους ελέγχους. Εκκρεμούν CI μετά τον συγχρονισμό και φιλοξενούμενη δοκιμή LAB.
