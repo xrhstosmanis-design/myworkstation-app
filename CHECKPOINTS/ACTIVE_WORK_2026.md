@@ -210,3 +210,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 14/11/2026 · #3864, Αποθήκη μπροστά στο POS: merged. CI 9847 success. Το Render δείχνει live το `89acd047`. Εκκρεμεί hosted έλεγχος με ρόλο χειριστή.
 
 - 14/11/2026 · Μπροστινό POS #3865: ξεχωριστό δικαίωμα χειριστή για συγχώνευση διπλοεγγραφών και προσαρμογή της διάταξης φίλτρων. Το `86b9cf56` ενημέρωσε τον έλεγχο από 27 σε 28 δικαιώματα. Στο [CI #9850](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43584315038) το απομονωμένο LAB απέτυχε αρχικά με Docker Hub 502 για `node:20-bookworm`. Διαπιστώθηκε επανεκτέλεση σε εξέλιξη. Εκκρεμούν τελικό αποτέλεσμα και δοκιμή με χειριστή.
+
+- #3865 · Η επανεκτέλεση [CI #9850](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43584315038) ολοκληρώθηκε επιτυχώς (5/5) στο `86b9cf56`. Τα φίλτρα και η συγχώνευση με ξεχωριστό δικαίωμα χειριστή εκκρεμούν για δοκιμή στο μπροστινό POS. Το PR παραμένει draft.
