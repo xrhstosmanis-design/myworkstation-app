@@ -319,3 +319,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - #3827 · CloudAudit: 11,4–12,5 ms για το ερώτημα του Backoffice με φίλτρο LAB, με Seq Scan. FTEXT: 0 εγγραφές LAB. Τα ευρετήρια παραμένουν ανεφάρμοστα στην κοινή βάση. Μέτρηση πριν/μετά την εγκατάσταση βρίσκεται εκτός της οδηγίας για δοκιμές μόνο στο υπάρχον LAB.
 
 - 2026-11-14 · Κουμπί αποστολής τζίρου LAB · [Checkpoint](CHANGES/2026-11-14-lab-turnover-mail-ui.md)
+
+- 2026-11-15 · Αναγνώριση συνεδρίας Super Admin για δοκιμή τζίρου LAB · [Checkpoint](CHANGES/2026-11-15-lab-turnover-session.md)
