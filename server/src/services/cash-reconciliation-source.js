@@ -98,5 +98,5 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
       original.fullEvidence={duplicates:await readCashReviewEvidence(db,{...original.session,sessionId:id},{includeChat:false}),events:await readFullCashEventEvidence(db,scope,original.session,original.automaticTransactions||[])};
     }
   }
-  return {store:stores,rule,sessions,selectedIds,period,byOpening:scope.cashEmailByOpening===true,coverage:'BOUNDED_CLOSED_SHIFTS',limit:cashReconciliationSourceLimit,...(paperEvidence?{paperEvidence}:{})};
+  return {store:stores,rule,sessions,selectedIds,period,...(scope.cashEmailByOpening===true?{byOpening:true}:{}),coverage:'BOUNDED_CLOSED_SHIFTS',limit:cashReconciliationSourceLimit,...(paperEvidence?{paperEvidence}:{})};
 }
