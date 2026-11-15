@@ -66,7 +66,7 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
   const stores=await db.store.findUnique({where:{id:scope.storeId},select:{id:true,companyId:true,name:true}});
   if(!stores||stores.companyId!==scope.companyId)throw reconcileError('CASH_RECONCILIATION_NOT_FOUND',404);
   const rule=await readCashControlRule(db,stores);
-  const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND ("closedAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date ORDER BY "closedAt","id" LIMIT 201`;
+  const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND ((CASE WHEN ${scope.cashEmailByOpening===true} THEN "openedAt" ELSE "closedAt" END) AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date ORDER BY "closedAt","id" LIMIT 201`;
   if(rows.length>cashReconciliationSourceLimit)throw reconcileError('CASH_RECONCILIATION_LIMIT');
   const selectedIds=rows.map(r=>r.id),ids=[...new Set([...selectedIds,...extraIds])];
   if(ids.length>500||selectedIds.some(id=>typeof id!=='string')||new Set(selectedIds).size!==selectedIds.length)throw reconcileError('CASH_RECONCILIATION_LIMIT');
@@ -98,5 +98,5 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
       original.fullEvidence={duplicates:await readCashReviewEvidence(db,{...original.session,sessionId:id},{includeChat:false}),events:await readFullCashEventEvidence(db,scope,original.session,original.automaticTransactions||[])};
     }
   }
-  return {store:stores,rule,sessions,selectedIds,period,coverage:'BOUNDED_CLOSED_SHIFTS',limit:cashReconciliationSourceLimit,...(paperEvidence?{paperEvidence}:{})};
+  return {store:stores,rule,sessions,selectedIds,period,byOpening:scope.cashEmailByOpening===true,coverage:'BOUNDED_CLOSED_SHIFTS',limit:cashReconciliationSourceLimit,...(paperEvidence?{paperEvidence}:{})};
 }
