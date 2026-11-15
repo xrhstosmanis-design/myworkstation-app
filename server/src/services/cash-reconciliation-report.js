@@ -66,7 +66,8 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     row.status=source.rule.mode==='POS_EFTPOS_ONLY'?'NOT_APPLICABLE':row.recheck?'RECHECK_REQUIRED':needsNext&&!row.nextClosed?'AWAITING_NEXT_SHIFT':row.reviewed?'REVIEWED':'AWAITING_REVIEW';
     row.reviewedBy=row.reviewed?lastConfirmation.actorName:null;
     row.reviewNote=row.reviewed?lastConfirmation.data.note||null:null;
-    row.day=row.closedAt?cashReportRowDay(row.closedAt):null;
+    const reportTimestamp=source.byOpening?row.openedAt:row.closedAt;
+    row.day=reportTimestamp?cashReportRowDay(reportTimestamp):null;
     row.expenseFindings=original.expenseFindings||[];
     if(original.netlinkEvidence!==undefined)row.netlinkEvidence=original.netlinkEvidence;
     if(original.eventSales)row.eventSales=original.eventSales;
@@ -76,7 +77,7 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   }
   const selected=source.selectedIds.map(id=>rows.get(id));
   const sourceReportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.automaticAudit?{automaticAudit:r.automaticAudit}:{}),...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{}),...(r.netlinkEvidence!==undefined?{netlinkEvidence:r.netlinkEvidence}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
-  const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
+  const checkpoint=source.byOpening?null:[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
   const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
   for(const r of rows.values()){
