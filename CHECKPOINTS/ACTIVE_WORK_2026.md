@@ -330,3 +330,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - INSTALL-SUPPORT · #3209, εξαγωγή καρτέλας PDF/XLSX OPEN, LAB NOT TESTED. Ελέγχθηκε η καρτέλα και εντοπίστηκαν οι υπάρχουσες βιβλιοθήκες PDFKit και XLSX. Επόμενο βήμα καταχώριση ανάθεσης στο main. [Checkpoint](CHANGES/2026-11-15-lista-selides-1-handoff.md).
 
 - 2026-11-15 · Manual cash email opening day, follow-up to #3875 · [Checkpoint](CHANGES/2026-11-15-manual-cash-email-opening-day.md) · LAB pending.
+
+- 2026-11-15 · BackOffice τιμολόγηση με όλα τα είδη στην αποθήκη · [Checkpoint](CHANGES/2026-11-15-backoffice-invoice-stock-selection.md).
