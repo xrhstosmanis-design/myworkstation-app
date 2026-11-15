@@ -40,6 +40,14 @@ async function transferTotals(db, transferId) {
   return totals;
 }
 
+async function auditTransfer(db, user, storeId, eventType, details) {
+  await db.$executeRaw`
+    INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+    VALUES (${randomUUID()},${user.companyId},${storeId},${user.operatorId || user.id},${user.id},
+            ${eventType},${JSON.stringify({ actorName: user.fullName, terminalPos: user.terminalPos, ...details })}::jsonb)
+  `;
+}
+
 const transferPath = "/stores/:storeId/internal-transfers";
 
 function canAccessStore(user, storeId) {
@@ -207,6 +215,18 @@ router.post([transferPath, transferPath + "/quote"], async (req, res, next) => {
       if (totals.payable !== parsed.data.expectedPayable) {
         throw conflict("Η αξία άλλαξε. Υπολόγισε ξανά το πληρωτέο πριν από την καταχώριση.");
       }
+      const event = {
+        transferId, sourceStoreId, destinationStoreId, externalDestinationName,
+        ...totals, amount: totals.payable,
+        items: items.map(item => {
+          const product = byId.get(item.productId);
+          return { ...item, name: product.name, unitPrice: product.costPrice, vatRate: product.vatRate };
+        }),
+      };
+      await auditTransfer(tx, req.user, sourceStoreId, "POS_TRANSFER_CREDIT_CREATED", event);
+      if (destinationStoreId) {
+        await auditTransfer(tx, req.user, destinationStoreId, "POS_TRANSFER_STOCK_RECEIVED", event);
+      }
       return { transferId, duplicate: false, ...totals };
     });
     res.status(quoteOnly || result.duplicate ? 200 : 201).json(result);
@@ -274,6 +294,10 @@ router.post([
         VALUES (${transferId},${method},${totals.payable}::numeric,${bankReference},${req.user.id})
         RETURNING "method", "amount"::text AS "amount", "bankReference"
       `;
+      const details = { transferId, sourceStoreId: transfer.sourceStoreId, destinationStoreId: transfer.destinationStoreId, ...recorded };
+      await auditTransfer(tx, req.user, storeId, "POS_TRANSFER_SETTLED", details);
+      const otherStore = storeId === transfer.sourceStoreId ? transfer.destinationStoreId : transfer.sourceStoreId;
+      if (otherStore) await auditTransfer(tx, req.user, otherStore, "POS_TRANSFER_SETTLED", details);
       return recorded;
     });
     if (!settlement) return res.status(404).json({ error: "Δεν βρέθηκε η διακίνηση." });
@@ -342,6 +366,9 @@ router.post(transferPath + "/:transferId/cash-receipt", async (req, res, next) =
         UPDATE "PosInternalTransferSettlement" SET "cashReceiptTransactionId" = ${transaction.id}
         WHERE "transferId" = ${transferId}
       `;
+      await auditTransfer(tx, req.user, storeId, "POS_TRANSFER_CASH_RECEIVED", {
+        transferId, transactionId: transaction.id, amount: settlement.amount, sessionId: session.id, terminalPos,
+      });
       return { transactionId: transaction.id, duplicate: false };
     });
     if (!result) return res.status(404).json({ error: "Δεν βρέθηκε εξόφληση για τη διακίνηση." });
@@ -401,11 +428,14 @@ router.post(transferPath + "/:transferId/email", async (req, res, next) => {
       FROM net_lines ORDER BY "name", "sku"
     `;
     const pdf = await internalTransferPdf(transfer, lines, await transferTotals(prisma, transferId));
-    await sendEmail({
+    const delivery = await sendEmail({
       to: recipient.data, companyId: req.user.companyId, storeId,
       subject: "Εσωτερική διακίνηση προϊόντων",
       text: `Συνημμένα θα βρείτε τη διακίνηση από ${transfer.sourceName} προς ${transfer.destinationName}, με τους κωδικούς, τις ποσότητες και τις τιμές αγοράς για την καταχώρισή σας.`,
       attachments: [{ filename: `diakinisi-${transferId}.pdf`, content: pdf, contentType: "application/pdf" }],
+    });
+    await auditTransfer(prisma, req.user, storeId, "POS_TRANSFER_PDF_ACCEPTED", {
+      transferId, destinationName: transfer.destinationName, messageId: delivery.messageId,
     });
     res.json({ accepted: true });
   } catch (error) {
