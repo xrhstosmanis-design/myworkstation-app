@@ -1,3 +1,4 @@
+import {authorizePlatformAssistant} from "../services/platform-assistant-products.js";
 import {prisma} from "../prisma.js";
 import { Router } from "express";
 import { getMailStatus,sendTestEmail,sendMonthlyTurnoverTestEmail } from "../services/mail.js";
@@ -13,9 +14,17 @@ function requireSuperAdmin(req,res,next){
 
 router.use(requireSuperAdmin);
 
-const labTurnoverTestEnabled=req=>!req.user?.supportContext && req.user?.role === "SUPER_ADMIN" && process.env.MONTHLY_TURNOVER_LAB_SMTP_TEST === "true" && Boolean(process.env.MONTHLY_TURNOVER_LAB_STORE_ID);
+async function labTurnoverTestEnabled(req){
+  if(process.env.MONTHLY_TURNOVER_LAB_SMTP_TEST !== "true" || !process.env.MONTHLY_TURNOVER_LAB_STORE_ID)return false;
+  try{
+    await authorizePlatformAssistant(req,null);
+    return true;
+  }catch{
+    return false;
+  }
+}
 
-router.get("/status",(req,res)=>res.json({...getMailStatus(),labTurnoverTestEnabled:labTurnoverTestEnabled(req)}));
+router.get("/status",async(req,res)=>res.json({...getMailStatus(),labTurnoverTestEnabled:await labTurnoverTestEnabled(req)}));
 
 router.post("/test",async(req,res,next)=>{
   try{
@@ -28,7 +37,7 @@ router.post("/test",async(req,res,next)=>{
 
 router.post("/test/monthly-turnover",async(req,res)=>{
   try{
-    if(!labTurnoverTestEnabled(req)){
+    if(!await labTurnoverTestEnabled(req)){
       return res.status(403).json({error:"Η δοκιμή μηνιαίου τζίρου δεν είναι ενεργή για αυτή τη συνεδρία."});
     }
     const storeId=process.env.MONTHLY_TURNOVER_LAB_STORE_ID;
