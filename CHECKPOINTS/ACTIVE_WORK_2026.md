@@ -328,3 +328,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - Νο 12 · Η υπάρχουσα εκτέλεση επαληθεύτηκε για 16/11 09:00. Παράδοση NOT TESTED. Επόμενο βήμα διασταύρωση Message-ID.
 - INSTALL-SUPPORT · #3209, εξαγωγή καρτέλας PDF/XLSX OPEN, LAB NOT TESTED. Ελέγχθηκε η καρτέλα και εντοπίστηκαν οι υπάρχουσες βιβλιοθήκες PDFKit και XLSX. Επόμενο βήμα καταχώριση ανάθεσης στο main. [Checkpoint](CHANGES/2026-11-15-lista-selides-1-handoff.md).
+
+- 15/11/26, 8:01 μ.μ. ώρα Ελλάδας · INSTALL-SUPPORT / «Λίστα για σελίδες 1» · Εξαγωγή PDF/XLSX καρτέλας επιλεγμένου καταστήματος · LAB NOT TESTED · [Ανάληψη](CHANGES/2026-11-15-install-support-export-claim.md).
