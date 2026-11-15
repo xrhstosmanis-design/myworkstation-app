@@ -216,7 +216,7 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, onClose
       <details>
         <summary>Διακινήσεις προς εξωτερικά καταστήματα</summary>
         <ul>{externalHistory.map(row => <li key={row.id}>
-          {new Date(row.createdAt).toLocaleString("el-GR", { timeZone: "Europe/Athens" })} · {row.destinationName}
+          {new Date(row.createdAt).toLocaleString("el-GR", { timeZone: "Europe/Athens", hourCycle: "h23" })} · {row.destinationName}
           <button type="button" disabled={locked} onClick={() => {
             setMailTransferId(row.id);
             setRecipient("");

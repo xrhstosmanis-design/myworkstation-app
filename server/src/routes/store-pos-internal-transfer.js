@@ -6,7 +6,7 @@ import { prisma } from "../prisma.js";
 import { recordCashTransfer } from "../lib/store-cash-transfer.js";
 import { sendEmail } from "../services/mail.js";
 import { internalTransferPdf } from "../services/pos-internal-transfer-pdf.js";
-import { requestTerminal } from "./store-transactions.js";
+import storeTransactions from "./store-transactions.js";
 
 const router = Router();
 const transferInput = z.object({
@@ -249,7 +249,7 @@ router.post([
       }
       const totals = await transferTotals(tx, transferId);
       if (!bank && transfer.destinationStoreId && Number(totals.payable) > 0) {
-        const terminalPos = await requestTerminal(req);
+        const terminalPos = await storeTransactions.resolveTerminal(req);
         const [session] = await tx.$queryRaw`
           SELECT "id" FROM "CashShiftSession"
           WHERE "companyId" = ${req.user.companyId} AND "storeId" = ${storeId}
@@ -310,7 +310,7 @@ router.post(transferPath + "/:transferId/cash-receipt", async (req, res, next) =
       req.user.tokenType === "STORE_OPERATOR") return res.sendStatus(403);
 
   try {
-    const terminalPos = await requestTerminal(req);
+    const terminalPos = await storeTransactions.resolveTerminal(req);
     const result = await prisma.$transaction(async tx => {
       const [settlement] = await tx.$queryRaw`
         SELECT s."method", s."amount", s."cashReceiptTransactionId"

@@ -244,7 +244,7 @@ async function ownedStore(storeId,companyId){
   if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return store;
 }
-export async function requestTerminal(req){
+async function requestTerminal(req){
   const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
   if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
   if(req.user?.tokenType==="STORE_OPERATOR"){
@@ -1285,6 +1285,7 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
   res.json({...reversed,emailNotification});
 }));
 
+router.resolveTerminal = requestTerminal;
 export default router;
 
 

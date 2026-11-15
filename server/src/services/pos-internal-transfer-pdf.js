@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 const currency = new Intl.NumberFormat("el-GR", { style: "currency", currency: "EUR" });
 const unitPrice = new Intl.NumberFormat("el-GR", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 const quantity = new Intl.NumberFormat("el-GR", { maximumFractionDigits: 4 });
-const date = new Intl.DateTimeFormat("el-GR", { timeZone: "Europe/Athens", dateStyle: "short", timeStyle: "short" });
+const date = new Intl.DateTimeFormat("el-GR", { timeZone: "Europe/Athens", dateStyle: "short", timeStyle: "short", hourCycle: "h23" });
 
 export function internalTransferPdf(transfer, lines, totals) {
   const doc = new PDFDocument({ size: "A4", margin: 42, info: { Title: "Εσωτερική διακίνηση" } });
