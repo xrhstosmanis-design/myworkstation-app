@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from "react";
 import "./installation-support-profile.css";
 
-const present=value=>typeof value==="string"&&value.trim()?value.trim():"Μη καταχωρημένο";
+import {installationSupportRows, installationSupportTitle} from "../../../../shared/installation-support-profile.mjs";
 
 const guideSteps=[
   "Σημείωσε την ώρα, το τερματικό και τι ακριβώς συνέβη.",
@@ -33,8 +33,37 @@ function printGuide(){
   }catch(error){try{page?.close()}catch{}return false}
 }
 
-export default function InstallationSupportProfile({company,store,onClose}){
+export default function InstallationSupportProfile({company,store,onClose,request}){
   const closeRef=useRef(null),printRef=useRef(null),[printError,setPrintError]=useState(false);
+  const pdfRef=useRef(null),xlsxRef=useRef(null);
+  const [downloadError,setDownloadError]=useState("");
+  const [downloading,setDownloading]=useState(false);
+  const rows=company&&store?installationSupportRows(company,store):[];
+  const selection=useRef(null);
+  const selectionKey=company&&store?JSON.stringify([company.id,store.id]):null;
+  useEffect(()=>{
+    selection.current=selectionKey;
+    return ()=>{selection.current=null};
+  },[selectionKey]);
+  async function download(format){
+    setDownloading(true);
+    setDownloadError("");
+    try{
+      const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/installation-support-export/${format}`;
+      const blob=await request(path,{downloadBlob:true});
+      if(selection.current!==selectionKey)return;
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=url;
+      link.download=`installation-support.${format}`;
+      document.body.appendChild(link);
+      try{link.click()}finally{link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+    }catch(error){
+      if(selection.current===selectionKey)setDownloadError(error.message||"Η λήψη απέτυχε.");
+    }finally{
+      setDownloading(false);
+    }
+  }
   useEffect(()=>{
     const previous=document.activeElement;
     closeRef.current?.focus();
@@ -43,7 +72,7 @@ export default function InstallationSupportProfile({company,store,onClose}){
   const onKeyDown=event=>{
     if(event.key==="Escape"){event.stopPropagation();onClose();return}
     if(event.key==="Tab"){
-      const buttons=[closeRef.current,printRef.current].filter(Boolean);
+      const buttons=[closeRef.current,printRef.current,pdfRef.current,xlsxRef.current].filter(button=>button&&!button.disabled);
       if(buttons.length===1){event.preventDefault();buttons[0]?.focus();return}
       const first=buttons[0],last=buttons[buttons.length-1];
       if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
@@ -52,17 +81,21 @@ export default function InstallationSupportProfile({company,store,onClose}){
   };
   return <div className="install-support-overlay">
     <section className="install-support-profile" role="dialog" aria-modal="true" aria-labelledby="install-support-title" onKeyDown={onKeyDown}>
-      <header className="install-support-head"><div><h2 id="install-support-title">Στοιχεία υποστήριξης καταστήματος</h2><p>Προβολή διαθέσιμων στοιχείων</p></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Κλείσιμο στοιχείων υποστήριξης">Κλείσιμο</button></header>
+      <header className="install-support-head"><div><h2 id="install-support-title">{installationSupportTitle}</h2><p>Προβολή διαθέσιμων στοιχείων</p></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Κλείσιμο στοιχείων υποστήριξης">Κλείσιμο</button></header>
       {company&&store?<>
         <div className="install-support-guide"><button ref={printRef} type="button" onClick={()=>setPrintError(!printGuide())}>Εκτύπωση οδηγού βλάβης</button>{printError&&<p role="alert">Δεν άνοιξε η εκτύπωση. Επίτρεψε τα αναδυόμενα παράθυρα και προσπάθησε ξανά.</p>}</div>
+        <div className="install-support-guide">
+          <button ref={pdfRef} type="button" disabled={downloading} onClick={()=>download("pdf")}>Λήψη PDF</button>
+          <button ref={xlsxRef} type="button" disabled={downloading} onClick={()=>download("xlsx")}>Λήψη Excel</button>
+          {downloadError&&<p role="alert">{downloadError}</p>}
+        </div>
         <dl className="install-support-fields">
-          <div><dt>Εταιρεία</dt><dd>{present(company.name)}</dd></div>
-          <div><dt>Κατάστημα</dt><dd>{present(store.name)}</dd></div>
-          <div><dt>Πόλη</dt><dd>{present(store.city)}</dd></div>
-          <div><dt>Διεύθυνση</dt><dd>{present(store.address)}</dd></div>
-          <div><dt>Email υπευθύνου</dt><dd>{present(store.responsibleEmail)}</dd></div>
+          {rows.slice(0,5).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
         </dl>
-        <div className="install-support-unchecked"><h3>Στοιχεία που δεν έχουν επιβεβαιωθεί εδώ</h3><dl><div><dt>Υπολογιστές και εξοπλισμός</dt><dd>Δεν έχει ελεγχθεί</dd></div><div><dt>Τεχνικός</dt><dd>Δεν έχει ελεγχθεί</dd></div><div><dt>Απομακρυσμένη σύνδεση</dt><dd>Δεν έχει ελεγχθεί</dd></div><div><dt>Αντίγραφα ασφαλείας</dt><dd>Δεν έχει ελεγχθεί</dd></div></dl></div>
+        <div className="install-support-unchecked">
+          <h3>Στοιχεία που δεν έχουν επιβεβαιωθεί εδώ</h3>
+          <dl>{rows.slice(5).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        </div>
       </>:<p role="status">Το επιλεγμένο κατάστημα δεν είναι πλέον διαθέσιμο. Κλείσε την προβολή και επίλεξε κατάστημα ξανά.</p>}
     </section>
   </div>;

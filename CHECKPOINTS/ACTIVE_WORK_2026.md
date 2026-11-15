@@ -358,3 +358,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 21 · Υλοποίηση προβολής «Χωρίς πωλήσεις» ανά κατάστημα και διάστημα. Ενεργά είδη, αντιστοίχιση κατά ID, μέτρηση παρουσίας γραμμής ολοκληρωμένης πώλησης. Εκκρεμεί CI και έλεγχος UI στο υπάρχον LAB. [Checkpoint](CHANGES/2026-11-15-procurement-unsold-products.md)
 
 - 15/11/26, 8:01 μ.μ. ώρα Ελλάδας · INSTALL-SUPPORT / «Λίστα για σελίδες 1» · Εξαγωγή PDF/XLSX καρτέλας επιλεγμένου καταστήματος · LAB NOT TESTED · [Ανάληψη](CHANGES/2026-11-15-install-support-export-claim.md).
+
+- 2026-11-15 · INSTALL-SUPPORT / «Λίστα για σελίδες 1» · Υλοποίηση κουμπιών PDF/XLSX στον κλάδο `feat/install-support-profile-export` · Τοπικός έλεγχος πραγματικών PDF και XLSX PASS, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-15-install-support-profile-export.md).
