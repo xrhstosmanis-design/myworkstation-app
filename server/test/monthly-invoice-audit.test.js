@@ -89,6 +89,21 @@ test('source/order/approved projection is one logical invoice and a distinct mat
  const r=classifyInvoiceMonth(f,period);assert.equal(r.counts.logicalRecords,2);assert.equal(r.counts.unposted,1);assert.equal(r.counts.possibleDuplicates,2);assert.equal(r.counts.identityReview,0);assert.equal(r.items.find(x=>x.id==='doc:source').sources.length,3);
 });
 
+test('approved order projection without a backlink needs both posting records',()=>{
+ const f=empty();
+ f.documents=[doc('source',{documentNumber:'A 1',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'order'}),doc('order',{documentNumber:'A 1',status:'APPROVED',sourceType:'PURCHASE_ORDER'})];
+ f.orders=[{id:'order',supplierId:'sup',invoiceNumber:'A 1',sourceDocumentId:'source',status:'INVOICED',createdAt:'2026-11-01'}];
+ f.postings=[{orderId:'order',purchaseDocumentId:'order'}];
+ f.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'order',path:'PURCHASE_ORDER'}];
+ const report=classifyInvoiceMonth(f,period);
+ assert.equal(report.counts.logicalRecords,1);
+ assert.equal(report.counts.unposted,0);
+ assert.equal(report.counts.identityReview,0);
+ assert.equal(report.items[0].status,'POSTED');
+ f.stockPostings=[];
+ assert.ok(classifyInvoiceMonth(f,period).counts.identityReview>0);
+});
+
 test('confirmed aliases retain corrected canonical identity; contradictory aliases and source links remain review',()=>{
  const f=empty();f.documents=[doc('canonical',{documentNumber:'A 1',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'canonical-order'}),doc('old',{documentNumber:'OLD 99',issueDay:'2026-09-01',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'old-order',status:'MERGED'})];
  f.orders=[{id:'canonical-order',supplierId:'sup',invoiceNumber:'A 1',sourceDocumentId:'canonical',status:'NEW'},{id:'old-order',supplierId:'sup',invoiceNumber:'OLD 99',sourceDocumentId:'old',status:'MERGED'}];
