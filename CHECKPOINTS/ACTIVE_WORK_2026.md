@@ -4,6 +4,8 @@
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
 
+- 2026-11-15 · BackOffice τιμολόγηση με όλα τα είδη στην αποθήκη · [Checkpoint](CHANGES/2026-11-15-backoffice-invoice-stock-selection.md).
+
 - 2026-11-14 · Επιλογή δικαιωμάτων BackOffice ανά κατάστημα · [Checkpoint](CHANGES/2026-11-14-backoffice-store-permission-selection.md).
 
 - 2026-11-14 · Δικαίωμα επαναφοράς οριστικοποιημένου τιμολογίου · [Checkpoint](CHANGES/2026-11-14-staff-invoice-reopen.md).

@@ -206,8 +206,9 @@ function showOrder(root,data,assistantSource=null,openAssistant=false){if(!root.
   try{
     const payload={status:"INVOICED",expectedReopenVersion:Number(o.reopenVersion||0)};
     if(o.awaitingInvoice===true){
-      payload.excludeStockLineIds=await chooseInvoiceStockLines(data.lines.filter(line=>line.productId));
-      if(payload.excludeStockLineIds===null)return;
+      const excludedStockLineIds=await chooseInvoiceStockLines(data.lines.filter(line=>line.productId));
+      if(excludedStockLineIds===null)return;
+      if(excludedStockLineIds.length)payload.excludeStockLineIds=excludedStockLineIds;
     }else if(posContext?.staffCapabilities&&!confirm("Επιβεβαιώνεις την ολοκλήρωση της τιμολόγησης;"))return;
     await api(`/api/purchase-orders/${o.id}`,{method:"PATCH",body:JSON.stringify(payload)});
     await refresh();
