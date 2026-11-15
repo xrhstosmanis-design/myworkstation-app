@@ -278,6 +278,37 @@ router.get("/sales/report",requireCompanyModule("SALES_ANALYTICS"),async(req,res
   }catch(error){next(error)}
 });
 
+router.get("/sales/unsold-products",requireCompanyModule("SALES_ANALYTICS"),async(req,res,next)=>{
+  try{
+    const {storeId,from:fromDate,to:toDate}=z.object({
+      storeId:z.string().trim().min(1),
+      from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+    }).parse(req.query);
+    if((req.user.staffAccess===true&&req.user.storeId!==storeId)||!await ownedStore(req.user.companyId,storeId)){
+      return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    }
+    const from=greeceRangeDate(fromDate),to=greeceRangeDate(toDate,true);
+    if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){
+      return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
+    }
+    const products=await prisma.$queryRaw`
+      SELECT p.id,p.sku,p.name
+      FROM "StoreProduct" sp
+      JOIN "Product" p ON p.id=sp."productId" AND p."companyId"=${req.user.companyId}
+      WHERE sp."storeId"=${storeId} AND sp.active AND p.active
+      AND NOT EXISTS (
+        SELECT 1 FROM "SaleLine" l
+        JOIN "Sale" s ON s.id=l."saleId"
+        WHERE l."productId"=p.id AND s."companyId"=${req.user.companyId}
+          AND s."storeId"=${storeId} AND s.status='COMPLETED'
+          AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
+      )
+      ORDER BY p.name,p.sku,p.id`;
+    res.json({storeId,products});
+  }catch(error){next(error)}
+});
+
 router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),async(req,res,next)=>{
   try{
     const storeId=req.query.storeId?String(req.query.storeId):null;if(storeId&&!await ownedStore(req.user.companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
