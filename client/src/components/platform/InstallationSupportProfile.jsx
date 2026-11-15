@@ -72,7 +72,7 @@ export default function InstallationSupportProfile({company,store,onClose,reques
   const onKeyDown=event=>{
     if(event.key==="Escape"){event.stopPropagation();onClose();return}
     if(event.key==="Tab"){
-      const buttons=[closeRef.current,printRef.current,pdfRef.current,xlsxRef.current].filter(button=>button&&!button.disabled);
+      const buttons=[closeRef.current,pdfRef.current,xlsxRef.current,printRef.current].filter(button=>button&&!button.disabled);
       if(buttons.length===1){event.preventDefault();buttons[0]?.focus();return}
       const first=buttons[0],last=buttons[buttons.length-1];
       if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
@@ -83,12 +83,12 @@ export default function InstallationSupportProfile({company,store,onClose,reques
     <section className="install-support-profile" role="dialog" aria-modal="true" aria-labelledby="install-support-title" onKeyDown={onKeyDown}>
       <header className="install-support-head"><div><h2 id="install-support-title">{installationSupportTitle}</h2><p>Προβολή διαθέσιμων στοιχείων</p></div><button ref={closeRef} type="button" onClick={onClose} aria-label="Κλείσιμο στοιχείων υποστήριξης">Κλείσιμο</button></header>
       {company&&store?<>
-        <div className="install-support-guide"><button ref={printRef} type="button" onClick={()=>setPrintError(!printGuide())}>Εκτύπωση οδηγού βλάβης</button>{printError&&<p role="alert">Δεν άνοιξε η εκτύπωση. Επίτρεψε τα αναδυόμενα παράθυρα και προσπάθησε ξανά.</p>}</div>
         <div className="install-support-guide">
           <button ref={pdfRef} type="button" disabled={downloading} onClick={()=>download("pdf")}>Λήψη PDF</button>
           <button ref={xlsxRef} type="button" disabled={downloading} onClick={()=>download("xlsx")}>Λήψη Excel</button>
           {downloadError&&<p role="alert">{downloadError}</p>}
         </div>
+        <div className="install-support-guide"><button ref={printRef} type="button" onClick={()=>setPrintError(!printGuide())}>Εκτύπωση οδηγού βλάβης</button>{printError&&<p role="alert">Δεν άνοιξε η εκτύπωση. Επίτρεψε τα αναδυόμενα παράθυρα και προσπάθησε ξανά.</p>}</div>
         <dl className="install-support-fields">
           {rows.slice(0,5).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
         </dl>
