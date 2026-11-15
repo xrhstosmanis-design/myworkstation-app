@@ -13,7 +13,9 @@ function requireSuperAdmin(req,res,next){
 
 router.use(requireSuperAdmin);
 
-router.get("/status",(req,res)=>res.json(getMailStatus()));
+const labTurnoverTestEnabled=req=>!req.user?.supportContext && req.user?.role === "SUPER_ADMIN" && process.env.MONTHLY_TURNOVER_LAB_SMTP_TEST === "true" && Boolean(process.env.MONTHLY_TURNOVER_LAB_STORE_ID);
+
+router.get("/status",(req,res)=>res.json({...getMailStatus(),labTurnoverTestEnabled:labTurnoverTestEnabled(req)}));
 
 router.post("/test",async(req,res,next)=>{
   try{
@@ -26,7 +28,7 @@ router.post("/test",async(req,res,next)=>{
 
 router.post("/test/monthly-turnover",async(req,res)=>{
   try{
-    if(req.user?.supportContext || req.user?.role !== "SUPER_ADMIN" || process.env.MONTHLY_TURNOVER_LAB_SMTP_TEST !== "true"){
+    if(!labTurnoverTestEnabled(req)){
       return res.status(403).json({error:"Η δοκιμή μηνιαίου τζίρου δεν είναι ενεργή για αυτή τη συνεδρία."});
     }
     const storeId=process.env.MONTHLY_TURNOVER_LAB_STORE_ID;
