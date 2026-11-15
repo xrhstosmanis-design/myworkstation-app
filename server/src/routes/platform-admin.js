@@ -1385,11 +1385,11 @@ router.get("/cash-control/shortages",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 const readReviewedCashEmail=createReviewedCashEmailReader({db:prisma});
-async function cashReportEmailData(storeId,date,user){
-  const evidence=await readReviewedCashEmail(user,storeId,date);
+async function cashReportEmailData(storeId,date,user,byOpening=false){
+  const evidence=await readReviewedCashEmail(user,storeId,date,{byOpening});
   const store=await prisma.store.findUnique({where:{id:storeId},select:{id:true,name:true,responsibleEmail:true,companyId:true,company:{select:{users:{where:{role:"OWNER"},select:{email:true}}}}}});
   if(!store)return null;
-  const rows=await prisma.$queryRaw`SELECT s."id" AS "sessionId",s."shiftLabel",s."terminalPos",s."openedByName",s."variance",s."cardVariance",r."decision" AS "reviewDecision",r."actorName" AS "reviewedBy",r."createdAt" AS "reviewedAt",mv."lastMovementAt",(r."id" IS NOT NULL AND (mv."lastMovementAt" IS NULL OR r."createdAt">=mv."lastMovementAt")) AS "reviewValid" FROM "CashShiftSession" s LEFT JOIN LATERAL (SELECT cr."id",cr."decision",cr."actorName",cr."createdAt" FROM "CashControlReview" cr WHERE cr."companyId"=s."companyId" AND cr."storeId"=s."storeId" AND cr."sessionId"=s."id" ORDER BY cr."createdAt" DESC LIMIT 1) r ON TRUE LEFT JOIN LATERAL (SELECT MAX(GREATEST(t."createdAt",COALESCE(t."reversedAt",t."createdAt"))) AS "lastMovementAt" FROM "StoreTransaction" t WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId" AND t."sessionId"=s."id") mv ON TRUE WHERE s."storeId"=${storeId} AND s."companyId"=${store.companyId} AND s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date ORDER BY s."openedAt"`;
+  const rows=await prisma.$queryRaw`SELECT s."id" AS "sessionId",s."shiftLabel",s."terminalPos",s."openedByName",s."variance",s."cardVariance",r."decision" AS "reviewDecision",r."actorName" AS "reviewedBy",r."createdAt" AS "reviewedAt",mv."lastMovementAt",(r."id" IS NOT NULL AND (mv."lastMovementAt" IS NULL OR r."createdAt">=mv."lastMovementAt")) AS "reviewValid" FROM "CashShiftSession" s LEFT JOIN LATERAL (SELECT cr."id",cr."decision",cr."actorName",cr."createdAt" FROM "CashControlReview" cr WHERE cr."companyId"=s."companyId" AND cr."storeId"=s."storeId" AND cr."sessionId"=s."id" ORDER BY cr."createdAt" DESC LIMIT 1) r ON TRUE LEFT JOIN LATERAL (SELECT MAX(GREATEST(t."createdAt",COALESCE(t."reversedAt",t."createdAt"))) AS "lastMovementAt" FROM "StoreTransaction" t WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId" AND t."sessionId"=s."id") mv ON TRUE WHERE s."storeId"=${storeId} AND s."companyId"=${store.companyId} AND s."status"='CLOSED' AND ((CASE WHEN ${byOpening} THEN s."openedAt" ELSE s."closedAt" END) AT TIME ZONE 'Europe/Athens')::date=${date}::date ORDER BY s."openedAt"`;
   const recipients=normalizeReportRecipients([...store.company.users.map(row=>row.email),store.responsibleEmail]);
   if(store.companyId!==evidence.companyId)throw Object.assign(new Error("Η επιλογή καταστήματος άλλαξε."),{status:409});
   const normalized=rows.map(row=>({...row,variance:Number(row.variance||0),cardVariance:Number(row.cardVariance||0),reviewValid:Boolean(row.reviewValid)}));
@@ -1410,15 +1410,15 @@ function cashPersonalTestRecipient(user){
 
 router.get("/cash-control/stores/:storeId/email-preview",async(req,res,next)=>{try{
   const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(String(req.query.date||""));
-  const report=await cashReportEmailData(req.params.storeId,date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  const report=await cashReportEmailData(req.params.storeId,date,req.user,req.query.dateBasis==='SHIFT_OPENED_CALENDAR_DAY');if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const personalRecipient=req.query.mode==="self"?cashPersonalTestRecipient(req.user).email:undefined;
   const {html}=renderReviewedCashEmail({evidence:report.evidence,companyId:report.store.companyId,storeId:report.store.id,storeName:report.store.name,date,previewOnly:req.query.mode==="self"});
   res.json({date,storeId:report.store.id,storeName:report.store.name,recipients:report.recipients,personalRecipient,html,rows:report.rows,readyToSend:report.readyToSend,text:report.evidence.report.text,reportHash:report.evidence.fingerprint,generation:report.evidence.generation,manualSendOnly:true});
 }catch(error){next(error)}});
 
 router.post("/cash-control/stores/:storeId/send-email",async(req,res,next)=>{try{
-  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional()}).parse(req.body||{});
-  const report=await cashReportEmailData(req.params.storeId,body.date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),dateBasis:z.literal("SHIFT_OPENED_CALENDAR_DAY").optional(),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional()}).parse(req.body||{});
+  const report=await cashReportEmailData(req.params.storeId,body.date,req.user,body.dateBasis==='SHIFT_OPENED_CALENDAR_DAY');if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   if(!report.rows.length)return res.status(422).json({error:"Δεν υπάρχουν κλεισμένες βάρδιες για αυτή την ημερομηνία."});
   assertReviewedCashEmailPreview(report.evidence,body);
   if(!report.readyToSend)return res.status(409).json({error:"Η αναφορά δεν μπορεί να σταλεί: υπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση που απαιτεί επανέλεγχο.",code:"CASH_CONTROL_RECHECK_REQUIRED"});
@@ -1429,13 +1429,13 @@ router.post("/cash-control/stores/:storeId/send-email",async(req,res,next)=>{try
 }catch(error){next(error)}});
 
 router.post("/cash-control/stores/:storeId/send-preview",async(req,res,next)=>{try{
-  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional(),expectedRecipient:z.string().email().optional()}).parse(req.body||{});
+  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),dateBasis:z.literal("SHIFT_OPENED_CALENDAR_DAY").optional(),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional(),expectedRecipient:z.string().email().optional()}).parse(req.body||{});
   const {expectedRecipient}=body;
   const {email:recipient,override}=cashPersonalTestRecipient(req.user);
   if((override||expectedRecipient!==undefined)&&expectedRecipient!==recipient){
     return res.status(409).json({error:"Ο παραλήπτης δοκιμής άλλαξε. Άνοιξε νέα προεπισκόπηση.",code:"CASH_EMAIL_PREVIEW_CHANGED"});
   }
-  const report=await cashReportEmailData(req.params.storeId,body.date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  const report=await cashReportEmailData(req.params.storeId,body.date,req.user,body.dateBasis==='SHIFT_OPENED_CALENDAR_DAY');if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   if(!report.rows.length)return res.status(422).json({error:"Δεν υπάρχουν κλεισμένες βάρδιες για αυτή την ημερομηνία."});
   assertReviewedCashEmailPreview(report.evidence,body);
   const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:[recipient],previewOnly:true,storeName:report.store.name,date:body.date,rows:report.rows,evidence:report.evidence,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
