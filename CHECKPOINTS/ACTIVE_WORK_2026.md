@@ -2,7 +2,7 @@
 
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
-- Εσωτερική διακίνηση POS · Συμβάντα · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED.
+- Εσωτερική διακίνηση POS · Συμβάντα · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED. Καρτέλα POS με ελαχιστοποίηση σε προετοιμασία.
 
 - 2026-11-15 · Εσωτερική διακίνηση POS · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED.
 
