@@ -2,6 +2,8 @@
 
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
+- 2026-11-15 · Εσωτερική διακίνηση POS · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED.
+
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
 
 - 2026-11-15 · BackOffice τιμολόγηση με όλα τα είδη στην αποθήκη · [Checkpoint](CHANGES/2026-11-15-backoffice-invoice-stock-selection.md).
