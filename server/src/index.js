@@ -108,6 +108,7 @@ import storeTableOrdersRoutes from "./routes/store-table-orders.js";
 import storePreparationRoutes from "./routes/store-preparation.js";
 import productionPrinterRoutes,{productionPrinting} from "./routes/production-printers.js";
 import storePosPilotActionsRoutes from "./routes/store-pos-pilot-actions.js";
+import storePosInternalTransferRoutes from "./routes/store-pos-internal-transfer.js";
 import storePosConsumptionRoutes from "./routes/store-pos-consumption.js";
 import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
 import storePosSaleDisplayRoutes from "./routes/store-pos-sale-display.js";
@@ -309,6 +310,7 @@ app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalog
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosSaleDisplayRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosExchangeRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosInternalTransferRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosConsumptionRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),paymentDeviceAttemptRoutes);
