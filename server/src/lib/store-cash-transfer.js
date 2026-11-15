@@ -11,13 +11,13 @@ export function assertCashTransferAccess(user,direction,storeId){
 }
 
 // One ledger row is also the central transaction Audit. No sale or stock write.
-export async function recordCashTransfer(db,{user,storeId,terminalPos,body}){
+export async function recordCashTransfer(db,{user,storeId,terminalPos,body,descriptionPrefix}, transaction = null){
  const input=cashTransferSchema.parse(body);assertCashTransferAccess(user,input.direction,storeId);
  const type=input.direction==="IN"?"TRANSFER_AMOUNT":"TRANSFER_OUT";
  const domain=JSON.stringify([user.companyId,storeId,terminalPos,user.id,input.idempotencyKey]);
  const id=`cash-transfer-${crypto.createHash("sha256").update(domain).digest("hex")}`;
- const description=`${input.direction==="IN"?"Ιδιοκτήτης → Ταμείο":"Ταμείο → Ιδιοκτήτης"} · ${input.reason}`;
- return db.$transaction(async tx=>{
+ const description=`${descriptionPrefix ?? (input.direction==="IN"?"Ιδιοκτήτης → Ταμείο":"Ταμείο → Ιδιοκτήτης")} · ${input.reason}`;
+ const write = async tx=>{
   await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtextextended(${domain},0)) IS NULL) AS locked`;
   const prior=await tx.$queryRaw`SELECT * FROM "StoreTransaction" WHERE "id"=${id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
   if(prior[0]){
@@ -33,5 +33,6 @@ export async function recordCashTransfer(db,{user,storeId,terminalPos,body}){
   }
   const rows=await tx.$queryRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","paymentMethod","actorId","actorName") VALUES (${id},${user.companyId},${storeId},${input.sessionId},${type},${input.amount},${description},false,'CASH_SHIFT',${user.id},${user.fullName||"Χρήστης"}) RETURNING *`;
   return {transaction:rows[0],duplicate:false};
- });
+ };
+ return transaction ? write(transaction) : db.$transaction(write);
 }

@@ -1285,6 +1285,7 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
   res.json({...reversed,emailNotification});
 }));
 
+router.resolveTerminal = requestTerminal;
 export default router;
 
 
