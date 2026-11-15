@@ -580,19 +580,19 @@ export default function PlatformAdminApp(){
   const openCashEmailPreview=async(store,mode)=>{
     if(cashEmailSendInFlight.current)return;
     if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Αναζήτηση πριν από εξαγωγή ή αποστολή.");
-    if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το email καλύπτει μόνο πλήρη ημερολογιακή ημέρα κλεισίματος.");
+    if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το email καλύπτει μόνο πλήρη ημερολογιακή ημέρα έναρξης.");
     const sequence=++cashLoadSequence.current,date=cashReport.from||cashReport.date,api=requestFor("cash"),origin=scopeFor("cash"),context=readBackofficeContext(localStorage).key;
     const current=()=>sequence===cashLoadSequence.current&&readBackofficeContext(localStorage).key===context&&(origin?currentTwinOrigin(origin):aiTwinOriginRef.current?.destination!=="cash");
     const key="cash-"+(mode==="owners"?"email":"preview")+":"+store.storeId;
     setCashEmailDraft(null);setBusy(key);setError("");setMessage("");
     try{
-      const preview=await api("/api/platform/cash-control/stores/"+store.storeId+"/email-preview?date="+date+(mode==="self"?"&mode=self":""));
+      const preview=await api("/api/platform/cash-control/stores/"+store.storeId+"/email-preview?date="+date+"&dateBasis=SHIFT_OPENED_CALENDAR_DAY"+(mode==="self"?"&mode=self":""));
       if(!current())return;
       if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/)||!Array.isArray(preview.rows)||!Array.isArray(preview.recipients)||preview.recipients.some(recipient=>typeof recipient!=="string"))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
       if(mode==="self"&&(typeof preview.personalRecipient!=="string"||!preview.personalRecipient))throw new Error("Δεν βρέθηκε παραλήπτης προσωπικής δοκιμής.");
       const visibleSessions=new Set(cashReport.rows.filter(row=>row.storeId===store.storeId).map(row=>row.sessionId));
       if(preview.rows.length!==visibleSessions.size||preview.rows.some(row=>!visibleSessions.has(row.sessionId))){
-        throw new Error("Η αναφορά email βασίζεται στην ημέρα κλεισίματος και περιλαμβάνει διαφορετικές βάρδιες από την αναζήτηση.");
+        throw new Error("Η αναφορά email περιλαμβάνει διαφορετικές βάρδιες από την αναζήτηση. Ανανέωσε τα αποτελέσματα.");
       }
       setCashEmailDraft({...preview,mode,sequence,api,current,report:cashReport});
     }catch(err){if(current())setError(err.message)}finally{if(current())setBusy(value=>value===key?"":value)}
@@ -613,7 +613,7 @@ export default function PlatformAdminApp(){
     setBusy(key);setError("");setMessage("");
     try{
       const route=draft.mode==="owners"?"send-email":"send-preview";
-      const sent=await draft.api("/api/platform/cash-control/stores/"+draft.storeId+"/"+route,{method:"POST",body:JSON.stringify({date:draft.date,comment,reportHash:draft.reportHash,generation:draft.generation,expectedRecipient:draft.mode==="self"?draft.personalRecipient:undefined})});
+      const sent=await draft.api("/api/platform/cash-control/stores/"+draft.storeId+"/"+route,{method:"POST",body:JSON.stringify({date:draft.date,dateBasis:"SHIFT_OPENED_CALENDAR_DAY",comment,reportHash:draft.reportHash,generation:draft.generation,expectedRecipient:draft.mode==="self"?draft.personalRecipient:undefined})});
       if(!draft.current())return;
       setCashEmailDraft(null);
       setMessage(draft.mode==="owners"?"Η αναφορά του "+draft.storeName+" στάλθηκε σε: "+sent.recipients.join(", ")+".":"Η δοκιμαστική αναφορά στάλθηκε μόνο στο "+sent.recipients.join(", ")+".");

@@ -77,7 +77,7 @@ test('Platform cash preview shows the entire long native report and only explici
   holdSend=true;await act(async()=>{ownerSend.click();ownerSend.click()});
   assert.equal(posts().length,1,'two synchronous clicks must not double-send');
   assert.match(posts()[0].path,/\/send-email$/);
-  assert.deepEqual(JSON.parse(posts()[0].body),{date,comment:'',reportHash:'d'.repeat(64),generation:'0'});
+  assert.deepEqual(JSON.parse(posts()[0].body),{date,dateBasis:'SHIFT_OPENED_CALENDAR_DAY',comment:'',reportHash:'d'.repeat(64),generation:'0'});
   assert.equal(posts()[0].headers.Authorization,'Bearer synthetic');
   const exportButton=document.querySelector('button[aria-label="Αρχικά ελλείμματα καταστήματος (CSV)"]');await click(exportButton);assert.equal(typeof releaseExport,'function');
   assert.equal(button('Άκυρο').disabled,true);assert.equal(dialog().querySelector('.modal-close').disabled,true);assert.equal(dialog().querySelector('textarea').disabled,true,'a different global busy operation cannot unlock a pending send');

@@ -4,7 +4,7 @@ import {periodSchema,hash} from './cash-reconciliation-contract.js';
 import {reconciliationText} from './cash-reconciliation-report.js';
 
 const fail=(code='CASH_EMAIL_RECHECK_REQUIRED',status=409)=>{throw Object.assign(new Error('Ανανέωσε την προεπισκόπηση και ολοκλήρωσε τον έλεγχο πριν από αποστολή.'),{code,status})};
-const fingerprint=e=>hash({companyId:e.companyId,storeId:e.storeId,generation:e.generation,head:e.report.head,reportHash:e.report.reportHash,period:e.report.period,text:e.report.text});
+const fingerprint=e=>hash({companyId:e.companyId,storeId:e.storeId,generation:e.generation,head:e.report.head,reportHash:e.report.reportHash,period:e.report.period,...(e.byOpening?{dateBasis:"SHIFT_OPENED_CALENDAR_DAY"}:{}),text:e.report.text});
 const checked=e=>{
  if(!e||typeof e.companyId!=='string'||!e.companyId||typeof e.storeId!=='string'||!e.storeId||typeof e.generation!=='string'||!e.report||e.report.storeId!==e.storeId||e.report.generation!==e.generation||!periodSchema.safeParse(e.report.period).success||!Array.isArray(e.report.rows)||e.report.rows.length>200||e.report.coverage!=='BOUNDED_CLOSED_SHIFTS'||e.report.financialFinality!=='REVIEWED_CASH_ROWS_ONLY'||e.report.originalFinancialLedgerChanged!==false||!/^[a-f0-9]{64}$/.test(e.report.reportHash)||(e.report.head!=='ROOT'&&!/^[a-f0-9]{64}$/.test(e.report.head)))fail();
  if(new Set(e.report.rows.map(r=>r.sessionId)).size!==e.report.rows.length||e.report.text!==reconciliationText(e.report)||e.fingerprint!==fingerprint(e))fail();
@@ -21,17 +21,17 @@ const provisionalReadinessReport=report=>{
  return projectAutomaticReviewedReport(view);
 };
 export function createReviewedCashEmailReader({db,authorize,repository}){
- return async(user,storeId,date)=>{
+ return async(user,storeId,date,{byOpening=false}={})=>{
   const parsed=periodSchema.safeParse({from:date,to:date});if(!parsed.success)fail('CASH_EMAIL_INVALID_DATE',400);
   const admission=authorize||(await import('../routes/cash-papers.js')).authorizeCashPaper;
   const repo=repository||(await import('./cash-reconciliation-repository.js')).createCashReconciliationRepository(db);
   try{
-   const {scope}=await admission(db,user,storeId);scope.generation=await repo.generation(scope);scope.fullAudit=true;scope.includeNetlink=true;
+   const {scope}=await admission(db,user,storeId);scope.generation=await repo.generation(scope);scope.fullAudit=true;scope.includeNetlink=true;scope.cashEmailByOpening=byOpening;
    const report=await repo.read(scope,parsed.data);
    const fresh=await admission(db,user,storeId);
    if(fresh.scope.companyId!==scope.companyId||fresh.scope.storeId!==scope.storeId||await repo.generation(scope)!==scope.generation)fail();
    if(report.period?.from!==date||report.period?.to!==date)fail();
-   const result={companyId:scope.companyId,storeId:scope.storeId,generation:scope.generation,report};result.fingerprint=fingerprint(result);return checked(result);
+   const result={companyId:scope.companyId,storeId:scope.storeId,generation:scope.generation,byOpening,report};result.fingerprint=fingerprint(result);return checked(result);
   }catch(error){if(error?.code==='CASH_EMAIL_INVALID_DATE')throw error;fail('CASH_EMAIL_RECHECK_REQUIRED',error?.status===403?403:error?.status===404?404:409);}
  };
 }
