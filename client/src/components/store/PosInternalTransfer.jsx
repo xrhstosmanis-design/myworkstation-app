@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import "./store-consumption-menu.css";
+import { createPortal } from "react-dom";
+import "./pos-internal-transfer.css";
 
 const money = new Intl.NumberFormat("el-GR", { style: "currency", currency: "EUR" });
 
-export default function PosInternalTransfer({ api, storeId, scanCatalog, onClose, onDone }) {
+export default function PosInternalTransfer({ api, storeId, scanCatalog, minimized, onMinimize, onRestore, onClose, onDone }) {
   const path = `/api/store-pos/stores/${encodeURIComponent(storeId)}/internal-transfers`;
   const [selectedCredit, setSelectedCredit] = useState(null);
   const [bankReference, setBankReference] = useState("");
@@ -152,12 +153,25 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, onClose
   }
 
   const locked = pending || submitAttempted;
-  return <div className="store-consumption-overlay">
-    <section className="store-consumption-menu" role="dialog" aria-modal="true" aria-label="Εσωτερική διακίνηση" style={{ maxHeight: "85vh", overflow: "auto" }}>
+  if (minimized) return createPortal(
+    <button type="button" className="pos-transfer-resume" onClick={onRestore}>
+      Επαναφορά διακίνησης · {items.length} είδη
+    </button>, document.body
+  );
+
+  return createPortal(<div className="pos-transfer-overlay">
+    <section className="pos-transfer-card" role="dialog" aria-modal="true" aria-labelledby="pos-transfer-title">
       <header>
-        <h3>Εσωτερική διακίνηση</h3>
-        <button type="button" disabled={pending} onClick={onClose}>Κλείσιμο</button>
+        <h2 id="pos-transfer-title">Εσωτερική διακίνηση</h2>
+        <div className="pos-transfer-header-actions">
+          <button type="button" disabled={pending} onClick={onMinimize}>− Ελαχιστοποίηση</button>
+          <button type="button" disabled={pending} onClick={() => {
+            if (!items.length || window.confirm("Να κλείσει η διακίνηση και να χαθούν τα είδη που σκανάρισες;")) onClose();
+          }}>Κλείσιμο</button>
+        </div>
       </header>
+      <div className="pos-transfer-content">
+      <main className="pos-transfer-entry">
       <label>Προορισμός
         <select value={destination} disabled={locked} onChange={event => { setDestination(event.target.value); setQuote(null); }}>
           <option value="">Επίλεξε κατάστημα</option>
@@ -168,11 +182,12 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, onClose
       {destination === "external" && <label>Όνομα καταστήματος
         <input value={external} maxLength={200} disabled={locked} onChange={event => { setExternal(event.target.value); setQuote(null); }}/>
       </label>}
-      <form onSubmit={scan}>
+      <form className="pos-transfer-scan" onSubmit={scan}>
         <label>Barcode <input autoFocus disabled={locked} value={barcode} onChange={event => setBarcode(event.target.value)}/></label>
         <button disabled={locked || !barcode.trim()}>Προσθήκη</button>
       </form>
-      <ul>{items.map(row => {
+      {!items.length && <p className="pos-transfer-empty">Σκάναρε το πρώτο προϊόν για να ξεκινήσεις.</p>}
+      <ul className="pos-transfer-items">{items.map(row => {
         const priced = quote?.items.find(line => line.productId === row.productId);
         return <li key={row.productId}>
           {row.name} × {row.quantity}
@@ -185,9 +200,15 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, onClose
       })}</ul>
       {notice && <p role="status">{notice}</p>}
       {error && <p role="alert">{error}</p>}
+      <div className="pos-transfer-totals">
       {quote && <p>Καθαρή αξία {money.format(quote.net)} · ΦΠΑ {money.format(quote.vat)} · <strong>Πληρωτέο {money.format(quote.payable)}</strong></p>}
+      <div className="pos-transfer-submit">
       <button type="button" disabled={locked || !items.length || !destination || (destination === "external" && !external.trim())} onClick={() => submit(false)}>Υπολογισμός αξίας</button>
       <button type="button" disabled={pending || !quote} onClick={() => submit(true)}>{submitAttempted ? "Επανάληψη καταχώρισης" : "Καταχώριση επί πιστώσει"}</button>
+      </div>
+      </div>
+      </main>
+      <aside className="pos-transfer-history" aria-label="Ιστορικό διακινήσεων">
       <details>
         <summary>Ανεξόφλητες διακινήσεις ({credit.length})</summary>
         <ul>{credit.map(row => <li key={row.id}>
@@ -228,6 +249,8 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, onClose
           </form>}
         </li>)}</ul>
       </details>
+      </aside>
+      </div>
     </section>
-  </div>;
+  </div>, document.body);
 }
