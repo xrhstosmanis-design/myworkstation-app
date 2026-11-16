@@ -50,10 +50,10 @@ export default function PlatformSecurityPanel({request,onCurrentRevoked}){
     setBusy("others");setError("");
     try{await request("/api/auth/sessions/revoke-others",{method:"POST",body:"{}"});await load()}catch(err){setError(err.message)}finally{setBusy("")}
   };
-  const sendMailTest=async(monthlyTurnover=false)=>{
+  const sendMailTest=async(reportType)=>{
     setMailBusy(true);setError("");setMailMessage("");
     try{
-      const result=await request(monthlyTurnover?"/api/platform/mail/test/monthly-turnover":"/api/platform/mail/test",{method:"POST",body:"{}"});
+      const result=await request(reportType?"/api/platform/mail/test/"+reportType:"/api/platform/mail/test",{method:"POST",body:"{}"});
       setMailMessage(monthlyTurnover?"Το SMTP αποδέχθηκε το δοκιμαστικό email τζίρου LAB.":`Το δοκιμαστικό email στάλθηκε στο ${result.recipient}.`);
     }catch(err){setError(err.message)}finally{setMailBusy(false)}
   };
@@ -74,7 +74,8 @@ export default function PlatformSecurityPanel({request,onCurrentRevoked}){
         <article><Mail/><div><b>SMTP αποστολή</b><span>{mailStatus?.configured?"Έτοιμη":"Χρειάζεται ρύθμιση"}</span></div></article>
         <article><ShieldCheck/><div><b>Ασφαλής σύνδεση</b><span>{mailStatus?.secure?`SSL/TLS · ${mailStatus.port}`:"Μη ενεργή"}</span></div></article>
         <button onClick={()=>sendMailTest()} disabled={mailBusy||!mailStatus?.configured}><Send/>{mailBusy?"Αποστολή…":"Αποστολή δοκιμαστικού email"}</button>
-        {mailStatus?.labTurnoverTestEnabled&&<button onClick={()=>sendMailTest(true)} disabled={mailBusy||!mailStatus.configured}><Send/>Δοκιμή email τζίρου LAB</button>}
+        {mailStatus?.labTurnoverTestEnabled&&<button onClick={()=>sendMailTest("monthly-turnover")} disabled={mailBusy||!mailStatus.configured}><Send/>Δοκιμή email τζίρου LAB</button>}
+        {mailStatus?.labTurnoverTestEnabled&&<button onClick={()=>sendMailTest("monthly-supplier")} disabled={mailBusy||!mailStatus.configured}><Send/>Δοκιμή email προμηθευτών LAB</button>}
       </div>
       {mailMessage&&<div className="platform-alert success">{mailMessage}</div>}
       {!mailStatus?.configured&&<div className="platform-alert error">Λείπουν ρυθμίσεις email: {(mailStatus?.missing||[]).join(", ")||"έλεγχος server"}</div>}

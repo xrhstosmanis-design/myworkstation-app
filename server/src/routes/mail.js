@@ -1,7 +1,7 @@
 import {authorizePlatformAssistant} from "../services/platform-assistant-products.js";
 import {prisma} from "../prisma.js";
 import { Router } from "express";
-import { getMailStatus,sendTestEmail,sendMonthlyTurnoverTestEmail } from "../services/mail.js";
+import { getMailStatus,sendTestEmail,sendMonthlyTurnoverTestEmail,sendMonthlySupplierTestEmail } from "../services/mail.js";
 
 const router=Router();
 
@@ -35,10 +35,10 @@ router.post("/test",async(req,res,next)=>{
   }
 });
 
-router.post("/test/monthly-turnover",async(req,res)=>{
+router.post(["/test/monthly-turnover","/test/monthly-supplier"],async(req,res)=>{
   try{
     if(!await labTurnoverTestEnabled(req)){
-      return res.status(403).json({error:"Η δοκιμή μηνιαίου τζίρου δεν είναι ενεργή για αυτή τη συνεδρία."});
+      return res.status(403).json({error:"Η δοκιμή μηνιαίας αναφοράς δεν είναι ενεργή για αυτή τη συνεδρία."});
     }
     const storeId=process.env.MONTHLY_TURNOVER_LAB_STORE_ID;
     const store=storeId && await prisma.store.findFirst({
@@ -46,7 +46,8 @@ router.post("/test/monthly-turnover",async(req,res)=>{
       select:{id:true,companyId:true},
     });
     if(!store)return res.status(403).json({error:"Δεν έχει οριστεί ενεργό κατάστημα LAB."});
-    const result=await sendMonthlyTurnoverTestEmail({companyId:store.companyId,storeId:store.id});
+    const send=req.path==="/test/monthly-supplier"?sendMonthlySupplierTestEmail:sendMonthlyTurnoverTestEmail;
+    const result=await send({companyId:store.companyId,storeId:store.id});
     return res.json({ok:true,...result});
   }catch{
     return res.status(503).json({error:"Η δοκιμαστική παράδοση SMTP δεν επιβεβαιώθηκε."});

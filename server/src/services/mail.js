@@ -1,3 +1,4 @@
+import {supplierComparisonEmailLines} from "./supplier-comparison-email.js";
 import {monthlyTurnoverMailSections} from "./daily-turnover-report.js";
 import {summarizeDailyTurnover} from "./daily-turnover-summary.js";
 import {renderReviewedCashEmail} from './cash-reviewed-email.js';
@@ -197,11 +198,24 @@ export async function sendMonthlyTurnoverTestEmail(scope){
     ],
   };
   const sections=monthlyTurnoverMailSections({status:"AVAILABLE",...summary},shifts,"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ");
+  return sendLabReportTest(scope,testRecipient,"LAB · ΔΟΚΙΜΗ ΜΗΝΙΑΙΑΣ ΑΝΑΦΟΡΑΣ ΤΖΙΡΟΥ",["Δοκιμαστικά δεδομένα.",...sections].join("\n\n"));
+}
+
+export async function sendMonthlySupplierTestEmail(scope){
+  const {testRecipient}=requireMailConfig();
+  const sections=supplierComparisonEmailLines([{productName:"Δοκιμαστικό προϊόν",unitLabel:"τεμάχιο",suppliers:[
+    {supplierName:"Δοκιμαστικός προμηθευτής Α",lastCost:1,differenceFromLowestCost:0},
+    {supplierName:"Δοκιμαστικός προμηθευτής Β",lastCost:1.2,differenceFromLowestCost:0.2}
+  ]}]);
+  return sendLabReportTest(scope,testRecipient,"LAB · ΔΟΚΙΜΗ ΜΗΝΙΑΙΑΣ ΣΥΓΚΡΙΣΗΣ ΠΡΟΜΗΘΕΥΤΩΝ",["Δοκιμαστικά δεδομένα.",...sections].join("\n"));
+}
+
+async function sendLabReportTest(scope,testRecipient,subject,text){
   const to=testRecipient.toLowerCase();
   const result=await createAutomaticReportSmtpTransport(scope).sendMail({
     to,
-    subject:"LAB · ΔΟΚΙΜΗ ΜΗΝΙΑΙΑΣ ΑΝΑΦΟΡΑΣ ΤΖΙΡΟΥ",
-    text:["Δοκιμαστικά δεδομένα.",...sections].join("\n\n"),
+    subject,
+    text,
   });
   if(result.accepted?.length!==1 || result.accepted[0]!==to || result.rejected?.length!==0 || result.pending?.length || !result.messageId){
     throw new Error("LAB SMTP acceptance not confirmed");
