@@ -134,7 +134,7 @@ router.patch("/stores/:storeId/table-orders/:orderId/waiter", async (req,res,nex
         operatorId:operator.id,operatorName:operator.displayName};
       await tx.$executeRaw`
         INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-        VALUES (${crypto.randomUUID()},${companyId},${store.id},${operator.id},${req.user.id},
+        VALUES (${crypto.randomUUID()},${companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},
           'TABLE_ORDER_WAITER_CHANGED',${JSON.stringify(details)}::jsonb)
       `;
       return {status:200,order:{...order,operatorId:operator.id,operatorName:operator.displayName}};
