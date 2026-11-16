@@ -12587,9 +12587,9 @@ Claim codex/pos-catalog-perf-20261008/08Oct11:23:48Z/PR1876/maince4db388 preserv
 
 **Υπόλοιπο / όρια PASS:** Μεταφορά/ένωση/split, αλλαγή σερβιτόρου, μερικές πληρωμές, χρεώσιμοι modifiers, πλήρες KDS/ειδοποιήσεις, cross-store και reconnect/idempotency αποδοχή. Τα υπάρχοντα τραπέζια/γύροι/αλλεργιογόνα/Android PASS προστατεύονται.
 
-**Υπεύθυνη σελίδα / branch:** agent/table-service-layout-takeover-20260927
+**Υπεύθυνη σελίδα / branch:** /root · `feat/table-service-waiter-handoff-20261116` για τα τέσσερα εγκεκριμένα σκέλη. `agent/table-service-layout-takeover-20260927` για τις υπόλοιπες εκκρεμότητες.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 16/11/2026, ώρα Ελλάδας. Ρητή έγκριση ιδιοκτήτη για μεταφορά προς /root της αλλαγής σερβιτόρου, μερικής πληρωμής, χρεώσιμων επιλογών και πλήρους ελέγχου KDS. Κριτήρια στο [checkpoint του #23](../../CHECKPOINTS/CHANGES/2026-11-16-table-service-remaining-acceptance.md), PR #3955. Νέο LAB αποτέλεσμα εκκρεμεί.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
