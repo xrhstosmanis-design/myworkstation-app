@@ -54,7 +54,8 @@ export default function PlatformSecurityPanel({request,onCurrentRevoked}){
     setMailBusy(true);setError("");setMailMessage("");
     try{
       const result=await request(reportType?"/api/platform/mail/test/"+reportType:"/api/platform/mail/test",{method:"POST",body:"{}"});
-      setMailMessage(monthlyTurnover?"Το SMTP αποδέχθηκε το δοκιμαστικό email τζίρου LAB.":`Το δοκιμαστικό email στάλθηκε στο ${result.recipient}.`);
+      const labReport = {"monthly-turnover":"τζίρου","monthly-supplier":"προμηθευτών"}[reportType];
+      setMailMessage(labReport?`Το SMTP αποδέχθηκε το δοκιμαστικό email ${labReport} LAB.`:`Το δοκιμαστικό email στάλθηκε στο ${result.recipient}.`);
     }catch(err){setError(err.message)}finally{setMailBusy(false)}
   };
 
