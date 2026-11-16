@@ -96,6 +96,17 @@ test('native inbox business status follows exact scoped order despite stale AI/i
   const before=await f.snapshot(),registered=await run('REGISTERED');
   assert.equal(registered.length,1);assert.equal(registered[0].linkedOrderId,'mydata');assert.equal(registered[0].status,'IN_REVIEW');assert.match(archiveStatus(registered[0]),/Τιμολογημένο/);
   assert.equal((await run('PENDING')).length,0);assert.equal((await run('REGISTERED',true))[0].count,1);
+  await db.$executeRawUnsafe(`CREATE TABLE "SupplierPaymentSettlement" ("id" text, "companyId" text, "storeId" text, "transactionId" text)`);
+  await db.$executeRawUnsafe(`CREATE TABLE "SupplierPaymentAllocation" ("companyId" text, "settlementId" text, "purchaseDocumentId" text, "amount" numeric)`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","amount") VALUES ('open-payment','c','s','SUPPLIER_PAYMENT',200)`);
+  await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentSettlement" VALUES ('open-settlement','c','s','open-payment')`);
+  await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentAllocation" VALUES ('c','open-settlement','d-mydata',153.82)`);
+  const allocatedQuery=archiveQuery('c','s',{processing:'REGISTERED'},false,true);
+  const [allocated]=await db.$queryRawUnsafe(allocatedQuery.sql,...allocatedQuery.values);
+  assert.equal(allocated.paymentCount,1);
+  assert.equal(Number(allocated.paymentAmount),153.82);
+  await db.$executeRawUnsafe(`DELETE FROM "StoreTransaction" WHERE "id"='open-payment'`);
+
   await db.$executeRawUnsafe(`INSERT INTO "AiReaderJob"("id","companyId","storeId","attachmentId","purchaseDocumentId") VALUES('conflict','c','s','pdf','d-pos')`);
   assert.equal((await run('REGISTERED')).length,0);
   const conflict=(await run('LINK_REVIEW'))[0];assert.equal(conflict.linkedOrderId,null);
