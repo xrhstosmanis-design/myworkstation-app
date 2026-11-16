@@ -42,6 +42,13 @@ export async function runSalesCountsRegression(db){
  out=await read({storeId:'control'});assert.equal(out.normalSaleCount,1);assert.equal(out.totalGross,99);
  out=await read({q:'no-match'});assert.deepEqual(out.items,[]);assert.equal(out.normalSaleCount,0);assert.equal(out.reversalCount,0);assert.equal(out.totalGross,0);assert.deepEqual(out.sourceCoverage,{complete:true,returnedGroupCount:0,totalGroupCount:0,limit:10000,totalsScope:'COMPLETE_SOURCE'});
  assert.deepEqual(await db.$queryRaw`SELECT (SELECT COUNT(*)::int FROM "Sale") AS sales,(SELECT COUNT(*)::int FROM "SaleLine") AS lines`,before);
+ await db.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","status","documentDate","createdAt","sourceType") VALUES ('pack','c','s','APPROVED','2026-10-09','2026-10-09','PURCHASE_ORDER')`;
+ await db.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("purchaseDocumentId","productId","unit","unitCost","unitsPerPackage") VALUES ('pack','p','PIECE',24,1)`;
+ await db.$executeRaw`INSERT INTO "StockMovement" VALUES ('old','PURCHASE_ORDER','pack','s','p','PURCHASE_PACK_CORRECTION',2,'2026-10-11'),('latest','PURCHASE_ORDER','pack','s','p','PURCHASE_PACK_CORRECTION',1,'2026-10-12'),('other-store','PURCHASE_ORDER','pack','control','p','PURCHASE_PACK_CORRECTION',99,'2026-10-13')`;
+ out=await read();
+ assert.equal(out.totalCost,1);
+ assert.equal(out.items.find(r=>r.productId==='p').costValue,1);
+ assert.equal(out.items.find(r=>r.productId==='q').costValue,0);
  // 10001 distinct groups and baskets prove full-source aggregation before LIMIT.
  await db.$executeRawUnsafe(`INSERT INTO "Sale" SELECT 'cap-sale-'||g,'c','s','COMPLETED','NORMAL','POS','2026-10-10T10:00:00'::timestamp,NULL FROM generate_series(1,10001)g`);
  await db.$executeRawUnsafe(`INSERT INTO "SaleLine" SELECT 'cap-line-'||g,'cap-sale-'||g,'cap-product-'||g,'cap-'||g,1,1,0,0,1,NULL,NULL FROM generate_series(1,10001)g`);
