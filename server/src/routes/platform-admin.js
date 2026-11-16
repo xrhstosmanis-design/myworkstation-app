@@ -1,5 +1,5 @@
 import {businessQuestionPeriod} from '../services/assistant-business-period.js';
-import {readDailyTurnover, dailyTurnoverAnswer, isDailyTurnoverQuestion} from '../services/daily-turnover-report.js';
+import {readDailyTurnover, dailyTurnoverAnswer, isDailyTurnoverQuestion, isShiftTurnoverQuestion, readShiftTurnover} from '../services/daily-turnover-report.js';
 import {customerCostMeter,revalidateCostRequest} from '../services/ai-customer-cost-runtime.js';
 import {walletActivityFromRequest} from '../services/ai-wallet-activity.js';
 import {createReviewedCashEmailReader,reviewedCashEmailReadiness,assertReviewedCashEmailPreview,renderReviewedCashEmail} from '../services/cash-reviewed-email.js';
@@ -1578,17 +1578,19 @@ router.post("/ai-command-center/ask",async(req,res,next)=>{
     const body=aiCommandQuestionSchema.parse(req.body||{});
     const turn=body.conversation?await platformHistoryTurns.begin(req,body.conversation,body.question):null;if(turn)body.history=turn.history;
     const signal=AbortSignal.timeout(60000),assistant=await createPlatformAssistantSession(req,body.selection,{signal,allStores:body.readScope==="all_stores"});
-    if (isDailyTurnoverQuestion(body.question)) {
+    const shiftTurnover = isShiftTurnoverQuestion(body.question);
+    if (shiftTurnover || isDailyTurnoverQuestion(body.question)) {
       const scope = assistant.scope;
       if (!scope || body.readScope === 'all_stores') {
         return res.status(422).json({error:'Επίλεξε ένα κατάστημα για τη μεταβολή τζίρου.',code:'PLATFORM_ASSISTANT_SCOPE_REQUIRED'});
       }
       await assistant.verify();
       const period = businessQuestionPeriod(body.question);
-      const report = period ? await readDailyTurnover(prisma,{...scope,...period}) : null;
+      const readTurnover = shiftTurnover ? readShiftTurnover : readDailyTurnover;
+      const report = period ? await readTurnover(prisma,{...scope,...period}) : null;
       await assistant.verify();
       const answer = report ? dailyTurnoverAnswer(report,scope.storeName) : {
-        answer:'Για ποιο διάστημα θέλεις τη μεταβολή τζίρου;',
+        answer:shiftTurnover ? 'Για ποιο διάστημα θέλεις τον τζίρο ανά βάρδια;' : 'Για ποιο διάστημα θέλεις τη μεταβολή τζίρου;',
         highlights:[],
         limitations:'',
       };

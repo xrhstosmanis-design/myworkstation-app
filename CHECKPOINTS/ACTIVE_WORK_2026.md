@@ -376,3 +376,4 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 2026-11-15 · INSTALL-SUPPORT / «Λίστα για σελίδες 1» · LAB PASS για λήψη και αντιπαραβολή των 9 γραμμών PDF/XLSX στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Εναλλαγή καταστήματος και μη έγκυρο ζεύγος NOT TESTED. [Checkpoint](CHANGES/2026-11-15-install-support-profile-export.md).
 
 - 2026-11-15 · Διόρθωση σύνδεσης τιμολογημένων στη μηνιαία αναφορά · [Checkpoint](CHANGES/2026-11-15-monthly-invoice-posting-links.md).
+- 2026-11-15 · Τζίρος και μέσος όρος ανά βάρδια στον Βοηθό Super Admin · τοπική αλλαγή, εκκρεμεί LAB. [Checkpoint](CHANGES/2026-11-15-shift-turnover.md)
