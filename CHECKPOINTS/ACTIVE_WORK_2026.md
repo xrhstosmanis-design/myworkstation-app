@@ -379,3 +379,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - 2026-11-15 · Διόρθωση σύνδεσης τιμολογημένων στη μηνιαία αναφορά · [Checkpoint](CHANGES/2026-11-15-monthly-invoice-posting-links.md).
 - 2026-11-15 · Τζίρος και μέσος όρος ανά βάρδια στον Βοηθό Super Admin · τοπική αλλαγή, εκκρεμεί LAB. [Checkpoint](CHANGES/2026-11-15-shift-turnover.md)
+
+- 2026-11-16 · Υπόλοιπα προμηθευτών · [Checkpoint](CHANGES/2026-11-16-supplier-balance-payment-review.md) · PR #3921 · LAB εκκρεμεί.
