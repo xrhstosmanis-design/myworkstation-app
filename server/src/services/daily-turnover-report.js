@@ -130,3 +130,13 @@ export function dailyTurnoverAnswer(report, storeName) {
     limitations: 'Μετρητά και κάρτες από κλεισμένες βάρδιες, με ημερομηνία έναρξης σε ώρα Ελλάδας.',
   };
 }
+
+export function monthlyTurnoverMailSections(daily, shifts, storeName) {
+  const turnover = dailyTurnoverAnswer(daily, storeName);
+  const sections = [turnover.answer, ...turnover.highlights, turnover.limitations];
+  if (shifts) {
+    const shift = dailyTurnoverAnswer(shifts, storeName);
+    sections.push(shift.answer, shift.limitations);
+  }
+  return sections;
+}
