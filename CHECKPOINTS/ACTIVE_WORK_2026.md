@@ -402,3 +402,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 34 · [Δοκιμή email προμηθευτών LAB](CHANGES/2026-11-16-supplier-lab-mail-test.md). Εκκρεμεί επιβεβαίωση παραλαβής.
 
 - Νο 34 · [Επιβεβαίωση SMTP στο LAB](CHANGES/2026-11-16-lab-smtp-confirmation-fix.md). Εκκρεμεί πραγματική παραλαβή στο inbox.
+
+16/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / Νο 7 · Ξεχωριστό δικαίωμα ακύρωσης καταχωρισμένου τιμολογίου. [Checkpoint](CHANGES/2026-11-16-no7-manager-invoice-cancel.md). Hosted LAB εκκρεμεί.

@@ -125,11 +125,25 @@ test('product creation after stocktake navigation does not attach to a different
   assert.equal(shouldRefreshStocktakeAfterAttach('draft-a','draft-a'),true);
 });
 
-test('posted invoice reopen requires its own store capability and never grants cancellation',()=>{
+test('posted invoice reopening and cancellation require separate explicit store rights',()=>{
   assert.equal(staffRequestCapability('GET','/api/purchase-orders/order/reopen-preview'),'invoices.reopen');
   assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/reopen'),'invoices.reopen');
-  assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/cancel'),null);
   assert.equal(staffRequestCapability('GET','/api/purchase-orders/order/reopen'),null);
   assert.equal(validStaffCapabilities(['invoices.reopen']),false);
   assert.equal(validStaffCapabilities(['invoices.read','invoices.reopen']),true);
+});
+
+test('invoice cancellation admits only the exact preview and submit routes and requires invoice viewing',()=>{
+  const view='invoices.read';
+  const cancel='invoices.cancel';
+  assert.equal(staffRequestCapability('GET','/api/purchase-orders/order/cancel-preview'),cancel);
+  assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/cancel'),cancel);
+  assert.equal(staffRequestCapability('GET','/api/purchase-orders/order/cancel'),null);
+  assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/cancel-preview'),null);
+  assert.equal(staffRequestCapability('POST','/api/purchase-orders/order/cancel/extra'),null);
+  assert.equal(validStaffCapabilities([cancel]),false);
+  assert.equal(validStaffCapabilities([view,cancel]),true);
+  assert.deepEqual(new Set(changeStaffCapability([],cancel,true)),new Set([view,cancel]));
+  assert.deepEqual(changeStaffCapability([view,cancel],view,false),[]);
+  for(const profile of Object.values(staffProfiles))assert.equal(profile.capabilities.includes(cancel),false);
 });

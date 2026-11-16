@@ -112,7 +112,7 @@ test('native approved adjustments, credit documents and corrupt movement ownersh
 test('native registered HTTP reopen routes enforce actor/scope and perform one confirmed transition',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await fixture();let server;try{
   await f.finalize();const {default:express,Router}=await import('express');const src=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replaceAll('export async function ','async function ');
-  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder','cancelPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','previewPurchaseOrderCancel','reopenPurchaseOrder','cancelPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.previewPurchaseOrderCancel,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
   const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.headers['x-fixture-role']==='operator'?{...actor,tokenType:'STORE_OPERATOR'}:actor;next()});app.use('/api/purchase-orders',router);app.use((err,req,res,next)=>res.status(err.status||400).json({error:err.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const url=`http://127.0.0.1:${server.address().port}/api/purchase-orders/pos`;
   const denied=await fetch(url+'/reopen-preview?storeId=s',{headers:{'x-fixture-role':'operator'}});assert.equal(denied.status,403);
@@ -236,7 +236,7 @@ test('synthetic full-stack BackOffice cancellation uses isolated HTTP and Postgr
   const originalEvidence=await f.preserved();
   const {default:express,Router}=await import('express');
   const routeSource=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
-  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder','cancelPurchaseOrder',routeSource)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','previewPurchaseOrderCancel','reopenPurchaseOrder','cancelPurchaseOrder',routeSource)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.previewPurchaseOrderCancel,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
   const app=express();app.use(express.json());
   app.use((req,res,next)=>{
    const role=req.headers['x-fixture-actor'];
