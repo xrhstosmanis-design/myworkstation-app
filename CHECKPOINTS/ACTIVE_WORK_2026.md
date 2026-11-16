@@ -339,6 +339,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 ## Νο 21 — Προμήθειες και εμπορικές αναλύσεις (15/11/2026)
 
+- Νο 21 · 16/11/2026 · Υφιστάμενο LAB, Super Admin, μόνο ανάγνωση: η «Σύγκριση Προμηθευτών» φόρτωσε μετά την εγκατάσταση της έκδοσης `78017dd` ([deploy](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43874533500)), η οποία περιλαμβάνει το [#3914](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3914). Εμφανίστηκαν 39 ενδείξεις «Αποθηκευμένη μετατροπή αγοράς». Παράδειγμα: παραστατικό B 1970, κόστος 1,250 €. Η δοκιμή PostgreSQL του #3914 κάλυψε `INVOICED` και `FINAL`. Στο ορατό δείγμα LAB δεν επιβεβαιώθηκε κατάταξη με δύο προμηθευτές ούτε η κατάσταση της συνδεδεμένης παραγγελίας για κάθε γραμμή. Μερικό LAB PASS για φόρτωση και προβολή κόστους, η κατάταξη παραμένει ανοικτή.
+
 - Νο 21 · Η σύγκριση προμηθευτών περιλαμβάνει πλέον συνδεδεμένες παραγγελίες INVOICED στο branch υλοποίησης. Εκκρεμούν CI και LAB. [Checkpoint](CHANGES/2026-11-15-no21-invoiced-supplier-comparison.md)
 
 **Στοχευμένη ανάθεση 15/11/2026:** Η σελίδα Νο 21 (/root, `fix/no21-invoiced-supplier-comparison`) αναλαμβάνει το φίλτρο κατάστασης της συνδεδεμένης παραγγελίας στο `GET /api/commerce/supplier-price-comparison`. Τα υπόλοιπα του Νο 29 παραμένουν στην υφιστάμενη ανάθεση. Για το KM483, η δοκιμή μόνο ανάγνωσης με FINAL/INVOICED ανέκτησε τον αποθηκευμένο συντελεστή 1 και έδωσε 0,90 / 0,95 / 0,95 €/τεμ. ([#3901](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3901)). Εκκρεμούν υλοποίηση, CI και επαλήθευση στο υπάρχον LAB.
