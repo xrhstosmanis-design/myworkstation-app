@@ -403,6 +403,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - Νο 34 · [Επιβεβαίωση SMTP στο LAB](CHANGES/2026-11-16-lab-smtp-confirmation-fix.md). Εκκρεμεί πραγματική παραλαβή στο inbox.
 
-16/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / Νο 7 · Ξεχωριστό δικαίωμα ακύρωσης καταχωρισμένου τιμολογίου. [Checkpoint](CHANGES/2026-11-16-no7-manager-invoice-cancel.md). Hosted LAB εκκρεμεί.
+## Νο 31 — Προϊόντα χαμηλής απόδοσης
 
-16/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / Νο 7 · Συγκεντρωτική προβολή βαρδιών με ξεχωριστό δικαίωμα. Κοινή δοκιμή hosted LAB με ακύρωση καταχωρισμένου τιμολογίου.
+- 16/11/2026 · Κλάδος ελέγχου `review/no31-reconciliation` για το υπάρχον #1772. Προσαρμογή στο main και έλεγχος τιμολογημένων αγορών συσκευασίας. [Checkpoint](CHANGES/2026-11-16-no31-reconciliation.md). Εκκρεμούν CI και LAB.
+
+16/11/2026 — Νο 7 · [Κοινός έλεγχος δικαιωμάτων](CHANGES/2026-11-16-no7-manager-invoice-cancel.md).
