@@ -1,3 +1,4 @@
+import {resolveModifierInventoryPrices} from "../lib/modifier-inventory-price.js";
 import {lockActiveSaleProducts} from "../lib/inventory-sale-product-lock.js";
 import {maybeChangeSameProductStock} from '../store-baking-same-product.js';
 import crypto from "crypto";
@@ -55,7 +56,51 @@ router.post("/stores/:storeId/table-orders",async(req,res,next)=>{try{
   if(body.idempotencyKey){const previous=(await prisma.$queryRaw`SELECT "actorId","payloadHash","resultJson" FROM "TableOrderRequest" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey} LIMIT 1`)[0];if(previous)return res.json({...tableOrderReplay(previous,actorId,payloadHash),idempotentReplay:true})}
   const table=(await prisma.$queryRaw`SELECT "id","name" FROM "DiningTable" WHERE "id"=${body.tableId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true LIMIT 1`)[0];if(!table)return res.status(404).json({error:"Το τραπέζι δεν βρέθηκε."});
   const ids=body.items.map(item=>item.productId),products=await prisma.$queryRaw`SELECT p."id",p."name",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(ps."preparationEnabled",false) AS "preparationEnabled",COALESCE(NULLIF(ps."productionStation",''),'ΠΑΡΑΓΩΓΗ') AS "productionStation" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} AND sp."active"=true LEFT JOIN "PreparationProductSettings" ps ON ps."companyId"=p."companyId" AND ps."productId"=p."id" WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND p."id"=ANY(${ids}::text[])`,byId=new Map(products.map(row=>[row.id,row]));if(byId.size!==new Set(ids).size)return res.status(400).json({error:"Κάποιο προϊόν δεν είναι διαθέσιμο στο κατάστημα."});
-  let orderId=crypto.randomUUID(),roundNumber=1,finalTotal=0;const lines=body.items.map(item=>{const product=byId.get(item.productId),unitPrice=money(product.salePrice),lineTotal=Number((unitPrice*item.quantity).toFixed(2));return {...item,name:product.name,unitPrice,lineTotal,preparationEnabled:Boolean(product.preparationEnabled),productionStation:product.productionStation}}),addedTotal=Number(lines.reduce((sum,line)=>sum+line.lineTotal,0).toFixed(2)),preparationBatches=[];
+  const requestedModifierIds=[...new Set(body.items.flatMap(item=>item.modifiers.map(modifier=>modifier.id)))];
+  const modifierById=new Map();
+  const allowedModifiersByProduct=new Map();
+  if(requestedModifierIds.length){
+    const eligible=await prisma.$queryRaw`
+      SELECT pg."productId",m."id",m."description",m."price"
+      FROM "PreparationProductModifierGroup" pg
+      JOIN "ManagementModifierGroup" g ON g."id"=pg."groupId" AND g."companyId"=pg."companyId" AND g."active"=TRUE
+      JOIN "ManagementModifier" m ON m."groupId"=g."id" AND m."companyId"=g."companyId" AND m."active"=TRUE
+      WHERE pg."companyId"=${req.user.companyId} AND pg."productId"=ANY(${ids}::text[])
+        AND m."id"=ANY(${requestedModifierIds}::text[])
+    `;
+    for(const modifier of eligible){
+      if(!allowedModifiersByProduct.has(modifier.productId))allowedModifiersByProduct.set(modifier.productId,new Set());
+      allowedModifiersByProduct.get(modifier.productId).add(modifier.id);
+      modifierById.set(modifier.id,{id:modifier.id,description:modifier.description,price:modifier.price});
+    }
+    for(const item of body.items){
+      const selections=item.modifiers.map(modifier=>modifier.id);
+      if(new Set(selections).size!==selections.length||
+        selections.some(id=>!allowedModifiersByProduct.get(item.productId)?.has(id))){
+        return res.status(400).json({error:"Μη διαθέσιμη ή διπλή επιλογή παρασκευής για το προϊόν."});
+      }
+    }
+    const resolved=await resolveModifierInventoryPrices(prisma,req.user.companyId,store.id,[...modifierById.values()]);
+    for(const modifier of resolved)modifierById.set(modifier.id,modifier);
+  }
+
+  const lines=body.items.map(item=>{
+    const product=byId.get(item.productId);
+    const modifiers=item.modifiers.map(selection=>{
+      const modifier=modifierById.get(selection.id);
+      const price=money(modifier.price);
+      if(!Number.isFinite(price)||Math.abs(price-selection.price)>0.009){
+        throw Object.assign(new Error("Η τιμή επιλογής άλλαξε. Άνοιξε ξανά τις επιλογές παρασκευής."),{status:409});
+      }
+      return {id:modifier.id,description:modifier.description,price};
+    });
+    const unitPrice=Number((money(product.salePrice)+modifiers.reduce((sum,modifier)=>sum+modifier.price,0)).toFixed(2));
+    if(unitPrice<0)throw Object.assign(new Error("Η τελική τιμή είδους δεν μπορεί να είναι αρνητική."),{status:400});
+    return {...item,modifiers,name:product.name,unitPrice,lineTotal:Number((unitPrice*item.quantity).toFixed(2)),
+      preparationEnabled:Boolean(product.preparationEnabled),productionStation:product.productionStation};
+  });
+  let orderId=crypto.randomUUID(),roundNumber=1,finalTotal=0;
+  const addedTotal=Number(lines.reduce((sum,line)=>sum+line.lineTotal,0).toFixed(2)),preparationBatches=[];
   const terminalPos=String(req.user?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
   let replayResult=null;await prisma.$transaction(async tx=>{if(body.idempotencyKey){await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:round:${body.idempotencyKey}`})) IS NULL) AS locked`;const previous=(await tx.$queryRaw`SELECT "actorId","payloadHash","resultJson" FROM "TableOrderRequest" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey} LIMIT 1`)[0];if(previous){replayResult=tableOrderReplay(previous,actorId,payloadHash);return}}await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:${table.id}`})) IS NULL) AS locked`;const active=(await tx.$queryRaw`SELECT "id","total" FROM "TableOrder" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableId"=${table.id} AND "status" IN ('OPEN','SENT','READY') ORDER BY "createdAt" LIMIT 1 FOR UPDATE`)[0];if(active){orderId=active.id;const latest=(await tx.$queryRaw`SELECT COALESCE(MAX("roundNumber"),0)::int AS "roundNumber" FROM "TableOrderLine" WHERE "orderId"=${orderId}`)[0];roundNumber=Number(latest?.roundNumber||0)+1;finalTotal=Number((money(active.total)+addedTotal).toFixed(2));await tx.$executeRaw`UPDATE "TableOrder" SET "status"='SENT',"total"=${finalTotal},"updatedAt"=NOW() WHERE "id"=${orderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id}`}else{finalTotal=addedTotal;await tx.$executeRaw`INSERT INTO "TableOrder" ("id","companyId","storeId","tableId","operatorId","operatorName","terminalPos","status","notes","total") VALUES (${orderId},${req.user.companyId},${store.id},${table.id},${req.user.id},${req.user.fullName||"Χειριστής"},${terminalPos},'SENT',${body.notes||null},${finalTotal})`}await lockActiveSaleProducts(tx,{companyId:req.user.companyId,storeId:store.id,productIds:lines.map(line=>line.productId)});
 for(const line of lines)await tx.$executeRaw`INSERT INTO "TableOrderLine" ("id","orderId","productId","description","quantity","unitPrice","lineTotal","notes","allergensJson","roundNumber") VALUES (${crypto.randomUUID()},${orderId},${line.productId},${line.name},${line.quantity},${line.unitPrice},${line.lineTotal},${line.notes||null},${JSON.stringify(line.allergens||[])}::jsonb,${roundNumber})`;
