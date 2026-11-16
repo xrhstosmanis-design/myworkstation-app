@@ -63,14 +63,15 @@ test('native FINAL and INVOICED reopen, pack inversion and corrected re-post ret
   const stale=await f.patch({status:'FINAL'});assert.equal(stale.failure?.status,409);
   const docs=await handlers('../src/routes/commerce-invoice-draft-approval.js',f.db);const approval=await invoke(docs['POST /purchases/:documentId/approve'],{documentId:'d-pos'});assert.equal(approval.failure?.status,409);
   await f.db.$executeRaw`INSERT INTO "PurchaseOrderLine"
-    ("id","orderId","productId","supplierCode","description","quantity","unitCost","netAmount","vatRate","vatAmount","grossAmount","stockUnitsPerInvoiceUnit")
-    VALUES ('corrected-line','pos','p','CODE','Corrected row',2,1,2,13,.26,2.26,6)`;
+    ("id","orderId","productId","supplierCode","description","quantity","unitCost","netAmount","vatRate","vatAmount","grossAmount","invoiceUnit","stockUnitsPerInvoiceUnit")
+    VALUES ('corrected-line','pos','p','CODE','Corrected row',2,1,2,13,.26,2.26,'PACKAGE',6)`;
   assert.ifError((await f.patch({status:'FINAL',expectedReopenVersion:1})).failure);
   const beforeDelayedPack=await f.snapshot();
   await assert.rejects(f.pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Old cycle',expectedReopenVersion:0}),e=>e.status===409);
   assert.equal(await f.snapshot(),beforeDelayedPack,'a delayed old-cycle pack callback cannot mutate the new finalization');
   await f.db.$executeRaw`UPDATE "PurchaseDocument" SET "totalGross"=2.26 WHERE "id"='d-pos'`;
   assert.ifError((await f.patch({status:'INVOICED',expectedReopenVersion:1})).failure);
+  assert.equal((await f.patch({status:'INVOICED',expectedReopenVersion:1})).result.idempotent,true);
   assert.equal(await f.stock(),22);assert.equal(await f.preserved(),keep);
   assert.deepEqual(await f.db.$queryRawUnsafe('SELECT "id","documentDate","createdByUserId" FROM "PurchaseDocument" ORDER BY "id"'),beforeDocs);
   await assert.rejects(reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(p)),e=>e.status===409);
