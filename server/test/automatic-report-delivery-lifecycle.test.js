@@ -297,3 +297,11 @@ test('lifecycle generation matches native canonical decimal-string int64 semanti
   const c = claimed(), gate = current(c.input); gate.snapshot.lifecycleGeneration = '5';
   code(() => startDelivery(c, {expectedVersion: c.version, token: c.token, now: NOW, current: gate}), 'STALE_GATE');
 });
+
+test('monthly supplier comparison has a delivery identity distinct from cash',()=>{
+ const cash=input({frequency:'MONTHLY'});
+ const supplier={...cash,reportType:'SUPPLIER_COMPARISON'};
+ assert.notEqual(fresh(cash).slotId,fresh(supplier).slotId);
+ assert.equal(fresh(supplier).slotId,fresh(supplier).slotId);
+ assert.throws(()=>fresh({...supplier,frequency:'DAILY'}),/Unsupported report kind/);
+});

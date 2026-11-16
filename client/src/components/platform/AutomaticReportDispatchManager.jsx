@@ -26,6 +26,7 @@ function DeliveryHistory({history}){
      <td>{stamp(row.at)}</td>
      <td>{row.type==='INVOICE_STOCK_EXCLUSION'
       ? ['Είδη τιμολογίου εκτός αποθήκης',row.invoiceNumber].filter(Boolean).join(' · ')
+      : row.type==='SUPPLIER_COMPARISON' ? 'Μηνιαία σύγκριση προμηθευτών'
       : [frequencies.find(([value])=>value===row.frequency)?.[1],'αναφορά ταμείου'].filter(Boolean).join(' ')}</td>
      <td>{deliveryStatus[row.status]||'Άγνωστη κατάσταση'}{deliveryFailure[row.failure]&&<div>{deliveryFailure[row.failure]}</div>}</td>
      <td style={{overflowWrap:'anywhere'}}>{row.messageId||'—'}</td>

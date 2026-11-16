@@ -1,4 +1,5 @@
 import {monthlyTurnoverMailSections} from './daily-turnover-report.js';
+import {SUPPLIER_COMPARISON_PAYLOAD_FORMAT} from './supplier-comparison-email.js';
 import {createHash} from "node:crypto";
 import {reconcileDeliverySlot} from "./automatic-report-delivery-lifecycle.js";
 import {automaticReviewedMailText} from "./automatic-report-cash-payload.js";
@@ -42,17 +43,23 @@ function request(raw){
   const p=args.payload;
   shape(p,["format","scope","period","frequency","sourceFingerprint","financialFinality","financialLimitations","contentType","body","byteLength","payloadFingerprint"]);
   shape(p.scope,["companyId","storeId"]);
-  if(p.format!=="MWS_AUTOMATIC_CASH_PAYLOAD_V1"||p.scope.companyId!==args.scope.companyId||p.scope.storeId!==args.scope.storeId||!["DAILY","WEEKLY","MONTHLY"].includes(p.frequency)||p.financialFinality!=="PROVISIONAL"||p.contentType!=="application/json; charset=utf-8")fail();
+  const supplier=p.format===SUPPLIER_COMPARISON_PAYLOAD_FORMAT;
+  if((supplier?p.frequency!=="MONTHLY":p.format!=="MWS_AUTOMATIC_CASH_PAYLOAD_V1")||p.scope.companyId!==args.scope.companyId||p.scope.storeId!==args.scope.storeId||!["DAILY","WEEKLY","MONTHLY"].includes(p.frequency)||p.financialFinality!=="PROVISIONAL"||p.contentType!=="application/json; charset=utf-8")fail();
   if(typeof p.body!=="string"||!Number.isSafeInteger(p.byteLength)||p.byteLength<1||p.byteLength>2*1024*1024||Buffer.byteLength(p.body,"utf8")!==p.byteLength||p.payloadFingerprint!==hash(p.body)||typeof p.sourceFingerprint!=="string"||!/^[a-f0-9]{64}$/.test(p.sourceFingerprint))fail();
   let content;try{content=JSON.parse(p.body)}catch{fail()}
   if(!content||content.format!==p.format||content.scope?.companyId!==p.scope.companyId||content.scope?.storeId!==p.scope.storeId||content.frequency!==p.frequency||content.sourceFingerprint!==p.sourceFingerprint||content.financialFinality!=="PROVISIONAL"||content.financialReconciliationComplete!==false||content.employeeLiabilityAdjusted!==false||canonical(content.period)!==canonical(p.period)||canonical(content.financialLimitations)!==canonical(p.financialLimitations))fail();
+  if(supplier){
+    text(content.subject,300);
+    if(typeof content.text!=='string'||!content.text.trim())fail();
+  }
   if(Object.hasOwn(content,'reviewedCash'))try{automaticReviewedMailText(content)}catch{fail()}
   if(!iso(p.period?.from)||!iso(p.period?.to)||p.period.from>=p.period.to||p.period.to>args.now)fail();
   return freeze(args);
 }
 function started(raw,args){
   const value=copy(raw),r=reconcileDeliverySlot(value,value.input),p=args.payload;
-  if(r.status!=="ATTEMPTING"||r.slotId!==args.scope.slotId||r.input.companyId!==args.scope.companyId||r.input.storeId!==args.scope.storeId||r.version!==args.expectedVersion+1||r.token!==args.token||r.attemptStartedAt!==args.now||r.updatedAt!==args.now||r.leaseUntil<=args.now||r.input.frequency!==p.frequency||r.input.periodFrom!==p.period.from||r.input.periodTo!==p.period.to||r.input.snapshot.payloadFingerprint!==p.payloadFingerprint||r.input.snapshot.sourceFingerprint!==p.sourceFingerprint||JSON.parse(p.body).settingsVersion!==r.input.snapshot.settingsVersion)fail();
+  const reportType=p.format===SUPPLIER_COMPARISON_PAYLOAD_FORMAT?"SUPPLIER_COMPARISON":"CASH";
+  if(r.input.reportType!==reportType||r.status!=="ATTEMPTING"||r.slotId!==args.scope.slotId||r.input.companyId!==args.scope.companyId||r.input.storeId!==args.scope.storeId||r.version!==args.expectedVersion+1||r.token!==args.token||r.attemptStartedAt!==args.now||r.updatedAt!==args.now||r.leaseUntil<=args.now||r.input.frequency!==p.frequency||r.input.periodFrom!==p.period.from||r.input.periodTo!==p.period.to||r.input.snapshot.payloadFingerprint!==p.payloadFingerprint||r.input.snapshot.sourceFingerprint!==p.sourceFingerprint||JSON.parse(p.body).settingsVersion!==r.input.snapshot.settingsVersion)fail();
   return r;
 }
 const unknown=reason=>Object.freeze({outcome:"UNKNOWN",reason,automaticRetryAllowed:false});
@@ -107,6 +114,10 @@ export function createAutomaticReportMailAdapter({startAttempt,sendMail}){
     // The injected transport owns its timeout; any uncertainty is terminal.
     try{
       const content=JSON.parse(args.payload.body);
+      if(content.format===SUPPLIER_COMPARISON_PAYLOAD_FORMAT){
+        const result=await sendMail(Object.freeze({to:r.input.recipient,subject:content.subject,text:content.text}));
+        return evidence(result,r.input.recipient);
+      }
       const cashText = Object.hasOwn(content,'reviewedCash') ? automaticReviewedMailText(content) : args.payload.body;
       const turnover = content.dailyTurnover;
       const text = turnover

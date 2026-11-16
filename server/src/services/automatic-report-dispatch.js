@@ -8,10 +8,10 @@ import {createAutomaticReportSmtpTransport} from './mail.js';
 // There is no schema creation, implicit enrollment, automatic recovery or send
 // within preparation. The bound facade keeps repository.create in the caller's
 // transaction rather than checking out an independent nested transaction.
-export function createAutomaticReportDispatcher({db,persistence=defaultPersistence,activationProvider,clock=()=>new Date().toISOString(),sendMail}){
+export function createAutomaticReportDispatcher({db,persistence=defaultPersistence,activationProvider,reportType='CASH',clock=()=>new Date().toISOString(),sendMail}){
  if(!db||typeof db.$transaction!=='function'||typeof activationProvider!=='function'||typeof clock!=='function'||sendMail!==undefined&&typeof sendMail!=='function')throw new TypeError('Trusted dispatcher dependencies required');
  const transactional={$transaction:fn=>db.$transaction(fn,{isolationLevel:'ReadCommitted',maxWait:5000,timeout:15000})};
- const eligibility=createAutomaticReportEligibilityReader({activationProvider,persistence});
+ const eligibility=createAutomaticReportEligibilityReader({activationProvider,persistence,reportType});
  const repository=createAutomaticReportDeliveryRepository({db:transactional,readEligibility:eligibility});
  async function prepare(raw){
   const scope=automaticReportScopeInput(raw),now=clock();

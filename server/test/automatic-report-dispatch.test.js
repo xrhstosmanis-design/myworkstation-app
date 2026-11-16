@@ -57,3 +57,34 @@ test('default OFF and source HOLD cannot reach SMTP',async()=>{
 test('unproven SMTP acceptance persists UNKNOWN and repeated sweep cannot retry',async()=>{
  const h=fixture();let sends=0;const d=createAutomaticReportDispatcher({...h,clock:()=>NOW,sendMail:async()=>{sends++;return{messageId:'planned'}}});assert.equal((await d.dispatch(scope)).outcomes[0].outcome,'UNKNOWN');await d.dispatch(scope);assert.equal(sends,1);
 });
+
+test('monthly supplier dispatch stores SMTP acceptance and does not resend on another sweep',async()=>{
+ const h=fixture(),reportType='SUPPLIER_COMPARISON',monthly={...scope,frequency:'MONTHLY'};
+ const query=h.tx.$queryRaw;
+ h.tx.$queryRaw=async(strings,...values)=>{
+  if(strings.join('?').includes('FROM "PurchaseDocumentLine"'))return [
+   {productId:'p',productName:'Καφές',productUnit:'PIECE',supplierId:'one',supplierName:'Πρώτος',documentId:'one',quantity:10,unit:'PIECE',netAmount:10},
+   {productId:'p',productName:'Καφές',productUnit:'PIECE',supplierId:'two',supplierName:'Δεύτερος',documentId:'two',quantity:10,unit:'PIECE',netAmount:12}
+  ];
+  return query(strings,...values);
+ };
+ h.persistence.readLockedDispatchAuthorization=async(_tx,request)=>{
+  assert.equal(request.reportType,reportType);
+  return h.auth;
+ };
+ for(const record of [h.auth.policy,h.auth.grant,h.auth.recipients[0].consent])record.allowedFrequencies=['MONTHLY'];
+ const messages=[];
+ const dispatcher=createAutomaticReportDispatcher({...h,reportType,clock:()=>'2026-12-01T06:00:00.000Z',sendMail:async message=>{
+  assert.equal([...h.slots.values()][0].status,'ATTEMPTING');
+  messages.push(message);
+  return {accepted:[message.to],rejected:[],messageId:'supplier-fixture-message'};
+ }});
+ const result=await dispatcher.dispatch(monthly);
+ assert.equal(result.outcomes[0]?.outcome,'ACCEPTED');
+ assert.equal([...h.slots.values()][0].status,'ACCEPTED');
+ assert.equal((await dispatcher.dispatch(monthly)).attempted,0);
+ assert.equal(messages.length,1);
+ assert.equal(messages[0].to,'recipient@example.invalid');
+ assert.match(messages[0].subject,/Σύγκριση προμηθευτών 2026-11/);
+ assert.match(messages[0].text,/Πρώτος.*Χαμηλότερο συγκρίσιμο κόστος/);
+});

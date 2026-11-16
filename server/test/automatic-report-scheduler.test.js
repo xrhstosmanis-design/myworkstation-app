@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createAutomaticReportScheduler} from '../src/services/automatic-report-scheduler.js';
 import {createBackgroundDrain} from '../src/server-shutdown.js';
-function fixture(){
+function fixture(reportType){
  const work=createBackgroundDrain(),queries=[],calls=[],timers=[];let control={valid:true,enabled:true,fingerprint:'one'};
  const db={$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});return[{companyId:'c',storeId:'s'},{companyId:'d',storeId:'t'}]}};
  const dispatcher={dispatch:async(scope,options)=>{calls.push({scope,options});return{attempted:1}}};
- const scheduler=createAutomaticReportScheduler({db,dispatcher,activationProvider:()=>control,work,batchSize:2,maxAttempts:3,timers:{setInterval:(fn,ms)=>{const t={fn,ms,unref(){this.unrefed=true}};timers.push(t);return t},clearInterval:t=>{t.cleared=true}}});
+ const scheduler=createAutomaticReportScheduler({db,dispatcher,reportType,activationProvider:()=>control,work,batchSize:2,maxAttempts:3,timers:{setInterval:(fn,ms)=>{const t={fn,ms,unref(){this.unrefed=true}};timers.push(t);return t},clearInterval:t=>{t.cleared=true}}});
  return{scheduler,db,dispatcher,work,queries,calls,timers,setControl:c=>{control=c}};
 }
 test('construction is inert, explicit start once creates unref timer and OFF makes zero database calls',async()=>{
@@ -16,7 +16,7 @@ test('construction is inert, explicit start once creates unref timer and OFF mak
 });
 test('bounded sweep runs only three known frequencies and uses keyset on following sweep',async()=>{
  const h=fixture();assert.equal((await h.scheduler.sweep()).attempted,3);assert.deepEqual(h.calls.map(x=>x.scope.frequency),['DAILY','WEEKLY','MONTHLY']);assert.equal(h.queries[0].values.at(-1),2);assert.deepEqual(h.calls.map(x=>x.options.maxAttempts),[3,2,1]);
- await h.scheduler.sweep();assert.match(h.queries[1].sql,/\("companyId","storeId"\)>/);assert.deepEqual(h.queries[1].values,['c','s',2]);
+ await h.scheduler.sweep();assert.match(h.queries[1].sql,/\("companyId","storeId"\)>/);assert.deepEqual(h.queries[1].values,['CASH','c','s',2]);
 });
 test('concurrent sweeps share one tracked task; shutdown stops admission but drains current operation',async()=>{
  const h=fixture();let release;const wait=new Promise(r=>{release=r});h.dispatcher.dispatch=async scope=>{h.calls.push(scope);await wait;return{attempted:1}};
@@ -31,4 +31,11 @@ test('fresh OFF/epoch change mid-sweep prevents additional frequency/store admis
 test('invalid bounds or dishonest dispatcher cannot silently exceed batch budget',async()=>{
  const h=fixture();h.dispatcher.dispatch=async()=>({attempted:99});await assert.rejects(h.scheduler.sweep());await h.work.drain();assert.equal(h.work.size,0);
  assert.throws(()=>createAutomaticReportScheduler({db:h.db,dispatcher:h.dispatcher,activationProvider:()=>({}),work:h.work,intervalMs:1}));
+});
+
+test('supplier scheduler selects its own policies and only runs monthly',async()=>{
+ const h=fixture('SUPPLIER_COMPARISON');
+ assert.equal((await h.scheduler.sweep()).attempted,2);
+ assert.deepEqual(h.queries[0].values,['SUPPLIER_COMPARISON',2]);
+ assert.deepEqual(h.calls.map(call=>call.scope.frequency),['MONTHLY','MONTHLY']);
 });

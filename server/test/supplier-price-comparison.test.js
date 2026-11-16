@@ -1,3 +1,4 @@
+import {readSupplierComparison} from "../src/services/supplier-comparison-report.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -67,7 +68,7 @@ test("comparison route uses the licensed target store/company and only reads app
   const queries=[];
   const prisma={$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join("?"),values});return [line({netAmount:10})];},$executeRaw:()=>{throw new Error("Unexpected write");}};
   const module=source.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"");
-  new Function("Router","prisma","requireCompanyModule","requireStoreModule","buildSupplierPriceComparison","orderSuggestionsRouter",module)(()=>router,prisma,()=>()=>{},key=>{assert.equal(key,"INVENTORY");return "STORE_LICENSE_GUARD";},buildSupplierPriceComparison,()=>{});
+  new Function("Router","prisma","requireCompanyModule","requireStoreModule","readSupplierComparison","orderSuggestionsRouter",module)(()=>router,prisma,()=>()=>{},key=>{assert.equal(key,"INVENTORY");return "STORE_LICENSE_GUARD";},readSupplierComparison,()=>{});
   const route=registrations.find(r=>r.method==="get"&&r.args[0]==="/supplier-price-comparison");
   assert.equal(route.args[1],"STORE_LICENSE_GUARD");
   let body,error;
@@ -76,6 +77,20 @@ test("comparison route uses the licensed target store/company and only reads app
   const {sql,values}=queries[0];
   assert.match(sql,/d\."status"='APPROVED' AND d\."documentType"='INVOICE'/);
   assert.match(sql,/p\."companyId"=\?/);assert.match(sql,/s\."companyId"=\?/);assert.match(sql,/d\."storeId"=\?/);
-  assert.ok(values.every(value=>["target-store","target-company"].includes(value)));
+  assert.ok(values.every(value=>["target-store","target-company",null].includes(value)));
   assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|ALTER)\b/);
+});
+
+test("monthly supplier report compares the latest costs across distinct suppliers",async()=>{
+  const db={$queryRaw:async(_strings,...values)=>{
+    assert.ok(values.includes("2026-10-01"));
+    return [
+      line({supplierId:"a",netAmount:10}),
+      line({supplierId:"b",netAmount:20}),
+      line({productId:"single",supplierId:"a",netAmount:30})
+    ];
+  }};
+  const [product,...otherProducts]=await readSupplierComparison(db,{companyId:"company",storeId:"store",month:"2026-10"});
+  assert.deepEqual(otherProducts,[]);
+  assert.deepEqual(Object.fromEntries(product.suppliers.map(supplier=>[supplier.supplierId,supplier.differenceFromLowestCost])),{a:0,b:1});
 });

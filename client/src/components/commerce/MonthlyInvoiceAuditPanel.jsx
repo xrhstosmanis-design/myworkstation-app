@@ -19,7 +19,7 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
   const serial=++previewRequest.current,selected={storeId,month},scope={...selected,api};setPreviewObservation({...scope,loading:true});
   const currentScope=()=>!controller.signal.aborted&&previewRequest.current===serial&&current.current.storeId===selected.storeId&&current.current.month===selected.month&&current.current.api===api;
   try{
-   const data=await api('/api/reports/invoice-audit-email-preview?'+new URLSearchParams(selected).toString(),{signal:controller.signal});
+   const data=await api('/api/reports/invoice-audit-email-preview?'+new URLSearchParams({...selected,includeSupplierComparison:"true"}).toString(),{signal:controller.signal});
    if(!currentScope())return;
    if(data?.store?.id!==selected.storeId||data?.period?.month!==selected.month||data?.previewOnly!==true||data?.sendingEnabled!==false||data?.readOnly!==true||data?.separateSnapshots!==true||data?.purposeConsent!=='NOT_ASSUMED'||typeof data?.payload?.subject!=='string'||typeof data?.payload?.body!=='string'||!data?.payload?.coverage||!data?.recipients)throw Error('Η προεπισκόπηση δεν αντιστοιχεί στην τρέχουσα επιλογή.');
    setPreviewObservation({...scope,data,loading:false});

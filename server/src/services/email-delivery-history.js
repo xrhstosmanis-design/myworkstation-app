@@ -2,7 +2,7 @@ const historyLimit = 50;
 
 export async function readEmailDeliveryHistory(tx, {companyId, storeId}, reportSchemaReady) {
   const reports = reportSchemaReady ? await tx.$queryRaw`
-    SELECT "slotId" AS "id", 'CASH' AS "type", "status",
+    SELECT "slotId" AS "id", COALESCE("record"->'input'->>'reportType', 'CASH') AS "type", "status",
       "record"->'input'->>'frequency' AS "frequency",
       COALESCE("record"->>'completedAt', "record"->>'createdAt') AS "at",
       "record"->>'messageId' AS "messageId", NULL::text AS "failure"

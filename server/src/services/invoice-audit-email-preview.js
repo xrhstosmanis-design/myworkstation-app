@@ -1,3 +1,4 @@
+import {readSupplierComparison} from './supplier-comparison-report.js';
 import {readMonthlyInvoiceAudit} from './monthly-invoice-audit.js';
 import {buildInvoiceAuditEmailPayload} from './invoice-audit-email-payload.js';
 import {invoiceAuditEmailPeriod} from './invoice-audit-email-period.js';
@@ -61,11 +62,16 @@ async function recipientSummary(db,actor,input,clock){
 
 export async function readInvoiceAuditEmailPreview(db,actor,input,{clock=()=>new Date(),readAudit=readMonthlyInvoiceAudit}={}){
  if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input?.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
- if(!input||Object.keys(input).some(k=>!['storeId','month'].includes(k))||!safeText(input.storeId))fail('Επίλεξε συγκεκριμένο κατάστημα και μήνα.');
+ if(!input||Object.keys(input).some(k=>!['storeId','month','includeSupplierComparison'].includes(k))||!safeText(input.storeId))fail('Επίλεξε συγκεκριμένο κατάστημα και μήνα.');
+ if(input.includeSupplierComparison!==undefined&&input.includeSupplierComparison!=='true')fail('Μη έγκυρη επιλογή σύγκρισης προμηθευτών.');
  invoiceAuditEmailPeriod(input.month);
  const reportNow=new Date(clock());if(!Number.isFinite(reportNow.getTime()))fail('Μη έγκυρη ώρα παρατήρησης.',502);
  const report=await readAudit(db,actor,{storeId:input.storeId,month:input.month},{now:reportNow});
  if(report?.store?.id!==input.storeId||report?.period?.month!==input.month)fail('Η πηγή δεν αντιστοιχεί στην επιλογή.',502);
- const payload=buildInvoiceAuditEmailPayload(report),recipients=await recipientSummary(db,actor,input,clock);
+ const recipients=await recipientSummary(db,actor,input,clock);
+ const supplierComparison=input.includeSupplierComparison==='true'
+  ? await readSupplierComparison(db,{companyId:actor.companyId,storeId:input.storeId,month:input.month})
+  : undefined;
+ const payload=buildInvoiceAuditEmailPayload(report,{supplierComparison});
  return {store:{id:report.store.id,name:report.store.name},period:payload.period,reportObservedAt:payload.reportObservedAt,recipientObservedAt:recipients.observedAt,separateSnapshots:true,previewOnly:true,readOnly:true,sendingEnabled:false,purposeConsent:'NOT_ASSUMED',reportType:'INVOICE_AUDIT',payload,recipients};
 }

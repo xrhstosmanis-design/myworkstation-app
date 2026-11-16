@@ -100,3 +100,26 @@ test('administrative proof does not bypass tamper, principal, lifecycle, cutoff,
   const h=fixture(),pair=h.auth.recipients[0];Object.assign(pair.recipient,{companyId:'c',storeId:'s',verifiedAt:null});pair.consent.consentedBy='report-superadmin:sa';pair.consent.proofHash=administratorAuthorizationProof(pair.recipient,pair.consent);change(h);await assert.rejects(createAutomaticReportEligibilityReader(h).readContext(h.tx,scope,NOW));
  }
 });
+
+test('supplier dispatch binds the Athens calendar month and requires supplier consent',async()=>{
+ const h=fixture(),reportType='SUPPLIER_COMPARISON';
+ const query=h.tx.$queryRaw;
+ h.tx.$queryRaw=async(strings,...values)=>{
+  if(strings.join('?').includes('FROM "PurchaseDocumentLine"'))return [];
+  return query(strings,...values);
+ };
+ h.persistence.readLockedDispatchAuthorization=async(_tx,request)=>{
+  assert.equal(request.reportType,reportType);
+  return h.auth;
+ };
+ for(const record of [h.auth.policy,h.auth.grant,h.auth.recipients[0].consent])record.allowedFrequencies=['MONTHLY'];
+ const read=createAutomaticReportEligibilityReader({...h,reportType});
+ const monthly={...scope,frequency:'MONTHLY'},now='2026-12-01T06:00:00.000Z';
+ const {inputs,payload}=await read.readContext(h.tx,monthly,now);
+ assert.equal(inputs[0].reportType,reportType);
+ assert.equal(inputs[0].periodFrom,'2026-10-31T22:00:00.000Z');
+ assert.equal(inputs[0].periodTo,'2026-11-30T22:00:00.000Z');
+ assert.match(JSON.parse(payload.body).subject,/2026-11/);
+ h.auth.recipients[0].consent=null;
+ await assert.rejects(read.readContext(h.tx,monthly,now),{code:'REPORT_DISPATCH_HOLD'});
+});
