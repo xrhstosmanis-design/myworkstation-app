@@ -775,3 +775,32 @@ test('posted invoice cancellation appears and submits only with the independent 
   }finally{await m.close()}
  }
 });
+
+test('shift report needs only its own grant and opens without a selected till',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const store={id:'a1',name:'A1'};
+ const shift={id:'shift',status:'OPEN',openedByName:'Synthetic report operator',transactionCount:1,openedAt:'2026-11-16T08:00:00Z',terminalPos:'MAIN',cashSales:13};
+ const calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'MANAGER',capabilities:['shifts.read']}]};
+  assert.equal(path,'/api/cash-control/stores/a1/reporting-overview');
+  assert.equal(options.method||'GET','GET');
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  assert.equal(options.headers['x-mws-terminal-pos'],undefined);
+  return {store,timeZone:'Europe/Athens',recent:[shift],openSessions:[shift],recentTransactions:[{id:'entry',sessionId:'shift',type:'SALE_CASH',amount:13,description:'Synthetic report transaction',occurredAt:'2026-11-16T08:01:00Z'}]};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const select=document.querySelector('[aria-label="Κατάστημα"]');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.equal(button('Πωλήσεις και βάρδιες'),undefined);
+  assert.equal(button('Κλείσιμο βάρδιας'),undefined);
+  await m.act(async()=>button('Αναφορά βαρδιών').click());
+  assert.equal(document.querySelector('[aria-label="Ταμείο"]'),null);
+  assert.match(document.body.textContent,/Synthetic report operator/);
+  await m.act(async()=>button('1 · Προβολή').click());
+  assert.match(document.body.textContent,/Synthetic report transaction/);
+  await m.act(async()=>button('Ανανέωση αναφοράς βαρδιών').click());
+  assert.equal(calls.filter(call=>call.path.endsWith('/reporting-overview')).length,2);
+ }finally{await m.close();}
+});

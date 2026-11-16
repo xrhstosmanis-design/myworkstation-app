@@ -147,3 +147,16 @@ test('invoice cancellation admits only the exact preview and submit routes and r
   assert.deepEqual(changeStaffCapability([view,cancel],view,false),[]);
   for(const profile of Object.values(staffProfiles))assert.equal(profile.capabilities.includes(cancel),false);
 });
+
+test('shift report viewing is an independent exact read grant',()=>{
+  const capability='shifts.read';
+  assert.equal(validStaffCapabilities([capability]),true);
+  assert.deepEqual(changeStaffCapability([],capability,true),[capability]);
+  for(const profile of Object.values(staffProfiles))assert.equal(profile.capabilities.includes(capability),false);
+  for(const prefix of ['/api/cash-control','/api/cash']){
+   const path=prefix+'/stores/store/reporting-overview';
+   assert.equal(staffRequestCapability('GET',path),capability);
+   assert.equal(staffRequestCapability('POST',path),null);
+   assert.equal(staffRequestCapability('GET',path+'/extra'),null);
+  }
+});

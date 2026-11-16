@@ -47,6 +47,8 @@ test('actual admission binds actions to selected store/object and never grants o
   for(const [path,method,body,cap]of [
    ['/api/purchase-orders/order','PATCH',{description:'edit'},'invoices.edit'],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL'},'invoices.approve'],
+   ['/api/cash-control/stores/a1/reporting-overview','GET',{},'shifts.read'],
+   ['/api/cash/stores/a1/reporting-overview','GET',{},'shifts.read'],
    ['/api/purchase-orders/order/cancel-preview?storeId=a1','GET',{},'invoices.cancel'],
    ['/api/purchase-orders/order/cancel','POST',{storeId:'a1'},'invoices.cancel'],
    ['/api/purchase-orders/order','PATCH',{status:'INVOICED',expectedReopenVersion:0,excludeStockLineIds:['line-a']},'invoices.approve'],
@@ -68,6 +70,9 @@ test('actual admission binds actions to selected store/object and never grants o
    ['/api/purchase-orders/order','PATCH',{status:'FINAL',excludeStockLineIds:['line-a']}],
    ['/api/purchase-orders/order','PATCH',{status:'INVOICED',excludeStockLineIds:['line-a'],totalMismatchOverride:true}],
    ['/api/purchase-orders/foreign','PATCH',{status:'INVOICED',excludeStockLineIds:['line-a']}],
+   ['/api/cash-control/stores/a2/reporting-overview','GET',{}],
+   ['/api/cash/stores/a2/reporting-overview','GET',{}],
+   ['/api/cash-control/stores/a1/reporting-overview','POST',{}],
    ['/api/transactions/stores/a2','POST',expense],
    ['/api/transactions/stores/a1/supplier-settlements/s/review','POST',{}],
    ['/api/transactions/tx/reverse','POST',{}],
@@ -87,6 +92,15 @@ test('actual admission binds actions to selected store/object and never grants o
   p.grant(['invoices.read','invoices.cancel']);
   assert.equal((await send('/api/purchase-orders/order/reopen-preview?storeId=a1','GET')).status,403);
   assert.equal((await send('/api/purchase-orders/order/reopen','POST',{storeId:'a1'})).status,403);
+  for(const unrelated of ['sales.read','shifts.close','cash.read']){
+   p.grant([unrelated]);
+   assert.equal((await send('/api/cash-control/stores/a1/reporting-overview','GET')).status,403);
+  }
+  p.grant(['shifts.read']);
+  assert.equal((await send('/api/cash-control/stores/a1/reporting-overview','GET')).status,200);
+  assert.equal((await send('/api/backoffice-staff/sales/stores/a1/terminals','GET')).status,403);
+  assert.equal((await send('/api/cash/stores/a1/close-context','GET')).status,403);
+  assert.equal((await send('/api/cash/sessions/shift/close','POST',{})).status,403);
   p.grant(['invoices.read']);p.disableInventory();
   assert.equal((await send('/api/purchase-orders/report?storeId=a1','GET')).status,403,'purchase review needs the selected store inventory module');
   assert.equal((await send('/api/commerce/documents/inbox/archive?storeId=a1','GET')).status,200,'existing document-only archive remains available');
