@@ -333,10 +333,11 @@ router.patch("/:orderId",async(req,res,next)=>{
           const stockUnits = row.invoiceUnit === "PACKAGE" ? n(row.stockUnitsPerInvoiceUnit) : 1;
           if (!Number.isInteger(stockUnits) || stockUnits < 1)
             throw Object.assign(new Error("Έλεγξε τα τεμάχια ανά συσκευασία."), {status:409});
-          const stockQuantity = n(row.quantity) * stockUnits;
-          current.quantity+=stockQuantity;
+          const invoiceQuantity=n(row.quantity);
+          current.quantity+=invoiceQuantity*stockUnits;
           if(!excludedStockLineIds.has(row.id)){
-            current.stockQuantity+=stockQuantity;
+            // The pack correction posts only the difference from invoice units.
+            current.stockQuantity+=invoiceQuantity;
             current.stockNet+=n(row.netAmount);
             current.stockExcise+=n(row.exciseTotal);
           }
