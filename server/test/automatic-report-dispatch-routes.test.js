@@ -10,7 +10,7 @@ test('actual mounted dispatch routes recheck database role, bind URL scope and r
  const db={user:{findUnique:async({where})=>({id:where.id,role})}};
  const app=express();app.use(express.json({limit:'16kb'}));
  app.use((req,_res,next)=>{if(req.headers['x-test-user'])req.user={id:req.headers['x-test-user'],isSuperAdmin:true};next()});
- app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',createAutomaticReportDispatchRouter(db,{management}));
+ app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',createAutomaticReportDispatchRouter(db,{management,env:{MONTHLY_TURNOVER_LAB_STORE_ID:'lab'}}));
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
  const base=`http://127.0.0.1:${server.address().port}/api/platform/companies/c/stores/s/report-dispatch`;
  const send=(suffix='',method='GET',body,identity='actor')=>fetch(base+suffix,{method,headers:{'content-type':'application/json',...(identity?{'x-test-user':identity}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -18,6 +18,10 @@ test('actual mounted dispatch routes recheck database role, bind URL scope and r
   assert.equal((await send('', 'GET',undefined,null)).status,401);assert.equal(calls.length,0);
   role='OWNER';assert.equal((await send()).status,403);assert.equal(calls.length,0,'browser super-admin flag cannot create actual role');
   role='SUPER_ADMIN';let response=await send();assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(calls.at(-1).scope,{actorId:'actor',companyId:'c',storeId:'s'});
+  const callsBeforeSupplier=calls.length;
+  assert.equal((await send('/supplier-comparison')).status,403);
+  assert.equal((await send('/supplier-comparison/recipients/authorize','POST',{})).status,403);
+  assert.equal(calls.length,callsBeforeSupplier);
   const cases=[['/policy','PUT','saveDispatchPolicy'],['/grant','PUT','saveAutomationGrant'],['/recipients','PUT','saveRecipient'],['/recipients/url-id','DELETE','revokeRecipient'],['/recipients/url-id/verification','POST','issueRecipientVerification'],['/recipients/url-id/verification/confirm','POST','confirmRecipientVerification'],['/recipients/url-id/consent/request','POST','issueRecipientConsent'],['/recipients/url-id/consent/confirm','POST','confirmRecipientConsent'],['/recipients/url-id/consent','PUT','saveRecipientConsent']];
   for(const [suffix,method,expected]of cases){response=await send(suffix,method,{expectedVersion:1,recipientId:'body-id',actorId:'body-actor'});assert.equal(response.status,200);const call=calls.at(-1);assert.equal(call.method,expected);assert.deepEqual(call.scope,{actorId:'actor',companyId:'c',storeId:'s'});if(suffix.includes('/url-id'))assert.equal(call.input.recipientId,'url-id','body cannot redirect recipient URL');}
   role='EMPLOYEE';const before=calls.length;assert.equal((await send('/grant','PUT',{})).status,403);assert.equal(calls.length,before,'role is freshly rechecked after prior success');
