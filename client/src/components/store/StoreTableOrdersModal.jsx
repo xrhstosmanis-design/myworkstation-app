@@ -5,6 +5,49 @@ const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",curr
 const blankTable={name:"",areaId:"",capacity:4,shape:"SQUARE"};
 const shapeLabel={SQUARE:"Τετράγωνο",ROUND:"Στρογγυλό",RECTANGLE:"Ορθογώνιο"};
 
+function WaiterAssignment({api,storeId,order,onSaved}){
+  const [operators,setOperators]=useState(null);
+  const [operatorId,setOperatorId]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const open=async()=>{
+    setBusy(true);
+    setError("");
+    try {
+      const result=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/table-service/waiters`);
+      setOperators(result.operators.filter(operator=>operator.id!==order.operatorId));
+    } catch(failure){setError(failure.message)}
+    finally{setBusy(false)}
+  };
+  const save=async event=>{
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/table-orders/${encodeURIComponent(order.id)}/waiter`,{
+        method:"PATCH",body:JSON.stringify({operatorId,expectedOperatorId:order.operatorId}),
+      });
+      setOperators(null);
+      setOperatorId("");
+      await onSaved();
+    } catch(failure){setError(failure.message)}
+    finally{setBusy(false)}
+  };
+  return <div>
+    {operators===null?<button type="button" disabled={busy} onClick={open}>ΑΛΛΑΓΗ ΣΕΡΒΙΤΟΡΟΥ</button>:
+      <form onSubmit={save}>
+        <label>Νέος σερβιτόρος <select value={operatorId} disabled={busy} onChange={event=>setOperatorId(event.target.value)}>
+          <option value="">Επίλεξε χειριστή</option>
+          {operators.map(operator=><option key={operator.id} value={operator.id}>{operator.displayName}</option>)}
+        </select></label>
+        {!operators.length&&<p>Δεν υπάρχουν άλλοι διαθέσιμοι χειριστές.</p>}
+        <button type="submit" disabled={busy||!operatorId}>ΑΠΟΘΗΚΕΥΣΗ ΣΕΡΒΙΤΟΡΟΥ</button>
+        <button type="button" disabled={busy} onClick={()=>{setOperators(null);setOperatorId("");setError("")}}>ΚΛΕΙΣΙΜΟ</button>
+      </form>}
+    {error&&<p role="alert">{error}</p>}
+  </div>;
+}
+
 export default function StoreTableOrdersModal({api,store,cart,onClose,onLoad,onCartCleared,setError,setMessage}){
   const [data,setData]=useState({areas:[],tables:[],orders:[],canConfigure:false}),[tableId,setTableId]=useState(""),[areaId,setAreaId]=useState("ALL"),[busy,setBusy]=useState(false),[configuring,setConfiguring]=useState(false),[newTable,setNewTable]=useState(blankTable);
   const load=async()=>{setBusy(true);try{const result=await api(`/api/store-pos/stores/${store.id}/table-service`);setData(result);setTableId(current=>result.tables?.some(table=>table.id===current)?current:result.tables?.[0]?.id||"")}catch(error){setError(error.message)}finally{setBusy(false)}};
@@ -23,6 +66,6 @@ export default function StoreTableOrdersModal({api,store,cart,onClose,onLoad,onC
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(145px,1fr))",gap:12,marginBottom:16}}>{visibleTables.map(table=>{const order=openOrders.get(table.id),ready=order?.status==="READY",selected=tableId===table.id;return <button key={table.id} onClick={()=>setTableId(table.id)} style={{minHeight:105,padding:12,borderRadius:table.shape==="ROUND"?"50%":table.shape==="RECTANGLE"?"10px":"18px",border:selected?"4px solid #0f766e":"2px solid #cbd5e1",background:ready?"#bbf7d0":order?"#fef3c7":"#f8fafc",color:"#143c34",fontWeight:900,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5}}><Armchair size={22}/><span>{table.name}</span><small><Users size={13}/> {table.capacity} άτομα · {shapeLabel[table.shape]||table.shape}</small><small>{ready?"ΕΤΟΙΜΟ ΓΙΑ ΠΑΡΑΛΑΒΗ":order?`${order.operatorName||"Χειριστής"} · ${euro(order.total)}`:"ΕΛΕΥΘΕΡΟ"}</small></button>})}</div>
     {!visibleTables.length&&<p style={{padding:18,textAlign:"center",background:"#f8fafc",borderRadius:12}}>Δεν υπάρχουν τραπέζια σε αυτή τη σάλα.</p>}
     <button className="pos-primary-action" disabled={busy||!tableId||!cart.length} onClick={send}>{selectedOrder?"ΠΡΟΣΘΗΚΗ ΝΕΟΥ ΓΥΡΟΥ":"ΑΠΟΣΤΟΛΗ ΠΑΡΑΓΓΕΛΙΑΣ"} ({cart.length} είδη)</button>
-    <div className="pos-hold-list" style={{marginTop:18}}>{data.orders.map(order=><article key={order.id} style={order.status==="READY"?{border:"3px solid #087a52",background:"#ecfdf5"}:undefined}><div><b>{order.tableName} · {euro(order.total)} {order.status==="READY"&&<span style={{color:"#087a52"}}>· ΕΤΟΙΜΗ ΓΙΑ ΠΑΡΑΛΑΒΗ</span>}</b><small style={{display:"block"}}>{order.operatorName||"Χειριστής"} · {order.status} · {(order.items||[]).map(item=>`Γ${item.roundNumber||1}: ${item.quantity}× ${item.name}`).join(" · ")}</small></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>useOrder(order)}>ΦΟΡΤΩΣΗ ΣΤΟ POS</button><button onClick={()=>wasteAll(order)} style={{background:"#d97706"}}>ΦΥΡΑ ΟΛΟ ΤΟ ΤΡΑΠΕΖΙ</button><button onClick={()=>status(order,"CANCELLED")}>ΑΚΥΡΩΣΗ</button></div></article>)}</div>
+    <div className="pos-hold-list" style={{marginTop:18}}>{data.orders.map(order=><article key={order.id} style={order.status==="READY"?{border:"3px solid #087a52",background:"#ecfdf5"}:undefined}><div><b>{order.tableName} · {euro(order.total)} {order.status==="READY"&&<span style={{color:"#087a52"}}>· ΕΤΟΙΜΗ ΓΙΑ ΠΑΡΑΛΑΒΗ</span>}</b><small style={{display:"block"}}>{order.operatorName||"Χειριστής"} · {order.status} · {(order.items||[]).map(item=>`Γ${item.roundNumber||1}: ${item.quantity}× ${item.name}`).join(" · ")}</small></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>useOrder(order)}>ΦΟΡΤΩΣΗ ΣΤΟ POS</button>{data.canConfigure&&<WaiterAssignment key={order.operatorId} api={api} storeId={store.id} order={order} onSaved={load}/>}<button onClick={()=>wasteAll(order)} style={{background:"#d97706"}}>ΦΥΡΑ ΟΛΟ ΤΟ ΤΡΑΠΕΖΙ</button><button onClick={()=>status(order,"CANCELLED")}>ΑΚΥΡΩΣΗ</button></div></article>)}</div>
   </main></section></div>;
 }
