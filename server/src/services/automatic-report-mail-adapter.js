@@ -109,8 +109,9 @@ export function createAutomaticReportMailAdapter({startAttempt,sendMail}){
       const content=JSON.parse(args.payload.body);
       const cashText = Object.hasOwn(content,'reviewedCash') ? automaticReviewedMailText(content) : args.payload.body;
       const turnover = content.dailyTurnover ? dailyTurnoverAnswer(content.dailyTurnover, content.storeName) : null;
+      const shifts = content.shiftTurnover ? dailyTurnoverAnswer(content.shiftTurnover, content.storeName) : null;
       const text = turnover
-        ? [turnover.answer, ...turnover.highlights, turnover.limitations, cashText].join("\n\n")
+        ? [turnover.answer, ...turnover.highlights, turnover.limitations, ...(shifts ? [shifts.answer, shifts.limitations] : []), cashText].join("\n\n")
         : cashText;
       const subject = `ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ${turnover ? ' ΚΑΙ ΤΖΙΡΟΥ' : ''} · ${r.input.frequency} · ${r.input.periodFrom} — ${r.input.periodTo}`;
       const result=await sendMail(Object.freeze({to:r.input.recipient,subject,text}));
