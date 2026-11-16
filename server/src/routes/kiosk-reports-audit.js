@@ -42,6 +42,7 @@ auditEventLabels.DINING_TABLE_CREATED="Δημιουργία τραπεζιού";
 auditEventLabels.DINING_TABLE_UPDATED="Ενημέρωση τραπεζιού";
 auditEventLabels.TABLE_ORDER_SENT="Αποστολή παραγγελίας τραπεζιού";
 auditEventLabels.TABLE_ORDER_ROUND_SENT="Αποστολή νέου γύρου τραπεζιού";
+auditEventLabels.TABLE_ORDER_WAITER_CHANGED="Αλλαγή σερβιτόρου τραπεζιού";
 auditEventLabels.TABLE_PREPARATION_READY="Ολοκλήρωση παρασκευής τραπεζιού";
 const operatorLifecycleEvents=new Set(["OPERATOR_CREATED","OPERATOR_PROFILE_UPDATED","OPERATOR_PIN_CHANGED","OPERATOR_PIN_RANDOMIZED","OPERATOR_DEACTIVATED","OPERATOR_LOGIN_PIN","OPERATOR_LOGIN_CARD","OPERATOR_LOGOUT"]);
 auditEventLabels.PRODUCT_CREATE="Δημιουργία νέου είδους";
@@ -85,6 +86,7 @@ const diningAuditDescription=(eventType,details={},areaNames=new Map())=>{
     return `${action} · ${details.name||"Χωρίς όνομα"} · Σάλα ${areaName} · ${n(details.capacity)} άτομα · ${diningShapeLabel(details.shape)}`;
   }
   if(eventType==="TABLE_ORDER_SENT"||eventType==="TABLE_ORDER_ROUND_SENT")return `${eventType==="TABLE_ORDER_SENT"?"ΑΠΟΣΤΟΛΗ ΠΑΡΑΓΓΕΛΙΑΣ":"ΑΠΟΣΤΟΛΗ ΝΕΟΥ ΓΥΡΟΥ"} · ${details.tableName||details.tableId||"Τραπέζι"} · Γύρος ${n(details.roundNumber)} · ${n(details.itemCount)} είδη · προσθήκη ${n(details.addedTotal).toFixed(2)} € · λογαριασμός ${n(details.total).toFixed(2)} € · χωρίς πώληση`;
+  if(eventType==="TABLE_ORDER_WAITER_CHANGED")return `ΑΛΛΑΓΗ ΣΕΡΒΙΤΟΡΟΥ · ${details.tableName||"Τραπέζι"} · ${details.previousOperatorName||"—"} → ${details.operatorName||"—"}`;
   if(eventType==="TABLE_PREPARATION_READY")return `ΟΛΟΚΛΗΡΩΣΗ ΠΑΡΑΣΚΕΥΗΣ · ${details.productionStation||"Σταθμός"} · δελτίο ${details.batchId||"—"} · χωρίς πώληση`;
   return null;
 };
@@ -264,7 +266,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
           'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','SUPPLIER_SETTLEMENT_CANCELLED','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PRODUCT_BARCODE_TRANSFERRED','PURCHASE_ORDER_DELETED','INVOICE_LINE_CORRECTED','PURCHASE_ORDER_DRAFT_CREATED','PURCHASE_ORDER_DRAFT_UPDATED','PURCHASE_ORDER_LINE_ADDED','PURCHASE_ORDER_LINE_DELETED'
           ,'OPERATOR_CREATED','OPERATOR_PROFILE_UPDATED','OPERATOR_PIN_CHANGED','OPERATOR_PIN_RANDOMIZED','OPERATOR_DEACTIVATED','OPERATOR_LOGIN_PIN','OPERATOR_LOGIN_CARD','OPERATOR_LOGOUT'
-          ,'DINING_AREA_CREATED','DINING_TABLE_CREATED','DINING_TABLE_UPDATED','TABLE_ORDER_SENT','TABLE_ORDER_ROUND_SENT','TABLE_PREPARATION_READY'
+          ,'DINING_AREA_CREATED','DINING_TABLE_CREATED','DINING_TABLE_UPDATED','TABLE_ORDER_SENT','TABLE_ORDER_ROUND_SENT','TABLE_PREPARATION_READY','TABLE_ORDER_WAITER_CHANGED'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${timeFrom}::text IS NULL OR to_char((CASE WHEN pg_typeof(a."createdAt")::text='timestamp without time zone' THEN a."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE a."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')>=${timeFrom}) AND (${timeTo}::text IS NULL OR to_char((CASE WHEN pg_typeof(a."createdAt")::text='timestamp without time zone' THEN a."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE a."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')<=${timeTo})
