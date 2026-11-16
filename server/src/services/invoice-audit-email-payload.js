@@ -1,3 +1,4 @@
+import {supplierComparisonEmailLines} from './supplier-comparison-email.js';
 import {invoiceAuditEmailPeriod} from './invoice-audit-email-period.js';
 
 const text=(value,max=160)=>typeof value==='string'?value.replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,max):'';
@@ -8,7 +9,7 @@ const date=value=>new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athen
 export const INVOICE_AUDIT_BACKOFFICE_URL='https://myworkstation-app.onrender.com/';
 
 // Explicit metadata projection: no source/session fingerprints, raw OCR or originals.
-export function buildInvoiceAuditEmailPayload(report){
+export function buildInvoiceAuditEmailPayload(report,{supplierComparison}={}){
  if(report?.readOnly!==true||!report?.store?.id||!Number.isFinite(Date.parse(report.asOf)))throw Object.assign(new Error('Μη έγκυρη πηγή προεπισκόπησης.'),{status:502});
  const period=invoiceAuditEmailPeriod(report.period?.month),known=report.coverage?.complete===true;
  const keys=['logicalRecords','unposted','uploadedAwaitingReview','possibleDuplicates','identityReview','credits','inactive'];
@@ -30,6 +31,7 @@ export function buildInvoiceAuditEmailPayload(report){
  lines.push('','Εκκρεμότητες πρωτοτύπων — Όλοι οι μήνες (χωριστό σύνολο, εκτός του επιλεγμένου μήνα έκδοσης).');
  if(!pendingKnown)lines.push('Η πηγή εκκρεμοτήτων δεν είναι διαθέσιμη. Το πλήθος είναι άγνωστο, όχι μηδενικό.');
  else{lines.push(`Σύνολο: ${pendingCounts.total} · Λείπει πρωτότυπο: ${pendingCounts.missingOriginal} · Ανεβασμένο προς έλεγχο: ${pendingCounts.uploadedAwaitingReview} · Χρειάζεται έλεγχο: ${pendingCounts.reviewRequired}`,`Λεπτομέρειες: ${pendingItems.length}, έως 50.${pendingTruncated?' Η λίστα είναι περιορισμένη· υπάρχουν επιπλέον εκκρεμότητες.':''}`);for(const r of pendingItems)lines.push(`${r.documentNumber||'Χωρίς αριθμό'} | ${r.supplierName||'Προμηθευτής προς έλεγχο'} | ${r.documentDate||'Άγνωστη ημερομηνία'} | ${labels[r.status]}`)}
+ if(supplierComparison)lines.push('',...supplierComparisonEmailLines(supplierComparison));
  lines.push('','Τα πιθανά διπλά απαιτούν ανθρώπινη σύγκριση πρωτοτύπων. Καμία αυτόματη ενοποίηση, καταχώριση ή πληρωμή.','Προεπισκόπηση μόνο — η αποστολή είναι απενεργοποιημένη.',`BackOffice (απαιτείται προσωπική σύνδεση και τρέχον δικαίωμα): ${INVOICE_AUDIT_BACKOFFICE_URL}`);
  return {subject,body:lines.join('\n'),period,reportObservedAt:report.asOf,coverage,summary,details:{items,limit:50,truncated:detailsTruncated},pendingOriginals:{period:'ALL_MONTHS',available:pendingKnown,counts:pendingCounts,items:pendingItems,limit:50,truncated:pendingTruncated},backofficeUrl:INVOICE_AUDIT_BACKOFFICE_URL};
 }

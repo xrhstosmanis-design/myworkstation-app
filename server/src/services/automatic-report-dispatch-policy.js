@@ -15,12 +15,19 @@ const next=v=>{const n=BigInt(v||0)+1n;if(n>9007199254740991n)fail(409,'REPORT_R
 const tables=['AutomaticReportDispatchPolicy','AutomaticReportAutomationGrant','AutomaticReportRecipient','AutomaticReportRecipientConsent','AutomaticReportPayload','AutomaticReportDeliverySlot'];
 export async function dispatchSchemaReady(tx){const rows=await tx.$queryRawUnsafe(`SELECT ${tables.map((name,i)=>`to_regclass(format('%I.%I',current_schema(),'${name}'))::text AS t${i}`).join(',')}`);const count=rows[0]?tables.filter((_x,i)=>!!rows[0]['t'+i]).length:0;if(count!==0&&count!==6)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');return count===6}
 const columns={policy:'*,"revision"::text AS "revision","lifecycleGeneration"::text AS "lifecycleGeneration"',grant:'*,"revision"::text AS "revision","lifecycleGeneration"::text AS "lifecycleGeneration"'};
-export async function readLockedDispatchAuthorization(tx,{companyId,storeId}){
- const policy=(await tx.$queryRawUnsafe(`SELECT ${columns.policy} FROM "AutomaticReportDispatchPolicy" WHERE "companyId"=$1 AND "storeId"=$2 AND "reportType"='CASH' FOR SHARE NOWAIT`,companyId,storeId))[0]||null;
- const grant=(await tx.$queryRawUnsafe(`SELECT ${columns.grant} FROM "AutomaticReportAutomationGrant" WHERE "companyId"=$1 AND "storeId"=$2 AND "reportType"='CASH' FOR SHARE NOWAIT`,companyId,storeId))[0]||null;
+export async function readLockedReportPolicyAndGrant(tx,{companyId,storeId,reportType='CASH'}){
+ if(!['CASH','SUPPLIER_COMPARISON'].includes(reportType))fail(400,'REPORT_TYPE_INVALID');
+ const policy=(await tx.$queryRawUnsafe(`SELECT ${columns.policy} FROM "AutomaticReportDispatchPolicy" WHERE "companyId"=$1 AND "storeId"=$2 AND "reportType"=$3 FOR SHARE NOWAIT`,companyId,storeId,reportType))[0]||null;
+ const grant=(await tx.$queryRawUnsafe(`SELECT ${columns.grant} FROM "AutomaticReportAutomationGrant" WHERE "companyId"=$1 AND "storeId"=$2 AND "reportType"=$3 FOR SHARE NOWAIT`,companyId,storeId,reportType))[0]||null;
+ return {policy,grant};
+}
+export async function readLockedDispatchAuthorization(tx,{companyId,storeId,reportType='CASH'}){
+ const {policy,grant}=await readLockedReportPolicyAndGrant(tx,{companyId,storeId,reportType});
  const recipients=await tx.$queryRaw`SELECT *,"version"::text AS "version" FROM "AutomaticReportRecipient" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "revokedAt" IS NULL ORDER BY "recipientId" FOR SHARE NOWAIT`;
  if(recipients.length>5)fail(409,'REPORT_RECIPIENT_LIMIT');
- const consents=await tx.$queryRaw`SELECT *,"revision"::text AS "revision","recipientVersion"::text AS "recipientVersion","lifecycleGeneration"::text AS "lifecycleGeneration" FROM "AutomaticReportRecipientConsent" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "recipientId" FOR SHARE NOWAIT`;
+ const cashConsents=()=>tx.$queryRaw`SELECT *,"revision"::text AS "revision","recipientVersion"::text AS "recipientVersion","lifecycleGeneration"::text AS "lifecycleGeneration" FROM "AutomaticReportRecipientConsent" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "recipientId" FOR SHARE NOWAIT`;
+ const supplierConsents=()=> tx.$queryRaw`SELECT *,"revision"::text AS "revision","recipientVersion"::text AS "recipientVersion","lifecycleGeneration"::text AS "lifecycleGeneration" FROM "AutomaticReportSupplierComparisonConsent" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "recipientId" FOR SHARE NOWAIT`;
+ const consents=await (reportType==='CASH'?cashConsents():supplierConsents());
  return {policy,grant,recipients:recipients.map(recipient=>({recipient,consent:consents.find(c=>c.recipientId===recipient.recipientId)||null}))};
 }
 export function dispatchPolicyFingerprint({policy,grant,recipient}){return hash({format:'MWS_AUTOMATIC_REPORT_AUTH_V1',policy:{revision:String(policy.revision),dispatchEnabled:policy.dispatchEnabled,allowsProvisional:policy.allowsProvisional,allowedFrequencies:[...policy.allowedFrequencies].sort(),lifecycleGeneration:String(policy.lifecycleGeneration)},grant:{revision:String(grant.revision),active:grant.active,principalId:grant.principalId,principalSessionVersion:grant.principalSessionVersion,allowedFrequencies:[...grant.allowedFrequencies].sort(),lifecycleGeneration:String(grant.lifecycleGeneration),activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,notBefore:new Date(grant.notBefore).toISOString(),createdAt:new Date(grant.createdAt).toISOString(),grantedAt:new Date(grant.grantedAt).toISOString()},recipientId:recipient.recipientId})}

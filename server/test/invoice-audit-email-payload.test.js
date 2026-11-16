@@ -16,3 +16,31 @@ test('invalid known counts fail closed and detail arrays stay bounded',()=>{
  assert.throws(()=>buildInvoiceAuditEmailPayload(report({asOf:'invalid'})));
  const r=report();r.items=Array.from({length:80},()=>r.items[0]);r.pendingOriginals.items=Array.from({length:80},()=>r.pendingOriginals.items[0]);const p=buildInvoiceAuditEmailPayload(r);assert.equal(p.details.items.length,50);assert.equal(p.pendingOriginals.items.length,50);
 });
+
+test('monthly comparison identifies the cheapest supplier and shows the price difference',()=>{
+ const supplierComparison=[{productName:'Καφές',unitLabel:'τεμάχιο',suppliers:[
+  {supplierName:'Πρώτος',lastCost:1,differenceFromLowestCost:0},
+  {supplierName:'Δεύτερος',lastCost:1.25,differenceFromLowestCost:0.25}
+ ]}];
+ const {body}=buildInvoiceAuditEmailPayload(report(),{supplierComparison});
+ assert.match(body,/Πρώτος.*Χαμηλότερο συγκρίσιμο κόστος/);
+ assert.match(body,/Δεύτερος.*\+0,25.*ανά τεμάχιο/);
+});
+
+test('the supplier schedule uses the last completed month in Athens across year and summer boundaries',async()=>{
+ const {completedSupplierReportMonth}=await import('../src/services/supplier-comparison-email.js');
+ assert.equal(completedSupplierReportMonth(new Date('2026-12-31T21:59:59Z')),'2026-11');
+ assert.equal(completedSupplierReportMonth(new Date('2026-12-31T22:00:00Z')),'2026-12');
+ assert.equal(completedSupplierReportMonth(new Date('2026-07-31T21:00:00Z')),'2026-07');
+});
+
+test('supplier email fingerprint is repeatable and scoped to the report month and store',async()=>{
+ const {readMonthlySupplierEmail}=await import('../src/services/supplier-comparison-email.js');
+ const db={$queryRaw:async()=>[]};
+ const scope={companyId:'company',storeId:'one',storeName:'Κατάστημα',month:'2026-10'};
+ const email=await readMonthlySupplierEmail(db,scope);
+ assert.match(email.fingerprint,/^[a-f0-9]{64}$/);
+ assert.deepEqual(await readMonthlySupplierEmail(db,scope),email);
+ assert.notEqual((await readMonthlySupplierEmail(db,{...scope,storeId:'two'})).fingerprint,email.fingerprint);
+ assert.notEqual((await readMonthlySupplierEmail(db,{...scope,month:'2026-09'})).fingerprint,email.fingerprint);
+});

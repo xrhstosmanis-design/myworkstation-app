@@ -49,7 +49,9 @@ const output=value=>frozen(detached(value));
 function normalizeInput(value){
   safe(value);shape(value,INPUT_KEYS);const result={};
   result.companyId=text(value.companyId,"companyId");result.storeId=text(value.storeId,"storeId");
-  if(value.reportType!=="CASH"||!["DAILY","WEEKLY","MONTHLY"].includes(value.frequency))invalid("Unsupported report kind.");
+  const cash=value.reportType==="CASH"&&["DAILY","WEEKLY","MONTHLY"].includes(value.frequency);
+  const supplierComparison=value.reportType==="SUPPLIER_COMPARISON"&&value.frequency==="MONTHLY";
+  if(!cash&&!supplierComparison)invalid("Unsupported report kind.");
   result.reportType=value.reportType;result.frequency=value.frequency;
   if(instant(value.periodFrom)>=instant(value.periodTo))invalid("Nonempty exclusive period required.");
   result.periodFrom=value.periodFrom;result.periodTo=value.periodTo;

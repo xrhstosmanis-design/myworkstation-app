@@ -389,6 +389,8 @@ await clearKatStuckRbsRequest();
 const automaticReportActivationProvider=()=>readActivation(process.env);
 const automaticReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider});
 const automaticReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:automaticReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain});
+const supplierReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'SUPPLIER_COMPARISON'});
+const supplierReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:supplierReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'SUPPLIER_COMPARISON'});
 const monthlyInventoryCaptureJobs=createMonthlyInventoryCaptureJobs(prisma);
 const monthlyInventoryCaptureScheduler=createMonthlyInventoryCaptureScheduler({jobs:monthlyInventoryCaptureJobs,work:backgroundDrain});
 const invoiceStockEmailScheduler=createInvoiceStockExclusionEmailScheduler({
@@ -401,6 +403,7 @@ const server=app.listen(process.env.PORT||8080,()=>{
   startMyDataReceivingWorker();
   startWorkforceAutoOutWorker();
   automaticReportScheduler.start();
+  supplierReportScheduler.start();
   invoiceStockEmailScheduler.start();
   monthlyInventoryCaptureScheduler.start();
 });

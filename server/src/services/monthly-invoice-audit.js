@@ -1,3 +1,4 @@
+import {invoiceAuditMonth} from './invoice-audit-month.js';
 import crypto from 'node:crypto';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
 import {readPendingInvoices,readPendingInvoiceSnapshotRows,readPendingInvoiceSnapshotRowsForAutomationInTransaction} from './pos-pending-invoices.js';
@@ -68,11 +69,7 @@ function storedPageDates(facts,docs,validOrders,jobsByAttachment,attachments){
  return dates;
 }
 
-export function invoiceAuditMonth(month){
- if(typeof month!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month))fail('Επίλεξε έγκυρο μήνα.');
- const first=month+'-01',next=new Date(first+'T12:00:00Z');next.setUTCMonth(next.getUTCMonth()+1);
- return {month,fromDay:first,toDayExclusive:next.toISOString().slice(0,10),basis:'DOCUMENT_ISSUE_DATE',timeZone:'Europe/Athens'};
-}
+export {invoiceAuditMonth};
 
 // Fixed metadata projections only. No attachment, image or raw OCR content is
 // fetched, and no optional intake/bootstrap function is called by this reader.
