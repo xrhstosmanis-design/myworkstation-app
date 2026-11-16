@@ -16,7 +16,17 @@ export const inboxProcessingJoin=`LEFT JOIN (
  FROM links
  LEFT JOIN "PurchaseDocument" d ON d."id"=links."purchaseDocumentId" AND d."companyId"=$1 AND d."storeId"=$2 AND d."status"<>'MERGED'
  LEFT JOIN "PurchaseOrder" o ON o."sourceDocumentId"=d."id" AND o."companyId"=$1 AND o."storeId"=$2 AND o."status" IN ('NEW','FINAL','INVOICED')
- LEFT JOIN "StoreTransaction" t ON t."id"=d."paymentTransactionId" AND t."companyId"=$1 AND t."storeId"=$2 AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+ LEFT JOIN LATERAL (
+  SELECT t."id",t."amount" FROM "StoreTransaction" t WHERE t."id"=d."paymentTransactionId"
+   AND t."companyId"=$1 AND t."storeId"=$2 AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+  UNION ALL
+  SELECT t."id",a."amount" FROM "SupplierPaymentAllocation" a
+  JOIN "SupplierPaymentSettlement" s ON s."id"=a."settlementId" AND s."companyId"=$1 AND s."storeId"=$2
+  JOIN "StoreTransaction" t ON t."id"=s."transactionId" AND t."companyId"=$1 AND t."storeId"=$2
+   AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+  WHERE a."purchaseDocumentId"=d."id" AND a."companyId"=$1
+   AND t."id" IS DISTINCT FROM d."paymentTransactionId"
+ ) t ON true
  GROUP BY links."attachmentId"
 ) processing ON processing."attachmentId"=i."attachmentId"`;
 export const inboxProcessingState=`CASE

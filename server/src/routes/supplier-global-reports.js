@@ -5,6 +5,9 @@ import * as XLSX from "xlsx";
 import {prisma} from "../prisma.js";
 import {supplierReportDate} from "../lib/supplier-report-date.js";
 
+import { postedSupplierPayment } from "../lib/supplier-payment-reporting.js";
+import { ensureSupplierControlSchema } from "./supplier-control.js";
+
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(value||0);
@@ -28,6 +31,7 @@ function parseQuery(raw){const q=querySchema.parse(raw||{}),now=new Date(),to=q.
 async function supplierOptions(companyId){return prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`}
 
 async function balanceReport(companyId,rawQuery){
+  await ensureSupplierControlSchema();
   const{from,to,supplierId,text}=parseQuery(rawQuery),suppliers=await supplierOptions(companyId);
   const rows=await prisma.$queryRaw`
     SELECT s."id" AS "supplierId",s."name" AS "supplierName",s."taxId",
@@ -35,10 +39,10 @@ async function balanceReport(companyId,rawQuery){
       COALESCE(ad."invoiceGross",0)-COALESCE(ad."creditGross",0)-COALESCE(ap."payments",0)+COALESCE(aa."adjustments",0) AS "balance"
     FROM "Supplier" s
     LEFT JOIN LATERAL (SELECT SUM(d."totalGross") FILTER (WHERE d."documentType"<>'CREDIT_NOTE') AS "invoiceGross",SUM(d."totalGross") FILTER (WHERE d."documentType"='CREDIT_NOTE') AS "creditGross" FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."supplierId"=s."id" AND d."status"='APPROVED' AND d."documentDate">=${from} AND d."documentDate"<=${to}) pd ON true
-    LEFT JOIN LATERAL (SELECT SUM(t."amount") AS "payments" FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."supplierId"=s."id" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND t."occurredAt">=${from} AND t."occurredAt"<=${to}) pp ON true
+    LEFT JOIN LATERAL (SELECT SUM(t."amount") AS "payments" FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."supplierId"=s."id" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND ${postedSupplierPayment} AND t."occurredAt">=${from} AND t."occurredAt"<=${to}) pp ON true
     LEFT JOIN LATERAL (SELECT SUM(a."amount") AS "adjustments" FROM "SupplierBalanceAdjustment" a WHERE a."companyId"=${companyId} AND a."supplierId"=s."id" AND a."occurredAt">=${from} AND a."occurredAt"<=${to}) pa ON true
     LEFT JOIN LATERAL (SELECT SUM(d."totalGross") FILTER (WHERE d."documentType"<>'CREDIT_NOTE') AS "invoiceGross",SUM(d."totalGross") FILTER (WHERE d."documentType"='CREDIT_NOTE') AS "creditGross" FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."supplierId"=s."id" AND d."status"='APPROVED') ad ON true
-    LEFT JOIN LATERAL (SELECT SUM(t."amount") AS "payments" FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."supplierId"=s."id" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL) ap ON true
+    LEFT JOIN LATERAL (SELECT SUM(t."amount") AS "payments" FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."supplierId"=s."id" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND ${postedSupplierPayment}) ap ON true
     LEFT JOIN LATERAL (SELECT SUM(a."amount") AS "adjustments" FROM "SupplierBalanceAdjustment" a WHERE a."companyId"=${companyId} AND a."supplierId"=s."id") aa ON true
     WHERE s."companyId"=${companyId} AND s."active"=true AND (${supplierId}::text IS NULL OR s."id"=${supplierId}) AND (${text}::text IS NULL OR s."name" ILIKE ${text} OR COALESCE(s."taxId",'') ILIKE ${text}) ORDER BY ABS(COALESCE(ad."invoiceGross",0)-COALESCE(ad."creditGross",0)-COALESCE(ap."payments",0)+COALESCE(aa."adjustments",0)) DESC,s."name"`;
   const items=rows.map(r=>{const invoiceGross=n(r.invoiceGross),creditGross=n(r.creditGross),payments=n(r.payments),adjustments=n(r.adjustments),balance=n(r.balance);return{...r,invoiceGross,creditGross,payments,adjustments,periodNet:invoiceGross-creditGross-payments+adjustments,balance}});
