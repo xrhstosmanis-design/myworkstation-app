@@ -107,6 +107,8 @@ router.post([transferPath, transferPath + "/quote"], async (req, res, next) => {
   const quoteOnly = req.path.endsWith("/quote");
   const sourceStoreId = req.params.storeId;
   const { companyId, id: userId } = req.user;
+  // Store Mode credentials are recorded in the transfer and audit, outside the User foreign key.
+  const stockMovementUserId = req.user.tokenType === "STORE_OPERATOR" ? null : userId;
   if (!canAccessStore(req.user, sourceStoreId)) return res.status(403).json({ error: "Δεν επιτρέπεται διακίνηση από αυτό το κατάστημα." });
   const parsed = transferInput.safeParse(req.body);
   if (!parsed.success || parsed.data.destinationStoreId === sourceStoreId || (!quoteOnly && !parsed.data.expectedPayable)) {
@@ -207,7 +209,7 @@ router.post([transferPath, transferPath + "/quote"], async (req, res, next) => {
             INSERT INTO "StockMovement"
               ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId","idempotencyKey")
             VALUES (${randomUUID()},${storeId},${productId},${movementType},${delta},${product.costPrice},
-                    'POS_INTERNAL_TRANSFER',${transferId},${externalDestinationName},${userId},${`${transferId}:${productId}:${movementType}`})
+                    'POS_INTERNAL_TRANSFER',${transferId},${externalDestinationName},${stockMovementUserId},${`${transferId}:${productId}:${movementType}`})
           `;
         }
       }
