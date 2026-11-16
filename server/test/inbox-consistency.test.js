@@ -89,6 +89,33 @@ test('native line review excludes equal amount without matching lines, other VAT
   assert.equal(await f.snapshot(),before);
  }finally{await f.close()}
 });
+test('stored POS photo links one old myDATA invoice on repeated receiving', {skip:!isolatedInvoiceDb()}, async()=>{
+ const {linkStoredPosInvoicePhotos}=await import('../src/lib/pos-unlinked-mydata.js');
+ const f=await invoiceDbFixture();
+ try{
+  await f.seed({mydata:false,posLines:1});
+  const {db}=f;
+  const scope={companyId:'c',storeId:'s'};
+  await db.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=NULL,"status"='RECEIVED' WHERE "id"='inbox'`;
+  await db.$executeRaw`UPDATE "PurchaseOrder" SET "status"='INVOICED' WHERE "id"='pos'`;
+  await db.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","status") VALUES ('duplicate','c','s','RECEIVED')`;
+  await db.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","issuerVat","series","documentNumber","issueDate","totalGross","rawPayload")
+   SELECT 'duplicate','c','s','duplicate','duplicate',"issuerVat","series","documentNumber","issueDate","totalGross",'{}'::jsonb FROM "MyDataInboundDocument" WHERE "id"='m'`;
+  const sync=()=>db.$transaction(tx=>linkStoredPosInvoicePhotos(tx,scope));
+  assert.equal(await sync(),0);
+  await db.$executeRaw`DELETE FROM "MyDataInboundDocument" WHERE "id"='duplicate'`;
+  await db.$executeRaw`DELETE FROM "DocumentInbox" WHERE "id"='duplicate'`;
+  const before=await f.snapshot();
+  assert.equal(await sync(),1);
+  assert.equal(await sync(),0);
+  const [linked]=await db.$queryRaw`SELECT i."attachmentId",m."rawPayload"->>'mydataDraftDocumentId' AS "documentId"
+   FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" WHERE m."id"='m'`;
+  assert.deepEqual(linked,{attachmentId:'photo',documentId:'d-pos'});
+  assert.deepEqual(await db.$queryRaw`SELECT "id","status" FROM "PurchaseOrder"`,[{id:'pos',status:'INVOICED'}]);
+  assert.equal(await f.snapshot(),before);
+ }finally{await f.close()}
+});
+
 test('native inbox business status follows exact scoped order despite stale AI/inbox labels; filters/count/export agree and conflicts never choose a draft',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await invoiceDbFixture();try{
   await f.seed();const {db}=f;

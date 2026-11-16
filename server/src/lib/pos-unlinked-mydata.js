@@ -1,4 +1,4 @@
-import {invoiceNumberParts,sameInvoiceNumber,previewInvoiceReconciliation} from './invoice-common-draft.js';
+import {invoiceNumberParts,sameInvoiceNumber,previewInvoiceReconciliation,lockInvoiceStore} from './invoice-common-draft.js';
 import {inboxHeader} from './pos-inbox-original.js';
 import {findInvoicePayment} from './invoice-payment-reuse.js';
 
@@ -60,4 +60,48 @@ export async function bindUnlinkedMyDataOriginal(tx,identity,original,{jobId,doc
  // handoff and receipt retain every page ID without bypassing that guard.
  await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"updatedAt"=NOW() WHERE "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} AND ("id"=${jobId} OR ("attachmentId"=${original.attachmentId} AND "purchaseDocumentId" IS NULL))`;
  await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({mydataPosReceipt:receipt})}::jsonb WHERE "id"=${jobId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
+}
+
+// Recover existing photo drafts during receiving, including older inbox rows.
+export async function linkStoredPosInvoicePhotos(tx,scope){
+ const {companyId,storeId}=scope;
+ await lockInvoiceStore(tx,companyId,storeId);
+ const matches=await tx.$queryRaw`
+  WITH candidates AS (
+   SELECT m."id",m."inboxId",m."mark",o."id" AS "orderId",d."id" AS "documentId",d."paymentTransactionId",
+    COUNT(*) OVER (PARTITION BY m."id") AS "draftCount",
+    COUNT(*) OVER (PARTITION BY d."id") AS "inboundCount"
+   FROM "MyDataInboundDocument" m
+   JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+   JOIN "Supplier" s ON s."companyId"=m."companyId" AND s."taxId"=m."issuerVat"
+   JOIN "PurchaseDocument" d ON d."companyId"=m."companyId" AND d."storeId"=m."storeId" AND d."supplierId"=s."id"
+    AND d."totalGross"=m."totalGross" AND d."documentDate"::date=m."issueDate"::date
+    AND REGEXP_REPLACE(UPPER(d."documentNumber"),'[^A-ZΑ-Ω0-9]','','g')=
+     REGEXP_REPLACE(UPPER(CONCAT_WS(' ',m."series",m."documentNumber")),'[^A-ZΑ-Ω0-9]','','g')
+   JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."sourceDocumentId"=d."id"
+    AND o."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."supplierId"=s."id"
+   WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
+    AND m."issuerVat" ~ '^[0-9]{9}$' AND m."documentNumber" ~ '[0-9]' AND m."invoiceType" LIKE '1.%'
+    AND m."totalGross">0 AND i."status"='RECEIVED' AND i."attachmentId" IS NULL
+    AND COALESCE(m."rawPayload"->>'xml','') NOT LIKE '%downloadingInvoiceUrl%'
+    AND NOT(COALESCE(m."rawPayload",'{}'::jsonb) ?| ARRAY['mydataDraftOrderId','mydataDraftDocumentId','mydataPosReceipt','commonDraft'])
+    AND d."documentType"='INVOICE' AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT' AND o."status" IN ('NEW','INVOICED')
+    AND NOT EXISTS (SELECT 1 FROM "MyDataInboundDocument" x WHERE x."companyId"=m."companyId" AND x."storeId"=m."storeId"
+     AND (x."rawPayload"->>'mydataDraftDocumentId'=d."id" OR x."rawPayload"->>'mydataDraftOrderId'=o."id"))
+  )
+  SELECT c.*,j."id" AS "jobId"
+  FROM candidates c
+  JOIN LATERAL (
+   SELECT j."id" FROM "AiReaderJob" j
+   JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId"
+   WHERE j."companyId"=${companyId} AND j."storeId"=${storeId} AND j."purchaseDocumentId"=c."documentId"
+    AND a."mimeType" IN ('image/jpeg','image/png','image/webp') AND a."contentData" IS NOT NULL
+   ORDER BY j."createdAt",j."id" LIMIT 1
+  ) j ON true
+  WHERE c."draftCount"=1 AND c."inboundCount"=1
+  ORDER BY c."inboxId" LIMIT 10`;
+ for(const match of matches){
+  await bindUnlinkedMyDataOriginal(tx,scope,{...match,attachmentId:null},match);
+ }
+ return matches.length;
 }

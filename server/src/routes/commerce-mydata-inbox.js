@@ -11,6 +11,7 @@ import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from ".
 import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../mydata-xml.js";
 import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
+import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
 import {acquireOriginal} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
@@ -170,6 +171,7 @@ async function performSync(req){
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
   const canPrepareDraft=Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY")));
+  const existingPhotosLinked=canPrepareDraft?await prisma.$transaction(tx=>linkStoredPosInvoicePhotos(tx,{companyId:req.user.companyId,storeId:store.id})):0;
   if(canPrepareDraft){
     const emptyDrafts=await prisma.$queryRaw`
       SELECT m."inboxId" FROM "MyDataInboundDocument" m
@@ -190,7 +192,7 @@ async function performSync(req){
     }
   }
   const message=created.length?`${created.length} νέα παραστατικά μπήκαν στα Πρόχειρα.`:fetched===0?"Η ΑΑΔΕ δεν επέστρεψε εισερχόμενα παραστατικά για αυτή τη σύνδεση και αυτό το διάστημα ΜΑΡΚ.":`Η ΑΑΔΕ επέστρεψε ${fetched} παραστατικά: ${duplicates} υπήρχαν ήδη, ${ignoredVat} δεν ταίριαξαν με το ΑΦΜ εταιρείας, ${missingMark} δεν είχαν ΜΑΡΚ. Δεν δημιουργήθηκε πρόχειρο.`;
-  return {ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,originalsDownloaded,originalsFailed,stockUpdated:false,fiscalTransmission:false,message:message+` Πρωτότυπα PDF: ${originalsDownloaded} λήψεις, ${originalsFailed} σε αναμονή/έλεγχο.`};
+  return {ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,originalsDownloaded,originalsFailed,existingPhotosLinked,stockUpdated:false,fiscalTransmission:false,message:message+` Πρωτότυπα PDF: ${originalsDownloaded} λήψεις, ${originalsFailed} σε αναμονή/έλεγχο.`};
 }
 
 router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
