@@ -406,3 +406,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ## Νο 31 — Προϊόντα χαμηλής απόδοσης
 
 - 16/11/2026 · Κλάδος ελέγχου `review/no31-reconciliation` για το υπάρχον #1772. Προσαρμογή στο main και έλεγχος τιμολογημένων αγορών συσκευασίας. [Checkpoint](CHANGES/2026-11-16-no31-reconciliation.md). Εκκρεμούν CI και LAB.
+
+- 2026-11-16 · Ιστορικό κόστος Στατιστικών Πωλήσεων · [Checkpoint](CHANGES/2026-11-16-sales-report-pack-cost.md) · LAB NOT TESTED.
