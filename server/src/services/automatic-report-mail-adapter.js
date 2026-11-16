@@ -1,4 +1,4 @@
-import {dailyTurnoverAnswer} from './daily-turnover-report.js';
+import {monthlyTurnoverMailSections} from './daily-turnover-report.js';
 import {createHash} from "node:crypto";
 import {reconcileDeliverySlot} from "./automatic-report-delivery-lifecycle.js";
 import {automaticReviewedMailText} from "./automatic-report-cash-payload.js";
@@ -108,10 +108,9 @@ export function createAutomaticReportMailAdapter({startAttempt,sendMail}){
     try{
       const content=JSON.parse(args.payload.body);
       const cashText = Object.hasOwn(content,'reviewedCash') ? automaticReviewedMailText(content) : args.payload.body;
-      const turnover = content.dailyTurnover ? dailyTurnoverAnswer(content.dailyTurnover, content.storeName) : null;
-      const shifts = content.shiftTurnover ? dailyTurnoverAnswer(content.shiftTurnover, content.storeName) : null;
+      const turnover = content.dailyTurnover;
       const text = turnover
-        ? [turnover.answer, ...turnover.highlights, turnover.limitations, ...(shifts ? [shifts.answer, shifts.limitations] : []), cashText].join("\n\n")
+        ? [...monthlyTurnoverMailSections(turnover, content.shiftTurnover, content.storeName), cashText].join("\n\n")
         : cashText;
       const subject = `ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ${turnover ? ' ΚΑΙ ΤΖΙΡΟΥ' : ''} · ${r.input.frequency} · ${r.input.periodFrom} — ${r.input.periodTo}`;
       const result=await sendMail(Object.freeze({to:r.input.recipient,subject,text}));
