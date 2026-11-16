@@ -189,11 +189,21 @@ export async function sendMonthlyTurnoverTestEmail(scope){
     dailyTotals,
   });
   const report=dailyTurnoverAnswer({status:"AVAILABLE",...summary},"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ");
+  const shifts=dailyTurnoverAnswer({
+    status:"AVAILABLE",
+    from:"2026-11-01",
+    to:"2026-11-03",
+    shifts:[
+      {name:"Πρωινή",count:3,cash:4000,card:8000},
+      {name:"Μεσημεριανή",count:3,cash:3000,card:7000},
+      {name:"Βραδινή",count:3,cash:3000,card:6000},
+    ],
+  },"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ");
   const to=testRecipient.toLowerCase();
   const result=await createAutomaticReportSmtpTransport(scope).sendMail({
     to,
     subject:"LAB · ΔΟΚΙΜΗ ΜΗΝΙΑΙΑΣ ΑΝΑΦΟΡΑΣ ΤΖΙΡΟΥ",
-    text:["Δοκιμαστικά δεδομένα.",report.answer,...report.highlights,report.limitations].join("\n\n"),
+    text:["Δοκιμαστικά δεδομένα.",report.answer,...report.highlights,report.limitations,shifts.answer,shifts.limitations].join("\n\n"),
   });
   if(result.accepted?.length!==1 || result.accepted[0]!==to || result.rejected?.length!==0 || result.pending?.length || !result.messageId){
     throw new Error("LAB SMTP acceptance not confirmed");
