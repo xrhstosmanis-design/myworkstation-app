@@ -5,6 +5,9 @@ import {previewInvoiceReconciliation,reconcileInvoiceDrafts,assertInvoiceStockAv
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
 import {archiveQuery,archiveStatus} from '../src/invoice-archive.js';
 import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {setTimeout as delay} from 'node:timers/promises';
 
 const lines=Array.from({length:13},(_,i)=>({description:'PRINTED ITEM '+i,quantity:1,netAmount:1,grossAmount:1.13}));
 test('line review needs multiple distinct matching physical rows and corroborating totals, never only an equal amount',()=>{
@@ -105,6 +108,37 @@ test('native inbox business status follows exact scoped order despite stale AI/i
   const [allocated]=await db.$queryRawUnsafe(allocatedQuery.sql,...allocatedQuery.values);
   assert.equal(allocated.paymentCount,1);
   assert.equal(Number(allocated.paymentAmount),153.82);
+  const clientRequire=createRequire(new URL('../../client/package.json',import.meta.url));
+  const {build}=createRequire(clientRequire.resolve('vite'))('esbuild');
+  const {JSDOM}=clientRequire('jsdom');
+  const bundle=await build({
+   stdin:{
+    contents:`import React from 'react';
+import {createRoot} from 'react-dom/client';
+import InvoiceInboxPanel from './src/components/commerce/InvoiceInboxPanel.jsx';
+createRoot(document.getElementById('root')).render(
+ <InvoiceInboxPanel api={window.readInbox} stores={[{id:'s',name:'LAB'}]} readOnly />
+);`,
+    resolveDir:fileURLToPath(new URL('../../client/',import.meta.url)),
+    loader:'jsx'
+   },
+   bundle:true,
+   write:false,
+   loader:{'.css':'empty'}
+  });
+  const dom=new JSDOM('<div id="root"></div>',{runScripts:'outside-only'});
+  try {
+   dom.window.readInbox=async path=>{
+    assert.match(path,/inbox\/archive/);
+    return {items:JSON.parse(JSON.stringify([allocated])),total:1,archiveTotal:1,suppliers:[]};
+   };
+   dom.window.eval(bundle.outputFiles[0].text);
+   const paymentText=()=>Array.from(dom.window.document.querySelectorAll('small'))
+    .find(node=>node.textContent.includes('Υπάρχουσα πληρωμή'))?.textContent;
+   for(let attempt=0;attempt<100&&!paymentText();attempt++)await delay(20);
+   assert.match(paymentText()||'',/153,82\s*€/);
+  }finally{dom.window.close()}
+
   await db.$executeRawUnsafe(`DELETE FROM "StoreTransaction" WHERE "id"='open-payment'`);
 
   await db.$executeRawUnsafe(`INSERT INTO "AiReaderJob"("id","companyId","storeId","attachmentId","purchaseDocumentId") VALUES('conflict','c','s','pdf','d-pos')`);
