@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-16 · #28 · Μικτή επιλογή αποθήκης από εξουσιοδοτημένο χειριστή · [Checkpoint](CHANGES/2026-11-16-backoffice-staff-stock-line-exclusions.md) · AWAITING LAB.
+
 - POS εσωτερική διακίνηση · Διόρθωση αναγνωριστικού χειριστή στην κίνηση αποθέματος · [Checkpoint](CHANGES/2026-11-16-pos-transfer-minimize-lab.md) · LAB επαναδοκιμή εκκρεμεί.
 
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
