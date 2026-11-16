@@ -385,3 +385,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 2026-11-15 · Τζίρος και μέσος όρος ανά βάρδια στον Βοηθό Super Admin · τοπική αλλαγή, εκκρεμεί LAB. [Checkpoint](CHANGES/2026-11-15-shift-turnover.md)
 
 - 2026-11-16 · Τζίρος ανά βάρδια στο μηνιαίο email · τοπική αλλαγή, εκκρεμεί LAB. [Checkpoint](CHANGES/2026-11-16-monthly-shift-turnover.md)
+
+- 2026-11-16 · Ιστορικό κόστος Στατιστικών Πωλήσεων · [Checkpoint](CHANGES/2026-11-16-sales-report-pack-cost.md) · PR #3965 · LAB NOT TESTED.
