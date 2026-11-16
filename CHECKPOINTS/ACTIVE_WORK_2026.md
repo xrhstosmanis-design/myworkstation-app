@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-16 · #23 TABLE_SERVICE · Χρέωση επιλογών στον γύρο · [Checkpoint](CHANGES/2026-11-16-table-service-modifier-prices.md) · Draft, εξόφληση και LAB εκκρεμούν.
+
 - 2026-11-16 · #23 TABLE_SERVICE · Αλλαγή σερβιτόρου σε ανοιχτό τραπέζι · [Checkpoint](CHANGES/2026-11-16-table-service-waiter-assignment.md) · CI/LAB εκκρεμούν.
 
 - 2026-11-16 · #28 · Μικτή επιλογή αποθήκης από εξουσιοδοτημένο χειριστή · [Checkpoint](CHANGES/2026-11-16-backoffice-staff-stock-line-exclusions.md) · AWAITING LAB.
