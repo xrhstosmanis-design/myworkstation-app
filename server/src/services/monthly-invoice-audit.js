@@ -166,8 +166,10 @@ function classifyInvoiceMonthCore(facts,period){
  for(const o of orders.values()){
   if(o.status==='MERGED')continue;
   const source=validOrders.get(o.id),posting=postingsByOrder.get(o.id),target=docs.get(posting?.purchaseDocumentId);
-  const valid=source&&target&&target.status==='APPROVED'&&target.purchaseOrderId===o.id&&target.supplierId===source.supplierId&&sameIdentity(target,source)&&root(target.key)===root(source.key)&&stockPostingKeys.has(JSON.stringify([o.id,source.id,target.id,'PURCHASE_ORDER']));
-  if(valid)validatedPostedOrders.add(o.id);
+  const recordedProjection=target&&target.purchaseOrderId==null&&target.id===o.id&&target.sourceType==='PURCHASE_ORDER'&&o.status==='INVOICED';
+  const linkedProjection=target&&source&&target.purchaseOrderId===o.id&&root(target.key)===root(source.key);
+  const valid=source&&target&&target.status==='APPROVED'&&(linkedProjection||recordedProjection)&&target.supplierId===source.supplierId&&sameIdentity(target,source)&&stockPostingKeys.has(JSON.stringify([o.id,source.id,target.id,'PURCHASE_ORDER']));
+  if(valid){join(source.key,target.key);validatedPostedOrders.add(o.id)}
   else if(posting||source?.status==='APPROVED'||o.status==='INVOICED'){
    const reason='Η καταχώριση αγοράς δεν διαθέτει επιβεβαιωμένο εγκεκριμένο παραστατικό και σύνδεση αποθήκης.';
    setReason('order:'+o.id,reason);if(source)setReason(source.key,reason);if(target)setReason(target.key,reason);

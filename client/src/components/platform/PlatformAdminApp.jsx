@@ -131,7 +131,7 @@ async function request(path,options={}){
   return rawPlatformRequest(path,options);
 }
 async function rawPlatformRequest(path,options={}){
-  const {n40Scope,remoteStream,...fetchOptions}=options;
+  const {n40Scope,remoteStream,downloadBlob,...fetchOptions}=options;
   const trace=n40ReadHeaders(path,n40Scope,options.method||"GET");
   const token=localStorage.getItem("token");
   const response=await fetch(path,{
@@ -140,6 +140,7 @@ async function rawPlatformRequest(path,options={}){
   });
   if(trace)n40PublishRead(path,n40Scope,trace.traceId,response.status);
   if(remoteStream===true&&/^\/api\/remote-support\/controller\/[a-f0-9-]{36}\/stream$/.test(path)&&response.ok)return response.body;
+  if(downloadBlob===true&&response.ok)return response.blob();
   const text=await response.text();
   let data={};
   if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}

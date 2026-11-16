@@ -2,6 +2,8 @@
 
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
+- Εσωτερική διακίνηση POS · Συμβάντα · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED. Καρτέλα POS με ελαχιστοποίηση σε προετοιμασία.
+
 - 2026-11-15 · Εσωτερική διακίνηση POS · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED.
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
@@ -337,6 +339,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 ## Νο 21 — Προμήθειες και εμπορικές αναλύσεις (15/11/2026)
 
+**Στοχευμένη ανάθεση 15/11/2026:** Η σελίδα Νο 21 (/root, `fix/no21-invoiced-supplier-comparison`) αναλαμβάνει το φίλτρο κατάστασης της συνδεδεμένης παραγγελίας στο `GET /api/commerce/supplier-price-comparison`. Τα υπόλοιπα του Νο 29 παραμένουν στην υφιστάμενη ανάθεση. Για το KM483, η δοκιμή μόνο ανάγνωσης με FINAL/INVOICED ανέκτησε τον αποθηκευμένο συντελεστή 1 και έδωσε 0,90 / 0,95 / 0,95 €/τεμ. ([#3901](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3901)). Εκκρεμούν υλοποίηση, CI και επαλήθευση στο υπάρχον LAB.
+
 Ανάθεση συντονισμού από τον χρήστη βάσει της γραμμής «Σελίδα εμπορικών λειτουργιών» της 13/11. Η εργασία αφορά χαρτογράφηση και επαλήθευση στο υπάρχον LAB. Διατηρούνται οι υφιστάμενες αναθέσεις των επιμέρους λειτουργιών.
 
 | Πεδίο | Υπάρχουσα λειτουργία | Εκκρεμότητα |
@@ -367,4 +371,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - Νο 21 · 17/17 στοχευμένες δοκιμές του υπάρχοντος κώδικα προτάσεων και φίλτρου ελλείμματος πέρασαν (`order-suggestions.test.js`, `supplier-stock-shortfall-contract.test.js`). Καλύπτονται θετικό ελάχιστο, αναπλήρωση βάσει καθαρής ζήτησης, φίλτρο κατηγορίας και αρνητικό απόθεμα για έλεγχο. Η συνεδρία LAB επανήλθε ως απογραφέας μετά από αλλαγή σύνδεσης. Η διαδραστική επαλήθευση των φίλτρων ως Super Admin παραμένει ανοικτή.
 
+- 2026-11-15 · INSTALL-SUPPORT / «Λίστα για σελίδες 1» · LAB PASS για λήψη και αντιπαραβολή των 9 γραμμών PDF/XLSX στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Εναλλαγή καταστήματος και μη έγκυρο ζεύγος NOT TESTED. [Checkpoint](CHANGES/2026-11-15-install-support-profile-export.md).
+
+- 2026-11-15 · Διόρθωση σύνδεσης τιμολογημένων στη μηνιαία αναφορά · [Checkpoint](CHANGES/2026-11-15-monthly-invoice-posting-links.md).
 - 2026-11-15 · Τζίρος και μέσος όρος ανά βάρδια στον Βοηθό Super Admin · τοπική αλλαγή, εκκρεμεί LAB. [Checkpoint](CHANGES/2026-11-15-shift-turnover.md)

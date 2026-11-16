@@ -54,6 +54,8 @@ import {sendHikvisionPrecheck} from "../services/video-installation-package.js";
 import aiCreditRoutes from "./platform-ai-credits.js";
 import {createN40FixtureHandlers} from "../services/n40-backoffice-fixture.mjs";
 
+import {installationSupportExport} from "../services/installation-support-export.js";
+
 const router=Router();
 router.use(auth);
 router.use((req,res,next)=>{
@@ -132,6 +134,23 @@ async function installationStore(companyId,storeId){
   if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη.");error.status=404;throw error}
   return store;
 }
+router.get("/companies/:companyId/stores/:storeId/installation-support-export/:format",async(req,res,next)=>{
+  try{
+    const {companyId,storeId,format}=req.params;
+    if(format!=="pdf"&&format!=="xlsx")return res.status(404).json({error:"Μη διαθέσιμη μορφή εξαγωγής."});
+    const store=await prisma.store.findFirst({
+      where:{id:storeId,companyId,active:true},
+      select:{name:true,city:true,address:true,responsibleEmail:true},
+    });
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
+    const company=await prisma.company.findUnique({where:{id:companyId},select:{name:true}});
+    if(!company)return res.status(404).json({error:"Δεν βρέθηκε η εταιρεία."});
+    const content=await installationSupportExport(company,store,format);
+    res.set("Cache-Control","no-store");
+    return res.attachment(`installation-support.${format}`).send(content);
+  }catch(error){return next(error)}
+});
+
 async function onlineStoreContext(companyId,storeId){
   await ensureStoreBakingSchema(prisma);
   await ensureKatOnlineOrderingSchema();
