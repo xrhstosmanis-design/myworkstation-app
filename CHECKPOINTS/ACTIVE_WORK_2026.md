@@ -396,3 +396,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 2026-11-16 · Μηνιαίο email LAB με ανάλυση βαρδιών · [Checkpoint](CHANGES/2026-11-16-lab-monthly-shifts.md).
 
 - 2026-11-16 · Νο 34 · Μηνιαία σύγκριση προμηθευτών #3946 · CI στο main μπλοκαρισμένο στον έλεγχο καταγραφής. Εγκατάσταση και παραλαβή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-16-monthly-supplier-report-release.md)
+
+- Νο 34 · [Δοκιμή email προμηθευτών LAB](CHANGES/2026-11-16-supplier-lab-mail-test.md). Εκκρεμεί επιβεβαίωση παραλαβής.
