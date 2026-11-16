@@ -9,9 +9,11 @@ import {requireCompanyModule,requireStoreModule} from "../middleware/module-acce
 import {readSupplierComparison} from "../services/supplier-comparison-report.js";
 import {mobileUploads} from "./mobile-invoice-upload.js";
 import orderSuggestionsRouter from "./order-suggestions.js";
+import lowValueProductsRouter from "./low-value-products.js";
 
 const router=Router();
 router.use(orderSuggestionsRouter);
+router.use(lowValueProductsRouter);
 const id=()=>crypto.randomUUID();
 const num=value=>Number(value||0);
 function imageAttachment(attachment){
