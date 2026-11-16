@@ -375,7 +375,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - Νο 21 · 17/17 στοχευμένες δοκιμές του υπάρχοντος κώδικα προτάσεων και φίλτρου ελλείμματος πέρασαν (`order-suggestions.test.js`, `supplier-stock-shortfall-contract.test.js`). Καλύπτονται θετικό ελάχιστο, αναπλήρωση βάσει καθαρής ζήτησης, φίλτρο κατηγορίας και αρνητικό απόθεμα για έλεγχο. Η συνεδρία LAB επανήλθε ως απογραφέας μετά από αλλαγή σύνδεσης. Η διαδραστική επαλήθευση των φίλτρων ως Super Admin παραμένει ανοικτή.
 
-- 2026-11-15 · INSTALL-SUPPORT / «Λίστα για σελίδες 1» · LAB PASS για λήψη και αντιπαραβολή των 9 γραμμών PDF/XLSX στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Εναλλαγή καταστήματος και μη έγκυρο ζεύγος NOT TESTED. [Checkpoint](CHANGES/2026-11-15-install-support-profile-export.md).
+- 2026-11-16 · INSTALL-SUPPORT · LAB PASS για εναλλαγή μεταξύ δύο καταστημάτων. Κάθε PDF και XLSX έδειξε το επιλεγμένο κατάστημα και συμφώνησε στις εννέα γραμμές. Μη έγκυρο ζεύγος εταιρείας–καταστήματος: NOT TESTED. [Checkpoint](CHANGES/2026-11-15-install-support-profile-export.md).
 
 - 2026-11-15 · Διόρθωση σύνδεσης τιμολογημένων στη μηνιαία αναφορά · [Checkpoint](CHANGES/2026-11-15-monthly-invoice-posting-links.md).
 - 2026-11-15 · Τζίρος και μέσος όρος ανά βάρδια στον Βοηθό Super Admin · τοπική αλλαγή, εκκρεμεί LAB. [Checkpoint](CHANGES/2026-11-15-shift-turnover.md)
