@@ -140,7 +140,7 @@ router.get("/supplier-price-comparison",requireStoreModule("INVENTORY"),async(re
             OR UPPER(TRIM(COALESCE(pl."invoiceUnit",''))) NOT IN ('PIECE','ΤΜΧ','PACKAGE'))::int AS "invalidUnits"
         FROM "PurchaseOrder" po JOIN "PurchaseOrderLine" pl ON pl."orderId"=po."id"
         WHERE po."id"=d."id" AND po."companyId"=${companyId} AND po."storeId"=${storeId}
-          AND po."status"='FINAL' AND pl."productId"=p."id"
+          AND po."status" IN ('FINAL','INVOICED') AND pl."productId"=p."id"
       ) original ON d."sourceType"='PURCHASE_ORDER'
       WHERE d."companyId"=${companyId} AND d."storeId"=${storeId}
         AND d."status"='APPROVED' AND d."documentType"='INVOICE'
