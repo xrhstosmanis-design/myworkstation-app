@@ -72,7 +72,8 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
   if(format&&!exporting)return res.status(400).json({error:"Μη έγκυρη μορφή εξαγωγής."});
   const offset=exporting?0:Math.max(0,Math.floor(Number(req.query.offset)||0));
   const filters={processing:req.query.processing,q:req.query.q,supplier:req.query.supplier,date:req.query.date,dateFrom:req.query.dateFrom,dateTo:req.query.dateTo,receivedToday:req.query.receivedToday==="true",receivedBeforeToday:req.query.receivedBeforeToday==="true",id:req.query.id,limit:exporting?20001:100,offset};
-  const query=archiveQuery(req.user.companyId,store.id,filters),count=archiveQuery(req.user.companyId,store.id,filters,true),all=archiveQuery(req.user.companyId,store.id,{processing:filters.processing,receivedToday:filters.receivedToday,receivedBeforeToday:filters.receivedBeforeToday},true);
+  const [paymentSchema]=await prisma.$queryRaw`SELECT to_regclass('"SupplierPaymentAllocation"') IS NOT NULL AND to_regclass('"SupplierPaymentSettlement"') IS NOT NULL AS available`;
+  const query=archiveQuery(req.user.companyId,store.id,filters,false,paymentSchema?.available===true),count=archiveQuery(req.user.companyId,store.id,filters,true),all=archiveQuery(req.user.companyId,store.id,{processing:filters.processing,receivedToday:filters.receivedToday,receivedBeforeToday:filters.receivedBeforeToday},true);
   const [rows,counts,totals]=await Promise.all([prisma.$queryRawUnsafe(query.sql,...query.values),prisma.$queryRawUnsafe(count.sql,...count.values),prisma.$queryRawUnsafe(all.sql,...all.values)]);
   if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,store.id,'invoices.read');
   if(exporting){

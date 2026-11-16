@@ -1,6 +1,6 @@
 // Aggregate the selected store's job links once, including canonical POS photos.
 // $1/$2 are the archive query's existing company/store bound parameters.
-export const inboxProcessingJoin=`LEFT JOIN (
+export const inboxProcessingJoin=(withAllocations=false)=>`LEFT JOIN (
  WITH scoped_jobs AS (
   SELECT j."id",j."attachmentId",j."purchaseDocumentId",j."resultJson" FROM "AiReaderJob" j WHERE j."companyId"=$1 AND j."storeId"=$2
  ), links AS (
@@ -19,13 +19,13 @@ export const inboxProcessingJoin=`LEFT JOIN (
  LEFT JOIN LATERAL (
   SELECT t."id",t."amount" FROM "StoreTransaction" t WHERE t."id"=d."paymentTransactionId"
    AND t."companyId"=$1 AND t."storeId"=$2 AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
-  UNION ALL
+  ${withAllocations?`UNION ALL
   SELECT t."id",a."amount" FROM "SupplierPaymentAllocation" a
   JOIN "SupplierPaymentSettlement" s ON s."id"=a."settlementId" AND s."companyId"=$1 AND s."storeId"=$2
   JOIN "StoreTransaction" t ON t."id"=s."transactionId" AND t."companyId"=$1 AND t."storeId"=$2
    AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
   WHERE a."purchaseDocumentId"=d."id" AND a."companyId"=$1
-   AND t."id" IS DISTINCT FROM d."paymentTransactionId"
+   AND t."id" IS DISTINCT FROM d."paymentTransactionId"`:""}
  ) t ON true
  GROUP BY links."attachmentId"
 ) processing ON processing."attachmentId"=i."attachmentId"`;
