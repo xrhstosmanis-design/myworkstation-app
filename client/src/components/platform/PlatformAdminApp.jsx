@@ -12,7 +12,7 @@ import {cashReportPeriod,cashReportRowDay} from "../../lib/cash-report-period.js
 import AutomaticReportSettingsManager from "./AutomaticReportSettingsManager.jsx";
 import ReportRecipientFields from "./ReportRecipientFields.jsx";
 import AssistantChatPage from "../voice/AssistantChatPage.jsx";
-import {requestPlatformAssistant,requestPlatformAssistantExport,requestPlatformAssistantStatus} from "./platform-assistant-context.mjs";
+import {requestPlatformAssistant,requestPlatformAssistantExport,requestPlatformAssistantStatus,requestPlatformLabMail} from "./platform-assistant-context.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {readBackofficeContext} from "../../utils/backofficeSessionBoundary.mjs";
 import {n40ReadHeaders,n40PublishRead} from "../../../../shared/n40-read-trace.mjs";
@@ -128,6 +128,8 @@ async function request(path,options={}){
   }
   if(path==="/api/platform/ai-command-center/export")return requestPlatformAssistantExport(rawPlatformRequest,path,options,localStorage,sessionStorage);
   if(path.startsWith("/api/platform/ai-command-center/status"))return requestPlatformAssistantStatus(rawPlatformRequest,path,options,localStorage,sessionStorage);
+  if(path==="/api/platform/mail/test/monthly-supplier"||path==="/api/platform/mail/test/monthly-turnover")
+    return requestPlatformLabMail(rawPlatformRequest,path,options,localStorage,sessionStorage);
   return rawPlatformRequest(path,options);
 }
 async function rawPlatformRequest(path,options={}){

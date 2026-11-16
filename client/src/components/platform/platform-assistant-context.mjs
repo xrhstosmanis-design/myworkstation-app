@@ -30,6 +30,11 @@ export async function requestPlatformAssistantStatus(request,path,options,storag
  if(!/^\/api\/platform\/ai-command-center\/status(?:\?[^#]*)?$/.test(path)||(options?.method||"GET")!=="GET")throw denied("Μη επιτρεπόμενος έλεγχος βοηθού.","PLATFORM_ASSISTANT_REQUEST_REJECTED");
  return requestBoundAssistant(request,path,options,storage,sessions);
 }
+export async function requestPlatformLabMail(request,path,options,storage,sessions){
+ if(!["/api/platform/mail/test/monthly-turnover","/api/platform/mail/test/monthly-supplier"].includes(path)||options?.method!=="POST")
+  throw denied("Μη επιτρεπόμενη δοκιμή email LAB.","PLATFORM_ASSISTANT_REQUEST_REJECTED");
+ return requestBoundAssistant(request,path,options,storage,sessions);
+}
 async function requestBoundAssistant(request,path,options,storage,sessions){
  const before=readPlatformAssistantContext(storage,sessions);
  const assertCurrent=()=>{
