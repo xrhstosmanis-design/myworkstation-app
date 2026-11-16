@@ -1,3 +1,7 @@
+## 16/11/2026 — POS εσωτερική διακίνηση / Audit LAB PASS
+
+Επαληθεύτηκαν στο Super Admin οι εγγραφές πίστωσης και παραλαβής με κοινό κωδικό, ποσό και ώρα. Εκκρεμούν εξόφληση σε επόμενη βάρδια και παραλαβή email με PDF στο LAB. Τεκμήριο: [checkpoint](CHANGES/2026-11-16-pos-transfer-credit-lab-pass.md).
+
 ## 07/11/2026 22:24:54 UTC - CASH-UNIFIED-AUDIT-15 / FULL NATIVE PREVIEW AND CANCEL / SCOPED LIVE PASS
 
 Retained owner codex/cash-chat-reconciliation-20261026 with /root coordination; no transfer. PR #3711 merged as ff4665eb8ec4b7b572ac65d792a788e48657a051; exact PR CI 42417280001 and main CI 42418343730 passed all five jobs. Guarded deploy 42419487430 / job 128544666223 succeeded; actual health confirmed the exact revision at 07/11 22:14:28.5241665 UTC.
