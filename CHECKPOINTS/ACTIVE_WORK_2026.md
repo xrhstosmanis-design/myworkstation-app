@@ -8,6 +8,8 @@
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
 
+- 2026-11-16 · Υπόλοιπα προμηθευτών · [Checkpoint](CHANGES/2026-11-16-supplier-balance-payment-review.md) · PR #3921 · LAB εκκρεμεί.
+
 - 2026-11-15 · BackOffice τιμολόγηση με όλα τα είδη στην αποθήκη · [Checkpoint](CHANGES/2026-11-15-backoffice-invoice-stock-selection.md).
 
 - 2026-11-14 · Επιλογή δικαιωμάτων BackOffice ανά κατάστημα · [Checkpoint](CHANGES/2026-11-14-backoffice-store-permission-selection.md).
@@ -386,4 +388,4 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - 2026-11-16 · Τζίρος ανά βάρδια στο μηνιαίο email · τοπική αλλαγή, εκκρεμεί LAB. [Checkpoint](CHANGES/2026-11-16-monthly-shift-turnover.md)
 
-- 2026-11-16 · Υπόλοιπα προμηθευτών · [Checkpoint](CHANGES/2026-11-16-supplier-balance-payment-review.md) · PR #3921 · LAB εκκρεμεί.
+- 2026-11-16 · Μηνιαίο email LAB με ανάλυση βαρδιών · [Checkpoint](CHANGES/2026-11-16-lab-monthly-shifts.md).
