@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import express from 'express';
 import {staffCapabilities,staffProfiles,changeStaffCapability,validStaffCapabilities,staffRequestCapability} from '../../shared/backoffice-staff.mjs';
 import {previewPurchaseOrderCancel,cancelPurchaseOrder} from '../src/services/purchase-order-reopen.js';
-import {enforceBackofficeStaff,requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
+import {enforceBackofficeStaff,requireStaffGrant,requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
 
 const expense={type:'OTHER_EXPENSE',amount:2,evidenceMode:'NO_DOCUMENT',description:'Synthetic expense',responsibilityAcknowledged:true,paymentSource:'EXTERNAL',paymentMethod:'EMPLOYEE_REIMBURSEMENT',idempotencyKey:'synthetic-fixed-key'};
 function policy(){
@@ -138,4 +139,56 @@ test('delegated invoice cancellation rechecks the grant inside preview and submi
   };
   await assert.rejects(cancel(p.db,p.user),{code:'STAFF_ACCESS_DENIED'});
  }
+});
+
+test('canonical shift report redacts delegated data and revalidates immediately before response',async()=>{
+ const source=await readFile(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
+ const start=source.indexOf('function staffShiftReportRow(');
+ const stop=source.indexOf('router.get("/stores/:storeId/daily-summary"',start);
+ assert.ok(start>=0&&stop>start);
+ const p=policy();
+ p.grant(['shifts.read']);
+ const staffQuery=p.db.$queryRaw;
+ let revokeWhileLoading=false;
+ let reportQueryCount=0;
+ p.db.$queryRaw=async(strings,...values)=>{
+  const sql=strings.join('?');
+  if(sql.includes('FROM "CashShiftSession" s')){
+   assert.deepEqual(values,['a','a1','a','a1']);
+   reportQueryCount++;
+   return [{id:'shift',status:'OPEN',openedByName:'Synthetic',terminalPos:'MAIN',liveCashSales:13,transactionCount:1,closingNote:'Internal evidence',duplicateReviewJson:[{privateRef:'control'}]}];
+  }
+  if(sql.includes('ORDER BY "occurredAt"')){
+   assert.deepEqual(values,['a','a1',['shift']]);
+   reportQueryCount++;
+   if(revokeWhileLoading)p.grant([]);
+   return [{id:'entry',sessionId:'shift',amount:'13.00'}];
+  }
+  return staffQuery(strings,...values);
+ };
+ let handler;
+ const money=value=>Number(value||0);
+ const assertStoreAccess=(req,storeId)=>{if(req.user.staffAccess&&req.user.storeId!==storeId)throw Object.assign(new Error('wrong store'),{status:403});};
+ const ownedStore=async(id,companyId)=>{assert.deepEqual([id,companyId],['a1','a']);return {id,name:'A1'};};
+ const normalized=row=>({...row});
+ new Function('router','route','prisma','money','normalize','assertStoreAccess','ownedStore','requireStaffGrant',source.slice(start,stop))(
+  {get:(_path,fn)=>{handler=fn;}},fn=>fn,p.db,money,normalized,assertStoreAccess,ownedStore,requireStaffGrant,
+ );
+ const invoke=async(user,storeId='a1')=>{
+  let body;
+  await handler({user,params:{storeId}},{json:value=>{body=value;}});
+  return body;
+ };
+ await assert.rejects(invoke(p.user,'a2'),{status:403});
+ assert.equal(reportQueryCount,0);
+ const owner=await invoke({role:'OWNER',companyId:'a'});
+ assert.equal(owner.recent[0].closingNote,'Internal evidence');
+ const delegated=await invoke(p.user);
+ assert.equal(delegated.recent[0].cashSales,13);
+ assert.equal(delegated.recent[0].closingNote,undefined);
+ assert.equal(delegated.recent[0].duplicateReviewJson,undefined);
+ assert.deepEqual(delegated.openSessions,delegated.recent);
+ assert.deepEqual(delegated.recentTransactions,[{id:'entry',sessionId:'shift',amount:13}]);
+ revokeWhileLoading=true;
+ await assert.rejects(invoke(p.user),{code:'STAFF_ACCESS_DENIED'});
 });
