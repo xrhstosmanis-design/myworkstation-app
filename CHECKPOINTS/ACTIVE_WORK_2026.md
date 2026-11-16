@@ -402,3 +402,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 34 · [Δοκιμή email προμηθευτών LAB](CHANGES/2026-11-16-supplier-lab-mail-test.md). Εκκρεμεί επιβεβαίωση παραλαβής.
 
 - Νο 34 · [Επιβεβαίωση SMTP στο LAB](CHANGES/2026-11-16-lab-smtp-confirmation-fix.md). Εκκρεμεί πραγματική παραλαβή στο inbox.
+
+## Νο 31 — Προϊόντα χαμηλής απόδοσης
+
+- 16/11/2026 · Κλάδος ελέγχου `review/no31-reconciliation` για το υπάρχον #1772. Προσαρμογή στο main και έλεγχος τιμολογημένων αγορών συσκευασίας. [Checkpoint](CHANGES/2026-11-16-no31-reconciliation.md). Εκκρεμούν CI και LAB.
