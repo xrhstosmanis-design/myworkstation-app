@@ -46,6 +46,7 @@ test('actual admission binds actions to selected store/object and never grants o
   for(const [path,method,body,cap]of [
    ['/api/purchase-orders/order','PATCH',{description:'edit'},'invoices.edit'],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL'},'invoices.approve'],
+   ['/api/purchase-orders/order','PATCH',{status:'INVOICED',expectedReopenVersion:0,excludeStockLineIds:['line-a']},'invoices.approve'],
    ['/api/transactions/stores/a1','POST',expense,'payments.expense'],
    ['/api/transactions/stores/a1/supplier-settlements','POST',{},'payments.supplier'],
    ['/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'CANCEL'},'sales.cancel'],
@@ -57,6 +58,9 @@ test('actual admission binds actions to selected store/object and never grants o
    ['/api/purchase-orders/foreign','PATCH',{description:'other store'}],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL',description:'smuggled edit'}],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL',totalMismatchOverride:true}],
+   ['/api/purchase-orders/order','PATCH',{status:'FINAL',excludeStockLineIds:['line-a']}],
+   ['/api/purchase-orders/order','PATCH',{status:'INVOICED',excludeStockLineIds:['line-a'],totalMismatchOverride:true}],
+   ['/api/purchase-orders/foreign','PATCH',{status:'INVOICED',excludeStockLineIds:['line-a']}],
    ['/api/transactions/stores/a2','POST',expense],
    ['/api/transactions/stores/a1/supplier-settlements/s/review','POST',{}],
    ['/api/transactions/tx/reverse','POST',{}],
