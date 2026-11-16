@@ -6,6 +6,7 @@ const owner=fs.readFileSync(new URL("../src/routes/owner-products.js",import.met
 const commerce=fs.readFileSync(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
 const cash=fs.readFileSync(new URL("../src/routes/cash-control.js",import.meta.url),"utf8");
 const ownerUi=fs.readFileSync(new URL("../../client/src/components/commerce/OwnerProductCenter.jsx",import.meta.url),"utf8");
+const supplierReport=fs.readFileSync(new URL("../src/services/supplier-comparison-report.js",import.meta.url),"utf8");
 const supplierUi=fs.readFileSync(new URL("../../client/src/components/commerce/SupplierPriceComparisonPanel.jsx",import.meta.url),"utf8");
 const cashUi=fs.readFileSync(new URL("../../client/src/components/cloud/CashControlPanel.jsx",import.meta.url),"utf8");
 
@@ -29,11 +30,11 @@ test("promotions accept barcode and Excel source-store fanout",()=>{
 
 test("supplier comparison ranks normalized approved purchase costs",()=>{
   assert.match(commerce,/supplier-price-comparison/);
-  assert.match(commerce,/unitsPerPackage/);
-  assert.match(commerce,/buildSupplierPriceComparison\(lines\)/);
+  assert.match(supplierReport,/unitsPerPackage/);
+  assert.match(commerce,/readSupplierComparison\(prisma/);
   assert.match(commerce,/supplier-price-comparison",requireStoreModule\("INVENTORY"\)/);
-  assert.match(commerce,/d\."companyId"=\$\{req\.user\.companyId\}/);
-  assert.match(commerce,/d\."status"='APPROVED'/);
+  assert.match(supplierReport,/d\."companyId"=\$\{companyId\} AND d\."storeId"=\$\{storeId\}/);
+  assert.match(supplierReport,/d\."status"='APPROVED'/);
   assert.match(supplierUi,/ΧΑΜΗΛΟΤΕΡΗ ΤΙΜΗ/);
 });
 

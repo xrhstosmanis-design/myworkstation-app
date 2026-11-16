@@ -44,7 +44,12 @@ export async function readSupplierComparison(db,{companyId,storeId,month}) {
     const suppliers = buildSupplierPriceComparison(lines);
     if (!month) return suppliers;
 
-    const products = Map.groupBy(suppliers, supplier => supplier.productId);
+    const products = new Map();
+    for (const supplier of suppliers) {
+      const group = products.get(supplier.productId) ?? [];
+      group.push(supplier);
+      products.set(supplier.productId, group);
+    }
     return [...products.values()].filter(group => group.length >= 2).map(group => {
       const {productId,productName,unitLabel} = group[0];
       const comparable = group.filter(supplier => supplier.lastCost > 0);
