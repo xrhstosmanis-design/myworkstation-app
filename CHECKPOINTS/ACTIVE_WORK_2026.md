@@ -407,4 +407,6 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - 16/11/2026 · Κλάδος ελέγχου `review/no31-reconciliation` για το υπάρχον #1772. Προσαρμογή στο main και έλεγχος τιμολογημένων αγορών συσκευασίας. [Checkpoint](CHANGES/2026-11-16-no31-reconciliation.md). Εκκρεμούν CI και LAB.
 
+- Νο 34 · [Περιορισμός ανάκλησης άδειας ταμείου](CHANGES/2026-11-16-automatic-report-grant-revocation-scope.md). Εκκρεμεί η ρύθμιση αυτόματης σύγκρισης προμηθευτών στο LAB.
+
 16/11/2026 — Νο 7 · [Κοινός έλεγχος δικαιωμάτων](CHANGES/2026-11-16-no7-manager-invoice-cancel.md).
