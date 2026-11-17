@@ -1,3 +1,15 @@
+## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — IMPLEMENTED / AWAITING CI + MERGE + LAB
+
+Owner /root; source branch `feat/pos-packs-cash-returns`; PR #4006. Documentation claims #4001/#4005 are merged. The earlier foundation-only entry is superseded for implementation scope, retained as history.
+
+Implemented: distinct sale products with store-specific prices and store-scoped base-product/units mapping; POS catalog availability from base units; shared stock posting used by ordinary POS/RBS/ftext finalizers; frozen line composition for historical returns; package-aware exchange/waste paths; DB guard against writing independent package stock. Scanned cart → Return → cash confirmation → Finish records stock, negative cash payment/shift entry and audit atomically. No original receipt selection or replacement purchase, no card/EFTPOS refund and no duplicate miscellaneous expense. Persistent request identity, replay and cancellation tombstones reconcile uncertain responses. Permissions, store/company/terminal/shift and authoritative price checks remain server-side.
+
+Validation: Node 20.20.2 + isolated local PostgreSQL 18.6 targeted suite: 17 PASS, 0 FAIL, 0 SKIP. It measured 24/6 stock, loose+pack aggregation, per-store prices, cash-only refund with original card payment/control terminal unchanged, concurrent retry, cancellation, changed price rejection, rollback, package stock guard and exact original-line restoration. Mounted React test covered confirmation, double click, lost-response reload and identical request replay. Frontend build passed. Broad local suite was interrupted after independent Chromium ECONNRESET/environment failures; no full-suite PASS claimed. Exact PR CI, deployed-revision verification and real LAB remain pending.
+
+User requests one grouped acceptance session at the end; no repeated POS/Owner/Super Admin switching. No live products, stock, cash, cards, fiscal commands, charge or external message changed. No functional LAB PASS/manual closure claimed. Source merge/deploy awaits owner approval after required checks.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-implementation.md`. Scope/remaining grouped acceptance: `docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md`.
+
 ## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — SOURCE FOUNDATION / NOT INTEGRATED
 Owner /root; source branch feat/pos-packs-cash-returns. Approved documentation #4001 and #4005 merged. Shared cents/base-unit planning implemented, with four passing local tests under Node 24.22.1 (not Node20/CI/LAB proof). No runtime imports, UI, endpoint, schema or production behavior changed.
 Remaining: store-scoped package editor and persistence; sale stock posting with frozen package composition; atomic scanned cash return with permission/terminal/shift validation, persisted request identity, cash/stock/audit, POS confirmation; historical returns and holds/offline/reporting compatibility; Node20/full CI and existing LAB before/after acceptance. No source merge/deploy authorized. Next action: implement store-scoped package persistence and use the shared plan in atomic sale/return services.
@@ -7,7 +19,11 @@ Branch work/pos-packs-returns-20261117. Owner approved central implementation an
 Continuation for these two independent new tasks only: [scope and pending acceptance](../../docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md).
 Package products have their own barcode/button and store-specific sale price; consume linked base bottle units (24 or 6). Scanned cash return needs no replacement or original receipt selection; restore stock and reduce current terminal cash once, with unchanged card totals and no duplicate miscellaneous expense. Preserve permissions, isolation, fiscal gates, audit and idempotency; existing owners/return flows retained.
 
+- 2026-11-17 · Νο 15 TABLE_SERVICE · Κινητό, μεταφορά, ένωση και διαίρεση λογαριασμού · [Checkpoint](CHANGES/2026-11-17-table-service-account-operations.md) · PR #3998, τοπικά PASS, native CI και κοινό LAB εκκρεμούν.
+
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
+
+- 2026-11-17 · 13–14 · Διόρθωση ιστορικού κόστους και επισκόπηση εκκρεμών αγορών · [Checkpoint](CHANGES/2026-11-17-no13-no14-batch-source.md) · Τοπικοί έλεγχοι, CI και κοινή αποδοχή LAB σε συνέχεια.
 
 - 2026-11-17 · Νο 13 · LAB PASS για CSV και εκτυπώσιμη προβολή «Χωρίς ΦΠΑ» στο c19e099 · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · PDF, φυσική εκτύπωση και υπόλοιπο 13–14 ανοιχτά.
 
@@ -457,3 +473,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 17/11/2026 · Νο 2 · Άνοιγμα υπάρχοντος προχείρου από την ενσωματωμένη Θυρίδα. 36 τοπικοί έλεγχοι PASS. CI και στοχευμένος επανέλεγχος LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
 
 - Νο 3 — [Πληρωτέο φωτογραφιών OCR](CHANGES/2026-11-17-no3-ocr-photo-payable.md) · PR #3996.
+
+- 17/11/2026 · Νο 2 · Συμβατότητα παλιών κοινών πληρωμών myDATA–POS. 39 τοπικοί έλεγχοι PASS και στοχευμένος SQL έλεγχος. Πλήρες CI και τελική κοινή συνεδρία LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).

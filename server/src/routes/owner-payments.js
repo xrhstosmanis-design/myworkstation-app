@@ -91,8 +91,17 @@ router.get("/business-picture",async(req,res,next)=>{
           WHERE pd."companyId"=${companyId} AND pd."status"='APPROVED' AND (${storeId}::text IS NULL OR pd."storeId"=${storeId})
           GROUP BY pd."id",pl."productId"
         ), "purchaseCosts" AS MATERIALIZED (
-          SELECT posted.*,COALESCE(original."pieceCost",posted."legacyUnitCost") AS "unitCost",original."pieceCost",original."rawLandedCost",original.factor
+          SELECT posted.*,COALESCE(correction."unitCost",original."pieceCost",posted."legacyUnitCost") AS "unitCost",
+            COALESCE(correction."unitCost",original."pieceCost") AS "pieceCost",original."rawLandedCost",original.factor
           FROM "postedCostGroups" posted
+          LEFT JOIN LATERAL (
+            SELECT sm."unitCost" FROM "StockMovement" sm
+            WHERE posted."sourceType"='PURCHASE_ORDER' AND sm."sourceType"='PURCHASE_ORDER'
+              AND sm."sourceId"=posted."documentId" AND sm."storeId"=posted."storeId"
+              AND sm."productId"=posted."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+              AND sm."unitCost">0
+            ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1
+          ) correction ON true
           LEFT JOIN LATERAL (
             SELECT SUM(l."netAmount"+COALESCE(l."exciseTotal",0))/NULLIF(SUM(l."quantity"*CASE WHEN l."invoiceUnit"='PACKAGE' THEN l."stockUnitsPerInvoiceUnit" ELSE 1 END),0) AS "pieceCost",
               SUM(l."netAmount"+COALESCE(l."exciseTotal",0))/NULLIF(SUM(l."quantity"),0) AS "rawLandedCost",

@@ -1,3 +1,4 @@
+import {packageStatements,packageSchema,readStockPackage,saveStockPackage} from '../lib/pos-stock-packages.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -15,6 +16,7 @@ async function ensure(){
   if(scope?.schemaReady===true)return;
   if(ready)return ready;
   ready=(async()=>{
+    for(const sql of packageStatements)await prisma.$executeRawUnsafe(sql);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ProductSetItem" (
       "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"productId" TEXT NOT NULL,"relatedProductId" TEXT NOT NULL,
       "quantity" NUMERIC(14,4) NOT NULL DEFAULT 1,"salePrice" NUMERIC(14,4),"updatedBy" TEXT,"updatedByName" TEXT,
@@ -56,6 +58,16 @@ router.delete("/:productId/set-items/:id",async(req,res,next)=>{try{const parent
 const recipeSchema=z.object({ingredientProductId:z.string().min(1),quantity:z.coerce.number().positive().max(100000),unit:z.enum(["PCS","GR","ML"]).default("PCS")});
 router.post("/:productId/recipe-items",async(req,res,next)=>{try{const parent=await product(req,req.params.productId),body=recipeSchema.parse(req.body||{}),actor=req.user.fullName||req.user.email||"BackOffice";if(!parent)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});if(body.ingredientProductId===parent.id)return res.status(400).json({error:"Η συνταγή δεν μπορεί να περιέχει το ίδιο προϊόν."});const ingredient=await product(req,body.ingredientProductId);if(!ingredient)return res.status(400).json({error:"Το υλικό δεν είναι έγκυρο."});const old=(await prisma.$queryRaw`SELECT "id" FROM "PreparationRecipeLine" WHERE "companyId"=${req.user.companyId} AND "productId"=${parent.id} AND "ingredientProductId"=${ingredient.id} LIMIT 1`)[0];if(old)await prisma.$executeRaw`UPDATE "PreparationRecipeLine" SET "quantity"=${body.quantity},"unit"=${body.unit},"automatic"=true,"updatedBy"=${req.user.id},"updatedByName"=${actor},"updatedAt"=NOW() WHERE "id"=${old.id}`;else await prisma.$executeRaw`INSERT INTO "PreparationRecipeLine" ("id","companyId","productId","ingredientProductId","quantity","unit","automatic","updatedBy","updatedByName") VALUES (${uid()},${req.user.companyId},${parent.id},${ingredient.id},${body.quantity},${body.unit},true,${req.user.id},${actor})`;await audit(req,parent.id,"RECIPE_ITEM_SAVED",{ingredientProductId:ingredient.id,ingredientName:ingredient.name,quantity:body.quantity,unit:body.unit});res.json({ok:true})}catch(error){next(error)}});
 router.delete("/:productId/recipe-items/:id",async(req,res,next)=>{try{const parent=await product(req,req.params.productId);if(!parent)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});await prisma.$executeRaw`DELETE FROM "PreparationRecipeLine" WHERE "id"=${req.params.id} AND "companyId"=${req.user.companyId} AND "productId"=${parent.id}`;await audit(req,parent.id,"RECIPE_ITEM_DELETED",{relationId:req.params.id});res.json({ok:true})}catch(error){next(error)}});
+
+
+async function packageScope(req){
+ if(scope||req.user?.staffAccess||req.user?.tokenType==='STORE_OPERATOR')throw Object.assign(new Error('Η ρύθμιση συσκευασίας γίνεται από τον ιδιοκτήτη στο κατάστημα.'),{status:403});
+ const storeId=String(req.query.storeId||'');if(!storeId)throw Object.assign(new Error('Επίλεξε κατάστημα.'),{status:400});
+ const found=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true}});if(!found)throw Object.assign(new Error('Δεν βρέθηκε το κατάστημα.'),{status:404});
+ return {companyId:req.user.companyId,storeId,productId:req.params.productId,user:req.user};
+}
+router.get('/:productId/stock-package',async(req,res,next)=>{try{const bound=await packageScope(req);const current=await readStockPackage(prisma,bound);const candidates=await prisma.$queryRaw`SELECT p."id",p."name",p."sku" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${bound.storeId} AND sp."active"=TRUE WHERE p."companyId"=${bound.companyId} AND p."active"=TRUE AND p."trackStock"=TRUE AND p."unit" IN ('PIECE','PCS') AND p."id"<>${bound.productId} ORDER BY p."name" LIMIT 5000`;res.json({current:current?{baseProductId:current.baseProductId,unitsPerPackage:Number(current.unitsPerPackage)}:null,candidates})}catch(e){next(e)}});
+router.post('/:productId/stock-package',async(req,res,next)=>{try{const bound=await packageScope(req);res.json(await saveStockPackage(prisma,bound,packageSchema.parse(req.body)))}catch(e){if(e.name==='ZodError')return res.status(400).json({error:'Επίλεξε βασικό είδος και ακέραιο πλήθος τεμαχίων από 2 και πάνω.'});next(e)}});
 
 router.prepare=ensure;
 return router;

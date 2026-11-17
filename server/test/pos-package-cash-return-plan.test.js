@@ -16,6 +16,7 @@ test('cash return restores packs plus loose bottles once in the plan, with uncha
 });
 test('no-stock items and fractional weighed items do not introduce package stock or floating money errors',()=>{
  const r=scannedCashReturnPlan([{productId:'service',quantity:1,storePrice:1,trackStock:false},{productId:'weighed',quantity:0.125,storePrice:1.2}]);
+ assert.equal(scannedCashReturnPlan([{productId:'weighed',quantity:1.005,storePrice:1}]).refundCents,101);
  assert.equal(r.refundCents,115);assert.deepEqual(r.stock,[{productId:'weighed',quantity:0.125}]);
 });
 test('invalid units, self-links, fractional packs and nonfinite or imprecise money fail closed',()=>{

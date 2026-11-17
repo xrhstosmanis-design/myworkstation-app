@@ -7,7 +7,7 @@ export function buildOrderSuggestions(rows,{historyDays=30,coverageDays=7,leadDa
   if(!Number.isInteger(historyDays)||historyDays<7||historyDays>90||!Number.isInteger(coverageDays)||coverageDays<1||coverageDays>60||!Number.isInteger(leadDays)||leadDays<0||leadDays>30)throw new Error("Μη έγκυρες ημέρες υπολογισμού.");
   return rows.map(row=>{
     const unit=suggestionUnit(row.unit),stock=number(row.currentStock),minimum=row.minStock==null?0:number(row.minStock),sold=number(row.soldQuantity),returned=number(row.returnedQuantity);
-    const base={productId:row.productId,name:row.name,sku:row.sku,unitLabel:unit?.label||String(row.unit||"—"),currentStock:stock,minStock:minimum,soldQuantity:sold,returnedQuantity:returned,netQuantity:null,dailyDemand:null,targetStock:null,suggestedQuantity:null,daysRemaining:null,reason:"",warnings:[]};
+    const base={productId:row.productId,name:row.name,sku:row.sku,unitLabel:unit?.label||String(row.unit||"—"),currentStock:stock,minStock:minimum,soldQuantity:sold,returnedQuantity:returned,netQuantity:null,dailyDemand:null,targetStock:null,suggestedQuantity:null,daysRemaining:null,reason:"",warnings:[],pendingPurchaseReview:row.pendingPurchaseReview||[]};
     if(!unit){base.reason="Χρειάζεται επιβεβαίωση μονάδας αποθήκης.";return base;}
     if(row.hasRecipe){base.reason="Προϊόν συνταγής — χρειάζεται ξεχωριστή πρόταση υλικών.";return base;}
     if(stock===null||minimum===null||minimum<0||sold===null||returned===null||sold<0||returned<0){base.reason="Ελλιπή ή μη έγκυρα στοιχεία αποθέματος/κίνησης.";return base;}

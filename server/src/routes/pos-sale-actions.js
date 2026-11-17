@@ -1,3 +1,5 @@
+import {changePackageStock} from '../lib/pos-stock-packages.js';
+import {scannedReturnStatements,quoteScannedCashReturn,recordScannedCashReturn,cancelScannedCashReturn} from '../lib/pos-scanned-cash-return.js';
 import {maybeChangeSameProductStock} from '../store-baking-same-product.js';
 import crypto from "crypto";
 import {recordInternalReturn} from "../lib/pos-internal-return.js";
@@ -25,6 +27,7 @@ export async function ensurePosSaleActionSchema(){
   if(!readyPromise){
     readyPromise=(async()=>{
       const statements=[
+        ...scannedReturnStatements,
         `ALTER TABLE "Sale" ADD COLUMN IF NOT EXISTS "transactionMode" TEXT NOT NULL DEFAULT 'NORMAL'`,
         `ALTER TABLE "Sale" ADD COLUMN IF NOT EXISTS "delayedReason" TEXT`,
         `ALTER TABLE "Sale" ADD COLUMN IF NOT EXISTS "delayedRecordedAt" TIMESTAMPTZ`,
@@ -158,7 +161,7 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
       for(const line of lines){
         await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${reversalId},${line.productId||null},${line.description},${-money(line.quantity)},${money(line.unitPrice)},${-money(line.discount)},${money(line.vatRate)},${-money(line.lineTotal)})`;
         if(line.productId){
-          const restoredSame=await maybeChangeSameProductStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:line.productId,quantity:money(line.quantity),kind:Number(line.quantity)<0?'CONSUME':'RESTORE',actorId:req.user.id,actorName:req.user.fullName||'Χειριστής',note:`Επιστροφή ${reversalId}`});
+          const restoredSame=await changePackageStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:line.productId,quantity:money(line.quantity),saleId:reversalId,lineId:`reverse:${reversalId}:${line.id}`,restore:Number(line.quantity)>0,originalLineId:line.id})||await maybeChangeSameProductStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:line.productId,quantity:money(line.quantity),kind:Number(line.quantity)<0?'CONSUME':'RESTORE',actorId:req.user.id,actorName:req.user.fullName||'Χειριστής',note:`Επιστροφή ${reversalId}`});
           const restored=restoredSame?[{productId:line.productId}]:await tx.$queryRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${money(line.quantity)} FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=${line.productId} AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=${req.user.companyId} AND p."trackStock"=TRUE RETURNING sp."productId"`;
           if(restored[0])restoredProductIds.push(restored[0].productId);
         }
@@ -187,4 +190,21 @@ router.post("/stores/:storeId/sales/:saleId/internal-return",async(req,res,next)
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε προϊόντα, τρόπο επιστροφής, μία από τις τρεις αιτιολογίες και επιβεβαίωσε την εσωτερική καταχώριση."});next(error)}
 });
 
+
+router.post("/stores/:storeId/cash-returns/quote",async(req,res,next)=>{try{
+ const store=await ownedStore(req,req.params.storeId),terminalPos=await requestTerminal(req);
+ if(req.user?.tokenType==='STORE_OPERATOR'&&(!req.storeOperatorAccess?.returnItems||!req.storeOperatorAccess?.cash))return res.status(403).json({error:'Χρειάζονται δικαιώματα επιστροφής και μετρητών.'});
+ const result=await prisma.$transaction(tx=>quoteScannedCashReturn(tx,{companyId:req.user.companyId,storeId:store.id,terminalPos,user:req.user},req.body));res.json(result);
+}catch(e){if(e.name==='ZodError')return res.status(400).json({error:'Έλεγξε τα είδη επιστροφής.'});next(e)}});
+router.post("/stores/:storeId/cash-returns",async(req,res,next)=>{try{
+ const store=await ownedStore(req,req.params.storeId),terminalPos=await requestTerminal(req);
+ if(req.user?.tokenType==='STORE_OPERATOR'&&(!req.storeOperatorAccess?.returnItems||!req.storeOperatorAccess?.cash))return res.status(403).json({error:'Χρειάζονται δικαιώματα επιστροφής και μετρητών.'});
+ const result=await recordScannedCashReturn(prisma,{companyId:req.user.companyId,storeId:store.id,terminalPos,user:req.user},req.body);res.status(201).json(result);
+}catch(e){if(e.name==='ZodError')return res.status(400).json({error:'Έλεγξε και επιβεβαίωσε την επιστροφή με μετρητά.'});next(e)}});
+
+router.post("/stores/:storeId/cash-returns/cancel",async(req,res,next)=>{try{
+ const store=await ownedStore(req,req.params.storeId),terminalPos=await requestTerminal(req);
+ if(req.user?.tokenType==='STORE_OPERATOR'&&(!req.storeOperatorAccess?.returnItems||!req.storeOperatorAccess?.cash))return res.status(403).json({error:'Χρειάζονται δικαιώματα επιστροφής και μετρητών.'});
+ res.json(await cancelScannedCashReturn(prisma,{companyId:req.user.companyId,storeId:store.id,terminalPos,user:req.user},req.body));
+}catch(e){if(e.name==='ZodError')return res.status(400).json({error:'Μη έγκυρη ταυτότητα επιστροφής.'});next(e)}});
 export default router;

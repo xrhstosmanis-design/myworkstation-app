@@ -27,7 +27,8 @@ export function scannedCashReturnPlan(lines){
  const items=lines.map(line=>{
   if(!line.productId)invalid('Λείπει το είδος επιστροφής.');
   const count=quantity(line.quantity),unitCents=moneyCents(line.storePrice);
-  let stockProductId=line.productId,stockQuantity=count,totalCents=Math.round(unitCents*count);
+  const milli=Math.round(count*1000),numerator=unitCents*milli;if(!Number.isSafeInteger(numerator)||numerator>Number.MAX_SAFE_INTEGER-500)invalid("Η αξία είναι πολύ μεγάλη.");
+  let stockProductId=line.productId,stockQuantity=count,totalCents=Math.floor((numerator+500)/1000);
   if(line.baseProductId){const pack=packageStockLine({...line,quantity:count});stockProductId=pack.baseProductId;stockQuantity=pack.stockQuantity;totalCents=pack.totalCents;}
   if(line.trackStock!==false)stock.set(stockProductId,Number(((stock.get(stockProductId)||0)+stockQuantity).toFixed(3)));
   refundCents+=totalCents;

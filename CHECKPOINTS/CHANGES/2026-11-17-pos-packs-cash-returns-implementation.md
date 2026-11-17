@@ -1,0 +1,31 @@
+# POS package products and scanned cash returns — implementation
+
+## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — IMPLEMENTED / AWAITING CI + MERGE + LAB
+
+Owner /root; source branch `feat/pos-packs-cash-returns`; PR #4006. Documentation claims #4001/#4005 are merged. The earlier foundation-only entry is superseded for implementation scope, retained as history.
+
+Implemented: distinct sale products with store-specific prices and store-scoped base-product/units mapping; POS catalog availability from base units; shared stock posting used by ordinary POS/RBS/ftext finalizers; frozen line composition for historical returns; package-aware exchange/waste paths; DB guard against writing independent package stock. Scanned cart → Return → cash confirmation → Finish records stock, negative cash payment/shift entry and audit atomically. No original receipt selection or replacement purchase, no card/EFTPOS refund and no duplicate miscellaneous expense. Persistent request identity, replay and cancellation tombstones reconcile uncertain responses. Permissions, store/company/terminal/shift and authoritative price checks remain server-side.
+
+Validation: Node 20.20.2 + isolated local PostgreSQL 18.6 targeted suite: 17 PASS, 0 FAIL, 0 SKIP. It measured 24/6 stock, loose+pack aggregation, per-store prices, cash-only refund with original card payment/control terminal unchanged, concurrent retry, cancellation, changed price rejection, rollback, package stock guard and exact original-line restoration. Mounted React test covered confirmation, double click, lost-response reload and identical request replay. Frontend build passed. Broad local suite was interrupted after independent Chromium ECONNRESET/environment failures; no full-suite PASS claimed. Exact PR CI, deployed-revision verification and real LAB remain pending.
+
+User requests one grouped acceptance session at the end; no repeated POS/Owner/Super Admin switching. No live products, stock, cash, cards, fiscal commands, charge or external message changed. No functional LAB PASS/manual closure claimed. Source merge/deploy awaits owner approval after required checks.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-implementation.md`. Scope/remaining grouped acceptance: `docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md`.
+
+## Usage prepared for acceptance (not LAB verified)
+
+Owner → selected store → Inventory/catalog → create a new package sale item with opening stock 0, its own barcode and the store's retail price. Reopen its card → Συσκευασία → select the base bottle item and 24 or 6 units. Mapping is store-specific and immutable; a different composition uses a new sale item. Original products/prices of other stores remain independent. Base item must be active, tracked, in pieces, and not a SET/recipe/baking product. No separate package stock is created. Supplier receipts/counts/adjustments use the base item; writes to independent package stock are rejected rather than silently diverging.
+
+POS → scan the returned regular items or packages → ΕΠΙΣΤΡΟΦΗ → inspect the server-calculated cash amount → Τέλος. The current store/terminal's open shift loses cash and the corresponding base stock increases in the same transaction. An original CARD purchase is not modified and card totals do not change. One negative Sale/Payment, one shift ledger entry and audits identify the customer return. It is NON_FISCAL operational recording; it neither issues nor reverses a fiscal receipt and never invokes EFTPOS. Existing original-sale and fiscal-return pathways are preserved. Empty cart still opens the old original-sale return flow. SET/recipe/baking returns use their existing specialized flow. The new scanned flow is online-only; it does not create an offline refund queue.
+
+If the response is lost, the same stored identity is retried after reload. Cancel reconciles against a committed result or creates a tombstone that prevents a delayed original submission from posting later. No second key is generated for an unresolved return. A changed quote or closed/replaced shift cannot post; cancellation then permits a fresh review. Restored stock does not depend on a mutable current package definition for original-sale returns: the sale-line posting stores the base product and unit factor.
+
+## Single grouped acceptance session after approved release
+
+1. Owner, existing MYWORKSTATION LAB only: prepare fresh synthetic 500ml and 1.5L base items and new 24/6 package items; define each store price and composition. Record exact deployed revision and affected/control store, terminal, operator and shift. Observe base stocks and package-derived availability. Do not replay historical transactions or touch real stores.
+2. POS, one continuous session: before each identified action capture affected shift cash/card/IRIS/count and base stock/latest movements with other terminal as control. Test one/two packs, loose+pack, cash customer return without replacement, a package return, cancel and retry after a controlled response loss. Refresh the same sources after each action and record expected/actual deltas and immutable IDs. Scan-to-cash return needs RETURN_ITEMS and POS_CASH. No card refund is sent.
+3. Owner, one final review: cash negative once, original card/control terminal unchanged, base stock correct, package independent stock remains zero, movement/Sale/Payment/audits reconciled. Check denied permission and cross-store request without replaying economic actions. Record scoped PASS/FAIL, remaining limits and update manual/central continuation only after real acceptance.
+
+## Source notes and remaining gates
+
+Code and local native/mounted checks are complete for the described POS scope. Source PR CI must be green before an approved merge; normal guarded deployment and exact revision must precede any LAB session. No migration/seed or financial action was run against a production database. Global historical tracker/pending files remain untouched; the approved small continuation carries these two new independent tasks. Existing scanner/permission/table-service owners are preserved. This page retains ownership until completion or a named handoff.

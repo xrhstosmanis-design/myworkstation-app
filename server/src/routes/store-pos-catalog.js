@@ -1,3 +1,4 @@
+import {packageCatalog} from '../lib/pos-stock-packages.js';
 import {revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
 import {readLifecycleGeneration} from '../services/store-lifecycle-generation.js';
 import {Router} from "express";
@@ -346,7 +347,7 @@ router.get("/stores/:storeId",async(req,res,next)=>{
         ORDER BY c."name" NULLS LAST,p."name"`
     ]);
     const layout=layoutForAccess(layoutRows[0]?.layoutJson||null,access);
-    res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,sourceCode:row.masterCode||row.sku||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
+    res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:(await packageCatalog(prisma,{companyId:req.user.companyId,storeId:store.id},products)).map(row=>({...row,sourceCode:row.masterCode||row.sku||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
   }catch(error){next(error)}
 });
 
@@ -357,7 +358,7 @@ router.get("/stores/:storeId/legacy-full",async(req,res,next)=>{
  LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=sp."vatDepartmentIdOverride" AND vd."companyId"=p."companyId"
  LEFT JOIN "ProductSubcategory" sc ON sc."id"=CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END
       LEFT JOIN LATERAL (SELECT mp."id",mp."sourceCode" FROM "MasterProduct" mp WHERE mp."active"=true AND (mp."id"=p."masterProductId" OR (p."sku" IS NOT NULL AND mp."sourceCode"=p."sku") OR (p."sku" IS NOT NULL AND EXISTS (SELECT 1 FROM "MasterProductBarcode" z WHERE z."masterProductId"=mp."id" AND z."barcode"=p."sku")) OR EXISTS (SELECT 1 FROM "MasterProductBarcode" mb JOIN "ProductBarcode" pb ON pb."productId"=p."id" AND pb."barcode"=mb."barcode" WHERE mb."masterProductId"=mp."id") OR (p."name" IS NOT NULL AND mp."name" IS NOT NULL AND lower(btrim(mp."name"))=lower(btrim(p."name")))) ORDER BY CASE WHEN mp."id"=p."masterProductId" THEN 0 WHEN p."sku" IS NOT NULL AND mp."sourceCode"=p."sku" THEN 1 ELSE 2 END,mp."id" LIMIT 1) resolved_mp ON true
-      WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,masterProductId:row.resolvedMasterProductId||row.masterProductId||null,sourceCode:row.masterCode||row.sku||null,masterCode:row.masterCode||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))})}catch(error){next(error)}
+      WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:(await packageCatalog(prisma,{companyId:req.user.companyId,storeId:store.id},products)).map(row=>({...row,masterProductId:row.resolvedMasterProductId||row.masterProductId||null,sourceCode:row.masterCode||row.sku||null,masterCode:row.masterCode||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))})}catch(error){next(error)}
 });
 export default router;
 
