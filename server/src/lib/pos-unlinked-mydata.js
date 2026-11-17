@@ -76,12 +76,13 @@ export async function linkStoredPosInvoicePhotos(tx,scope){
    JOIN "Supplier" s ON s."companyId"=m."companyId" AND s."taxId"=m."issuerVat"
    JOIN "PurchaseDocument" d ON d."companyId"=m."companyId" AND d."storeId"=m."storeId" AND d."supplierId"=s."id"
     AND d."totalGross"=m."totalGross" AND d."documentDate"::date=m."issueDate"::date
-    AND REGEXP_REPLACE(UPPER(d."documentNumber"),'[^A-ZΑ-Ω0-9]','','g')=
-     REGEXP_REPLACE(UPPER(CONCAT_WS(' ',m."series",m."documentNumber")),'[^A-ZΑ-Ω0-9]','','g')
+    AND LTRIM(SUBSTRING(TRIM(d."documentNumber") FROM '[0-9]+$'),'0')=LTRIM(m."documentNumber",'0')
+    AND REGEXP_REPLACE(UPPER(REGEXP_REPLACE(TRIM(d."documentNumber"),'[0-9]+$','')),'[^A-ZΑ-Ω0-9]','','g')=
+     REGEXP_REPLACE(UPPER(COALESCE(m."series",'')),'[^A-ZΑ-Ω0-9]','','g')
    JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."sourceDocumentId"=d."id"
     AND o."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."supplierId"=s."id"
    WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
-    AND m."issuerVat" ~ '^[0-9]{9}$' AND m."documentNumber" ~ '[0-9]' AND m."invoiceType" LIKE '1.%'
+    AND m."issuerVat" ~ '^[0-9]{9}$' AND m."documentNumber" ~ '^[0-9]+$' AND LTRIM(m."documentNumber",'0')<>'' AND m."invoiceType" LIKE '1.%'
     AND m."totalGross">0 AND i."status"='RECEIVED' AND i."attachmentId" IS NULL
     AND COALESCE(m."rawPayload"->>'xml','') NOT LIKE '%downloadingInvoiceUrl%'
     AND NOT(COALESCE(m."rawPayload",'{}'::jsonb) ?| ARRAY['mydataDraftOrderId','mydataDraftDocumentId','mydataPosReceipt','commonDraft'])
