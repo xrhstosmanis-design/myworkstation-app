@@ -6,6 +6,7 @@ import {z} from "zod";
 import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from "./helpers/invoice-common-draft-fixture.js";
 import * as common from "../src/lib/invoice-common-draft.js";
 import {loadInvoiceAssistantSource} from "../src/lib/invoice-assistant-source.js";
+import {acquireOriginal} from "../src/mydata-original.js";
 const scope={companyId:'c',storeId:'s',inboxId:'inbox'};
 const confirmed=preview=>({posOrderId:'pos',expectedVersion:preview.version,confirmSameInvoice:true,confirmMark:preview.mark,confirmPaymentDiscrepancy:true,reason:'Compared both original files',actorId:'owner'});
 
@@ -32,17 +33,78 @@ test('native existing mismatched pair becomes one draft; immutable payment, both
  }finally{await f.close()}
 });
 
+test('native myDATA-first consolidation keeps the existing POS payment handoff as its only payment binding', {skip:!isolatedInvoiceDb()},async()=>{
+ const f=await invoiceDbFixture();try{
+  await f.seed();
+  await f.db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{posHandoff,paymentTransactionId}','"payment"') WHERE "id"='j-pos'`);
+  const before=await f.snapshot();
+  const result=await f.db.$transaction(tx=>common.reconcileInvoiceDrafts(tx,scope,{posOrderId:'pos',automatic:true,actorId:'owner'}));
+  const jobs=await f.db.$queryRawUnsafe(`SELECT "id","purchaseDocumentId","resultJson" FROM "AiReaderJob" ORDER BY "createdAt"`);
+  assert.equal(result.documentId,'d-pos');
+  assert.equal(await f.snapshot(),before);
+  assert.deepEqual(jobs.map(job=>job.purchaseDocumentId),['d-pos','d-pos']);
+  assert.equal(jobs[0].resultJson.mydataPosReceipt.paymentTransactionId,null);
+  assert.equal(jobs[1].resultJson.posHandoff.paymentTransactionId,'payment');
+  assert.equal((await loadInvoiceAssistantSource(f.db,'c','pos')).pages[0].filename,'POS.jpg');
+ }finally{await f.close()}
+});
+
 test('native POS-first reuses its padded-number draft; myDATA-first race binds stored POS pages to original draft with no new order', {skip:!isolatedInvoiceDb()},async()=>{
  for(const first of ['pos','mydata']){const f=await invoiceDbFixture();try{
   await f.seed({pos:first==='pos',mydata:first==='mydata'});const before=await f.snapshot();
   if(first==='pos'){
    const result=await f.db.$transaction(tx=>common.attachInboundToExistingDraft(tx,scope,'owner'));assert.equal(result.purchaseOrderId,'pos');
   }else{
+   await f.db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{posHandoff,paymentTransactionId}','"payment"') WHERE "id"='j-pos'`);
    const result=await f.db.$transaction(async tx=>{await common.lockInvoiceStore(tx,'c','s');return common.reuseInboundDraftForPosJob(tx,{companyId:'c',storeId:'s',supplierTaxId:'099999999',documentNumber:'21-ΤΔΑ 006836',documentDate:'2026-10-12',totalGross:3.39,documentType:'INVOICE'},{jobId:'j-pos',paymentTransactionId:'payment'})});assert.equal(result.orderId,'mydata');
+   const jobs=await f.db.$queryRawUnsafe(`SELECT "id","resultJson" FROM "AiReaderJob" ORDER BY "id"`);
+   assert.equal(jobs[0].resultJson.mydataPosReceipt.paymentSourceJobId,'j-pos');
+   assert.equal(jobs[1].resultJson.commonDraft.paymentTransactionId,'payment');
   }
   assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "PurchaseOrder"'))[0].count,1);assert.equal(await f.snapshot(),before);
   const target=first==='pos'?'pos':'mydata';const source=await loadInvoiceAssistantSource(f.db,'c',target);assert.equal(source.pages[0].filename,'POS.jpg');assert.equal((await loadInvoiceAssistantSource(f.db,'c',target,{inboxId:'inbox',storeId:'s'})).pages[0].filename,'original.pdf');
  }finally{await f.close()}}
+});
+
+test('native original acquisition returns and reopens the registered canonical order after absorbing an exact POS draft', {skip:!isolatedInvoiceDb()},async()=>{
+ const f=await invoiceDbFixture();try{
+  await f.seed({payment:false,mydataLines:1});
+  await f.db.$executeRaw`UPDATE "PurchaseOrder" SET "status"='INVOICED' WHERE "id"='mydata'`;
+  await f.db.$executeRaw`UPDATE "PurchaseDocument" SET "status"='APPROVED' WHERE "id"='d-mydata'`;
+  await f.db.$executeRaw`INSERT INTO "PurchaseOrderPosting"("orderId","companyId","purchaseDocumentId") VALUES('mydata','c','d-mydata')`;
+  const before=await f.snapshot();
+  const acquire=()=>acquireOriginal(f.db,'c','s','inbox','owner',true,()=>assert.fail('The stored original should be reused'));
+  const first=await acquire();
+  assert.equal(first.purchaseOrderId,'mydata');assert.equal(first.reused,false);
+  const retry=await acquire();
+  assert.equal(retry.purchaseOrderId,'mydata');assert.equal(retry.reused,true);
+  const orders=await f.db.$queryRaw`SELECT "id","status" FROM "PurchaseOrder" ORDER BY "id"`;
+  assert.deepEqual(orders,[{id:'mydata',status:'INVOICED'},{id:'pos',status:'MERGED'}]);
+  assert.equal(await f.snapshot(),before);
+ }finally{await f.close()}
+});
+
+test('native original acquisition prefills the empty paid POS draft once without changing the payment', {skip:!isolatedInvoiceDb()},async()=>{
+ const f=await invoiceDbFixture();try{
+  await f.seed({mydata:false});
+  await f.db.$executeRaw`ALTER TABLE "MyDataInboundDocument" ADD COLUMN "totalNet" NUMERIC, ADD COLUMN "totalVat" NUMERIC`;
+  await f.db.$executeRaw`ALTER TABLE "PurchaseOrderLine" ADD COLUMN "initialUnitCost" NUMERIC`;
+  const xml='<invoiceDetails><itemDescr>Verified row</itemDescr><quantity>3</quantity><measurementUnit>1</measurementUnit><netValue>3</netValue><vatCategory>2</vatCategory><vatAmount>0.39</vatAmount></invoiceDetails>';
+  await f.db.$executeRaw`UPDATE "MyDataInboundDocument" SET "totalNet"=3,"totalVat"=0.39,"rawPayload"=jsonb_build_object('xml',${xml}::text) WHERE "id"='m'`;
+  await f.db.$executeRaw`UPDATE "DocumentInbox" SET "status"='RECEIVED' WHERE "id"='inbox'`;
+  const before=await f.snapshot();
+  const acquire=()=>acquireOriginal(f.db,'c','s','inbox','owner',true,()=>assert.fail('The stored original should be reused'));
+  assert.equal((await acquire()).purchaseOrderId,'pos');
+  const readLines=()=>f.db.$queryRaw`SELECT "id","orderId","description","grossAmount"::text FROM "PurchaseOrderLine"`;
+  const lines=await readLines();
+  assert.equal(lines.length,1);
+  assert.deepEqual(lines.map(({orderId,description,grossAmount})=>({orderId,description,grossAmount})),[{orderId:'pos',description:'Verified row',grossAmount:'3.39'}]);
+  assert.equal((await acquire()).purchaseOrderId,'pos');
+  assert.deepEqual(await readLines(),lines);
+  const [document]=await f.db.$queryRaw`SELECT "paymentTransactionId" FROM "PurchaseDocument" WHERE "id"='d-pos'`;
+  assert.equal(document.paymentTransactionId,'payment');
+  assert.equal(await f.snapshot(),before);
+ }finally{await f.close()}
 });
 
 test('native wrong scope/MARK/stale values/populated conflicts and already double-posted invoices cannot mutate the pair', {skip:!isolatedInvoiceDb()},async()=>{

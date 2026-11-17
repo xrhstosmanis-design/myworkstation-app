@@ -157,6 +157,42 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    assert.equal((await readPendingInvoices(db,scope)).rows.find(r=>r.id===original.transaction.id)?.status,'REVIEW_REQUIRED');assert.equal((await post('/fast-handoff',upload)).status,409);
    await db.$executeRaw`DELETE FROM "AiReaderJob" WHERE "id"='duplicate-primary'`;assert.ok(!(await readPendingInvoices(db,scope)).rows.some(r=>r.id===original.transaction.id));
   });
+  await t.test('a completed common draft can normalize POS padding while preserving the exact payment and original',async()=>{
+   const created=await createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'MATCH-00709',idempotencyKey:'common-padding-key'});
+   const sourcePage=page();sourcePage.dataUrl='data:application/pdf;base64,'+Buffer.from('%PDF-1.4\n'+'MATCH-709 original '.repeat(20)+'%%EOF').toString('base64');
+   const request={...upload,documentNumber:'MATCH-00709',paymentTransactionId:created.transaction.id,expectedPendingInvoice:{id:created.transaction.id,fingerprint:created.fingerprint},pages:[sourcePage]};
+   const [jobId,documentId,orderId,attachmentId]=['padding-job','padding-document','padding-order','padding-original'];
+   const manifest=invoicePageManifest([sourcePage]);
+   const handoff={paymentTransactionId:created.transaction.id,supplierId:'sup',documentNumber:'MATCH-00709',documentDate:base.deferredInvoice.documentDate,totalGross:base.amount,pageIndex:0,pageCount:1,pageJobIds:[jobId],pendingInvoiceManifest:manifest};
+   await db.$executeRaw`INSERT INTO "DocumentAttachment"("id","companyId","storeId","mimeType","checksum","contentData") VALUES (${attachmentId},'c','s',${sourcePage.mimeType},${manifest[0].checksum},${sourcePage.dataUrl})`;
+   await db.$executeRaw`INSERT INTO "PurchaseOrder"("id","companyId","storeId","supplierId","status","invoiceNumber","sourceDocumentId") VALUES (${orderId},'c','s','sup','NEW','MATCH- 709',${documentId})`;
+   await db.$executeRaw`INSERT INTO "PurchaseDocument"("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalGross","status","purchaseOrderId","paymentTransactionId") VALUES (${documentId},'c','s','sup','INVOICE','MATCH- 709',${base.deferredInvoice.documentDate}::timestamptz,${base.amount},'DRAFT',${orderId},${created.transaction.id})`;
+   await db.$executeRaw`INSERT INTO "AiReaderJob"("id","companyId","storeId","attachmentId","purchaseDocumentId","status","resultJson") VALUES (${jobId},'c','s',${attachmentId},${documentId},'AWAITING_APPROVAL',${JSON.stringify({posHandoff:handoff})}::jsonb)`;
+   const readPending=async()=> (await readPendingInvoices(db,scope)).rows.find(row=>row.id===created.transaction.id);
+   assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
+   const proof={completed:true,documentId,orderId,paymentTransactionId:created.transaction.id,inboxId:'same-store-inbox',mark:'123456',requiresPaymentReview:false};
+   const saveProof=async value=>db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{commonDraft}',${JSON.stringify(value)}::jsonb) WHERE "id"=${jobId}`;
+   for(const invalid of [{...proof,orderId:'another-order'},{...proof,paymentTransactionId:'another-payment'},{...proof,requiresPaymentReview:true}]){
+    await saveProof(invalid);
+    assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
+    await assert.rejects(assertExpectedPendingInvoice(db,scope,request),{code:'PENDING_INVOICE_REVIEW_REQUIRED'});
+   }
+   await saveProof(proof);
+   assert.equal(await readPending(),undefined);
+   assert.equal((await assertExpectedPendingInvoice(db,scope,request)).source.jobId,jobId);
+   const projection={paymentTransactionId:created.transaction.id,paymentSourceJobId:jobId,attachmentIds:[attachmentId]};
+   await db.$executeRaw`INSERT INTO "AiReaderJob"("id","companyId","storeId","attachmentId","purchaseDocumentId","stage","status","resultJson") SELECT 'mydata-projection',"companyId","storeId","attachmentId","purchaseDocumentId","stage","status",${JSON.stringify({mydataPosReceipt:projection})}::jsonb FROM "AiReaderJob" WHERE "id"=${jobId}`;
+   assert.equal(await readPending(),undefined);
+   assert.equal((await assertExpectedPendingInvoice(db,scope,request)).source.jobId,jobId);
+   await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "resultJson"="resultJson" #- '{mydataPosReceipt,paymentSourceJobId}' WHERE "id"='mydata-projection'`);
+   assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
+   await assert.rejects(assertExpectedPendingInvoice(db,scope,request));
+   await db.$executeRawUnsafe(`DELETE FROM "AiReaderJob" WHERE "id"='mydata-projection'`);
+   await db.$executeRaw`UPDATE "PurchaseDocument" SET "documentNumber"='OTHER- 709' WHERE "id"=${documentId}`;
+   assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
+   await assert.rejects(assertExpectedPendingInvoice(db,scope,request),{code:'PENDING_INVOICE_REVIEW_REQUIRED'});
+   await db.$executeRaw`UPDATE "PurchaseDocument" SET "documentNumber"='MATCH- 709' WHERE "id"=${documentId}`;
+  });
   await t.test('primary summary deduplicates a job shared by both bindings and preserves distinct payment bindings',async()=>{
    const created=await createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'DUAL-701',idempotencyKey:'dual-source-binding-key'}),p=page();p.dataUrl='data:application/pdf;base64,'+Buffer.from('%PDF-1.4\n'+'DUAL-701 original '.repeat(20)+'%%EOF').toString('base64');const request={...upload,documentNumber:'DUAL-701',paymentTransactionId:created.transaction.id,expectedPendingInvoice:{id:created.transaction.id,fingerprint:created.fingerprint},pages:[p]};assert.equal((await post('/fast-handoff',request)).status,202);
    const originalJob=(await db.$queryRaw`SELECT "id","resultJson" FROM "AiReaderJob" WHERE "resultJson"->'posHandoff'->>'paymentTransactionId'=${original.transaction.id} AND "resultJson"->'posHandoff'->>'pageIndex'='0'`)[0];
