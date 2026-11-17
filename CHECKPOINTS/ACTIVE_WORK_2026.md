@@ -1,3 +1,11 @@
+## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — causal amendment before source
+
+User screenshot reports paid invoice recovery rejected by fast-handoff despite the pending close row. The upper FAST_PAYMENT_WITHOUT_DRAFT recovery form is distinct from the plain pending panel. Read-only source diagnosis: invoiceToken removes NFD combining marks, while findInvoicePayment SQL currently uppercases then drops non-range characters, losing precomposed accented Greek letters. Synthetic reproduction target: ΆνευΧ-12345. This is a suspected cause pending native PostgreSQL proof, not a repair of live data.
+
+Same /root owner and branch; extend the bounded source scope to `client/src/components/store/StoreShiftClosePanel.jsx` (FastPaymentDraft acquisition and stale response guards only), `server/src/lib/invoice-payment-reuse.js` (lookup normalization only), new `server/test/invoice-payment-unicode-postgres.test.js`, and existing `server/test/invoice-payment-reuse-v1.test.js` (normalization regression only). Retain originally claimed pending panel and new mobile UI test. Reuse the same acquisition UI in both close attachment paths, without changing close/PIN guards, payment identity, supplier/store/type/reversal/amount checks, AI route semantics or financial state. Existing invoice/payment and shift owners retain all other scope.
+
+Required before completion: native accented/decomposed Greek lookup matching and rejection boundaries, protected payment reuse/handoff/pending tests, mounted QR/camera scenarios on both close paths, build and full CI. One original payment, no duplicate charge, no live financial repair, no historical replay, no close bypass. This amendment must merge before the newly added source paths are edited. Final functional LAB remains in the common session and NOT TESTED.
+
 ## 17/11/2026 22:08 EET — SHIFT-CLOSE-INVOICE-MOBILE-01 — proposed independent assignment /root
 
 Branch `fix/shift-close-expense-mobile-20261117`, base `e4210cf`. User requests QR photo transfer from mobile and camera acquisition when attaching a missing invoice at shift closure, matching the existing POS payment flow. Status: CLAIM PREPARED; source and hosted LAB NOT TESTED. Claim must land on main before source edits under AGENTS.md. Existing invoice, cash, PIN, scanner, myDATA and role owners remain retained.
