@@ -29,7 +29,7 @@ test("approved Platform home keeps company selection and routes existing actions
   localStorage.setItem("token","fixture-only");localStorage.setItem("platformUser",JSON.stringify({id:"fixture-user",fullName:"Fixture User"}));
   const company=(id,name,storeId,storeName)=>({id,name,active:true,plan:"BASIC",modules:[],stores:[{id:storeId,name:storeName,active:true}]});
   const a={...company("company-a","Company A","store-a","Store A"),taxId:"001234567"},b={...company("company-b","Company B","store-b","Store B"),taxId:"987654321",owner:{id:"owner-a",fullName:"Owner A",email:"owner@example.invalid"}};
-  let companies=[a,b];const calls=[],unexpected=[];
+  let companies=[a,b];const calls=[],unexpected=[],pending=new Map();
   globalThis.fetch=async(url,options={})=>{
     const method=options.method||"GET",pathname=new URL(url,"https://isolated.invalid").pathname;
     calls.push({url,method});
@@ -44,8 +44,13 @@ test("approved Platform home keeps company selection and routes existing actions
     else if(pathname==="/api/transactions/supplier-settlements/review"||pathname==="/api/transactions/bank-ledger/review")data={items:[]};
     else if(pathname==="/api/platform/invoice-learning/workspace")data={state:{documents:[],profiles:{}}};
     else if(/^\/api\/platform\/companies\/[^/]+\/stores\/[^/]+\/(installation-terminals|device-routing|video-connection)$/.test(pathname))data={terminals:[],fiscalDevices:[],eftposDevices:[],cameras:[]};
+    else if(pathname.endsWith("/access-matrix")){
+      const store=companies.flatMap(item=>item.stores).find(item=>pathname.includes(`/stores/${item.id}/`));
+      data={company:a,store,licenseAllowed:true,summary:{},rows:[]};
+    }
     else if(pathname==="/api/auth/logout")data={ok:true};
     else {unexpected.push({url,method});throw new Error(`Unexpected fixture route ${pathname}`);}
+    if(pending.has(pathname))await pending.get(pathname).promise;
     return {ok:true,status:200,text:async()=>JSON.stringify(data),json:async()=>data};
   };
   const React=await import("react"),{createRoot}=await import("react-dom/client"),{act}=React;
@@ -81,6 +86,53 @@ test("approved Platform home keeps company selection and routes existing actions
     assert.ok(calls.some(c=>c.url.includes('/companies/company-a/stores/store-a/installation-terminals')));
     assert.ok(document.querySelector('.terminal-manager-dialog'));
     await click(document.querySelector('.terminal-manager-dialog .modal-close'));
+    const storeA2={id:"store-a2",name:"Store A2",active:true};
+    companies=[{...a,stores:[a.stores[0],storeA2]},b];
+    await click(document.querySelector('.platform-action-utility button'));
+    const defer=pathname=>{
+      let release,fail;
+      const promise=new Promise((resolve,reject)=>{release=resolve;fail=reject;});pending.set(pathname,{promise});
+      return error=>act(async()=>{pending.delete(pathname);if(error)fail(error);else release();});
+    };
+    const openStores=()=>click([...detail().querySelectorAll('button')].find(el=>el.textContent==='Καταστήματα'));
+    const storeActions=store=>[...document.querySelectorAll('.security-list article')].find(el=>el.querySelector('b')?.textContent===store);
+    const storeAction=(store,action)=>[...storeActions(store).querySelectorAll('button')].find(el=>el.textContent===action);
+    await openStores();
+    const finishOldTerminal=defer('/api/platform/companies/company-a/stores/store-a/installation-terminals');
+    await click(storeAction('Store A','Εγκαταστάσεις / Τερματικά'));
+    await click(storeAction('Store A2','Εγκαταστάσεις / Τερματικά'));
+    const terminalDialog=()=>document.querySelector('.terminal-manager-dialog');
+    assert.match(terminalDialog().querySelector('p').textContent,/Store A2/);
+    await finishOldTerminal();assert.match(terminalDialog().querySelector('p').textContent,/Store A2/);
+    await click(terminalDialog().querySelector('.modal-close'));
+
+    const finishOldMatrix=defer('/api/platform/store-modules/companies/company-a/stores/store-a/access-matrix');
+    await click(storeAction('Store A','Έλεγχος δικαιωμάτων'));
+    await click(storeAction('Store A2','Έλεγχος δικαιωμάτων'));
+    const matrix=()=>document.querySelector('.access-matrix-dialog');
+    assert.match(matrix().querySelector('p').textContent,/Store A2/);
+    await finishOldMatrix();assert.match(matrix().querySelector('p').textContent,/Store A2/);
+    await click(matrix().querySelector('.modal-close'));
+
+    const closeStores=()=>click(storeActions('Store A').closest('.platform-security-dialog').querySelector('.modal-close'));
+    const finishClosedMatrix=defer('/api/platform/store-modules/companies/company-a/stores/store-a/access-matrix');
+    await click(storeAction('Store A','Έλεγχος δικαιωμάτων'));
+    await closeStores();
+    await finishClosedMatrix();assert.equal(matrix(),null);
+
+    await openStores();
+    const finishClosedTerminal=defer('/api/platform/companies/company-a/stores/store-a/installation-terminals');
+    await click(storeAction('Store A','Εγκαταστάσεις / Τερματικά'));
+    await closeStores();
+    await finishClosedTerminal(new Error('Late fixture terminal error'));
+    assert.equal(terminalDialog(),null);assert.equal(document.querySelector('.platform-alert.error'),null);
+
+    companies=[a,b];await click(document.querySelector('.platform-action-utility button'));
+    const finishDeselectedTerminal=defer('/api/platform/companies/company-a/stores/store-a/installation-terminals');
+    await click([...detail().querySelectorAll('button')].find(el=>el.textContent==='Τερματικά'));
+    await select('Company B');await finishDeselectedTerminal();
+    assert.equal(terminalDialog(),null);assert.match(detail().textContent,/Company B/);
+    await select('Company A');
     companies=[b];await click(document.querySelector('.platform-action-utility button'));
     assert.match(detail().textContent,/προηγούμενη επιλογή/);
     await click(button('Εργαλεία'));assert.equal(document.querySelector('[aria-label="Εργαλεία"]').hidden,false);
