@@ -52,6 +52,7 @@ export default function CommerceLauncher(){
   const lockWholesaleSubmission=useCallback(locked=>{wholesaleLockRef.current=Boolean(locked);setWholesaleSubmissionLocked(Boolean(locked))},[]);
   const [entryLoading,setEntryLoading]=useState(false);
   const [entryError,setEntryError]=useState("");
+  const [invoiceOrder,setInvoiceOrder]=useState(null);
   const [visible,setVisible]=useState(false);
   const visibleRef=useRef(false),workspaceElementRef=useRef(null);
   const [mode,setMode]=useState("products");
@@ -135,13 +136,18 @@ export default function CommerceLauncher(){
     const requestId=++openRequestRef.current;
     setMode(operations?"legacy":"products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
     entryStoreRef.current=requestedStoreId;
-    setSupportStoreId(requestedStoreId);setEntryLoading(scoped);setEntryError("");
+    setSupportStoreId(requestedStoreId);setEntryLoading(scoped);setEntryError("");setInvoiceOrder(null);
     if(scoped){setStores([]);setInventoryStoreId("");setInventoryInitialProduct(null);setActiveModules([]);setInternetSearchOpen(false)}
     try{
       const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);
       if(requestId!==openRequestRef.current||!visibleRef.current)return;
       const scopedStores=scoped?list.filter(store=>store.id===requestedStoreId&&store.active!==false):list;
       if(scoped&&(!requestedStoreId||!scopedStores.length))throw new Error("Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο. Κλείσε και άνοιξε ξανά τις λειτουργίες από το κατάστημά σου.");
+      const order=operations&&target?.invoiceOrder;
+      if(order?.orderId&&order.storeId===requestedStoreId){
+        if(!license.activeModules?.includes("DOCUMENTS"))throw new Error("Η θυρίδα τιμολογίων δεν είναι διαθέσιμη στην τρέχουσα άδεια.");
+        setInvoiceOrder(order);
+      }
       setStores(scopedStores);setInventoryStoreId(scoped?requestedStoreId:scopedStores[0]?.id||"");setActiveModules(license.activeModules||[]);
     }catch(error){
       if(requestId!==openRequestRef.current||!visibleRef.current)return;
@@ -193,7 +199,7 @@ export default function CommerceLauncher(){
           <button className={legacyView==="online"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("online")}}><ShoppingBag/>Online Παραγγελίες</button>
           {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("tables")}}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub key={supportStoreId} api={request} stores={stores} activeStoreId={supportStoreId}/>}
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub key={supportStoreId} api={request} stores={stores} activeStoreId={supportStoreId} initialInvoiceOrder={invoiceOrder} onInitialInvoiceOrderHandled={()=>setInvoiceOrder(null)}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}

@@ -1,4 +1,5 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
+import {installPurchaseOrdersSuite} from "./installPurchaseOrdersSuite.js";
 import {BarChart3,Boxes,Camera,ChevronRight,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
 import AiReaderPanel from "./AiReaderPanel.jsx";
@@ -24,7 +25,15 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules}){
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled}){
+  const commerceRoot=useRef(null);
+  useEffect(()=>{
+    if(!initialInvoiceOrder||!commerceRoot.current)return;
+    const hub=commerceRoot.current;
+    installPurchaseOrdersSuite();
+    hub.dispatchEvent(new CustomEvent("purchase-orders:open",{bubbles:true,detail:{...initialInvoiceOrder,navigationOnly:true}}));
+    onInitialInvoiceOrderHandled?.();
+  },[initialInvoiceOrder,onInitialInvoiceOrderHandled]);
   const [cachedActiveModules,setActiveModules]=useState(readActive);
   // The selected-store entry owns fresh module checks. Events/catalog reads
   // must not replace that verified scope or remount an in-progress inbox.
@@ -173,9 +182,9 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
 
   const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
 
-  if(initialTab==="documents")return <div className="commerce-hub">{active.has("DOCUMENTS")&&<InvoiceInboxPanel api={api} stores={stores}/>}</div>;
+  if(initialTab==="documents")return <div className="commerce-hub">{active.has("DOCUMENTS")&&<InvoiceInboxPanel api={api} stores={stores} onOpenOrder={onOpenInvoiceOrder}/>}</div>;
 
-  return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}${tab==="lowValue"?" low-value-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
+  return <div ref={commerceRoot} className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}${tab==="lowValue"?" low-value-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
     <section className="panel">
       {tab==="orderSuggestions"&&<button type="button" className="order-suggestions-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}
       {tab==="lowValue"&&<button type="button" className="low-value-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}

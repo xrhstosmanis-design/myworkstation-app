@@ -444,3 +444,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 34 · [Έγκριση Super Admin στη μηνιαία αποστολή](CHANGES/2026-11-17-supplier-admin-eligibility.md). Τοπικοί έλεγχοι PASS. Παράδοση LAB εκκρεμεί.
 
 - 17/11/2026 · Νο 2, Θυρίδα myDATA, POS και πληρωμές. [Συνέχεια και ενιαία δοκιμή LAB](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
+
+- 17/11/2026 · Νο 2 · Άνοιγμα υπάρχοντος προχείρου από την ενσωματωμένη Θυρίδα. 36 τοπικοί έλεγχοι PASS. CI και στοχευμένος επανέλεγχος LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
