@@ -25,6 +25,7 @@ test('isolated PostgreSQL: packages, atomic cash return, retries, cancellation, 
    'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"active" bool,"currentStock" numeric,"salePrice" numeric,"vatDepartmentIdOverride" text,"updatedAt" timestamptz,primary key("storeId","productId"))',
    'CREATE TABLE "ProductBarcode"("productId" text,"barcode" text,"salePrice" numeric)',
    'CREATE TABLE "ManagementVatDepartment"("id" text,"companyId" text,"vatRate" numeric)',
+   'CREATE TABLE "PreparationRecipeLine"("companyId" text,"productId" text,"automatic" bool)',
    'CREATE TABLE "StoreBakingPolicy"("companyId" text,"storeId" text,"productId" text)',
    'CREATE TABLE "CashShiftSession"("id" text primary key,"companyId" text,"storeId" text,"terminalPos" text,"status" text,"openedAt" timestamptz default now())',
    'CREATE TABLE "Sale"("id" text primary key,"companyId" text,"storeId" text,"operatorEmployeeId" text,"fiscalStatus" text,"subtotal" numeric,"discount" numeric,"total" numeric,"status" text,"source" text,"occurredAt" timestamptz,"transactionMode" text,"reversalKind" text,"operationChannel" text)',
@@ -50,6 +51,9 @@ test('isolated PostgreSQL: packages, atomic cash return, retries, cancellation, 
   const snapshot=async()=>JSON.stringify({stock:await stock(),sales:await db.$queryRaw`SELECT * FROM "Sale" ORDER BY "id"`,payments:await db.$queryRaw`SELECT * FROM "Payment" ORDER BY "id"`,ledger:await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`,movements:await db.$queryRaw`SELECT * FROM "StockMovement" ORDER BY "id"`,audit:await db.$queryRaw`SELECT * FROM "PosSaleActionAudit" ORDER BY "id"`});
   const request=async(extra={})=>{const q=await db.$transaction(tx=>quoteScannedCashReturn(tx,scope,input));return {...input,requestId:crypto.randomUUID(),sessionId:q.sessionId,quoteHash:q.quoteHash,confirmed:true,...extra}};
   await assert.rejects(db.$executeRawUnsafe(`UPDATE "StoreProduct" SET "currentStock"=1 WHERE "storeId"='store' AND "productId"='pack24'`));
+  const beforeRecipe=await snapshot();await db.$executeRawUnsafe(`INSERT INTO "PreparationRecipeLine" VALUES('company','water',true)`);
+  await assert.rejects(db.$transaction(tx=>quoteScannedCashReturn(tx,scope,input)),{status:409});assert.equal(await snapshot(),beforeRecipe);
+  await db.$executeRawUnsafe(`DELETE FROM "PreparationRecipeLine"`);
   const q=await db.$transaction(tx=>quoteScannedCashReturn(tx,scope,input));assert.equal(q.refundCents,850);assert.equal(q.cardDeltaCents,0);
   const body=await request(),result=await recordScannedCashReturn(db,scope,body),after=await snapshot();
   assert.equal(result.total,-8.5);assert.equal((await stock())['store:water'],125);assert.equal((await stock())['control:water'],500);assert.equal((await stock())['store:pack24'],0);

@@ -32,6 +32,8 @@ export async function saveStockPackage(db,scope,input){
   if(rows.length!==2)throw packageError('Τα δύο είδη πρέπει να είναι ενεργά στο επιλεγμένο κατάστημα.');
   const parent=rows.find(r=>r.id===productId),base=rows.find(r=>r.id===body.baseProductId);
   if(parent.isSet||parent.isRecipe||base.isSet||base.isRecipe||!base.trackStock||!['PIECE','PCS'].includes(base.unit)||!['PIECE','PCS','PACKAGE'].includes(parent.unit))throw packageError('Χρειάζεται βασικό είδος σε τεμάχια με απόθεμα και απλή συσκευασία χωρίς SET ή συνταγή.');
+  const automatic=await tx.$queryRaw`SELECT "productId" FROM "PreparationRecipeLine" WHERE "companyId"=${companyId} AND "productId" IN (${productId},${body.baseProductId}) AND "automatic"=TRUE LIMIT 1`;
+  if(automatic.length)throw packageError('Το βασικό είδος και η συσκευασία δεν μπορούν να έχουν αυτόματη συνταγή.');
   const nesting=await tx.$queryRaw`SELECT "productId" FROM "StoreStockPackage" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND ("productId"=${body.baseProductId} OR "baseProductId"=${productId}) LIMIT 1`;
   if(nesting.length)throw packageError('Δεν επιτρέπεται συσκευασία μέσα σε άλλη συσκευασία.');
   const baked=await tx.$queryRaw`SELECT "productId" FROM "StoreBakingPolicy" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "productId" IN (${productId},${body.baseProductId}) LIMIT 1`;
@@ -79,8 +81,10 @@ export async function validatePackageSaleItems(db,{companyId,storeId},items){
  for(const item of items){
   const config=await readStockPackage(db,{companyId,storeId,productId:item.productId});if(!config)continue;
   try{packageStockLine({productId:item.productId,baseProductId:config.baseProductId,unitsPerPackage:Number(config.unitsPerPackage),quantity:Number(item.quantity),storePrice:0})}catch(e){throw packageError(e.message,400)}
-  const base=await db.$queryRaw`SELECT p."id" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} AND sp."active"=TRUE WHERE p."id"=${config.baseProductId} AND p."companyId"=${companyId} AND p."active"=TRUE AND p."trackStock"=TRUE AND p."unit" IN ('PIECE','PCS')`;
+  const base=await db.$queryRaw`SELECT p."id" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} AND sp."active"=TRUE WHERE p."id"=${config.baseProductId} AND p."companyId"=${companyId} AND p."active"=TRUE AND p."trackStock"=TRUE AND p."isSet"=FALSE AND p."isRecipe"=FALSE AND p."unit" IN ('PIECE','PCS')`;
   if(!base.length)throw packageError('Το βασικό είδος συσκευασίας δεν είναι διαθέσιμο.');
+  const automatic=await db.$queryRaw`SELECT "productId" FROM "PreparationRecipeLine" WHERE "companyId"=${companyId} AND "productId" IN (${item.productId},${config.baseProductId}) AND "automatic"=TRUE LIMIT 1`;
+  if(automatic.length)throw packageError('Η συσκευασία και το βασικό είδος δεν μπορούν να έχουν αυτόματη συνταγή.');
   const parent=await db.$queryRaw`SELECT "isSet","isRecipe" FROM "Product" WHERE "id"=${item.productId} AND "companyId"=${companyId}`;
   if(parent[0]?.isSet||parent[0]?.isRecipe)throw packageError('Το είδος συσκευασίας δεν μπορεί να έχει SET ή συνταγή.');
   const baked=await db.$queryRaw`SELECT "productId" FROM "StoreBakingPolicy" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "productId" IN (${item.productId},${config.baseProductId}) LIMIT 1`;

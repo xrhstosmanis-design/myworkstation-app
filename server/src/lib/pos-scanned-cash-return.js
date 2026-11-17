@@ -24,6 +24,8 @@ export async function quoteScannedCashReturn(db,scope,input){
   const p=byId.get(item.productId);
   if(p.isSet||p.isRecipe)throw packageError('Η απευθείας επιστροφή SET ή παρασκευής χρειάζεται έλεγχο της σύνθεσης.');
   const config=await readStockPackage(db,{companyId,storeId,productId:p.id});
+  const automatic=await db.$queryRaw`SELECT "productId" FROM "PreparationRecipeLine" WHERE "companyId"=${companyId} AND "productId" IN (${p.id},${config?.baseProductId||p.id}) AND "automatic"=TRUE LIMIT 1`;
+  if(automatic.length)throw packageError('Για είδος με αυτόματη συνταγή χρησιμοποίησε την επιστροφή της αρχικής συναλλαγής.');
   let storePrice=Number(p.salePrice);
   if(item.barcode){const code=(await db.$queryRaw`SELECT "salePrice" FROM "ProductBarcode" WHERE "productId"=${p.id} AND "barcode"=${item.barcode}`)[0];if(!code)throw packageError('Το barcode δεν ανήκει στο είδος.');if(!config&&code.salePrice!=null)storePrice=Number(code.salePrice);}
   const baking=await db.$queryRaw`SELECT "productId" FROM "StoreBakingPolicy" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "productId"=${p.id} LIMIT 1`;
