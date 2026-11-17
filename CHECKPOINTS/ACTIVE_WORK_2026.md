@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-17 · Νο 15 TABLE_SERVICE · Είσοδος κινητού με ανοιχτή βάρδια · [Checkpoint](CHANGES/2026-11-17-table-service-mobile-active-shift.md) · PR #3998, τοπικοί έλεγχοι PASS, CI και φυσικό LAB εκκρεμούν.
+
 - 2026-11-17 · Νο 13 · Κοινό φίλτρο ΦΠΑ για CSV, οθόνη και εκτύπωση · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · CI και LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
