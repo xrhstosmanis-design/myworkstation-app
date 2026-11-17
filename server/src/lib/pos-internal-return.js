@@ -1,3 +1,4 @@
+import {changePackageStock} from './pos-stock-packages.js';
 import crypto from 'node:crypto';
 import {z} from 'zod';
 export const INTERNAL_RETURN_MODE='INTERNAL_RETURN_PENDING_RBS';
@@ -40,7 +41,7 @@ export async function recordInternalReturn(db,scope,input){
   for(const line of selected){
    if(line.productId){const product=(await tx.$queryRaw`SELECT p."trackStock",sp."productId" AS "storeProductId" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} WHERE p."id"=${line.productId} AND p."companyId"=${companyId} LIMIT 1`)[0];if(!product||(product.trackStock&&!product.storeProductId))reject('Δεν υπάρχει ασφαλής αντιστοίχιση αποθήκης της αρχικής γραμμής.');}
    await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${returnSaleId},${line.productId||null},${line.description},${-line.returnQty},${Number(line.unitPrice)},${-Number(line.discount||0)*line.returnQty/Number(line.quantity)},${Number(line.vatRate)},${-line.returnCents/100})`;
-   if(line.productId){const restored=await tx.$queryRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${line.returnQty} FROM "Product" p WHERE sp."storeId"=${storeId} AND sp."productId"=${line.productId} AND p."id"=sp."productId" AND p."companyId"=${companyId} AND p."trackStock"=TRUE RETURNING sp."productId"`;if(restored[0])restoredProductIds.push(line.productId);}
+   if(line.productId){const packaged=await changePackageStock(tx,{companyId,storeId,productId:line.productId,quantity:line.returnQty,saleId:returnSaleId,lineId:`internal:${returnSaleId}:${line.id}`,restore:true,originalLineId:line.id});const restored=packaged?[{productId:packaged.baseProductId}]:await tx.$queryRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${line.returnQty} FROM "Product" p WHERE sp."storeId"=${storeId} AND sp."productId"=${line.productId} AND p."id"=sp."productId" AND p."companyId"=${companyId} AND p."trackStock"=TRUE RETURNING sp."productId"`;if(restored[0])restoredProductIds.push(line.productId);}
   }
   await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${returnSaleId},${body.refundMethod},${-refund})`;
   const description=`POS ΕΣΩΤΕΡΙΚΗ ΕΠΙΣΤΡΟΦΗ ${returnSaleId} · αρχική ${saleId} · ${INTERNAL_RETURN_LABEL} · Αιτιολογία: ${body.reason} · ${body.refundMethod}`;

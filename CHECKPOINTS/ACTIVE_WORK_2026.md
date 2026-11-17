@@ -48,10 +48,13 @@ Acceptance preparation: mounted component checks for mobile multi-photo receptio
 
 Checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-shift-close-invoice-mobile.md`.
 
-## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — ASSIGNED /root
-Branch work/pos-packs-returns-20261117. Owner approved central implementation and documentation merge. Claim #4001 merged c8fb55a; NOT TESTED.
-Continuation for these two independent new tasks only: [scope and pending acceptance](../../docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md).
-Package products have their own barcode/button and store-specific sale price; consume linked base bottle units (24 or 6). Scanned cash return needs no replacement or original receipt selection; restore stock and reduce current terminal cash once, with unchanged card totals and no duplicate miscellaneous expense. Preserve permissions, isolation, fiscal gates, audit and idempotency; existing owners/return flows retained.
+## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — IMPLEMENTED / AWAITING CI + MERGE + LAB
+
+Owner /root; source branch `feat/pos-packs-cash-returns`; PR #4006. Claims #4001/#4005 are merged. Distinct store-priced package sale products consume linked base units (24/6), and direct scanned customer returns atomically restore stock and reduce only current-terminal cash, with audit/replay/cancel protection. Original card totals and existing fiscal/return/permission gates are preserved. No production data or fiscal/provider action was run.
+
+Node 20.20.2 / isolated PostgreSQL 18.6: **25 PASS / 0 FAIL / 0 SKIP**, including the complete 26,656-product read-only catalog and existing cancellation/baking controls. Frontend build PASS. Full PR CI, approved source merge/deploy, exact deployed revision and real LAB remain pending. User acceptance is one grouped Owner → POS → final Owner review session at the end; no repeated role switching requested now.
+
+Current checkpoint and complete validation history: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-implementation.md`. Foundation history remains in `CHECKPOINTS/CHANGES/2026-11-17-pos-package-cash-return-foundation.md`. Scope/pending acceptance: `docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md`; evidence `CHECKPOINTS/EVIDENCE/pos-packages-cash-return-20261117/local-validation.json`. Other owners remain unchanged. This update edits only this module's existing row so independent pages may continue prepending their own updates without a shared-prefix conflict.
 
 - 2026-11-17 · Νο 15 TABLE_SERVICE · Κινητό, μεταφορά, ένωση και διαίρεση λογαριασμού · [Checkpoint](CHANGES/2026-11-17-table-service-account-operations.md) · #3998 / e4210cf · main CI 6105 PASS + 8 recovery, guarded LIVE 22:26 Αθήνας · κοινή φυσική αποδοχή LAB εκκρεμεί.
 
