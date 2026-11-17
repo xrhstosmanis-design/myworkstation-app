@@ -47,6 +47,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
   const active=new Set(activeModules);
+  const lowValueCompanyAccess=active.has("LOW_VALUE_PRODUCTS");
   const canReadLowValue=Boolean(storeId)&&lowValueAccessStoreId===storeId;
 
   useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,activeStoreId]);
@@ -91,14 +92,13 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   useEffect(()=>{loadCatalog()},[]);
   useEffect(()=>{
     let current=true;
-    setLowValueAccessStoreId("");
     if(storeId){
       api(`/api/commerce/low-value-products/access?storeId=${encodeURIComponent(storeId)}`)
-        .then(data=>{if(current&&data.storeId===storeId)setLowValueAccessStoreId(storeId)})
-        .catch(()=>{});
-    }
+        .then(data=>{if(current)setLowValueAccessStoreId(data.storeId===storeId?storeId:"")})
+        .catch(()=>{if(current)setLowValueAccessStoreId("")});
+    }else setLowValueAccessStoreId("");
     return ()=>{current=false};
-  },[storeId,activeModules]);
+  },[storeId,lowValueCompanyAccess]);
   useEffect(()=>{
     setError("");setMessage("");
     if(tab==="inventory")loadInventory().catch(e=>setError(e.message));
