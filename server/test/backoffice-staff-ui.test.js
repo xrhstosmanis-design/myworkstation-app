@@ -1305,3 +1305,130 @@ test('read-only workforce schedule, leaves and attendance reject a foreign store
     try{assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκε το κατάστημα/)}finally{await m.close()}
   }
 });
+
+test('stock movements use the native selected-product history table and discard stale dates and revoked reads',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  let resolveOld,attempt=0,wrongProduct=false,deny=false;
+  const old=new Promise(resolve=>{resolveOld=resolve});
+  const movement=note=>({companyId:'a',storeId:'a1',product:{id:'p1',currentStock:5},reconciliationAccess:{allowed:true},reconciliation:{status:'AGREEMENT',ledgerStock:5,difference:0,movementCount:1,duplicateCandidates:[]},movements:[{id:'move',createdAt:'2026-11-17T08:00:00Z',movementType:'PURCHASE',actorName:'Scoped stock operator',unitCost:1,salePrice:2,inQty:5,outQty:0,stockAfter:5,note}]});
+  const api=async(path,options={})=>{
+    calls.push({path,options});assert.equal(options.method||'GET','GET');
+    if(path.endsWith('/me'))return {...identity,companyId:'a',stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['stock.read','products.read']},{id:'a2',name:'A2',profile:'MANAGER',capabilities:['products.read']}]};
+    const url=new URL(path,'https://isolated.invalid');
+    assert.equal(options.headers['x-backoffice-store-id'],'a1');
+    assert.equal(url.searchParams.get('storeId'),'a1');
+    if(url.pathname==='/api/inventory-archive')return {store:{id:'a1'},items:[{productId:'p1',name:'Scoped stock product',currentStock:5}],categories:[],subcategories:[],page:1,pages:1,total:1,totals:{}};
+    assert.equal(url.pathname,'/api/inventory-ledger/p1/movements');
+    assert.ok(url.searchParams.get('from'));assert.ok(url.searchParams.get('to'));
+    if(deny)throw Object.assign(new Error('Η πρόσβαση ανακλήθηκε.'),{status:403});
+    if(++attempt===1)return old;
+    const result=movement('Current stock movement');
+    return wrongProduct?{...result,product:{id:'other'}}:result;
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const select=document.querySelector('[aria-label="Κατάστημα"]');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Κινήσεις αποθήκης').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+    assert.equal(button('Κινήσεις είδους').disabled,true);
+    await m.act(async()=>document.querySelector('.ia-row.data').click());
+    assert.equal(document.querySelector('[title="Διόρθωση είδους"]').hidden,true);
+    await m.act(async()=>button('Κινήσεις είδους').click());
+    await m.act(async()=>{const input=document.querySelector('[aria-label="Κινήσεις από"]');Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'2026-01-01');input.dispatchEvent(new Event('input',{bubbles:true}))});
+    assert.equal(button('Ανανέωση κινήσεων').disabled,false);
+    await m.act(async()=>document.querySelector('.ia-modal form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.match(document.querySelector('.ia-modal table').textContent,/Scoped stock operator/);
+    assert.match(document.querySelector('.ia-modal table').textContent,/Current stock movement/);
+    assert.match(document.querySelector('.ia-modal table').textContent,/Τιμή πώλησης/);
+    assert.match(document.querySelector('.ia-modal').textContent,/ΣΥΜΦΩΝΙΑ STOCK/);
+    assert.equal([...document.querySelectorAll('.ia-modal button')].some(el=>el.textContent.includes('Excel')),false);
+    await m.act(async()=>resolveOld(movement('Stale stock movement')));
+    assert.doesNotMatch(document.querySelector('.ia-modal').textContent,/Stale stock movement/);
+    wrongProduct=true;
+    await m.act(async()=>button('Ανανέωση κινήσεων').click());
+    assert.equal(document.querySelector('.ia-modal'),null);
+    assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκε το κατάστημα και το είδος/);
+    wrongProduct=false;
+    await m.act(async()=>button('Κινήσεις είδους').click());
+    assert.match(document.querySelector('.ia-modal table').textContent,/Current stock movement/);
+    deny=true;
+    await m.act(async()=>button('Ανανέωση κινήσεων').click());
+    assert.equal(document.querySelector('.ia-modal'),null);
+    assert.match(document.querySelector('[role="alert"]').textContent,/Η πρόσβαση ανακλήθηκε/);
+    assert.doesNotMatch(document.body.textContent,/Current stock movement/);
+    await m.act(async()=>{const select=document.querySelector('[aria-label="Κατάστημα"]');select.value='a2';select.dispatchEvent(new Event('change',{bubbles:true}))});
+    assert.equal(button('Κινήσεις αποθήκης'),undefined);
+    assert.equal(document.querySelector('.ia-shell'),null);
+  }finally{await m.close()}
+});
+
+test('delegated payroll reads native periods, detail and preview while hiding writers and rejecting old store or month results',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  let resolveDetail,resolvePreview,previewAttempts=0,deny=false;
+  const oldDetail=new Promise(resolve=>{resolveDetail=resolve}),oldPreview=new Promise(resolve=>{resolvePreview=resolve});
+  const period=storeId=>({id:`period-${storeId}`,name:`Payroll ${storeId}`,status:'DRAFT',periodStart:'2026-11-01T00:00:00.000Z',periodEnd:'2026-12-01T00:00:00.000Z'});
+  const detail=storeId=>({...period(storeId),companyId:'a',storeId,lines:[{id:'line',employeeId:'employee',employeeName:`Payroll worker ${storeId}`,plannedMinutes:480,actualMinutes:480,absenceMinutes:0,grossAmount:120,paidAmount:20,balanceAmount:100}],payments:[]});
+  const api=async(path,options={})=>{
+    calls.push({path,options});assert.equal(options.method||'GET','GET');
+    if(path.endsWith('/me'))return {...identity,companyId:'a',stores:[...['a1','a2'].map(id=>({id,name:id.toUpperCase(),profile:'AUDITOR',capabilities:['payroll.read']})),{id:'a3',name:'A3',profile:'MANAGER',capabilities:[]}]};
+    const storeId=options.headers['x-backoffice-store-id'],url=new URL(path,'https://isolated.invalid');
+    const base=`/api/platform/store-modules/companies/a/stores/${storeId}/workforce-v2/payroll`;
+    assert.ok([`${base}/periods`,`${base}/periods/period-${storeId}`,`${base}/preview`].includes(url.pathname));
+    if(deny)throw Object.assign(new Error('Η πρόσβαση ανακλήθηκε.'),{status:403});
+    if(url.pathname===`${base}/periods`)return {companyId:'a',storeId,items:[period(storeId)]};
+    if(url.pathname===`${base}/periods/period-${storeId}`)return storeId==='a1'?oldDetail:detail(storeId);
+    const preview={companyId:'a',storeId,from:url.searchParams.get('from'),to:url.searchParams.get('to'),entries:[{employeeId:'employee'}],totalAmount:321};
+    return ++previewAttempts===1?oldPreview:preview;
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  const selectStore=async(id)=>m.act(async()=>{const select=document.querySelector('[aria-label="Κατάστημα"]');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}))});
+  try{
+    await selectStore('a1');
+    assert.equal(button('Προσωπικό'),undefined);
+    await m.act(async()=>button('Μισθοδοσία').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+    assert.doesNotMatch(document.body.textContent,/Payroll worker a1/);
+    await selectStore('a2');
+    await m.act(async()=>button('Μισθοδοσία').click());
+    assert.match(document.querySelector('.workforce-payroll-table').textContent,/Payroll worker a2/);
+    await m.act(async()=>resolveDetail(detail('a1')));
+    assert.doesNotMatch(document.body.textContent,/Payroll worker a1/);
+    for(const label of ['Δημιουργία περιόδου','Επανυπολογισμός περιόδου','Καταχώριση πληρωμής','Οριστικό κλείδωμα'])assert.equal(button(label),undefined);
+    assert.equal(document.querySelector('.workforce-payroll-payment'),null);
+    assert.equal(document.querySelector('.workforce-payroll-guide'),null);
+    await m.act(async()=>button('Υπολογισμός').click());
+    const previous=calls.at(-1),oldQuery=new URL(previous.path,'https://isolated.invalid').searchParams;
+    await m.act(async()=>{const input=document.querySelector('input[type="month"]');Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'2026-10');input.dispatchEvent(new Event('input',{bubbles:true}))});
+    await m.act(async()=>resolvePreview({companyId:'a',storeId:'a2',from:oldQuery.get('from'),to:oldQuery.get('to'),entries:[],totalAmount:99999}));
+    assert.doesNotMatch(document.body.textContent,/99999|99.999/);
+    await m.act(async()=>button('Υπολογισμός').click());
+    assert.match(document.querySelector('.workforce-payroll-preview').textContent,/2026-10/);
+    assert.match(document.querySelector('.workforce-payroll-preview').textContent,/321/);
+    deny=true;
+    await m.act(async()=>button('Υπολογισμός').click());
+    assert.match(document.querySelector('[role="alert"]').textContent,/Η πρόσβαση ανακλήθηκε/);
+    assert.doesNotMatch(document.body.textContent,/Payroll worker a2|Payroll a2|321/);
+    await selectStore('a3');
+    assert.equal(button('Μισθοδοσία'),undefined);
+    assert.equal(document.querySelector('.workforce-payroll-workspace'),null);
+  }finally{await m.close()}
+});
+
+test('native payroll read-only rejects foreign periods, detail and preview envelopes',async()=>{
+  const Panel=await component('platform/WorkforceV2PayrollTab');
+  const period={id:'period',name:'Scoped period',status:'DRAFT',periodStart:'2026-11-01T00:00:00Z',periodEnd:'2026-12-01T00:00:00Z'};
+  for(const mismatch of ['list','detail','preview']){
+    const request=async path=>{
+      const url=new URL(path,'https://isolated.invalid');
+      if(url.pathname.endsWith('/periods'))return {companyId:'a',storeId:mismatch==='list'?'other':'a1',items:[period]};
+      if(url.pathname.endsWith('/periods/period'))return {...period,companyId:'a',storeId:mismatch==='detail'?'other':'a1',lines:[],payments:[]};
+      return {companyId:'a',storeId:'other',from:url.searchParams.get('from'),to:url.searchParams.get('to'),entries:[],totalAmount:99999};
+    };
+    const m=await mount(Panel,{company:{id:'a'},store:{id:'a1'},request,readOnly:true});
+    try{
+      if(mismatch==='preview')await m.act(async()=>button('Υπολογισμός').click());
+      assert.ok(document.querySelector('[role="alert"]'));
+      assert.doesNotMatch(document.body.textContent,/Scoped period|99999|99.999/);
+    }finally{await m.close()}
+  }
+});

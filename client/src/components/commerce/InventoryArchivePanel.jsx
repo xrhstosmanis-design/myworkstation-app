@@ -1,4 +1,5 @@
 import {inventoryCsv,printInventoryRows,inventoryHistoryColumns} from "./inventory-export.js";
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {ArrowRightLeft,Barcode,ChevronLeft,ChevronRight,ClipboardList,Edit3,FileSpreadsheet,PackagePlus,Printer,RefreshCw,Search,Truck,X} from "lucide-react";
 import InventoryBarcodeLookup from "./InventoryBarcodeLookup.jsx";
@@ -48,7 +49,7 @@ function DuplicateGroup({group, canMerge, onMerge}) {
   </section>;
 }
 
-export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null,staffCardEdit=false}){
+export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null,staffCardEdit=false,stockMovementRead=false,companyId=null}){
   const operatorMode=operatorCapabilities!==null;
   const can=key=>!operatorMode||operatorCapabilities[key]===true;
   const [operatorMenu,setOperatorMenu]=useState(null),[history,setHistory]=useState(null);
@@ -77,6 +78,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   }
 
   const archiveGeneration=useRef(0);
+  useEffect(()=>()=>{archiveGeneration.current++},[]);
   const openingProductRef=useRef("");
   const cardScopeRef=useRef(storeId);cardScopeRef.current=storeId;
   const newCardGeneration=useRef(0);
@@ -89,6 +91,29 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   const [query,setQuery]=useState(""),[category,setCategory]=useState(""),[subcategory,setSubcategory]=useState(""),[status,setStatus]=useState("ACTIVE"),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100);
   const [loading,setLoading]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
   const [checked,setChecked]=useState([]),[selected,setSelected]=useState(null),[modal,setModal]=useState(null);
+  const [movementFrom,setMovementFrom]=useState(()=>greeceDateInput(new Date(Date.now()-30*86400000))),[movementTo,setMovementTo]=useState(()=>greeceDateInput(new Date()));
+  const movementRequest=useRef(0),movementScope=useRef("");
+  movementScope.current=JSON.stringify([storeId,companyId,selected?.productId,movementFrom,movementTo,stockMovementRead]);
+  useEffect(()=>{movementRequest.current++;setHistory(null);return()=>{movementRequest.current++}},[storeId,companyId,selected?.productId,stockMovementRead]);
+  useEffect(()=>{
+    movementRequest.current++;
+    setHistory(current=>current?.stockRead?{...current,rows:[],loading:false,currentStock:undefined}:current);
+  },[movementFrom,movementTo]);
+  const closeHistory=()=>{movementRequest.current++;setHistory(null)};
+  const openStockMovements=async()=>{
+    if(!stockMovementRead||!selected||!storeId||!companyId)return;
+    const current=++movementRequest.current,own=movementScope.current,productId=selected.productId;
+    setError("");
+    setHistory({kind:'movements',title:`Κινήσεις είδους · ${selected.name}`,rows:[],stockRead:true,loading:true,scope:own});
+    try{
+      if(!movementFrom||!movementTo||movementFrom>movementTo)throw Error("Επίλεξε έγκυρο διάστημα κινήσεων.");
+      const query=new URLSearchParams({storeId,from:movementFrom,to:movementTo});
+      const result=await api(`/api/inventory-ledger/${encodeURIComponent(productId)}/movements?${query}`);
+      if(current!==movementRequest.current||own!==movementScope.current)return;
+      if(result?.companyId!==companyId||result.storeId!==storeId||result.product?.id!==productId||!Array.isArray(result.movements))throw Error("Δεν επιβεβαιώθηκε το κατάστημα και το είδος των κινήσεων.");
+      setHistory({kind:'movements',title:`Κινήσεις είδους · ${selected.name}`,rows:result.movements,stockRead:true,loading:false,scope:own,currentStock:result.product.currentStock,reconciliationAccess:result.reconciliationAccess,reconciliation:result.reconciliation});
+    }catch(failure){if(current===movementRequest.current&&own===movementScope.current){setHistory(null);setError(failure.message)}}
+  };
   const [merge,setMerge]=useState(null);
   const mergeSavingRef=useRef(false);
   const [bulk,setBulk]=useState(bulkBlank);
@@ -105,9 +130,10 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   const load=async(nextPage=page,filters={})=>{
     const generation=++archiveGeneration.current;
     if(!storeId)return;setLoading(true);setError("");setMessage("");
+    if(stockMovementRead){movementRequest.current++;setHistory(null);setSelected(null);setData(current=>({...current,items:[],total:0,totals:{}}));}
     try{
       const params=new URLSearchParams({storeId,q:query,category,subcategory,status,vatDepartment,marginMin,marginMax,...filters,page:String(nextPage),pageSize:String(pageSize)});
-      const result=await api(`/api/inventory-archive?${params.toString()}`);if(cardScopeRef.current!==storeId||generation!==archiveGeneration.current)return;setData(result);setPage(result.page);setChecked(ids=>ids.filter(id=>result.items.some(row=>row.productId===id)));setSelected(current=>current?result.items.find(r=>r.productId===current.productId)||null:null);
+      const result=await api(`/api/inventory-archive?${params.toString()}`);if(cardScopeRef.current!==storeId||generation!==archiveGeneration.current)return;if(stockMovementRead&&result?.store?.id!==storeId)throw Error("Δεν επιβεβαιώθηκε το κατάστημα της αποθήκης.");setData(result);setPage(result.page);setChecked(ids=>ids.filter(id=>result.items.some(row=>row.productId===id)));setSelected(current=>current?result.items.find(r=>r.productId===current.productId)||null:null);
     }catch(e){if(cardScopeRef.current===storeId&&generation===archiveGeneration.current)setError(e.message)}finally{if(cardScopeRef.current===storeId&&generation===archiveGeneration.current)setLoading(false)}
   };
   useEffect(()=>{setPage(1);load(1)},[storeId,pageSize]);
@@ -284,7 +310,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
 
   return <div className="ia-shell" data-pos-inventory={operatorMode?"true":undefined} onContextMenu={operatorMode?event=>{const row=event.target.closest('.ia-row.data');if(!row)return;event.preventDefault();setOperatorMenu(data.items.find(item=>item.productId===row.dataset.productId)||null)}:undefined} onPointerDown={operatorMode?event=>{if(event.pointerType==='mouse')return;const row=event.target.closest('.ia-row.data');if(row)longPress.current=setTimeout(()=>setOperatorMenu(data.items.find(item=>item.productId===row.dataset.productId)||null),650)}:undefined} onPointerUp={()=>clearTimeout(longPress.current)} onPointerMove={()=>clearTimeout(longPress.current)} onPointerCancel={()=>clearTimeout(longPress.current)}>
     {operatorMenu&&<Modal title={operatorMenu.name} onClose={()=>setOperatorMenu(null)}><div className="ia-toolbar-actions"><button onClick={()=>{openEdit(operatorMenu);setOperatorMenu(null)}}>Καρτέλα είδους / τιμές / barcode</button>{['movements','purchases','price-history'].map((kind,index)=><button key={kind} onClick={async()=>{const row=operatorMenu;setOperatorMenu(null);setError("");try{const result=await api(`/api/owner-products/${row.productId}/${kind}?storeId=${encodeURIComponent(storeId)}`);setHistory({kind,title:['Κινήσεις είδους','Ιστορικό αγορών','Αλλαγές τιμών'][index],rows:Array.isArray(result)?result:result.movements||result.purchases||[]})}catch(failure){setError(failure.message)}}}>{['Κινήσεις είδους','Ιστορικό αγορών','Αλλαγές τιμών'][index]}</button>)}{can('print')&&<><button onClick={()=>printInventoryRows([operatorMenu])}>Ετικέτα barcode</button><button onClick={()=>printInventoryRows(data.items.filter(row=>checked.includes(row.productId)).length?data.items.filter(row=>checked.includes(row.productId)):[operatorMenu])}>Ετικέτες επιλεγμένων</button>{['A4','A5','A6'].map(size=><button key={size} onClick={()=>printInventoryRows([operatorMenu],{size,labels:false})}>Φυλλάδιο {size}</button>)}</>}<button onClick={()=>inventoryCsv('eidos.csv',[['sku','Κωδικός'],['barcode','Barcode'],['name','Περιγραφή'],['salePrice','Λιανική'],['currentStock','Απόθεμα']],[operatorMenu])}>Εξαγωγή είδους CSV</button><button onClick={()=>{openDelivery(operatorMenu);setOperatorMenu(null)}}>e‑Delivery</button></div></Modal>}
-    {history&&<Modal wide title={history.title} onClose={()=>setHistory(null)}><button onClick={()=>inventoryCsv('istoriko.csv',inventoryHistoryColumns[history.kind],history.rows)}>Excel / CSV</button><div style={{overflow:'auto'}}>{history.rows.length?<table><thead><tr>{inventoryHistoryColumns[history.kind].map(([key,label])=><th key={key}>{label}</th>)}</tr></thead><tbody>{history.rows.map((row,index)=><tr key={index}>{inventoryHistoryColumns[history.kind].map(([key])=><td key={key}>{key==='createdAt'||key==='invoicedAt'?when(row[key]||row.createdAt):String(row[key]??'—')}</td>)}</tr>)}</tbody></table>:<p>Δεν υπάρχουν εγγραφές.</p>}</div></Modal>}
+    {history&&<Modal wide title={history.title} onClose={closeHistory}>{history.stockRead&&<form className="ia-toolbar-actions" onSubmit={event=>{event.preventDefault();openStockMovements()}}><label>Από<input aria-label="Κινήσεις από" type="date" required value={movementFrom} onChange={event=>setMovementFrom(event.target.value)}/></label><label>Έως<input aria-label="Κινήσεις έως" type="date" required value={movementTo} onChange={event=>setMovementTo(event.target.value)}/></label><button disabled={history.loading}>Ανανέωση κινήσεων</button>{history.scope===movementScope.current&&history.currentStock!==undefined&&<span>Τρέχον απόθεμα {qty(history.currentStock)}</span>}</form>}{history.stockRead&&!history.loading&&history.scope===movementScope.current&&history.reconciliationAccess&&<div className="ia-alert"><b>{history.reconciliationAccess.allowed?(history.reconciliation?.status==='AGREEMENT'?'ΣΥΜΦΩΝΙΑ STOCK':'ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ'):'ΕΛΕΓΧΟΣ ΣΥΜΦΩΝΙΑΣ STOCK'}</b>{history.reconciliationAccess.allowed?<><span> Καταγεγραμμένες κινήσεις {qty(history.reconciliation?.ledgerStock)}</span><span> · Διαφορά {qty(history.reconciliation?.difference)}</span><span> · Κινήσεις {history.reconciliation?.movementCount??0}</span><span> · Πιθανές διπλές {history.reconciliation?.duplicateCandidates?.length??0}</span></>:<p>Διαθέσιμο στο module «Έλεγχος Απωλειών».</p>}</div>}{!history.stockRead&&<button onClick={()=>inventoryCsv('istoriko.csv',inventoryHistoryColumns[history.kind],history.rows)}>Excel / CSV</button>}<div style={{overflow:'auto'}}>{history.loading?<p role="status">Φόρτωση κινήσεων…</p>:history.stockRead&&history.scope!==movementScope.current?<p>Επίλεξε Ανανέωση κινήσεων για το διάστημα.</p>:history.rows.length?<table><thead><tr>{inventoryHistoryColumns[history.kind].map(([key,label])=><th key={key}>{label}</th>)}</tr></thead><tbody>{history.rows.map((row,index)=><tr key={index}>{inventoryHistoryColumns[history.kind].map(([key])=><td key={key}>{key==='createdAt'||key==='invoicedAt'?when(row[key]||row.createdAt):String(row[key]??'—')}</td>)}</tr>)}</tbody></table>:<p>Δεν υπάρχουν εγγραφές.</p>}</div></Modal>}
     <header className="ia-titlebar"><div><b>Αρχείο ειδών (Αποθήκη)</b><small>{store?.name||data.store?.name||"Κατάστημα"}</small></div><div className="ia-title-actions">
       {operatorMode&&<button type="button" onClick={()=>{
         filtersRef.current?.scrollIntoView({block:"start"});
@@ -302,13 +328,14 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
         <button>Εφαρμογή Margin</button>
       </form>
     </>}</section>
-    {error&&<div className="ia-alert error">{error}</div>}{message&&<div className="ia-alert success">{message}</div>}
+    {error&&<div className="ia-alert error" role="alert">{error}</div>}{message&&<div className="ia-alert success">{message}</div>}
     <section className="ia-grid-card"><div className="ia-grid-caption"><b>Αποτελέσματα αναζήτησης</b><div className="ia-grid-meta"><span>{data.total.toLocaleString("el-GR")} είδη</span><div className="ia-caption-pagination"><button disabled={page<=1||loading} onClick={()=>load(page-1)}><ChevronLeft/></button><b>Σελίδα {page} από {data.pages}</b><button disabled={page>=data.pages||loading} onClick={()=>load(page+1)}><ChevronRight/></button></div></div></div><div className="ia-table-wrap" ref={tableRef}><div className="ia-table">
       <div className="ia-row head"><span></span><span><input type="checkbox" disabled={readOnly&&exportIds===null} checked={allVisible} onChange={toggleAll}/></span><span>Εσωτ. κωδικός</span><span>BARCODE</span><span>Περιγραφή</span><span>Τμήμα ΦΠΑ</span><span>Margin</span><span>MARKUP</span><span>Λιανική</span><span>efood</span><span>Wolt</span><span>Αποθήκη</span><span>Συν. αξία λιανικής</span><span>Συν. κόστος</span><span>Τελ. αγορά</span><span>Μέση αγορά 6μ.</span><span>Ημ/νία αγοράς</span><span>Βασικός προμηθευτής</span><span>% ΦΠΑ</span><span>Κατηγορία</span><span>Υποκατηγορία</span><span>Εταιρεία</span><span>Alarm stock</span><span>Πωλήσεις 15ημ.</span><span>Τελ. πώληση</span><span>δημοσ. e‑delivery</span><span>δημοσ. stock</span><span>δημοσ. τιμών</span><span>Ενημέρωση</span><span>ΜΜ</span><span>ID</span></div>
       {data.items.map(row=><div className={`ia-row data ${selected?.productId===row.productId?"selected":""}`} key={row.productId} data-product-id={row.productId} onClick={()=>setSelected(row)}><span className="ia-edit"><button hidden={readOnly&&!staffCardEdit} disabled={(readOnly&&!staffCardEdit)||loading} title="Διόρθωση είδους" onClick={e=>{e.stopPropagation();openEdit(row)}}><Edit3/></button></span><span><input type="checkbox" disabled={readOnly&&exportIds===null} checked={selection.includes(row.productId)} onChange={()=>toggleOne(row.productId)} onClick={e=>e.stopPropagation()}/></span><span className="link">{row.sku||"—"}</span><span><Barcode/>{row.barcode||"—"}</span><span className="name"><b>{row.name}</b></span><span title={row.vatDepartmentName||"Δεν έχει οριστεί Τμήμα ΦΠΑ"}>{row.vatDepartmentName||"⚠ Δεν έχει οριστεί"}</span><span className={Number(row.margin)<0?"negative":"metric"}>{pct(row.margin)}</span><span className={Number(row.markup)<0?"negative":"metric"}>{pct(row.markup)}</span><span className="metric">{money(row.salePrice)}</span><span>{money(row.efoodPrice)}</span><span>{money(row.woltPrice)}</span><span className={row.bakedStock!=null?"metric ia-baking-stock":"metric"}>{row.bakedStock!=null?<><b>Σύνολο {qty(row.currentStock)}</b><small>Άψητα {qty(row.unbakedStock)}</small><small>Ψημένα {qty(row.bakedStock)}</small></>:qty(row.currentStock)}</span><span className="metric">{money(row.retailStockValue)}</span><span>{money(row.costStockValue)}</span><span>{money(row.lastPurchasePrice)}</span><span>{money(row.averagePurchasePrice)}</span><span>{when(row.lastPurchaseAt)}</span><span className="link">{row.supplierName||"—"}</span><span>{qty(row.vatRate)}%</span><span>{row.categoryName||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ"}</span><span>{row.subcategoryName||"ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ"}</span><span>{row.brandName||"—"}</span><span>{qty(row.minStock)}</span><span className="metric">{qty(row.sales15Qty)}</span><span>{when(row.lastSaleAt)}</span><span><input type="checkbox" readOnly checked={Boolean(row.eDeliveryEnabled)}/></span><span><input type="checkbox" readOnly checked={Boolean(row.publishStock)}/></span><span><input type="checkbox" readOnly checked={Boolean(row.publishPrices)}/></span><span>{when(row.updatedAt)}</span><span>{row.unit||"—"}</span><span>{row.productId}</span></div>)}
       {!loading&&!data.items.length&&<div className="ia-empty">Δεν βρέθηκαν είδη με τα συγκεκριμένα κριτήρια.</div>}
     </div></div><footer className="ia-totals"><span>Σελίδα: {data.items.length} είδη</span><b>Stock {qty(pageTotals.stock)}</b><b>Λιανική {money(pageTotals.retailStockValue)}</b><b>Κόστος {money(pageTotals.costStockValue)}</b></footer></section>
     <footer className="ia-toolbar"><label className="ia-horizontal-control"><ChevronLeft/><span>Οριζόντια κύλιση</span><input aria-label="Οριζόντια κύλιση ειδών" type="range" min="0" max={scrollMax} value={scrollX} onChange={e=>moveHorizontal(e.target.value)}/><ChevronRight/></label><div className="ia-toolbar-actions"><button onClick={onClose}><X/>Κλείσιμο</button>
+      {stockMovementRead&&<button type="button" disabled={!selected||loading} onClick={openStockMovements}>Κινήσεις είδους</button>}
       <button type="button" disabled={!storeId||!can("read")} onClick={checkDuplicates}>Έλεγχος διπλοεγγραφών</button>
       <button disabled={!storeId||loading||exporting} onClick={()=>exportCatalog()}><FileSpreadsheet/>Excel όλων των ειδών</button>
       {exportIds===null
