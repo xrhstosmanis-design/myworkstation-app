@@ -29,6 +29,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [catalog,setCatalog]=useState([]);
   const [tab,setTab]=useState("modules");
   const [storeId,setStoreId]=useState(stores[0]?.id||"");
+  const [lowValueAccessStoreId,setLowValueAccessStoreId]=useState("");
   const [assistantStoreId,setAssistantStoreId]=useState(()=>stores.find(s=>s.id===activeStoreId)?.id||"");
   const [overview,setOverview]=useState(null);
   const [products,setProducts]=useState([]);
@@ -46,6 +47,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
   const active=new Set(activeModules);
+  const canReadLowValue=Boolean(storeId)&&lowValueAccessStoreId===storeId;
 
   useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,activeStoreId]);
   useEffect(()=>{setAssistantStoreId(stores.find(s=>s.id===activeStoreId)?.id||"")},[stores,activeStoreId]);
@@ -87,6 +89,16 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const loadAi=async()=>{if(active.has("AI_READER"))setAiStatus(await api("/api/commerce/ai-reader/status"))};
 
   useEffect(()=>{loadCatalog()},[]);
+  useEffect(()=>{
+    let current=true;
+    setLowValueAccessStoreId("");
+    if(storeId){
+      api(`/api/commerce/low-value-products/access?storeId=${encodeURIComponent(storeId)}`)
+        .then(data=>{if(current&&data.storeId===storeId)setLowValueAccessStoreId(storeId)})
+        .catch(()=>{});
+    }
+    return ()=>{current=false};
+  },[storeId,activeModules]);
   useEffect(()=>{
     setError("");setMessage("");
     if(tab==="inventory")loadInventory().catch(e=>setError(e.message));
@@ -170,7 +182,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button disabled={!active.has("INVENTORY")} className={tab==="invoiceMonthAudit"?"active":""} onClick={()=>setTab("invoiceMonthAudit")}>Έλεγχος τιμολογίων μήνα</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="monthlyInventoryCapture"?"active":""} onClick={()=>setTab("monthlyInventoryCapture")}>Εξουσιοδότηση μηνιαίας απογραφής</button>
         <button disabled={!active.has("ORDER_SUGGESTIONS")} className={tab==="orderSuggestions"?"active":""} onClick={()=>setTab("orderSuggestions")}>Προτάσεις Παραγγελίας</button>
-        <button disabled={!active.has("LOW_VALUE_PRODUCTS")} className={tab==="lowValue"?"active":""} onClick={()=>setTab("lowValue")}>Προϊόντα Χαμηλής Απόδοσης</button>
+        <button disabled={!canReadLowValue} className={tab==="lowValue"?"active":""} onClick={()=>setTab("lowValue")}>Προϊόντα Χαμηλής Απόδοσης</button>
         
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
@@ -192,7 +204,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}
     {tab==="supplierComparison"&&active.has("INVENTORY")&&<SupplierPriceComparisonPanel key={storeId} api={api} storeId={storeId}/>}
     {tab==="orderSuggestions"&&active.has("ORDER_SUGGESTIONS")&&<OrderSuggestionsPanel key={storeId} api={api} storeId={storeId}/> }
-    {tab==="lowValue"&&active.has("LOW_VALUE_PRODUCTS")&&<LowValueProductsPanel key={storeId} api={api} storeId={storeId}/> }
+    {tab==="lowValue"&&canReadLowValue&&<LowValueProductsPanel key={storeId} api={api} storeId={storeId}/> }
 
     {tab==="inventory"&&<>
       <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>
