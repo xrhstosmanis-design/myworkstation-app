@@ -8,6 +8,8 @@ Validation: Node 20.20.2 + isolated local PostgreSQL 18.6 expanded targeted suit
 
 Automatic recipe records are checked directly, including stale false recipe flags, so a scanned refund or package never restores fictitious ingredient/recipe stock. The expanded 21-test native suite was rerun successfully after this guard.
 
+Package stock-guard bootstrap is atomic and idempotent: it does not drop an installed trigger while other requests may run. Native replay of the schema setup leaves exactly one effective guard.
+
 User requests one grouped acceptance session at the end; no repeated POS/Owner/Super Admin switching. No live products, stock, cash, cards, fiscal commands, charge or external message changed. No functional LAB PASS/manual closure claimed. Source merge/deploy awaits owner approval after required checks.
 
 Checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-implementation.md`. Scope/remaining grouped acceptance: `docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md`.

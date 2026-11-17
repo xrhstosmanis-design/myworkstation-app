@@ -37,6 +37,8 @@ test('isolated PostgreSQL: packages, atomic cash return, retries, cancellation, 
    'CREATE TABLE "StoreOperatorAudit"("id" text primary key,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb)',
    ...packageStatements,...scannedReturnStatements];
   for(const sql of sqls)await db.$executeRawUnsafe(sql);
+  for(const sql of packageStatements)await db.$executeRawUnsafe(sql);
+  assert.equal((await db.$queryRaw`SELECT tgname FROM pg_trigger WHERE tgname='mws_guard_package_stock_change' AND tgrelid='"StoreProduct"'::regclass`).length,1);
   await db.$executeRawUnsafe(`INSERT INTO "Store" VALUES('store','company',true),('control','company',true)`);
   await db.$executeRawUnsafe(`INSERT INTO "Product"("id","companyId","name","unit","active","trackStock","salePrice","vatRate") VALUES('pack24','company','24-pack','PACKAGE',true,true,8,13),('water','company','500ml','PIECE',true,true,.5,13),('pack6','company','6-pack','PACKAGE',true,true,4,13),('water1500','company','1500ml','PIECE',true,true,.7,13)`);
   await db.$executeRawUnsafe(`INSERT INTO "StoreProduct"("storeId","productId","active","currentStock","salePrice") VALUES('store','pack24',true,0,8),('store','water',true,100,.5),('store','pack6',true,0,4),('store','water1500',true,60,.7),('control','pack24',true,0,9),('control','water',true,500,.6)`);

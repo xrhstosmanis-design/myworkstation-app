@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-11-17T22:11:12.344997+02:00",
+  "recordedAt": "2026-11-17T22:13:57.305480+02:00",
   "node": "20.20.2",
   "isolatedPostgres": "18.6",
   "passed": 21,
@@ -7,15 +7,15 @@
   "skipped": 0,
   "frontendBuild": "PASS",
   "functionalLab": "NOT TESTED",
-  "followup": "Actual automatic-recipe guard added, native 21-test suite rerun; frontend unchanged.",
+  "followup": "Actual recipe guard and atomic idempotent schema guard verified in the rerun 21-test native suite; frontend unchanged.",
   "logSha256": {
-    "native-expanded-results.log": "0a2449c7d7e6fde8ede5ed3bcb8539062491f791940516cffe160c43a7c03580",
+    "native-expanded-results.log": "7b75f497f0cfb1f3c570c0105ef3039c68a66ba521b6ec5ae1272d6602e6b16a",
     "final-build-node20.log": "d88ac4e9ef98cd487cb488e712e5c2e4e16bfa90b9a0d6dc55fa8bfbc54f9fd6"
   },
   "broadLocalSuite": "interrupted after independent Chromium ECONNRESET; not a full-suite PASS",
   "boundary": "synthetic isolated database only; no production data, stock, cash, card, fiscal or provider action",
   "runtimeFileSha256": {
-    "server/src/lib/pos-stock-packages.js": "6dd3f39e13c8e5cfb64139c10823a2b87650ed0232d93e1e3e3c90fe908535db",
+    "server/src/lib/pos-stock-packages.js": "5047a1971f3fab48807b3c57113d122358b62498a065be56de1f4808930ae732",
     "server/src/lib/pos-scanned-cash-return.js": "6d8495e69c1c039090a1b4f6f7c44fb0ea6f6ea1e204a7f44cbf39ebcfc8a511",
     "shared/pos-package-return.mjs": "df46b5582f86f61e129b24f028ebd781eebb5ad333772e8e30576533172e909a"
   }

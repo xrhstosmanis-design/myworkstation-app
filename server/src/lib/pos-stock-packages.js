@@ -11,8 +11,12 @@ export const packageStatements=[
        RAISE EXCEPTION 'Το απόθεμα συσκευασίας τηρείται στο βασικό είδος. Καταχώρησε τα τεμάχια στο βασικό είδος.' USING ERRCODE='23514';
      END IF;
    END IF; RETURN NEW; END $$ LANGUAGE plpgsql`,
- `DROP TRIGGER IF EXISTS "mws_guard_package_stock_change" ON "StoreProduct"`,
- `CREATE TRIGGER "mws_guard_package_stock_change" BEFORE INSERT OR UPDATE OF "currentStock" ON "StoreProduct" FOR EACH ROW EXECUTE FUNCTION "mws_guard_package_stock"()`
+ `DO $guard$ BEGIN
+   PERFORM pg_advisory_xact_lock(hashtext('mws_guard_package_stock_change'));
+   IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='mws_guard_package_stock_change' AND tgrelid='"StoreProduct"'::regclass) THEN
+     CREATE TRIGGER "mws_guard_package_stock_change" BEFORE INSERT OR UPDATE OF "currentStock" ON "StoreProduct" FOR EACH ROW EXECUTE FUNCTION "mws_guard_package_stock"();
+   END IF;
+ END $guard$`
 ];
 export const packageError=(message,status=409)=>Object.assign(new Error(message),{status});
 export async function packageLock(db,storeId){await db.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`stock-package:${storeId}`})) IS NULL) AS locked`;}
