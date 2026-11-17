@@ -70,7 +70,7 @@ test("selected-store direct invoice entry retains native view and boundaries",as
   try{
     await t.test("one direct click opens the actual inbox for B, never the first available A",async()=>{
       await reset();await render();const start=calls.length;await open();await settle();assert.ok(inbox());
-      const selects=[...document.querySelectorAll(".commerce-hub select")];assert.ok(selects.length>=2);
+      const selects=[...document.querySelectorAll(".commerce-hub select")];assert.equal(selects.length,1);
       for(const select of selects){assert.equal(select.value,"B");assert.deepEqual([...select.options].map(o=>o.value),["B"]);}
       assert.match(document.querySelector(".invoice-inbox-head h2").textContent,/Θυρίδα Τιμολογίων/);
       const reads=calls.slice(start).filter(c=>c.url.includes("/documents/"));assert.ok(reads.length>=3);assert.ok(reads.every(c=>new URL(c.url,"https://isolated.invalid").searchParams.get("storeId")==="B"));
@@ -96,12 +96,12 @@ test("selected-store direct invoice entry retains native view and boundaries",as
         assert.equal(document.querySelector('[data-fixture="OwnerPaymentQuickActions.jsx"]'),draft);assert.equal(draft.value,"preserved draft");
       }
     });
-    await t.test("late catalog response cannot overwrite freshly verified entry modules",async()=>{
+    await t.test("late permission response cannot overwrite freshly verified entry modules",async()=>{
       await reset();await render();let release;
-      licenseResponses=[{activeModules:["DOCUMENTS"],modules:[]},new Promise(r=>{release=r})];
+      licenseResponses=[{activeModules:["DOCUMENTS"],modules:[]},new Promise(r=>{release=r}),{activeModules:["DOCUMENTS"],modules:[]}];
       await open();await settle();const first=inbox();assert.ok(first);await click("Παλιά τιμολόγια");
-      await emit("focus");await act(async()=>release({activeModules:[],modules:[]}));
-      assert.equal(inbox(),first,"older catalog data must not overwrite the entry's newer verification");
+      await emit("focus");await emit("focus");await act(async()=>release({activeModules:[],modules:[]}));
+      assert.equal(inbox(),first,"older permission data must not overwrite the entry's newer verification");
       assert.equal(document.querySelector('[aria-label="Προβολή τιμολογίων"] button[aria-pressed="true"]').textContent,"Παλιά τιμολόγια");
     });
     await t.test("stale granting events cannot restore a freshly revoked entry",async()=>{
