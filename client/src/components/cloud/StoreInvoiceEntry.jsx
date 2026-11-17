@@ -4,7 +4,7 @@ import CommerceHub from "../commerce/CommerceHub.jsx";
 // This is an entry into the existing Backoffice, not a second invoice UI.
 // The parent's session-bound API and the unchanged server guards authorize
 // every request. Cached modules and an arbitrary/default store never suffice.
-export default function StoreInvoiceEntry({api,storeId}){
+export default function StoreInvoiceEntry({api,storeId,onOpenOrder}){
   const selected=typeof storeId==="string"?storeId.trim():"";
   const [entry,setEntry]=useState(null);
   useEffect(()=>{
@@ -31,5 +31,5 @@ export default function StoreInvoiceEntry({api,storeId}){
   },[api,selected]);
   if(!entry||entry.api!==api||entry.storeId!==selected)return <p role="status">Έλεγχος πρόσβασης στη θυρίδα του καταστήματος…</p>;
   if(entry.error)return <p role="alert">{entry.error}</p>;
-  return <CommerceHub key={selected} api={api} stores={[entry.store]} activeStoreId={selected} initialTab="documents" verifiedActiveModules={entry.modules}/>;
+  return <CommerceHub key={selected} api={api} stores={[entry.store]} activeStoreId={selected} initialTab="documents" onOpenInvoiceOrder={onOpenOrder} verifiedActiveModules={entry.modules}/>;
 }

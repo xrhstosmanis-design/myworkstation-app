@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
+import {flushSync} from "react-dom";
 import {ArrowLeft,BriefcaseBusiness,Barcode,Copy,KeyRound,RefreshCw,ShieldCheck,Users,WalletCards} from "lucide-react";
 import StoreInvoiceEntry from "./StoreInvoiceEntry.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
@@ -69,6 +70,11 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
   };
   const openCommerce=()=>{if(refuseCompetingCommerce())return;onOpenCommerce?onOpenCommerce():window.dispatchEvent(new window.CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))};
   const closeInvoices=()=>{if(navigationLocked)return;invoiceOpenRef.current=false;setInvoiceEntryMessage("");setInvoiceOpen(false)};
+  const openInvoiceOrder=order=>{
+    if(navigationLocked||!invoiceOpenRef.current||!invoiceRegionRef.current||order.storeId!==store.id)return;
+    flushSync(closeInvoices);
+    window.dispatchEvent(new window.CustomEvent("mws:commerce-open",{detail:{view:"operations",storeId:store.id,invoiceOrder:order}}));
+  };
   const [primary,setPrimary]=useState(can("sales.read")?"shifts":"payments");
   const currentPrimary=primaryView??primary;
   const choosePrimary=value=>{if(navigationLocked)return;onPrimaryChange?onPrimaryChange(value):setPrimary(value)};
@@ -177,7 +183,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
     {!delegated&&invoiceEntryMessage&&<p role="alert">{invoiceEntryMessage}</p>}
     {!delegated&&invoiceOpen&&<section ref={invoiceRegionRef} aria-label="Θυρίδα επιλεγμένου καταστήματος">
       <button className="owner-tool-close" type="button" disabled={navigationLocked} onClick={closeInvoices}>Κλείσιμο θυρίδας τιμολογίων</button>
-      <StoreInvoiceEntry api={api} storeId={store.id}/>
+      <StoreInvoiceEntry api={api} storeId={store.id} onOpenOrder={openInvoiceOrder}/>
     </section>}
 
     <nav className="owner-primary-nav" aria-label="Βάρδιες και πληρωμές">

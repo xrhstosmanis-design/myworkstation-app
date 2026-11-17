@@ -37,7 +37,7 @@ test("selected-store direct invoice entry retains native view and boundaries",as
   const mod={exports:{}};new Function("require","module","exports",result.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);
   const React=await import("react"),{act}=React,{createRoot}=await import("react-dom/client"),root=createRoot(document.getElementById("root")),launcherRoot=createRoot(document.getElementById("commerce-root"));
   const stores=[{id:"A",name:"Store A",active:true},{id:"B",name:"Store B",active:true}];
-  const calls=[];let rows=stores,modules=["DOCUMENTS"],responses=[],licenseResponses=[],denied=null,boundary,stopWatch=()=>{};
+  const calls=[];let rows=stores,modules=["DOCUMENTS"],responses=[],licenseResponses=[],denied=null,linkedOrder=null,boundary,stopWatch=()=>{};
   const token=session=>`fixture.${Buffer.from(JSON.stringify({id:"owner",companyId:"company",sessionId:session,tokenType:"BACKOFFICE_USER",role:"OWNER"})).toString("base64url")}.fixture`;
   const raw=async(url,options={})=>{
     calls.push({url,method:options.method||"GET"});
@@ -46,7 +46,9 @@ test("selected-store direct invoice entry retains native view and boundaries",as
     if(url==="/api/stores"){if(denied)throw Object.assign(new Error("Fixture denied"),{status:denied});return responses.length?await responses.shift():rows;}
     if(url==="/api/wholesale/capabilities")return {enabled:true};
     if(url==="/api/license/current")return licenseResponses.length?await licenseResponses.shift():{activeModules:modules,modules:[]};
-    if(url.includes("/documents/inbox/archive?"))return {items:[],total:0,archiveTotal:0,suppliers:[]};
+    if(url.includes("/documents/inbox/archive?"))return {items:linkedOrder?[{id:"inbox-B",filename:"LAB-B.pdf",linkedOrderId:linkedOrder.id,processingStatus:"DRAFT",receivedAt:"2026-11-16T10:00:00Z"}]:[],total:linkedOrder?1:0,archiveTotal:linkedOrder?1:0,suppliers:[]};
+    if(url.startsWith("/api/purchase-orders/report?"))return {orders:[],stores,suppliers:[]};
+    if(url==="/api/purchase-orders/order-B/detail"&&linkedOrder)return {order:linkedOrder,lines:[{id:"line-B",description:"LAB invoice line",quantity:2}],totals:{net:2,gross:2.48}};
     if(url.includes("/documents/mydata/status?"))return {enabled:true,labLocked:true,serverAutomatic:true};
     if(url.includes("/overview?"))return {devices:[],recent:[],summary:{}};
     throw new Error(`Unexpected request ${url}`);
@@ -55,7 +57,7 @@ test("selected-store direct invoice entry retains native view and boundaries",as
   const stopNative=mod.exports.installNativeIntegrations();
   const render=async(storeId="B",extra={})=>act(async()=>root.render(React.createElement(mod.exports.default,{api:boundary.request,store:{id:storeId,name:`Store ${storeId}`},onBack:()=>{},...extra})));
   const reset=async()=>{
-    stopWatch();await act(async()=>{root.render(null);launcherRoot.render(null)});rows=stores;modules=["DOCUMENTS"];responses=[];licenseResponses=[];denied=null;
+    stopWatch();await act(async()=>{root.render(null);launcherRoot.render(null)});rows=stores;modules=["DOCUMENTS"];responses=[];licenseResponses=[];denied=null;linkedOrder=null;
     localStorage.clear();localStorage.setItem("token",token("session-A"));localStorage.setItem("user",JSON.stringify({id:"owner",companyId:"company",role:"OWNER"}));localStorage.setItem("activeModules",JSON.stringify(["DOCUMENTS"]));
     const next=createBackofficeSessionBoundary({readContext:()=>readBackofficeContext(localStorage),request:raw,isCurrent:()=>boundary===next,onInvalidated:()=>root.render(React.createElement("p",{"data-session-blocked":"true"},"Session stopped"))});boundary=next;stopWatch=watchBackofficeContext(boundary,window,document);
     await act(async()=>launcherRoot.render(React.createElement(mod.exports.Launcher)));
@@ -197,6 +199,20 @@ test("selected-store direct invoice entry retains native view and boundaries",as
       await reset();await render();await emit("mws:commerce-open",{view:"products",storeId:"B"});await settle();await click("Χονδρική B2B");await click("Lock isolated wholesale fixture");
       const draft=document.querySelector('[data-fixture="WholesaleSuiteWorkspace.jsx"]');draft.value="pending wholesale fixture";await open();await settle();assert.equal(inbox(),null);assert.equal(document.querySelector('[aria-label="Θυρίδα επιλεγμένου καταστήματος"]'),null);
       assert.equal(document.querySelector('[data-fixture="WholesaleSuiteWorkspace.jsx"]'),draft);assert.equal(draft.value,"pending wholesale fixture");assert.equal(document.querySelector('.commerce-overlay button[title="Κλείσιμο"]').disabled,true);
+    });
+    await t.test("a linked draft opens the existing order editor with its lines from the embedded inbox",async()=>{
+      await reset();linkedOrder={id:"order-B",storeId:"B",status:"NEW",invoiceNumber:"LAB-ORDER-B"};
+      await render();await open();await settle();
+      const start=calls.length;
+      await click("Άνοιγμα υπάρχοντος προχείρου");await settle();
+      assert.equal(document.querySelector('[aria-label="Θυρίδα επιλεγμένου καταστήματος"]'),null);
+      assert.equal(document.querySelectorAll(".commerce-hub").length,1);
+      const dialog=document.querySelector(".po-modal-overlay");
+      assert.match(dialog?.textContent||"",/LAB-ORDER-B/,JSON.stringify({calls:calls.slice(start),error:document.querySelector(".po-message")?.textContent}));
+      assert.match(dialog.textContent,/LAB invoice line/);
+      assert.equal(calls.slice(start).filter(c=>c.url==="/api/purchase-orders/order-B/detail").length,1);
+      assert.ok(calls.slice(start).every(c=>c.method==="GET"));
+      dialog.remove();
     });
     await t.test("all observed setup, navigation and LAB status polling stay read-only",async()=>{
       await reset();await render();await open();await settle();await act(async()=>{for(const timer of [...timers.values()])if(timer.ms===15*60*1000)await timer.fn()});await settle();
