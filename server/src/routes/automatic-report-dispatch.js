@@ -43,6 +43,18 @@ export function createAutomaticReportDispatchRouter(db,{env=process.env,manageme
    res.status(503).json({error:'Η ενέργεια δεν επιβεβαιώθηκε. Ανανέωσε την κατάσταση πριν από νέα προσπάθεια.',code:'AUTOMATIC_REPORT_ACTION_UNCONFIRMED'});
   }
  };
+ let supplierService;
+ const getSupplierService=()=>supplierService??=createAutomaticReportManagement({db,reportType:'SUPPLIER_COMPARISON',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Supplier invitations are unavailable')}});
+ const supplierScope=async req=>{
+  const s=scope(req);
+  if(req.user.supportContext||s.storeId!==env.MONTHLY_TURNOVER_LAB_STORE_ID||!await db.store.findFirst({where:{id:s.storeId,companyId:s.companyId,active:true,name:'ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ',company:{name:'MYWORKSTATION LAB',active:true}},select:{id:true}})){
+   throw Object.assign(new Error('Η ρύθμιση επιτρέπεται μόνο στο Εργαστήριο Δοκιμών.'),{status:403});
+  }
+  return s;
+ };
+ router.get('/supplier-comparison',handle(async req=>{const s=await supplierScope(req);return getSupplierService().getDispatchManagement(s)}));
+ router.post('/supplier-comparison/recipients/authorize',handle(async req=>{const s=await supplierScope(req);return getSupplierService().authorizeAdministratorRecipient(s,req.body)}));
+ router.put('/supplier-comparison/policy',handle(async req=>{const s=await supplierScope(req);return getSupplierService().saveDispatchPolicy(s,req.body)}));
  router.get('/',handle(req=>service.getDispatchManagement(scope(req))));
  router.put('/policy',handle(req=>service.saveDispatchPolicy(scope(req),req.body)));
  router.put('/grant',handle(req=>service.saveAutomationGrant(scope(req),req.body)));

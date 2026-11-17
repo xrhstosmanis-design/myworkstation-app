@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {Prisma} from '@prisma/client';
 import {administratorAuthorizationProof,reportRecipientAuthority,authorizeAdministratorRecipient,administratorRecipientSchema} from '../src/services/automatic-report-administrator-authorization.js';
 
 function proof(){const recipient={companyId:'c',storeId:'s',recipientId:'r',email:'mail@example.invalid',version:'1',verifiedAt:null},authorization={revision:'2',recipientVersion:'1',active:true,lifecycleGeneration:'3',allowedFrequencies:['DAILY','MONTHLY'],consentedBy:'report-superadmin:admin',consentedAt:'2026-11-01T07:00:00.000Z'};authorization.proofHash=administratorAuthorizationProof(recipient,authorization);return{recipient,authorization}}
@@ -22,4 +23,23 @@ test('administrative Save requires explicit current SuperAdmin and rejects injec
  await assert.rejects(authorizeAdministratorRecipient(base,input),{code:'REPORT_SUPER_ADMIN_REQUIRED'});
  await assert.rejects(authorizeAdministratorRecipient({...base,actor:{id:'admin',role:'SUPER_ADMIN'}},{...input,allowedFrequencies:['DAILY','DAILY']}),{code:'REPORT_RECIPIENT_INVALID'});
  await assert.rejects(authorizeAdministratorRecipient({...base,actor:{id:'admin',role:'SUPER_ADMIN'}},input),{code:'REPORT_ACTIVATION_REQUIRED'});
+});
+
+test('supplier approval writes only monthly records for its report type',async()=>{
+ const {recipient}=proof();
+ const writes=[];
+ const tx={$executeRaw:async(strings,...values)=>writes.push(Prisma.sql(strings,...values))};
+ const context={tx,scope:{actorId:'admin',companyId:'c',storeId:'s'},actor:{id:'admin',role:'SUPER_ADMIN',sessionVersion:1},records:{recipients:[{recipient,consent:null}]},generation:'3',activation:{valid:true,enabled:true,epoch:'epoch',activationFingerprint:'fingerprint',issuedAt:'2026-11-01T00:00:00Z',notBefore:'2026-11-01T00:00:00Z'},now:new Date('2026-11-16T21:00:00Z'),reportType:'SUPPLIER_COMPARISON'};
+ const input={email:recipient.email,recipientId:recipient.recipientId,expectedRecipientVersion:1,expectedAuthorizationRevision:0,expectedGrantRevision:0,expectedPolicyRevision:0,allowedFrequencies:['MONTHLY'],explicitAuthorization:true};
+ await assert.rejects(authorizeAdministratorRecipient(context,{...input,allowedFrequencies:['DAILY']}),{code:'REPORT_FREQUENCIES_INVALID'});
+ assert.equal(writes.length,0);
+ assert.equal((await authorizeAdministratorRecipient(context,input)).saved,true);
+ assert.equal(writes.length,3);
+ assert.match(writes[0].text,/^INSERT INTO "AutomaticReportSupplierComparisonConsent"/);
+ assert.match(writes[1].text,/^INSERT INTO "AutomaticReportAutomationGrant"/);
+ assert.match(writes[2].text,/^INSERT INTO "AutomaticReportDispatchPolicy"/);
+ for(const query of writes.slice(1)){
+  assert.match(query.text,/"reportType"/);
+  assert.ok(query.values.includes('SUPPLIER_COMPARISON'));
+ }
 });
