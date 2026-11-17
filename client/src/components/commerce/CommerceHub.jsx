@@ -30,6 +30,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
   // must not replace that verified scope or remount an in-progress inbox.
   const activeModules=Array.isArray(verifiedActiveModules)?verifiedActiveModules:cachedActiveModules;
   const [catalog,setCatalog]=useState([]);
+  const [lowValueAccessStoreId,setLowValueAccessStoreId]=useState("");
   const [tab,setTab]=useState(()=>initialTab==="documents"?"documents":"modules");
   const [storeId,setStoreId]=useState(stores[0]?.id||"");
   const [assistantStoreId,setAssistantStoreId]=useState(()=>stores.find(s=>s.id===activeStoreId)?.id||"");
@@ -187,7 +188,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
         <button disabled={!active.has("INVENTORY")} className={tab==="invoiceMonthAudit"?"active":""} onClick={()=>setTab("invoiceMonthAudit")}>Έλεγχος τιμολογίων μήνα</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="monthlyInventoryCapture"?"active":""} onClick={()=>setTab("monthlyInventoryCapture")}>Εξουσιοδότηση μηνιαίας απογραφής</button>
         <button disabled={!active.has("ORDER_SUGGESTIONS")} className={tab==="orderSuggestions"?"active":""} onClick={()=>setTab("orderSuggestions")}>Προτάσεις Παραγγελίας</button>
-        <button disabled={!active.has("LOW_VALUE_PRODUCTS")} className={tab==="lowValue"?"active":""} onClick={()=>setTab("lowValue")}>Προϊόντα Χαμηλής Απόδοσης</button>
+        <button disabled={!canReadLowValue} className={tab==="lowValue"?"active":""} onClick={()=>setTab("lowValue")}>Προϊόντα Χαμηλής Απόδοσης</button>
         
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
@@ -209,7 +210,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
     {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}
     {tab==="supplierComparison"&&active.has("INVENTORY")&&<SupplierPriceComparisonPanel key={storeId} api={api} storeId={storeId}/>}
     {tab==="orderSuggestions"&&active.has("ORDER_SUGGESTIONS")&&<OrderSuggestionsPanel key={storeId} api={api} storeId={storeId}/> }
-    {tab==="lowValue"&&active.has("LOW_VALUE_PRODUCTS")&&<LowValueProductsPanel key={storeId} api={api} storeId={storeId}/> }
+    {tab==="lowValue"&&canReadLowValue&&<LowValueProductsPanel key={storeId} api={api} storeId={storeId}/> }
 
     {tab==="inventory"&&<>
       <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>
