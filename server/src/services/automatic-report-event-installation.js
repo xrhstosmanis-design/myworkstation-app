@@ -61,7 +61,7 @@ export function createAutomaticReportEventInstallation(db,{sourceRevision,enable
    if(input?.explicitAuthorization!==true)fail('REPORT_EVENT_INSTALL_AUTHORIZATION_REQUIRED');
    const scope=scopeInput(input),packet=copy(input.packet);if(packet?.sourceRevision!==sourceRevision||packet.oldPlanHash!==oldPlanHash||packet.targetPlanHash!==targetPlanHash)fail();
    return transaction(actor,false,async(tx,admittedActor)=>{
-    await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended('mws:monthly-snapshot-install-v1',0))");
+    await tx.$queryRawUnsafe("SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('mws:monthly-snapshot-install-v1',0))");
     const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS schema'))[0]?.schema;if(schema!==packet.schema)fail();
     const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname LIMIT 601`,schema);
     const allowed=new Set([...target.knownTables,'StoreLifecycleFence','StoreLifecycleExecution','StoreLifecycleTombstone','StoreLifecycleRuntime']);
