@@ -9,6 +9,11 @@ test("owner buttons use IDs, reveal only linked stores and derive new groups fro
  const previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[k]});
  const React=await import("react"),{createRoot}=await import("react-dom/client"),{act}=React,root=createRoot(document.getElementById("root"));
+ let detailScrolls=0;
+ dom.window.matchMedia=()=>({matches:true});
+ dom.window.HTMLElement.prototype.scrollIntoView=function({block}){
+  assert.equal(block,"start");assert.ok(this.classList.contains("platform-company-detail"));detailScrolls++;
+ };
  const a={id:"a",fullName:"Ίδιο Όνομα",email:"a@example.invalid"},b={id:"b",fullName:"Ίδιο Όνομα",email:"b@example.invalid"};
  const c=(id,owner,name)=>({id,name:"Εταιρεία "+id,owner,active:true,stores:[{id:"store-"+id,name}]});
  let owners=[a,b],companies=[c("one",a,"Κατάστημα Άλφα"),c("two",a,"Κατάστημα Βήτα"),c("three",b,"Άλλο κατάστημα"),c("orphan",null,"Χωρίς σύνδεση")];
@@ -20,11 +25,14 @@ test("owner buttons use IDs, reveal only linked stores and derive new groups fro
   await click(toggles()[0]);assert.equal(toggles()[0].getAttribute("aria-expanded"),"true");assert.equal(document.querySelectorAll(".platform-company-card").length,2);
   assert.match(document.querySelector(".platform-owner-companies").textContent,/Κατάστημα Άλφα/);assert.doesNotMatch(document.querySelector(".platform-owner-companies").textContent,/Άλλο κατάστημα/);
   await click(document.querySelector('[aria-label="Διαχείριση Εταιρεία two"]'));assert.equal(document.querySelector("[data-selected]").dataset.selected,"two");
+  assert.equal(document.activeElement,document.querySelector(".platform-company-detail"));assert.equal(detailScrolls,1);
   assert.match(toggles()[1].textContent,/1 εταιρεία · 1 κατάστημα/);
   await click(toggles()[1]);assert.equal(document.querySelector("[data-selected]"),null);assert.equal(document.querySelectorAll(".platform-company-card").length,1);assert.match(document.querySelector(".platform-owner-companies").textContent,/Άλλο κατάστημα/);
   await click(toggles()[1]);assert.equal(document.querySelectorAll(".platform-company-card").length,0);
   await search("αλφα");assert.equal(toggles().length,1);await click(toggles()[0]);assert.equal(document.querySelectorAll(".platform-company-card").length,1);
-  await search("");await click(toggles()[2]);assert.match(document.querySelector(".platform-owner-companies").textContent,/Χωρίς σύνδεση/);
+  await search("χωρις ιδιοκτητη");assert.equal(toggles().length,1);
+  await click(toggles()[0]);assert.match(document.querySelector(".platform-owner-companies").textContent,/Χωρίς σύνδεση/);
+  await search("");
   const next={id:"new",fullName:"Νέος ιδιοκτήτης",email:"new@example.invalid"};owners=[...owners,next];companies=[...companies,c("newco",next,"Νέο κατάστημα")];await render();assert.equal(toggles().length,4);
   await click(toggles()[2]);assert.match(document.querySelector(".platform-owner-companies").textContent,/Νέο κατάστημα/);
   companies=companies.map(company=>company.id==="newco"?{...company,stores:[...company.stores,{id:"store-next",name:"Δεύτερο νέο"}]}:company);await render();assert.match(document.querySelector(".platform-owner-companies").textContent,/Δεύτερο νέο/);
