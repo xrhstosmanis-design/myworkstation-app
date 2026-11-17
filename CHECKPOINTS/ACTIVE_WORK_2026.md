@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-17 · [Ιστορικό κόστος από αρχική γραμμή αγοράς](CHANGES/2026-11-17-sales-report-original-pack.md) · Εκκρεμούν CI και LAB.
+
 - 2026-11-17 · #23 TABLE_SERVICE · Μερική πληρωμή μετρητών LAB · [Checkpoint](CHANGES/2026-11-17-table-service-partial-cash-lab.md) · CI PASS στο f572ff9, λειτουργική δοκιμή εκκρεμεί.
 
 - 2026-11-16 · #23 TABLE_SERVICE · Χρέωση επιλογών στον γύρο · [Checkpoint](CHANGES/2026-11-16-table-service-modifier-prices.md) · Draft, CI PASS στο 4a45dd39, μερική πληρωμή και LAB εκκρεμούν.
@@ -19,6 +21,8 @@
 - 2026-11-15 · Εσωτερική διακίνηση POS · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED.
 
 Σκοπός: σύντομες, συχνές ενημερώσεις ανά εργασία χωρίς συνεχή επεξεργασία του μεγάλου `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`.
+
+- 2026-11-16 · Υπόλοιπα προμηθευτών · [Checkpoint](CHANGES/2026-11-16-supplier-balance-payment-review.md) · PR #3921 · LAB εκκρεμεί.
 
 - 2026-11-15 · BackOffice τιμολόγηση με όλα τα είδη στην αποθήκη · [Checkpoint](CHANGES/2026-11-15-backoffice-invoice-stock-selection.md).
 
@@ -410,6 +414,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 34 · [Επιβεβαίωση SMTP στο LAB](CHANGES/2026-11-16-lab-smtp-confirmation-fix.md). Εκκρεμεί πραγματική παραλαβή στο inbox.
 
 ## Νο 31 — Προϊόντα χαμηλής απόδοσης
+
+- 17/11/2026 · [Διόρθωση προβολής κινητού](CHANGES/2026-11-17-no31-mobile-report.md). Φόρτωση Ιδιοκτήτη σε προβολή υπολογιστή επιβεβαιωμένη. Κύλιση και σταθερότητα στο Android εκκρεμούν.
 
 - 17/11/2026 · [Δοκιμή Ιδιοκτήτη σε φυσική συσκευή](CHANGES/2026-11-17-no31-lab-owner-window.md). Προσωρινή πρόσβαση στο υπάρχον LAB. Λειτουργική αποδοχή εκκρεμεί.
 

@@ -15,8 +15,10 @@ export async function runSalesCountsRegression(db){
    'CREATE TABLE "PriceCatalogPromotion"("id" text primary key,"companyId" text,"active" bool)',
    'CREATE TABLE "Sale"("id" text primary key,"companyId" text,"storeId" text,"status" text,"transactionMode" text,"source" text,"occurredAt" timestamp,"originalSaleId" text)',
    'CREATE TABLE "SaleLine"("id" text primary key,"saleId" text,"productId" text,"description" text,"quantity" numeric,"unitPrice" numeric,"discount" numeric,"vatRate" numeric,"lineTotal" numeric,"promotionId" text,"promotionType" text)',
-   'CREATE TABLE "PurchaseDocumentLine"("purchaseDocumentId" text,"productId" text,"unit" text,"unitCost" numeric,"unitsPerPackage" numeric,"createdAt" timestamp,"id" text)',
-   'CREATE TABLE "PurchaseDocument"("id" text,"supplierId" text,"companyId" text,"storeId" text,"status" text,"documentDate" timestamp,"createdAt" timestamp,"sourceType" text)',
+   'CREATE TABLE "PurchaseDocumentLine"("purchaseDocumentId" text,"productId" text,"unit" text,"unitCost" numeric,"unitsPerPackage" numeric,"createdAt" timestamp,"id" text,"quantity" numeric,"netAmount" numeric)',
+   'CREATE TABLE "PurchaseDocument"("id" text,"supplierId" text,"companyId" text,"storeId" text,"status" text,"documentDate" timestamp,"createdAt" timestamp,"sourceType" text,"purchaseOrderId" text,"documentNumber" text)',
+   'CREATE TABLE "PurchaseOrder"("id" text,"companyId" text,"storeId" text,"supplierId" text,"invoiceNumber" text,"status" text)',
+   'CREATE TABLE "PurchaseOrderLine"("orderId" text,"productId" text,"quantity" numeric,"netAmount" numeric,"resolutionStatus" text,"invoiceUnit" text,"stockUnitsPerInvoiceUnit" numeric)',
    'CREATE TABLE "StockMovement"("id" text,"sourceType" text,"sourceId" text,"storeId" text,"productId" text,"movementType" text,"unitCost" numeric,"createdAt" timestamp)',
    'CREATE TABLE "Supplier"("id" text,"name" text)'
   ])await db.$executeRawUnsafe(sql);
@@ -49,6 +51,15 @@ export async function runSalesCountsRegression(db){
  assert.equal(out.totalCost,1);
  assert.equal(out.items.find(r=>r.productId==='p').costValue,1);
  assert.equal(out.items.find(r=>r.productId==='q').costValue,0);
+ await db.$executeRaw`UPDATE "PurchaseDocument" SET "purchaseOrderId"='po',"documentNumber"='invoice' WHERE "id"='pack'`;
+ await db.$executeRaw`UPDATE "PurchaseDocumentLine" SET "quantity"=1,"netAmount"=24 WHERE "purchaseDocumentId"='pack'`;
+ await db.$executeRaw`INSERT INTO "PurchaseOrder" VALUES ('po','c','s',NULL,'invoice','INVOICED')`;
+ await db.$executeRaw`INSERT INTO "PurchaseOrderLine" VALUES ('po','p',1,24,'MATCHED','PACKAGE',500)`;
+ await db.$executeRaw`DELETE FROM "StockMovement" WHERE "storeId"='s'`;
+ out=await read();
+ assert.equal(out.totalCost,0.048);
+ await db.$executeRaw`UPDATE "PurchaseOrderLine" SET "netAmount"=23 WHERE "orderId"='po'`;
+ assert.equal((await read()).totalCost,24);
  // 10001 distinct groups and baskets prove full-source aggregation before LIMIT.
  await db.$executeRawUnsafe(`INSERT INTO "Sale" SELECT 'cap-sale-'||g,'c','s','COMPLETED','NORMAL','POS','2026-10-10T10:00:00'::timestamp,NULL FROM generate_series(1,10001)g`);
  await db.$executeRawUnsafe(`INSERT INTO "SaleLine" SELECT 'cap-line-'||g,'cap-sale-'||g,'cap-product-'||g,'cap-'||g,1,1,0,0,1,NULL,NULL FROM generate_series(1,10001)g`);
