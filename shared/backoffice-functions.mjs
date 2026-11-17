@@ -300,6 +300,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "edit",
       "approve",
       "reopen",
+      "cancel",
       "delete",
       "credit",
       "export",

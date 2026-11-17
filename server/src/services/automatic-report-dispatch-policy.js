@@ -51,36 +51,39 @@ export async function readImmutablePayload(tx,s){
  const checked=payloadMetadata({...s,payload},String(r.lifecycleGeneration));if(checked.payloadId!==r.payloadId||String(content.settingsVersion)!==String(r.settingsVersion)||new Date(content.period.from).getTime()!==new Date(r.periodFrom).getTime()||new Date(content.period.to).getTime()!==new Date(r.periodTo).getTime())fail(409,'REPORT_PAYLOAD_CORRUPT');return Object.freeze(payload);
 }
 const publicRecord=r=>{if(!r)return null;const output={};for(const [k,v]of Object.entries(r))if(!k.startsWith('challenge')&&k!=='proofHash'){output[k]=typeof v==='bigint'?Number(v):['revision','version','recipientVersion'].includes(k)?Number(v):v instanceof Date?v.toISOString():v}return output};
-export function createAutomaticReportManagement({db,activationProvider,sendVerification,clock=()=>new Date()}){
+export function createAutomaticReportManagement({db,activationProvider,sendVerification,clock=()=>new Date(),reportType='CASH'}){
  if(!db||typeof db.$transaction!=='function'||typeof activationProvider!=='function'||typeof sendVerification!=='function')throw new TypeError('Invalid automatic report management dependencies');
+ if(!['CASH','SUPPLIER_COMPARISON'].includes(reportType))fail(400,'REPORT_TYPE_INVALID');
+ const supplier=reportType==='SUPPLIER_COMPARISON';
  function transaction(scope,work,write=true){
   scope=snapshotDispatchInput(scope);
   const s={actorId:scope?.actorId,companyId:scope?.companyId,storeId:scope?.storeId};if(Object.values(s).some(x=>typeof x!=='string'||!x.trim()||/[\u0000-\u001f]/.test(x)))fail(400,'REPORT_SCOPE_INVALID');
   const generation=lifecycleContext()[s.storeId],now=new Date(clock());if(!Number.isFinite(now.getTime()))fail(400,'REPORT_CLOCK_INVALID');
   return db.$transaction(async tx=>{
    const actor=await tx.user.findUnique({where:{id:s.actorId},select:{id:true,role:true,sessionVersion:true}});if(actor?.role!=='SUPER_ADMIN')fail(403,'REPORT_SUPER_ADMIN_REQUIRED');
-   const ready=await dispatchSchemaReady(tx);
+   const ready=await dispatchSchemaReady(tx)&&(!supplier||(await tx.$queryRaw`SELECT to_regclass('"AutomaticReportSupplierComparisonConsent"') IS NOT NULL AS ready`)[0]?.ready===true);
    const state=ready?await lockAutomaticReportBoundary(tx,{companyId:s.companyId,storeId:s.storeId,expectedGeneration:generation}):null;
    const rows=write?await tx.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "id"=${s.storeId} AND "companyId"=${s.companyId} AND "active"=true FOR NO KEY UPDATE NOWAIT`:await tx.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "id"=${s.storeId} AND "companyId"=${s.companyId} AND "active"=true FOR SHARE NOWAIT`;
    if(!rows.length)fail(404,'REPORT_STORE_NOT_FOUND');
    const [lockedActor]=await tx.$queryRaw`SELECT "id","role","sessionVersion" FROM "User" WHERE "id"=${s.actorId} FOR SHARE NOWAIT`;
    if(!lockedActor||lockedActor.role!=='SUPER_ADMIN'||lockedActor.sessionVersion!==actor.sessionVersion)fail(403,'REPORT_SUPER_ADMIN_REQUIRED');
-   if(!ready){if(write)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');const a=activationProvider();return {history:await readEmailDeliveryHistory(tx,s,false),schemaReady:false,policy:null,grant:null,recipients:[],activation:{valid:a?.valid===true,enabled:a?.enabled===true,notBefore:a?.notBefore||null,epoch:a?.epoch||null}}}
+   if(!ready){if(write)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');const a=activationProvider();return {history:await readEmailDeliveryHistory(tx,s,false,{supplierOnly:supplier}),schemaReady:false,policy:null,grant:null,recipients:[],activation:{valid:a?.valid===true,enabled:a?.enabled===true,notBefore:a?.notBefore||null,epoch:a?.epoch||null}}}
    // Parent Store lock protects absent rows; all authorization mutations follow
    // the same policy -> grant -> recipients -> consents order.
-   const records=await readLockedDispatchAuthorization(tx,s);
-   return work({tx,scope:s,now,actor:lockedActor,generation:state.generation,records,activation:activationProvider()});
+   const records=await readLockedDispatchAuthorization(tx,supplier?{...s,reportType}:s);
+   return work({tx,scope:s,now,actor:lockedActor,generation:state.generation,records,reportType,activation:activationProvider()});
   },{isolationLevel:'ReadCommitted',maxWait:5000,timeout:15000}).catch(error=>{if(error?.code==='55P03'||error?.meta?.code==='55P03')fail(409,'REPORT_DISPATCH_BUSY');throw error});
  }
  const recipientApi=createRecipientManagement({mutate:transaction,sendVerification});
  const invitations=createAutomaticReportInvitations({db,mutate:transaction,readAuthorization:readLockedDispatchAuthorization,schemaReady:dispatchSchemaReady,sendInvitation:sendVerification,clock});
  const api={...recipientApi,issueRecipientInvitation:invitations.issue,
   authorizeAdministratorRecipient:(scope,input)=>transaction(scope,context=>authorizeAdministratorRecipient(context,input)),
-  getDispatchManagement:scope=>transaction(scope,async({tx,scope:s,records,activation,generation})=>({history:await readEmailDeliveryHistory(tx,s,true),schemaReady:true,policy:publicRecord(records.policy),grant:publicRecord(records.grant),recipients:records.recipients.map(({recipient,consent})=>({recipient:publicRecord(recipient),consent:publicRecord(consent),authorizationBasis:consent?.consentedBy?.startsWith(ADMINISTRATOR_AUTHORITY_PREFIX)?'SUPER_ADMIN':'RECIPIENT',authorization:reportRecipientAuthority(recipient,consent,{generation,principalId:records.grant?.principalId})})),activation:{valid:activation?.valid===true,enabled:activation?.enabled===true,notBefore:activation?.notBefore||null,epoch:activation?.epoch||null}}),false),
+  getDispatchManagement:scope=>transaction(scope,async({tx,scope:s,records,activation,generation})=>({history:await readEmailDeliveryHistory(tx,s,true,{supplierOnly:supplier}),schemaReady:true,policy:publicRecord(records.policy),grant:publicRecord(records.grant),recipients:records.recipients.map(({recipient,consent})=>({recipient:publicRecord(recipient),consent:publicRecord(consent),authorizationBasis:consent?.consentedBy?.startsWith(ADMINISTRATOR_AUTHORITY_PREFIX)?'SUPER_ADMIN':'RECIPIENT',authorization:reportRecipientAuthority(recipient,consent,{generation,principalId:records.grant?.principalId})})),activation:{valid:activation?.valid===true,enabled:activation?.enabled===true,notBefore:activation?.notBefore||null,epoch:activation?.epoch||null}}),false),
   saveDispatchPolicy:(scope,input)=>transaction(scope,async({tx,scope:s,now,generation,records})=>{
    expected(records.policy?.revision,input.expectedRevision);if(typeof input.dispatchEnabled!=='boolean'||typeof input.allowsProvisional!=='boolean')fail(400,'REPORT_POLICY_INVALID');const allowed=freq(input.allowedFrequencies);
+   if(supplier&&(input.dispatchEnabled||allowed.some(value=>value!=='MONTHLY')))fail(400,'REPORT_POLICY_INVALID');
    if(input.dispatchEnabled&&(!input.allowsProvisional||!allowed.length||!records.grant?.active||allowed.some(f=>!records.grant.allowedFrequencies.includes(f))||!records.recipients.some(({recipient,consent})=>reportRecipientAuthority(recipient,consent,{generation,principalId:records.grant.principalId})&&allowed.every(f=>consent.allowedFrequencies.includes(f)))))fail(409,'REPORT_POLICY_PREREQUISITES');
-   await tx.$executeRaw`INSERT INTO "AutomaticReportDispatchPolicy" ("companyId","storeId","revision","dispatchEnabled","allowsProvisional","allowedFrequencies","lifecycleGeneration","updatedBy","updatedAt") VALUES (${s.companyId},${s.storeId},${next(records.policy?.revision)},${input.dispatchEnabled},${input.allowsProvisional},${allowed}::text[],${BigInt(generation)},${s.actorId},${now}) ON CONFLICT ("companyId","storeId","reportType") DO UPDATE SET "revision"=EXCLUDED."revision","dispatchEnabled"=EXCLUDED."dispatchEnabled","allowsProvisional"=EXCLUDED."allowsProvisional","allowedFrequencies"=EXCLUDED."allowedFrequencies","lifecycleGeneration"=EXCLUDED."lifecycleGeneration","updatedBy"=EXCLUDED."updatedBy","updatedAt"=EXCLUDED."updatedAt"`;return {saved:true,revision:Number(next(records.policy?.revision))};
+   await tx.$executeRaw`INSERT INTO "AutomaticReportDispatchPolicy" ("companyId","storeId","reportType","revision","dispatchEnabled","allowsProvisional","allowedFrequencies","lifecycleGeneration","updatedBy","updatedAt") VALUES (${s.companyId},${s.storeId},${reportType},${next(records.policy?.revision)},${input.dispatchEnabled},${input.allowsProvisional},${allowed}::text[],${BigInt(generation)},${s.actorId},${now}) ON CONFLICT ("companyId","storeId","reportType") DO UPDATE SET "revision"=EXCLUDED."revision","dispatchEnabled"=EXCLUDED."dispatchEnabled","allowsProvisional"=EXCLUDED."allowsProvisional","allowedFrequencies"=EXCLUDED."allowedFrequencies","lifecycleGeneration"=EXCLUDED."lifecycleGeneration","updatedBy"=EXCLUDED."updatedBy","updatedAt"=EXCLUDED."updatedAt"`;return {saved:true,revision:Number(next(records.policy?.revision))};
   }),
   saveAutomationGrant:(scope,input)=>transaction(scope,async({tx,scope:s,now,actor,generation,records,activation})=>{
    expected(records.grant?.revision,input.expectedRevision);if(typeof input.active!=='boolean')fail(400,'REPORT_GRANT_INVALID');const allowed=freq(input.allowedFrequencies);if(input.active&&input.explicitAuthorization!==true)fail(400,'REPORT_EXPLICIT_AUTHORIZATION_REQUIRED');if(input.active&&(!activation?.valid||!allowed.length||now<new Date(activation.issuedAt)))fail(409,'REPORT_ACTIVATION_REQUIRED');
@@ -90,7 +93,7 @@ export function createAutomaticReportManagement({db,activationProvider,sendVerif
   })
  };
  const schemas={authorizeAdministratorRecipient:administratorRecipientSchema,saveDispatchPolicy:z.object({expectedRevision:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),dispatchEnabled:z.boolean(),allowsProvisional:z.boolean(),allowedFrequencies:z.array(z.enum(['DAILY','WEEKLY','MONTHLY'])).max(3)}).strict(),saveAutomationGrant:z.object({expectedRevision:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),active:z.boolean(),allowedFrequencies:z.array(z.enum(['DAILY','WEEKLY','MONTHLY'])).max(3),explicitAuthorization:z.boolean().optional()}).strict()};
- return Object.freeze(Object.fromEntries(Object.entries(api).map(([key,fn])=>[key,(scope,input)=>{
+ return Object.freeze(Object.fromEntries(Object.entries(api).filter(([key])=>!supplier||['getDispatchManagement','authorizeAdministratorRecipient','saveDispatchPolicy'].includes(key)).map(([key,fn])=>[key,(scope,input)=>{
  const checkedScope=z.object({actorId:z.string().min(1).max(200),companyId:z.string().min(1).max(200),storeId:z.string().min(1).max(200)}).strict().parse(snapshotDispatchInput(scope));
  const checkedInput=input===undefined?undefined:snapshotDispatchInput(input);return fn(checkedScope,schemas[key]?schemas[key].parse(checkedInput):checkedInput);
  }])));

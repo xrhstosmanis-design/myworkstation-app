@@ -24,8 +24,20 @@ test("sales statistics are tenant store and management scoped",()=>{
 test("historical cost uses the last approved purchase available at sale time",()=>{
   assert.match(server,/pd\."status"='APPROVED'/);
   assert.match(server,/pd\."documentDate"<=sa\."occurredAt"/);
-  assert.match(server,/ORDER BY pd\."documentDate" DESC,pd\."createdAt" DESC LIMIT 1/);
+  assert.match(server,/ORDER BY pd\."documentDate" DESC,pd\."createdAt" DESC,pd\."id" DESC,pl\."createdAt" DESC,pl\."id" DESC LIMIT 1/);
   assert.match(server,/profit=netSales-costValue/);
+});
+
+test("both sales views scope historical pack corrections to the purchase, store and product",()=>{
+  const queries=server.split('AS "unitCost",sup."name" AS "supplierName"').slice(0,-1);
+  assert.equal(queries.length,2);
+  for(const query of queries){
+    const cost=query.slice(query.lastIndexOf("SELECT COALESCE("));
+    assert.ok(cost.includes('sm."sourceId"=pd."id" AND sm."storeId"=pd."storeId"'));
+    assert.ok(cost.includes('sm."productId"=pl."productId"'));
+    assert.ok(cost.includes("PURCHASE_PACK_CORRECTION"));
+    assert.ok(cost.indexOf('SELECT sm."unitCost"') < cost.indexOf('CASE WHEN pl."unit"'));
+  }
 });
 
 test("sales report exposes net VAT cost profit margin and stock",()=>{

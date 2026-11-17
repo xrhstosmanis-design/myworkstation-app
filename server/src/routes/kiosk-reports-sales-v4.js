@@ -86,12 +86,20 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
       LEFT JOIN "PriceCatalogPromotion" promo ON ${promotionsOnly} AND promo."id"=sl."promotionId" AND promo."companyId"=sa."companyId"
       LEFT JOIN "StoreProduct" sp ON sp."storeId"=sa."storeId" AND sp."productId"=sl."productId"
       LEFT JOIN LATERAL (
-        SELECT CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END AS "unitCost",sup."name" AS "supplierName"
+        SELECT COALESCE(
+        (SELECT sm."unitCost" FROM "StockMovement" sm
+         WHERE pd."sourceType"='PURCHASE_ORDER' AND sm."sourceType"='PURCHASE_ORDER'
+           AND sm."sourceId"=pd."id" AND sm."storeId"=pd."storeId"
+           AND sm."productId"=pl."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+           AND sm."unitCost">0
+         ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1),
+        CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END
+      ) AS "unitCost",sup."name" AS "supplierName"
         FROM "PurchaseDocumentLine" pl
         JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId"
         LEFT JOIN "Supplier" sup ON sup."id"=pd."supplierId"
         WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=sl."productId" AND pd."documentDate"<=sa."occurredAt"
-        ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
+        ORDER BY pd."documentDate" DESC,pd."createdAt" DESC,pd."id" DESC,pl."createdAt" DESC,pl."id" DESC LIMIT 1
       ) pc ON true
       WHERE sa."occurredAt">=${from} AND sa."occurredAt"<${to}
         AND (${observedThrough}::timestamp IS NULL OR sa."occurredAt"<=${observedThrough})
@@ -201,10 +209,18 @@ router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
     LEFT JOIN "Employee" e ON e."id"=sa."operatorEmployeeId"
     LEFT JOIN "Customer" cu ON cu."id"=sa."customerId"
     LEFT JOIN LATERAL (
-      SELECT CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END AS "unitCost",sup."name" AS "supplierName"
+      SELECT COALESCE(
+        (SELECT sm."unitCost" FROM "StockMovement" sm
+         WHERE pd."sourceType"='PURCHASE_ORDER' AND sm."sourceType"='PURCHASE_ORDER'
+           AND sm."sourceId"=pd."id" AND sm."storeId"=pd."storeId"
+           AND sm."productId"=pl."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+           AND sm."unitCost">0
+         ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1),
+        CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END
+      ) AS "unitCost",sup."name" AS "supplierName"
       FROM "PurchaseDocumentLine" pl JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=pd."supplierId"
       WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=p."id" AND pd."documentDate"<=sa."occurredAt"
-      ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
+      ORDER BY pd."documentDate" DESC,pd."createdAt" DESC,pd."id" DESC,pl."createdAt" DESC,pl."id" DESC LIMIT 1
     ) pc ON true
     LEFT JOIN LATERAL (
       SELECT string_agg(DISTINCT py."method",', ' ORDER BY py."method") AS "methods" FROM "Payment" py WHERE py."saleId"=sa."id"
