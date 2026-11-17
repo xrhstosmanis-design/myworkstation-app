@@ -2,7 +2,7 @@
 
 - 2026-11-17 · Νο 15 TABLE_SERVICE · Είσοδος κινητού με ανοιχτή βάρδια · [Checkpoint](CHANGES/2026-11-17-table-service-mobile-active-shift.md) · PR #3998, τοπικοί έλεγχοι PASS, CI και φυσικό LAB εκκρεμούν.
 
-- 2026-11-17 · Νο 13 · Κοινό φίλτρο ΦΠΑ για CSV, οθόνη και εκτύπωση · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · CI και LAB εκκρεμούν.
+- 2026-11-17 · Νο 13 · LAB PASS για CSV και εκτυπώσιμη προβολή «Χωρίς ΦΠΑ» στο c19e099 · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · PDF, φυσική εκτύπωση και υπόλοιπο 13–14 ανοιχτά.
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
@@ -446,3 +446,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 34 · [Έγκριση Super Admin στη μηνιαία αποστολή](CHANGES/2026-11-17-supplier-admin-eligibility.md). Τοπικοί έλεγχοι PASS. Παράδοση LAB εκκρεμεί.
 
 - 17/11/2026 · Νο 2, Θυρίδα myDATA, POS και πληρωμές. [Συνέχεια και ενιαία δοκιμή LAB](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
+
+- 17/11/2026 · Νο 2 · Άνοιγμα υπάρχοντος προχείρου από την ενσωματωμένη Θυρίδα. 36 τοπικοί έλεγχοι PASS. CI και στοχευμένος επανέλεγχος LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
+
+- Νο 3 — [Πληρωτέο φωτογραφιών OCR](CHANGES/2026-11-17-no3-ocr-photo-payable.md) · PR #3996.
