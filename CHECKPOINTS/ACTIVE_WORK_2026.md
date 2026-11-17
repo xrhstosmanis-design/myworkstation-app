@@ -448,3 +448,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 17/11/2026 · Νο 2 · Άνοιγμα υπάρχοντος προχείρου από την ενσωματωμένη Θυρίδα. 36 τοπικοί έλεγχοι PASS. CI και στοχευμένος επανέλεγχος LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
 
 - Νο 3 — [Πληρωτέο φωτογραφιών OCR](CHANGES/2026-11-17-no3-ocr-photo-payable.md) · PR #3996.
+
+- 17/11/2026 · Νο 2 · Συμβατότητα παλιών κοινών πληρωμών myDATA–POS. 39 τοπικοί έλεγχοι PASS και στοχευμένος SQL έλεγχος. Πλήρες CI και τελική κοινή συνεδρία LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).

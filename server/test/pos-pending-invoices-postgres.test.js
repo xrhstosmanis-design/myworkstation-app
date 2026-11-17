@@ -187,6 +187,24 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "resultJson"="resultJson" #- '{mydataPosReceipt,paymentSourceJobId}' WHERE "id"='mydata-projection'`);
    assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
    await assert.rejects(assertExpectedPendingInvoice(db,scope,request));
+   await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{commonDraft}',${JSON.stringify(proof)}::jsonb) WHERE "id"='mydata-projection'`;
+   assert.equal(await readPending(),undefined,'legacy projection resolves only with the same stored common draft and original pages');
+   assert.equal((await assertExpectedPendingInvoice(db,scope,request)).source.jobId,jobId);
+   for(const attachmentIds of ['invalid-array',[],[attachmentId,attachmentId],['missing-original']]){
+    await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{mydataPosReceipt,attachmentIds}',${JSON.stringify(attachmentIds)}::jsonb) WHERE "id"='mydata-projection'`;
+    assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
+    await assert.rejects(assertExpectedPendingInvoice(db,scope,request));
+   }
+   await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{mydataPosReceipt,attachmentIds}',${JSON.stringify([attachmentId])}::jsonb) WHERE "id"='mydata-projection'`;
+   await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{commonDraft,paymentTransactionId}','"other-payment"') WHERE "id"='mydata-projection'`);
+   assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
+   await assert.rejects(assertExpectedPendingInvoice(db,scope,request));
+   await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{commonDraft}',${JSON.stringify(proof)}::jsonb) WHERE "id"='mydata-projection'`;
+   await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{mydataPosReceipt,paymentTransactionId}','"other-payment"') WHERE "id"='mydata-projection'`);
+   assert.equal((await readPendingInvoices(db,scope)).rows.some(row=>row.id===created.transaction.id),false);
+   const foreignPayment=await createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'SECOND-710',idempotencyKey:'other-settlement-key'});
+   await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{mydataPosReceipt,paymentTransactionId}',${JSON.stringify(foreignPayment.transaction.id)}::jsonb) WHERE "id"='mydata-projection'`;
+   assert.equal((await readPendingInvoices(db,scope)).rows.find(row=>row.id===foreignPayment.transaction.id)?.status,'REVIEW_REQUIRED');
    await db.$executeRawUnsafe(`DELETE FROM "AiReaderJob" WHERE "id"='mydata-projection'`);
    await db.$executeRaw`UPDATE "PurchaseDocument" SET "documentNumber"='OTHER- 709' WHERE "id"=${documentId}`;
    assert.equal((await readPending())?.status,'REVIEW_REQUIRED');
