@@ -1,0 +1,12 @@
+# POS-PACK-STOCK-01 + POS-SCAN-RETURN-01 — 17/11/2026
+Owner /root. Branch work/pos-packs-returns-20261117. Owner approved publication and merge of documentation only.
+Status: CLAIM PENDING CENTRAL REGISTRY SYNCHRONIZATION; NOT TESTED.
+Scope:
+- Packages are separate sale products with own barcode/POS button and price per store. Link to base product and quantity. 24-pack of 500 ml consumes 24 bottles; 6-pack of 1.5 l consumes 6 bottles. EUR 8/4 are examples, never fixed. Restore the same base quantities on return.
+- Scan products at POS, select cash return, confirm amount, finish. No replacement purchase or original receipt selection. Restore stock and reduce current terminal/shift cash once; record a customer return, not duplicate miscellaneous expense. Card totals unchanged even if original purchase was card-paid. No EFTPOS refund.
+Preserve return permissions, store/company scope, current terminal/shift, fiscal gates, audit, idempotency, original-sale returns and normal exchange. Do not bypass fiscal gates through NON_FISCAL exchange.
+Existing scanner POS-BARCODE-CART-02 and permission owners retain scope.
+Baseline 21dd890: source inspection only. Barcode unitMultiplier exists but applyBarcodePrices only selects barcode/product/price. Exchange requires SALE + RETURN. Original-sale full/item returns exist.
+Existing LAB acceptance: measured before/after stock and cash for 1/2 packs, loose+pack, pack return, scanned cash-only return, duplicate/rejected submission, cancel, denied permission, cross-store. No historical transaction replay; no production mutations.
+Publication blocker: local Git fetch works but push fails with missing GitHub username. Large shared tracker files must not be transferred through chat APIs (AGENTS.md bounded I/O rule). Prepared local commits faff39b and 61f24cd include tracker/pending/active updates; these need authorized local Git publication before source changes. This small checkpoint preserves central scope; it does not claim those registry updates were published.
+Next: restore authorized Git push, synchronize registry claim and pass required CI, merge documentation, implement bounded changes. Code merge/deploy/charges require separate owner approval.
