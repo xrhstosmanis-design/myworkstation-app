@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-17 · [Ιστορικό κόστος από αρχική γραμμή αγοράς](CHANGES/2026-11-17-sales-report-original-pack.md) · Εκκρεμούν CI και LAB.
+
 - 2026-11-17 · #23 TABLE_SERVICE · Μερική πληρωμή μετρητών LAB · [Checkpoint](CHANGES/2026-11-17-table-service-partial-cash-lab.md) · CI PASS στο f572ff9, λειτουργική δοκιμή εκκρεμεί.
 
 - 2026-11-16 · #23 TABLE_SERVICE · Χρέωση επιλογών στον γύρο · [Checkpoint](CHANGES/2026-11-16-table-service-modifier-prices.md) · Draft, CI PASS στο 4a45dd39, μερική πληρωμή και LAB εκκρεμούν.
