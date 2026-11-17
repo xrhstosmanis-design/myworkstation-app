@@ -204,5 +204,6 @@ test('registered inbox activation reads the purchase list without background OCR
  assert.equal(calls.length,1);assert.match(calls[0].path,/purchase-orders\/report/);assert.equal(calls[0].options.method,undefined);
  calls.length=0;open(hub,button);await new Promise(resolve=>setImmediate(resolve));
  assert.equal(calls.length,2);assert.equal(calls[1].path,'/api/commerce/ai-reader/fast-recover');assert.equal(calls[1].options.method,'POST');
- assert.match(source,/activate\(hub,button,event\.detail\.readOnly===true\)/);
+ assert.match(source,/const readOnly=event\.detail\.readOnly===true\|\|event\.detail\.navigationOnly===true/);
+ assert.match(source,/activate\(hub,button,readOnly\)/);
 });
