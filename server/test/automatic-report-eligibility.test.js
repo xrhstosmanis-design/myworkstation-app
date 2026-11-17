@@ -120,6 +120,13 @@ test('supplier dispatch binds the Athens calendar month and requires supplier co
  assert.equal(inputs[0].periodFrom,'2026-10-31T22:00:00.000Z');
  assert.equal(inputs[0].periodTo,'2026-11-30T22:00:00.000Z');
  assert.match(JSON.parse(payload.body).subject,/2026-11/);
+ const {administratorAuthorizationProof}=await import('../src/services/automatic-report-administrator-authorization.js');
+ const {recipient,consent}=h.auth.recipients[0];
+ Object.assign(recipient,{companyId:scope.companyId,storeId:scope.storeId,verifiedAt:null});
+ consent.consentedBy='report-superadmin:sa';
+ consent.proofHash=administratorAuthorizationProof(recipient,consent);
+ const adminContext=await read.readContext(h.tx,monthly,now);
+ assert.equal(adminContext.authorities[recipient.email].basis,'SUPER_ADMIN');
  h.auth.recipients[0].consent=null;
  await assert.rejects(read.readContext(h.tx,monthly,now),{code:'REPORT_DISPATCH_HOLD'});
 });
