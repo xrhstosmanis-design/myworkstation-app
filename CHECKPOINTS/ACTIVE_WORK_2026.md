@@ -3,6 +3,8 @@ Branch work/pos-packs-returns-20261117. Owner approved central implementation an
 Continuation for these two independent new tasks only: [scope and pending acceptance](../../docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md).
 Package products have their own barcode/button and store-specific sale price; consume linked base bottle units (24 or 6). Scanned cash return needs no replacement or original receipt selection; restore stock and reduce current terminal cash once, with unchanged card totals and no duplicate miscellaneous expense. Preserve permissions, isolation, fiscal gates, audit and idempotency; existing owners/return flows retained.
 
+- 2026-11-17 · Νο 15 TABLE_SERVICE · Κινητό, μεταφορά, ένωση και διαίρεση λογαριασμού · [Checkpoint](CHANGES/2026-11-17-table-service-account-operations.md) · PR #3998, τοπικά PASS, native CI και κοινό LAB εκκρεμούν.
+
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
 - 2026-11-17 · 13–14 · Διόρθωση ιστορικού κόστους και επισκόπηση εκκρεμών αγορών · [Checkpoint](CHANGES/2026-11-17-no13-no14-batch-source.md) · Τοπικοί έλεγχοι, CI και κοινή αποδοχή LAB σε συνέχεια.
