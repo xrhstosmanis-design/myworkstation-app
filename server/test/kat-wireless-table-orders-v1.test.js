@@ -41,7 +41,11 @@ test("POS checkout locks and closes the exact table order once",()=>{
   assert.match(checkout,/FROM "TableOrderLine"/);
   assert.match(checkout,/SET "status"='PAID',"saleId"=\$\{saleId\}/);
   assert.match(checkout,/linkedCount/);
-  assert.match(checkout,/for\(const line of tableLines\)expected\.set\(line\.productId/);
+  assert.match(checkout,/byId\.get\(requested\.tableLineId\)/);
+  assert.match(checkout,/line\.productId!==item\.productId/);
+  assert.match(checkout,/money\(line\.quantity\)-item\.quantity/);
+  assert.match(checkout,/FOR UPDATE[\s\S]*tablePriceSnapshot\(tablePriceLines\)!==tablePriceSnapshot\(currentLines\)/);
+  assert.match(checkout,/previous\?\.id===tableOrder\.saleId/);
 });
 
 test("responsive POS UI can send, monitor and load table orders",()=>{
