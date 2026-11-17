@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-17 · Νο 27 · Κεντρική Διαχείριση και σελίδα Ιδιοκτήτη · [Checkpoint](CHANGES/2026-11-17-no27-central-owner.md) · Τοπική υλοποίηση στο `work/no27-central-owner`, 96 συνδυασμένοι τοπικοί έλεγχοι και build PASS · CI και LAB εκκρεμούν.
+
 - 2026-11-17 · #23 TABLE_SERVICE · Ενιαίο συνθετικό HTTP E2E · [Checkpoint](CHANGES/2026-11-17-table-service-combined-ci.md) · CI και hosted LAB εκκρεμούν.
 
 - 2026-11-17 · [Ιστορικό κόστος από αρχική γραμμή αγοράς](CHANGES/2026-11-17-sales-report-original-pack.md) · Εκκρεμούν CI και LAB.
