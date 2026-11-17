@@ -1,5 +1,7 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-17 · Νο 15 TABLE_SERVICE · Μεταφορά, ένωση και διαίρεση ενεργού λογαριασμού · [Checkpoint](CHANGES/2026-11-17-table-service-account-operations.md) · Owner /root, υλοποίηση και CI σε εξέλιξη, ενιαία αποδοχή LAB στο τέλος.
+
 - 2026-11-17 · Νο 15 TABLE_SERVICE · Είσοδος κινητού με ανοιχτή βάρδια · [Checkpoint](CHANGES/2026-11-17-table-service-mobile-active-shift.md) · PR #3998, τοπικοί έλεγχοι PASS, CI και φυσικό LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 13 · LAB PASS για CSV και εκτυπώσιμη προβολή «Χωρίς ΦΠΑ» στο c19e099 · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · PDF, φυσική εκτύπωση και υπόλοιπο 13–14 ανοιχτά.
