@@ -312,7 +312,18 @@ router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),asyn
 });
 
 router.get("/handover",requireCompanyModule("SHIFT_HANDOVER"),async(req,res,next)=>{
-  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});res.json(await prisma.$queryRaw`SELECT h."id",h."priority",h."message",h."status",h."acknowledgedAt",h."acknowledgedByName",h."createdAt",COALESCE(h."fromName",f."fullName") AS "fromName",t."fullName" AS "toName",(h."attachmentData" IS NOT NULL) AS "hasAttachment",h."attachmentFilename" FROM "ShiftHandover" h LEFT JOIN "Employee" f ON f."id"=h."fromEmployeeId" LEFT JOIN "Employee" t ON t."id"=h."toEmployeeId" WHERE h."storeId"=${store.id} ORDER BY CASE WHEN h."status"='OPEN' THEN 0 ELSE 1 END,h."createdAt" DESC LIMIT 200`)}catch(error){next(error)}
+  try{
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(req.query?.storeId!==req.user.storeId||req.staffGrant?.capability!=='handover.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,'handover.read');
+    }
+    const store=await ownedStore(req.user.companyId,req.query.storeId);
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    const rows=await prisma.$queryRaw`SELECT h."id",h."priority",h."message",h."status",h."acknowledgedAt",h."acknowledgedByName",h."createdAt",COALESCE(h."fromName",f."fullName") AS "fromName",t."fullName" AS "toName",(h."attachmentData" IS NOT NULL) AS "hasAttachment",h."attachmentFilename" FROM "ShiftHandover" h LEFT JOIN "Employee" f ON f."id"=h."fromEmployeeId" LEFT JOIN "Employee" t ON t."id"=h."toEmployeeId" WHERE h."storeId"=${store.id} ORDER BY CASE WHEN h."status"='OPEN' THEN 0 ELSE 1 END,h."createdAt" DESC LIMIT 200`;
+    if(delegated)await requireStaffGrant(prisma,req.user,store.id,'handover.read');
+    res.json(rows);
+  }catch(error){next(error)}
 });
 
 router.post("/handover",requireCompanyModule("SHIFT_HANDOVER"),async(req,res,next)=>{
@@ -324,7 +335,19 @@ router.post("/handover/:handoverId/ack",requireCompanyModule("SHIFT_HANDOVER"),a
 });
 
 router.get("/handover/:handoverId/attachment",requireCompanyModule("SHIFT_HANDOVER"),async(req,res,next)=>{
-  try{const rows=await prisma.$queryRaw`SELECT h."storeId",h."attachmentData",h."attachmentMimeType",h."attachmentFilename" FROM "ShiftHandover" h JOIN "Store" s ON s."id"=h."storeId" WHERE h."id"=${req.params.handoverId} AND s."companyId"=${req.user.companyId} LIMIT 1`;const row=rows[0];if(!row||!row.attachmentData)return res.status(404).json({error:"Δεν υπάρχει συνημμένο."});if(req.user.tokenType==="STORE_OPERATOR"&&req.user.storeId!==row.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το συνημμένο."});res.json({dataUrl:row.attachmentData,mimeType:row.attachmentMimeType,filename:row.attachmentFilename})}catch(error){next(error)}
+  try{
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(req.query?.storeId!==req.user.storeId||req.staffGrant?.capability!=='handover.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,'handover.read');
+    }
+    const rows=await prisma.$queryRaw`SELECT h."storeId",h."attachmentData",h."attachmentMimeType",h."attachmentFilename" FROM "ShiftHandover" h JOIN "Store" s ON s."id"=h."storeId" WHERE h."id"=${req.params.handoverId} AND s."companyId"=${req.user.companyId} AND (${!delegated} OR h."storeId"=${req.user.storeId||null}) LIMIT 1`;
+    const row=rows[0];
+    if(!row||!row.attachmentData)return res.status(404).json({error:"Δεν υπάρχει συνημμένο."});
+    if((req.user.tokenType==="STORE_OPERATOR"||delegated)&&req.user.storeId!==row.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το συνημμένο."});
+    if(delegated)await requireStaffGrant(prisma,req.user,row.storeId,'handover.read');
+    res.json({dataUrl:row.attachmentData,mimeType:row.attachmentMimeType,filename:row.attachmentFilename});
+  }catch(error){next(error)}
 });
 
 router.get("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{

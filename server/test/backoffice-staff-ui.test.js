@@ -1084,3 +1084,77 @@ test('native analytics rejects mismatched store identity from any report context
     }finally{await m.close()}
   }
 });
+
+test('delegated handover is scoped read-only and suppresses late attachments and revoked lists',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[],popups=[];
+  let resolveAttachment,denyRefresh=false;
+  const pendingAttachment=new Promise(resolve=>{resolveAttachment=resolve});
+  const row=storeId=>({id:`handover-${storeId}`,priority:'HIGH',status:'OPEN',message:`Handover ${storeId}`,fromName:'Named operator',hasAttachment:true});
+  const api=async(path,options={})=>{
+    calls.push({path,options});assert.equal(options.method||'GET','GET');
+    if(path.endsWith('/me'))return {...identity,stores:[
+      ...['a1','a2'].map(id=>({id,name:id.toUpperCase(),profile:'AUDITOR',capabilities:['handover.read']})),
+      {id:'a3',name:'A3',profile:'MANAGER',capabilities:[]}
+    ]};
+    const url=new URL(path,'https://isolated.invalid'),storeId=options.headers['x-backoffice-store-id'];
+    assert.equal(url.searchParams.get('storeId'),storeId);
+    if(url.pathname.endsWith('/attachment'))return storeId==='a1'?pendingAttachment:{dataUrl:'data:image/jpeg;base64,AAAA',filename:'handover.jpg'};
+    assert.equal(url.pathname,'/api/commerce/handover');
+    if(denyRefresh)throw Object.assign(new Error('Η πρόσβαση ανακλήθηκε.'),{status:403});
+    return [row(storeId)];
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  const selectStore=async(id)=>m.act(async()=>{
+    const select=document.querySelector('[aria-label="Κατάστημα"]');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  window.open=()=>{const popup={document:document.implementation.createHTMLDocument('')};popups.push(popup);return popup};
+  try{
+    assert.equal(button('Παράδοση βάρδιας'),undefined);
+    await selectStore('a1');
+    await m.act(async()=>button('Παράδοση βάρδιας').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+    assert.match(document.querySelector('.store-handover').textContent,/Handover a1/);
+    assert.equal(document.querySelector('.store-handover form'),null);
+    assert.equal(button('Επιβεβαίωση παραλαβής'),undefined);
+    await m.act(async()=>button('Συνημμένο').click());
+    await selectStore('a2');
+    await m.act(async()=>button('Παράδοση βάρδιας').click());
+    assert.match(document.querySelector('.store-handover').textContent,/Handover a2/);
+    await m.act(async()=>resolveAttachment({dataUrl:'data:image/jpeg;base64,AAAA',filename:'late.jpg'}));
+    assert.equal(popups.length,0);
+    await m.act(async()=>button('Συνημμένο').click());
+    assert.equal(popups.length,1);
+    assert.equal(popups[0].document.querySelector('img').alt,'handover.jpg');
+    denyRefresh=true;
+    await m.act(async()=>document.querySelector('.store-handover .cloud-panel-head button').click());
+    assert.match(document.querySelector('[role="alert"]').textContent,/Η πρόσβαση ανακλήθηκε/);
+    assert.doesNotMatch(document.body.textContent,/Handover a2/);
+    await selectStore('a3');
+    assert.equal(button('Παράδοση βάρδιας'),undefined);
+    assert.equal(document.querySelector('.store-handover'),null);
+  }finally{await m.close()}
+});
+
+test('native handover preserves Owner creation and acknowledgement by default',async()=>{
+  const Panel=await component('store/StoreHandoverPanel'),writes=[];
+  const api=async(path,options={})=>{
+    if(options.method){writes.push({path,body:JSON.parse(options.body)});return {ok:true}}
+    return [{id:'handover',priority:'NORMAL',status:'OPEN',message:'Existing handover'}];
+  };
+  const m=await mount(Panel,{api,store:{id:'a1'}});
+  try{
+    const form=document.querySelector('.store-handover form');
+    form.elements.message.value='New Owner handover';
+    await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.deepEqual(writes[0],{path:'/api/commerce/handover',body:{storeId:'a1',priority:'NORMAL',message:'New Owner handover',attachment:null}});
+    assert.equal(form.elements.message.value,'');
+    assert.match(document.body.textContent,/Η παράδοση στάλθηκε/);
+    await m.act(async()=>button('Επιβεβαίωση παραλαβής').click());
+    assert.deepEqual(writes[1],{path:'/api/commerce/handover/handover/ack',body:{}});
+    assert.match(document.body.textContent,/Η παραλαβή επιβεβαιώθηκε/);
+    await m.render({api,store:{id:'a1'},readOnly:true});
+    assert.equal(document.querySelector('form'),null);
+    assert.equal(button('Επιβεβαίωση παραλαβής'),undefined);
+    assert.equal(writes.length,2);
+  }finally{await m.close()}
+});
