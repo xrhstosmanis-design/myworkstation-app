@@ -414,3 +414,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 34 · [Ρύθμιση μηνιαίας σύγκρισης προμηθευτών LAB](CHANGES/2026-11-16-lab-monthly-supplier-authorization.md). Εκκρεμεί δοκιμή ρύθμισης και προγραμματισμένης παραλαβής.
 
 17/11/2026 — Νο 7 · [Κοινός έλεγχος δικαιωμάτων](CHANGES/2026-11-16-no7-manager-invoice-cancel.md).
+
+- Νο 7 · [Δοκιμή προσωπικού υπευθύνου LAB](CHANGES/2026-11-17-lab-manager-invoice-and-shift-report.md). Επαναφορά και ακύρωση επιβεβαιώθηκαν. Εκκρεμούν αναφορά βαρδιών και έλεγχος περιορισμού δικαιωμάτων.
