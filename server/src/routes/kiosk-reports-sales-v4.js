@@ -93,6 +93,20 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
            AND sm."productId"=pl."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
            AND sm."unitCost">0
          ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1),
+        (SELECT pl."unitCost"/MIN(pol."stockUnitsPerInvoiceUnit")
+         FROM "PurchaseOrder" po
+         JOIN "PurchaseOrderLine" pol ON pol."orderId"=po."id" AND pol."productId"=pl."productId"
+         WHERE po."id"=COALESCE(pd."purchaseOrderId",CASE WHEN pd."sourceType"='PURCHASE_ORDER' THEN pd."id" END)
+           AND po."companyId"=pd."companyId" AND po."storeId"=pd."storeId"
+           AND po."supplierId" IS NOT DISTINCT FROM pd."supplierId"
+           AND po."invoiceNumber"=pd."documentNumber" AND po."status" IN ('FINAL','INVOICED')
+           AND pol."quantity"=pl."quantity" AND ROUND(pol."netAmount",2)=ROUND(pl."netAmount",2)
+         HAVING COUNT(*)=1 AND BOOL_AND(pol."resolutionStatus"='MATCHED'
+           AND pol."invoiceUnit"='PACKAGE' AND pol."stockUnitsPerInvoiceUnit">1)
+           AND pl."unit"='PIECE'
+           AND (SELECT COUNT(*) FROM "PurchaseDocumentLine" same_product
+                WHERE same_product."purchaseDocumentId"=pd."id"
+                  AND same_product."productId"=pl."productId")=1),
         CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END
       ) AS "unitCost",sup."name" AS "supplierName"
         FROM "PurchaseDocumentLine" pl
@@ -216,6 +230,20 @@ router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
            AND sm."productId"=pl."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
            AND sm."unitCost">0
          ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1),
+        (SELECT pl."unitCost"/MIN(pol."stockUnitsPerInvoiceUnit")
+         FROM "PurchaseOrder" po
+         JOIN "PurchaseOrderLine" pol ON pol."orderId"=po."id" AND pol."productId"=pl."productId"
+         WHERE po."id"=COALESCE(pd."purchaseOrderId",CASE WHEN pd."sourceType"='PURCHASE_ORDER' THEN pd."id" END)
+           AND po."companyId"=pd."companyId" AND po."storeId"=pd."storeId"
+           AND po."supplierId" IS NOT DISTINCT FROM pd."supplierId"
+           AND po."invoiceNumber"=pd."documentNumber" AND po."status" IN ('FINAL','INVOICED')
+           AND pol."quantity"=pl."quantity" AND ROUND(pol."netAmount",2)=ROUND(pl."netAmount",2)
+         HAVING COUNT(*)=1 AND BOOL_AND(pol."resolutionStatus"='MATCHED'
+           AND pol."invoiceUnit"='PACKAGE' AND pol."stockUnitsPerInvoiceUnit">1)
+           AND pl."unit"='PIECE'
+           AND (SELECT COUNT(*) FROM "PurchaseDocumentLine" same_product
+                WHERE same_product."purchaseDocumentId"=pd."id"
+                  AND same_product."productId"=pl."productId")=1),
         CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END
       ) AS "unitCost",sup."name" AS "supplierName"
       FROM "PurchaseDocumentLine" pl JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=pd."supplierId"
