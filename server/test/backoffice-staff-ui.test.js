@@ -389,7 +389,7 @@ test('mounted uncertain count freezes the same event identity and preserves coun
 
 test('mounted account form saves username and four-digit PIN without a required password or broadened store',async()=>{
   const Admin=await component('BackofficeStaffAdmin'),writes=[];
-  const api=async(path,options={})=>{if(options.method==='POST'){writes.push(JSON.parse(options.body));return {id:'created'}}return {accounts:[],stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}};
+  const api=async(path,options={})=>{if(options.method==='POST'){writes.push(JSON.parse(options.body));return {id:'created',revision:1}}return {accounts:writes.map(({fullName,username,grants})=>({id:'created',fullName,username,active:true,revision:1,grants})),stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}};
   const m=await mount(Admin,{api});
   try{
     await m.act(async()=>button('Νέος χειριστής').click());
@@ -431,6 +431,61 @@ test('owner permission matrix exposes all supported actions regardless of role a
     assert.equal(checkbox('A1: Απογραφή — Καταμέτρηση').checked,false);
     await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
     assert.deepEqual(writes[0].grants,[{storeId:'a1',profile:'MANAGER',capabilities:['cash.read']}]);
+  }finally{await m.close()}
+});
+
+test('owner can replace extra store rights with four exact grants, verify the saved result and revoke one store',async()=>{
+  const Admin=await component('BackofficeStaffAdmin'),writes=[];
+  const stores=[{id:'a1',name:'A1'},{id:'a2',name:'A2'}];
+  const otherStore={storeId:'a2',profile:'AUDITOR',capabilities:['cash.read']};
+  let account={id:'staff',fullName:'Fixture',username:'fixture',active:true,revision:1,grants:[
+    {storeId:'a1',profile:'MANAGER',capabilities:['cash.read','inventory.read','inventory.count','invoices.edit','invoices.read']},otherStore
+  ]};
+  let retainExtra=true;
+  const api=async(path,options={})=>{
+    if(!options.method)return {accounts:[account],stores};
+    assert.equal(path,'/api/backoffice-staff/admin/accounts/staff');
+    assert.equal(options.method,'PUT');
+    const body=JSON.parse(options.body);
+    writes.push(body);
+    assert.equal(body.expectedRevision,account.revision);
+    account={...account,revision:account.revision+1,grants:body.grants.map(grant=>({
+      ...grant,capabilities:[...grant.capabilities].reverse().concat(retainExtra&&grant.storeId==='a1'?['cash.read']:[])
+    }))};
+    return {id:account.id,revision:account.revision};
+  };
+  const m=await mount(Admin,{api});
+  const select=label=>document.querySelector(`input[aria-label="A1: ${label}"]`).click();
+  const submit=()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+  try{
+    await m.act(async()=>button('Δικαιώματα / Απενεργοποίηση').click());
+    const store=()=>document.querySelector('.staff-grant');
+    await m.act(async()=>[...store().querySelectorAll('button')].find(el=>el.textContent==='Μόνο διαθέσιμες προβολές').click());
+    assert.ok([...store().querySelectorAll('.staff-permission-matrix input:checked')].every(el=>el.getAttribute('aria-label').includes('Προβολή')||el.getAttribute('aria-label').includes('προβολή')));
+    assert.equal(document.querySelectorAll('.staff-grant')[1].querySelectorAll('.staff-permission-matrix input:checked').length,1);
+    await m.act(async()=>[...store().querySelectorAll('button')].find(el=>el.textContent==='Καθαρισμός επιλογών').click());
+    await m.act(async()=>select('Τιμολόγια — Επαναφορά οριστικοποιημένου τιμολογίου'));
+    await m.act(async()=>select('Τιμολόγια — Ακύρωση καταχωρισμένου τιμολογίου'));
+    await m.act(async()=>select('Πωλήσεις και βάρδιες — Συγκεντρωτική προβολή βαρδιών'));
+    assert.match(store().querySelector('.staff-permission-summary').textContent,/2 προβολές · 2 ενέργειες/);
+    await m.act(async()=>submit());
+    const grants=[{storeId:'a1',profile:'MANAGER',capabilities:['invoices.reopen','invoices.read','invoices.cancel','shifts.read']},otherStore];
+    assert.deepEqual(writes[0].grants,grants);
+    assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκαν/);
+    assert.equal(document.querySelector('[role="status"]'),null);
+
+    retainExtra=false;
+    await m.act(async()=>button('Δικαιώματα / Απενεργοποίηση').click());
+    await m.act(async()=>select('Έλεγχος ταμείων — Προβολή αναφοράς'));
+    await m.act(async()=>submit());
+    assert.match(document.querySelector('[role="status"]').textContent,/Αποθηκεύτηκε και επαληθεύτηκε/);
+    assert.deepEqual(new Set(writes[1].grants[0].capabilities),new Set(grants[0].capabilities));
+
+    await m.act(async()=>button('Δικαιώματα / Απενεργοποίηση').click());
+    await m.act(async()=>store().querySelector('input[type="checkbox"]').click());
+    await m.act(async()=>submit());
+    assert.deepEqual(writes[2].grants,[otherStore]);
+    assert.match(document.querySelector('[role="status"]').textContent,/Αποθηκεύτηκε και επαληθεύτηκε/);
   }finally{await m.close()}
 });
 

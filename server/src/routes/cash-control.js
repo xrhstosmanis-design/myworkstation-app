@@ -109,8 +109,10 @@ async function ensureTables(){
 export async function ensureCashControlSchema(){return ensureTables()}
 
 async function requireCashAccess(req,res,next){
-  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='shifts.read'&&/^\/stores\/[^/]+\/reporting-overview$/.test(req.path))return next();
-  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='shifts.read'&&/^\/stores\/[^/]+\/reporting-overview\/?$/.test(req.path))return next();
+  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='shifts.read'){
+    const target=req.path.match(/^\/stores\/([^/]+)\/reporting-overview$/);
+    if(target&&target[1]===req.user.storeId)return next();
+  }
   if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='sales.read')return next();
   if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='shifts.close'&&req.path.endsWith('/close-context'))return next();
   if(req.user?.staffAccess===true&&req.method==='POST'&&req.staffGrant?.capability==='shifts.close')return next();

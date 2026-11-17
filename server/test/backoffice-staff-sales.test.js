@@ -42,7 +42,7 @@ test('sales permission admits only three exact GET endpoints and no correction/p
   for(const [method,path] of [['POST','/api/transactions/stores/s'],['POST','/api/owner-shifts/shift/force-close'],['POST','/api/transactions/stores/s/payments/p/correct-amount'],['GET','/api/store-pos/sales/journal']])assert.equal(staffRequestCapability(method,path),null);
 });
 
-test('shift reporting grant passes only its own GET endpoint through the cash middleware', async()=>{
+test('shift reporting grant passes only its own GET endpoint and admitted store through the cash middleware', async()=>{
   const cash=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
   const start=cash.indexOf('async function requireCashAccess(');
   const end=cash.indexOf('\nfunction assertStoreAccess(',start);
@@ -50,12 +50,14 @@ test('shift reporting grant passes only its own GET endpoint through the cash mi
   const authorize=new Function(cash.slice(start,end)+'\nreturn requireCashAccess;')();
   for(const [method,path,capability,expected] of [
     ['GET','/stores/s/reporting-overview','shifts.read',true],
+    ['GET','/stores/s/reporting-overview/','shifts.read',false],
+    ['GET','/stores/other/reporting-overview','shifts.read',false],
     ['GET','/stores/s/overview','shifts.read',false],
     ['POST','/stores/s/reporting-overview','shifts.read',false],
     ['GET','/stores/s/reporting-overview',undefined,false],
   ]){
     let allowed=false,status;
-    await authorize({method,path,user:{staffAccess:true,role:'EMPLOYEE',tokenType:'BACKOFFICE_USER'},staffGrant:{capability}},
+    await authorize({method,path,user:{staffAccess:true,role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',storeId:'s'},staffGrant:{capability}},
       {status(code){status=code;return this},json(){}},()=>{allowed=true});
     assert.equal(allowed,expected);
     assert.equal(status,expected?undefined:403);
