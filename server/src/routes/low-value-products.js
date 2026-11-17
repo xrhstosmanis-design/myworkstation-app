@@ -2,6 +2,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireStoreModule} from "../middleware/module-access.js";
+import {lowValueLabOwnerAccess} from "../services/low-value-lab-owner-access.js";
 import {buildLowValueProducts} from "../lib/low-value-products.js";
 
 const optionsSchema=z.object({historyDays:z.coerce.number().int().min(7).max(365).default(30),slowDays:z.coerce.number().int().min(1).max(730).default(90),marginPercent:z.coerce.number().min(0).max(100).default(20)});
@@ -60,9 +61,21 @@ export async function readLowValueProducts(db,{storeId,companyId,options,now=new
 }
 
 const router=Router();
-router.get("/low-value-products",requireStoreModule("LOW_VALUE_PRODUCTS"),async(req,res,next)=>{
+const requireReportModule=requireStoreModule("LOW_VALUE_PRODUCTS",{temporaryAccess:lowValueLabOwnerAccess});
+function requireReportRole(req,res,next){
+  if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)){
+    return res.status(403).json({error:"Η αναφορά είναι διαθέσιμη μόνο σε διαχειριστικούς ρόλους.",code:"ROLE_MODULE_DENIED"});
+  }
+  next();
+}
+
+router.get("/low-value-products/access",requireReportModule,requireReportRole,(req,res)=>{
+  res.set("Cache-Control","no-store");
+  res.json({storeId:req.targetStore.id});
+});
+
+router.get("/low-value-products",requireReportModule,requireReportRole,async(req,res,next)=>{
   try{
-    if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η αναφορά είναι διαθέσιμη μόνο σε διαχειριστικούς ρόλους.",code:"ROLE_MODULE_DENIED"});
     const parsed=optionsSchema.safeParse(req.query);
     if(!parsed.success)return res.status(400).json({error:"Έλεγξε το ιστορικό (7–365), τις ημέρες αργής κίνησης (1–730) και το όριο περιθωρίου (0–100%)."});
     res.set("Cache-Control","no-store");

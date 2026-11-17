@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 import {once} from "node:events";
 import express from "express";
 import {z} from "zod";
+import {lowValueLabOwnerAccess} from "../src/services/low-value-lab-owner-access.js";
 import {buildLowValueProducts} from "../src/lib/low-value-products.js";
 import {ownerRestrictedModuleKeys} from "../src/services/module-catalog.js";
 
@@ -62,11 +63,11 @@ test("product value HTTP/SQL: historic net cost, returns, isolation, roles and n
     const guardSource=await readFile(new URL("../src/middleware/module-access.js",import.meta.url),"utf8");
     const guard=new Function("prisma","ownerRestrictedModuleKeys",guardSource.replace(/^import .*;\s*$/gm,"").replace(/^export /gm,"")+"\nreturn requireStoreModule;")(db,ownerRestrictedModuleKeys);
     const routeSource=await readFile(new URL("../src/routes/low-value-products.js",import.meta.url),"utf8");
-    const registrations=[];new Function("Router","z","prisma","requireStoreModule","buildLowValueProducts",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,buildLowValueProducts);
+    const registrations=[];new Function("Router","z","prisma","requireStoreModule","lowValueLabOwnerAccess","buildLowValueProducts",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,lowValueLabOwnerAccess,buildLowValueProducts);
     const users={owner:{role:"OWNER",companyId:"a"},sa:{role:"SUPER_ADMIN",companyId:"different"},employee:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a"},permitted:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a",permissions:["MODULE:LOW_VALUE_PRODUCTS"]},suspended:{role:"OWNER",companyId:"c"}};
-    const app=express();app.use((req,res,next)=>{req.user=users[req.get("x-fixture-user")];return req.user?next():res.status(401).end();});app.get("/api/commerce/low-value-products",...registrations[0].slice(1));app.use((err,req,res,next)=>res.status(500).json({error:err.message}));
+    const app=express();app.use((req,res,next)=>{req.user=users[req.get("x-fixture-user")];return req.user?next():res.status(401).end();});for(const [path,...handlers] of registrations)app.get(`/api/commerce${path}`,...handlers);app.use((err,req,res,next)=>res.status(500).json({error:err.message}));
     const server=app.listen(0,"127.0.0.1");await once(server,"listening");
-    const request=async(store,user="owner",extra="")=>{const res=await fetch(`http://127.0.0.1:${server.address().port}/api/commerce/low-value-products?${store===undefined?"":`storeId=${store}`}${extra}`,{headers:{"x-fixture-user":user}});return {status:res.status,cache:res.headers.get("cache-control"),body:await res.json()};};
+    const request=async(store,user="owner",extra="",suffix="")=>{const res=await fetch(`http://127.0.0.1:${server.address().port}/api/commerce/low-value-products${suffix}?${store===undefined?"":`storeId=${store}`}${extra}`,{headers:{"x-fixture-user":user}});return {status:res.status,cache:res.headers.get("cache-control"),body:await res.json()};};
     const snapshot=()=>Promise.all(Object.keys(tables).map(async name=>(await tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS count,md5(string_agg(row_to_json(t)::text,',' ORDER BY "id")) AS digest FROM "${name}" t`))[0]));const before=await snapshot();
     try{
       await t.test("real SQL scopes active products, excludes foreign/draft/future/waste, and calculates actual VAT and historical net cost",async()=>{
@@ -78,6 +79,15 @@ test("product value HTTP/SQL: historic net cost, returns, isolation, roles and n
       });
       await t.test("tenant, operator, disabled module and license denials precede report reads",async()=>{
         for(const [store,user,status,code] of [["b1","owner",404,"TENANT_STORE_REJECTED"],["a2","employee",404,"TENANT_STORE_REJECTED"],["a1","employee",403,"ROLE_MODULE_DENIED"],["a1","permitted",403,"ROLE_MODULE_DENIED"],["off","owner",403,"MODULE_DISABLED"],["c1","suspended",403,"LICENSE_INACTIVE"],[undefined,"owner",400,null],["missing","owner",404,null]]){const count=reads,result=await request(store,user);assert.equal(result.status,status,JSON.stringify(result.body));if(code)assert.equal(result.body.code,code);assert.equal(reads,count);}
+      });
+      await t.test("availability uses the report restrictions without loading any rows",async()=>{
+        const count=reads;
+        const result=await request("a1","owner","","/access");
+        assert.deepEqual(result,{status:200,cache:"no-store",body:{storeId:"a1"}});
+        for(const [store,user,status] of [["off","owner",403],["b1","owner",404],["a1","employee",403]]){
+          assert.equal((await request(store,user,"","/access")).status,status);
+        }
+        assert.equal(reads,count);
       });
       await t.test("query bounds, selected-store support, sibling stock and read-only snapshots",async()=>{
         for(const extra of ["&historyDays=0","&slowDays=731","&marginPercent=101","&historyDays=Infinity"]){const count=reads;assert.equal((await request("a1","owner",extra)).status,400);assert.equal(reads,count);}

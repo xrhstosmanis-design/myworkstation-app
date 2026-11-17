@@ -34,7 +34,7 @@ test("KAT Admin stays company scoped while Super Admin can select another compan
 
 test("KAT module enforcement keeps Seller and Admin licensed while preserving the explicit Super Admin bypass",()=>{
   assert.match(moduleAccess,/user\.role==="SUPER_ADMIN"\|\|user\.isSuperAdmin===true/);
-  assert.match(moduleAccess,/export function requireStoreModule\(moduleKey\)/);
+  assert.match(moduleAccess,/export function requireStoreModule\(moduleKey,\{temporaryAccess\}=\{\}\)/);
   assert.match(moduleAccess,/STORE_OPERATOR/);
   assert.match(moduleAccess,/CompanyModule/);
 });
