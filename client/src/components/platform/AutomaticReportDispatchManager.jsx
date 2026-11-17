@@ -26,6 +26,8 @@ function DeliveryHistory({history}){
      <td>{stamp(row.at)}</td>
      <td>{row.type==='INVOICE_STOCK_EXCLUSION'
       ? ['Είδη τιμολογίου εκτός αποθήκης',row.invoiceNumber].filter(Boolean).join(' · ')
+      : row.type==='INVENTORY_RESULT' ? ['Αποτελέσματα απογραφής',row.eventId].filter(Boolean).join(' · ')
+      : row.type==='PROMOTION_RESULT' ? ['Αποτελέσματα προσφοράς',row.eventId].filter(Boolean).join(' · ')
       : row.type==='SUPPLIER_COMPARISON' ? 'Μηνιαία σύγκριση προμηθευτών'
       : [frequencies.find(([value])=>value===row.frequency)?.[1],'αναφορά ταμείου'].filter(Boolean).join(' ')}</td>
      <td>{deliveryStatus[row.status]||'Άγνωστη κατάσταση'}{deliveryFailure[row.failure]&&<div>{deliveryFailure[row.failure]}</div>}</td>
@@ -37,34 +39,38 @@ function DeliveryHistory({history}){
 
 export default function AutomaticReportDispatchManager(props){
  const {company,store}=props;
- if(company.name!=='MYWORKSTATION LAB'||store.name!=='ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ')return <ReportDispatchSettings {...props}/>;
- return <LabReportDispatchManager key={company.id+':'+store.id} {...props}/>;
+ return <ReportDispatchManager key={company.id+':'+store.id} {...props}/>;
 }
 
-function LabReportDispatchManager(props){
- const [supplier,setSupplier]=useState(false);
+function ReportDispatchManager(props){
+ const [type,setType]=useState('CASH');
+ const supplier=type==='SUPPLIER_COMPARISON';
  return <>
   <div role="group" aria-label="Τύπος αυτόματης αναφοράς">
-   <button type="button" aria-pressed={!supplier} onClick={()=>setSupplier(false)}>Αναφορές ταμείου</button>
-   <button type="button" aria-pressed={supplier} onClick={()=>setSupplier(true)}>Μηνιαία σύγκριση προμηθευτών</button>
+   <button type="button" aria-pressed={type==='CASH'} onClick={()=>setType('CASH')}>Αναφορές ταμείου</button>
+   {props.company.name==='MYWORKSTATION LAB'&&props.store.name==='ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ'&&<button type="button" aria-pressed={supplier} onClick={()=>setType('SUPPLIER_COMPARISON')}>Μηνιαία σύγκριση προμηθευτών</button>}
+   <button type="button" aria-pressed={type==='PROMOTION_RESULT'} onClick={()=>setType('PROMOTION_RESULT')}>Αποτελέσματα προσφορών</button>
+   <button type="button" aria-pressed={type==='INVENTORY_RESULT'} onClick={()=>setType('INVENTORY_RESULT')}>Αποτελέσματα απογραφής</button>
   </div>
-  <ReportDispatchSettings key={String(supplier)} supplier={supplier} {...props}/>
+  <ReportDispatchSettings key={type} supplier={supplier} event={['PROMOTION_RESULT','INVENTORY_RESULT'].includes(type)} inventory={type==='INVENTORY_RESULT'} {...props}/>
  </>;
 }
 
-function ReportDispatchSettings({company,store,request,supplier=false}){
+function ReportDispatchSettings({company,store,request,supplier=false,event=false,inventory=false}){
+ const scoped=supplier||event;
+ const initialFrequencies=event?['EVENT']:supplier?['MONTHLY']:['DAILY'];
  const scope=`${company.id}:${store.id}`,current=useRef(scope),sequence=useRef(0);
  current.current=scope;
  const [data,setData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
- const [email,setEmail]=useState(''),[selected,setSelected]=useState(supplier?['MONTHLY']:['DAILY']),[tokens,setTokens]=useState({}),[ack,setAck]=useState(false);
- const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/report-dispatch${supplier?'/supplier-comparison':''}`;
+ const [email,setEmail]=useState(''),[selected,setSelected]=useState(initialFrequencies),[tokens,setTokens]=useState({}),[ack,setAck]=useState(false);
+ const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/report-dispatch${inventory?'/inventory-result':event?'/promotion-results':supplier?'/supplier-comparison':''}`;
  const load=async()=>{
   const id=++sequence.current,captured=scope;setBusy(true);setError('');
   try{const result=await request(path);if(id===sequence.current&&captured===current.current){setData({scope:captured,result});if(result.policy?.allowedFrequencies?.length)setSelected(result.policy.allowedFrequencies)}}
   catch(e){if(id===sequence.current&&captured===current.current)setError(e.message)}
   finally{if(id===sequence.current&&captured===current.current)setBusy(false)}
  };
- useEffect(()=>{setData(null);setEmail('');setTokens({});setAck(false);setMessage('');setSelected(supplier?['MONTHLY']:['DAILY']);load();return()=>{sequence.current++}},[scope]);
+ useEffect(()=>{setData(null);setEmail('');setTokens({});setAck(false);setMessage('');setSelected(initialFrequencies);load();return()=>{sequence.current++}},[scope]);
  const mutate=async(suffix,body,success,method='POST')=>{
   const captured=scope,id=++sequence.current;setBusy(true);setError('');setMessage('');
   try{const result=await request(path+suffix,{method,body:JSON.stringify(body)});if(id!==sequence.current||captured!==current.current)return;setTokens({});setMessage(typeof success==='function'?success(result):success);await load()}
@@ -81,7 +87,7 @@ function ReportDispatchSettings({company,store,request,supplier=false}){
   allowedFrequencies:selected,explicitAuthorization:true
  },r=>r.externalActivationEnabled?'Ο παραλήπτης εγκρίθηκε. Η αυτόματη αποστολή ενεργοποιήθηκε για επιλέξιμες περιόδους. Δεν στάλθηκε πρόσκληση.':'Η έγκριση και οι περίοδοι αποθηκεύτηκαν. Η κεντρική αποστολή είναι κλειστή. Δεν στάλθηκε πρόσκληση.');
  return <section className="report-settings-dispatch" aria-label="Αυτόματες αποστολές αναφορών" style={{borderTop:'1px solid #cbd5e1',marginTop:20,paddingTop:16}}>
-  <h3>{supplier?'Μηνιαία σύγκριση προμηθευτών LAB':'Αυτόματες αποστολές'}</h3>
+  <h3>{inventory?'Αποτελέσματα απογραφής':event?'Αποτελέσματα προσφορών':supplier?'Μηνιαία σύγκριση προμηθευτών LAB':'Αυτόματες αποστολές'}</h3>
   <p>Κατάστημα: <strong>{store.name}</strong>. Οι αναφορές είναι προσωρινές· δεν αποτελούν οικονομική πιστοποίηση ή χρέωση εργαζομένου.</p>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
   {!storeData&&!error&&<p>Ανάγνωση κατάστασης αποστολών…</p>}
@@ -91,7 +97,7 @@ function ReportDispatchSettings({company,store,request,supplier=false}){
    <p>Δεν αποστέλλονται παλιές ή ελλιπείς περίοδοι. Έναρξη επιτρεπόμενης περιόδου από {stamp(grant?.notBefore||storeData.activation?.notBefore)}. Οι αβέβαιες αποστολές δεν επαναλαμβάνονται αυτόματα.</p>
    <fieldset disabled={busy}>
     <legend>Περίοδοι και άδεια αποστολής</legend>
-    {supplier?<p>Μηνιαία αποστολή για το Εργαστήριο Δοκιμών.</p>:<>
+    {scoped?<p>{inventory?'Αυτόματη αποστολή αποτελεσμάτων μετά από κάθε επιλέξιμη οριστικοποιημένη απογραφή.':event?'Αυτόματη αποστολή μετά τη λήξη κάθε επιλέξιμης προσφοράς.':'Μηνιαία αποστολή για το Εργαστήριο Δοκιμών.'}</p>:<>
     {frequencies.map(([value,label])=><label key={value} style={{display:'inline-block',marginRight:16}}><input type="checkbox" checked={selected.includes(value)} onChange={e=>setSelected(old=>e.target.checked?[...old,value]:old.filter(x=>x!==value))}/>{label}</label>)}
     <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/>Εξουσιοδοτώ την αυτόματη αποστολή προσωρινών αναφορών μόνο για αυτό το κατάστημα και τις επιλεγμένες περιόδους.</label>
     <button type="button" disabled={!ack||!selected.length} onClick={()=>mutate('/grant',{expectedRevision:grant?.revision||0,active:true,allowedFrequencies:selected,explicitAuthorization:true},'Η εξουσιοδότηση αποθηκεύτηκε. Απαιτείται και εγκεκριμένος παραλήπτης.','PUT')}>Αποθήκευση εξουσιοδότησης</button>{' '}
@@ -103,7 +109,7 @@ function ReportDispatchSettings({company,store,request,supplier=false}){
     <p>Ως Super Admin καταχώρισε το email και πάτησε «Αποθήκευση και ενεργοποίηση». Με αυτή την ενέργεια εγκρίνεις την αποστολή των αναφορών αυτού του καταστήματος στον συγκεκριμένο παραλήπτη, για τις επιλεγμένες περιόδους. Δεν απαιτείται πρόσκληση ή κωδικός. Οι αυτόματες αναφορές χρησιμοποιούν την ίδια αποθηκευμένη λίστα παραληπτών.</p>
     <label>Νέο email<input aria-label="Νέο email αυτόματων αναφορών" type="email" maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label>
     <button type="button" disabled={!email||!selected.length} onClick={()=>authorize(email,storeData.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase()))}>Αποθήκευση και ενεργοποίηση</button>
-    {!supplier&&<details><summary>Προαιρετική πρόσκληση παραλήπτη</summary>
+    {!scoped&&<details><summary>Προαιρετική πρόσκληση παραλήπτη</summary>
     <button type="button" disabled={!email||!selected.length} onClick={()=>{const existing=storeData.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase())?.recipient;mutate('/invitations',{email,expectedVersion:existing?.version||0,...(existing?{recipientId:existing.recipientId}:{}),allowedFrequencies:selected},r=>r.alreadyConfirmed?'Η υπάρχουσα έγκριση του παραλήπτη διατηρήθηκε. Δεν στάλθηκε νέα πρόσκληση.':'Η πρόσκληση στάλθηκε. Ο παραλήπτης επιβεβαιώνει από το email του.')}}>Αποθήκευση email</button>
     <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
     <button type="button" disabled={!email||storeData.recipients?.filter(x=>!x.recipient.revokedAt).length>=5} onClick={()=>mutate('/recipients',{email,expectedVersion:0},'Ο παραλήπτης προστέθηκε χωρίς επιβεβαίωση.','PUT')}>Προσθήκη παραλήπτη</button>
@@ -113,7 +119,7 @@ function ReportDispatchSettings({company,store,request,supplier=false}){
      <strong>{r.email}</strong> · {r.revokedAt?'Ανακλημένος':authorizationBasis==='SUPER_ADMIN'||authorization?.basis==='SUPER_ADMIN'?(authorization?.basis==='SUPER_ADMIN'?<>Εγκεκριμένο από Super Admin · {stamp(authorization.authorizedAt)}</>:<>Χωρίς ενεργή έγκριση από Super Admin</>):<>{r.verifiedAt?'Επιβεβαιωμένο email':'Μη επιβεβαιωμένο email'} · {consent?.active?'Ενεργή συγκατάθεση':'Χωρίς ενεργή συγκατάθεση'}</>}
      {!r.revokedAt&&<>
       <button type="button" disabled={!selected.length} onClick={()=>authorize(r.email,{recipient:r,consent})}>Έγκριση και ενεργοποίηση</button>
-      {!supplier&&<><details><summary>Προαιρετική επιβεβαίωση παραλήπτη</summary>
+      {!scoped&&<><details><summary>Προαιρετική επιβεβαίωση παραλήπτη</summary>
       {(!r.verifiedAt||!consent?.active||selected.some(f=>!consent.allowedFrequencies?.includes(f)))&&<button type="button" disabled={!selected.length} onClick={()=>mutate('/invitations',{email:r.email,recipientId:r.recipientId,expectedVersion:r.version,allowedFrequencies:selected},'Η πρόσκληση στάλθηκε. Επιβεβαίωσε από τον σύνδεσμο του email.')}>Αποστολή πρόσκλησης</button>}
       <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
       <div><button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/verification`,{expectedVersion:r.version},'Στάλθηκε αίτημα επιβεβαίωσης. Ο κωδικός ισχύει για 10 λεπτά.')}>Αποστολή κωδικού email</button>{' '}

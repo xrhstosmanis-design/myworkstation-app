@@ -46,12 +46,15 @@ function integer(value,min=1){if(!Number.isSafeInteger(value)||value<min)invalid
 function detached(value){return JSON.parse(JSON.stringify(value));}
 function frozen(value){if(value&&typeof value==="object"){for(const v of Object.values(value))frozen(v);Object.freeze(value);}return value;}
 const output=value=>frozen(detached(value));
+function inputKeys(value){return ["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value?.reportType)?[...INPUT_KEYS,"eventId"]:INPUT_KEYS;}
 function normalizeInput(value){
-  safe(value);shape(value,INPUT_KEYS);const result={};
+  safe(value);shape(value,inputKeys(value));const result={};
   result.companyId=text(value.companyId,"companyId");result.storeId=text(value.storeId,"storeId");
   const cash=value.reportType==="CASH"&&["DAILY","WEEKLY","MONTHLY"].includes(value.frequency);
   const supplierComparison=value.reportType==="SUPPLIER_COMPARISON"&&value.frequency==="MONTHLY";
-  if(!cash&&!supplierComparison)invalid("Unsupported report kind.");
+  const promotionResult=["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value.reportType)&&value.frequency==="EVENT";
+  if(!cash&&!supplierComparison&&!promotionResult)invalid("Unsupported report kind.");
+  if(promotionResult)result.eventId=text(value.eventId,"eventId");
   result.reportType=value.reportType;result.frequency=value.frequency;
   if(instant(value.periodFrom)>=instant(value.periodTo))invalid("Nonempty exclusive period required.");
   result.periodFrom=value.periodFrom;result.periodTo=value.periodTo;
@@ -81,13 +84,16 @@ function normalizeInput(value){
 function slotId(input){
   // Versions/hashes deliberately excluded: editing a report/recipient setting
   // cannot create a second automatic-send permission for the same period.
-  return createHash("sha256").update(JSON.stringify([input.companyId,input.storeId,input.reportType,input.frequency,input.periodFrom,input.periodTo,input.recipient])).digest("hex");
+  const identity=["PROMOTION_RESULT","INVENTORY_RESULT"].includes(input.reportType)
+    ?[input.companyId,input.storeId,input.reportType,input.eventId,input.recipient]
+    :[input.companyId,input.storeId,input.reportType,input.frequency,input.periodFrom,input.periodTo,input.recipient];
+  return createHash("sha256").update(JSON.stringify(identity)).digest("hex");
 }
 function gate(input,current,now){
   safe(current);
   const administrator=current?.recipientAuthorizationBasis==='SUPER_ADMIN';
-  shape(current,[...INPUT_KEYS,"checkedAt",...GATES,"maintenanceBlocked",...(administrator?["recipientAuthorizationBasis","administratorAuthorizationActive"]:[])]);
-  const metadata=Object.fromEntries(INPUT_KEYS.map(k=>[k,current[k]]));
+  shape(current,[...inputKeys(input),"checkedAt",...GATES,"maintenanceBlocked",...(administrator?["recipientAuthorizationBasis","administratorAuthorizationActive"]:[])]);
+  const metadata=Object.fromEntries(inputKeys(input).map(k=>[k,current[k]]));
   if(JSON.stringify(normalizeInput(metadata))!==JSON.stringify(input)||current.checkedAt!==now)fail("STALE_GATE","Fresh exact scope/snapshot assertions required.");
   const required=administrator?GATES.filter(k=>!["recipientVerified","consentActive"].includes(k)):GATES;
   if(required.some(k=>current[k]!==true)||current.maintenanceBlocked!==false||administrator&&(current.administratorAuthorizationActive!==true||current.consentActive!==false||typeof current.recipientVerified!=='boolean'))fail("DELIVERY_BLOCKED","Delivery is not explicitly eligible.");

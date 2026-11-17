@@ -74,11 +74,11 @@ test('recovery build allowlist explicitly ships only the reviewed added full-pro
  assert.ok(!rules.includes('!ops/backup/lifecycle/*.json'),'no arbitrary profile packaging');
 });
 
-test('actual CI recovery image contains both fixed manifests and the pure selector, without running recovery',{
+test('actual CI recovery image contains all reviewed manifest selectors without running recovery',{
  skip:!process.env.MWS_LIFECYCLE_RECOVERY_IMAGE&&!process.env.CI?'Actual recovery image unavailable locally':false,timeout:30000
 },()=>{
  assert.ok(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE,'Actual CI recovery image is mandatory');
- const script=`import sys,json,hashlib\nsys.path.insert(0,'/backup/lifecycle')\nimport worker\nresult=[]\nfor env in ({},{'${key}':'BASE'},{'${key}':'${full}'}):\n p=worker.selected_manifest_file(env)\n result.append(hashlib.sha256(worker.compact(json.loads(p.read_text())).encode()).hexdigest())\ntry:\n worker.selected_manifest_file({'${key}':'../manifest.json'})\n raise AssertionError('Unknown profile accepted')\nexcept ValueError:\n pass\nprint(json.dumps(result))`;
+ const script=`import sys,json,hashlib\nsys.path.insert(0,'/backup/lifecycle')\nimport worker\nresult=[]\nfor env in ({},{'${key}':'BASE'},{'${key}':'${full}'},{'${key}':'AUTOMATIC_EVENT_REPORTS_V1'},{'${key}':'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'}):\n p=worker.selected_manifest_document(env)\n result.append(hashlib.sha256(worker.compact(p).encode()).hexdigest())\ntry:\n worker.selected_manifest_file({'${key}':'../manifest.json'})\n raise AssertionError('Unknown profile accepted')\nexcept ValueError:\n pass\nprint(json.dumps(result))`;
  const run=spawnSync('docker',['run','--rm','--network=none','--memory=128m','--pids-limit=40','--entrypoint','python3',process.env.MWS_LIFECYCLE_RECOVERY_IMAGE,'-c',script],{encoding:'utf8',timeout:25000,maxBuffer:1024*1024});
- assert.equal(run.status,0,run.stderr);assert.deepEqual(JSON.parse(run.stdout),[baseHash,baseHash,fullHash]);
+ assert.equal(run.status,0,run.stderr);assert.deepEqual(JSON.parse(run.stdout),[baseHash,baseHash,fullHash,...['AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'].map(profile=>hash(selectedStoreLifecycleManifest({[key]:profile})))]);
 });

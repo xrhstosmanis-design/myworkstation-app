@@ -143,3 +143,7 @@ export function createMonthlyInventoryCaptureInstallation(db,{sourceRevision,ena
   }
  });
 }
+
+// Shared strict control-table and bounded global-state observations for the
+// explicit event report profile transition. These helpers perform reads only.
+export {controlMetadata as readLifecycleInstallationControls,globalState as readLifecycleInstallationGlobalState};

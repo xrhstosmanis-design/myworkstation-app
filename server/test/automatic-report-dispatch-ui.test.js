@@ -71,3 +71,83 @@ test('mounted email/save sends one invitation action, reuses confirmed state and
   hold=true;await act(async()=>save().click());assert.ok(pending);await render('C');await act(async()=>pending({invitationIssued:true}));assert.doesNotMatch(document.querySelector('[role="status"]')?.textContent||'',/Η πρόσκληση στάλθηκε/);assert.equal(dom.window.localStorage.length,0);assert.equal(dom.window.sessionStorage.length,0);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]}
 });
+
+test('mounted promotion settings authorizes only EVENT through the selected store promotion endpoint',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'});
+ const keys=['window','document','navigator','HTMLElement','Node','Event','IS_REACT_ACT_ENVIRONMENT'];
+ const previous=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+ for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});
+ const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
+ const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/platform/AutomaticReportDispatchManager.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime']});
+ const module={exports:{}};
+ new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+ const calls=[];
+ const request=async(path,options={})=>{
+  calls.push({path,...options});
+  return options.method?{saved:true,externalActivationEnabled:false}:{schemaReady:true,activation:{enabled:false},policy:null,grant:null,recipients:[]};
+ };
+ const root=createRoot(document.getElementById('root'));
+ const button=text=>[...document.querySelectorAll('button')].find(element=>element.textContent===text);
+ try{
+  await act(async()=>root.render(React.createElement(module.exports.default,{company:{id:'company',name:'Example'},store:{id:'store-A',name:'Store A'},request})));
+  await act(async()=>button('Αποτελέσματα προσφορών').click());
+  assert.equal(button('Αποτελέσματα προσφορών').getAttribute('aria-pressed'),'true');
+  assert.match(calls.at(-1).path,/\/companies\/company\/stores\/store-A\/report-dispatch\/promotion-results$/);
+  assert.equal(calls.filter(call=>call.method).length,0);
+  await act(async()=>{
+   const email=document.querySelector('[aria-label="Νέο email αυτόματων αναφορών"]');
+   Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(email,'approved@example.invalid');
+   email.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+  });
+  await act(async()=>button('Αποθήκευση και ενεργοποίηση').click());
+  const writes=calls.filter(call=>call.method);
+  assert.equal(writes.length,1);
+  assert.match(writes[0].path,/\/stores\/store-A\/report-dispatch\/promotion-results\/recipients\/authorize$/);
+  assert.deepEqual(JSON.parse(writes[0].body),{email:'approved@example.invalid',expectedRecipientVersion:0,expectedAuthorizationRevision:0,expectedGrantRevision:0,expectedPolicyRevision:0,allowedFrequencies:['EVENT'],explicitAuthorization:true});
+  assert.match(document.body.textContent,/Η κεντρική αποστολή είναι κλειστή/);
+ }finally{
+  await act(async()=>root.unmount());
+  dom.window.close();
+  for(const [key,descriptor]of previous)descriptor?Object.defineProperty(globalThis,key,descriptor):delete globalThis[key];
+ }
+});
+
+test('mounted inventory settings authorizes only EVENT through the selected store inventory endpoint',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'});
+ const keys=['window','document','navigator','HTMLElement','Node','Event','IS_REACT_ACT_ENVIRONMENT'];
+ const previous=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+ for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});
+ const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
+ const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/platform/AutomaticReportDispatchManager.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime']});
+ const module={exports:{}};
+ new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+ const calls=[];
+ const request=async(path,options={})=>{
+  calls.push({path,...options});
+  return options.method?{saved:true,externalActivationEnabled:false}:{schemaReady:true,activation:{enabled:false},policy:null,grant:null,recipients:[]};
+ };
+ const root=createRoot(document.getElementById('root'));
+ const button=text=>[...document.querySelectorAll('button')].find(element=>element.textContent===text);
+ try{
+  await act(async()=>root.render(React.createElement(module.exports.default,{company:{id:'company',name:'Example'},store:{id:'store-A',name:'Store A'},request})));
+  await act(async()=>button('Αποτελέσματα απογραφής').click());
+  assert.equal(button('Αποτελέσματα απογραφής').getAttribute('aria-pressed'),'true');
+  assert.match(calls.at(-1).path,/\/companies\/company\/stores\/store-A\/report-dispatch\/inventory-result$/);
+  assert.equal(calls.filter(call=>call.method).length,0);
+  await act(async()=>{
+   const email=document.querySelector('[aria-label="Νέο email αυτόματων αναφορών"]');
+   Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(email,'approved@example.invalid');
+   email.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+  });
+  await act(async()=>button('Αποθήκευση και ενεργοποίηση').click());
+  const writes=calls.filter(call=>call.method);
+  assert.equal(writes.length,1);
+  assert.match(writes[0].path,/\/stores\/store-A\/report-dispatch\/inventory-result\/recipients\/authorize$/);
+  assert.deepEqual(JSON.parse(writes[0].body),{email:'approved@example.invalid',expectedRecipientVersion:0,expectedAuthorizationRevision:0,expectedGrantRevision:0,expectedPolicyRevision:0,allowedFrequencies:['EVENT'],explicitAuthorization:true});
+  assert.match(document.body.textContent,/Η κεντρική αποστολή είναι κλειστή/);
+ }finally{
+  await act(async()=>root.unmount());
+  dom.window.close();
+  for(const [key,descriptor]of previous)descriptor?Object.defineProperty(globalThis,key,descriptor):delete globalThis[key];
+ }
+});

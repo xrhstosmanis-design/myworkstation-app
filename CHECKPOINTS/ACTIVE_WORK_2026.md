@@ -81,6 +81,8 @@ Package products have their own barcode/button and store-specific sale price; co
 
 - POS εσωτερική διακίνηση · Διόρθωση αναγνωριστικού χειριστή στην κίνηση αποθέματος · [Checkpoint](CHANGES/2026-11-16-pos-transfer-minimize-lab.md) · LAB επαναδοκιμή εκκρεμεί.
 
+- 2026-11-17 · Νο 9 · Αυτόματα email προσφορών και απογραφής · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Προσφορές CI 5/5, προστέθηκαν απογραφή και lifecycle, ενιαίο CI και τελικό LAB εκκρεμούν.
+
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
 - Εσωτερική διακίνηση POS · Συμβάντα · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED. Καρτέλα POS με ελαχιστοποίηση σε προετοιμασία.

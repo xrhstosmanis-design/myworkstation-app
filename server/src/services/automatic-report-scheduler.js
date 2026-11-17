@@ -1,10 +1,11 @@
 // Explicitly started, bounded and drained by the existing server shutdown work.
 // No timers or database work run at import or factory construction.
-export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',activationProvider,work,clock=()=>new Date().toISOString(),intervalMs=60000,batchSize=5,maxAttempts=15,timers={setInterval,clearInterval}}){
+export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',activationProvider,work,clock=()=>new Date().toISOString(),intervalMs=60000,batchSize=5,maxAttempts=15,timers={setInterval,clearInterval},readPromotionEvents,readInventoryEvents}){
  if(!db||!dispatcher||typeof dispatcher.dispatch!=='function'||typeof activationProvider!=='function'||!work||typeof work.track!=='function'||typeof work.onStop!=='function'||!Number.isInteger(intervalMs)||intervalMs<60000||!Number.isInteger(batchSize)||batchSize<1||batchSize>20||!Number.isInteger(maxAttempts)||maxAttempts<1||maxAttempts>60)throw new TypeError('Bounded scheduler dependencies required');
- const frequencies={CASH:['DAILY','WEEKLY','MONTHLY'],SUPPLIER_COMPARISON:['MONTHLY']};
+ const frequencies={CASH:['DAILY','WEEKLY','MONTHLY'],SUPPLIER_COMPARISON:['MONTHLY'],PROMOTION_RESULT:['EVENT'],INVENTORY_RESULT:['EVENT']};
  if(!Object.hasOwn(frequencies,reportType))throw new TypeError('Unsupported scheduled report type');
  let timer=null,inflight=null,stopped=false,cursor=null;
+ const eventCursors=new Map();
  const stop=()=>{stopped=true;if(timer!==null){timers.clearInterval(timer);timer=null}};
  work.onStop(stop);
  const enabled=()=>{const c=activationProvider();return c?.valid&&c.enabled?c:null};
@@ -19,12 +20,27 @@ export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',
   for(const row of rows){
    if(stopped||work.stopping||attempted>=maxAttempts)break;
    const latest=enabled();if(!latest||latest.fingerprint!==control.fingerprint)break;
-   for(const frequency of frequencies[reportType]){
+   const eventKey=JSON.stringify([row.companyId,row.storeId]);
+   let scopes=frequencies[reportType].map(frequency=>({...row,frequency}));
+   if(['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)){
+    const reader=reportType==='INVENTORY_RESULT'
+     ?readInventoryEvents??(await import('./inventory-result-email.js')).listDueInventoryResultEvents
+     :readPromotionEvents??(await import('./promotion-result-email.js')).listDuePromotionResultEvents;
+    const events=await reader(db,{...row,now:clock(),limit:5,afterEventId:eventCursors.get(eventKey)||''});
+    if(!Array.isArray(events)||events.length>5)throw new Error('Invalid bounded report events');
+    scopes=events.map(event=>({...row,frequency:'EVENT',eventId:event.eventId}));
+    if(events.length===0)eventCursors.delete(eventKey);
+   }
+   for(const scope of scopes){
     if(stopped||work.stopping||attempted>=maxAttempts)break;
     const fresh=enabled();if(!fresh||fresh.fingerprint!==control.fingerprint)break;
-    const result=await dispatcher.dispatch({companyId:row.companyId,storeId:row.storeId,frequency},{maxAttempts:Math.min(5,maxAttempts-attempted)});
+    const result=await dispatcher.dispatch(scope,{maxAttempts:Math.min(5,maxAttempts-attempted)});
     if(!Number.isInteger(result.attempted)||result.attempted<0||result.attempted>Math.min(5,maxAttempts-attempted))throw new Error('Invalid dispatcher attempt count');
     attempted+=result.attempted;
+    if(['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)){
+     eventCursors.delete(eventKey);eventCursors.set(eventKey,scope.eventId);
+     if(eventCursors.size>1000)eventCursors.delete(eventCursors.keys().next().value);
+    }
    }
    cursor={companyId:row.companyId,storeId:row.storeId};
   }
