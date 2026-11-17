@@ -11,7 +11,7 @@ test('optional reviewed mode preserves old settings shape and requires an explic
 });
 
 import {readAutomaticDailyCashPreview} from '../src/services/automatic-report-source.js';
-import {buildAutomaticCashPayload} from '../src/services/automatic-report-cash-payload.js';
+import {automaticReviewedMailText,buildAutomaticCashPayload} from '../src/services/automatic-report-cash-payload.js';
 test('explicit reviewed mode fails closed until reviewed result is available',async()=>{
  const configuration={...base(),reviewedReconciliation:true};
  const rows=[7,15,23].map((hour,i)=>({id:String(i),companyId:'c',storeId:'s',terminalPos:'MAIN',status:'CLOSED',openedAt:new Date(`2026-10-15T${String(hour).padStart(2,'0')}:00:00+03:00`),closedAt:new Date(i===2?'2026-10-16T07:00:00+03:00':`2026-10-15T${hour+8}:00:00+03:00`),variance:0}));
@@ -36,7 +36,7 @@ test('internal selection rejects invalid, duplicate and stale requests before re
 import {hash} from '../src/services/cash-reconciliation-contract.js';
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 import {projectAutomaticReviewedReport,validateAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
-import {canSendProvisionalCashReport} from '../src/services/cash-reviewed-automatic-contract.js';
+import {canSendProvisionalCashReport,validateAutomaticReviewedReceipt} from '../src/services/cash-reviewed-automatic-contract.js';
 test('common reviewed report preserves separate cash and cards and rejects changed source or totals',()=>{
  const s={session:{id:'a',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:'employee',openedByName:'Σούλα',openedAt:'2026-10-21T06:00:00Z',closedAt:'2026-10-21T14:00:00Z',shiftLabel:'Πρωινή'},sourceHash:hash('session'),initialCents:-700,basisCents:-700,cardCents:20000,explainedCents:0,reviewStatus:'VALID',nextClosed:true,transactions:[{id:'PRIVATE_TRANSACTION'}]};
  s.expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:12000,occurredAt:'2026-10-21T07:00:00.000Z'}];
@@ -76,6 +76,21 @@ test('automatic calculation crosses the strict consumer once with open findings,
  const source={store:{id:'store',name:'LAB'},rule:{mode:'FULL',carryOverEnabled:true},sessions:new Map([['a',s]]),selectedIds:['a'],period:{from:'2026-10-21',to:'2026-10-21'},coverage:'BOUNDED_CLOSED_SHIFTS'};
  const report=projectAutomaticReviewedReport(projectReconciliation(source,[]));
  assert.equal(report.rows[0].automaticAudit.status,'CALCULATED');assert.equal(report.rows[0].reviewed,false);assert.equal(report.totals.shortageCents,0);assert.equal(report.totals.pending,1);assert(canSendProvisionalCashReport(report));
+ const rule={deliveryTerminalPattern:'DELIVERY'};
+ const groups=[{companyId:'co',storeId:'store',terminalPos:'MAIN',cashChain:'STORE',day:'2026-10-21',rows:[{sessionId:'a',employeeId:'employee',employeeName:'Σούλα',variance:-7}]}];
+ const sourceFingerprint=hash('source');
+ const receipt={status:'READY',reason:null,companyId:'co',storeId:'store',generation:'1',head:'ROOT',sourceFingerprint,report};
+ const dailyEvidence={complete:false,unassigned:[],shifts:[{sessionId:'a',unresolved:[{reason:'UNCERTAIN_LINE',count:1}],comparisons:[],omittedComparisons:0,netlink:null}]};
+ const unsigned={...receipt,dailyEvidence};
+ const reviewedCash={...unsigned,fingerprint:hash(unsigned)};
+ const context={companyId:'co',storeId:'store',groups,rule,dayStartHour:7,sourceFingerprint};
+ assert(validateAutomaticReviewedReceipt(reviewedCash,context));
+ assert(validateAutomaticReviewedReceipt({...receipt,fingerprint:hash(receipt)},context));
+ const wrongShift={...unsigned,dailyEvidence:{...dailyEvidence,shifts:[{...dailyEvidence.shifts[0],sessionId:'foreign'}]}};
+ assert(!validateAutomaticReviewedReceipt({...wrongShift,fingerprint:hash(wrongShift)},context));
+ const content={reviewedCash,scope:{companyId:'co',storeId:'store'},groups,rule,period:{dayStartHour:7},sourceFingerprint,disclosures:[],frequency:'DAILY'};
+ assert.match(automaticReviewedMailText(content),/Αβέβαιη ανάγνωση γραμμής/);
+ assert.throws(()=>automaticReviewedMailText({...content,frequency:'MONTHLY'}));
  assert.match(report.text,/Εκκρεμότητα: Αναμονή κλεισίματος/);assert(!JSON.stringify(report).includes('automaticSnapshot'));assert(!JSON.stringify(report).includes('automaticTransactions'));
  assert.throws(()=>projectAutomaticReviewedReport({...projectReconciliation(source,[]),rows:[{...projectReconciliation(source,[]).rows[0],automaticAudit:{...report.rows[0].automaticAudit,humanApproval:true}}]}));
  s.automaticSnapshot.cashSales=1;const changed=projectAutomaticReviewedReport(projectReconciliation(source,[]));assert.equal(changed.rows[0].automaticAudit.status,'INCOMPLETE');assert.equal(canSendProvisionalCashReport(changed),false);

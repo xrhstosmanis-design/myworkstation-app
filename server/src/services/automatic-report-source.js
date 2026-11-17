@@ -83,7 +83,7 @@ export async function readAutomaticCashPreviewInTransaction(tx,{actorId,companyI
     // snapshot has totals; original employee amounts always remain unadjusted.
     const groups=ready?summarizeCashVariances(rows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
     const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,frequency,period,configuration,rule,rows})).digest("hex");
-    const reviewedCash=configuration.reviewedReconciliation===true?await readReviewedAutomaticCash(tx,{actorId,companyId,storeId,period,rows,groups,rule,sourceFingerprint,ready}):null;
+    const reviewedCash=configuration.reviewedReconciliation===true?await readReviewedAutomaticCash(tx,{actorId,companyId,storeId,period,rows,groups,rule,sourceFingerprint,ready,includeDailyEvidence:frequency==="DAILY"}):null;
     return {kind:`${frequency}_CASH_PREVIEW`,frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
       ...(configuration.reviewedReconciliation===true?{reviewedReconciliation:true,reviewedCash}:{}),
       complete:rows.length<=sourceLimit,groups,...(frequency==="MONTHLY"?{openingOperatorSummary:ready?summarizeOpeningOperators(groups):null}:{}),sourceFingerprint,generatedAt:new Date(now),

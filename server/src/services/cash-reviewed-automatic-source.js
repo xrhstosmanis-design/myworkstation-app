@@ -7,7 +7,7 @@ import {projectAutomaticReviewedReport,validateAutomaticReviewedReport,canSendPr
 // This adapter runs inside the caller's existing authenticated, read-only
 // business-day transaction. It never calls the handwriting provider or writes
 // to the financial ledger. Failure always stays a hold, never a zero balance.
-export async function readReviewedAutomaticCash(tx,{actorId,companyId,storeId,period,rows,groups,rule,sourceFingerprint,ready}){
+export async function readReviewedAutomaticCash(tx,{actorId,companyId,storeId,period,rows,groups,rule,sourceFingerprint,ready,includeDailyEvidence=false}){
  const hold=reason=>({status:'HOLD',reason,report:null});
  if(!ready)return hold('SOURCE_NOT_READY');
  try{
@@ -17,11 +17,11 @@ export async function readReviewedAutomaticCash(tx,{actorId,companyId,storeId,pe
   const state=await readLifecycleGeneration(tx,scope);
   if(state.maintenance||state.retired)return hold('SCOPE_UNAVAILABLE');
   scope.generation=state.generation;
-  const selected=await createCashReconciliationRepository(tx).readSelectedInTransaction(tx,scope,{from:period.fromDay,to:period.toDay},rows.map(r=>r.id));
+  const selected=await createCashReconciliationRepository(tx).readSelectedInTransaction(tx,scope,{from:period.fromDay,to:period.toDay},rows.map(r=>r.id),{includeDailyEvidence});
   const report=projectAutomaticReviewedReport(selected.report);
   if(!validateAutomaticReviewedReport(report,{companyId,storeId,groups,rule,dayStartHour:period.dayStartHour}))return hold('REVIEWED_SOURCE_MISMATCH');
   const complete=canSendProvisionalCashReport(report);
-  const result={status:complete?'READY':'HOLD',reason:complete?null:'REVIEW_REQUIRED',companyId,storeId,generation:state.generation,head:selected.head,sourceFingerprint,report};
+  const result={status:complete?'READY':'HOLD',reason:complete?null:'REVIEW_REQUIRED',companyId,storeId,generation:state.generation,head:selected.head,sourceFingerprint,report,...(selected.dailyEvidence?{dailyEvidence:selected.dailyEvidence}:{})};
   return {...result,fingerprint:hash(result)};
  }catch{return hold('REVIEWED_SOURCE_UNAVAILABLE')}
 }
