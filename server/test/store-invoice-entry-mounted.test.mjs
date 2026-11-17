@@ -153,11 +153,12 @@ test("selected-store direct invoice entry retains native view and boundaries",as
       await render("B",{navigationLocked:true});assert.equal(button("Θυρίδα τιμολογίων καταστήματος").disabled,true);await open();assert.equal(inbox(),null);
     });
     const launcherOpen=()=>emit("mws:commerce-open",{view:"operations",storeId:"B"});
+    const invoiceOnly=host=>{assert.ok(host.querySelector(".invoice-inbox"));assert.equal(host.querySelector("[data-purchase-orders-launch],[data-supplier-control-launch],[data-customer-control-launch],[data-price-catalog-launch]"),null)};
     const allButtons=host=>{assert.ok(host,"active hub");for(const selector of ["[data-purchase-orders-launch]","[data-supplier-control-launch]","[data-customer-control-launch]","[data-price-catalog-launch]"])assert.ok(host.querySelector(selector),selector)};
     const closeLauncher=()=>act(async()=>{const b=document.querySelector('.commerce-overlay button[title="Κλείσιμο"]');assert.ok(b);assert.equal(b.disabled,false);b.click()});
     await t.test("embedded inbox refuses a second launcher hub and explicit close restores native installers",async()=>{
       await reset();await render();await click("Πληρωμές Ιδιοκτήτη / Διαχειριστή");const payment=document.querySelector('[data-fixture="OwnerPaymentQuickActions.jsx"]');payment.value="untouched payment draft";
-      await open();await settle();const first=inbox();allButtons(document.querySelector(".commerce-hub"));await launcherOpen();await settle();
+      await open();await settle();const first=inbox();invoiceOnly(document.querySelector(".commerce-hub"));await launcherOpen();await settle();
       assert.equal(document.querySelectorAll(".commerce-hub").length,1,"must not mount two native commerce hubs");assert.equal(document.querySelector(".commerce-overlay"),null,"existing inbox must refuse competing launcher");assert.equal(inbox(),first);assert.match(document.querySelector('[role="alert"]').textContent,/Κλείσε πρώτα/);
       await close();await launcherOpen();await settle();assert.equal(inbox(),null);assert.equal(document.querySelectorAll(".commerce-hub").length,1);allButtons(document.querySelector(".commerce-overlay .commerce-hub"));
       assert.equal(document.querySelector('[data-fixture="OwnerPaymentQuickActions.jsx"]'),payment);assert.equal(payment.value,"untouched payment draft");
@@ -165,7 +166,7 @@ test("selected-store direct invoice entry retains native view and boundaries",as
     await t.test("existing launcher refuses embedded entry without discarding its mounted state",async()=>{
       await reset();await render();await launcherOpen();await settle();const first=document.querySelector(".commerce-overlay .commerce-hub");allButtons(first);await open();await settle();
       assert.equal(document.querySelector('[aria-label="Θυρίδα επιλεγμένου καταστήματος"]'),null,"existing launcher owns the workspace");assert.equal(document.querySelectorAll(".commerce-hub").length,1);assert.equal(document.querySelector(".commerce-overlay .commerce-hub"),first);assert.match(document.querySelector('[role="alert"]').textContent,/Κλείσε πρώτα/);
-      await closeLauncher();await open();await settle();assert.ok(inbox());allButtons(document.querySelector(".commerce-hub"));assert.equal(document.querySelectorAll(".commerce-hub").length,1);
+      await closeLauncher();await open();await settle();assert.ok(inbox());invoiceOnly(document.querySelector(".commerce-hub"));assert.equal(document.querySelectorAll(".commerce-hub").length,1);
     });
     await t.test("minimized launcher still owns its workspace until explicit close",async()=>{
       await reset();await render();await launcherOpen();await settle();await act(async()=>document.querySelector('.commerce-overlay button[title="Ελαχιστοποίηση"]').click());

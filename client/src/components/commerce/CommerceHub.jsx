@@ -89,7 +89,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
 
   const loadAi=async()=>{if(active.has("AI_READER"))setAiStatus(await api("/api/commerce/ai-reader/status"))};
 
-  useEffect(()=>{loadCatalog()},[]);
+  useEffect(()=>{if(initialTab!=="documents")loadCatalog()},[initialTab]);
   useEffect(()=>{
     setError("");setMessage("");
     if(tab==="inventory")loadInventory().catch(e=>setError(e.message));
@@ -160,6 +160,8 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
 
   const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
 
+  if(initialTab==="documents")return <div className="commerce-hub">{active.has("DOCUMENTS")&&<InvoiceInboxPanel api={api} stores={stores}/>}</div>;
+
   return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}${tab==="lowValue"?" low-value-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
     <section className="panel">
       {tab==="orderSuggestions"&&<button type="button" className="order-suggestions-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}
@@ -229,7 +231,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
       setMessage(`Κατάστημα: ${row.storeName} · Αναγνωριστικό: ${row.sourceId}`);
     }}/>}
 
-    {tab==="documents"&&(initialTab!=="documents"||active.has("DOCUMENTS"))&&<InvoiceInboxPanel key={pendingSourceStoreId} api={api} stores={pendingSourceStoreId?[...stores].sort((a,b)=>(a.id===pendingSourceStoreId?-1:b.id===pendingSourceStoreId?1:0)):stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
+    {tab==="documents"&&<InvoiceInboxPanel key={pendingSourceStoreId} api={api} stores={pendingSourceStoreId?[...stores].sort((a,b)=>(a.id===pendingSourceStoreId?-1:b.id===pendingSourceStoreId?1:0)):stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
 
     {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi} focusJobId={aiFocusJobId}/>}
 
