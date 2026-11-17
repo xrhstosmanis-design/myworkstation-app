@@ -62,8 +62,19 @@ export async function readReconciliationSession(db,scope,id,rule,eventCollector)
   if(deferEvents)eventCollector.push(result);
   return result;
 }
-export async function readStoredCashPaperEvidence(db,scope,{sessions,selectedIds,period,store}){
-  const discovered=await readCashChatEvidence(db,scope),repository=createCashPaperRepository(db);
+export async function readStoredCashPaperEvidence(db,scope,{sessions,selectedIds,period,store},{checkChatSchema=false}={}){
+  // A failed query on a legacy schema aborts the scheduler's PostgreSQL
+  // snapshot even when the discovery layer catches the exception.
+  const [schema]=checkChatSchema?await db.$queryRaw`
+    SELECT COUNT(*)::int = 10 AS "available" FROM pg_attribute
+    WHERE attrelid=to_regclass(format('%I.%I',current_schema(),'StoreChatMessage'))
+      AND attnum>0 AND NOT attisdropped
+      AND attname IN ('id','companyId','storeId','category','createdAt','attachmentName',
+        'attachmentMimeType','attachmentSize','attachmentChecksum','attachmentData')
+  `:[{available:true}];
+  const discovered=schema?.available?await readCashChatEvidence(db,scope)
+    :{status:'UNAVAILABLE',reason:'CHAT_SOURCE_UNAVAILABLE',sources:[]};
+  const repository=createCashPaperRepository(db);
   const {discovery,papers}=await readStoredCashPaperPreview({repository,scope,discovery:discovered,admitted:boundAutomaticPaperDiscovery(discovered),byteLimit:automaticPaperByteLimit});
   return projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds,period,storeName:store.name});
 }

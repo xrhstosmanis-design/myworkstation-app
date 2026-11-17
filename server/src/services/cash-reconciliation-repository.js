@@ -85,7 +85,7 @@ export function createCashReconciliationRepository(db){
     for(const id of ids){
       sessions.set(id,{...sessions.get(id),netlinkEvidence:netlink.get(id)??null});
     }
-    const paper=await readStoredCashPaperEvidence(tx,scope,{...source,sessions});
+    const paper=await readStoredCashPaperEvidence(tx,scope,{...source,sessions},{checkChatSchema:true});
     return {report,head:chain.head,generation:scope.generation,dailyEvidence:projectDailyCashEvidence(paper,netlink,ids)};
   }
   async function apply(scope,actor,request){
