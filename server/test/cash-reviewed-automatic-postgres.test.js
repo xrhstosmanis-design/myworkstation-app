@@ -43,7 +43,14 @@ test('isolated postgres reviewed offset and confirmations feed exact business sh
   const configuration={dayStartHour:7,secondShiftStartHour:15,thirdShiftStartHour:23,terminals:[{terminalPos:'MAIN',requiredSlots:[1,2,3]}],cashRule:{mode:'FULL',deliveryTerminalPattern:'DELIVERY',carryOverEnabled:true,posEftposEnabled:true},reviewedReconciliation:true};
   const input={actorId:'actor',companyId:'co',storeId:'store',day:'2026-10-21',configuration,settingsVersion:1,now:new Date('2026-10-22T09:00:00+03:00')};
   const automaticBefore=await db.$queryRaw`SELECT * FROM "CashShiftSession" ORDER BY "id"`,automaticTx=await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`;
-  const automatic=await db.$transaction(async tx=>{await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');return readAutomaticCashPreviewInTransaction(tx,input)},{isolationLevel:'RepeatableRead',timeout:30000});
+  const automatic=await db.$transaction(async tx=>{
+   await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+   const preview=await readAutomaticCashPreviewInTransaction(tx,input);
+   assert.equal((await tx.$queryRaw`SELECT 1 AS n`)[0].n,1,'legacy paper schema must leave the read-only snapshot usable');
+   return preview;
+  },{isolationLevel:'RepeatableRead',timeout:30000});
+  assert.equal(automatic.reviewedCash.dailyEvidence.complete,false);
+  assert.deepEqual(automatic.reviewedCash.dailyEvidence.shifts.map(shift=>shift.sessionId),['a','b','c']);
   assert.equal(automatic.ready,true);assert.equal(automatic.reviewedCash.status,'READY');assert(automatic.reviewedCash.report.rows.every(r=>r.automaticallyCalculated&&!r.reviewed&&r.reviewedBy===null));
   assert.equal(automatic.reviewedCash.report.calculatedResult.shortageCents,1000);assert.equal(automatic.reviewedCash.report.calculatedResult.surplusCents,800);
   assert.equal(automatic.reviewedCash.report.totals.shortageCents,0);

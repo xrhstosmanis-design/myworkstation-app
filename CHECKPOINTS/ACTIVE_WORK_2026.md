@@ -1,5 +1,9 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-17 · Νο 13 · Κοινό φίλτρο ΦΠΑ για CSV, οθόνη και εκτύπωση · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · CI και LAB εκκρεμούν.
+
+- 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
+
 - 2026-11-17 · Νο 27 · Κεντρική Διαχείριση και σελίδα Ιδιοκτήτη · [Checkpoint](CHANGES/2026-11-17-no27-central-owner.md) · Τοπική υλοποίηση στο `work/no27-central-owner`, 96 συνδυασμένοι τοπικοί έλεγχοι και build PASS · CI και LAB εκκρεμούν.
 
 - 2026-11-17 · #23 TABLE_SERVICE · Ενιαίο συνθετικό HTTP E2E · [Checkpoint](CHANGES/2026-11-17-table-service-combined-ci.md) · CI και hosted LAB εκκρεμούν.
@@ -438,3 +442,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 17/11/2026 — Νο 3: είσοδος στη Θυρίδα επιλεγμένου καταστήματος. [Checkpoint](CHANGES/2026-11-17-no3-invoice-entry-port.md).
 
 - Νο 34 · [Έγκριση Super Admin στη μηνιαία αποστολή](CHANGES/2026-11-17-supplier-admin-eligibility.md). Τοπικοί έλεγχοι PASS. Παράδοση LAB εκκρεμεί.
+
+- 17/11/2026 · Νο 2, Θυρίδα myDATA, POS και πληρωμές. [Συνέχεια και ενιαία δοκιμή LAB](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).

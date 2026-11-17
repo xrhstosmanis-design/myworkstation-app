@@ -4,7 +4,9 @@ import {cashIssueQuestion} from './cash-issue-replies.js';
 import {readLifecycleGeneration,assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {createCashPaperRepository} from './cash-paper-repository.js';
 import {reconciliationEntity,reconciliationLimit,scopeKey,hash,actionId,requestHash,chainState,activeRecords,reconcileError,transactionMatchesPaper,periodSchema} from './cash-reconciliation-contract.js';
-import {readReconciliationSources,readReconciliationSession} from './cash-reconciliation-source.js';
+import {readCashNetlinkShiftEvidence} from './cash-netlink-shift-evidence.js';
+import {projectDailyCashEvidence} from './cash-daily-delivery-evidence.js';
+import {readReconciliationSources,readReconciliationSession,readStoredCashPaperEvidence} from './cash-reconciliation-source.js';
 import {projectReconciliation,immediateCashPair} from './cash-reconciliation-report.js';
 import {cashReportRowDay} from '../../../client/src/lib/cash-report-period.js';
 import {readKioskCashEvidence} from './cash-kiosk-imports.js';
@@ -64,7 +66,7 @@ export function createCashReconciliationRepository(db){
   async function generationFor(tx,scope){const s=await readLifecycleGeneration(tx,scope);if(s.maintenance||s.retired)throw reconcileError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
   // Internal consumer only: the caller supplies session IDs from its trusted,
   // same-transaction business-window query. This is not a public ID-list API.
-  async function readSelectedInTransaction(tx,scope,scanPeriod,sessionIds){
+  async function readSelectedInTransaction(tx,scope,scanPeriod,sessionIds,{includeDailyEvidence=false}={}){
     if(!periodSchema.safeParse(scanPeriod).success||!Array.isArray(sessionIds)||!sessionIds.length||sessionIds.length>200||sessionIds.some(id=>typeof id!=='string'||!id.trim())||new Set(sessionIds).size!==sessionIds.length)throw reconcileError('CASH_RECONCILIATION_SCOPE_INVALID',400);
     if(await generationFor(tx,scope)!==scope.generation)throw reconcileError('STORE_LIFECYCLE_STALE_GENERATION');
     const chain=await state(tx,scope);
@@ -77,7 +79,14 @@ export function createCashReconciliationRepository(db){
     if(!days.every(d=>typeof d==='string')||(Date.parse(displayPeriod.to)-Date.parse(displayPeriod.from))/86400000>=32)throw reconcileError('CASH_RECONCILIATION_LIMIT');
     const ids=chosen.map(s=>s.session.id);
     const {report}=await materialize(tx,scope,scanPeriod,chain,ids,{ids,displayPeriod},source);
-    return {report,head:chain.head,generation:scope.generation};
+    if(!includeDailyEvidence)return {report,head:chain.head,generation:scope.generation};
+    const netlink=await readCashNetlinkShiftEvidence(tx,scope,ids);
+    const sessions=new Map(source.sessions);
+    for(const id of ids){
+      sessions.set(id,{...sessions.get(id),netlinkEvidence:netlink.get(id)??null});
+    }
+    const paper=await readStoredCashPaperEvidence(tx,scope,{...source,sessions},{checkChatSchema:true});
+    return {report,head:chain.head,generation:scope.generation,dailyEvidence:projectDailyCashEvidence(paper,netlink,ids)};
   }
   async function apply(scope,actor,request){
     return db.$transaction(async tx=>{

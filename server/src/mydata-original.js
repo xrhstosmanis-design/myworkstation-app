@@ -115,7 +115,22 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   const jobs=await tx.$queryRaw`SELECT "id","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "attachmentId"=${inbox[0].attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
   const job=jobs[0];
   const common=await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId);
-  if(common && (!row.rawPayload?.mydataDraftOrderId || common.purchaseOrderId!==row.rawPayload.mydataDraftOrderId))return common;
+  if(common){
+    if(common.ok && job?.id && ["RECEIVED","IN_REVIEW"].includes(inbox[0].status)
+      && /^(?:1\.[1-6]|2\.[1-4])$/.test(String(row.invoiceType||"")) && (!row.currency||row.currency==="EUR") && Number(row.totalGross)>0){
+      const drafts=await tx.$queryRaw`SELECT o."id",o."supplierId" FROM "PurchaseOrder" o
+        JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
+        WHERE o."id"=${common.purchaseOrderId} AND d."id"=${common.documentId} AND o."companyId"=${companyId} AND o."storeId"=${storeId}
+          AND o."status"='NEW' AND d."status"='DRAFT' AND d."documentType"='INVOICE'
+          AND NOT EXISTS (SELECT 1 FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id")
+          AND NOT EXISTS (SELECT 1 FROM "PurchaseDocumentLine" l WHERE l."purchaseDocumentId"=d."id") FOR UPDATE OF o,d`;
+      const draft=drafts[0];
+      if(draft && await prefillReviewDraft(tx,row,job,companyId,storeId,draft.id,draft.supplierId)){
+        await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Κοινό πρόχειρο POS/myDATA — Έλεγχος γραμμών"},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+      }
+    }
+    return common;
+  }
   if(job?.purchaseDocumentId||row.rawPayload?.mydataDraftOrderId){
     const orders=await tx.$queryRaw`SELECT o."id",o."status",o."supplierId" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId" WHERE d."id"=${job?.purchaseDocumentId||row.rawPayload.mydataDraftDocumentId} AND o."companyId"=${companyId} AND o."storeId"=${storeId} LIMIT 1 FOR UPDATE OF o`;
     if(!orders[0])throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
