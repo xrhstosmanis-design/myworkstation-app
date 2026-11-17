@@ -1,3 +1,19 @@
+## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — source candidate / AWAITING CI AND LAB
+
+Approved assignment #4008 merged `0a1e6f4`; causal amendment #4009 merged `be6c767` before their source edits. Source candidate is based on `be6c767`. Owner remains /root. No deployment or live financial operation performed.
+
+Implemented shared QR mobile-photo reception, camera capture and page management in both the plain pending-invoice panel and the upper FAST_PAYMENT_WITHOUT_DRAFT close recovery form. Each acquisition is fenced to store, API, selected original payment and fingerprint; cancellation, replacement and unmount reject late uploads/streams. Preserve one PDF or up to five photos and existing 6.5 MB total limits. Submission is explicit, serialized and reuses prepared original bytes after an uncertain response. Confirmed handoff refreshes close pending state; plain capture remains without AI, existing fast recovery retains its guarded AI/draft semantics.
+
+Root cause reproduced in isolated PostgreSQL: JavaScript invoiceToken deaccented Greek, but the SQL lookup discarded the accented letter itself. Synthetic number `ΆνευΧ-12345` could not find its own payment. SQL now applies NFD normalization before uppercase/filtering, matching JavaScript. The before regression had 6 failures; the corrected native Unicode suite and retained pending-invoice fixture all pass. Company/supplier/store/type/reversal/full-number/amount guards and the existing 0.05 EUR tolerance remain unchanged. No production repair, re-payment, historical replay, stock/fiscal action or shift-close bypass.
+
+Local validation (Node 24.22.1):
+- 67/67 protected tests PASS, 0 failed, 0 skipped: invoice-payment-reuse-v1, pos-fast-handoff-recovery-v1, pos-pending-invoices, pos-pending-invoices-ui and new pos-pending-invoices-mobile-ui.
+- 33/33 isolated native PostgreSQL 18.6 tests PASS, 0 failed, 0 skipped: new invoice-payment-unicode-postgres plus retained pos-pending-invoices-postgres.
+- Initial retained native fixture ran with the embedded server's Europe/Athens timezone and had three dependent assertion failures. The unchanged fixture passed when the isolated server was configured to UTC, matching its expected test environment. No assertion, timeout or skip was relaxed.
+- `npm run build` PASS, Vite 10.64s; TABLE_SERVICE bundle verification PASS. `git diff --check` PASS.
+
+Hosted LAB and physical mobile/camera acceptance remain NOT TESTED, to join the user's final common test session. Source merge/deployment requires the owner's approval; only documentation claims have been approved for merge so far. Next: full exact-head Node20 CI, review the source PR, then approved installation and the final shared LAB session. Do not ask the user to repeat the real supplier payment.
+
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — causal amendment before source
 
 User screenshot reports paid invoice recovery rejected by fast-handoff despite the pending close row. The upper FAST_PAYMENT_WITHOUT_DRAFT recovery form is distinct from the plain pending panel. Read-only source diagnosis: invoiceToken removes NFD combining marks, while findInvoicePayment SQL currently uppercases then drops non-range characters, losing precomposed accented Greek letters. Synthetic reproduction target: ΆνευΧ-12345. This is a suspected cause pending native PostgreSQL proof, not a repair of live data.
@@ -23,3 +39,9 @@ Evidence: current pending attachment UI offers a file input only. StoreShiftClos
 Read locally: AGENTS.md, COMMON_WORK_RULE.md, authoritative tracker/pending registry, active registry, deferred-invoice checkpoint of 26 October, shift invoice-draft guard checkpoint of 10 November, and POS PASS manual. Inspected main history for the affected panel. No current independent QR/camera claim for this missing-invoice attachment UI was found. This claim does not transfer any other owner scope.
 
 Next action: approve and merge this documentation-only claim, then implement the bounded panel change and its mounted tests. No source edits before the claim is on main.
+
+Local test log SHA256 (full bytes retained in the task workspace):
+- `shift-unicode-before.log`: `015036d1d63b4d35e3a19bc40231a6a6ff65b74b2f515e1a72f0434e62bdd41b`
+- `shift-unicode-after-utc.log`: `e2b434ab19a17ce8f6601f6446f33d95f5cdd70c3e0827c2e8815a2d26a70cf5`
+- `shift-mobile-protected.log`: `f994fc649814e0d26c2187841eb09b840052c9adbe088d5bf112414f38dd13b9`
+- `shift-mobile-build.log`: `65eac8d220552a42c6c0f53f34d2d3b5a116d43b24e2cd217733273c4497faec`
