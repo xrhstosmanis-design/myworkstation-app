@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import express from 'express';
 import {staffCapabilities,staffProfiles,changeStaffCapability,validStaffCapabilities,staffRequestCapability} from '../../shared/backoffice-staff.mjs';
-import {enforceBackofficeStaff,requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
+import {previewPurchaseOrderCancel,cancelPurchaseOrder} from '../src/services/purchase-order-reopen.js';
+import {enforceBackofficeStaff,requireStaffGrant,requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
 
 const expense={type:'OTHER_EXPENSE',amount:2,evidenceMode:'NO_DOCUMENT',description:'Synthetic expense',responsibilityAcknowledged:true,paymentSource:'EXTERNAL',paymentMethod:'EMPLOYEE_REIMBURSEMENT',idempotencyKey:'synthetic-fixed-key'};
 function policy(){
@@ -46,6 +48,10 @@ test('actual admission binds actions to selected store/object and never grants o
   for(const [path,method,body,cap]of [
    ['/api/purchase-orders/order','PATCH',{description:'edit'},'invoices.edit'],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL'},'invoices.approve'],
+   ['/api/cash-control/stores/a1/reporting-overview','GET',{},'shifts.read'],
+   ['/api/cash/stores/a1/reporting-overview','GET',{},'shifts.read'],
+   ['/api/purchase-orders/order/cancel-preview?storeId=a1','GET',{},'invoices.cancel'],
+   ['/api/purchase-orders/order/cancel','POST',{storeId:'a1'},'invoices.cancel'],
    ['/api/purchase-orders/order','PATCH',{status:'INVOICED',expectedReopenVersion:0,excludeStockLineIds:['line-a']},'invoices.approve'],
    ['/api/transactions/stores/a1','POST',expense,'payments.expense'],
    ['/api/transactions/stores/a1/supplier-settlements','POST',{},'payments.supplier'],
@@ -56,11 +62,18 @@ test('actual admission binds actions to selected store/object and never grants o
   const before=reached;
   for(const [path,method,body]of [
    ['/api/purchase-orders/foreign','PATCH',{description:'other store'}],
+   ['/api/purchase-orders/foreign/cancel-preview?storeId=a1','GET',{}],
+   ['/api/purchase-orders/foreign/cancel','POST',{storeId:'a1'}],
+   ['/api/purchase-orders/order/cancel-preview?storeId=a2','GET',{}],
+   ['/api/purchase-orders/order/cancel','POST',{storeId:'a2'}],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL',description:'smuggled edit'}],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL',totalMismatchOverride:true}],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL',excludeStockLineIds:['line-a']}],
    ['/api/purchase-orders/order','PATCH',{status:'INVOICED',excludeStockLineIds:['line-a'],totalMismatchOverride:true}],
    ['/api/purchase-orders/foreign','PATCH',{status:'INVOICED',excludeStockLineIds:['line-a']}],
+   ['/api/cash-control/stores/a2/reporting-overview','GET',{}],
+   ['/api/cash/stores/a2/reporting-overview','GET',{}],
+   ['/api/cash-control/stores/a1/reporting-overview','POST',{}],
    ['/api/transactions/stores/a2','POST',expense],
    ['/api/transactions/stores/a1/supplier-settlements/s/review','POST',{}],
    ['/api/transactions/tx/reverse','POST',{}],
@@ -74,6 +87,21 @@ test('actual admission binds actions to selected store/object and never grants o
   p.grant(['sales.read','payments.read','payments.expense']);
   assert.equal((await send('/api/transactions/stores/a1','POST',{...expense,paymentSource:'CASH_SHIFT',paymentMethod:'CASH_SHIFT'})).status,403);
   assert.equal((await send('/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'CANCEL'})).status,403);
+  p.grant(['invoices.read','invoices.reopen']);
+  assert.equal((await send('/api/purchase-orders/order/cancel-preview?storeId=a1','GET')).status,403);
+  assert.equal((await send('/api/purchase-orders/order/cancel','POST',{storeId:'a1'})).status,403);
+  p.grant(['invoices.read','invoices.cancel']);
+  assert.equal((await send('/api/purchase-orders/order/reopen-preview?storeId=a1','GET')).status,403);
+  assert.equal((await send('/api/purchase-orders/order/reopen','POST',{storeId:'a1'})).status,403);
+  for(const unrelated of ['sales.read','shifts.close','cash.read']){
+   p.grant([unrelated]);
+   assert.equal((await send('/api/cash-control/stores/a1/reporting-overview','GET')).status,403);
+  }
+  p.grant(['shifts.read']);
+  assert.equal((await send('/api/cash-control/stores/a1/reporting-overview','GET')).status,200);
+  assert.equal((await send('/api/backoffice-staff/sales/stores/a1/terminals','GET')).status,403);
+  assert.equal((await send('/api/cash/stores/a1/close-context','GET')).status,403);
+  assert.equal((await send('/api/cash/sessions/shift/close','POST',{})).status,403);
   p.grant(['invoices.read']);p.disableInventory();
   assert.equal((await send('/api/purchase-orders/report?storeId=a1','GET')).status,403,'purchase review needs the selected store inventory module');
   assert.equal((await send('/api/commerce/documents/inbox/archive?storeId=a1','GET')).status,200,'existing document-only archive remains available');
@@ -94,4 +122,73 @@ test('writer revalidation uses current locked grants, selected terminal, declara
  await assert.rejects(requireStaffOrderAction(p.db,edit,'order','invoices.edit'),{code:'STAFF_DRAFT_CLOSED'});
  p.grant(['invoices.read']);await assert.rejects(requireStaffAction(p.db,{...edit,staffGrant:{capability:'invoices.approve'}},'a1','invoices.approve'),{code:'STAFF_ACCESS_DENIED'});
  p.revoke();await assert.rejects(requireStaffAction(p.db,req,'a1','payments.expense'),{code:'STAFF_SESSION_INVALID'});
+});
+
+test('delegated invoice cancellation rechecks the grant inside preview and submission transactions',async()=>{
+ const version='a'.repeat(64);
+ for(const cancel of [
+  (db,user)=>previewPurchaseOrderCancel(db,user,'order','a1'),
+  (db,user)=>cancelPurchaseOrder(db,user,'order',{storeId:'a1',version,reason:'Synthetic duplicate',confirm:true}),
+ ]){
+  const p=policy();
+  p.grant(['invoices.read','invoices.cancel']);
+  p.db.$executeRawUnsafe=async()=>{};
+  p.db.$transaction=async work=>{
+   p.grant(['invoices.read']);
+   return work({...p.db,$queryRawUnsafe:async()=>assert.fail('revoked grant reached invoice transaction')});
+  };
+  await assert.rejects(cancel(p.db,p.user),{code:'STAFF_ACCESS_DENIED'});
+ }
+});
+
+test('canonical shift report redacts delegated data and revalidates immediately before response',async()=>{
+ const source=await readFile(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
+ const start=source.indexOf('function staffShiftReportRow(');
+ const stop=source.indexOf('router.get("/stores/:storeId/daily-summary"',start);
+ assert.ok(start>=0&&stop>start);
+ const p=policy();
+ p.grant(['shifts.read']);
+ const staffQuery=p.db.$queryRaw;
+ let revokeWhileLoading=false;
+ let reportQueryCount=0;
+ p.db.$queryRaw=async(strings,...values)=>{
+  const sql=strings.join('?');
+  if(sql.includes('FROM "CashShiftSession" s')){
+   assert.deepEqual(values,['a','a1','a','a1']);
+   reportQueryCount++;
+   return [{id:'shift',status:'OPEN',openedByName:'Synthetic',terminalPos:'MAIN',liveCashSales:13,transactionCount:1,closingNote:'Internal evidence',duplicateReviewJson:[{privateRef:'control'}]}];
+  }
+  if(sql.includes('ORDER BY "occurredAt"')){
+   assert.deepEqual(values,['a','a1',['shift']]);
+   reportQueryCount++;
+   if(revokeWhileLoading)p.grant([]);
+   return [{id:'entry',sessionId:'shift',amount:'13.00'}];
+  }
+  return staffQuery(strings,...values);
+ };
+ let handler;
+ const money=value=>Number(value||0);
+ const assertStoreAccess=(req,storeId)=>{if(req.user.staffAccess&&req.user.storeId!==storeId)throw Object.assign(new Error('wrong store'),{status:403});};
+ const ownedStore=async(id,companyId)=>{assert.deepEqual([id,companyId],['a1','a']);return {id,name:'A1'};};
+ const normalized=row=>({...row});
+ new Function('router','route','prisma','money','normalize','assertStoreAccess','ownedStore','requireStaffGrant',source.slice(start,stop))(
+  {get:(_path,fn)=>{handler=fn;}},fn=>fn,p.db,money,normalized,assertStoreAccess,ownedStore,requireStaffGrant,
+ );
+ const invoke=async(user,storeId='a1')=>{
+  let body;
+  await handler({user,params:{storeId}},{json:value=>{body=value;}});
+  return body;
+ };
+ await assert.rejects(invoke(p.user,'a2'),{status:403});
+ assert.equal(reportQueryCount,0);
+ const owner=await invoke({role:'OWNER',companyId:'a'});
+ assert.equal(owner.recent[0].closingNote,'Internal evidence');
+ const delegated=await invoke(p.user);
+ assert.equal(delegated.recent[0].cashSales,13);
+ assert.equal(delegated.recent[0].closingNote,undefined);
+ assert.equal(delegated.recent[0].duplicateReviewJson,undefined);
+ assert.deepEqual(delegated.openSessions,delegated.recent);
+ assert.deepEqual(delegated.recentTransactions,[{id:'entry',sessionId:'shift',amount:13}]);
+ revokeWhileLoading=true;
+ await assert.rejects(invoke(p.user),{code:'STAFF_ACCESS_DENIED'});
 });

@@ -5,17 +5,19 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close']);
 export const staffPermissionSections=Object.freeze([
   {key:'invoices',label:'Τιμολόγια',actions:[
     {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα, τα πρωτότυπα και τις αγορές του καταστήματος.'},
     {key:'invoices.edit',label:'Επεξεργασία πρόχειρου τιμολογίου',description:'Διορθώνει στοιχεία και γραμμές ανοικτού πρόχειρου, με υπάρχοντα είδη. Δεν αλλάζει καταχωρισμένη αγορά ή καρτέλα προϊόντος.',requires:['invoices.read']},
     {key:'invoices.approve',label:'Έγκριση και καταχώριση τιμολογίου',description:'Οριστικοποιεί ελεγμένη αγορά και ενημερώνει απόθεμα με τους υπάρχοντες ελέγχους. Δεν παρακάμπτει διαφορά συνόλων.',requires:['invoices.read']},
-    {key:'invoices.reopen',label:'Επαναφορά οριστικοποιημένου τιμολογίου',description:'Επαναφέρει το ίδιο τιμολόγιο για διόρθωση με αιτιολογία, προεπισκόπηση και αντιστροφή των σχετικών κινήσεων αποθήκης.',requires:['invoices.read']}
+    {key:'invoices.reopen',label:'Επαναφορά οριστικοποιημένου τιμολογίου',description:'Επαναφέρει το ίδιο τιμολόγιο για διόρθωση με αιτιολογία, προεπισκόπηση και αντιστροφή των σχετικών κινήσεων αποθήκης.',requires:['invoices.read']},
+    {key:'invoices.cancel',label:'Ακύρωση καταχωρισμένου τιμολογίου',description:'Ακυρώνει οριστικά το τιμολόγιο του επιλεγμένου καταστήματος, με αιτιολογία, προεπισκόπηση και αντιστροφή αποθέματος.',requires:['invoices.read']}
   ]},
   {key:'sales',label:'Πωλήσεις και βάρδιες',actions:[
     {key:'sales.read',label:'Προβολή πωλήσεων και ταμείων',description:'Βλέπει πωλήσεις, κινήσεις και υπόλοιπα βαρδιών του καταστήματος.'},
     {key:'sales.cancel',label:'Ακύρωση πώλησης τρέχουσας βάρδιας',description:'Ακυρώνει μη φορολογική πώληση στην ίδια ανοικτή βάρδια, με αιτιολογία και αντίστροφη εγγραφή. Δεν επιτρέπει επιστροφή ή ακύρωση φορολογικής απόδειξης.',requires:['sales.read']},
+    {key:'shifts.read',label:'Συγκεντρωτική προβολή βαρδιών',description:'Βλέπει τις πρόσφατες βάρδιες όλων των ταμείων του καταστήματος, τα σύνολα και τις κινήσεις τους.'},
     {key:'shifts.close',label:'Κλείσιμο βάρδιας με καταμέτρηση',description:'Κλείνει βάρδια του επιλεγμένου ταμείου με πραγματική καταμέτρηση, EFTPOS και καταγραφή διαφορών. Δεν επιτρέπει διοικητικό κλείσιμο χωρίς καταμέτρηση.'}
   ]},
   {key:'payments',label:'Πληρωμές',actions:[
@@ -64,8 +66,11 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/cancel-preview$/.test(path))||
+     (method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/cancel$/.test(path)))return 'invoices.cancel';
   if ((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/reopen-preview$/.test(path))||
       (method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/reopen$/.test(path)))return 'invoices.reopen';
+  if(method==='GET'&&/^\/api\/(?:cash|cash-control)\/stores\/[^/]+\/reporting-overview$/.test(path))return 'shifts.read';
   if(method==='GET'&&(/^(?:\/api\/backoffice-staff\/shifts\/stores\/[^/]+\/terminals|\/api\/cash\/stores\/[^/]+\/close-context)$/.test(path)))return 'shifts.close';
   if(method==='GET'&&/^\/api\/backoffice-staff\/sales\/stores\/[^/]+\/terminals$/.test(path))return 'sales.read';
   if(method==='GET'&&/^\/api\/backoffice-staff\/payments\/stores\/[^/]+$/.test(path))return 'payments.read';

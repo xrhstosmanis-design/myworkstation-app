@@ -728,3 +728,79 @@ test('close-only staff can open the counted shift form without reading sales his
   assert.ok(calls.every(x=>!x.options.method&&!x.path.includes('/transactions/')));
  }finally{await m.close()}
 });
+
+test('posted invoice cancellation appears and submits only with the independent store grant',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const action of ['invoices.reopen','invoices.cancel']){
+  const calls=[];
+  const order={id:'order',storeId:'a1',storeName:'A1',supplierName:'Synthetic',status:'INVOICED',invoiceNumber:'SYN-CANCEL'};
+  const base='/api/purchase-orders/order';
+  const api=async(path,options={})=>{
+   calls.push({path,options});
+   if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'MANAGER',capabilities:['invoices.read',action]}]};
+   if(path.startsWith('/api/purchase-orders/report?'))return {stores:[{id:'a1',name:'A1'}],suppliers:[],orders:[order],summary:{count:1}};
+   if(path===base+'/detail')return {order,lines:[],totals:{quantity:0,net:0,gross:0}};
+   if(path===base+'/cancel-preview?storeId=a1')return {version:'fixture-version',expenseDelta:-1.24,negativeStockCount:1,stockChanges:[{name:'Fixture stock',before:0,delta:-1,after:-1}]};
+   if(path===base+'/cancel'&&options.method==='POST'){order.status='CANCELLED';return {status:order.status};}
+   return {items:[],suppliers:[],total:0,archiveTotal:0};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+  try{
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button('Τιμολόγια').click());
+   await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());
+   await m.act(async()=>document.querySelector('[data-po-open]').click());
+   const cancel=document.querySelector('[data-cancel-invoice]');
+   assert.equal(Boolean(cancel),action==='invoices.cancel');
+   assert.equal(Boolean(document.querySelector('[data-reopen]')),action==='invoices.reopen');
+   assert.equal(calls.some(c=>c.path.startsWith(base+'/cancel')),false);
+   if(!cancel)continue;
+   await m.act(async()=>cancel.click());
+   const form=document.querySelector('[data-cancel-form]');
+   const submit=()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   form.elements.reason.value='Synthetic duplicate invoice';
+   form.elements.confirm.checked=true;
+   await m.act(async()=>submit());
+   assert.equal(calls.some(c=>c.options.method==='POST'),false,'negative stock needs explicit confirmation');
+   form.elements.negative.checked=true;
+   await m.act(async()=>submit());
+   const preview=calls.find(c=>c.path===base+'/cancel-preview?storeId=a1');
+   assert.equal(preview.options.headers['x-backoffice-store-id'],'a1');
+   const writes=calls.filter(c=>c.options.method==='POST');
+   assert.equal(writes.length,1);
+   assert.equal(writes[0].path,base+'/cancel');
+   assert.equal(writes[0].options.headers['x-backoffice-store-id'],'a1');
+   assert.deepEqual(JSON.parse(writes[0].options.body),{storeId:'a1',version:'fixture-version',reason:'Synthetic duplicate invoice',confirm:true,confirmNegativeStock:true});
+   assert.equal(document.querySelector('[data-cancel-invoice]'),null);
+  }finally{await m.close()}
+ }
+});
+
+test('shift report needs only its own grant and opens without a selected till',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const store={id:'a1',name:'A1'};
+ const shift={id:'shift',status:'OPEN',openedByName:'Synthetic report operator',transactionCount:1,openedAt:'2026-11-16T08:00:00Z',terminalPos:'MAIN',cashSales:13};
+ const calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'MANAGER',capabilities:['shifts.read']}]};
+  assert.equal(path,'/api/cash-control/stores/a1/reporting-overview');
+  assert.equal(options.method||'GET','GET');
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  assert.equal(options.headers['x-mws-terminal-pos'],undefined);
+  return {store,timeZone:'Europe/Athens',recent:[shift],openSessions:[shift],recentTransactions:[{id:'entry',sessionId:'shift',type:'SALE_CASH',amount:13,description:'Synthetic report transaction',occurredAt:'2026-11-16T08:01:00Z'}]};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const select=document.querySelector('[aria-label="Κατάστημα"]');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.equal(button('Πωλήσεις και βάρδιες'),undefined);
+  assert.equal(button('Κλείσιμο βάρδιας'),undefined);
+  await m.act(async()=>button('Αναφορά βαρδιών').click());
+  assert.equal(document.querySelector('[aria-label="Ταμείο"]'),null);
+  assert.match(document.body.textContent,/Synthetic report operator/);
+  await m.act(async()=>button('1 · Προβολή').click());
+  assert.match(document.body.textContent,/Synthetic report transaction/);
+  await m.act(async()=>button('Ανανέωση αναφοράς βαρδιών').click());
+  assert.equal(calls.filter(call=>call.path.endsWith('/reporting-overview')).length,2);
+ }finally{await m.close();}
+});

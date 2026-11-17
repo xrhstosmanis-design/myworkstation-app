@@ -338,10 +338,19 @@ router.get("/stores/:storeId/close-context",route(async(req,res)=>{
   res.json({openSession:session?normalize(session):null,pendingInvoices,summaryBySession:session?{[session.id]:{cashSales:totals.cashSales,cardSales:totals.cardSales,expensesTotal:totals.expenses,transferIn:totals.transferIn,transferOut:totals.transferOut}}:{}});
 }));
 
+function staffShiftReportRow(row){
+  const {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,cashSales,cardSales,expenses,
+    actualOperational,expectedOperational,variance,eftposTotal,cardVariance,transactionCount}=row;
+  return {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,cashSales,cardSales,expenses,
+    actualOperational,expectedOperational,variance,eftposTotal,cardVariance,transactionCount};
+}
+
 router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
-  if(req.user?.tokenType==="STORE_OPERATOR"||!["OWNER","ADMIN","MANAGER"].includes(req.user?.role))return res.status(403).json({error:"Η συγκεντρωτική αναφορά βαρδιών είναι διαθέσιμη μόνο στο BackOffice."});
+  const delegated=req.user?.staffAccess===true;
+  if(!delegated&&(req.user?.tokenType==="STORE_OPERATOR"||!["OWNER","ADMIN","MANAGER"].includes(req.user?.role)))return res.status(403).json({error:"Η συγκεντρωτική αναφορά βαρδιών είναι διαθέσιμη μόνο στο BackOffice."});
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
+  if(delegated)await requireStaffGrant(prisma,req.user,store.id,"shifts.read");
   const sessionRows=await prisma.$queryRaw`
     SELECT s.*,
       COALESCE(t."cashSales",0) AS "liveCashSales",
@@ -371,7 +380,9 @@ router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
     FROM "StoreTransaction"
     WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "sessionId"=ANY(${ids}::text[])
     ORDER BY "occurredAt" DESC LIMIT 500`:[];
-  res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent:sessions,openSessions:sessions.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
+  if(delegated)await requireStaffGrant(prisma,req.user,store.id,"shifts.read");
+  const recent=delegated?sessions.map(staffShiftReportRow):sessions;
+  res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent,openSessions:recent.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
 }));
 
 router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{

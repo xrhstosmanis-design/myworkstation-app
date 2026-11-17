@@ -112,7 +112,7 @@ test('native approved adjustments, credit documents and corrupt movement ownersh
 test('native registered HTTP reopen routes enforce actor/scope and perform one confirmed transition',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await fixture();let server;try{
   await f.finalize();const {default:express,Router}=await import('express');const src=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replaceAll('export async function ','async function ');
-  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder','cancelPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','previewPurchaseOrderCancel','reopenPurchaseOrder','cancelPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.previewPurchaseOrderCancel,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
   const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.headers['x-fixture-role']==='operator'?{...actor,tokenType:'STORE_OPERATOR'}:actor;next()});app.use('/api/purchase-orders',router);app.use((err,req,res,next)=>res.status(err.status||400).json({error:err.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const url=`http://127.0.0.1:${server.address().port}/api/purchase-orders/pos`;
   const denied=await fetch(url+'/reopen-preview?storeId=s',{headers:{'x-fixture-role':'operator'}});assert.equal(denied.status,403);
@@ -236,7 +236,7 @@ test('synthetic full-stack BackOffice cancellation uses isolated HTTP and Postgr
   const originalEvidence=await f.preserved();
   const {default:express,Router}=await import('express');
   const routeSource=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
-  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder','cancelPurchaseOrder',routeSource)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','previewPurchaseOrderCancel','reopenPurchaseOrder','cancelPurchaseOrder',routeSource)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.previewPurchaseOrderCancel,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
   const app=express();app.use(express.json());
   app.use((req,res,next)=>{
    const role=req.headers['x-fixture-actor'];
@@ -322,6 +322,85 @@ test('synthetic full-stack BackOffice cancellation uses isolated HTTP and Postgr
  }finally{
   if(dom)dom.window.close();
   if(server)await new Promise(resolve=>server.close(resolve));
+  await f.close();
+ }
+});
+
+test('native personal manager cancellation requires a live store grant and audits exactly one reversal',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();
+ let server;
+ try{
+  await f.finalize();
+  const {enforceBackofficeStaff}=await import('../src/services/backoffice-staff-access.js');
+  const {ensureBackofficeStaffSchema}=await import('../src/backoffice-staff-bootstrap.js');
+  for(const sql of [
+   'CREATE TABLE "Company" ("id" text PRIMARY KEY,"name" text NOT NULL,"active" boolean DEFAULT true,"licenseStatus" text DEFAULT \'ACTIVE\',"subscriptionEndsAt" timestamptz)',
+   'CREATE TABLE "CompanyModule" ("id" text PRIMARY KEY,"companyId" text,"moduleKey" text,"active" boolean DEFAULT true,"startsAt" timestamptz,"endsAt" timestamptz)',
+   'CREATE TABLE "StorePaidModule" ("storeId" text,"moduleKey" text,"active" boolean,"startsAt" timestamptz,"endsAt" timestamptz)',
+   'ALTER TABLE "Store" ADD COLUMN "active" boolean DEFAULT true',
+   'ALTER TABLE "User" ADD COLUMN "fullName" text,ADD COLUMN "email" text,ADD COLUMN "role" text,ADD COLUMN "sessionVersion" integer DEFAULT 0,ADD COLUMN "mustChangePassword" boolean DEFAULT false',
+   'CREATE TABLE "UserSession" ("id" text PRIMARY KEY,"userId" text,"expiresAt" timestamptz,"revokedAt" timestamptz)',
+  ])await f.db.$executeRawUnsafe(sql);
+  await f.db.$executeRaw`INSERT INTO "Company" ("id","name") VALUES ('c','Company fixture'),('foreign-company','Foreign company fixture')`;
+  await f.db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") VALUES ('docs','c','DOCUMENTS'),('stock','c','INVENTORY')`;
+  await f.db.$executeRaw`INSERT INTO "Store" ("id","companyId","name") VALUES ('foreign-store','foreign-company','Foreign store fixture')`;
+  await f.db.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","status") VALUES ('control-order','c','control','INVOICED'),('foreign-order','foreign-company','foreign-store','INVOICED')`;
+  await f.db.$executeRaw`INSERT INTO "User" ("id","companyId","fullName","email","role") VALUES ('personal','c','Synthetic personal manager','personal@isolated.invalid','EMPLOYEE')`;
+  await f.db.$executeRaw`INSERT INTO "UserSession" ("id","userId","expiresAt") VALUES ('session-personal','personal',NOW()+INTERVAL '1 hour')`;
+  await ensureBackofficeStaffSchema(f.db);
+  await f.db.$executeRaw`INSERT INTO "BackofficeStaffAccount" ("userId","companyId","username","pinHash") VALUES ('personal','c','personal.fixture','fixture')`;
+  await f.db.$executeRaw`INSERT INTO "BackofficeStaffGrant" ("userId","companyId","storeId","profile","capabilities") VALUES ('personal','c','s','MANAGER','["invoices.read","invoices.reopen"]'::jsonb)`;
+  const grant=capabilities=>f.db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"=${JSON.stringify(capabilities)}::jsonb WHERE "userId"='personal' AND "storeId"='s'`;
+  const personal={id:'personal',companyId:'c',fullName:'Synthetic personal manager',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true,sessionId:'session-personal',sessionVersion:0};
+  const {default:express,Router}=await import('express');
+  const source=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','previewPurchaseOrderCancel','reopenPurchaseOrder','cancelPurchaseOrder',source)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.previewPurchaseOrderCancel,reopen.reopenPurchaseOrder,reopen.cancelPurchaseOrder);
+  const app=express();
+  app.use(express.json());
+  app.use(async(req,res,next)=>{
+   req.user=personal;
+   try{await enforceBackofficeStaff(f.db,req,res);next()}catch(error){next(error)}
+  });
+  app.use('/api/purchase-orders',router);
+  app.use((error,_req,res,_next)=>res.status(error.status||400).json({error:error.message}));
+  server=await new Promise(resolve=>{const listener=app.listen(0,'127.0.0.1',()=>resolve(listener));});
+  const send=(path,storeId='s',body)=>fetch(`http://127.0.0.1:${server.address().port}/api/purchase-orders/${path}`,{
+   headers:{'x-backoffice-store-id':storeId,'content-type':'application/json'},
+   ...(body?{method:'POST',body:JSON.stringify(body)}:{}),
+  });
+  const preserved=await f.preserved();
+  assert.equal(await f.stock(),13);
+  assert.equal((await send('pos/cancel-preview?storeId=s')).status,403);
+  assert.equal((await send('pos/cancel','s',confirmed({version:'0'.repeat(64)}))).status,403);
+  await grant(['invoices.read','invoices.cancel']);
+  assert.equal((await send('pos/reopen-preview?storeId=s')).status,403);
+  assert.equal((await send('pos/cancel-preview?storeId=control','control')).status,403);
+  for(const orderId of ['control-order','foreign-order']){
+   assert.equal((await send(orderId+'/cancel-preview?storeId=s')).status,404);
+   assert.equal((await send(orderId+'/cancel','s',confirmed({version:'0'.repeat(64)}))).status,404);
+  }
+  const previewResponse=await send('pos/cancel-preview?storeId=s');
+  assert.equal(previewResponse.status,200);
+  const preview=await previewResponse.json();
+  assert.equal(preview.stockChanges[0].delta,-3);
+  await grant(['invoices.read']);
+  assert.equal((await send('pos/cancel','s',confirmed(preview))).status,403);
+  assert.equal(await f.stock(),13);
+  assert.deepEqual(await f.db.$queryRaw`SELECT "actorId" FROM "PurchaseOrderReopenAudit"`,[]);
+  await grant(['invoices.read','invoices.cancel']);
+  const confirmedCancel=await send('pos/cancel','s',confirmed(preview));
+  assert.equal(confirmedCancel.status,200);
+  assert.equal((await confirmedCancel.json()).status,'CANCELLED');
+  assert.equal((await (await send('pos/cancel','s',confirmed(preview))).json()).idempotent,true);
+  assert.equal(await f.stock(),10);
+  assert.equal(await f.preserved(),preserved);
+  assert.deepEqual(await f.db.$queryRaw`SELECT "actorId","actorRole" FROM "PurchaseOrderReopenAudit"`,[{actorId:'personal',actorRole:'EMPLOYEE'}]);
+  assert.deepEqual(await f.db.$queryRaw`SELECT "actorId" FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_ORDER_CANCELLED'`,[{actorId:'personal'}]);
+  assert.deepEqual(await f.db.$queryRaw`SELECT COUNT(*)::int AS count FROM "PurchaseOrderReopenMovement"`,[{count:1}]);
+  await f.db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"='session-personal'`;
+  assert.equal((await send('pos/cancel','s',confirmed(preview))).status,401);
+ }finally{
+  if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});
   await f.close();
  }
 });
