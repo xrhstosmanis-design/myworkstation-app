@@ -22,6 +22,8 @@
 
 - POS εσωτερική διακίνηση · Διόρθωση αναγνωριστικού χειριστή στην κίνηση αποθέματος · [Checkpoint](CHANGES/2026-11-16-pos-transfer-minimize-lab.md) · LAB επαναδοκιμή εκκρεμεί.
 
+- 2026-11-17 · Νο 9 · Αυτόματο email ληγμένης προσφοράς · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Τοπική υλοποίηση, CI/PostgreSQL και LAB εκκρεμούν.
+
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
 - Εσωτερική διακίνηση POS · Συμβάντα · [Checkpoint](CHANGES/2026-11-15-pos-internal-transfer.md) · LAB NOT TESTED. Καρτέλα POS με ελαχιστοποίηση σε προετοιμασία.
@@ -445,4 +447,4 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 - 17/11/2026 · Νο 2, Θυρίδα myDATA, POS και πληρωμές. [Συνέχεια και ενιαία δοκιμή LAB](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
 
-- 2026-11-17 · Νο 9 · Αυτόματο email ληγμένης προσφοράς · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Τοπική υλοποίηση, CI/PostgreSQL και LAB εκκρεμούν.
+- 17/11/2026 · Νο 2 · Άνοιγμα υπάρχοντος προχείρου από την ενσωματωμένη Θυρίδα. 36 τοπικοί έλεγχοι PASS. CI και στοχευμένος επανέλεγχος LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
