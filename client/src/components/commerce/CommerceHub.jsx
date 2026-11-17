@@ -24,12 +24,15 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId=""}){
-  const [activeModules,setActiveModules]=useState(readActive);
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules}){
+  const [cachedActiveModules,setActiveModules]=useState(readActive);
+  // The selected-store entry owns fresh module checks. Events/catalog reads
+  // must not replace that verified scope or remount an in-progress inbox.
+  const activeModules=Array.isArray(verifiedActiveModules)?verifiedActiveModules:cachedActiveModules;
   const [catalog,setCatalog]=useState([]);
-  const [tab,setTab]=useState("modules");
-  const [storeId,setStoreId]=useState(stores[0]?.id||"");
   const [lowValueAccessStoreId,setLowValueAccessStoreId]=useState("");
+  const [tab,setTab]=useState(()=>initialTab==="documents"?"documents":"modules");
+  const [storeId,setStoreId]=useState(stores[0]?.id||"");
   const [assistantStoreId,setAssistantStoreId]=useState(()=>stores.find(s=>s.id===activeStoreId)?.id||"");
   const [overview,setOverview]=useState(null);
   const [products,setProducts]=useState([]);
@@ -89,8 +92,9 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
   const loadAi=async()=>{if(active.has("AI_READER"))setAiStatus(await api("/api/commerce/ai-reader/status"))};
 
-  useEffect(()=>{loadCatalog()},[]);
+  useEffect(()=>{if(initialTab!=="documents")loadCatalog()},[initialTab]);
   useEffect(()=>{
+    if(initialTab==="documents")return;
     let current=true;
     if(storeId){
       api(`/api/commerce/low-value-products/access?storeId=${encodeURIComponent(storeId)}`)
@@ -98,7 +102,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         .catch(()=>{if(current)setLowValueAccessStoreId("")});
     }else setLowValueAccessStoreId("");
     return ()=>{current=false};
-  },[storeId,lowValueCompanyAccess]);
+  },[storeId,lowValueCompanyAccess,initialTab]);
   useEffect(()=>{
     setError("");setMessage("");
     if(tab==="inventory")loadInventory().catch(e=>setError(e.message));
@@ -168,6 +172,8 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   };
 
   const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
+
+  if(initialTab==="documents")return <div className="commerce-hub">{active.has("DOCUMENTS")&&<InvoiceInboxPanel api={api} stores={stores}/>}</div>;
 
   return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}${tab==="lowValue"?" low-value-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
     <section className="panel">
