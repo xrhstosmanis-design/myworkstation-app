@@ -1,3 +1,8 @@
+## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — ASSIGNED /root
+Branch work/pos-packs-returns-20261117. Owner approved central implementation and documentation merge. Claim #4001 merged c8fb55a; NOT TESTED.
+Continuation for these two independent new tasks only: [scope and pending acceptance](../../docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md).
+Package products have their own barcode/button and store-specific sale price; consume linked base bottle units (24 or 6). Scanned cash return needs no replacement or original receipt selection; restore stock and reduce current terminal cash once, with unchanged card totals and no duplicate miscellaneous expense. Preserve permissions, isolation, fiscal gates, audit and idempotency; existing owners/return flows retained.
+
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
 - 2026-11-17 · Νο 13 · LAB PASS για CSV και εκτυπώσιμη προβολή «Χωρίς ΦΠΑ» στο c19e099 · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · PDF, φυσική εκτύπωση και υπόλοιπο 13–14 ανοιχτά.
