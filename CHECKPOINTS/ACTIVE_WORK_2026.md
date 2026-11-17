@@ -1,3 +1,7 @@
+## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — SOURCE FOUNDATION / NOT INTEGRATED
+Owner /root; source branch feat/pos-packs-cash-returns. Approved documentation #4001 and #4005 merged. Shared cents/base-unit planning implemented, with four passing local tests under Node 24.22.1 (not Node20/CI/LAB proof). No runtime imports, UI, endpoint, schema or production behavior changed.
+Remaining: store-scoped package editor and persistence; sale stock posting with frozen package composition; atomic scanned cash return with permission/terminal/shift validation, persisted request identity, cash/stock/audit, POS confirmation; historical returns and holds/offline/reporting compatibility; Node20/full CI and existing LAB before/after acceptance. No source merge/deploy authorized. Next action: implement store-scoped package persistence and use the shared plan in atomic sale/return services.
+
 ## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — ASSIGNED /root
 Branch work/pos-packs-returns-20261117. Owner approved central implementation and documentation merge. Claim #4001 merged c8fb55a; NOT TESTED.
 Continuation for these two independent new tasks only: [scope and pending acceptance](../../docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md).
