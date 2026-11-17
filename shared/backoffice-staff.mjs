@@ -5,7 +5,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read']);
 export const staffPermissionSections=Object.freeze([
   {key:'invoices',label:'Τιμολόγια',actions:[
     {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα, τα πρωτότυπα και τις αγορές του καταστήματος.'},
@@ -25,6 +25,12 @@ export const staffPermissionSections=Object.freeze([
     {key:'payments.supplier',label:'Καταχώριση πληρωμής προμηθευτή',description:'Πληρωμή ανοικτών τιμολογίων ή έναντι με αποδεικτικό ή ρητή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.expense',label:'Καταχώριση εξόδου',description:'Καταχωρίζει θετικό έξοδο με αιτιολογία και παραστατικό ή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.cash',label:'Πληρωμή από μετρητά βάρδιας',description:'Επιτρέπει αφαίρεση της πληρωμής από την ανοικτή βάρδια του επιλεγμένου ταμείου.',requires:['payments.read','sales.read']}
+  ]},
+  {key:'performance',label:'Απόδοση προϊόντων',actions:[
+    {key:'low-value-products.read',label:'Προϊόντα Χαμηλής Απόδοσης',description:'Βλέπει την αναφορά προϊόντων χαμηλής απόδοσης του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'suppliers',label:'Προμηθευτές',actions:[
+    {key:'supplier-price-comparison.read',label:'Σύγκριση τιμών προμηθευτών',description:'Βλέπει τις τιμές και τις αγορές του ίδιου είδους από διαφορετικούς προμηθευτές στο επιλεγμένο κατάστημα.'}
   ]},
   {key:'products',label:'Είδη και αποθήκη',actions:[
     {key:'products.read',label:'Προβολή ειδών',description:'Βλέπει είδη, τιμές, κόστος και απόθεμα του καταστήματος.'},
@@ -66,6 +72,8 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if(method==='GET'&&['/api/commerce/low-value-products/access','/api/commerce/low-value-products'].includes(path))return 'low-value-products.read';
+  if(method==='GET'&&path==='/api/commerce/supplier-price-comparison')return 'supplier-price-comparison.read';
   if((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/cancel-preview$/.test(path))||
      (method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/cancel$/.test(path)))return 'invoices.cancel';
   if ((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/reopen-preview$/.test(path))||

@@ -4,6 +4,12 @@
 // stay unchanged; adding a catalogue entry never grants access automatically.
 export const backofficeFunctionCatalogue=Object.freeze([
   {
+    "key": "low-value-products",
+    "label": "Προϊόντα Χαμηλής Απόδοσης",
+    "scope": "STORE",
+    "actions": ["read"]
+  },
+  {
     "key": "access",
     "label": "Χειριστές και δικαιώματα",
     "scope": "COMPANY",
@@ -251,7 +257,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     ]
   },
   {
-    "key": "supplier-comparison",
+    "key": "supplier-price-comparison",
     "label": "Σύγκριση προμηθευτών",
     "scope": "STORE",
     "actions": [

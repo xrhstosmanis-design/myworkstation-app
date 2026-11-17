@@ -1,6 +1,6 @@
 import {LOCAL_INVOICE_OCR_LIMITS} from "../../../shared/local-invoice-ocr-limits.mjs";
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
-import {requireStaffGrant} from '../services/backoffice-staff-access.js';
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -114,7 +114,14 @@ router.get("/suppliers",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
 router.get("/supplier-price-comparison",requireStoreModule("INVENTORY"),async(req,res,next)=>{
   try {
     const {id: storeId, companyId} = req.targetStore;
-    res.json(await readSupplierComparison(prisma,{storeId,companyId,month:req.query?.month}));
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(req.user.storeId!==storeId||req.user.companyId!==companyId||req.staffGrant?.capability!=='supplier-price-comparison.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,storeId,'supplier-price-comparison.read');
+    }
+    const result=await readSupplierComparison(prisma,{storeId,companyId,month:req.query?.month});
+    if(delegated)await requireStaffGrant(prisma,req.user,storeId,'supplier-price-comparison.read');
+    res.json(result);
   } catch(error) { next(error); }
 });
 

@@ -51,7 +51,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(capability==='LIFECYCLE'){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
-    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read'].includes(c)):[];
+    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read'].includes(c)):[];
     let disabled;
     for(const read of reads){
       try{await requireStaffGrant(db,user,storeId,read);req.user={...req.user,storeId};return true}
@@ -107,7 +107,7 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
-  return capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
+  return capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
 }
 
 // Must run inside each canonical writer transaction, before writes or replay.
