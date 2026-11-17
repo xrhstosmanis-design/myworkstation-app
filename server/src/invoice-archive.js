@@ -3,7 +3,7 @@ import {inboxProcessingJoin,inboxProcessingState,inboxProcessingFields} from "./
 const normalize=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ς/g,"σ").toLocaleLowerCase("el-GR");
 const escape=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const from=`FROM "DocumentInbox" i LEFT JOIN "Supplier" s ON s."id"=i."supplierId" AND s."companyId"=i."companyId" LEFT JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=i."companyId" LEFT JOIN "MyDataInboundDocument" m ON m."inboxId"=i."id" AND m."companyId"=i."companyId" AND m."storeId"=i."storeId"`;
-export function archiveQuery(companyId,storeId,filters={},count=false){
+export function archiveQuery(companyId,storeId,filters={},count=false,withAllocations=false){
   const values=[companyId,storeId],where=['i."companyId"=$1','i."storeId"=$2'];
   const add=(sql,value)=>{values.push(value);where.push(sql.replace("?",`$${values.length}`))};
   const processing=String(filters.processing||"ALL");
@@ -24,7 +24,7 @@ export function archiveQuery(companyId,storeId,filters={},count=false){
   const haystack=`translate(lower(concat_ws(' ',s."name",a."filename",i."note",m."mark",m."series",m."documentNumber",m."issuerVat")), 'άέήίόύώϊΐϋΰς', 'αεηιουωιιυυσ')`;
   for(const term of normalize(String(filters.q||"").slice(0,200)).split(/\s+/).filter(Boolean))add(`strpos(${haystack},?)>0`,term);
   const select=count?'COUNT(*)::int AS "count"':`i."id",i."status",i."receivedAt",i."note",i."responsibleName",i."supplierId",s."name" AS "supplierName",a."filename",a."mimeType",(a."contentData" IS NOT NULL) AS "hasAttachment",m."mark",m."issuerVat",m."series",m."documentNumber",m."issueDate",m."currency",m."totalNet",m."totalVat",m."totalGross",(m."rawPayload"->>'xml' LIKE '%downloadingInvoiceUrl%') AS "hasProviderOriginal",m."rawPayload"->>'originalError' AS "originalError",m."rawPayload"->>'originalJobId' AS "originalJobId",${inboxProcessingFields}`;
-  let sql=`SELECT ${select} ${from} ${withProcessing?inboxProcessingJoin:""} WHERE ${where.join(" AND ")}`;
+  let sql=`SELECT ${select} ${from} ${withProcessing?inboxProcessingJoin(withAllocations):""} WHERE ${where.join(" AND ")}`;
   if(!count){const requestedLimit=Number(filters.limit),requestedOffset=Number(filters.offset),limit=Number.isFinite(requestedLimit)?Math.min(20001,Math.max(1,Math.floor(requestedLimit)||100)):100,offset=Number.isFinite(requestedOffset)?Math.max(0,Math.floor(requestedOffset)):0;values.push(limit,offset);sql+=` ORDER BY COALESCE(s."name",'Χωρίς αντιστοίχιση') ASC,m."issueDate" DESC NULLS LAST,i."receivedAt" DESC,i."id" DESC LIMIT $${values.length-1} OFFSET $${values.length}`;}
   return {sql,values};
 }
