@@ -1,3 +1,5 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {staffRequestCapability} from '../../../shared/backoffice-staff.mjs';
 import {prisma} from "../prisma.js";
 import {PERSONNEL_BASIC,isSuperAdmin,requirePersonnelPackage,storePaidModuleState,storePaidModuleStates} from "../store-paid-modules.js";
 import {serializeWorkforceRule} from "../workforce-v2-rules.js";
@@ -11,6 +13,11 @@ export const employeeInclude={
 };
 
 export function managementGuard(req,res,next){
+  if(req.user?.staffAccess===true){
+    const path=String(req.originalUrl||'').split('?')[0];
+    if(req.staffGrant?.capability==='employees.read'&&staffRequestCapability(req.method,path)==='employees.read'&&req.params.companyId===req.user.companyId&&req.params.storeId===req.user.storeId)return next();
+    return res.status(403).json({error:'Δεν υπάρχει δικαίωμα προβολής προσωπικού.'});
+  }
   if(isSuperAdmin(req.user)||managementRoles.has(req.user?.role))return next();
   return res.status(403).json({error:"Απαιτείται δικαίωμα Super Admin, Owner, Admin ή Manager."});
 }
@@ -46,6 +53,16 @@ export async function contextFor(req){
   const storeId=String(req.params.storeId||"");
   if(!companyId||!storeId)throw Object.assign(new Error("Δεν προσδιορίστηκε ιδιοκτήτης ή κατάστημα."),{status:400});
   if(!isSuperAdmin(req.user)&&String(req.user?.companyId||"")!==companyId)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404});
+  if(req.user?.staffAccess===true){
+    if(req.user.storeId!==storeId||req.staffGrant?.capability!=='employees.read')throw staffError();
+    await requireStaffGrant(prisma,req.user,storeId,'employees.read');
+    const [store,company]=await Promise.all([
+      prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true,companyId:true}}),
+      prisma.company.findUnique({where:{id:companyId},select:{id:true,name:true,active:true}})
+    ]);
+    if(!store||!company?.active)throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε το κατάστημα.');
+    return {company,store};
+  }
   const access=await requirePersonnelPackage(req,storeId,PERSONNEL_BASIC);
   if(String(access.store.companyId)!==companyId)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404});
   const company=await prisma.company.findUnique({where:{id:companyId},select:{id:true,name:true,active:true}});
@@ -112,14 +129,38 @@ export function serializeEmployee(employee,storeMap=new Map()){
   };
 }
 
+export function employeeReadSelection(storeId,companyId){
+  return {
+    id:true,companyId:true,baseStoreId:true,fullName:true,phone:true,email:true,active:true,
+    maxDaysPerWeek:true,maxHoursPerWeek:true,minimumDaysOff:true,worksMorning:true,worksAfternoon:true,worksNight:true,worksWeekend:true,
+    createdAt:true,updatedAt:true,
+    roleAssignments:{where:{role:{companyId}},select:{primary:true,role:{select:{id:true,name:true,code:true,active:true}}},orderBy:[{primary:'desc'},{createdAt:'asc'}]},
+    storeAccess:{where:{storeId,active:true},select:{id:true,storeId:true,isBaseStore:true,canSchedule:true,active:true}}
+  };
+}
+
+export function serializeEmployeeRead(employee,store){
+  const roles=(employee.roleAssignments||[]).map(({role,primary})=>({...role,primary:Boolean(primary)}));
+  return {
+    id:employee.id,companyId:employee.companyId,fullName:employee.fullName,phone:employee.phone||null,email:employee.email||null,active:employee.active,
+    baseStoreId:employee.baseStoreId===store.id?store.id:null,baseStoreName:employee.baseStoreId===store.id?store.name:null,
+    roles,primaryRole:roles.find(role=>role.primary)||null,
+    storeAccess:(employee.storeAccess||[]).filter(access=>access.storeId===store.id).map(access=>({...access,storeName:store.name})),
+    maxDaysPerWeek:employee.maxDaysPerWeek,maxHoursPerWeek:Number(employee.maxHoursPerWeek),minimumDaysOff:employee.minimumDaysOff,
+    worksMorning:employee.worksMorning,worksAfternoon:employee.worksAfternoon,worksNight:employee.worksNight,worksWeekend:employee.worksWeekend,
+    createdAt:employee.createdAt,updatedAt:employee.updatedAt
+  };
+}
+
 export async function loadEmployee(req,context,employeeId){
-  const scope=isSuperAdmin(req.user)?{}:await accessibleStoreIds(req,context.company.id);
+  const delegated=req.user?.staffAccess===true;
+  const scope=delegated?{ids:[context.store.id]}:isSuperAdmin(req.user)?{}:await accessibleStoreIds(req,context.company.id);
   const employee=await prisma.workforceEmployee.findFirst({
     where:{
       id:String(employeeId),companyId:context.company.id,
       ...(isSuperAdmin(req.user)?{}:{OR:[{baseStoreId:{in:scope.ids}},{storeAccess:{some:{storeId:{in:scope.ids},active:true}}}]})
     },
-    include:employeeInclude
+    ...(delegated?{select:employeeReadSelection(context.store.id,context.company.id)}:{include:employeeInclude})
   });
   if(!employee)throw Object.assign(new Error("Δεν βρέθηκε εργαζόμενος Workforce v2."),{status:404});
   return employee;

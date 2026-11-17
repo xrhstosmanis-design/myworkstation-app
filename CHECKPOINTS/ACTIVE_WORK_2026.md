@@ -464,3 +464,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκαν προσωπικές προβολές Προτάσεων Παραγγελίας και Ανάλυσης Πωλήσεων, με ξεχωριστά δικαιώματα και ακριβή επιλογή καταστήματος. Συνέχεια PR #4007, νέο CI και κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
 
 17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκε προβολή Παράδοσης Βάρδιας και συνημμένων ανά χειριστή/κατάστημα. Προσωπικές εγγραφές και επιβεβαιώσεις απαιτούν χωριστή υλοποίηση. Ίδιο PR #4007, οι δοκιμές LAB συγκεντρώνονται στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
+
+17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκε `employees.read` για προσωπική προβολή λίστας και καρτέλας εργαζομένων επιλεγμένου καταστήματος, με πακέτο προσωπικού και χωρίς συγχρονισμό διαπιστευτηρίων POS κατά την ανάγνωση. Ίδιο PR #4007. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).

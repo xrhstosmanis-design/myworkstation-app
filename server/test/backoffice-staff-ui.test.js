@@ -1158,3 +1158,74 @@ test('native handover preserves Owner creation and acknowledgement by default',a
     assert.equal(writes.length,2);
   }finally{await m.close()}
 });
+
+test('delegated personnel reuses native cards with scoped list/detail reads and suppresses payroll and late profiles',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  let resolveDetail,denyRefresh=false;
+  const pendingDetail=new Promise(resolve=>{resolveDetail=resolve});
+  const employee=storeId=>({id:`employee-${storeId}`,companyId:'a',fullName:`Employee ${storeId}`,phone:'2100000000',email:'staff@example.invalid',active:true,baseStoreId:storeId,baseStoreName:storeId.toUpperCase(),primaryRole:{name:'Ταμίας'},storeAccess:[{storeId,active:true}],maxDaysPerWeek:5,maxHoursPerWeek:40,minimumDaysOff:2,worksMorning:true,paymentType:'FIXED_MONTHLY',fixedMonthlyAmount:98765});
+  const api=async(path,options={})=>{
+    calls.push({path,options});assert.equal(options.method||'GET','GET');
+    if(path.endsWith('/me'))return {...identity,companyId:'a',stores:[
+      ...['a1','a2'].map(id=>({id,name:id.toUpperCase(),profile:'AUDITOR',capabilities:['employees.read']})),
+      {id:'a3',name:'A3',profile:'MANAGER',capabilities:[]}
+    ]};
+    const storeId=options.headers['x-backoffice-store-id'];
+    const base=`/api/platform/store-modules/companies/a/stores/${storeId}/workforce-v2/employees`;
+    assert.ok(path===base||path===`${base}/employee-${storeId}`);
+    if(denyRefresh)throw Object.assign(new Error('Η πρόσβαση ανακλήθηκε.'),{status:403});
+    if(path!==base)return storeId==='a1'?pendingDetail:{companyId:'a',storeId,item:employee(storeId)};
+    return {companyId:'a',storeId,items:[employee(storeId)],count:1};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  const selectStore=async(id)=>m.act(async()=>{
+    const select=document.querySelector('[aria-label="Κατάστημα"]');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  try{
+    assert.equal(button('Προσωπικό'),undefined);
+    await selectStore('a1');
+    await m.act(async()=>button('Προσωπικό').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+    assert.match(document.querySelector('.workforce-employee-list').textContent,/Employee a1/);
+    assert.equal(document.querySelector('.workforce-editor-card'),null);
+    assert.equal(button('Επεξεργασία'),undefined);
+    assert.equal(button('Εκτύπωση κάρτας'),undefined);
+    assert.equal(button('Αποστολή εφαρμογής'),undefined);
+    assert.equal(button('Απόδοση & Ταμεία'),undefined);
+    assert.equal(button('Απενεργοποίηση'),undefined);
+    assert.equal(document.querySelector('.workforce-tabs'),null);
+    assert.doesNotMatch(document.body.textContent,/98765|Σταθερό|Ωρομίσθιο|Μισθοδοσία/);
+    await m.act(async()=>button('Προβολή καρτέλας').click());
+    await selectStore('a2');
+    await m.act(async()=>button('Προσωπικό').click());
+    assert.match(document.querySelector('.workforce-employee-list').textContent,/Employee a2/);
+    await m.act(async()=>resolveDetail({companyId:'a',storeId:'a1',item:{...employee('a1'),email:'late-profile@example.invalid'}}));
+    assert.doesNotMatch(document.body.textContent,/Employee a1|late-profile/);
+    await m.act(async()=>button('Προβολή καρτέλας').click());
+    assert.match(document.querySelector('.workforce-employee-detail').textContent,/staff@example.invalid/);
+    denyRefresh=true;
+    await m.act(async()=>button('Ανανέωση προσωπικού').click());
+    assert.match(document.querySelector('[role="alert"]').textContent,/Η πρόσβαση ανακλήθηκε/);
+    assert.doesNotMatch(document.body.textContent,/Employee a2|staff@example.invalid/);
+    await selectStore('a3');
+    assert.equal(button('Προσωπικό'),undefined);
+    assert.equal(document.querySelector('.workforce-personnel-read'),null);
+    assert.equal(calls.length,6);
+  }finally{await m.close()}
+});
+
+test('personnel read view rejects same-company replies for another store in list and detail',async()=>{
+  const Panel=await component('platform/WorkforceV2EmployeesPanel');
+  const employee={id:'employee',companyId:'a',fullName:'Unconfirmed personnel',active:true,maxDaysPerWeek:5,maxHoursPerWeek:40};
+  for(const mismatch of ['list','detail']){
+    const api=async path=>path.endsWith('/employees')
+      ?{companyId:'a',storeId:mismatch==='list'?'other':'a1',items:[employee],count:1}
+      :{companyId:'a',storeId:'other',item:{...employee,email:'foreign-profile@example.invalid'}};
+    const m=await mount(Panel,{company:{id:'a'},store:{id:'a1',name:'A1'},request:api,readOnly:true});
+    try{
+      if(mismatch==='detail')await m.act(async()=>button('Προβολή καρτέλας').click());
+      assert.ok(document.querySelector('[role="alert"]'));
+      assert.doesNotMatch(document.body.textContent,/Unconfirmed personnel|foreign-profile@example.invalid/);
+    }finally{await m.close()}
+  }
+});
