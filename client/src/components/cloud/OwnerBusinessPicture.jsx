@@ -4,7 +4,7 @@ import {ChevronDown,ChevronRight,Download,Maximize2,Minimize2,Printer,RefreshCw,
 import {businessPicturePreset} from "./business-picture-dates.js";
 import BusinessPictureExpenseDetails from "./BusinessPictureExpenseDetails.jsx";
 import BusinessPictureCostDetails from "./BusinessPictureCostDetails.jsx";
-import {businessPictureCell,businessPictureCsv} from "./business-picture-values.js";
+import {businessPictureCell,businessPictureCsv,businessPictureVisibleValue} from "./business-picture-values.js";
 import {businessPicturePrintHtml} from "./business-picture-print.js";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
@@ -31,12 +31,11 @@ export default function OwnerBusinessPicture({api,store,onClose}){
   useEffect(()=>{setData(null);setExpensePeriod(null);setCostPeriod(null);load();return ()=>{sequence.current++}},[store?.id]);
   const preset=kind=>{const p=businessPicturePreset(kind);setFrom(p.from);setTo(p.to)};
   const daysByMonth=useMemo(()=>{const map=new Map();for(const row of data?.daily||[]){if(!map.has(row.month))map.set(row.month,[]);map.get(row.month).push(row)}return map},[data]);
-  const visible=(value,key)=>{if(scope==="WITH_VAT"&&["salesNet","purchaseNet"].includes(key))return null;if(scope==="WITHOUT_VAT"&&["salesGross","purchaseGross","salesVat","purchaseVat"].includes(key))return null;return value};
-  const exportCsv=()=>{const blob=new Blob([businessPictureCsv(data,columns)],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`eikona-epixeiriseis-${data?.calendarFrom||from}-${data?.calendarTo||to}.csv`;a.click();URL.revokeObjectURL(url)};
+  const exportCsv=()=>{const blob=new Blob([businessPictureCsv(data,columns,scope)],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`eikona-epixeiriseis-${data?.calendarFrom||from}-${data?.calendarTo||to}.csv`;a.click();URL.revokeObjectURL(url)};
   const periodFor=row=>row?.day?{day:row.day}:row?.month&&row.month!=="ΣΥΝΟΛΟ"?{month:row.month}:{};
   const openExpenses=row=>{setCostPeriod(null);setExpensePeriod(periodFor(row))};
   const openCosts=row=>{setExpensePeriod(null);setCostPeriod(periodFor(row))};
-  const rowCells=row=>columns.map(([key,,format])=>{const cell=businessPictureCell(row,key),value=visible(cell.value,key);return <td key={key} className={key==="netProfit"?"business-profit":key.includes("Vat")?"business-vat":""}>{key==="missingCostLines"&&value>0?<button type="button" className="business-expense-link business-cost-link" aria-label={`Προβολή ${value} γραμμών χωρίς κόστος`} onClick={e=>{e.stopPropagation();openCosts(row)}}>{format(value)} · Είδη</button>:key==="missingExpenseVatPayments"&&value>0?<button type="button" className="business-expense-link" aria-label={`Προβολή ${value} εξόδων με ΦΠΑ 0% χωρίς ανάλυση`} onClick={e=>{e.stopPropagation();openExpenses(row)}}>{format(value)} · Προβολή</button>:value==null?"—":cell.estimated?<><span title="Προσωρινή εκτίμηση κόστους">≈ {format(value)}</span><small style={{display:"block",fontSize:12,fontWeight:700}}>Εκτίμηση</small></>:format(value)}</td>});
+  const rowCells=row=>columns.map(([key,,format])=>{const cell=businessPictureCell(row,key),value=businessPictureVisibleValue(cell.value,key,scope);return <td key={key} className={key==="netProfit"?"business-profit":key.includes("Vat")?"business-vat":""}>{key==="missingCostLines"&&value>0?<button type="button" className="business-expense-link business-cost-link" aria-label={`Προβολή ${value} γραμμών χωρίς κόστος`} onClick={e=>{e.stopPropagation();openCosts(row)}}>{format(value)} · Είδη</button>:key==="missingExpenseVatPayments"&&value>0?<button type="button" className="business-expense-link" aria-label={`Προβολή ${value} εξόδων με ΦΠΑ 0% χωρίς ανάλυση`} onClick={e=>{e.stopPropagation();openExpenses(row)}}>{format(value)} · Προβολή</button>:value==null?"—":cell.estimated?<><span title="Προσωρινή εκτίμηση κόστους">≈ {format(value)}</span><small style={{display:"block",fontSize:12,fontWeight:700}}>Εκτίμηση</small></>:format(value)}</td>});
   const printReport=()=>{
     const popup=window.open("","_blank");
     if(!popup){setError("Επίτρεψε το αναδυόμενο παράθυρο για την εκτυπώσιμη αναφορά.");return}
