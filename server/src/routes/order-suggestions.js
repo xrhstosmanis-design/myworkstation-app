@@ -12,6 +12,7 @@ export async function readOrderSuggestions(db,{storeId,companyId,options,now=new
     SELECT p."id" AS "productId",p."name",p."sku",p."unit",sp."currentStock",sp."minStock",
       EXISTS(SELECT 1 FROM "Recipe" r WHERE r."companyId"=${companyId} AND r."productId"=p."id" AND r."active"=TRUE)
         OR EXISTS(SELECT 1 FROM "PreparationRecipeLine" r WHERE r."companyId"=${companyId} AND r."productId"=p."id" AND r."automatic"=TRUE) AS "hasRecipe",
+      COALESCE(pending."review",'[]'::jsonb) AS "pendingPurchaseReview",
       COALESCE(sales."soldQuantity",0) AS "soldQuantity",COALESCE(sales."returnedQuantity",0) AS "returnedQuantity"
     FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
     LEFT JOIN LATERAL (
@@ -22,6 +23,22 @@ export async function readOrderSuggestions(db,{storeId,companyId,options,now=new
       WHERE l."productId"=p."id" AND s."companyId"=${companyId} AND s."storeId"=${storeId}
         AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${now}
     ) sales ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(jsonb_build_object('status',review."status",'orderCount',review."orderCount",
+        'recordedStockQuantity',CASE WHEN review."unconvertedLineCount"=0 THEN review."quantity" ELSE NULL END,
+        'unconvertedLineCount',review."unconvertedLineCount") ORDER BY review."status") AS "review"
+      FROM (
+        SELECT o."status",COUNT(DISTINCT o."id")::int AS "orderCount",
+          SUM(l."quantity"*l."stockUnitsPerInvoiceUnit") AS "quantity",
+          COUNT(*) FILTER (WHERE l."quantity" IS NULL OR l."quantity"<=0 OR l."stockUnitsPerInvoiceUnit" IS NULL
+            OR l."stockUnitsPerInvoiceUnit"<=0 OR l."quantity"::text IN ('NaN','Infinity','-Infinity')
+            OR l."stockUnitsPerInvoiceUnit"::text IN ('NaN','Infinity','-Infinity'))::int AS "unconvertedLineCount"
+        FROM "PurchaseOrder" o JOIN "PurchaseOrderLine" l ON l."orderId"=o."id" AND l."productId"=p."id"
+        WHERE o."companyId"=${companyId} AND o."storeId"=${storeId}
+          AND (o."status"='NEW' OR (o."status"='FINAL' AND o."awaitingInvoice"=TRUE))
+        GROUP BY o."status"
+      ) review
+    ) pending ON TRUE
     WHERE sp."storeId"=${storeId} AND sp."active"=TRUE AND p."active"=TRUE AND p."trackStock"=TRUE
     ORDER BY p."name",p."id"`;
   return {storeId,generatedAt:now.toISOString(),from:from.toISOString(),to:now.toISOString(),options,rows:buildOrderSuggestions(rows,options)};

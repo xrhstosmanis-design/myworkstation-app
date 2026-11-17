@@ -43,6 +43,7 @@ export function buildSupplierProposalCsv({snapshot,rows,filters}){
   if(!snapshot?.storeId||!Array.isArray(rows)||!rows.length||typeof snapshot.generatedAt!=="string"||snapshot.generatedAt!==snapshot.to||!Number.isFinite(Date.parse(snapshot.generatedAt))||snapshot.supplierBasis!=="APPROVED_DOCUMENT_FREQUENCY_PROXY"||snapshot.reviewRequired!==true||snapshot.automaticTransmission!==false)throw Error("Δεν υπάρχει έγκυρη πρόταση για εξαγωγή.");
   const header=["Κατάστημα ID","Στιγμή υπολογισμού (ISO)","Ιστορικό από (ISO)","Ιστορικό έως (ISO)","Ημέρες ιστορικού","Ημέρες κάλυψης","Ημέρες παράδοσης","Βάση πρότασης","Πλήρης πηγή παραστατικών","Απαιτείται έλεγχος","Αυτόματη αποστολή","Αναζήτηση","Φίλτρο υποψήφιου προμηθευτή","Μόνο ποσότητες για παραγγελία / έλεγχο","Εύρος εξαγωγής","Προϊόν ID","Προϊόν","Κωδικός","Μονάδα αποθήκης","Απόθεμα","Ελάχιστο απόθεμα","Πωλήσεις","Επιστροφές / ακυρώσεις","Καθαρή κίνηση","Ημερήσια ζήτηση","Προτεινόμενη ποσότητα","Υποψήφιος προμηθευτής ID","Υποψήφιος προμηθευτής","Αιτία ελέγχου προμηθευτή","Υποψήφιοι / εγκεκριμένα παραστατικά","Αιτιολογία ποσότητας","Προειδοποιήσεις"];
   header.push("Φίλτρο τρέχοντος ελλείμματος","Κατάσταση τρέχοντος αποθέματος","Έλλειμμα κάτω από ελάχιστο","Βάση ελλείμματος","Φυσικό απόθεμα επαληθευμένο","Αιτίες ελέγχου ελλείμματος");
+  header.push("Εκκρεμείς αγορές για έλεγχο (καταγεγραμμένες ποσότητες)");
   const stockShortfall=filters.stockShortfall===undefined?"ALL":filters.stockShortfall;
   if(!shortfallFilters.has(stockShortfall))invalidShortfall();
   snapshot.rows.forEach(validateCurrentStockShortfall);
@@ -52,7 +53,7 @@ export function buildSupplierProposalCsv({snapshot,rows,filters}){
     if(!matchesCurrentStockShortfall(row,stockShortfall))invalidShortfall();
     const shortfall=validateCurrentStockShortfall(row);
     const group=snapshot.groups.find(item=>item.candidateSupplierId===row.candidateSupplierId);
-    return [...metadata,row.productId,row.name,row.sku,row.unitLabel,row.currentStock,row.minStock,row.soldQuantity,row.returnedQuantity,row.netQuantity,row.dailyDemand,row.suggestedQuantity,row.candidateSupplierId,group?.supplierName||"Χωρίς προμηθευτή",row.supplierReviewReason,row.supplierCandidates.map(candidate=>`${candidate.supplierName}: ${candidate.documentCount}`).join(" | "),row.reason,row.warnings.join(" | "),stockShortfall,shortfall.status,shortfall.quantity,shortfall.basis,"NO",shortfall.reviewReasons.join(" | ")];
+    return [...metadata,row.productId,row.name,row.sku,row.unitLabel,row.currentStock,row.minStock,row.soldQuantity,row.returnedQuantity,row.netQuantity,row.dailyDemand,row.suggestedQuantity,row.candidateSupplierId,group?.supplierName||"Χωρίς προμηθευτή",row.supplierReviewReason,row.supplierCandidates.map(candidate=>`${candidate.supplierName}: ${candidate.documentCount}`).join(" | "),row.reason,row.warnings.join(" | "),stockShortfall,shortfall.status,shortfall.quantity,shortfall.basis,"NO",shortfall.reviewReasons.join(" | "),(row.pendingPurchaseReview||[]).map(review=>`${review.status==="NEW"?"Πρόχειρες αγορές":"Προς τιμολόγηση"}: ${review.orderCount} / ${review.recordedStockQuantity==null?"Μετατροπή προς έλεγχο":`${review.recordedStockQuantity} ${row.unitLabel}`}`).join(" | ")];
   });
   return "\ufeff"+[header,...records].map(record=>record.map(cell).join(",")).join("\r\n")+"\r\n";
 }
