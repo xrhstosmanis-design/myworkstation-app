@@ -15,7 +15,8 @@ export const employeeInclude={
 export function managementGuard(req,res,next){
   if(req.user?.staffAccess===true){
     const path=String(req.originalUrl||'').split('?')[0];
-    if(req.staffGrant?.capability==='employees.read'&&staffRequestCapability(req.method,path)==='employees.read'&&req.params.companyId===req.user.companyId&&req.params.storeId===req.user.storeId)return next();
+    const capability=staffRequestCapability(req.method,path);
+    if(['employees.read','schedule.read','attendance.read','leaves.read'].includes(capability)&&req.staffGrant?.capability===capability&&req.params.companyId===req.user.companyId&&req.params.storeId===req.user.storeId)return next();
     return res.status(403).json({error:'Δεν υπάρχει δικαίωμα προβολής προσωπικού.'});
   }
   if(isSuperAdmin(req.user)||managementRoles.has(req.user?.role))return next();
@@ -54,8 +55,9 @@ export async function contextFor(req){
   if(!companyId||!storeId)throw Object.assign(new Error("Δεν προσδιορίστηκε ιδιοκτήτης ή κατάστημα."),{status:400});
   if(!isSuperAdmin(req.user)&&String(req.user?.companyId||"")!==companyId)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404});
   if(req.user?.staffAccess===true){
-    if(req.user.storeId!==storeId||req.staffGrant?.capability!=='employees.read')throw staffError();
-    await requireStaffGrant(prisma,req.user,storeId,'employees.read');
+    const capability=req.staffGrant?.capability;
+    if(req.user.storeId!==storeId||!['employees.read','schedule.read','attendance.read','leaves.read'].includes(capability))throw staffError();
+    await requireStaffGrant(prisma,req.user,storeId,capability);
     const [store,company]=await Promise.all([
       prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true,companyId:true}}),
       prisma.company.findUnique({where:{id:companyId},select:{id:true,name:true,active:true}})

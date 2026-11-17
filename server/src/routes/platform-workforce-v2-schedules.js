@@ -1,3 +1,4 @@
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -147,7 +148,23 @@ router.post("/ai/interpret",async(req,res,next)=>{try{
  const proposal=buildAiProposal({instruction:body.instruction,periodStart:normalizedPeriodStart,employees,templates});res.json({mode:"PREVIEW_ONLY",periodStart:normalizedPeriodStart,instruction:body.instruction,conversation:body.conversation,context:{store:{id:context.store.id,name:context.store.name},employees:permanentRules,shiftTemplates:templates.map(t=>({id:t.id,name:t.name,category:t.category,startTime:t.startTime,endTime:t.endTime,minimumPeople:t.minimumPeople,maximumPeople:t.maximumPeople}))},proposal,nextStep:"USER_REVIEW",message:"Δημιουργήθηκε structured preview από τα πραγματικά δεδομένα Workforce. Δεν γράφτηκε καμία βάρδια. Έλεγξε το πρόγραμμα και γράψε διορθώσεις πριν από έγκριση."});
 }catch(error){next(error)}});
 
-router.get("/",async(req,res,next)=>{try{const context=await contextFor(req),q=z.object({from:dateText.optional(),to:dateText.optional(),status:z.string().optional()}).parse(req.query||{});const items=await prisma.workforceSchedule.findMany({where:{companyId:context.company.id,storeId:context.store.id,...(q.from?{periodEnd:{gte:dayStart(q.from)}}:{}),...(q.to?{periodStart:{lte:new Date(`${q.to}T23:59:59.999Z`)}}:{}),...(q.status?{status:q.status}:{})},include:scheduleInclude,orderBy:[{periodStart:"desc"},{version:"desc"}],take:100});res.json({items:items.map(serialize)});}catch(error){next(error)}});
+router.get("/",async(req,res,next)=>{try{
+  const context=await contextFor(req),delegated=req.user?.staffAccess===true;
+  const q=z.object({from:dateText.optional(),to:dateText.optional(),status:z.string().optional()}).parse(req.query||{});
+  const employeeScope={companyId:context.company.id,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]};
+  const selection={
+    id:true,companyId:true,storeId:true,periodStart:true,periodEnd:true,periodType:true,status:true,version:true,approvedAt:true,publishedAt:true,createdAt:true,updatedAt:true,
+    assignments:{where:{shiftTemplate:{companyId:context.company.id,storeId:context.store.id},OR:[{employeeId:null},{employee:employeeScope}]},select:{
+      id:true,date:true,employeeId:true,shiftTemplateId:true,slot:true,status:true,warningState:true,
+      employee:{select:{id:true,fullName:true}},
+      shiftTemplate:{select:{id:true,name:true,category:true,startTime:true,endTime:true,minimumPeople:true,maximumPeople:true,requiredRole:{select:{id:true,name:true}}}}
+    },orderBy:[{date:'asc'},{shiftTemplate:{startTime:'asc'}},{slot:'asc'}]}
+  };
+  const items=await prisma.workforceSchedule.findMany({where:{companyId:context.company.id,storeId:context.store.id,...(q.from?{periodEnd:{gte:dayStart(q.from)}}:{}),...(q.to?{periodStart:{lte:new Date(`${q.to}T23:59:59.999Z`)}}:{}),...(q.status?{status:q.status}:{})},...(delegated?{select:selection}:{include:scheduleInclude}),orderBy:[{periodStart:"desc"},{version:"desc"}],take:100});
+  if(delegated)await requireStaffGrant(prisma,req.user,context.store.id,'schedule.read');
+  res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),items:items.map(serialize)});
+}catch(error){next(error)}});
+
 router.get("/:scheduleId/validation",async(req,res,next)=>{try{const context=await contextFor(req);context.requestUser=req.user;res.json(await scheduleValidation(context,await loadSchedule(context,req.params.scheduleId)));}catch(error){next(error)}});
 router.post("/",async(req,res,next)=>{try{
   const context=await contextFor(req);context.requestUser=req.user;const body=z.object({periodStart:dateText,periodType:z.enum(["WEEK","MONTH"]).default("WEEK"),notes:z.string().trim().max(1000).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{});

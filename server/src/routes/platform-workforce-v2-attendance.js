@@ -1,3 +1,4 @@
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -34,18 +35,26 @@ async function publishedAssignment(context,employeeId,date){
 }
 
 router.get("/",async(req,res,next)=>{try{
-  const context=await contextFor(req),query=z.object({date:dateText}).parse(req.query||{}),start=dayStart(query.date),end=new Date(start.getTime()+86400000);
-  const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:start,lt:end}},include:{employee:true},orderBy:[{startedAt:"asc"}]});
-  const sessionIds=sessions.map(item=>item.scheduledAssignmentId).filter(Boolean),assignments=sessionIds.length?await prisma.workforceScheduleAssignment.findMany({where:{id:{in:sessionIds}},include:assignmentInclude}):[];
+  const context=await contextFor(req),delegated=req.user?.staffAccess===true,query=z.object({date:dateText}).parse(req.query||{}),start=dayStart(query.date),end=new Date(start.getTime()+86400000);
+  const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:start,lt:end},...(delegated?{employee:{companyId:context.company.id}}:{})},
+    ...(delegated?{select:{id:true,employeeId:true,scheduledAssignmentId:true,startedAt:true,endedAt:true,workedMinutes:true,lateMinutes:true,earlyLeaveMinutes:true,overtimeMinutes:true,status:true,employee:{select:{id:true,fullName:true}}}}:{include:{employee:true}}),orderBy:[{startedAt:"asc"}]});
+  const sessionIds=sessions.map(item=>item.scheduledAssignmentId).filter(Boolean),assignments=sessionIds.length?await prisma.workforceScheduleAssignment.findMany({where:{id:{in:sessionIds},...(delegated?{schedule:{companyId:context.company.id,storeId:context.store.id},shiftTemplate:{companyId:context.company.id,storeId:context.store.id}}:{})},
+    ...(delegated?{select:{id:true,date:true,shiftTemplate:{select:{id:true,name:true,startTime:true,endTime:true}}}}:{include:assignmentInclude})}):[];
   const map=new Map(assignments.map(item=>[item.id,item]));
   const employeeIds=[...new Set(sessions.map(item=>item.employeeId))];
-  const rates=employeeIds.length?await prisma.workforceHourlyRate.findMany({where:{employeeId:{in:employeeIds},validFrom:{lt:end},OR:[{validTo:null},{validTo:{gte:start}}]},orderBy:{validFrom:"desc"}}):[];
+  const rates=!delegated&&employeeIds.length?await prisma.workforceHourlyRate.findMany({where:{employeeId:{in:employeeIds},validFrom:{lt:end},OR:[{validTo:null},{validTo:{gte:start}}]},orderBy:{validFrom:"desc"}}):[];
   const rateMap=new Map();
   for(const rate of rates)if(!rateMap.has(rate.employeeId))rateMap.set(rate.employeeId,rate);
-  const rows=sessions.map(item=>serializeSession({...item,assignment:map.get(item.scheduledAssignmentId)||null,hourlyRate:rateMap.has(item.employeeId)?rateMap.get(item.employeeId).hourlyRate:null}));
+  const rows=sessions.map(item=>{
+    const row=serializeSession({...item,assignment:map.get(item.scheduledAssignmentId)||null,hourlyRate:rateMap.has(item.employeeId)?rateMap.get(item.employeeId).hourlyRate:null});
+    if(!delegated)return row;
+    const {hourlyRate,workedAmount,employee,...attendance}=row;
+    return {...attendance,employee:{id:employee.id,fullName:employee.fullName}};
+  });
   const employees=await prisma.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},select:{id:true,fullName:true},orderBy:{fullName:"asc"}});
   const scheduledRows=rows.filter(row=>row.scheduledMinutes!==null);
-  res.json({date:query.date,employees,items:rows,canApprove:isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),workedAmount:Number(rows.reduce((total,row)=>total+(row.workedAmount??0),0).toFixed(2)),scheduledMinutes:scheduledRows.reduce((total,row)=>total+row.scheduledMinutes,0),varianceMinutes:scheduledRows.reduce((total,row)=>total+row.varianceMinutes,0),scheduledSessions:scheduledRows.length,review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
+  if(delegated)await requireStaffGrant(prisma,req.user,context.store.id,'attendance.read');
+  res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),date:query.date,employees,items:rows,canApprove:!delegated&&isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),...(!delegated?{workedAmount:Number(rows.reduce((total,row)=>total+(row.workedAmount??0),0).toFixed(2))}:{}),scheduledMinutes:scheduledRows.reduce((total,row)=>total+row.scheduledMinutes,0),varianceMinutes:scheduledRows.reduce((total,row)=>total+row.varianceMinutes,0),scheduledSessions:scheduledRows.length,review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
 }catch(error){next(error)}});
 
 const clockBody=z.object({employeeId:z.string().min(1),eventType:z.enum(["IN","OUT"]),note:z.string().trim().max(500).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)});

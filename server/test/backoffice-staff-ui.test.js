@@ -1229,3 +1229,79 @@ test('personnel read view rejects same-company replies for another store in list
     }finally{await m.close()}
   }
 });
+
+test('schedule, attendance and leave views each use an independent native store read without other workforce requests',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace');
+  for(const [key,label,endpoint,selector] of [
+    ['schedule','Πρόγραμμα','schedules','.workforce-schedule-workspace'],
+    ['attendance','Παρουσίες','attendance','.workforce-attendance-workspace'],
+    ['leaves','Άδειες και ρεπό','leaves','.workforce-schedule-workspace']
+  ]){
+    const calls=[];
+    let resolveOld,pendingRefresh=false,denyRefresh=false;
+    const old=new Promise(resolve=>{resolveOld=resolve});
+    const payload=(storeId,date)=>{
+      const employee={id:`employee-${storeId}`,fullName:`Scoped worker ${storeId}`};
+      const envelope={companyId:'a',storeId};
+      if(key==='leaves')return {...envelope,items:[{id:'leave',employee,leaveType:'DAY_OFF',status:'REQUESTED',startDate:date,endDate:date}]};
+      if(key==='schedule')return {...envelope,items:[{id:'schedule',periodStart:date,periodEnd:date,status:'DRAFT',version:1,assignments:[{id:'assignment',date,slot:1,employeeId:employee.id,employee,shiftTemplate:{id:'template',name:'Πρωινή',startTime:'08:00',endTime:'16:00'},warningState:'NEEDS_APPROVAL'}]}]};
+      return {...envelope,date,employees:[employee],canApprove:true,summary:{open:1,closed:0,workedMinutes:60,scheduledMinutes:480,varianceMinutes:-420,review:1,workedAmount:98765},items:[{id:'attendance',employee,status:'NEEDS_APPROVAL',startedAt:'2026-11-17T08:00:00Z',workedMinutes:60,scheduledMinutes:480,varianceMinutes:-420,hourlyRate:98765,workedAmount:98765}]};
+    };
+    const api=async(path,options={})=>{
+      calls.push({path,options});assert.equal(options.method||'GET','GET');
+      if(path.endsWith('/me'))return {...identity,companyId:'a',stores:[
+        ...['a1','a2'].map(id=>({id,name:id.toUpperCase(),profile:'AUDITOR',capabilities:[`${key}.read`]})),
+        {id:'a3',name:'A3',profile:'MANAGER',capabilities:[]}
+      ]};
+      const storeId=options.headers['x-backoffice-store-id'];
+      const url=new URL(path,'https://isolated.invalid');
+      assert.equal(url.pathname,`/api/platform/store-modules/companies/a/stores/${storeId}/workforce-v2/${endpoint}`);
+      if(denyRefresh)throw Object.assign(new Error('Η πρόσβαση ανακλήθηκε.'),{status:403});
+      if(pendingRefresh&&storeId==='a1')return old;
+      return payload(storeId,url.searchParams.get(key==='attendance'?'date':'from'));
+    };
+    const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+    const selectStore=async(id)=>m.act(async()=>{const select=document.querySelector('[aria-label="Κατάστημα"]');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}))});
+    try{
+      await selectStore('a1');
+      for(const otherLabel of ['Προσωπικό','Πρόγραμμα','Παρουσίες','Άδειες και ρεπό'].filter(item=>item!==label))assert.equal(button(otherLabel),undefined);
+      await m.act(async()=>button(label).click());
+      await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+      assert.match(document.querySelector(selector).textContent,/Scoped worker a1/);
+      for(const forbidden of ['Νέο πρόχειρο πρόγραμμα','Έλεγχος προγράμματος','Δημοσίευση','Έγκριση','Αφαίρεση','Καταχώριση αιτήματος','Απόρριψη','Διόρθωση ωρών','Έναρξη','Λήξη'])assert.equal(button(forbidden),undefined,`${key}: ${forbidden}`);
+      assert.equal(document.querySelector('.workforce-schedule-sections'),null);
+      assert.equal(document.querySelector('.workforce-leave-form'),null);
+      assert.doesNotMatch(document.querySelector(selector).textContent,/98765|Ωρομίσθιο|Αξία ωρών|Αξία πραγματικών ωρών/);
+      if(key==='schedule'){
+        await m.act(async()=>button('Ανά εργαζόμενο').click());
+        assert.match(document.querySelector('.workforce-employee-schedule').textContent,/Scoped worker a1/);
+      }
+      pendingRefresh=true;
+      const refresh=()=>document.querySelector(`${selector} .workforce-v2-section-title button`);
+      await m.act(async()=>refresh().click());
+      assert.doesNotMatch(document.querySelector(selector).textContent,/Scoped worker a1/);
+      await selectStore('a2');
+      await m.act(async()=>button(label).click());
+      assert.match(document.querySelector(selector).textContent,/Scoped worker a2/);
+      await m.act(async()=>resolveOld(payload('a1','2026-11-17')));
+      assert.doesNotMatch(document.querySelector(selector).textContent,/Scoped worker a1/);
+      denyRefresh=true;
+      await m.act(async()=>refresh().click());
+      assert.match(document.querySelector('[role="alert"]').textContent,/Η πρόσβαση ανακλήθηκε/);
+      assert.doesNotMatch(document.querySelector(selector).textContent,/Scoped worker a2/);
+      await selectStore('a3');
+      assert.equal(button(label),undefined);
+      assert.equal(document.querySelector(selector),null);
+      assert.equal(calls.length,5);
+    }finally{await m.close()}
+  }
+});
+
+test('read-only workforce schedule, leaves and attendance reject a foreign store envelope',async()=>{
+  const Schedule=await component('platform/WorkforceV2ScheduleTab'),Attendance=await component('platform/WorkforceV2AttendanceTab');
+  for(const [Panel,extra] of [[Schedule,{}],[Schedule,{readOnlySection:'LEAVE'}],[Attendance,{}]]){
+    const request=async()=>({companyId:'a',storeId:'foreign',items:[{id:'foreign'}]});
+    const m=await mount(Panel,{company:{id:'a'},store:{id:'a1'},request,readOnly:true,...extra});
+    try{assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκε το κατάστημα/)}finally{await m.close()}
+  }
+});

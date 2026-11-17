@@ -1,7 +1,7 @@
 import {staffCapabilities,staffProfiles,staffRequestCapability,validStaffCapabilities} from '../../../shared/backoffice-staff.mjs';
 import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-access.js';
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
-import {PERSONNEL_BASIC,resolvePersonnelPackageStates} from '../personnel-packages.js';
+import {PERSONNEL_BASIC,PERSONNEL_PRO,resolvePersonnelPackageStates} from '../personnel-packages.js';
 import {lifecycleContext} from './store-lifecycle-context.js';
 export const staffError=(status=403,code='STAFF_ACCESS_DENIED',message='Δεν υπάρχει δικαίωμα για αυτή την ενέργεια.')=>Object.assign(new Error(message),{status,code});
 export async function staffAccount(db,user){
@@ -28,9 +28,9 @@ export async function requireStaffGrant(db,user,storeId,capability,{additionalMo
   if(!grant||!staffProfiles[grant.profile]||!validStaffCapabilities(grant.capabilities)||!grant.capabilities.includes(capability))throw staffError();
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
-  if(capability==='employees.read'){
+  if(['employees.read','schedule.read','attendance.read','leaves.read'].includes(capability)){
     const rows=await db.$queryRaw`SELECT "moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId}`;
-    if(!resolvePersonnelPackageStates(rows).states[PERSONNEL_BASIC].effectiveActive)throw staffError(403,'MODULE_DISABLED','Το πακέτο προσωπικού δεν είναι ενεργό στο κατάστημα.');
+    if(!resolvePersonnelPackageStates(rows).states[capability==='attendance.read'?PERSONNEL_PRO:PERSONNEL_BASIC].effectiveActive)throw staffError(403,'MODULE_DISABLED','Το πακέτο προσωπικού δεν είναι ενεργό στο κατάστημα.');
   }
   const modules=[...new Set([...modulesForCapability(capability),...additionalModules])];
   for(const moduleKey of modules){
@@ -56,7 +56,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(capability==='LIFECYCLE'){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
-    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read'].includes(c)):[];
+    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read'].includes(c)):[];
     let disabled;
     for(const read of reads){
       try{await requireStaffGrant(db,user,storeId,read);req.user={...req.user,storeId};return true}
@@ -67,7 +67,7 @@ export async function enforceBackofficeStaff(db,req,res){
   const storeId=req.get('x-backoffice-store-id');
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
   if(['analytics.read','handover.read'].includes(capability)&&req.query?.storeId!==storeId)throw staffError();
-  const workforce=path.match(/^\/api\/platform\/store-modules\/companies\/([^/]+)\/stores\/([^/]+)\/workforce-v2\/employees(?:\/[^/]+)?$/);
+  const workforce=path.match(/^\/api\/platform\/store-modules\/companies\/([^/]+)\/stores\/([^/]+)\/workforce-v2\/(?:employees(?:\/[^/]+)?|schedules|attendance|leaves)$/);
   if(workforce&&(workforce[1]!==user.companyId||workforce[2]!==storeId))throw staffError();
   const sales=path.match(/^\/api\/(?:transactions|cash|cash-control|store-pos)\/stores\/([^/]+)(?:\/|$)/);
   if(sales&&sales[1]!==storeId)throw staffError();
@@ -115,7 +115,7 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
-  return capability==='employees.read'?[]:capability==='handover.read'?['SHIFT_HANDOVER']:capability==='analytics.read'?['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']:capability==='order-suggestions.read'?['ORDER_SUGGESTIONS']:capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
+  return ['employees.read','schedule.read','attendance.read','leaves.read'].includes(capability)?[]:capability==='handover.read'?['SHIFT_HANDOVER']:capability==='analytics.read'?['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']:capability==='order-suggestions.read'?['ORDER_SUGGESTIONS']:capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
 }
 
 // Must run inside each canonical writer transaction, before writes or replay.
