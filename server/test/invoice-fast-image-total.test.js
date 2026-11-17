@@ -69,3 +69,14 @@ test("a labeled VAT table row verifies the explicit payable",async()=>{
   assert.equal(recoverBalancedInvoicePayable(`${table} 100,00 24,00 24,00 124,00 ΠΛΗΡΩΤΕΟ 120,00`),0);
   assert.equal(recoverBalancedInvoicePayable(`${table} 100,00 24,00 24,00 124,00 ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ ΠΛΗΡΩΤΕΟ 124,00`),0);
 });
+
+test("a VAT rate printed before its amount verifies the photos' payable",async()=>{
+  const {recoverBalancedInvoicePayable}=await import("../src/lib/invoice-total-reading.js");
+  const footer=(rate,payable,separator="")=>
+    `ΚΑΘΑΡΗ ΑΞΙΑ: 45,00 EUR ΦΠΑ ${rate}%: 10,80 EUR ${separator}ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ: ${payable} EUR`;
+  assert.equal(recoverBalancedInvoicePayable(footer("24","55,80")),55.8);
+  assert.equal(recoverBalancedInvoicePayable(footer("24,00","55,80")),55.8);
+  assert.equal(recoverBalancedInvoicePayable(footer("13","55,80")),0);
+  assert.equal(recoverBalancedInvoicePayable(footer("24","50,00")),0);
+  assert.equal(recoverBalancedInvoicePayable(footer("24","55,80","ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ ")),0);
+});

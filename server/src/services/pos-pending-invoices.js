@@ -30,10 +30,29 @@ const commonDraftNumber=(proof,documentId,orderId,paymentId,documentNumber,origi
 )`;
 // The original myDATA job stores an attachment view of the same POS handoff.
 // A separate source still requires review unless the stored pointer proves it.
-const isProjectedReceipt=(receipt,sourceId,sourceAttachment,sourceHeader,paymentId)=>Prisma.sql`(
- ${receipt}->>'paymentSourceJobId'=${sourceId} AND ${sourceHeader}->>'paymentTransactionId'=${paymentId}
- AND COALESCE(${sourceHeader}->>'pageIndex','0')='0'
+const isProjectedReceipt=(receipt,sourceId,sourceAttachment,sourceHeader,paymentId,proof,companyId,storeId,legacyEnabled)=>Prisma.sql`(
+ ${sourceHeader}->>'paymentTransactionId'=${paymentId} AND COALESCE(${sourceHeader}->>'pageIndex','0')='0'
  AND jsonb_typeof(${receipt}->'attachmentIds')='array' AND (${receipt}->'attachmentIds') ? ${sourceAttachment}
+ AND ( ${receipt}->>'paymentSourceJobId'=${sourceId} OR ${legacyEnabled?Prisma.sql`(
+  NOT (${receipt} ? 'paymentSourceJobId') AND ${proof}->'completed'='true'::jsonb
+  AND ${proof}->>'paymentTransactionId'=${paymentId} AND ${proof}->'requiresPaymentReview'='false'::jsonb
+  AND NULLIF(${proof}->>'mark','') IS NOT NULL AND NULLIF(${proof}->>'inboxId','') IS NOT NULL
+  AND EXISTS (SELECT 1 FROM "AiReaderJob" original
+   JOIN "PurchaseDocument" d ON d."id"=original."purchaseDocumentId" AND d."companyId"=original."companyId" AND d."storeId"=original."storeId"
+   JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."sourceDocumentId"=d."id" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId"
+   WHERE original."id"=${sourceId} AND original."companyId"=${companyId} AND original."storeId"=${storeId}
+    AND original."resultJson"->'commonDraft'=${proof} AND d."id"=${proof}->>'documentId'
+    AND o."id"=${proof}->>'orderId' AND d."paymentTransactionId"=${paymentId}
+    AND jsonb_typeof(${sourceHeader}->'pageJobIds')='array'
+    AND jsonb_array_length(CASE WHEN jsonb_typeof(${receipt}->'attachmentIds')='array' THEN ${receipt}->'attachmentIds' ELSE '[]'::jsonb END) BETWEEN 1 AND 5
+    AND jsonb_array_length(CASE WHEN jsonb_typeof(${receipt}->'attachmentIds')='array' THEN ${receipt}->'attachmentIds' ELSE '[]'::jsonb END)=jsonb_array_length(CASE WHEN jsonb_typeof(${sourceHeader}->'pageJobIds')='array' THEN ${sourceHeader}->'pageJobIds' ELSE '[]'::jsonb END)
+    AND (SELECT COUNT(DISTINCT id) FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(${receipt}->'attachmentIds')='array' THEN ${receipt}->'attachmentIds' ELSE '[]'::jsonb END) unique_attachment(id))=jsonb_array_length(CASE WHEN jsonb_typeof(${receipt}->'attachmentIds')='array' THEN ${receipt}->'attachmentIds' ELSE '[]'::jsonb END)
+    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(${receipt}->'attachmentIds')='array' THEN ${receipt}->'attachmentIds' ELSE '[]'::jsonb END) attachment(id)
+     WHERE NOT EXISTS (SELECT 1 FROM "AiReaderJob" page WHERE page."companyId"=${companyId} AND page."storeId"=${storeId}
+      AND page."purchaseDocumentId"=d."id" AND page."attachmentId"=attachment.id
+      AND (${sourceHeader}->'pageJobIds') ? page."id" AND page."resultJson"->'posHandoff'->>'paymentTransactionId'=${paymentId}))
+  )
+ )`:Prisma.sql`FALSE`})
 )`;
 function scopeCheck(scope){if(!text(scope?.companyId)||!text(scope?.storeId)||!text(scope?.user?.id))fail('Απαιτείται προσωπική πρόσβαση και συγκεκριμένο κατάστημα.','PENDING_INVOICE_SCOPE',403)}
 function readerCheck(scope,row){
@@ -136,7 +155,7 @@ export async function pendingInvoiceSource(db,scope,row){
  const plain=await plainCaptureSource(db,scope,row);if(plain)return plain;
  const capability=await pendingProbe(db,scope);
  if(!capability.jobs){if(capability.jobTable)fail('Η υπάρχουσα πηγή απαιτεί έλεγχο συμβατότητας.','PENDING_INVOICE_REVIEW_REQUIRED');return null;}
- const jobs=await db.$queryRaw`SELECT j."id",j."attachmentId",j."purchaseDocumentId",j."status",j."resultJson" FROM "AiReaderJob" j WHERE j."companyId"=${scope.companyId} AND j."storeId"=${scope.storeId} AND ((j."resultJson"->'posHandoff'->>'paymentTransactionId'=${row.id} AND COALESCE(j."resultJson"->'posHandoff'->>'pageIndex','0')='0') OR (j."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=${row.id} AND NOT EXISTS(SELECT 1 FROM "AiReaderJob" source WHERE source."companyId"=j."companyId" AND source."storeId"=j."storeId" AND source."purchaseDocumentId"=j."purchaseDocumentId" AND source."id"<>j."id" AND ${isProjectedReceipt(Prisma.sql`(j."resultJson"->'mydataPosReceipt')`,Prisma.sql`source."id"`,Prisma.sql`source."attachmentId"`,Prisma.sql`(source."resultJson"->'posHandoff')`,Prisma.sql`${row.id}`)}))) ORDER BY j."createdAt",j."id" LIMIT 2`;
+ const jobs=await db.$queryRaw`SELECT j."id",j."attachmentId",j."purchaseDocumentId",j."status",j."resultJson" FROM "AiReaderJob" j WHERE j."companyId"=${scope.companyId} AND j."storeId"=${scope.storeId} AND ((j."resultJson"->'posHandoff'->>'paymentTransactionId'=${row.id} AND COALESCE(j."resultJson"->'posHandoff'->>'pageIndex','0')='0') OR (j."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=${row.id} AND NOT EXISTS(SELECT 1 FROM "AiReaderJob" source WHERE source."companyId"=j."companyId" AND source."storeId"=j."storeId" AND source."purchaseDocumentId"=j."purchaseDocumentId" AND source."id"<>j."id" AND ${isProjectedReceipt(Prisma.sql`(j."resultJson"->'mydataPosReceipt')`,Prisma.sql`source."id"`,Prisma.sql`source."attachmentId"`,Prisma.sql`(source."resultJson"->'posHandoff')`,Prisma.sql`${row.id}`,Prisma.sql`(j."resultJson"->'commonDraft')`,Prisma.sql`j."companyId"`,Prisma.sql`j."storeId"`,capability.full)}))) ORDER BY j."createdAt",j."id" LIMIT 2`;
  if(!jobs.length)return null;if(jobs.length>1)fail('Περισσότερες από μία πηγές απαιτούν έλεγχο.');
  if(!capability.full)fail('Η υπάρχουσα πηγή απαιτεί έλεγχο της αλυσίδας παραστατικού.','PENDING_INVOICE_REVIEW_REQUIRED');
  const job=jobs[0],h=job.resultJson?.posHandoff,receipt=job.resultJson?.mydataPosReceipt;
@@ -312,7 +331,7 @@ async function readPendingInvoiceRowsCore(db,scope,full=false){
  SELECT "id" AS "sourceId",h->>'paymentTransactionId' AS "paymentId" FROM jobs WHERE h->>'paymentTransactionId' IS NOT NULL AND COALESCE(h->>'pageIndex','0')='0'
  UNION SELECT j."id",j.r->>'paymentTransactionId' FROM jobs j WHERE j.r->>'paymentTransactionId' IS NOT NULL
   AND NOT EXISTS(SELECT 1 FROM jobs source WHERE source."id"<>j."id" AND source."purchaseDocumentId"=j."purchaseDocumentId"
-   AND ${isProjectedReceipt(Prisma.sql`j.r`,Prisma.sql`source."id"`,Prisma.sql`source."attachmentId"`,Prisma.sql`(source.h)`,Prisma.sql`(j.r->>'paymentTransactionId')`)})
+   AND ${isProjectedReceipt(Prisma.sql`j.r`,Prisma.sql`source."id"`,Prisma.sql`source."attachmentId"`,Prisma.sql`(source.h)`,Prisma.sql`(j.r->>'paymentTransactionId')`,Prisma.sql`j.common`,Prisma.sql`${scope.companyId}`,Prisma.sql`${scope.storeId}`,capability.full)})
  ), all_bindings AS MATERIALIZED (
  SELECT "id" AS "sourceId",h->>'paymentTransactionId' AS "paymentId" FROM jobs WHERE h->>'paymentTransactionId' IS NOT NULL
  UNION SELECT "id",r->>'paymentTransactionId' FROM jobs WHERE r->>'paymentTransactionId' IS NOT NULL

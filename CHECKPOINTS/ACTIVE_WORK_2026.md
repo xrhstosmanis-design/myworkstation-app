@@ -1,8 +1,11 @@
+## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — ASSIGNED /root
+Branch work/pos-packs-returns-20261117. Owner approved central implementation and documentation merge. Claim #4001 merged c8fb55a; NOT TESTED.
+Continuation for these two independent new tasks only: [scope and pending acceptance](../../docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md).
+Package products have their own barcode/button and store-specific sale price; consume linked base bottle units (24 or 6). Scanned cash return needs no replacement or original receipt selection; restore stock and reduce current terminal cash once, with unchanged card totals and no duplicate miscellaneous expense. Preserve permissions, isolation, fiscal gates, audit and idempotency; existing owners/return flows retained.
+
+- 2026-11-17 · Νο 15 TABLE_SERVICE · Κινητό, μεταφορά, ένωση και διαίρεση λογαριασμού · [Checkpoint](CHANGES/2026-11-17-table-service-account-operations.md) · PR #3998, τοπικά PASS, native CI και κοινό LAB εκκρεμούν.
+
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
-
-- 2026-11-17 · Νο 15 TABLE_SERVICE · Μεταφορά, ένωση και διαίρεση λογαριασμού · [Checkpoint](CHANGES/2026-11-17-table-service-account-operations.md) · PR #3998, τοπικό PASS, native CI και ενιαία φυσική δοκιμή εκκρεμούν.
-
-- 2026-11-17 · Νο 15 TABLE_SERVICE · Είσοδος κινητού με ανοιχτή βάρδια · [Checkpoint](CHANGES/2026-11-17-table-service-mobile-active-shift.md) · PR #3998, τοπικοί έλεγχοι PASS, CI και φυσικό LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 13 · LAB PASS για CSV και εκτυπώσιμη προβολή «Χωρίς ΦΠΑ» στο c19e099 · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · PDF, φυσική εκτύπωση και υπόλοιπο 13–14 ανοιχτά.
 
@@ -452,3 +455,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - 17/11/2026 · Νο 2 · Άνοιγμα υπάρχοντος προχείρου από την ενσωματωμένη Θυρίδα. 36 τοπικοί έλεγχοι PASS. CI και στοχευμένος επανέλεγχος LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
 
 - Νο 3 — [Πληρωτέο φωτογραφιών OCR](CHANGES/2026-11-17-no3-ocr-photo-payable.md) · PR #3996.
+
+- 17/11/2026 · Νο 2 · Συμβατότητα παλιών κοινών πληρωμών myDATA–POS. 39 τοπικοί έλεγχοι PASS και στοχευμένος SQL έλεγχος. Πλήρες CI και τελική κοινή συνεδρία LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
