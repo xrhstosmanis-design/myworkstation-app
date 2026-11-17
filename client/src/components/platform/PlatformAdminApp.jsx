@@ -155,7 +155,7 @@ export default function PlatformAdminApp(){
   });
   const [returnedTwin]=useState(()=>localStorage.getItem("supportContext")?null:readTwinReturn(sessionStorage,user?.id));
   useEffect(()=>{if(!localStorage.getItem("supportContext"))clearTwinReturn(sessionStorage)},[]);
-  const overviewLoadSequence=useRef(0);
+  const overviewLoadSequence=useRef(0), storePanelLoadSequence=useRef(0);
   const [data,setData]=useState(null);
   const [backupMonitor,setBackupMonitor]=useState(null);
   const [owners,setOwners]=useState([]);
@@ -253,7 +253,8 @@ export default function PlatformAdminApp(){
   },[readiness]);
 
   const clearSession=(clearError=true)=>{
-    overviewLoadSequence.current++;setLoading(false);
+    overviewLoadSequence.current++;cancelStorePanelLoad();setLoading(false);
+    setStoreCompany(null);setTerminalManager(null);setDeviceOperationsManager(null);setAccessMatrix(null);setReadiness(null);setShowInstallationCenter(false);
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
     setShowAssistantPage(false);setAssistantAllScope(false);setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);clearTwinOrigin();clearTwinReturn(sessionStorage);setShowAiCommandCenter(false);setCashReport(null);setAnalyticsResult(null);setShowSupplierSettlementReview(false);setShowBankLedgerReview(false);setVideoConnectionManager(null);setWorkforceTarget(null);if(clearError)setError("");
   };
@@ -391,17 +392,32 @@ export default function PlatformAdminApp(){
     }catch(err){if(twinOrigin)throw err;setError(err.message);setBusy("")}
   };
 
-  const checkReadiness=async(company,store)=>{
-    setBusy(`readiness:${store.id}`);setError("");
-    try{setReadiness(await request(`/api/platform/companies/${company.id}/stores/${store.id}/pilot-readiness`));setRecoveryWorkflow(null)}
-    catch(err){setError(err.message)}finally{setBusy("")}
+  const cancelStorePanelLoad=()=>{
+    storePanelLoadSequence.current++;
+    setBusy(value=>/^(terminals|readiness|access-matrix):/.test(value)?"":value);
   };
-
-  const checkAccessMatrix=async(company,store)=>{
-    setBusy(`access-matrix:${store.id}`);setError("");
-    try{setAccessMatrix(await request(`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/access-matrix`))}
-    catch(err){setError(err.message)}finally{setBusy("")}
+  const loadStorePanel=async(kind,company,store,loadPanel,showPanel)=>{
+    const sequence=++storePanelLoadSequence.current;
+    const {key:context}=readBackofficeContext(localStorage);
+    const current=()=>sequence===storePanelLoadSequence.current&&readBackofficeContext(localStorage).key===context;
+    const busyKey=`${kind}:${store.id}`;
+    setBusy(busyKey);setError("");
+    try{
+      const result=await loadPanel();
+      if(!current())return;
+      const currentCompany=dataRef.current?.companies?.find(item=>item.id===company.id);
+      const currentStore=currentCompany?.stores?.find(item=>item.id===store.id);
+      if(currentStore)showPanel(result,currentCompany,currentStore);
+    }catch(err){if(current())setError(err.message)}
+    finally{if(current())setBusy(value=>value===busyKey?"":value)}
   };
+  const checkReadiness=(company,store)=>loadStorePanel("readiness",company,store,
+    ()=>request(`/api/platform/companies/${company.id}/stores/${store.id}/pilot-readiness`),
+    result=>{setReadiness(result);setRecoveryWorkflow(null)}
+  );
+  const checkAccessMatrix=(company,store)=>loadStorePanel("access-matrix",company,store,
+    ()=>request(`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/access-matrix`),setAccessMatrix
+  );
 
   const savePilotProfile=async event=>{
     event.preventDefault();setBusy("pilot-profile");setError("");setMessage("");
@@ -469,11 +485,18 @@ export default function PlatformAdminApp(){
     setMessage(`Η συντόμευση Store Mode για το «${store.name}» δημιουργήθηκε.`);
   };
 
-  const openTerminals=async(company,store,openOperations=false)=>{
-    setBusy(`terminals:${store.id}`);setError("");
-    try{const [result,routing]=await Promise.all([request(`/api/platform/companies/${company.id}/stores/${store.id}/installation-terminals`),request(`/api/platform/companies/${company.id}/stores/${store.id}/device-routing`)]);const manager={company,store,terminals:result.terminals,routing,activationUrl:""};setRoutingTerminalPos("");setOpenDeviceCenter(openOperations);setShowInstallationCenter(false);if(openOperations){setDeviceOperationsManager(manager);setTerminalManager(null)}else{setDeviceOperationsManager(null);setTerminalManager(manager)}}
-    catch(err){setError(err.message)}finally{setBusy("")}
-  };
+  const openTerminals=(company,store,openOperations=false)=>loadStorePanel("terminals",company,store,
+    ()=>Promise.all([
+      request(`/api/platform/companies/${company.id}/stores/${store.id}/installation-terminals`),
+      request(`/api/platform/companies/${company.id}/stores/${store.id}/device-routing`)
+    ]),
+    ([result,routing],currentCompany,currentStore)=>{
+      const manager={company:currentCompany,store:currentStore,terminals:result.terminals,routing,activationUrl:""};
+      setRoutingTerminalPos("");setOpenDeviceCenter(openOperations);setShowInstallationCenter(false);
+      setDeviceOperationsManager(openOperations?manager:null);
+      setTerminalManager(openOperations?null:manager);
+    }
+  );
   const openFiscalIntegrations=async(company,store)=>{
     setBusy(`integrations:${store.id}`);setError("");
     try{const result=await request(`/api/platform/companies/${company.id}/stores/${store.id}/integrations`);setFiscalIntegrations({company,store,integrations:result.integrations||[]})}catch(err){setError(err.message)}finally{setBusy("")}
@@ -484,7 +507,7 @@ export default function PlatformAdminApp(){
   };
   const refreshTerminals=async(current=terminalManager)=>{
     const [result,routing]=await Promise.all([request(`/api/platform/companies/${current.company.id}/stores/${current.store.id}/installation-terminals`),request(`/api/platform/companies/${current.company.id}/stores/${current.store.id}/device-routing`)]);
-    setTerminalManager(value=>({...value,terminals:result.terminals,routing}));
+    setTerminalManager(value=>value?.company.id===current.company.id&&value.store.id===current.store.id?{...value,terminals:result.terminals,routing}:value);
   };
   const createTerminal=async event=>{
     event.preventDefault();setBusy("terminal-create");setError("");
@@ -672,7 +695,7 @@ export default function PlatformAdminApp(){
         <article><UsersRound/><div><span>Δοκιμές</span><strong>{data?.stats?.trialCompanies||0}</strong><small>{expiringTrials} λήγουν σύντομα</small></div></article>
         <article className={`backup-monitor-stat ${backupMonitor?.configured?(backupMonitor?.status?.toLowerCase()||"pending"):"pending"}`} data-backup-monitoring="true"><DatabaseBackup/><div><span>Backup ανά 3 ώρες</span><strong>{!backupMonitor?.configured?"ΡΥΘΜΙΣΗ":backupMonitor?.status==="OK"?"OK":backupMonitor?.status==="FAILED"?"FAIL":backupMonitor?.status==="OVERDUE"?"ΑΡΓΕΙ":"—"}</strong><small>{backupMonitor?.lastSuccess?`Τελευταίο ${new Date(backupMonitor.lastSuccess.completedAt||backupMonitor.lastSuccess.startedAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}`:backupMonitor?.configured?"Αναμονή πρώτου cron run":"Απαιτείται εξωτερική ρύθμιση"}</small></div></article>
       </div>
-      <div hidden={homeSection!=="customers"}><PlatformCompanyWorkspace companies={data?.companies||[]} owners={owners} loading={loading} onNewOwnerCompany={setNewOwnerCompany} renderManagement={company=><>
+      <div hidden={homeSection!=="customers"}><PlatformCompanyWorkspace companies={data?.companies||[]} owners={owners} loading={loading} onNewOwnerCompany={setNewOwnerCompany} onCompanySelectionChange={cancelStorePanelLoad} renderManagement={company=><>
             <p className="platform-detail-owner"><b>{company.owner?.fullName||"Δεν έχει οριστεί ιδιοκτήτης"}</b><br/>{company.owner?.email||"—"}<br/><small>{company.city||"Χωρίς πόλη"} · {company.userCount??0} χρήστες · {company.employeeCount??0} εργαζόμενοι<br/>Δημιουργήθηκε {when(company.createdAt)}</small></p>
             <div className="platform-management-primary"><button className="secondary" onClick={()=>setCompanyIdentityEdit(company)}><Building2/>Στοιχεία εταιρείας</button><button className="secondary" onClick={()=>setStoreCompany(company)}><Store/>Καταστήματα</button><button className="secondary" onClick={()=>company.stores.length===1?openTerminals(company,company.stores[0]):setStoreCompany(company)} disabled={Boolean(busy&&company.stores.some(store=>busy===`terminals:${store.id}`))}><Monitor/>Τερματικά</button></div>
             <details className="platform-management-more"><summary>Συνδρομή και πρόσθετες ενέργειες</summary>
@@ -746,7 +769,7 @@ export default function PlatformAdminApp(){
     {resetCompany&&<div className="platform-modal"><form className="small" onSubmit={resetPassword}><button type="button" className="modal-close" onClick={()=>setResetCompany(null)}><X/></button><h2>Νέος προσωρινός κωδικός</h2><p>{resetCompany.owner?.fullName} · {resetCompany.owner?.email}</p><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required autoFocus/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setResetCompany(null)}>Ακύρωση</button><button disabled={busy==="reset"}>{busy==="reset"?"Αποθήκευση…":"Αλλαγή κωδικού"}</button></div></form></div>}
 
     {storeLifecycle&&<StoreLifecyclePanel key={storeLifecycle.company.id+":"+storeLifecycle.store.id} company={storeLifecycle.company} store={storeLifecycle.store} request={request} onClose={()=>setStoreLifecycle(null)}/>}
-    {storeCompany&&!storeEdit&&!terminalManager&&!storeLifecycle&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setStoreCompany(null)}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"} · Email κλεισίματος: {store.cashCloseEmailEnabled!==false?"ΝΑΙ":"ΟΧΙ"}</small></div><div className="platform-store-actions"><button onClick={()=>openTerminals(storeCompany,store)} disabled={busy===`terminals:${store.id}`}><Monitor/>{busy===`terminals:${store.id}`?"Φόρτωση…":"Εγκαταστάσεις / Τερματικά"}</button><a href={storeModeUrl(store)} target="_blank" rel="noreferrer"><ExternalLink/>Store Mode</a><button className="secondary" onClick={()=>downloadStoreShortcut(store)}><Download/>Απλή συντόμευση</button><button className="secondary" onClick={()=>openLabelSettings(storeCompany,store)} disabled={busy===`labels:${store.id}`}><Printer/>Ρυθμίσεις ετικέτας</button><button className="secondary" onClick={()=>setProductionPrinterTarget({company:storeCompany,store})}><Printer/>Εκτυπωτής παραγωγής</button><button onClick={()=>openCustomer(storeCompany,store,"BACKOFFICE")}><LayoutDashboard/>Πλήρες Backoffice</button><button className="secondary" onClick={()=>openOnlineStore(storeCompany,store)} disabled={busy===`online-store:${store.id}`}><ShoppingBag/>{busy===`online-store:${store.id}`?"Φόρτωση…":"Online Store"}</button>{storeCompany.modules?.some(module=>module.key==="TABLE_SERVICE"&&module.active)&&<button className="secondary" onClick={()=>toggleTableService(storeCompany,store)} disabled={busy===`tables:${store.id}`}><UsersRound/>{busy===`tables:${store.id}`?"Έλεγχος…":"TABLE_SERVICE ενεργό/ανενεργό"}</button>}<button className="secondary" onClick={()=>openCustomer(storeCompany,store,"SHIFTS")}><CalendarDays/>Βάρδιες</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"CASH_CONTROL")}><WalletCards/>Έλεγχος Ταμείων</button><button className="secondary" onClick={()=>checkReadiness(storeCompany,store)} disabled={busy===`readiness:${store.id}`}><ShieldCheck/>{busy===`readiness:${store.id}`?"Έλεγχος…":"Ετοιμότητα"}</button><button className="secondary" onClick={()=>checkAccessMatrix(storeCompany,store)} disabled={busy===`access-matrix:${store.id}`}><ShieldCheck/>{busy===`access-matrix:${store.id}`?"Έλεγχος…":"Έλεγχος δικαιωμάτων"}</button><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button><button className="secondary" onClick={()=>setReportSettingsStore({company:storeCompany,store})}>Αναφορές ταμείων</button><button className="danger" onClick={()=>setStoreLifecycle({company:storeCompany,store})}>Νέα έναρξη καταστήματος</button><button className="danger" onClick={()=>archiveStore(storeCompany,store)} disabled={busy===`archive:${store.id}`}><Trash2/>Αφαίρεση κενού καταστήματος</button></div></article>)}</div><form className="terminal-create-form" onSubmit={createStore}><label>Νέο κατάστημα<input name="name" minLength="2" maxLength="160" required placeholder="Όνομα καταστήματος"/></label><label>Πόλη<input name="city" maxLength="100"/></label><button disabled={busy==="store-create"}><Plus/>{busy==="store-create"?"Δημιουργία…":"Δημιουργία καταστήματος"}</button></form></section></div>}
+    {storeCompany&&!storeEdit&&!terminalManager&&!storeLifecycle&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>{cancelStorePanelLoad();setStoreCompany(null)}}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"} · Email κλεισίματος: {store.cashCloseEmailEnabled!==false?"ΝΑΙ":"ΟΧΙ"}</small></div><div className="platform-store-actions"><button onClick={()=>openTerminals(storeCompany,store)} disabled={busy===`terminals:${store.id}`}><Monitor/>{busy===`terminals:${store.id}`?"Φόρτωση…":"Εγκαταστάσεις / Τερματικά"}</button><a href={storeModeUrl(store)} target="_blank" rel="noreferrer"><ExternalLink/>Store Mode</a><button className="secondary" onClick={()=>downloadStoreShortcut(store)}><Download/>Απλή συντόμευση</button><button className="secondary" onClick={()=>openLabelSettings(storeCompany,store)} disabled={busy===`labels:${store.id}`}><Printer/>Ρυθμίσεις ετικέτας</button><button className="secondary" onClick={()=>setProductionPrinterTarget({company:storeCompany,store})}><Printer/>Εκτυπωτής παραγωγής</button><button onClick={()=>openCustomer(storeCompany,store,"BACKOFFICE")}><LayoutDashboard/>Πλήρες Backoffice</button><button className="secondary" onClick={()=>openOnlineStore(storeCompany,store)} disabled={busy===`online-store:${store.id}`}><ShoppingBag/>{busy===`online-store:${store.id}`?"Φόρτωση…":"Online Store"}</button>{storeCompany.modules?.some(module=>module.key==="TABLE_SERVICE"&&module.active)&&<button className="secondary" onClick={()=>toggleTableService(storeCompany,store)} disabled={busy===`tables:${store.id}`}><UsersRound/>{busy===`tables:${store.id}`?"Έλεγχος…":"TABLE_SERVICE ενεργό/ανενεργό"}</button>}<button className="secondary" onClick={()=>openCustomer(storeCompany,store,"SHIFTS")}><CalendarDays/>Βάρδιες</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"CASH_CONTROL")}><WalletCards/>Έλεγχος Ταμείων</button><button className="secondary" onClick={()=>checkReadiness(storeCompany,store)} disabled={busy===`readiness:${store.id}`}><ShieldCheck/>{busy===`readiness:${store.id}`?"Έλεγχος…":"Ετοιμότητα"}</button><button className="secondary" onClick={()=>checkAccessMatrix(storeCompany,store)} disabled={busy===`access-matrix:${store.id}`}><ShieldCheck/>{busy===`access-matrix:${store.id}`?"Έλεγχος…":"Έλεγχος δικαιωμάτων"}</button><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button><button className="secondary" onClick={()=>setReportSettingsStore({company:storeCompany,store})}>Αναφορές ταμείων</button><button className="danger" onClick={()=>setStoreLifecycle({company:storeCompany,store})}>Νέα έναρξη καταστήματος</button><button className="danger" onClick={()=>archiveStore(storeCompany,store)} disabled={busy===`archive:${store.id}`}><Trash2/>Αφαίρεση κενού καταστήματος</button></div></article>)}</div><form className="terminal-create-form" onSubmit={createStore}><label>Νέο κατάστημα<input name="name" minLength="2" maxLength="160" required placeholder="Όνομα καταστήματος"/></label><label>Πόλη<input name="city" maxLength="100"/></label><button disabled={busy==="store-create"}><Plus/>{busy==="store-create"?"Δημιουργία…":"Δημιουργία καταστήματος"}</button></form></section></div>}
 
     {accessMatrix&&<div className="platform-modal"><section className="platform-security-dialog access-matrix-dialog"><button type="button" className="modal-close" onClick={()=>setAccessMatrix(null)}><X/></button><h2>Έλεγχος δικαιωμάτων modules</h2><p>{accessMatrix.company.name} · {accessMatrix.store.name}</p><div className={`access-license-state ${accessMatrix.licenseAllowed?"ok":"blocked"}`}><ShieldCheck/><div><b>{accessMatrix.licenseAllowed?"ΕΝΕΡΓΗ ΑΔΕΙΑ ΠΕΛΑΤΗ":"ΑΝΕΝΕΡΓΗ Ή ΛΗΓΜΕΝΗ ΑΔΕΙΑ"}</b><span>Μόνιμη πρόσβαση Super Admin · {accessMatrix.summary.ownerAllowed} modules ιδιοκτήτη · {accessMatrix.summary.employeeRestricted} περιορισμένα για εργαζόμενο</span></div></div><div className="access-matrix-table"><div className="head"><span>Module</span><span>Πηγή</span><span>Super Admin</span><span>Ιδιοκτήτης</span><span>Εργαζόμενος</span><span>Με ειδικό δικαίωμα</span></div>{accessMatrix.rows.map(row=><div className={`row ${row.effectiveActive?"active":"inactive"}`} key={row.key}><span><b>{row.name}</b><small>{row.key}</small></span><span>{row.source==="STORE_OVERRIDE"?"Ρύθμιση καταστήματος":"Άδεια εταιρείας"}</span><strong className="allowed">ΠΑΝΤΑ</strong><strong className={row.owner.allowed?"allowed":"denied"}>{row.owner.allowed?"ΝΑΙ":"ΟΧΙ"}</strong><strong className={row.employee.allowed?"allowed":"denied"}>{row.employee.allowed?"ΝΑΙ":"ΟΧΙ"}</strong><strong className={row.employeeWithPermission.allowed?"allowed":"denied"}>{row.employeeWithPermission.allowed?"ΝΑΙ":"ΟΧΙ"}</strong></div>)}</div><p className="readiness-note">Ο έλεγχος είναι μόνο ανάγνωσης. Δεν ενεργοποιεί module, δεν αλλάζει άδεια και δεν μεταβάλλει δικαιώματα χρηστών.</p></section></div>}
 
@@ -812,7 +835,7 @@ export default function PlatformAdminApp(){
     {showBankLedgerReview&&<BankLedgerReviewCenter key={scopeFor("bank")?twinScopeKey(aiTwinOrigin):"central"} entryScope={scopeFor("bank")} request={requestFor("bank")} onClose={()=>{setShowBankLedgerReview(false);returnFromTwin("bank")}} setMessage={setMessage} companies={data?.companies||[]} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name})))} />}
     {showEventsCenter&&<SuperAdminEventsCenter request={request} companies={data?.companies||[]} onClose={()=>setShowEventsCenter(false)}/>}
     {showFiscalDryRun&&<FiscalBridgeDryRunCenter companies={data?.companies||[]} onClose={()=>setShowFiscalDryRun(false)}/>}
-    {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
+    {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>{cancelStorePanelLoad();setShowInstallationCenter(false)}}/>}
     {showOnlineRadioCenter&&<SuperAdminOnlineRadioCenter companies={data?.companies||[]} request={request} onClose={()=>setShowOnlineRadioCenter(false)}/>}
     {workforceTarget&&!scopeFor("workforce")&&<SuperAdminStaffScheduler {...workforceTarget} companies={data?.companies||[]} request={request} onClose={()=>setWorkforceTarget(null)}/>}
     {workforceTarget&&scopeFor("workforce")&&<SuperAdminStaffScheduler {...workforceTarget} companies={twinCompanies} request={requestFor("workforce")} onClose={()=>{setWorkforceTarget(null);returnFromTwin("workforce")}}/>}
