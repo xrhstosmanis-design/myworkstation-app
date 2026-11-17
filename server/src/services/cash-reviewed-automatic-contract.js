@@ -3,6 +3,7 @@ import {cashIssueRegisterSchema,assertCashIssues} from './cash-issue-replies.js'
 import {calculatedCashResultSchema,assertCalculatedCashResult,cashArithmeticIsCurrent,hasCashNumericContradiction} from './cash-automatic-result.js';
 import {automaticCashAuditSchema} from './cash-automatic-audit.js';
 import {z} from 'zod';
+import {dailyCashEvidenceSchema} from './cash-daily-delivery-evidence.js';
 import {hash,day} from './cash-reconciliation-contract.js';
 import {reconciliationText} from './cash-reconciliation-report.js';
 import {summarizeCashVariances} from './automatic-report-policy.js';
@@ -90,10 +91,14 @@ export function canSendProvisionalCashReport(report){
  }catch{return false}
 }
 
-const receiptSchema=z.object({status:z.literal('READY'),reason:z.null(),companyId:id,storeId:id,generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/),head:z.union([sha,z.literal('ROOT')]),sourceFingerprint:sha,report:reportSchema,fingerprint:sha}).strict();
+const receiptSchema=z.object({status:z.literal('READY'),reason:z.null(),companyId:id,storeId:id,generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/),head:z.union([sha,z.literal('ROOT')]),sourceFingerprint:sha,report:reportSchema,dailyEvidence:dailyCashEvidenceSchema.optional(),fingerprint:sha}).strict();
 export function validateAutomaticReviewedReceipt(value,{companyId,storeId,groups,rule,dayStartHour,sourceFingerprint}){
  try{
   const receipt=receiptSchema.parse(value),{fingerprint,...unsigned}=receipt;
+  if(receipt.dailyEvidence){
+   const ids=new Set(receipt.report.rows.map(row=>row.sessionId));
+   if(receipt.dailyEvidence.shifts.length!==ids.size||receipt.dailyEvidence.shifts.some(shift=>!ids.delete(shift.sessionId)))return false;
+  }
   return receipt.companyId===companyId&&receipt.storeId===storeId&&receipt.sourceFingerprint===sourceFingerprint&&BigInt(receipt.generation)<=9223372036854775807n&&hash(unsigned)===fingerprint&&canSendProvisionalCashReport(receipt.report)&&validateAutomaticReviewedReport(receipt.report,{companyId,storeId,groups,rule,dayStartHour});
  }catch{return false}
 }

@@ -62,6 +62,12 @@ export async function readReconciliationSession(db,scope,id,rule,eventCollector)
   if(deferEvents)eventCollector.push(result);
   return result;
 }
+export async function readStoredCashPaperEvidence(db,scope,{sessions,selectedIds,period,store}){
+  const discovered=await readCashChatEvidence(db,scope),repository=createCashPaperRepository(db);
+  const {discovery,papers}=await readStoredCashPaperPreview({repository,scope,discovery:discovered,admitted:boundAutomaticPaperDiscovery(discovered),byteLimit:automaticPaperByteLimit});
+  return projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds,period,storeName:store.name});
+}
+
 export async function readReconciliationSources(db,scope,period,extraIds=[]){
   const stores=await db.store.findUnique({where:{id:scope.storeId},select:{id:true,companyId:true,name:true}});
   if(!stores||stores.companyId!==scope.companyId)throw reconcileError('CASH_RECONCILIATION_NOT_FOUND',404);
@@ -91,9 +97,7 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
   }
   let paperEvidence;
   if(scope.fullAudit===true){
-    const discovered=await readCashChatEvidence(db,scope),repository=createCashPaperRepository(db);
-    const {discovery,papers}=await readStoredCashPaperPreview({repository,scope,discovery:discovered,admitted:boundAutomaticPaperDiscovery(discovered),byteLimit:automaticPaperByteLimit});
-    paperEvidence=projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds,period,storeName:stores.name});
+    paperEvidence=await readStoredCashPaperEvidence(db,scope,{sessions,selectedIds,period,store:stores});
     for(const id of selectedIds){const original=sessions.get(id);
       original.fullEvidence={duplicates:await readCashReviewEvidence(db,{...original.session,sessionId:id},{includeChat:false}),events:await readFullCashEventEvidence(db,scope,original.session,original.automaticTransactions||[])};
     }

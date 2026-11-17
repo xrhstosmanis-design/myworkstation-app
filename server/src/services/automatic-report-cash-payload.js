@@ -1,3 +1,4 @@
+import {dailyCashEvidenceText} from './cash-daily-delivery-evidence.js';
 import {createHash} from "node:crypto";
 import {cashPreviewPeriod,reportBusinessPeriod,reportDayOffset,summarizeOpeningOperators} from "./automatic-report-policy.js";
 import {validateAutomaticReviewedReceipt} from "./cash-reviewed-automatic-contract.js";
@@ -133,6 +134,7 @@ function build(raw){
   const financialLimitations=[...LIMITATIONS],disclosures=[...DISCLOSURES];
   if(p.frequency==="MONTHLY")disclosures.push("Οι καταγεγραμμένοι χρήστες έναρξης δεν αποτελούν επιβεβαιωμένη ταυτότητα εργαζομένου ή στοιχείο μισθοδοσίας.");
   const reviewed=p.reviewedReconciliation===true?p.reviewedCash:null;
+  check(!reviewed?.dailyEvidence||p.frequency==="DAILY","Daily evidence on a non-daily report.");
   if(p.reviewedReconciliation===true)check(validateAutomaticReviewedReceipt(reviewed,{companyId,storeId,groups,rule,dayStartHour:bounds.dayStartHour,sourceFingerprint:p.sourceFingerprint}),"Reviewed cash result unavailable or changed.");
   else check(!own(p,"reviewedCash"),"Unexpected reviewed cash result.");
   const content={format:FORMAT,scope,storeName:p.store.name,period:bounds,frequency:p.frequency,settingsVersion,sourceFingerprint:p.sourceFingerprint,sourceCount:p.sourceCount,financialFinality:"PROVISIONAL",financialReconciliationComplete:false,financialLimitations,employeeLiabilityAdjusted:false,disclosures,rule:{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled},groups,dayReadiness,...(openingOperatorSummary?{openingOperatorSummary}:{}),...(reviewed?{reviewedCash:reviewed}:{}),...(p.dailyTurnover?{dailyTurnover:p.dailyTurnover}:{}),...(p.shiftTurnover?{shiftTurnover:p.shiftTurnover}:{})};
@@ -143,5 +145,7 @@ function build(raw){
 export function automaticReviewedMailText(content){
   check(content&&Array.isArray(content.disclosures)&&content.disclosures.every(v=>typeof v==='string'&&v.length<=1000&&!/[\u0000-\u001f\u007f]/.test(v)),"Invalid disclosures.");
   check(validateAutomaticReviewedReceipt(content.reviewedCash,{companyId:content.scope?.companyId,storeId:content.scope?.storeId,groups:content.groups,rule:content.rule,dayStartHour:content.period?.dayStartHour,sourceFingerprint:content.sourceFingerprint}),"Invalid reviewed cash result.");
-  return [...content.disclosures,'',content.reviewedCash.report.text].join('\n');
+  const {report,dailyEvidence}=content.reviewedCash;
+  check(!dailyEvidence||content.frequency==="DAILY","Daily evidence on a non-daily report.");
+  return [...content.disclosures,'',report.text,...(dailyEvidence?['',...dailyCashEvidenceText(dailyEvidence,report)]:[])].join('\n');
 }
