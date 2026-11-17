@@ -1,12 +1,11 @@
-# POS-PACK-STOCK-01 + POS-SCAN-RETURN-01 — 17/11/2026
-Owner /root. Branch work/pos-packs-returns-20261117. Owner approved publication and merge of documentation only.
-Status: CLAIM PENDING CENTRAL REGISTRY SYNCHRONIZATION; NOT TESTED.
-Scope:
-- Packages are separate sale products with own barcode/POS button and price per store. Link to base product and quantity. 24-pack of 500 ml consumes 24 bottles; 6-pack of 1.5 l consumes 6 bottles. EUR 8/4 are examples, never fixed. Restore the same base quantities on return.
-- Scan products at POS, select cash return, confirm amount, finish. No replacement purchase or original receipt selection. Restore stock and reduce current terminal/shift cash once; record a customer return, not duplicate miscellaneous expense. Card totals unchanged even if original purchase was card-paid. No EFTPOS refund.
-Preserve return permissions, store/company scope, current terminal/shift, fiscal gates, audit, idempotency, original-sale returns and normal exchange. Do not bypass fiscal gates through NON_FISCAL exchange.
-Existing scanner POS-BARCODE-CART-02 and permission owners retain scope.
-Baseline 21dd890: source inspection only. Barcode unitMultiplier exists but applyBarcodePrices only selects barcode/product/price. Exchange requires SALE + RETURN. Original-sale full/item returns exist.
-Existing LAB acceptance: measured before/after stock and cash for 1/2 packs, loose+pack, pack return, scanned cash-only return, duplicate/rejected submission, cancel, denied permission, cross-store. No historical transaction replay; no production mutations.
-Publication blocker: local Git fetch works but push fails with missing GitHub username. Large shared tracker files must not be transferred through chat APIs (AGENTS.md bounded I/O rule). Prepared local commits faff39b and 61f24cd include tracker/pending/active updates; these need authorized local Git publication before source changes. This small checkpoint preserves central scope; it does not claim those registry updates were published.
-Next: restore authorized Git push, synchronize registry claim and pass required CI, merge documentation, implement bounded changes. Code merge/deploy/charges require separate owner approval.
+# Central POS packages and cash returns — assignment continuation
+## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — ASSIGNED /root
+Branch work/pos-packs-returns-20261117. Owner approved central implementation and documentation merge. Claim #4001 merged c8fb55a; NOT TESTED.
+Continuation for these two independent new tasks only: [scope and pending acceptance](../../docs/roadmap/POS_PACKS_RETURNS_2026-11-17.md).
+Package products have their own barcode/button and store-specific sale price; consume linked base bottle units (24 or 6). Scanned cash return needs no replacement or original receipt selection; restore stock and reduce current terminal cash once, with unchanged card totals and no duplicate miscellaneous expense. Preserve permissions, isolation, fiscal gates, audit and idempotency; existing owners/return flows retained.
+
+The connected GitHub application is functional; CLI push authentication is not required for bounded connector publication. Previous push blocker is superseded for small files.
+The large historical tracker and pending roadmap are retained unchanged. This small continuation follows COMMON_WORK_RULE.md's instruction to continue in a new Markdown when existing documents are too large. It covers only the two new independent tasks; no ownership transfer of scanner/permissions/other POS work.
+Baseline 21dd890: inspection only. Existing original-sale returns remain protected; exchange endpoint must not become a fiscal bypass.
+Acceptance: existing LAB, before/after cash, stock, card control, 1 and 2 packs, loose+pack, return, retry/double-submit, cancel, permission denial, cross-store rejection. Code CI is not LAB PASS. No production mutations.
+Next: implement after this synchronized documentation claim is merged. Source merge/deploy needs owner approval.
