@@ -48,7 +48,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 27 | MyWorkStation · Κεντρική Διαχείριση και Ιδιοκτήτης | 17/11/2026 14:16 | Τοπικές αλλαγές σε κύλιση, αναζήτηση και εναλλαγή καταστήματος. Ο πίνακας δικαιωμάτων ακολουθεί την ενεργή επιλογή. | Κλάδος `work/no27-central-owner`, βάση `bd1e54b`, 96 συνδυασμένοι τοπικοί έλεγχοι, 228 έλεγχοι Κεντρικής Διαχείρισης, build PASS | GitHub CI και μία κοινή συνεδρία στο υπάρχον LAB ανά ρόλο και συσκευή |
 | 31 | Δοκιμή Ιδιοκτήτη LAB | 17/11/2026 | Συνολική επιβεβαίωση Android από τον χρήστη | PR #3984 και #3986 | Ενημέρωση κεντρικού μητρώου |
-| 2 | Αποθετήριο MyWorkStation | 17/11/2026 | Συγχώνευση αλλαγής Θυρίδας | PR #3978 | Ενιαία λειτουργική δοκιμή LAB |
+| 2 | Αποθετήριο MyWorkStation | 17/11/2026 | Συγχώνευση αλλαγής Θυρίδας | PR #3978 και [πορεία myDATA, POS και πληρωμών](../../CHECKPOINTS/CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md) | Ενιαία λειτουργική δοκιμή LAB |
 | 8 | Αποθετήριο MyWorkStation | 17/11/2026 | Συγχώνευση έγκρισης Super Admin | PR #3987 | Προγραμματισμένη παράδοση LAB και Message-ID |
 
 Πηγές: [Κεντρικό μητρώο](https://github.com/xrhstosmanis-design/myworkstation-app/blob/main/docs/roadmap/OPEN_WORK_TRACKER.md) · [Ενεργές εργασίες](https://github.com/xrhstosmanis-design/myworkstation-app/blob/main/CHECKPOINTS/ACTIVE_WORK_2026.md) · [Αναλυτικές εκκρεμότητες](https://github.com/xrhstosmanis-design/myworkstation-app/blob/main/docs/roadmap/PENDING_WORK.md).

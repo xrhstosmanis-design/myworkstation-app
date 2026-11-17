@@ -15,6 +15,26 @@ const day=value=>{const s=text(value,10);return /^\d{4}-\d{2}-\d{2}$/.test(s)&&!
 const cents=value=>{const n=Number(value);return Number.isFinite(n)&&n>0&&n<=999999999&&Math.abs(n*100-Math.round(n*100))<.00001?Math.round(n*100):null};
 const eventId=id=>'pi_pending_'+hash(id);
 const operator=user=>user?.tokenType==='STORE_OPERATOR';
+// Common-draft consolidation may remove spaces and leading zeroes from the
+// final numeric suffix. Only a completed receipt for this exact document,
+// order and payment can authorize this alternate spelling of the POS header.
+const commonDraftNumber=(proof,documentId,orderId,paymentId,documentNumber,originalNumber)=>Prisma.sql`(
+ ${proof}->'completed'='true'::jsonb AND ${proof}->>'documentId'=${documentId}
+ AND ${proof}->>'orderId'=${orderId} AND ${proof}->>'paymentTransactionId'=${paymentId}
+ AND NULLIF(${proof}->>'inboxId','') IS NOT NULL AND NULLIF(${proof}->>'mark','') IS NOT NULL
+ AND ${proof}->'requiresPaymentReview'='false'::jsonb
+ AND ${documentNumber} !~ '[0-9][[:space:]]+[0-9]' AND ${originalNumber} !~ '[0-9][[:space:]]+[0-9]'
+ AND regexp_replace(${documentNumber},'\\s','','g') ~ '[0-9]$'
+ AND regexp_replace(regexp_replace(${documentNumber},'\\s','','g'),'(^|[^0-9])0+([0-9]+)$','\\1\\2')
+   =regexp_replace(regexp_replace(${originalNumber},'\\s','','g'),'(^|[^0-9])0+([0-9]+)$','\\1\\2')
+)`;
+// The original myDATA job stores an attachment view of the same POS handoff.
+// A separate source still requires review unless the stored pointer proves it.
+const isProjectedReceipt=(receipt,sourceId,sourceAttachment,sourceHeader,paymentId)=>Prisma.sql`(
+ ${receipt}->>'paymentSourceJobId'=${sourceId} AND ${sourceHeader}->>'paymentTransactionId'=${paymentId}
+ AND COALESCE(${sourceHeader}->>'pageIndex','0')='0'
+ AND jsonb_typeof(${receipt}->'attachmentIds')='array' AND (${receipt}->'attachmentIds') ? ${sourceAttachment}
+)`;
 function scopeCheck(scope){if(!text(scope?.companyId)||!text(scope?.storeId)||!text(scope?.user?.id))fail('Απαιτείται προσωπική πρόσβαση και συγκεκριμένο κατάστημα.','PENDING_INVOICE_SCOPE',403)}
 function readerCheck(scope,row){
  scopeCheck(scope);
@@ -116,17 +136,21 @@ export async function pendingInvoiceSource(db,scope,row){
  const plain=await plainCaptureSource(db,scope,row);if(plain)return plain;
  const capability=await pendingProbe(db,scope);
  if(!capability.jobs){if(capability.jobTable)fail('Η υπάρχουσα πηγή απαιτεί έλεγχο συμβατότητας.','PENDING_INVOICE_REVIEW_REQUIRED');return null;}
- const jobs=await db.$queryRaw`SELECT "id","attachmentId","purchaseDocumentId","status","resultJson" FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND (("resultJson"->'posHandoff'->>'paymentTransactionId'=${row.id} AND COALESCE("resultJson"->'posHandoff'->>'pageIndex','0')='0') OR "resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=${row.id}) ORDER BY "createdAt","id" LIMIT 2`;
+ const jobs=await db.$queryRaw`SELECT j."id",j."attachmentId",j."purchaseDocumentId",j."status",j."resultJson" FROM "AiReaderJob" j WHERE j."companyId"=${scope.companyId} AND j."storeId"=${scope.storeId} AND ((j."resultJson"->'posHandoff'->>'paymentTransactionId'=${row.id} AND COALESCE(j."resultJson"->'posHandoff'->>'pageIndex','0')='0') OR (j."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=${row.id} AND NOT EXISTS(SELECT 1 FROM "AiReaderJob" source WHERE source."companyId"=j."companyId" AND source."storeId"=j."storeId" AND source."purchaseDocumentId"=j."purchaseDocumentId" AND source."id"<>j."id" AND ${isProjectedReceipt(Prisma.sql`(j."resultJson"->'mydataPosReceipt')`,Prisma.sql`source."id"`,Prisma.sql`source."attachmentId"`,Prisma.sql`(source."resultJson"->'posHandoff')`,Prisma.sql`${row.id}`)}))) ORDER BY j."createdAt",j."id" LIMIT 2`;
  if(!jobs.length)return null;if(jobs.length>1)fail('Περισσότερες από μία πηγές απαιτούν έλεγχο.');
  if(!capability.full)fail('Η υπάρχουσα πηγή απαιτεί έλεγχο της αλυσίδας παραστατικού.','PENDING_INVOICE_REVIEW_REQUIRED');
  const job=jobs[0],h=job.resultJson?.posHandoff,receipt=job.resultJson?.mydataPosReceipt;
  if(['REJECTED','CANCELLED','DELETED'].includes(job.status)||!job.purchaseDocumentId&&['AWAITING_APPROVAL','CONFIRMED'].includes(job.status))fail('Η αρχική αλυσίδα παραστατικού δεν είναι διαθέσιμη για επανάληψη.','PENDING_INVOICE_REVIEW_REQUIRED');
+ let commonNumberVerified=false;
  if(job.purchaseDocumentId){
-  const chain=await db.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."totalGross" FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."sourceDocumentId"=d."id" WHERE d."id"=${job.purchaseDocumentId} AND d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."paymentTransactionId"=${row.id} AND d."supplierId"=${row.supplierId} AND d."documentType"='INVOICE' AND d."status" IN ('DRAFT','APPROVED') AND o."status" IN ('NEW','FINAL','INVOICED')`;
-  if(!chain[0]||invoiceToken(chain[0].documentNumber)!==invoiceToken(row.details.documentNumber)||day(chain[0].documentDate instanceof Date?chain[0].documentDate.toISOString().slice(0,10):String(chain[0].documentDate||'').slice(0,10))!==row.details.documentDate||cents(chain[0].totalGross)!==row.details.amountCents)fail('Το αρχικό πρόχειρο ή η αγορά έχουν διαγραφεί ή αλλάξει.','PENDING_INVOICE_REVIEW_REQUIRED');
+  const proof=Prisma.sql`${JSON.stringify(job.resultJson?.commonDraft??null)}::jsonb`;
+  const matchedPosHeader=h?.paymentTransactionId===row.id&&h.supplierId===row.supplierId&&h.documentNumber===row.details.documentNumber&&h.documentDate===row.details.documentDate&&cents(h.totalGross)===row.details.amountCents&&String(h.pageIndex??0)==='0';
+  const chain=await db.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."totalGross",(${matchedPosHeader} AND ${commonDraftNumber(proof,Prisma.sql`d."id"`,Prisma.sql`o."id"`,Prisma.sql`${row.id}`,Prisma.sql`d."documentNumber"`,Prisma.sql`${row.details.documentNumber}`)}) AS "commonNumberVerified" FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."sourceDocumentId"=d."id" WHERE d."id"=${job.purchaseDocumentId} AND d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."paymentTransactionId"=${row.id} AND d."supplierId"=${row.supplierId} AND d."documentType"='INVOICE' AND d."status" IN ('DRAFT','APPROVED') AND o."status" IN ('NEW','FINAL','INVOICED')`;
+  commonNumberVerified=chain[0]?.commonNumberVerified===true&&invoiceToken(chain[0].documentNumber)!==invoiceToken(row.details.documentNumber);
+  if(!chain[0]||(!commonNumberVerified&&invoiceToken(chain[0].documentNumber)!==invoiceToken(row.details.documentNumber))||day(chain[0].documentDate instanceof Date?chain[0].documentDate.toISOString().slice(0,10):String(chain[0].documentDate||'').slice(0,10))!==row.details.documentDate||cents(chain[0].totalGross)!==row.details.amountCents)fail('Το αρχικό πρόχειρο ή η αγορά έχουν διαγραφεί ή αλλάξει.','PENDING_INVOICE_REVIEW_REQUIRED');
  }
  let attachments=[];
- if(receipt?.receivedAt&&Array.isArray(receipt.attachmentIds)){
+ if(!commonNumberVerified&&receipt?.receivedAt&&Array.isArray(receipt.attachmentIds)){
   const documents=await db.$queryRaw`SELECT "supplierId","documentNumber","documentDate","totalGross","documentType","paymentTransactionId" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId||''} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "paymentTransactionId"=${row.id} AND "status" IN ('DRAFT','APPROVED')`;
   const document=documents[0],documentDay=document?.documentDate instanceof Date?document.documentDate.toISOString().slice(0,10):day(String(document?.documentDate||''));
   if(!document||document.documentType!=='INVOICE'||document.supplierId!==row.supplierId||invoiceToken(document.documentNumber)!==invoiceToken(row.details.documentNumber)||documentDay!==row.details.documentDate||cents(document.totalGross)!==row.details.amountCents)fail('Η αγορά myDATA δεν συμφωνεί με την αρχική πληρωμή. Απαιτείται έλεγχος.');
@@ -197,12 +221,12 @@ async function readPendingInvoiceRowsCore(db,scope,full=false){
  const includeFastPayments=Boolean(scope.sessionAll&&scope.sessionId&&capability.full);
  if(!capability.hasIntents&&!includeFastPayments)return {capability,value:{count:0,missingCount:0,uploadedCount:0,reviewCount:0,digest:'d41d8cd98f00b204e9800998ecf8427e',rows:[]}};
  const actor=operator(scope.user)&&!scope.sessionAll?scope.user.id:null,terminal=operator(scope.user)&&!scope.sessionAll?scope.terminalPos:null,sessionId=scope.sessionId||null;
- const jobRows=capability.jobs?Prisma.sql`SELECT "id","attachmentId","purchaseDocumentId","status","resultJson"->'posHandoff' AS h,"resultJson"->'mydataPosReceipt' AS r FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`:Prisma.sql`SELECT NULL::text AS "id",NULL::text AS "attachmentId",NULL::text AS "purchaseDocumentId",NULL::text AS "status",NULL::jsonb AS h,NULL::jsonb AS r WHERE FALSE`;
+ const jobRows=capability.jobs?Prisma.sql`SELECT "id","attachmentId","purchaseDocumentId","status","resultJson"->'posHandoff' AS h,"resultJson"->'mydataPosReceipt' AS r,"resultJson"->'commonDraft' AS common FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`:Prisma.sql`SELECT NULL::text AS "id",NULL::text AS "attachmentId",NULL::text AS "purchaseDocumentId",NULL::text AS "status",NULL::jsonb AS h,NULL::jsonb AS r,NULL::jsonb AS common WHERE FALSE`;
  const sourceFacts=capability.full?Prisma.sql`
  attachment_meta AS MATERIALIZED (
  SELECT "id","mimeType","checksum","contentData" IS NOT NULL AS present FROM "DocumentAttachment" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}
  ), document_chains AS MATERIALIZED (
- SELECT d."id",d."paymentTransactionId",d."supplierId",d."documentType",d."documentNumber",(d."documentDate" AT TIME ZONE 'UTC')::date::text AS "documentDay",d."totalGross",d."status",o."status" AS "orderStatus"
+ SELECT d."id",d."paymentTransactionId",d."supplierId",d."documentType",d."documentNumber",(d."documentDate" AT TIME ZONE 'UTC')::date::text AS "documentDay",d."totalGross",d."status",o."id" AS "orderId",o."status" AS "orderStatus"
  FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."sourceDocumentId"=d."id"
  WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId}
  ), task_meta AS MATERIALIZED (
@@ -229,7 +253,9 @@ async function readPendingInvoiceRowsCore(db,scope,full=false){
  ), source_content AS MATERIALIZED (SELECT "paymentId",bool_or(present) AS present FROM content_rows GROUP BY "paymentId"),
  source_headers AS MATERIALIZED (
  SELECT b."paymentId",b."sourceId",j."purchaseDocumentId",j."status",j.h,j.r,
- COALESCE(c."id" IS NOT NULL AND c."paymentTransactionId"=i."id" AND c."supplierId"=i."supplierId" AND c."documentType"='INVOICE' AND c."documentNumber"=i."invoiceDocumentNumber" AND c."documentDay"=i.details->>'documentDate' AND c."totalGross"=i."amount" AND c."status" IN ('DRAFT','APPROVED') AND c."orderStatus" IN ('NEW','FINAL','INVOICED'),FALSE) AS "chainValid",
+ COALESCE(c."id" IS NOT NULL AND c."paymentTransactionId"=i."id" AND c."supplierId"=i."supplierId" AND c."documentType"='INVOICE' AND c."documentDay"=i.details->>'documentDate' AND c."totalGross"=i."amount" AND c."status" IN ('DRAFT','APPROVED') AND c."orderStatus" IN ('NEW','FINAL','INVOICED'),FALSE) AS "chainValid",
+ COALESCE(c."documentNumber"=i."invoiceDocumentNumber",FALSE) AS "numberExact",
+ COALESCE(COALESCE(j.h->>'pageIndex','0')='0' AND ${commonDraftNumber(Prisma.sql`j.common`,Prisma.sql`c."id"`,Prisma.sql`c."orderId"`,Prisma.sql`i."id"`,Prisma.sql`c."documentNumber"`,Prisma.sql`i."invoiceDocumentNumber"`)},FALSE) AS "commonNumberVerified",
  COALESCE(j.h->>'paymentTransactionId'=i."id" AND j.h->>'supplierId'=i."supplierId" AND j.h->>'documentNumber'=i."invoiceDocumentNumber" AND j.h->>'documentDate'=i.details->>'documentDate' AND j.h->>'totalGross'=i."amount"::float8::text,FALSE) AS "headerValid",
  COALESCE(jsonb_typeof(j.h->'pageJobIds')='array' AND jsonb_array_length(CASE WHEN jsonb_typeof(j.h->'pageJobIds')='array' THEN j.h->'pageJobIds' ELSE '[]'::jsonb END) BETWEEN 1 AND 5 AND j.h->>'pageCount'=hp.n::text AND hp.valid,FALSE) AS "handoffPagesValid",
  COALESCE(j.h->'pendingInvoiceManifest' IS NULL OR (jsonb_typeof(j.h->'pendingInvoiceManifest')='array' AND jsonb_array_length(CASE WHEN jsonb_typeof(j.h->'pendingInvoiceManifest')='array' THEN j.h->'pendingInvoiceManifest' ELSE '[]'::jsonb END)=hp.n AND hp."manifestValid"),FALSE) AS "manifestValid",
@@ -239,8 +265,8 @@ async function readPendingInvoiceRowsCore(db,scope,full=false){
  LEFT JOIN handoff_page_facts hp ON hp."paymentId"=b."paymentId" AND hp."sourceId"=b."sourceId" LEFT JOIN receipt_page_facts rp ON rp."paymentId"=b."paymentId" AND rp."sourceId"=b."sourceId"
  ), source_facts AS MATERIALIZED (
  SELECT "paymentId","sourceId",
- "status" NOT IN ('REJECTED','CANCELLED','DELETED') AND "chainValid" AND "manifestValid" AND (("headerValid" AND "handoffPagesValid" AND ("status" IN ('AWAITING_APPROVAL','CONFIRMED') OR "hasTask")) OR (r->>'paymentTransactionId'="paymentId" AND "receiptPagesValid")) AS valid,
- "status" IN ('REJECTED','CANCELLED','DELETED') OR ("purchaseDocumentId" IS NULL AND "status" IN ('AWAITING_APPROVAL','CONFIRMED')) OR ("purchaseDocumentId" IS NOT NULL AND NOT "chainValid") OR (h->>'paymentTransactionId'="paymentId" AND (NOT "headerValid" OR NOT "handoffPagesValid" OR NOT "manifestValid")) OR (r->>'paymentTransactionId'="paymentId" AND NOT "receiptPagesValid") AS broken
+ "status" NOT IN ('REJECTED','CANCELLED','DELETED') AND "chainValid" AND "manifestValid" AND (("headerValid" AND "handoffPagesValid" AND ("numberExact" OR "commonNumberVerified") AND ("status" IN ('AWAITING_APPROVAL','CONFIRMED') OR "hasTask")) OR ("numberExact" AND r->>'paymentTransactionId'="paymentId" AND "receiptPagesValid")) AS valid,
+ "status" IN ('REJECTED','CANCELLED','DELETED') OR ("purchaseDocumentId" IS NULL AND "status" IN ('AWAITING_APPROVAL','CONFIRMED')) OR ("purchaseDocumentId" IS NOT NULL AND NOT ("chainValid" AND ("numberExact" OR ("commonNumberVerified" AND "headerValid")))) OR (h->>'paymentTransactionId'="paymentId" AND (NOT "headerValid" OR NOT "handoffPagesValid" OR NOT "manifestValid")) OR (r->>'paymentTransactionId'="paymentId" AND NOT "receiptPagesValid") AS broken
  FROM source_headers
  )`:Prisma.sql`
  source_content AS MATERIALIZED (SELECT NULL::text AS "paymentId",FALSE AS present WHERE FALSE),
@@ -284,7 +310,9 @@ async function readPendingInvoiceRowsCore(db,scope,full=false){
  ), jobs AS MATERIALIZED (${jobRows}),
  primary_bindings AS MATERIALIZED (
  SELECT "id" AS "sourceId",h->>'paymentTransactionId' AS "paymentId" FROM jobs WHERE h->>'paymentTransactionId' IS NOT NULL AND COALESCE(h->>'pageIndex','0')='0'
- UNION SELECT "id",r->>'paymentTransactionId' FROM jobs WHERE r->>'paymentTransactionId' IS NOT NULL
+ UNION SELECT j."id",j.r->>'paymentTransactionId' FROM jobs j WHERE j.r->>'paymentTransactionId' IS NOT NULL
+  AND NOT EXISTS(SELECT 1 FROM jobs source WHERE source."id"<>j."id" AND source."purchaseDocumentId"=j."purchaseDocumentId"
+   AND ${isProjectedReceipt(Prisma.sql`j.r`,Prisma.sql`source."id"`,Prisma.sql`source."attachmentId"`,Prisma.sql`(source.h)`,Prisma.sql`(j.r->>'paymentTransactionId')`)})
  ), all_bindings AS MATERIALIZED (
  SELECT "id" AS "sourceId",h->>'paymentTransactionId' AS "paymentId" FROM jobs WHERE h->>'paymentTransactionId' IS NOT NULL
  UNION SELECT "id",r->>'paymentTransactionId' FROM jobs WHERE r->>'paymentTransactionId' IS NOT NULL

@@ -440,8 +440,19 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='MERGED',"updatedAt"=NOW() WHERE "id"=${alias.orderId} AND "companyId"=${scope.companyId}`;
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "status"='MERGED',"updatedAt"=NOW() WHERE "id"=${alias.documentId} AND "companyId"=${scope.companyId}`;
  }
- const receipt={attachmentIds:photoIds,paymentTransactionId:payment?.paymentTransactionId||null,receivedAt:jobRows.find(j=>j.resultJson?.posHandoff)?.createdAt||new Date().toISOString(),requiresHumanReceiptReview:true};
- for(const j of jobRows)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${canonical.documentId},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({commonDraft:common,...(j.id===primary.id&&photoIds.length?{mydataPosReceipt:receipt}:{})})}::jsonb,"updatedAt"=NOW() WHERE "id"=${j.id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
+ const paymentId=common.paymentTransactionId;
+ const paymentHandoff=paymentId&&jobRows.find(j=>{
+  const handoff=j.resultJson?.posHandoff;
+  return handoff?.paymentTransactionId===paymentId&&Number(handoff.pageIndex??0)===0;
+ });
+ const existingReceipt=paymentId&&jobRows.some(j=>j.resultJson?.mydataPosReceipt?.paymentTransactionId===paymentId);
+ // The first job displays the POS photos. Preserve the original payment source
+ // so the projected photo receipt does not appear as a second payment binding.
+ const distinctPaymentSource=existingReceipt||(paymentHandoff&&paymentHandoff.id!==primary.id);
+ const receipt=photoIds.length&&!primary.resultJson?.mydataPosReceipt
+  ?{attachmentIds:photoIds,paymentTransactionId:distinctPaymentSource?null:paymentId,receivedAt:jobRows.find(j=>j.resultJson?.posHandoff)?.createdAt||new Date().toISOString(),requiresHumanReceiptReview:true}
+  :null;
+ for(const j of jobRows)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${canonical.documentId},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({commonDraft:common,...(j.id===primary.id&&receipt?{mydataPosReceipt:receipt}:{})})}::jsonb,"updatedAt"=NOW() WHERE "id"=${j.id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=COALESCE("rawPayload",'{}'::jsonb)||${JSON.stringify({mydataDraftOrderId:canonical.orderId,mydataDraftDocumentId:canonical.documentId,commonDraft:common,...(supplierCorrection||selectedRows?{reconciliationAudit:details}:{})})}::jsonb WHERE "inboxId"=${row.inboxId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
  return {ok:true,reused:false,orderId:canonical.orderId,documentId:canonical.documentId,aliasOrderIds:common.aliasOrderIds,paymentDifference:difference,requiresPaymentReview:common.requiresPaymentReview,supplierCorrection,paymentSupplierCorrection,stockUpdated:false,paymentChanged:false};
 }
@@ -450,10 +461,17 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
 export async function attachInboundToExistingDraft(tx,scope,actorId){
  const row=await inbound(tx,scope),orders=await candidateOrders(tx,row),pos=orders.filter(o=>!o.isMyData);
  if((row.rawPayload?.mydataDraftOrderId||row.jobDocumentId)&&!orders.some(o=>o.isMyData))throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
- if(!pos.length)return null;
+ if(!pos.length){
+  const recorded=row.rawPayload?.commonDraft;
+  const canonical=recorded?.completed===true&&orders.find(o=>o.isMyData&&o.orderId===recorded.orderId&&o.documentId===recorded.documentId);
+  return canonical?{ok:true,reused:true,orderId:canonical.orderId,documentId:canonical.documentId,purchaseOrderId:canonical.orderId,downloaded:false,stockUpdated:false,paymentChanged:false}:null;
+ }
  const exact=pos.filter(o=>o.exact);
  if(exact.length!==1||pos.length!==1)return {reconciliationRequired:true,candidateOrderIds:pos.map(o=>o.orderId),downloaded:false};
- try{return {...await reconcileInvoiceDrafts(tx,scope,{posOrderId:exact[0].orderId,automatic:true,actorId}),purchaseOrderId:exact[0].orderId,downloaded:false};}
+ try{
+  const result=await reconcileInvoiceDrafts(tx,scope,{posOrderId:exact[0].orderId,automatic:true,actorId});
+  return {...result,purchaseOrderId:result.orderId,downloaded:false};
+ }
  catch(e){if(e.status===409)return {reconciliationRequired:true,candidateOrderIds:pos.map(o=>o.orderId),downloaded:false};throw e}
 }
 async function inboundTableExists(tx){const rows=await tx.$queryRaw`SELECT to_regclass('"MyDataInboundDocument"') IS NOT NULL AS "exists"`;return rows[0]?.exists===true}
@@ -521,8 +539,11 @@ export async function reuseInboundDraftForPosJob(tx,identity,{jobId,paymentTrans
   JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId"
   WHERE j."companyId"=${identity.companyId} AND j."storeId"=${identity.storeId} AND j."id"=ANY(${ids}::text[]) ORDER BY j."id"`;
  if(pages.length!==ids.length||pages.some(p=>p.purchaseDocumentId&&p.purchaseDocumentId!==row.documentId))throw error("Οι φωτογραφίες ανήκουν σε διαφορετικό πρόχειρο.");
- const receipt={attachmentIds:[...new Set(pages.map(p=>p.attachmentId))],paymentTransactionId,receivedAt:new Date().toISOString(),requiresHumanReceiptReview:true};
- for(const page of pages)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${row.documentId},"updatedAt"=NOW() WHERE "id"=${page.id} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
+ const handoff=jobs[0].resultJson?.posHandoff;
+ const paymentSourceJobId=paymentTransactionId&&handoff?.paymentTransactionId===paymentTransactionId&&String(handoff.pageIndex??0)==='0'?jobId:null;
+ const receipt={attachmentIds:[...new Set(pages.map(p=>p.attachmentId))],paymentTransactionId,receivedAt:new Date().toISOString(),requiresHumanReceiptReview:true,...(paymentSourceJobId?{paymentSourceJobId}:{})};
+ const commonDraft={completed:true,documentId:row.documentId,orderId:row.orderId,inboxId:row.inboxId,mark:row.mark,paymentTransactionId,requiresPaymentReview:false};
+ for(const page of pages)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${row.documentId},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(page.id===paymentSourceJobId?{commonDraft}:{})}::jsonb,"updatedAt"=NOW() WHERE "id"=${page.id} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
  await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({mydataPosReceipt:receipt})}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.originalJobId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
  await tx.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"=COALESCE("paymentTransactionId",${paymentTransactionId}),"settlementMode"=CASE WHEN ${Boolean(paymentTransactionId)} THEN 'PAID' ELSE "settlementMode" END,"updatedAt"=NOW() WHERE "id"=${row.documentId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataPosReceipt:receipt,mydataDraftOrderId:row.orderId,mydataDraftDocumentId:row.documentId})}::jsonb WHERE "inboxId"=${row.inboxId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
