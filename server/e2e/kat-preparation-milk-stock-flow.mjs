@@ -117,7 +117,74 @@ async function main(){
   assert.equal(batch?.status,"CONSUMED");
   assert.equal(batch?.saleId,saleId);
 
-  const closed=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token,body:{cashSales:999,cardSales:999,eftposTotal:0,expenses:999,drawer:50+unitPrice,custody:0,coins:0,safe:0,note:"KAT milk e2e close"}});
+
+  let tableCashTotal=0;
+  if(process.env.TABLE_PARTIAL_PAYMENT_LAB_STORE_ID===storeId){
+    assert.equal(new URL(baseUrl).hostname,"127.0.0.1");
+    assert.equal(new URL(process.env.DATABASE_URL).pathname,"/myworkstation_test");
+    const prefix=`/api/store-pos/stores/${storeId}`;
+    const call=async (path,status,options={})=>{
+      const result=await request(prefix+path,{token,...options});
+      assert.equal(result.response.status,status,JSON.stringify(result.payload));
+      return result.payload;
+    };
+    await prisma.companyModule.upsert({where:{companyId_moduleKey:{companyId,moduleKey:"TABLE_SERVICE"}},update:{active:true,startsAt:null,endsAt:null},create:{companyId,moduleKey:"TABLE_SERVICE",active:true}});
+    const read=await request(prefix+"/table-service",{token:ownerToken});
+    assert.ok([200,403].includes(read.response.status));
+    await prisma.$executeRaw`INSERT INTO "StoreTableServiceConfig" ("companyId","storeId","enabled") VALUES (${companyId},${storeId},TRUE) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE`;
+    const previousPrice=(await prisma.$queryRaw`SELECT "price" FROM "ManagementModifier" WHERE "id"=${freshMilk.id}`)[0].price;
+    try{
+      await prisma.$executeRaw`UPDATE "ManagementModifier" SET "price"=0.50 WHERE "id"=${freshMilk.id}`;
+      const target=await request(`/api/operator-management/stores/${storeId}/operators`,{method:"POST",token:ownerToken,body:{username:"e2e.kat.table.waiter",fullName:"E2E Table Waiter",email:"",phone:"",role:"EMPLOYEE",active:true,pin:"5938"}});
+      assert.equal(target.response.status,201,JSON.stringify(target.payload));
+      const table=await call("/tables",201,{method:"POST",token:ownerToken,body:{name:"CI TABLE SERVICE "+crypto.randomUUID().slice(0,8)}});
+      const sent=await call("/table-orders",201,{method:"POST",body:{tableId:table.id,idempotencyKey:crypto.randomUUID(),items:[{productId:drink.id,quantity:1,modifiers:[{id:freshMilk.id,price:0.5}]}]}});
+      tableCashTotal=Number((unitPrice+0.5).toFixed(2));
+      assert.equal(sent.total,tableCashTotal);
+      const loadOrder=async ()=>(await call("/table-service",200)).orders.find(order=>order.id===sent.id);
+      const stored=await loadOrder();
+      assert.equal(stored.items[0].salePrice,tableCashTotal);
+      assert.equal(stored.partialCashEnabled,true);
+      const queue=await call("/table-service/preparation-queue",200);
+      const ticket=queue.rows.find(row=>row.tableOrderId===sent.id);
+      assert.ok(ticket,"Prepared table round must appear in KDS");
+      assert.equal(ticket.items[0].tableLineId,stored.items[0].id);
+      assert.equal(ticket.items[0].modifiers[0].price,0.5);
+      await call(`/table-service/preparation-queue/${ticket.id}/ready`,200,{method:"PATCH"});
+      assert.equal((await loadOrder()).status,"READY");
+      const candidates=await call("/table-service/waiters",200,{token:ownerToken});
+      const waiter=candidates.operators.find(row=>row.displayName==="E2E Table Waiter");
+      assert.ok(waiter);
+      const assignment={operatorId:waiter.id,expectedOperatorId:stored.operatorId};
+      await call(`/table-orders/${sent.id}/waiter`,403,{method:"PATCH",body:assignment});
+      await call(`/table-orders/${sent.id}/waiter`,200,{method:"PATCH",token:ownerToken,body:assignment});
+      assert.equal((await loadOrder()).operatorId,waiter.id);
+      const cashRows=async ()=>(await prisma.$queryRaw`SELECT "amount" FROM "StoreTransaction" WHERE "sessionId"=${sessionId} AND "type"='SALE_CASH'`).map(row=>Math.round(Number(row.amount)*100));
+      const before=await cashRows();
+      const cash={tableOrderId:sent.id,paymentMethod:"CASH",items:[{productId:drink.id,quantity:1,tableLineId:stored.items[0].id}]};
+      const partial={...cash,clientTransactionId:crypto.randomUUID(),tableCashAmountCents:100};
+      const balanceCents=Math.round(tableCashTotal*100)-100;
+      const first=await call("/checkout",200,{method:"POST",body:partial});
+      assert.equal(first.balanceCents,balanceCents);
+      assert.equal((await call("/checkout",200,{method:"POST",body:partial})).replay,true);
+      assert.equal((await loadOrder()).tablePaidCents,100);
+      assert.deepEqual((await cashRows()).sort(),[...before,100].sort());
+      const final={...cash,clientTransactionId:crypto.randomUUID(),tableCashBalanceCents:balanceCents};
+      const paid=await call("/checkout",201,{method:"POST",body:final});
+      assert.equal(paid.total,tableCashTotal);
+      assert.equal(paid.fiscalStatus,"NON_FISCAL");
+      assert.equal((await call("/checkout",200,{method:"POST",body:final})).saleId,paid.saleId);
+      assert.equal(await loadOrder(),undefined);
+      assert.deepEqual((await cashRows()).sort(),[...before,100,balanceCents].sort());
+      const [closedTable]=await prisma.$queryRaw`SELECT "status","saleId" FROM "TableOrder" WHERE "id"=${sent.id}`;
+      assert.deepEqual(closedTable,{status:"PAID",saleId:paid.saleId});
+      console.log("Combined table E2E passed: priced modifier, KDS, reassignment, cash installments and replay");
+    }finally{
+      await prisma.$executeRaw`UPDATE "ManagementModifier" SET "price"=${previousPrice} WHERE "id"=${freshMilk.id}`;
+    }
+  }
+
+  const closed=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token,body:{cashSales:999,cardSales:999,eftposTotal:0,expenses:999,drawer:50+unitPrice+tableCashTotal,custody:0,coins:0,safe:0,note:"KAT milk e2e close"}});
   assert.equal(closed.response.status,200,JSON.stringify(closed.payload));
   assert.equal(Number(closed.payload.variance),0);
 
