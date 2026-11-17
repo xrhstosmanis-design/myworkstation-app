@@ -57,6 +57,22 @@ test('native PostgreSQL restructure conserves lines, priced modifiers, KDS and p
  const moved=(await db.query('SELECT * FROM "TableOrderLine" WHERE "id"=$1',['one'])).rows[0];assert.equal(moved.orderId,splitId);assert.equal(Number(moved.unitPrice),2.5);assert.deepEqual(moved.allergensJson,['MILK']);
  const batches=(await db.query('SELECT * FROM "StorePreparationBatch"')).rows;assert.equal(batches.length,2);
  const splitBatch=batches.find(b=>b.tableOrderId===splitId);assert.deepEqual(splitBatch.itemsJson[0].modifiers,[{id:'milk',price:0.5}]);assert.equal(batches.find(b=>b.id==='batch').itemsJson[0].tableLineId,'two');
+ // Same product on both accounts exposes legacy product-only checkout ambiguity.
+ await db.exec(`UPDATE "TableOrderLine" SET "productId"='coffee' WHERE "id"='three';
+ INSERT INTO "StorePreparationBatch" ("id","companyId","storeId","itemsJson","status","tableOrderId") VALUES ('target-batch','company','store','[{"tableLineId":"three","productId":"coffee","quantity":1}]','READY','target')`);
+ const graphSnapshot=async()=>JSON.stringify(await Promise.all(['TableOrder','TableOrderLine','StorePreparationBatch','StoreOperatorAudit','TableOrderRequest'].map(async name=>(await db.query('SELECT * FROM "'+name+'" ORDER BY 1')).rows)));
+ const sourceItems=splitBatch.itemsJson;
+ await db.query('UPDATE "StorePreparationBatch" SET "itemsJson"=$1::jsonb WHERE "id"=$2',[JSON.stringify(sourceItems.map(item=>({...item,tableLineId:null}))),splitBatch.id]);
+ const beforeLegacySource=await graphSnapshot();
+ const legacySource=await call({operation:'MERGE',targetTableId:'c',idempotencyKey:key()},undefined,splitId);
+ assert.equal(legacySource.status,409);assert.match(legacySource.error.message,/παλιά δελτία/);
+ assert.equal(await graphSnapshot(),beforeLegacySource);
+ await db.query('UPDATE "StorePreparationBatch" SET "itemsJson"=$1::jsonb WHERE "id"=$2',[JSON.stringify(sourceItems),splitBatch.id]);
+ await db.exec(`UPDATE "StorePreparationBatch" SET "itemsJson"='[{"productId":"coffee","quantity":1}]' WHERE "id"='target-batch'`);
+ const beforeLegacyTarget=await graphSnapshot();
+ assert.equal((await call({operation:'MERGE',targetTableId:'c',idempotencyKey:key()},undefined,splitId)).status,409);
+ assert.equal(await graphSnapshot(),beforeLegacyTarget);
+ await db.exec(`UPDATE "StorePreparationBatch" SET "itemsJson"='[{"tableLineId":"three","productId":"coffee","quantity":1}]' WHERE "id"='target-batch'`);
  assert.equal((await call({operation:'MERGE',targetTableId:'c',idempotencyKey:key()},undefined,splitId)).status,200);
  const beforeClosed=await snapshot();
  assert.equal((await call({operation:'MOVE',targetTableId:'d',idempotencyKey:key()},undefined,splitId)).status,409);

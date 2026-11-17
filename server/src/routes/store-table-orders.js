@@ -161,7 +161,15 @@ router.post("/stores/:storeId/table-orders/:orderId/restructure", async (req,res
         const selectedIds=selected.map(line=>line.id);
         const batches=await tx.$queryRaw`SELECT * FROM "StorePreparationBatch" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableOrderId"=${source.id} ORDER BY "id" FOR UPDATE`;
         if(batches.some(batch=>!['SENT','READY'].includes(batch.status)||batch.saleId||batch.consumedAt))throw conflict("Υπάρχει ήδη εκτελεσμένη κίνηση παρασκευής στον λογαριασμό.");
-        if(body.operation==="SPLIT"&&batches.some(batch=>!Array.isArray(batch.itemsJson)||batch.itemsJson.some(item=>!item.tableLineId||!lines.some(line=>line.id===item.tableLineId))))throw conflict("Το παλιό δελτίο παρασκευής δεν υποστηρίζει ασφαλή διαίρεση.");
+        const hasUnlinkedPreparation=(tickets,orderLines)=>tickets.some(batch=>
+          !Array.isArray(batch.itemsJson)||batch.itemsJson.some(item=>
+            !item.tableLineId||!orderLines.some(line=>line.id===item.tableLineId&&line.productId===item.productId)));
+        if(hasUnlinkedPreparation(batches,lines))throw conflict("Τα παλιά δελτία παρασκευής πρέπει να παραμείνουν στο υπάρχον τραπέζι. Δεν υποστηρίζουν ασφαλή ένωση ή διαίρεση.");
+        if(target){
+          const targetLines=await tx.$queryRaw`SELECT "id","productId" FROM "TableOrderLine" WHERE "orderId"=${target.id} AND "quantity">0 ORDER BY "id" FOR UPDATE`;
+          const targetBatches=await tx.$queryRaw`SELECT "itemsJson" FROM "StorePreparationBatch" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableOrderId"=${target.id} AND "status" IN ('SENT','READY') ORDER BY "id" FOR UPDATE`;
+          if(hasUnlinkedPreparation(targetBatches,targetLines))throw conflict("Τα παλιά δελτία παρασκευής του προορισμού πρέπει να παραμείνουν στο υπάρχον τραπέζι. Επίλεξε άλλο τραπέζι για την ένωση.");
+        }
         const selectedTotal=Number(selected.reduce((sum,line)=>sum+money(line.lineTotal),0).toFixed(2));
         targetOrderId=target?.id||crypto.randomUUID();
         if(!target){
