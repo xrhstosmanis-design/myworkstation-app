@@ -1,3 +1,4 @@
+import {prepareAutomaticReportConsentInspection} from './automatic-report-consent-inspection.js';
 // Internal execution core. No production manifest, recovery adapter or HTTP route is registered here.
 import {createHash,randomUUID} from 'node:crypto';
 import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
@@ -317,6 +318,13 @@ export function createLifecycleInstallationCore(manifest,{sourceRevision}={}){
  return Object.freeze({
   describe:()=>Object.freeze({id:plan.id,planHash:plan.planHash,sourceRevision}),
   async inspectInTransaction(tx,actor){requireLifecycleAdmin(actor);const schema=await schemaFor(tx);return validateDatabase(tx,plan,schema,{allowUninstalled:true})},
+  async inspectAdditiveInTransaction(tx,actor,options){
+   requireLifecycleAdmin(actor);
+   const schema=await schemaFor(tx);
+   const prepared=await prepareAutomaticReportConsentInspection(tx,schema,reviewed,options);
+   const metadata=await validateDatabase(prepared.tx,plan,schema,{allowUninstalled:true});
+   return {...metadata,signature:hash({source:metadata.signature,additions:prepared.evidence})};
+  },
   installInTransaction,
   async install(db,actor,scope){requireLifecycleAdmin(actor);return db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL extra_float_digits=3");await tx.$executeRawUnsafe("SET LOCAL bytea_output='hex'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return installInTransaction(tx,actor,scope)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000})}
  });

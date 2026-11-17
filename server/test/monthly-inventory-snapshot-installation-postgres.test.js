@@ -202,3 +202,41 @@ test(capture?'native CAPTURE3 installation atomically provisions all three relat
   });
  }finally{await f.close();}
 });
+
+test('native event installation preserves CAPTURE generation and atomically rolls back catalogue changes',{
+ skip:!isolated()&&!process.env.CI?'Actual isolated PostgreSQL unavailable locally':false,timeout:300000
+},async t=>{
+ const {createAutomaticReportEventInstallation:createEvents}=await import('../src/services/automatic-report-event-installation.js');
+ const f=await fixture(true);
+ try{
+  await f.service.install(actor,await request(f));
+  await f.db.$executeRawUnsafe(`INSERT INTO "User"("id","email","passwordHash","fullName","companyId","role","updatedAt") VALUES ('synthetic-admin','synthetic@example.invalid','SYNTHETIC','SYNTHETIC','fixture-company','SUPER_ADMIN',NOW())`);
+  const supplierSql=readFileSync(new URL('../scripts/sql/automatic-report-supplier-comparison.sql',import.meta.url),'utf8');
+  for(const sql of supplierSql.split(';').map(value=>value.trim()).filter(value=>value&&value!=='BEGIN'&&value!=='COMMIT'))await f.db.$executeRawUnsafe(sql);
+  const service=createEvents(f.db,{sourceRevision:revision,enabled:true,profile:'CAPTURE'});
+  const beforeFence=(await f.db.$queryRawUnsafe(`SELECT * FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0];
+  const input={...scope,packet:(await service.inspect(actor,scope)).packet,explicitAuthorization:true};
+  await t.test('drift and active work invalidate inspected packets',async()=>{
+   await f.db.$executeRawUnsafe('CREATE TABLE "UnreviewedEventObject"("id" text)');
+   const drift=await state(f);await assert.rejects(service.install(actor,input));assert.deepEqual(await state(f),drift);
+   await f.db.$executeRawUnsafe('DROP TABLE "UnreviewedEventObject"');
+   await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "maintenance"=true WHERE "storeId"='target'`);
+   const maintenance=await state(f);await assert.rejects(service.install(actor,input));assert.deepEqual(await state(f),maintenance);
+   await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "maintenance"=false WHERE "storeId"='target'`);
+   await f.db.$executeRawUnsafe(`INSERT INTO "StoreLifecycleExecution"("id","companyId","storeId","mode","planHash","snapshotHash","state","expiresAt") VALUES ('event-running','fixture-company','sibling','RESET',$1,$2,'DRAINING',NOW()+INTERVAL '1 hour')`,beforeFence.planHash,'0'.repeat(64));
+   const running=await state(f);await assert.rejects(service.install(actor,input));assert.deepEqual(await state(f),running);
+   await f.db.$executeRawUnsafe(`DELETE FROM "StoreLifecycleExecution" WHERE "id"='event-running'`);
+  });
+  const fresh={...scope,packet:(await service.inspect(actor,scope)).packet,explicitAuthorization:true};
+  await t.test('late failure rolls back event relation and enrollment hash together',async()=>{
+   const before=await state(f);
+   const late=createEvents({$transaction:(fn,options)=>f.db.$transaction(async tx=>{const result=await fn(tx);assert.equal(result.installed,true);throw new Error('EVENT_INSTALL_LATE_ROLLBACK')},options)},{sourceRevision:revision,enabled:true,profile:'CAPTURE'});
+   await assert.rejects(late.install(actor,fresh),/EVENT_INSTALL_LATE_ROLLBACK/);assert.deepEqual(await state(f),before);
+   assert.equal((await f.db.$queryRawUnsafe(`SELECT to_regclass('"AutomaticReportEventConsent"') IS NULL AS missing`))[0].missing,true);
+  });
+  const result=await service.install(actor,fresh);
+  const afterFence=(await f.db.$queryRawUnsafe(`SELECT * FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0];
+  assert.equal(result.installed,true);assert.equal(afterFence.generation,beforeFence.generation);assert.equal(afterFence.planHash,service.describe().targetPlanHash);assert.notEqual(afterFence.planHash,beforeFence.planHash);
+  assert.equal((await service.inspect(actor,scope)).packet.installed,true);
+ }finally{await f.close();}
+});

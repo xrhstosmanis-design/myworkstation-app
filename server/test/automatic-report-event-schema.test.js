@@ -37,3 +37,19 @@ test('event profile is accepted by the existing lifecycle planner',async()=>{
     assert.doesNotThrow(()=>createLifecycleInspectionCore(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile}),{sourceRevision:'a'.repeat(40)}));
   }
 });
+
+test('Python recovery worker and JavaScript use identical event manifests from the packaged definition',async()=>{
+  const {spawnSync}=await import('node:child_process');
+  const {fileURLToPath}=await import('node:url');
+  const {createHash}=await import('node:crypto');
+  const {readFileSync}=await import('node:fs');
+  const directory=fileURLToPath(new URL('../../ops/backup/lifecycle',import.meta.url));
+  const script='import sys,json,hashlib\nsys.path.insert(0,sys.argv[1])\nimport worker\nprofiles=json.loads(sys.argv[2])\nprint(json.dumps([hashlib.sha256(worker.compact(worker.selected_manifest_document({"MWS_STORE_LIFECYCLE_PROFILE":profile})).encode()).hexdigest() for profile in profiles]))';
+  const profiles=['BASE','MONTHLY_INVENTORY_CAPTURE_V1','AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'];
+  const result=spawnSync('python3',['-c',script,directory,JSON.stringify(profiles)],{encoding:'utf8',timeout:15000});
+  assert.equal(result.status,0,result.stderr);
+  const expected=profiles.map(profile=>createHash('sha256').update(JSON.stringify(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile}))).digest('hex'));
+  assert.deepEqual(JSON.parse(result.stdout),expected);
+  const allowlist=readFileSync(new URL('../../ops/backup/Dockerfile.dockerignore',import.meta.url),'utf8').split('\n');
+  assert.equal(allowlist.filter(line=>line==='!ops/backup/lifecycle/automatic-report-consent-extension.proposed.json').length,1);
+});

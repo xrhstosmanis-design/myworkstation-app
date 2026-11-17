@@ -1,23 +1,9 @@
 // Explicit lifecycle profile for event report authorizations. The default
 // manifest remains usable before the optional event schema is provisioned.
-export const automaticReportEventConsentColumns=Object.freeze([
-  ['companyId','text',true],
-  ['storeId','text',true],
-  ['reportType','text',true],
-  ['recipientId','text',true],
-  ['revision','bigint',true],
-  ['recipientVersion','bigint',true],
-  ['active','boolean',true],
-  ['allowedFrequencies','text[]',true],
-  ['lifecycleGeneration','bigint',true],
-  ['consentedBy','text',false],
-  ['consentedAt','timestamp with time zone',false],
-  ['proofHash','text',false],
-  ['revokedBy','text',false],
-  ['revokedAt','timestamp with time zone',false],
-  ['updatedBy','text',true],
-  ['updatedAt','timestamp with time zone',true]
-].map(column=>Object.freeze(column)));
+import {readFileSync} from 'node:fs';
+const extension=JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/automatic-report-consent-extension.proposed.json',import.meta.url),'utf8'));
+if(extension.format!=='MWS_AUTOMATIC_REPORT_CONSENT_EXTENSION_V1')throw new Error('Invalid report consent lifecycle definition.');
+export const automaticReportEventConsentColumns=Object.freeze(extension.columns.map(column=>Object.freeze(column)));
 
 export function withAutomaticReportEventConsent(manifest){
   const result=structuredClone(manifest);
