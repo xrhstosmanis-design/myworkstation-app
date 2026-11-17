@@ -286,6 +286,11 @@ router.get("/sales/unsold-products",requireCompanyModule("SALES_ANALYTICS"),asyn
 
 router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),async(req,res,next)=>{
   try{
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(!req.query.storeId||req.query.storeId!==req.user.storeId||req.staffGrant?.capability!=='analytics.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,'analytics.read');
+    }
     const storeId=req.query.storeId?String(req.query.storeId):null;if(storeId&&!await ownedStore(req.user.companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     const to=req.query.to?greeceRangeDate(req.query.to,true):new Date(),from=req.query.from?greeceRangeDate(req.query.from):new Date(to.getTime()-30*86400000);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
     const duration=to.getTime()-from.getTime(),compareTo=req.query.compareTo?greeceRangeDate(req.query.compareTo,true):new Date(from.getTime()-1),compareFrom=req.query.compareFrom?greeceRangeDate(req.query.compareFrom):new Date(compareTo.getTime()-duration);
@@ -301,7 +306,8 @@ router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),asyn
       prisma.$queryRaw`SELECT p."method",COUNT(*)::int AS payments,SUM(p."amount") AS total FROM "Payment" p JOIN "Sale" s ON s."id"=p."saleId" WHERE s."companyId"=${req.user.companyId} AND (${storeId}::text IS NULL OR s."storeId"=${storeId}) AND s."occurredAt">=${from} AND s."occurredAt"<=${to} GROUP BY p."method" ORDER BY total DESC`,
       prisma.$queryRaw`SELECT "status",COUNT(*)::int AS count,COALESCE(SUM("total"),0) AS total FROM "Sale" WHERE "companyId"=${req.user.companyId} AND (${storeId}::text IS NULL OR "storeId"=${storeId}) AND "occurredAt">=${from} AND "occurredAt"<=${to} GROUP BY "status" ORDER BY count DESC`
     ]);
-    const current=summary[0]||{},previous=comparison[0]||{},revenue=Number(current.revenue||0),previousRevenue=Number(previous.revenue||0);res.json({from,to,compareFrom,compareTo,summary:{...current,revenueChangePercent:previousRevenue?((revenue-previousRevenue)/previousRevenue)*100:null},comparison:previous,daily,hours,categories,products,employees,stores:storeRows,methods,statuses,nonFiscal:true});
+    if(delegated)await requireStaffGrant(prisma,req.user,req.user.storeId,'analytics.read');
+    const current=summary[0]||{},previous=comparison[0]||{},revenue=Number(current.revenue||0),previousRevenue=Number(previous.revenue||0);res.json({storeId,from,to,compareFrom,compareTo,summary:{...current,revenueChangePercent:previousRevenue?((revenue-previousRevenue)/previousRevenue)*100:null},comparison:previous,daily,hours,categories,products,employees,stores:storeRows,methods,statuses,nonFiscal:true});
   }catch(error){next(error)}
 });
 

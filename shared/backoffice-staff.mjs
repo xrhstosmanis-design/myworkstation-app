@@ -5,7 +5,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read']);
 export const staffPermissionSections=Object.freeze([
   {key:'invoices',label:'Τιμολόγια',actions:[
     {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα, τα πρωτότυπα και τις αγορές του καταστήματος.'},
@@ -15,6 +15,7 @@ export const staffPermissionSections=Object.freeze([
     {key:'invoices.cancel',label:'Ακύρωση καταχωρισμένου τιμολογίου',description:'Ακυρώνει οριστικά το τιμολόγιο του επιλεγμένου καταστήματος, με αιτιολογία, προεπισκόπηση και αντιστροφή αποθέματος.',requires:['invoices.read']}
   ]},
   {key:'sales',label:'Πωλήσεις και βάρδιες',actions:[
+    {key:'analytics.read',label:'Ανάλυση πωλήσεων και βαρδιών',description:'Βλέπει πωλήσεις, κέρδος, προϊόντα και χειριστές ανά βάρδια του επιλεγμένου καταστήματος.',requires:['shifts.read','sales.read']},
     {key:'sales.read',label:'Προβολή πωλήσεων και ταμείων',description:'Βλέπει πωλήσεις, κινήσεις και υπόλοιπα βαρδιών του καταστήματος.'},
     {key:'sales.cancel',label:'Ακύρωση πώλησης τρέχουσας βάρδιας',description:'Ακυρώνει μη φορολογική πώληση στην ίδια ανοικτή βάρδια, με αιτιολογία και αντίστροφη εγγραφή. Δεν επιτρέπει επιστροφή ή ακύρωση φορολογικής απόδειξης.',requires:['sales.read']},
     {key:'shifts.read',label:'Συγκεντρωτική προβολή βαρδιών',description:'Βλέπει τις πρόσφατες βάρδιες όλων των ταμείων του καταστήματος, τα σύνολα και τις κινήσεις τους.'},
@@ -25,6 +26,9 @@ export const staffPermissionSections=Object.freeze([
     {key:'payments.supplier',label:'Καταχώριση πληρωμής προμηθευτή',description:'Πληρωμή ανοικτών τιμολογίων ή έναντι με αποδεικτικό ή ρητή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.expense',label:'Καταχώριση εξόδου',description:'Καταχωρίζει θετικό έξοδο με αιτιολογία και παραστατικό ή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.cash',label:'Πληρωμή από μετρητά βάρδιας',description:'Επιτρέπει αφαίρεση της πληρωμής από την ανοικτή βάρδια του επιλεγμένου ταμείου.',requires:['payments.read','sales.read']}
+  ]},
+  {key:'orders',label:'Παραγγελίες',actions:[
+    {key:'order-suggestions.read',label:'Προτάσεις παραγγελίας',description:'Βλέπει τις προτάσεις ειδών και την ομαδοποίησή τους ανά προμηθευτή στο επιλεγμένο κατάστημα.'}
   ]},
   {key:'performance',label:'Απόδοση προϊόντων',actions:[
     {key:'low-value-products.read',label:'Προϊόντα Χαμηλής Απόδοσης',description:'Βλέπει την αναφορά προϊόντων χαμηλής απόδοσης του επιλεγμένου καταστήματος.'}
@@ -72,6 +76,8 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if(method==='GET'&&path==='/api/commerce/sales/advanced-report')return 'analytics.read';
+  if(method==='GET'&&['/api/commerce/order-suggestions','/api/commerce/order-suggestions/by-supplier'].includes(path))return 'order-suggestions.read';
   if(method==='GET'&&['/api/commerce/low-value-products/access','/api/commerce/low-value-products'].includes(path))return 'low-value-products.read';
   if(method==='GET'&&path==='/api/commerce/supplier-price-comparison')return 'supplier-price-comparison.read';
   if((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/cancel-preview$/.test(path))||

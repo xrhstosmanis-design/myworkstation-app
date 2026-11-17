@@ -963,3 +963,124 @@ test('delegated low-value report opens independently, scopes calculations to its
     assert.equal(calls.length,3);
   }finally{await m.close()}
 });
+
+test('delegated order suggestions opens standalone and groups suppliers within the selected store',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const {buildSupplierOrderGroups}=await import('../src/lib/supplier-order-groups.js');
+  const flat={storeId:'a1',options:{historyDays:30,coverageDays:7,leadDays:3},generatedAt:'2026-11-17T12:00:00.000Z',from:'2026-10-18T12:00:00.000Z',to:'2026-11-17T12:00:00.000Z',rows:[{
+    productId:'product',name:'Scoped suggested product',sku:'001',unitLabel:'τεμάχιο',currentStock:1,minStock:2,targetStock:10,
+    soldQuantity:30,returnedQuantity:0,netQuantity:30,dailyDemand:1,suggestedQuantity:9,reason:'Demand.',warnings:[]
+  }]};
+  const evidence=[{productId:'product',supplierId:'supplier',supplierName:'Scoped supplier',documentId:'document'}];
+  const grouped={...flat,...buildSupplierOrderGroups(flat.rows,evidence,{complete:true}),supplierEvidence:{from:flat.from,to:flat.to,historyDays:30,limit:20000,complete:true,observedDocumentProductSupplierCount:1,physicalDeliveryFrequencyVerified:false}};
+  let denyRefresh=false;
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    assert.equal(options.method||'GET','GET');
+    if(path.endsWith('/me'))return {...identity,stores:[
+      {id:'a1',name:'A1',profile:'AUDITOR',capabilities:['order-suggestions.read']},
+      {id:'a2',name:'A2',profile:'MANAGER',capabilities:[]}
+    ]};
+    const url=new URL(path,'https://isolated.invalid');
+    assert.ok(['/api/commerce/order-suggestions','/api/commerce/order-suggestions/by-supplier'].includes(url.pathname));
+    assert.equal(url.searchParams.get('storeId'),'a1');
+    assert.equal(options.headers['x-backoffice-store-id'],'a1');
+    if(denyRefresh)throw Object.assign(new Error('Η πρόσβαση ανακλήθηκε.'),{status:403});
+    return url.pathname.endsWith('/by-supplier')?grouped:flat;
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  const selectStore=async(id)=>m.act(async()=>{
+    const select=document.querySelector('[aria-label="Κατάστημα"]');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  try{
+    assert.equal(button('Προτάσεις παραγγελίας'),undefined);
+    await selectStore('a1');
+    assert.equal(button('Είδη και αποθήκη'),undefined);
+    assert.equal(button('Τιμολόγια'),undefined);
+    await m.act(async()=>button('Προτάσεις παραγγελίας').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+    assert.match(document.querySelector('.order-suggestions').textContent,/Scoped suggested product/);
+    await m.act(async()=>{const select=document.querySelector('[aria-label="Προβολή προτάσεων"]');select.value='supplier';select.dispatchEvent(new Event('change',{bubbles:true}))});
+    assert.match(document.querySelector('.order-suggestions').textContent,/Scoped supplier/);
+    assert.match(document.querySelector('.order-suggestions').textContent,/PROXY/);
+    assert.equal(calls.length,3);
+    denyRefresh=true;
+    await m.act(async()=>document.querySelector('.order-suggestions-options').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.match(document.querySelector('[role="alert"]').textContent,/Η πρόσβαση ανακλήθηκε/);
+    assert.doesNotMatch(document.body.textContent,/Scoped suggested product/);
+    assert.equal(button('CSV πρότασης').disabled,true);
+    await selectStore('a2');
+    assert.equal(button('Προτάσεις παραγγελίας'),undefined);
+    assert.equal(document.querySelector('.order-suggestions'),null);
+    assert.equal(calls.length,4);
+  }finally{await m.close()}
+});
+
+test('delegated analytics restricts its native store selector and discards old or denied reports',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  let resolveFirst,denyRefresh=false;
+  const first=new Promise(resolve=>{resolveFirst=resolve});
+  const report=storeId=>({storeId,categories:[],employees:[],products:[{description:`Analytics product ${storeId}`,quantity:1,revenue:10,discounts:0}]});
+  const api=async(path,options={})=>{
+    calls.push({path,options});assert.equal(options.method||'GET','GET');
+    if(path.endsWith('/me'))return {...identity,stores:[
+      ...['a1','a2'].map(id=>({id,name:id.toUpperCase(),profile:'AUDITOR',capabilities:['analytics.read','sales.read','shifts.read']})),
+      {id:'a3',name:'A3',profile:'MANAGER',capabilities:[]}
+    ]};
+    const url=new URL(path,'https://isolated.invalid'),storeId=options.headers['x-backoffice-store-id'];
+    assert.ok(['a1','a2'].includes(storeId));
+    if(url.pathname.endsWith('/terminals'))return {storeId,terminals:[]};
+    if(denyRefresh)throw Object.assign(new Error('Η πρόσβαση ανακλήθηκε.'),{status:403});
+    if(url.pathname==='/api/commerce/sales/advanced-report'){
+      assert.equal(url.searchParams.get('storeId'),storeId);
+      assert.ok(url.searchParams.get('from'));assert.ok(url.searchParams.get('to'));
+      return storeId==='a1'?first:report(storeId);
+    }
+    assert.ok([`/api/cash-control/stores/${storeId}/reporting-overview`,`/api/transactions/stores/${storeId}/overview`].includes(url.pathname));
+    const shift={id:`shift-${storeId}`,openedAt:'2026-11-17T08:00:00Z',closedAt:'2026-11-17T09:00:00Z',openedByName:`Operator ${storeId}`,cashSales:10,cardSales:0};
+    return {store:{id:storeId},recent:url.pathname.endsWith('/reporting-overview')?[shift]:[],openSessions:[],recentTransactions:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  const selectStore=async(id)=>m.act(async()=>{
+    const select=document.querySelector('[aria-label="Κατάστημα"]');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  try{
+    await selectStore('a1');
+    await m.act(async()=>button('Ανάλυση πωλήσεων').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,60)));
+    assert.equal(document.querySelector('.kiosk-sales .kiosk-top-controls select').options.length,1);
+    assert.equal(document.querySelector('.kiosk-sales .kiosk-top-controls select').value,'a1');
+    assert.doesNotMatch(document.body.textContent,/Operator a1/,'contexts remain hidden until report completes');
+    await selectStore('a2');
+    assert.equal(document.querySelector('.kiosk-sales'),null);
+    await m.act(async()=>button('Ανάλυση πωλήσεων').click());
+    assert.match(document.querySelector('.kiosk-sales').textContent,/Analytics product a2/);
+    assert.equal(document.querySelector('.kiosk-sales .kiosk-top-controls select').options.length,1);
+    assert.equal(document.querySelector('.kiosk-sales .kiosk-top-controls select').value,'a2');
+    await m.act(async()=>resolveFirst(report('a1')));
+    assert.doesNotMatch(document.body.textContent,/Analytics product a1|Operator a1/);
+    denyRefresh=true;
+    await m.act(async()=>document.querySelector('.kiosk-top-controls button').click());
+    assert.match(document.querySelector('[role="alert"]').textContent,/Η πρόσβαση ανακλήθηκε/);
+    assert.doesNotMatch(document.body.textContent,/Analytics product a2|Operator a2/);
+    await selectStore('a3');
+    assert.equal(button('Ανάλυση πωλήσεων'),undefined);
+    assert.equal(document.querySelector('.kiosk-sales'),null);
+  }finally{await m.close()}
+});
+
+test('native analytics rejects mismatched store identity from any report context',async()=>{
+  const Analytics=await component('commerce/AdvancedSalesAnalytics');
+  for(const mismatch of ['cash','ledger','report']){
+    const api=async path=>{
+      if(path.includes('/sales/advanced-report'))return {storeId:mismatch==='report'?'other':'a1',products:[{description:'Unconfirmed store product'}]};
+      const cash=path.includes('/cash-control/');
+      return {store:{id:mismatch===(cash?'cash':'ledger')?'other':'a1'},recent:cash?[{id:'shift',openedAt:'2026-11-17T08:00:00Z',closedAt:'2026-11-17T09:00:00Z',openedByName:'Unconfirmed operator'}]:[],openSessions:[]};
+    };
+    const m=await mount(Analytics,{api,stores:[{id:'a1',name:'A1'}],initialStoreId:'a1'});
+    try{
+      assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκε το κατάστημα/);
+      assert.doesNotMatch(document.body.textContent,/Unconfirmed store product|Unconfirmed operator/);
+    }finally{await m.close()}
+  }
+});

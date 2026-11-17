@@ -101,3 +101,32 @@ test('low-value report independently requires its explicit right and selected-st
   capabilities=[right];
   await assert.rejects(requireStaffGrant(db,user,'other',right),{code:'STAFF_ACCESS_DENIED'});
 });
+
+test('sales analytics requires its view dependencies, three modules and an explicit matching selected store',async()=>{
+  const right='analytics.read',capabilities=[right,'shifts.read','sales.read'];
+  assert.equal(validStaffCapabilities([right]),false);
+  assert.equal(validStaffCapabilities(capabilities),true);
+  assert.equal(staffRequestCapability('GET','/api/commerce/sales/advanced-report'),right);
+  assert.equal(staffRequestCapability('POST','/api/commerce/sales/advanced-report'),null);
+  let activeModules=['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL'];
+  const checked=[];
+  const db={company:{findUnique:async()=>({active:true,licenseStatus:'ACTIVE',modules:activeModules.map(moduleKey=>({moduleKey,active:true}))})},$queryRaw:async(strings,...values)=>{
+    const sql=strings.join('?');
+    if(sql.includes('FROM "BackofficeStaffAccount" a'))return [{mustChangePassword:false}];
+    if(sql.includes('FROM "BackofficeStaffGrant" g'))return [{profile:'AUDITOR',capabilities}];
+    if(sql.includes('FROM "StorePaidModule"'))checked.push(values[1]);
+    return [];
+  }};
+  const user={id:'staff',companyId:'company',role:'EMPLOYEE',staffAccess:true,tokenType:'BACKOFFICE_USER',sessionId:'session',sessionVersion:0};
+  const request=query=>({user:{...user},originalUrl:'/api/commerce/sales/advanced-report',method:'GET',query,get:()=> 'store'});
+  const response={setHeader(){}};
+  const req=request({storeId:'store'});
+  await enforceBackofficeStaff(db,req,response);
+  assert.equal(req.staffGrant.capability,right);
+  assert.deepEqual(checked,['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']);
+  for(const query of [{},{storeId:''},{storeId:'other'},{storeId:['store','other']}])await assert.rejects(enforceBackofficeStaff(db,request(query),response),{code:'STAFF_ACCESS_DENIED'});
+  for(const missing of ['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']){
+    activeModules=['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL'].filter(moduleKey=>moduleKey!==missing);
+    await assert.rejects(enforceBackofficeStaff(db,request({storeId:'store'}),response),{code:'MODULE_DISABLED'});
+  }
+});

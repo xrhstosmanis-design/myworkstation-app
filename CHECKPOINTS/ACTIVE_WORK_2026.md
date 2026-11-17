@@ -460,3 +460,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 17/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / Νο 5. Τοπική υλοποίηση διαθέσιμων προβολών ανά κατάστημα και επαλήθευσης των αποθηκευμένων δικαιωμάτων. Εκκρεμούν CI, PostgreSQL και υπάρχον LAB. [Νέα λίστα](../docs/roadmap/MyWorkStation_FINAL_LIST_2026-11-17.md) και [checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
 
 17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκαν παραχωρούμενες προβολές Σύγκρισης Προμηθευτών και Προϊόντων Χαμηλής Απόδοσης ανά χειριστή και κατάστημα. Ίδιο PR #4007, νέο CI και κοινή δοκιμή LAB στο τέλος εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
+
+17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκαν προσωπικές προβολές Προτάσεων Παραγγελίας και Ανάλυσης Πωλήσεων, με ξεχωριστά δικαιώματα και ακριβή επιλογή καταστήματος. Συνέχεια PR #4007, νέο CI και κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
