@@ -31,3 +31,12 @@ test('supplier CSV uses only passed canonical filtered rows, preserves incomplet
   snapshot.rows[0].suggestedQuantity=Infinity;assert.throws(()=>buildSupplierProposalCsv({snapshot,rows:snapshot.rows,filters}),/ποσότητα/);
 });
 
+
+test('supplier CSV retains pending purchase review separately from suggested quantity',()=>{
+  const snapshot=fixture();
+  snapshot.rows[0].pendingPurchaseReview=[{status:'NEW',orderCount:1,recordedStockQuantity:15,unconvertedLineCount:0},{status:'FINAL',orderCount:2,recordedStockQuantity:null,unconvertedLineCount:1}];
+  const csv=buildSupplierProposalCsv({snapshot,rows:snapshot.rows,filters});
+  assert.match(csv,/Πρόχειρες αγορές: 1 \/ 15 τεμ\./);
+  assert.match(csv,/Προς τιμολόγηση: 2 \/ Μετατροπή προς έλεγχο/);
+  assert.ok(csv.includes('"5.125"'));
+});

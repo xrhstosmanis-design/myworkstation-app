@@ -11,6 +11,7 @@ test('actual profit SQL reconciles package discounts and units, original return 
  const {PrismaClient}=await import('@prisma/client'),db=new PrismaClient();
  try{await db.$transaction(async tx=>{
   const tables={
+   StockMovement:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"movementType" TEXT,"sourceType" TEXT,"sourceId" TEXT,"unitCost" NUMERIC,"createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
    Product:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"categoryId" TEXT,"unit" TEXT DEFAULT \'PIECE\',"name" TEXT,"sku" TEXT,"costPrice" NUMERIC',
    Sale:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT DEFAULT \'COMPLETED\',"source" TEXT DEFAULT \'POS\',"reversalKind" TEXT,"originalSaleId" TEXT,"occurredAt" TIMESTAMP',
    SaleLine:'"id" TEXT PRIMARY KEY,"saleId" TEXT,"productId" TEXT,"description" TEXT,"quantity" NUMERIC,"vatRate" NUMERIC DEFAULT 0,"lineTotal" NUMERIC',
@@ -50,7 +51,43 @@ test('actual profit SQL reconciles package discounts and units, original return 
   await purchase('later','small',1,24,24,24,'2032-01-03T09:00Z');await sale('return','2032-01-03T12:00Z','basket');await line('return-line','return','small',-1,-.5);r=await report('2032-01-03');assert.equal(r.totals.costValue,-.125);assert.equal(r.totals.returnTransactions,1);
   await sale('orphan','2032-01-06T12:00Z','absent');await line('orphan-line','orphan','small',-1,-.5);r=await report('2032-01-06');assert.equal(r.totals.grossProfit,null);assert.equal(r.totals.estimatedGrossProfit,null);assert.equal(r.totals.unestimatedCostLines,1);
   await sale('sibling','2032-01-02T12:00Z',null,'a2');await line('sibling-line','sibling','small',1,999);await sale('other-company','2032-01-02T12:00Z',null,'a1','b');await line('other-line','other-company','small',1,999);assert.equal((await report('2032-01-02')).totals.salesGross,2.5);
+  await product('pack-500',100,'other');
+  await purchase('p-500','pack-500',1,100,100,500);
+  await sale('pack-500-sale','2032-02-01T12:00Z');
+  await line('pack-500-line','pack-500-sale','pack-500',5,5);
+  r=await report('2032-02-01');
+  assert.equal(r.totals.costValue,1);
+  assert.equal(r.totals.normalizedPurchaseCostLines,1);
+
+  const correction=async(id,unitCost,{
+   store='a1',productId='pack-500',sourceId='p-500',
+   movementType='PURCHASE_PACK_CORRECTION',sourceType='PURCHASE_ORDER',
+   date='2032-01-31T12:00Z'
+  }={})=>tx.$executeRaw`INSERT INTO "StockMovement"
+   ("id","storeId","productId","sourceId","movementType","sourceType","unitCost","createdAt")
+   VALUES (${id},${store},${productId},${sourceId},${movementType},${sourceType},${unitCost},${new Date(date)})`;
+  await correction('valid-old',.25,{date:'2032-01-30T12:00Z'});
+  await correction('valid-latest-a',.3);
+  await correction('valid-latest-z',.4);
+  await correction('wrong-store',99,{store:'a2'});
+  await correction('wrong-product',99,{productId:'small'});
+  await correction('wrong-purchase',99,{sourceId:'p-small'});
+  await correction('wrong-movement',99,{movementType:'PURCHASE'});
+  await correction('wrong-source',99,{sourceType:'OTHER'});
+  await correction('zero',0);
+  await correction('negative',-1);
+  r=await report('2032-02-01');
+  assert.equal(r.totals.costValue,2);
+  assert.equal(r.totals.grossProfit,3);
+  assert.equal(r.totals.normalizedPurchaseCostLines,1);
+
+  await purchase('p-500-later','pack-500',1,300,300,500,'2032-02-02T12:00Z');
+  await sale('pack-500-return','2032-02-03T12:00Z','pack-500-sale');
+  await line('pack-500-return-line','pack-500-return','pack-500',-1,-1);
+  r=await report('2032-02-03');
+  assert.equal(r.totals.costValue,-.4);
+  assert.equal(r.totals.grossProfit,-.6);
   await assert.rejects(report('2032-01-02','2032-01-02','EMPLOYEE'),/διαθέσιμη/);await assert.rejects(report('2032-01-02','2032-01-02','OWNER','a2'),/κατάστημα/);
-  const digest=async()=>Promise.all(Object.keys(tables).map(name=>tx.$queryRawUnsafe(`SELECT md5(string_agg(row_to_json(t)::text,',' ORDER BY "id")) AS digest FROM "${name}" t`)));const before=await digest();await report('2031-12-31','2032-01-06');await report('2031-12-31','2032-01-06');assert.deepEqual(await digest(),before);
+  const digest=async()=>Promise.all(Object.keys(tables).map(name=>tx.$queryRawUnsafe(`SELECT md5(string_agg(row_to_json(t)::text,',' ORDER BY "id")) AS digest FROM "${name}" t`)));const before=await digest();await report('2031-12-31','2032-02-03');await report('2031-12-31','2032-02-03');assert.deepEqual(await digest(),before);
  },{timeout:40000});}finally{await db.$disconnect()}
 });
