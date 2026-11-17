@@ -107,12 +107,12 @@ export function storeTenantAccessAllowed(user,store){
   return true;
 }
 
-export function requireStoreModule(moduleKey){
+export function requireStoreModule(moduleKey,{temporaryAccess}={}){
   return async(req,res,next)=>{
     try{
       const storeId=String(req.body?.storeId||req.params?.storeId||req.query?.storeId||req.path.match(/\/stores\/([^/]+)/)?.[1]||req.path.match(/\/inspection\/([^/]+)/)?.[1]||"");
       if(!storeId)return res.status(400).json({error:"Δεν προσδιορίστηκε κατάστημα."});
-      const store=await prisma.store.findUnique({where:{id:storeId},select:{id:true,companyId:true}});
+      const store=await prisma.store.findUnique({where:{id:storeId},select:{id:true,companyId:true,...(temporaryAccess?{name:true,active:true}:{})}});
       if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
       if(!storeTenantAccessAllowed(req.user,store)){
         return res.status(404).json({error:"Δεν βρέθηκε κατάστημα.",code:"TENANT_STORE_REJECTED"});
@@ -126,7 +126,7 @@ export function requireStoreModule(moduleKey){
       const state=await companyModuleState(store.companyId);
       if(!state?.licenseAllowed)return res.status(403).json({error:"Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.",code:"LICENSE_INACTIVE"});
       const override=await storeModuleOverride(store.id,moduleKey);
-      if(!effectiveModuleEnabled(state.activeModules.includes(moduleKey),override))return res.status(403).json({error:"Το συγκεκριμένο module δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
+      if(!effectiveModuleEnabled(state.activeModules.includes(moduleKey),override)&&!temporaryAccess?.(req.user,store,state))return res.status(403).json({error:"Το συγκεκριμένο module δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
       req.license=state;
       req.storeModuleOverride=override;
       req.targetStore=store;

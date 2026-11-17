@@ -1,5 +1,9 @@
 # MyWorkStation — Μικρό ενεργό μητρώο βοηθών
 
+- 2026-11-17 · #23 TABLE_SERVICE · Μερική πληρωμή μετρητών LAB · [Checkpoint](CHANGES/2026-11-17-table-service-partial-cash-lab.md) · CI PASS στο f572ff9, λειτουργική δοκιμή εκκρεμεί.
+
+- 2026-11-16 · #23 TABLE_SERVICE · Χρέωση επιλογών στον γύρο · [Checkpoint](CHANGES/2026-11-16-table-service-modifier-prices.md) · Draft, CI PASS στο 4a45dd39, μερική πληρωμή και LAB εκκρεμούν.
+
 - 2026-11-17 · Ιστορικό κόστος Στατιστικών Πωλήσεων · [Checkpoint](CHANGES/2026-11-16-sales-report-pack-cost.md) · PR #3969 · LAB NOT TESTED.
 
 - 2026-11-16 · #23 TABLE_SERVICE · Αλλαγή σερβιτόρου σε ανοιχτό τραπέζι · [Checkpoint](CHANGES/2026-11-16-table-service-waiter-assignment.md) · CI/LAB εκκρεμούν.
@@ -407,6 +411,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 ## Νο 31 — Προϊόντα χαμηλής απόδοσης
 
+- 17/11/2026 · [Δοκιμή Ιδιοκτήτη σε φυσική συσκευή](CHANGES/2026-11-17-no31-lab-owner-window.md). Προσωρινή πρόσβαση στο υπάρχον LAB. Λειτουργική αποδοχή εκκρεμεί.
+
 - 16/11/2026 · Το [#3963](https://github.com/xrhstosmanis-design/myworkstation-app/pull/3963) ενσωματώθηκε και εγκαταστάθηκε ως `082d759`. Super Admin LAB PASS για φόρτωση, ιστορικό, σελιδοποίηση, αναζήτηση, φίλτρα και διασταύρωση δείγματος. [Τεκμήριο](CHANGES/2026-11-16-no31-hosted-lab-acceptance.md). Στο υπάρχον LAB δεν βρέθηκε ολοκληρωμένη πώληση ενεργού είδους με εγκεκριμένο προγενέστερο παραστατικό στο ίδιο κατάστημα σε δείγμα 365 ημερών. Γνωστό περιθώριο και κόστος συσκευασίας επαληθεύτηκαν στο CI. Ξεχωριστή αποδοχή Ιδιοκτήτη και φυσικής συσκευής παραμένει εκκρεμής.
 
 - Νο 34 · [Περιορισμός ανάκλησης άδειας ταμείου](CHANGES/2026-11-16-automatic-report-grant-revocation-scope.md). Εκκρεμεί η ρύθμιση αυτόματης σύγκρισης προμηθευτών στο LAB.
@@ -415,4 +421,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 
 17/11/2026 — Νο 7 · [Κοινός έλεγχος δικαιωμάτων](CHANGES/2026-11-16-no7-manager-invoice-cancel.md).
 
-- 17/11/2026 — Νο 3: τοπική μεταφορά εισόδου Θυρίδας. [Checkpoint](CHANGES/2026-11-17-no3-invoice-entry-port.md).
+- Νο 7 · [Δοκιμή προσωπικού υπευθύνου LAB](CHANGES/2026-11-17-lab-manager-invoice-and-shift-report.md). Επαναφορά και ακύρωση επιβεβαιώθηκαν. Εκκρεμούν αναφορά βαρδιών και έλεγχος περιορισμού δικαιωμάτων.
+
+17/11/2026 — Νο 7 · Διόρθωση πρόσβασης αναφοράς βαρδιών μετά τη δοκιμή LAB.
+
+- 17/11/2026 — Νο 3: είσοδος στη Θυρίδα επιλεγμένου καταστήματος. [Checkpoint](CHANGES/2026-11-17-no3-invoice-entry-port.md).

@@ -21,6 +21,9 @@
     "start": "node server/scripts/ensure-assistant-history.js && node server/scripts/ensure-ftext-recovery-schema.js && node server/scripts/ensure-ai-wallet-recovery-schema.js && npm run prisma:generate -w server && node server/src/ensure-workforce-v2-schema.js && node server/scripts/repair-diadoxou-vat.js && node server/scripts/map-diadoxou-register-departments.js && npm run start -w server",
     "seed": "npm run seed -w server"
   },
+  "overrides": {
+    "rollup": "4.68.4"
+  },
   "devDependencies": {
     "concurrently": "^9.1.2"
   }
