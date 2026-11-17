@@ -139,3 +139,11 @@ test('event scope requires its own identity without invoking frequency accessors
  for(const eventId of ['', ' p1']){assert.throws(()=>automaticReportScopeInput({companyId:'c',storeId:'s',frequency:'EVENT',eventId}));}
  assert.throws(()=>automaticReportScopeInput({companyId:'c',storeId:'s',frequency:'MONTHLY',eventId:'p1'}));
 });
+
+test('event automation refuses an unselected lifecycle profile before reading live source',async()=>{
+ for(const reportType of ['PROMOTION_RESULT','INVENTORY_RESULT']){
+  const h=fixture(),read=createAutomaticReportEligibilityReader({...h,reportType,env:{}});
+  await assert.rejects(read.readContext(h.tx,{companyId:'c',storeId:'s',frequency:'EVENT',eventId:'event-one'},NOW));
+  assert.deepEqual(h.events,[]);
+ }
+});

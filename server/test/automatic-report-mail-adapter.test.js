@@ -153,3 +153,36 @@ test("promotion payload uses its event identity and committed attempt before tra
   const invalid=createAutomaticReportMailAdapter({startAttempt:async()=>wrongStarted,sendMail:async()=>{throw Error("unexpected transport")}});
   assert.equal((await invalid.attempt(wrong)).reason,"START_RECEIPT_INVALID");
 });
+
+test("inventory payload uses its event identity and committed attempt before transport",async()=>{
+  const f=await fixture();
+  const source=JSON.parse(f.payload.body);
+  const content={...source,format:"MWS_INVENTORY_RESULT_PAYLOAD_V1",frequency:"EVENT",
+    eventId:"take-one",subject:"Αποτελέσματα απογραφής LAB",text:"Ποσότητα 2 · έκπτωση 1,00 €"};
+  const body=JSON.stringify(content);
+  const payload={...f.payload,format:content.format,frequency:"EVENT",body,
+    byteLength:Buffer.byteLength(body),payloadFingerprint:digest(body)};
+  const input={...f.started.input,reportType:"INVENTORY_RESULT",frequency:"EVENT",eventId:content.eventId,
+    snapshot:{...f.started.input.snapshot,payloadFingerprint:payload.payloadFingerprint}};
+  const current={...f.current,...input};
+  const pending=createDeliverySlot(input,{now:f.args.now,current});
+  const claimed=claimDelivery(pending,{expectedVersion:1,token:"attempt-one",now:f.args.now,leaseMs:60000});
+  const started=startDelivery(claimed,{expectedVersion:2,token:"attempt-one",now:f.args.now,current});
+  const args={...f.args,payload,scope:{...f.args.scope,slotId:started.slotId}};
+  const calls=[];
+  const adapter=createAutomaticReportMailAdapter({startAttempt:async()=>started,sendMail:async message=>{
+    calls.push(message);return accepted();
+  }});
+  assert.equal((await adapter.attempt(args)).outcome,"ACCEPTED");
+  assert.deepEqual(calls,[{to:recipient,subject:content.subject,text:content.text}]);
+  const changed={...content,eventId:"take-two"};
+  const changedBody=JSON.stringify(changed);
+  const wrong={...args,payload:{...payload,body:changedBody,byteLength:Buffer.byteLength(changedBody),payloadFingerprint:digest(changedBody)}};
+  const changedInput={...input,snapshot:{...input.snapshot,payloadFingerprint:wrong.payload.payloadFingerprint}};
+  const changedCurrent={...current,...changedInput};
+  const wrongPending=createDeliverySlot(changedInput,{now:f.args.now,current:changedCurrent});
+  const wrongClaimed=claimDelivery(wrongPending,{expectedVersion:1,token:"attempt-one",now:f.args.now,leaseMs:60000});
+  const wrongStarted=startDelivery(wrongClaimed,{expectedVersion:2,token:"attempt-one",now:f.args.now,current:changedCurrent});
+  const invalid=createAutomaticReportMailAdapter({startAttempt:async()=>wrongStarted,sendMail:async()=>{throw Error("unexpected transport")}});
+  assert.equal((await invalid.attempt(wrong)).reason,"START_RECEIPT_INVALID");
+});

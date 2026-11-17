@@ -322,3 +322,15 @@ test('each completed promotion has a separate delivery identity even for identic
   code(()=>fresh(missing),'INVALID_INPUT');
   code(()=>fresh({...input(),eventId:'unexpected'}),'INVALID_INPUT');
 });
+
+test('inventory event identity is independent of promotion events and stable across source dates',()=>{
+ const inventory=input({reportType:'INVENTORY_RESULT',frequency:'EVENT',eventId:'take-one'});
+ const a=fresh(inventory);
+ assert.equal(a.input.eventId,'take-one');
+ assert.notEqual(a.slotId,fresh({...inventory,reportType:'PROMOTION_RESULT'}).slotId);
+ assert.notEqual(a.slotId,fresh({...inventory,eventId:'take-two'}).slotId);
+ const changed={...inventory,periodTo:'2026-10-19T04:00:00.000Z'};
+ assert.equal(a.slotId,fresh(changed).slotId);
+ code(()=>reconcileDeliverySlot(a,changed),'DELIVERY_CONFLICT');
+ const {eventId,...missing}=inventory;code(()=>fresh(missing),'INVALID_INPUT');
+});

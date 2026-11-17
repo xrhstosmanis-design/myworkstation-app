@@ -46,13 +46,13 @@ function integer(value,min=1){if(!Number.isSafeInteger(value)||value<min)invalid
 function detached(value){return JSON.parse(JSON.stringify(value));}
 function frozen(value){if(value&&typeof value==="object"){for(const v of Object.values(value))frozen(v);Object.freeze(value);}return value;}
 const output=value=>frozen(detached(value));
-function inputKeys(value){return value?.reportType==="PROMOTION_RESULT"?[...INPUT_KEYS,"eventId"]:INPUT_KEYS;}
+function inputKeys(value){return ["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value?.reportType)?[...INPUT_KEYS,"eventId"]:INPUT_KEYS;}
 function normalizeInput(value){
   safe(value);shape(value,inputKeys(value));const result={};
   result.companyId=text(value.companyId,"companyId");result.storeId=text(value.storeId,"storeId");
   const cash=value.reportType==="CASH"&&["DAILY","WEEKLY","MONTHLY"].includes(value.frequency);
   const supplierComparison=value.reportType==="SUPPLIER_COMPARISON"&&value.frequency==="MONTHLY";
-  const promotionResult=value.reportType==="PROMOTION_RESULT"&&value.frequency==="EVENT";
+  const promotionResult=["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value.reportType)&&value.frequency==="EVENT";
   if(!cash&&!supplierComparison&&!promotionResult)invalid("Unsupported report kind.");
   if(promotionResult)result.eventId=text(value.eventId,"eventId");
   result.reportType=value.reportType;result.frequency=value.frequency;
@@ -84,7 +84,7 @@ function normalizeInput(value){
 function slotId(input){
   // Versions/hashes deliberately excluded: editing a report/recipient setting
   // cannot create a second automatic-send permission for the same period.
-  const identity=input.reportType==="PROMOTION_RESULT"
+  const identity=["PROMOTION_RESULT","INVENTORY_RESULT"].includes(input.reportType)
     ?[input.companyId,input.storeId,input.reportType,input.eventId,input.recipient]
     :[input.companyId,input.storeId,input.reportType,input.frequency,input.periodFrom,input.periodTo,input.recipient];
   return createHash("sha256").update(JSON.stringify(identity)).digest("hex");

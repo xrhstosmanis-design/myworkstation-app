@@ -15,3 +15,10 @@ test('activation revocation after first event prevents remaining event admission
  const scheduler=createAutomaticReportScheduler({db:{$queryRaw:async()=>[{companyId:'c',storeId:'s'}]},work:{stopping:false,track:p=>p,onStop(){}},reportType:'PROMOTION_RESULT',activationProvider:()=>({valid:true,enabled,fingerprint:'a'}),readPromotionEvents:async()=>[{eventId:'a'},{eventId:'b'}],dispatcher:{dispatch:async scope=>{calls.push(scope);enabled=false;return {attempted:1}}}});
  assert.equal((await scheduler.sweep()).attempted,1);assert.equal(calls.length,1);
 });
+
+test('inventory scheduler enumerates finalized take identities through the event dispatcher',async()=>{
+ const calls=[];
+ const scheduler=createAutomaticReportScheduler({db:{$queryRaw:async()=>[{companyId:'c',storeId:'s'}]},work:{stopping:false,track:p=>p,onStop(){}},reportType:'INVENTORY_RESULT',activationProvider:()=>({valid:true,enabled:true,fingerprint:'a'}),readInventoryEvents:async()=>[{eventId:'take-one'}],dispatcher:{dispatch:async scope=>{calls.push(scope);return {attempted:1}}}});
+ assert.equal((await scheduler.sweep()).attempted,1);
+ assert.deepEqual(calls,[{companyId:'c',storeId:'s',frequency:'EVENT',eventId:'take-one'}]);
+});

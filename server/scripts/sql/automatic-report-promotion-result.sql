@@ -7,7 +7,7 @@ ALTER TABLE "AutomaticReportDispatchPolicy"
     CHECK (
       ("reportType"='CASH' AND "allowedFrequencies" <@ ARRAY['DAILY','WEEKLY','MONTHLY']::text[]) OR
       ("reportType"='SUPPLIER_COMPARISON' AND "allowedFrequencies" <@ ARRAY['MONTHLY']::text[]) OR
-      ("reportType"='PROMOTION_RESULT' AND "allowedFrequencies" <@ ARRAY['EVENT']::text[])
+      ("reportType" IN ('PROMOTION_RESULT','INVENTORY_RESULT') AND "allowedFrequencies" <@ ARRAY['EVENT']::text[])
     ),
   ADD CONSTRAINT "AutomaticReportDispatchPolicy_allowedFrequencies_check"
     CHECK (array_position("allowedFrequencies",NULL) IS NULL AND
@@ -24,7 +24,7 @@ ALTER TABLE "AutomaticReportAutomationGrant"
     CHECK (
       ("reportType"='CASH' AND "allowedFrequencies" <@ ARRAY['DAILY','WEEKLY','MONTHLY']::text[]) OR
       ("reportType"='SUPPLIER_COMPARISON' AND "allowedFrequencies" <@ ARRAY['MONTHLY']::text[]) OR
-      ("reportType"='PROMOTION_RESULT' AND "allowedFrequencies" <@ ARRAY['EVENT']::text[])
+      ("reportType" IN ('PROMOTION_RESULT','INVENTORY_RESULT') AND "allowedFrequencies" <@ ARRAY['EVENT']::text[])
     ),
   ADD CONSTRAINT "AutomaticReportAutomationGrant_allowedFrequencies_check"
     CHECK (array_position("allowedFrequencies",NULL) IS NULL AND
@@ -42,7 +42,7 @@ ALTER TABLE "AutomaticReportPayload"
 CREATE TABLE IF NOT EXISTS "AutomaticReportEventConsent" (
   "companyId" TEXT NOT NULL,
   "storeId" TEXT NOT NULL,
-  "reportType" TEXT NOT NULL CHECK ("reportType"='PROMOTION_RESULT'),
+  "reportType" TEXT NOT NULL CHECK ("reportType" IN ('PROMOTION_RESULT','INVENTORY_RESULT')),
   "recipientId" TEXT NOT NULL,
   "revision" BIGINT NOT NULL DEFAULT 1 CHECK ("revision" BETWEEN 1 AND 9007199254740991),
   "recipientVersion" BIGINT NOT NULL CHECK ("recipientVersion" BETWEEN 1 AND 9007199254740991),

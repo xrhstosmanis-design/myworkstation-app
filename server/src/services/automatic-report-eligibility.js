@@ -1,3 +1,5 @@
+import {automaticReportEventLifecycleReady} from './automatic-report-event-schema.js';
+import {readInventoryResultEvent,buildAutomaticInventoryPayload} from './inventory-result-email.js';
 import {readPromotionResultEvent,buildAutomaticPromotionPayload} from './promotion-result-email.js';
 import {readDailyTurnover,readShiftTurnover} from './daily-turnover-report.js';
 import {buildAutomaticSupplierPayload,completedSupplierReportMonth} from './supplier-comparison-email.js';
@@ -24,15 +26,17 @@ export function automaticReportScopeInput(raw){
  if(!['companyId','storeId'].every(k=>typeof result[k]==='string'&&result[k]===result[k].trim()&&result[k].length>0&&result[k].length<=200&&!/[\u0000-\u001f\u007f]/.test(result[k]))||!['DAILY','WEEKLY','MONTHLY','EVENT'].includes(result.frequency)||result.frequency==='EVENT'&&(typeof result.eventId!=='string'||result.eventId!==result.eventId.trim()||!result.eventId||result.eventId.length>200||/[\u0000-\u001f\u007f]/.test(result.eventId)))hold();
  return Object.freeze(result);
 }
-export function createAutomaticReportEligibilityReader({activationProvider,persistence,reportType='CASH'}){
+export function createAutomaticReportEligibilityReader({activationProvider,persistence,reportType='CASH',env=process.env}){
  if(typeof activationProvider!=='function'||!persistence)throw new TypeError('Trusted dispatch dependencies required');
- if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT'].includes(reportType))throw new TypeError('Unsupported report type');
- const supplier=reportType==='SUPPLIER_COMPARISON',promotion=reportType==='PROMOTION_RESULT';
- const nonCash=supplier||promotion;
+ if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType))throw new TypeError('Unsupported report type');
+ const supplier=reportType==='SUPPLIER_COMPARISON',promotion=reportType==='PROMOTION_RESULT',inventory=reportType==='INVENTORY_RESULT';
+ const eventReport=promotion||inventory;
+ const nonCash=supplier||eventReport;
  const moduleKey=nonCash?'INVENTORY':'CASH_CONTROL';
  async function context(tx,raw,now){
   const scope=automaticReportScopeInput(raw);now=iso(now);
-  if(supplier&&scope.frequency!=='MONTHLY'||promotion&&scope.frequency!=='EVENT'||!promotion&&scope.frequency==='EVENT')hold();
+  if(eventReport&&!automaticReportEventLifecycleReady(env))hold();
+  if(supplier&&scope.frequency!=='MONTHLY'||eventReport&&scope.frequency!=='EVENT'||!eventReport&&scope.frequency==='EVENT')hold();
   const control=activationProvider();if(!control?.valid||!control.enabled)hold();
   const lifecycle=await lockAutomaticReportBoundary(tx,scope);
   const [company]=await tx.$queryRaw`SELECT "id","active","licenseStatus","subscriptionEndsAt" FROM "Company" WHERE "id"=${scope.companyId} FOR SHARE NOWAIT`;
@@ -58,15 +62,16 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   safe(policy.revision);safe(grant.revision);
   const month=supplier?completedSupplierReportMonth(new Date(now)):null;
   const monthBoundary=value=>new Date(Date.parse(invoiceAuditEmailPeriod(value).nominalScheduledAt)+60000);
-  const event=promotion?await readPromotionResultEvent(tx,{...scope,now}):null;
-  const period=promotion?{from:new Date(event.from),to:new Date(event.to)}:supplier
+  const event=inventory?await readInventoryResultEvent(tx,{...scope,now}):promotion?await readPromotionResultEvent(tx,{...scope,now}):null;
+  const period=eventReport?{from:new Date(event.from),to:new Date(event.to)}:supplier
    ? {from:monthBoundary(completedSupplierReportMonth(Date.parse(month+'-15T12:00:00Z'))),to:monthBoundary(month)}
    : completedReportPeriod(new Date(now),scope.frequency,configuration);
   const from=period.from.toISOString(),to=period.to.toISOString();
   if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<iso(grant.notBefore))hold();
   const settingsVersion=nonCash?safe(policy.revision):settings.version;
   let payload;
-  if(promotion)payload=await buildAutomaticPromotionPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
+  if(inventory)payload=await buildAutomaticInventoryPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
+  else if(promotion)payload=await buildAutomaticPromotionPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
   else if(supplier)payload=await buildAutomaticSupplierPayload(tx,{...scope,storeName:store.name,month,period:{from,to},settingsVersion});
   else{
    const preview=await readAutomaticCashPreviewInTransaction(tx,{actorId:principal.id,companyId:scope.companyId,storeId:scope.storeId,day:period.fromDay,frequency:scope.frequency,configuration,settingsVersion:settings.version,now:new Date(now)});
@@ -96,7 +101,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    const recipientVersion=safe(recipient.version),consentRevision=safe(consent.revision);
    if(typeof recipient.email!=='string'||!recipient.recipientId)hold();
    const policyFingerprint=persistence.dispatchPolicyFingerprint?persistence.dispatchPolicyFingerprint({policy,grant,recipient}):createHash('sha256').update(canonical({format:'MWS_DISPATCH_AUTHORIZATION_V1',policy,grant,recipientId:recipient.recipientId})).digest('hex');
-   const input={companyId:scope.companyId,storeId:scope.storeId,reportType,...(promotion?{eventId:scope.eventId}:{}),frequency:scope.frequency,periodFrom:from,periodTo:to,recipient:recipient.email,snapshot:{settingsVersion,recipientVersion,consentRevision,lifecycleGeneration:lifecycle.generation,sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint,principalId:principal.id,financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
+   const input={companyId:scope.companyId,storeId:scope.storeId,reportType,...(eventReport?{eventId:scope.eventId}:{}),frequency:scope.frequency,periodFrom:from,periodTo:to,recipient:recipient.email,snapshot:{settingsVersion,recipientVersion,consentRevision,lifecycleGeneration:lifecycle.generation,sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint,principalId:principal.id,financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
    eligible.push(input);
    authorities[recipient.email]={basis:authority.basis,mailboxVerified:!!recipient.verifiedAt};
   }

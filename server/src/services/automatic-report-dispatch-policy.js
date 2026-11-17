@@ -1,3 +1,4 @@
+import {automaticReportEventLifecycleReady} from './automatic-report-event-schema.js';
 import {readEmailDeliveryHistory} from './email-delivery-history.js';
 import {z} from 'zod';
 import {createHash} from 'node:crypto';
@@ -16,7 +17,7 @@ const tables=['AutomaticReportDispatchPolicy','AutomaticReportAutomationGrant','
 export async function dispatchSchemaReady(tx){const rows=await tx.$queryRawUnsafe(`SELECT ${tables.map((name,i)=>`to_regclass(format('%I.%I',current_schema(),'${name}'))::text AS t${i}`).join(',')}`);const count=rows[0]?tables.filter((_x,i)=>!!rows[0]['t'+i]).length:0;if(count!==0&&count!==6)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');return count===6}
 const columns={policy:'*,"revision"::text AS "revision","lifecycleGeneration"::text AS "lifecycleGeneration"',grant:'*,"revision"::text AS "revision","lifecycleGeneration"::text AS "lifecycleGeneration"'};
 export async function readLockedReportPolicyAndGrant(tx,{companyId,storeId,reportType='CASH'}){
- if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT'].includes(reportType))fail(400,'REPORT_TYPE_INVALID');
+ if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType))fail(400,'REPORT_TYPE_INVALID');
  const policy=(await tx.$queryRawUnsafe(`SELECT ${columns.policy} FROM "AutomaticReportDispatchPolicy" WHERE "companyId"=$1 AND "storeId"=$2 AND "reportType"=$3 FOR SHARE NOWAIT`,companyId,storeId,reportType))[0]||null;
  const grant=(await tx.$queryRawUnsafe(`SELECT ${columns.grant} FROM "AutomaticReportAutomationGrant" WHERE "companyId"=$1 AND "storeId"=$2 AND "reportType"=$3 FOR SHARE NOWAIT`,companyId,storeId,reportType))[0]||null;
  return {policy,grant};
@@ -28,7 +29,7 @@ export async function readLockedDispatchAuthorization(tx,{companyId,storeId,repo
  const cashConsents=()=>tx.$queryRaw`SELECT *,"revision"::text AS "revision","recipientVersion"::text AS "recipientVersion","lifecycleGeneration"::text AS "lifecycleGeneration" FROM "AutomaticReportRecipientConsent" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "recipientId" FOR SHARE NOWAIT`;
  const supplierConsents=()=> tx.$queryRaw`SELECT *,"revision"::text AS "revision","recipientVersion"::text AS "recipientVersion","lifecycleGeneration"::text AS "lifecycleGeneration" FROM "AutomaticReportSupplierComparisonConsent" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "recipientId" FOR SHARE NOWAIT`;
  const eventConsents=()=>tx.$queryRaw`SELECT *,"revision"::text AS "revision","recipientVersion"::text AS "recipientVersion","lifecycleGeneration"::text AS "lifecycleGeneration" FROM "AutomaticReportEventConsent" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "reportType"=${reportType} ORDER BY "recipientId" FOR SHARE NOWAIT`;
- const consents=await (reportType==='CASH'?cashConsents():reportType==='PROMOTION_RESULT'?eventConsents():supplierConsents());
+ const consents=await (reportType==='CASH'?cashConsents():['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)?eventConsents():supplierConsents());
  return {policy,grant,recipients:recipients.map(recipient=>({recipient,consent:consents.find(c=>c.recipientId===recipient.recipientId)||null}))};
 }
 export function dispatchPolicyFingerprint({policy,grant,recipient}){return hash({format:'MWS_AUTOMATIC_REPORT_AUTH_V1',policy:{revision:String(policy.revision),dispatchEnabled:policy.dispatchEnabled,allowsProvisional:policy.allowsProvisional,allowedFrequencies:[...policy.allowedFrequencies].sort(),lifecycleGeneration:String(policy.lifecycleGeneration)},grant:{revision:String(grant.revision),active:grant.active,principalId:grant.principalId,principalSessionVersion:grant.principalSessionVersion,allowedFrequencies:[...grant.allowedFrequencies].sort(),lifecycleGeneration:String(grant.lifecycleGeneration),activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,notBefore:new Date(grant.notBefore).toISOString(),createdAt:new Date(grant.createdAt).toISOString(),grantedAt:new Date(grant.grantedAt).toISOString()},recipientId:recipient.recipientId})}
@@ -52,18 +53,18 @@ export async function readImmutablePayload(tx,s){
  const checked=payloadMetadata({...s,payload},String(r.lifecycleGeneration));if(checked.payloadId!==r.payloadId||String(content.settingsVersion)!==String(r.settingsVersion)||new Date(content.period.from).getTime()!==new Date(r.periodFrom).getTime()||new Date(content.period.to).getTime()!==new Date(r.periodTo).getTime())fail(409,'REPORT_PAYLOAD_CORRUPT');return Object.freeze(payload);
 }
 const publicRecord=r=>{if(!r)return null;const output={};for(const [k,v]of Object.entries(r))if(!k.startsWith('challenge')&&k!=='proofHash'){output[k]=typeof v==='bigint'?Number(v):['revision','version','recipientVersion'].includes(k)?Number(v):v instanceof Date?v.toISOString():v}return output};
-export function createAutomaticReportManagement({db,activationProvider,sendVerification,clock=()=>new Date(),reportType='CASH'}){
+export function createAutomaticReportManagement({db,activationProvider,sendVerification,clock=()=>new Date(),reportType='CASH',env=process.env}){
  if(!db||typeof db.$transaction!=='function'||typeof activationProvider!=='function'||typeof sendVerification!=='function')throw new TypeError('Invalid automatic report management dependencies');
- if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT'].includes(reportType))fail(400,'REPORT_TYPE_INVALID');
+ if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType))fail(400,'REPORT_TYPE_INVALID');
  const supplier=reportType==='SUPPLIER_COMPARISON';
- const event=reportType==='PROMOTION_RESULT',scoped=supplier||event;
+ const event=['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType),scoped=supplier||event;
  function transaction(scope,work,write=true){
   scope=snapshotDispatchInput(scope);
   const s={actorId:scope?.actorId,companyId:scope?.companyId,storeId:scope?.storeId};if(Object.values(s).some(x=>typeof x!=='string'||!x.trim()||/[\u0000-\u001f]/.test(x)))fail(400,'REPORT_SCOPE_INVALID');
   const generation=lifecycleContext()[s.storeId],now=new Date(clock());if(!Number.isFinite(now.getTime()))fail(400,'REPORT_CLOCK_INVALID');
   return db.$transaction(async tx=>{
    const actor=await tx.user.findUnique({where:{id:s.actorId},select:{id:true,role:true,sessionVersion:true}});if(actor?.role!=='SUPER_ADMIN')fail(403,'REPORT_SUPER_ADMIN_REQUIRED');
-   const eventReady=!event||(await tx.$queryRaw`SELECT to_regclass('"AutomaticReportEventConsent"') IS NOT NULL AS ready`)[0]?.ready===true;
+   const eventReady=!event||automaticReportEventLifecycleReady(env)&&(await tx.$queryRaw`SELECT to_regclass('"AutomaticReportEventConsent"') IS NOT NULL AS ready`)[0]?.ready===true;
    const ready=eventReady&&await dispatchSchemaReady(tx)&&(!supplier||(await tx.$queryRaw`SELECT to_regclass('"AutomaticReportSupplierComparisonConsent"') IS NOT NULL AS ready`)[0]?.ready===true);
    const state=ready?await lockAutomaticReportBoundary(tx,{companyId:s.companyId,storeId:s.storeId,expectedGeneration:generation}):null;
    const rows=write?await tx.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "id"=${s.storeId} AND "companyId"=${s.companyId} AND "active"=true FOR NO KEY UPDATE NOWAIT`:await tx.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "id"=${s.storeId} AND "companyId"=${s.companyId} AND "active"=true FOR SHARE NOWAIT`;
