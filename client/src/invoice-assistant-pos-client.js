@@ -31,6 +31,7 @@ const printedReviewIssue=line=>{
 };
 const lineHtml=(line,index)=>`<div style="border-top:1px solid #e2ebef;padding:7px 0"><b>${index+1}. ${esc(line.description)}</b> ${line.supplierCode?`· ${esc(line.supplierCode)}`:""}<br>${esc(line.quantity)} ${line.invoiceUnit==="PACKAGE"?"πακέτα":"τεμ."} × ${esc(line.unitCost)} €${line.invoiceUnit==="PACKAGE"?` · απόθεμα ${esc(number(line.quantity)*number(line.stockUnitsPerInvoiceUnit))} τεμ.`:""} · εκπτώσεις ${esc(line.discount1||0)}/${esc(line.discount2||0)}/${esc(line.discount3||0)}%<br>Καθαρό ${euro(line.netAmount)} € · ΕΦΚ ${euro(line.exciseTotal)} € · ΦΠΑ ${esc(line.vatRate)}% · Πληρωτέο ${euro(line.grossAmount)} €</div>`;
 const editableFields=["supplierCode","description","quantity","invoiceUnit","stockUnitsPerInvoiceUnit","unitCost","discount1","discount2","discount3","exciseTotal","vatRate"];
+const draftLineSnapshotFields=[...editableFields,"productId","netAmount","grossAmount"];
 const rowAmounts=line=>{
   const net=invoicePrintedRounding(line)?.net??number(line.quantity)*number(line.unitCost)*["discount1","discount2","discount3"].reduce((factor,field)=>factor*(1-number(line[field])/100),1);
   const vat=(net+number(line.exciseTotal))*number(line.vatRate)/100;
@@ -117,7 +118,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   };
   let productPreparations;
   const lineById=new Map();
-  let source;const history=[];let activePrintedRows=[],activePagesComplete=false,activePrintedTotal=null;
+  let source,draftIdentity;const history=[];let activePrintedRows=[],activePagesComplete=false,activePrintedTotal=null;
   try{
     const [result,detail]=await Promise.all([
       manualSource?{document:{totalGross:null},pages:manualSource.manualPhotos.map((page,index)=>({...page,index:index+1,dataUrl:page.contentData}))}:api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/source${sourceQuery}`),
@@ -125,6 +126,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
     ]);
     if(!retainedWindow.isActive())return;
     source=result;
+    draftIdentity=detail.order;
     overlay.querySelector("[data-rule-tax]").value=String(result.document.supplierTaxId||"");overlay.querySelector("[data-rule-identity]").hidden=/^\d{9}$/.test(String(result.document.supplierTaxId||""));
     detail.lines.forEach(line=>lineById.set(line.id,line));
     if(!manualSource)productPreparations=mountInvoiceProducts(overlay.querySelector('[data-product-preparations]'),{api,orderId,storeId:sourceContext?.storeId||detail.order.storeId,isActive:()=>retainedWindow.isActive()&&(!scopeActive||scopeActive()),onSaved:async()=>{changed=true;const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);if(!retainedWindow.isActive())return;lineById.clear();latest.lines.forEach(line=>lineById.set(line.id,line));}});
@@ -316,10 +318,10 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
         }
         applying=true;apply.disabled=true;let done=0;try{
           const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
-          if(latest.order.status!=="NEW"||(manualSource?(latest.order.sourceType||latest.order.sourceDocumentId||latest.order.awaitingInvoice||latest.order.storeId!==manualSource.storeId):latest.order.sourceType!=="POS_OCR_DRAFT")||Number(latest.order.reopenVersion||0)!==Number(order.reopenVersion||0))throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
+          if(latest.order.id!==draftIdentity.id||latest.order.storeId!==draftIdentity.storeId||latest.order.sourceDocumentId!==draftIdentity.sourceDocumentId||latest.order.status!=="NEW"||(manualSource?(latest.order.sourceType||latest.order.sourceDocumentId||latest.order.awaitingInvoice||latest.order.storeId!==manualSource.storeId):latest.order.sourceType!=="POS_OCR_DRAFT")||Number(latest.order.reopenVersion||0)!==Number(order.reopenVersion||0))throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
           if(scopeActive&&!scopeActive())throw new Error("Η παραγγελία έκλεισε ή άλλαξε το επιλεγμένο κατάστημα.");
           const now=new Map(latest.lines.map(line=>[line.id,line]));
-          if(now.size!==lineById.size||[...lineById].some(([id,line])=>!now.has(id)||["description","quantity","unitCost","netAmount","grossAmount"].some(field=>String(now.get(id)[field]??"")!==String(line[field]??""))))throw new Error("Το πρόχειρο άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
+          if(now.size!==lineById.size||[...lineById].some(([id,line])=>!now.has(id)||draftLineSnapshotFields.some(field=>String(now.get(id)[field]??"")!==String(line[field]??""))))throw new Error("Το πρόχειρο άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const change of chosen)if(!now.has(change.lineId)||String(now.get(change.lineId)[change.field]??"")!==String(lineById.get(change.lineId)[change.field]??""))throw new Error("Μια επιλεγμένη γραμμή άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const [lineId,patch] of grouped){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`,{method:"PATCH",body:JSON.stringify(patch)});done++}
           for(const line of additions){const created=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:line.supplierCode||null,description:line.description.trim().slice(0,250),quantity:number(line.quantity),unitCost:number(line.unitCost),invoiceUnit:line.invoiceUnit,stockUnitsPerInvoiceUnit:number(line.stockUnitsPerInvoiceUnit),discount1:number(line.discount1),discount2:number(line.discount2),discount3:number(line.discount3),exciseTotal:number(line.exciseTotal),vatRate:number(line.vatRate),...(invoicePrintedRounding(line)?{printedNetAmount:number(line.netAmount)}:{})})});line.matchingLineId=created.id;done++}
