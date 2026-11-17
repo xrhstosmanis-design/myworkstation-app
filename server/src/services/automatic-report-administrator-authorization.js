@@ -11,16 +11,16 @@ const revision=z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 export const administratorRecipientSchema=z.object({
  email:z.string().trim().toLowerCase().email().max(254),recipientId:z.string().min(1).max(200).optional(),
  expectedRecipientVersion:revision,expectedAuthorizationRevision:revision,expectedGrantRevision:revision,expectedPolicyRevision:revision,
- allowedFrequencies:z.array(z.enum(['DAILY','WEEKLY','MONTHLY'])).min(1).max(3),explicitAuthorization:z.literal(true)
+ allowedFrequencies:z.array(z.enum(['DAILY','WEEKLY','MONTHLY','EVENT'])).min(1).max(3),explicitAuthorization:z.literal(true)
 }).strict();
 const iso=value=>{try{const d=new Date(value);return value!=null&&Number.isFinite(d.getTime())?d.toISOString():null}catch{return null}};
-const validFrequencies=v=>Array.isArray(v)&&v.length>0&&v.length<=3&&new Set(v).size===v.length&&v.every(f=>['DAILY','WEEKLY','MONTHLY'].includes(f));
+const validFrequencies=v=>Array.isArray(v)&&v.length>0&&v.length<=3&&new Set(v).size===v.length&&v.every(f=>['DAILY','WEEKLY','MONTHLY','EVENT'].includes(f));
 const same=(a,b)=>validFrequencies(a)&&validFrequencies(b)&&JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
 const validRevision=v=>/^[1-9]\d*$/.test(String(v))&&BigInt(v)<=9007199254740991n;
 const expect=(actual,wanted)=>{if(String(actual||0)!==String(wanted))fail('REPORT_REVISION_CHANGED')};
 const next=value=>{const n=BigInt(value||0)+1n;if(n>9007199254740991n)fail('REPORT_REVISION_EXHAUSTED');return n};
 export function administratorAuthorizationProof(recipient,authorization){
- return createHash('sha256').update(JSON.stringify(['MWS_REPORT_SUPERADMIN_AUTHORIZATION_V1',recipient.companyId,recipient.storeId,recipient.recipientId,recipient.email,String(recipient.version),String(authorization.revision),String(authorization.lifecycleGeneration),authorization.consentedBy,iso(authorization.consentedAt),[...authorization.allowedFrequencies].sort()])).digest('hex');
+ return createHash('sha256').update(JSON.stringify(['MWS_REPORT_SUPERADMIN_AUTHORIZATION_V1',recipient.companyId,recipient.storeId,recipient.recipientId,recipient.email,String(recipient.version),String(authorization.revision),String(authorization.lifecycleGeneration),authorization.consentedBy,iso(authorization.consentedAt),[...authorization.allowedFrequencies].sort(),...(authorization.reportType?[authorization.reportType]:[])])).digest('hex');
 }
 export function reportRecipientAuthority(recipient,authorization,{generation,principalId}={}){
  if(!recipient||recipient.revokedAt||!authorization||authorization.active!==true||authorization.revokedAt||!validRevision(recipient.version)||!validRevision(authorization.revision)||String(authorization.recipientVersion)!==String(recipient.version)||authorization.companyId!==undefined&&authorization.companyId!==recipient.companyId||authorization.storeId!==undefined&&authorization.storeId!==recipient.storeId||!validFrequencies(authorization.allowedFrequencies)||!iso(authorization.consentedAt)||typeof authorization.proofHash!=='string'||!/^[a-f0-9]{64}$/.test(authorization.proofHash)||generation!==undefined&&String(authorization.lifecycleGeneration)!==String(generation))return null;
@@ -41,8 +41,9 @@ export async function authorizeAdministratorRecipient({tx,scope:s,actor,records,
  if(actor?.role!=='SUPER_ADMIN'||actor.id!==s.actorId)fail('REPORT_SUPER_ADMIN_REQUIRED',403);
  if(/[,;\r\n]/.test(input.email)||!validFrequencies(input.allowedFrequencies))fail('REPORT_RECIPIENT_INVALID',400);
  const allowed=[...input.allowedFrequencies].sort();
- if(!['CASH','SUPPLIER_COMPARISON'].includes(reportType)||reportType==='SUPPLIER_COMPARISON'&&!same(allowed,['MONTHLY']))fail('REPORT_FREQUENCIES_INVALID',400);
- const consentTable=Prisma.raw(reportType==='CASH'?'"AutomaticReportRecipientConsent"':'"AutomaticReportSupplierComparisonConsent"');
+ if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT'].includes(reportType)||reportType==='SUPPLIER_COMPARISON'&&!same(allowed,['MONTHLY'])||reportType==='PROMOTION_RESULT'&&!same(allowed,['EVENT'])||reportType==='CASH'&&allowed.includes('EVENT'))fail('REPORT_FREQUENCIES_INVALID',400);
+ const event=reportType==='PROMOTION_RESULT';
+ const consentTable=Prisma.raw(event?'"AutomaticReportEventConsent"':reportType==='CASH'?'"AutomaticReportRecipientConsent"':'"AutomaticReportSupplierComparisonConsent"');
  expect(records.grant?.revision,input.expectedGrantRevision);expect(records.policy?.revision,input.expectedPolicyRevision);
  if(!activation?.valid||!iso(activation.issuedAt)||!iso(activation.notBefore)||now<new Date(activation.issuedAt))fail('REPORT_ACTIVATION_REQUIRED');
  let entry=records.recipients.find(({recipient:r})=>input.recipientId?r.recipientId===input.recipientId:r.email===input.email);
@@ -66,9 +67,9 @@ export async function authorizeAdministratorRecipient({tx,scope:s,actor,records,
   entry={recipient:{recipientId,companyId:s.companyId,storeId:s.storeId,email:input.email,version:'1',verifiedAt:null},consent:null};
  }
  if(!retainAuthority){
-  const r=entry.recipient,c={revision:String(next(entry.consent?.revision)),recipientVersion:String(r.version),lifecycleGeneration:String(generation),allowedFrequencies:allowed,consentedBy:ADMINISTRATOR_AUTHORITY_PREFIX+actor.id,consentedAt:now};
+  const r=entry.recipient,c={revision:String(next(entry.consent?.revision)),recipientVersion:String(r.version),lifecycleGeneration:String(generation),allowedFrequencies:allowed,consentedBy:ADMINISTRATOR_AUTHORITY_PREFIX+actor.id,consentedAt:now,...(event?{reportType}: {})};
   const proofHash=administratorAuthorizationProof(r,c);
-  await tx.$executeRaw`INSERT INTO ${consentTable} ("companyId","storeId","recipientId","revision","recipientVersion","active","allowedFrequencies","lifecycleGeneration","consentedBy","consentedAt","proofHash","updatedBy","updatedAt") VALUES (${s.companyId},${s.storeId},${r.recipientId},${BigInt(c.revision)},${BigInt(r.version)},true,${allowed}::text[],${BigInt(generation)},${c.consentedBy},${now},${proofHash},${actor.id},${now}) ON CONFLICT ("companyId","storeId","recipientId") DO UPDATE SET "revision"=EXCLUDED."revision","recipientVersion"=EXCLUDED."recipientVersion","active"=true,"allowedFrequencies"=EXCLUDED."allowedFrequencies","lifecycleGeneration"=EXCLUDED."lifecycleGeneration","consentedBy"=EXCLUDED."consentedBy","consentedAt"=EXCLUDED."consentedAt","proofHash"=EXCLUDED."proofHash","revokedBy"=NULL,"revokedAt"=NULL,"updatedBy"=EXCLUDED."updatedBy","updatedAt"=EXCLUDED."updatedAt"`;
+  await tx.$executeRaw`INSERT INTO ${consentTable} ("companyId","storeId",${Prisma.raw(event?'"reportType",':'')}"recipientId","revision","recipientVersion","active","allowedFrequencies","lifecycleGeneration","consentedBy","consentedAt","proofHash","updatedBy","updatedAt") VALUES (${s.companyId},${s.storeId},${event?Prisma.sql`${reportType},`:Prisma.empty}${r.recipientId},${BigInt(c.revision)},${BigInt(r.version)},true,${allowed}::text[],${BigInt(generation)},${c.consentedBy},${now},${proofHash},${actor.id},${now}) ON CONFLICT ("companyId","storeId",${Prisma.raw(event?'"reportType",':'')}"recipientId") DO UPDATE SET "revision"=EXCLUDED."revision","recipientVersion"=EXCLUDED."recipientVersion","active"=true,"allowedFrequencies"=EXCLUDED."allowedFrequencies","lifecycleGeneration"=EXCLUDED."lifecycleGeneration","consentedBy"=EXCLUDED."consentedBy","consentedAt"=EXCLUDED."consentedAt","proofHash"=EXCLUDED."proofHash","revokedBy"=NULL,"revokedAt"=NULL,"updatedBy"=EXCLUDED."updatedBy","updatedAt"=EXCLUDED."updatedAt"`;
   // An old outstanding invitation may not overwrite this newer explicit act.
   if(reportType==='CASH')await tx.$executeRaw`UPDATE "AutomaticReportRecipient" SET "challengeHash"=NULL,"challengeNonce"=NULL,"challengePurpose"=NULL,"challengeFrequencies"=ARRAY[]::text[],"challengeExpiresAt"=NULL,"updatedBy"=${actor.id},"updatedAt"=${now} WHERE "companyId"=${s.companyId} AND "storeId"=${s.storeId} AND "recipientId"=${r.recipientId}`;
  }

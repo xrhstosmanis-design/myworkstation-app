@@ -1,3 +1,4 @@
+import {readPromotionResultEvent,buildAutomaticPromotionPayload} from './promotion-result-email.js';
 import {readDailyTurnover,readShiftTurnover} from './daily-turnover-report.js';
 import {buildAutomaticSupplierPayload,completedSupplierReportMonth} from './supplier-comparison-email.js';
 import {invoiceAuditEmailPeriod} from './invoice-audit-email-period.js';
@@ -17,20 +18,21 @@ const active=(row,now)=>!!row&&row.active===true&&(!row.startsAt||iso(row.starts
 const safe=value=>{if(typeof value!=='string'||!/^[1-9]\d*$/.test(value)||BigInt(value)>BigInt(Number.MAX_SAFE_INTEGER))hold();return Number(value)};
 export function automaticReportScopeInput(raw){
  if(!raw||typeof raw!=='object'||![Object.prototype,null].includes(Object.getPrototypeOf(raw)))hold();
- const d=Object.getOwnPropertyDescriptors(raw),keys=['companyId','storeId','frequency'];
- if(Reflect.ownKeys(d).length!==3||keys.some(k=>!d[k]?.enumerable||!Object.hasOwn(d[k],'value')))hold();
+ const d=Object.getOwnPropertyDescriptors(raw),keys=['companyId','storeId','frequency',...(d.frequency?.value==='EVENT'?['eventId']:[])];
+ if(Reflect.ownKeys(d).length!==keys.length||keys.some(k=>!d[k]?.enumerable||!Object.hasOwn(d[k],'value')))hold();
  const result=Object.fromEntries(keys.map(k=>[k,d[k].value]));
- if(!['companyId','storeId'].every(k=>typeof result[k]==='string'&&result[k]===result[k].trim()&&result[k].length>0&&result[k].length<=200&&!/[\u0000-\u001f\u007f]/.test(result[k]))||!['DAILY','WEEKLY','MONTHLY'].includes(result.frequency))hold();
+ if(!['companyId','storeId'].every(k=>typeof result[k]==='string'&&result[k]===result[k].trim()&&result[k].length>0&&result[k].length<=200&&!/[\u0000-\u001f\u007f]/.test(result[k]))||!['DAILY','WEEKLY','MONTHLY','EVENT'].includes(result.frequency)||result.frequency==='EVENT'&&(typeof result.eventId!=='string'||result.eventId!==result.eventId.trim()||!result.eventId||result.eventId.length>200||/[\u0000-\u001f\u007f]/.test(result.eventId)))hold();
  return Object.freeze(result);
 }
 export function createAutomaticReportEligibilityReader({activationProvider,persistence,reportType='CASH'}){
  if(typeof activationProvider!=='function'||!persistence)throw new TypeError('Trusted dispatch dependencies required');
- if(!['CASH','SUPPLIER_COMPARISON'].includes(reportType))throw new TypeError('Unsupported report type');
- const supplier=reportType==='SUPPLIER_COMPARISON';
- const moduleKey=supplier?'INVENTORY':'CASH_CONTROL';
+ if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT'].includes(reportType))throw new TypeError('Unsupported report type');
+ const supplier=reportType==='SUPPLIER_COMPARISON',promotion=reportType==='PROMOTION_RESULT';
+ const nonCash=supplier||promotion;
+ const moduleKey=nonCash?'INVENTORY':'CASH_CONTROL';
  async function context(tx,raw,now){
   const scope=automaticReportScopeInput(raw);now=iso(now);
-  if(supplier&&scope.frequency!=='MONTHLY')hold();
+  if(supplier&&scope.frequency!=='MONTHLY'||promotion&&scope.frequency!=='EVENT'||!promotion&&scope.frequency==='EVENT')hold();
   const control=activationProvider();if(!control?.valid||!control.enabled)hold();
   const lifecycle=await lockAutomaticReportBoundary(tx,scope);
   const [company]=await tx.$queryRaw`SELECT "id","active","licenseStatus","subscriptionEndsAt" FROM "Company" WHERE "id"=${scope.companyId} FOR SHARE NOWAIT`;
@@ -47,23 +49,25 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   const modules=await tx.$queryRaw`SELECT "active","startsAt","endsAt" FROM "CompanyModule" WHERE "companyId"=${scope.companyId} AND "moduleKey"=${moduleKey}`;
   const overrides=await tx.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "moduleKey"=${moduleKey}`;
   if(!(overrides.length?active(overrides[0],now):active(modules[0],now)))hold();
-  const [settings]=supplier?[]:await tx.$queryRaw`SELECT "configurationJson","version" FROM "AutomaticReportSettings" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} FOR SHARE NOWAIT`;
-  if(!supplier&&(!settings||!Number.isSafeInteger(settings.version)||settings.version<1))hold();
-  const configuration=supplier?null:automaticReportConfigurationSchema.parse(settings.configurationJson);
-  const authorization=await persistence.readLockedDispatchAuthorization(tx,{companyId:scope.companyId,storeId:scope.storeId,now,activation:control,...(supplier?{reportType}:{})});
+  const [settings]=nonCash?[]:await tx.$queryRaw`SELECT "configurationJson","version" FROM "AutomaticReportSettings" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} FOR SHARE NOWAIT`;
+  if(!nonCash&&(!settings||!Number.isSafeInteger(settings.version)||settings.version<1))hold();
+  const configuration=nonCash?null:automaticReportConfigurationSchema.parse(settings.configurationJson);
+  const authorization=await persistence.readLockedDispatchAuthorization(tx,{companyId:scope.companyId,storeId:scope.storeId,now,activation:control,...(nonCash?{reportType}:{})});
   const {policy,grant,recipients}=authorization||{};
   if(!policy||!grant||!Array.isArray(recipients)||!recipients.length||recipients.length>5||policy.dispatchEnabled!==true||policy.allowsProvisional!==true||grant.active!==true||grant.revokedAt||principal?.role!=='SUPER_ADMIN'||principal.id!==grant.principalId||String(principal.sessionVersion)!==String(grant.principalSessionVersion)||policy.lifecycleGeneration!==lifecycle.generation||grant.lifecycleGeneration!==lifecycle.generation||!policy.allowedFrequencies?.includes(scope.frequency)||!grant.allowedFrequencies?.includes(scope.frequency))hold();
   safe(policy.revision);safe(grant.revision);
   const month=supplier?completedSupplierReportMonth(new Date(now)):null;
   const monthBoundary=value=>new Date(Date.parse(invoiceAuditEmailPeriod(value).nominalScheduledAt)+60000);
-  const period=supplier
+  const event=promotion?await readPromotionResultEvent(tx,{...scope,now}):null;
+  const period=promotion?{from:new Date(event.from),to:new Date(event.to)}:supplier
    ? {from:monthBoundary(completedSupplierReportMonth(Date.parse(month+'-15T12:00:00Z'))),to:monthBoundary(month)}
    : completedReportPeriod(new Date(now),scope.frequency,configuration);
   const from=period.from.toISOString(),to=period.to.toISOString();
   if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<iso(grant.notBefore))hold();
-  const settingsVersion=supplier?safe(policy.revision):settings.version;
+  const settingsVersion=nonCash?safe(policy.revision):settings.version;
   let payload;
-  if(supplier)payload=await buildAutomaticSupplierPayload(tx,{...scope,storeName:store.name,month,period:{from,to},settingsVersion});
+  if(promotion)payload=await buildAutomaticPromotionPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
+  else if(supplier)payload=await buildAutomaticSupplierPayload(tx,{...scope,storeName:store.name,month,period:{from,to},settingsVersion});
   else{
    const preview=await readAutomaticCashPreviewInTransaction(tx,{actorId:principal.id,companyId:scope.companyId,storeId:scope.storeId,day:period.fromDay,frequency:scope.frequency,configuration,settingsVersion:settings.version,now:new Date(now)});
    if(configuration.reviewedReconciliation===true&&preview.reviewedCash?.generation!==lifecycle.generation)hold();
@@ -92,7 +96,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    const recipientVersion=safe(recipient.version),consentRevision=safe(consent.revision);
    if(typeof recipient.email!=='string'||!recipient.recipientId)hold();
    const policyFingerprint=persistence.dispatchPolicyFingerprint?persistence.dispatchPolicyFingerprint({policy,grant,recipient}):createHash('sha256').update(canonical({format:'MWS_DISPATCH_AUTHORIZATION_V1',policy,grant,recipientId:recipient.recipientId})).digest('hex');
-   const input={companyId:scope.companyId,storeId:scope.storeId,reportType,frequency:scope.frequency,periodFrom:from,periodTo:to,recipient:recipient.email,snapshot:{settingsVersion,recipientVersion,consentRevision,lifecycleGeneration:lifecycle.generation,sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint,principalId:principal.id,financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
+   const input={companyId:scope.companyId,storeId:scope.storeId,reportType,...(promotion?{eventId:scope.eventId}:{}),frequency:scope.frequency,periodFrom:from,periodTo:to,recipient:recipient.email,snapshot:{settingsVersion,recipientVersion,consentRevision,lifecycleGeneration:lifecycle.generation,sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint,principalId:principal.id,financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
    eligible.push(input);
    authorities[recipient.email]={basis:authority.basis,mailboxVerified:!!recipient.verifiedAt};
   }
@@ -100,7 +104,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   return {scope,now,payload,inputs:eligible,activation:control,authorities};
  }
  const reader=async({tx,companyId,storeId,input,now})=>{
-  const current=await context(tx,{companyId,storeId,frequency:input.frequency},now);
+  const current=await context(tx,{companyId,storeId,frequency:input.frequency,...(input.eventId?{eventId:input.eventId}:{})},now);
   const candidate=current.inputs.find(v=>v.recipient===input.recipient);
   if(!candidate||canonical(candidate)!==canonical(input))hold();
   const stored=await persistence.readImmutablePayload(tx,{companyId,storeId,frequency:input.frequency,periodFrom:input.periodFrom,periodTo:input.periodTo,payloadFingerprint:input.snapshot.payloadFingerprint,lifecycleGeneration:input.snapshot.lifecycleGeneration,now});

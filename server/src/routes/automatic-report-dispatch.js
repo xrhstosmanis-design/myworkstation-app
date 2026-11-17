@@ -52,6 +52,11 @@ export function createAutomaticReportDispatchRouter(db,{env=process.env,manageme
   }
   return s;
  };
+ let promotionService;
+ const getPromotionService=()=>promotionService??=createAutomaticReportManagement({db,reportType:'PROMOTION_RESULT',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Event invitations are unavailable')}});
+ router.get('/promotion-results',handle(req=>getPromotionService().getDispatchManagement(scope(req))));
+ router.post('/promotion-results/recipients/authorize',handle(req=>getPromotionService().authorizeAdministratorRecipient(scope(req),req.body)));
+ router.put('/promotion-results/policy',handle(req=>getPromotionService().saveDispatchPolicy(scope(req),req.body)));
  router.get('/supplier-comparison',handle(async req=>{const s=await supplierScope(req);return getSupplierService().getDispatchManagement(s)}));
  router.post('/supplier-comparison/recipients/authorize',handle(async req=>{const s=await supplierScope(req);return getSupplierService().authorizeAdministratorRecipient(s,req.body)}));
  router.put('/supplier-comparison/policy',handle(async req=>{const s=await supplierScope(req);return getSupplierService().saveDispatchPolicy(s,req.body)}));

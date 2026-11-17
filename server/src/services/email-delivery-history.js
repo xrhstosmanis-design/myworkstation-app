@@ -1,17 +1,19 @@
 const historyLimit = 50;
 
-export async function readEmailDeliveryHistory(tx, {companyId, storeId}, reportSchemaReady, {supplierOnly=false}={}) {
+export async function readEmailDeliveryHistory(tx, {companyId, storeId}, reportSchemaReady, {supplierOnly=false,reportType=null}={}) {
   const reports = reportSchemaReady ? await tx.$queryRaw`
     SELECT "slotId" AS "id", COALESCE("record"->'input'->>'reportType', 'CASH') AS "type", "status",
       "record"->'input'->>'frequency' AS "frequency",
+      "record"->'input'->>'eventId' AS "eventId",
       COALESCE("record"->>'completedAt', "record"->>'createdAt') AS "at",
       "record"->>'messageId' AS "messageId", NULL::text AS "failure"
     FROM "AutomaticReportDeliverySlot"
     WHERE "companyId"=${companyId} AND "storeId"=${storeId}
+      AND (${reportType}::text IS NULL OR "record"->'input'->>'reportType'=${reportType})
       AND (NOT ${supplierOnly} OR "record"->'input'->>'reportType'='SUPPLIER_COMPARISON')
     ORDER BY "at" DESC NULLS LAST, "slotId" DESC LIMIT ${historyLimit}` : [];
 
-  if(supplierOnly)return reports;
+  if(supplierOnly||reportType)return reports;
 
   const [schema] = await tx.$queryRaw`
     SELECT to_regclass('"InvoiceStockExclusionEmail"') IS NOT NULL AS "ready"`;

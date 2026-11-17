@@ -130,3 +130,12 @@ test('supplier dispatch binds the Athens calendar month and requires supplier co
  h.auth.recipients[0].consent=null;
  await assert.rejects(read.readContext(h.tx,monthly,now),{code:'REPORT_DISPATCH_HOLD'});
 });
+
+test('event scope requires its own identity without invoking frequency accessors',()=>{
+ let invoked=false;
+ const bad={companyId:'c',storeId:'s',get frequency(){invoked=true;return 'EVENT'}};
+ assert.throws(()=>automaticReportScopeInput(bad));assert.equal(invoked,false);
+ assert.deepEqual(automaticReportScopeInput({companyId:'c',storeId:'s',frequency:'EVENT',eventId:'p1'}),{companyId:'c',storeId:'s',frequency:'EVENT',eventId:'p1'});
+ for(const eventId of ['', ' p1']){assert.throws(()=>automaticReportScopeInput({companyId:'c',storeId:'s',frequency:'EVENT',eventId}));}
+ assert.throws(()=>automaticReportScopeInput({companyId:'c',storeId:'s',frequency:'MONTHLY',eventId:'p1'}));
+});
