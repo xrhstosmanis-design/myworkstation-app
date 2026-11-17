@@ -1,5 +1,10 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
-import {bundleDocumentPhotos} from '../../lib/document-photo-pdf.js';
+import {bundleDocumentPhotos,validatePhotoSelection} from '../../lib/document-photo-pdf.js';
+import {captureCameraFrame} from '../../lib/camera-acquisition.js';
+import useCameraAcquisition from './useCameraAcquisition.js';
+import useMobileDocumentPhotos from './useMobileDocumentPhotos.js';
+import MobileDocumentPhotosQr from './MobileDocumentPhotosQr.jsx';
+import DocumentPhotoList from './DocumentPhotoList.jsx';
 
 const readFile=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('Δεν διαβάστηκε το αρχείο.'));reader.readAsDataURL(file)});
 const money=value=>Number(value||0).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
@@ -52,8 +57,67 @@ export default function StorePendingInvoicePanel({api,store,allowCreate=false,su
   <h4>Εκκρεμότητες τιμολογίων</h4><p>Οι παρακάτω πληρωμές έχουν ήδη γίνει. Το ανέβασμα συνδέει το πρωτότυπο με την ίδια πληρωμή, χωρίς νέα χρέωση.</p>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
   <button type="button" disabled={busy} onClick={refresh}>Ανανέωση εκκρεμοτήτων</button>
-  {!data?<p>Φόρτωση εκκρεμοτήτων…</p>:<><p>{data.count} εκκρεμότητες τιμολογίων{data.truncated?' · εμφανίζονται τα πρώτα 50':''}.</p>{data.rows.map(row=><div key={row.id} style={{padding:8,borderBottom:'1px solid #ddd'}}><b>{row.supplierName} · {row.documentNumber}</b><p>{row.documentDate} · {money(row.amount)} · {row.terminalPos} · {row.actorName}</p>{row.status==="UPLOADED_AWAITING_REVIEW"&&<p>Το πρωτότυπο ανέβηκε — εκκρεμεί σύνδεση ή έλεγχος. Ο έλεγχος συνεχίζεται στην υπάρχουσα καταχώριση. Δεν ξεκινά νέα ανάγνωση από εδώ.</p>}{row.status==="REVIEW_REQUIRED"&&<p>Χρειάζεται έλεγχος της αρχικής πληρωμής ή του παραστατικού.</p>}<button type="button" disabled={busy||row.status==='UPLOADED_AWAITING_REVIEW'} onClick={()=>{if(!active())return;prepared.current=null;setSelected(row);setFiles([]);setError('');setMessage('')}}>{row.status==='UPLOADED_AWAITING_REVIEW'?'Αναμονή ελέγχου στην υπάρχουσα καταχώριση':'Ανέβασε το ίδιο τιμολόγιο'}</button></div>)}</>}
-  {selected&&<div role="group" aria-label="Σύνδεση πρωτοτύπου με αρχική πληρωμή"><p><b>{selected.documentNumber} · {money(selected.amount)}</b> — επιβεβαίωσε ότι όλες οι σελίδες ανήκουν σε αυτό το τιμολόγιο.</p><label>Ένα πολυσέλιδο PDF ή έως 5 φωτογραφίες<input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy} onChange={e=>{if(active()){prepared.current=null;setFiles(Array.from(e.target.files||[]))}}}/></label><p>Οι φωτογραφίες αποθηκεύονται μαζί σε ένα PDF. Δεν γίνεται ανάγνωση AI.</p><p>{files.map(f=>f.name).join(' · ')}</p><button type="button" disabled={busy||!files.length} onClick={upload}>Σύνδεση χωρίς νέα πληρωμή</button><button type="button" disabled={busy} onClick={()=>{if(active()){prepared.current=null;setSelected(null);setFiles([])}}}>Ακύρωση</button></div>}
+  {!data?<p>Φόρτωση εκκρεμοτήτων…</p>:<><p>{data.count} εκκρεμότητες τιμολογίων{data.truncated?' · εμφανίζονται τα πρώτα 50':''}.</p>{data.rows.map(row=><div key={row.id} style={{padding:8,borderBottom:'1px solid #ddd'}}><b>{row.supplierName} · {row.documentNumber}</b><p>{row.documentDate} · {money(row.amount)} · {row.terminalPos} · {row.actorName}</p>{row.status==="UPLOADED_AWAITING_REVIEW"&&<p>Το πρωτότυπο ανέβηκε — εκκρεμεί σύνδεση ή έλεγχος. Ο έλεγχος συνεχίζεται στην υπάρχουσα καταχώριση. Δεν ξεκινά νέα ανάγνωση από εδώ.</p>}{row.status==="REVIEW_REQUIRED"&&<p>Χρειάζεται έλεγχος της αρχικής πληρωμής ή του παραστατικού.</p>}<button type="button" disabled={busy||row.status==='UPLOADED_AWAITING_REVIEW'} onClick={()=>{if(!active())return;prepared.current=null;setSelected({...row,context:renderContext,captureKey:newKey()});setFiles([]);setError('');setMessage('')}}>{row.status==='UPLOADED_AWAITING_REVIEW'?'Αναμονή ελέγχου στην υπάρχουσα καταχώριση':'Ανέβασε το ίδιο τιμολόγιο'}</button></div>)}</>}
+  {selected?.context===renderContext&&<PendingInvoiceCapture key={selected.captureKey} api={api} storeId={store.id} selected={selected} files={files} busy={busy} canAct={()=>active()&&!submitting.current} onFiles={next=>{if(active()&&!submitting.current){prepared.current=null;setFiles(next)}}} onMessage={text=>{if(active())setMessage(text)}} onError={text=>{if(active())setError(text)}} onUpload={upload} onCancel={()=>{if(active()&&!submitting.current){prepared.current=null;setSelected(null);setFiles([])}}}/>}
   {allowCreate&&<form onSubmit={create}><h4>Πληρωμή τώρα — ανέβασμα τιμολογίου αργότερα</h4><label>Προμηθευτής<select required disabled={busy} value={form.supplierId} onChange={e=>update('supplierId',e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label>Πραγματικός αριθμός τιμολογίου<input required maxLength={80} disabled={busy} value={form.documentNumber} onChange={e=>update('documentNumber',e.target.value)}/></label><label>Ημερομηνία τιμολογίου<input required type="date" disabled={busy} value={form.documentDate} onChange={e=>update('documentDate',e.target.value)}/></label><label>Ποσό πληρωμής<input required inputMode="decimal" disabled={busy} value={form.amount} onChange={e=>update('amount',e.target.value)}/></label><label>Τρόπος πληρωμής<select disabled={busy} value={form.paymentMethod} onChange={e=>update('paymentMethod',e.target.value)}><option value="CASH_SHIFT" disabled={!allowCash}>Μετρητά της ενεργής βάρδιας</option><option value="CORPORATE_CARD">Εταιρική κάρτα</option><option value="BANK_TRANSFER">Τραπεζική μεταφορά</option><option value="EMPLOYEE_REIMBURSEMENT">Πληρωμή υπαλλήλου προς επιστροφή</option></select></label><label><input type="checkbox" disabled={busy} checked={form.acknowledged} onChange={e=>{if(active())setForm(old=>({...old,acknowledged:e.target.checked}))}}/>Επιβεβαιώνω την πραγματική πληρωμή και θα ανεβάσω το τιμολόγιο αργότερα.</label><button type="submit" disabled={busy||!form.acknowledged||!data?.openSession}>Καταχώριση πληρωμής με εκκρεμές τιμολόγιο</button></form>}
  </section>;
+}
+
+// A fresh component per selected payment fences mobile/camera work to that original.
+export function PendingInvoiceCapture({api,storeId,selected,files,busy,canAct,onFiles,onMessage,onError,onUpload,onCancel,plainCapture=true,canSubmit=true}){
+ const mounted=useRef(false),video=useRef(null),camera=useCameraAcquisition(selected.captureKey);
+ const [stream,setStream]=useState(null),[opening,setOpening]=useState(false),[taking,setTaking]=useState(false);
+ const active=()=>mounted.current&&canAct();
+ const stopCamera=()=>{camera.cancel();setStream(null);setOpening(false);setTaking(false)};
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;camera.cancel()}},[camera]);
+ useEffect(()=>{if(stream&&video.current)video.current.srcObject=stream},[stream]);
+ const chooseFiles=incoming=>{
+  if(!active()||busy)return;
+  const added=Array.from(incoming||[]);if(!added.length)return;
+  try{
+   validatePhotoSelection(files,added);
+   const next=[...files,...added];
+   if(next.reduce((total,file)=>total+file.size,0)>6500000)throw Error('Επίλεξε έως 5 σελίδες με συνολικό μέγεθος έως 6,5 MB.');
+   onError('');onFiles(next);
+  }catch(error){onError(error.message)}
+ };
+ const mobile=useMobileDocumentPhotos({api,storeId,count:files.length,onFiles:chooseFiles,setMessage:text=>{if(active())onMessage(text)}});
+ useEffect(()=>{if(busy){camera.cancel();setStream(null);setOpening(false);setTaking(false);mobile.cancel()}},[busy]);
+ const startCamera=async()=>{
+  if(!active()||busy)return;
+  mobile.cancel();stopCamera();onError('');
+  const request=camera.open(),epoch=camera.checkpoint();setOpening(true);
+  try{const next=await request;if(next&&camera.current(epoch)&&active())setStream(next)}
+  catch(error){if(camera.current(epoch)&&active())onError(error.message)}
+  finally{if(camera.current(epoch)&&active())setOpening(false)}
+ };
+ const capture=async()=>{
+  if(!active()||busy||taking)return;
+  const epoch=camera.checkpoint();setTaking(true);
+  try{
+   const file=await captureCameraFrame(video.current,{name:`timologio-${Date.now()}.jpg`,isCurrent:()=>camera.current(epoch)&&active()});
+   if(!file||!camera.current(epoch)||!active())return;
+   stopCamera();chooseFiles([file]);
+  }catch(error){if(camera.current(epoch)&&active())onError(error.message)}
+  finally{if(camera.current(epoch)&&active())setTaking(false)}
+ };
+ const locked=busy||mobile.pending||opening||taking;
+ const full=files.length>=5||files.some(file=>file.type==='application/pdf');
+ return <div role="group" aria-label="Σύνδεση πρωτοτύπου με αρχική πληρωμή">
+  <p><b>{selected.documentNumber} · {money(selected.amount)}</b> — επιβεβαίωσε ότι όλες οι σελίδες ανήκουν σε αυτό το τιμολόγιο.</p>
+  <div className="pos-photo-actions">
+   <label>Ένα πολυσέλιδο PDF ή έως 5 φωτογραφίες<input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" disabled={locked||full||!!stream} onChange={event=>{const incoming=Array.from(event.target.files||[]);event.target.value='';chooseFiles(incoming)}}/></label>
+   <button type="button" disabled={locked||full} onClick={startCamera}>Λήψη από κάμερα</button>
+   <button type="button" disabled={locked||full} onClick={()=>{if(active()){stopCamera();mobile.createQr()}}}>QR από κινητό</button>
+  </div>
+  <MobileDocumentPhotosQr mobile={mobile}/>
+  {(opening||stream)&&<div className="pos-camera-live">
+   {opening?<p role="status">Άνοιγμα κάμερας…</p>:<><video ref={video} autoPlay playsInline/><p>Βάλε ολόκληρο το παραστατικό στο πλάνο και περίμενε να καθαρίσει η εικόνα.</p><button type="button" disabled={busy||taking||full} onClick={capture}>Φωτογράφιση</button></>}
+   <button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button>
+  </div>}
+  <DocumentPhotoList files={files} disabled={locked} onChange={next=>{if(active()&&!locked){onError('');onFiles(next)}}}/>
+  <p>Οι φωτογραφίες αποθηκεύονται μαζί σε ένα PDF. {plainCapture?'Δεν γίνεται ανάγνωση AI.':'Το πρόχειρο συνδέεται με την αρχική πληρωμή, χωρίς νέα χρέωση.'}</p>
+  <button type="button" disabled={locked||!files.length||!canSubmit} onClick={()=>{if(active()){mobile.cancel();stopCamera();onUpload()}}}>Σύνδεση χωρίς νέα πληρωμή</button>
+  <button type="button" disabled={busy} onClick={()=>{if(active()){mobile.cancel();stopCamera();onCancel()}}}>Ακύρωση</button>
+ </div>;
 }
