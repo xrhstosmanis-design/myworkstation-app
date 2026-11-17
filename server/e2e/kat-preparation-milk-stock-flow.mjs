@@ -133,7 +133,13 @@ async function main(){
     assert.ok([200,403].includes(read.response.status));
     await prisma.$executeRaw`INSERT INTO "StoreTableServiceConfig" ("companyId","storeId","enabled") VALUES (${companyId},${storeId},TRUE) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE`;
     const previousPrice=(await prisma.$queryRaw`SELECT "price" FROM "ManagementModifier" WHERE "id"=${freshMilk.id}`)[0].price;
+    const fiscalTable=(await prisma.$queryRaw`SELECT to_regclass('public."StoreFiscalDevice"')::text AS name`)[0]?.name;
+    const fixtureDevices=fiscalTable
+      ? await prisma.$queryRaw`SELECT "id" FROM "StoreFiscalDevice" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "active"=TRUE`
+      : [];
+    const fiscalIds=fixtureDevices.map(device=>device.id);
     try{
+      if(fiscalIds.length)await prisma.$executeRaw`UPDATE "StoreFiscalDevice" SET "active"=FALSE WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "id"=ANY(${fiscalIds}::text[])`;
       await prisma.$executeRaw`UPDATE "ManagementModifier" SET "price"=0.50 WHERE "id"=${freshMilk.id}`;
       const target=await request(`/api/operator-management/stores/${storeId}/operators`,{method:"POST",token:ownerToken,body:{username:"e2e.kat.table.waiter",fullName:"E2E Table Waiter",email:"",phone:"",role:"EMPLOYEE",active:true,pin:"5938"}});
       assert.equal(target.response.status,201,JSON.stringify(target.payload));
@@ -180,6 +186,7 @@ async function main(){
       assert.deepEqual(closedTable,{status:"PAID",saleId:paid.saleId});
       console.log("Combined table E2E passed: priced modifier, KDS, reassignment, cash installments and replay");
     }finally{
+      if(fiscalIds.length)await prisma.$executeRaw`UPDATE "StoreFiscalDevice" SET "active"=TRUE WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "id"=ANY(${fiscalIds}::text[])`;
       await prisma.$executeRaw`UPDATE "ManagementModifier" SET "price"=${previousPrice} WHERE "id"=${freshMilk.id}`;
     }
   }
