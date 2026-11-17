@@ -1,5 +1,4 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
-import {installPurchaseOrdersSuite} from "./installPurchaseOrdersSuite.js";
 import {BarChart3,Boxes,Camera,ChevronRight,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
 import AiReaderPanel from "./AiReaderPanel.jsx";
@@ -30,9 +29,16 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
   useEffect(()=>{
     if(!initialInvoiceOrder||!commerceRoot.current)return;
     const hub=commerceRoot.current;
-    installPurchaseOrdersSuite();
-    hub.dispatchEvent(new CustomEvent("purchase-orders:open",{bubbles:true,detail:{...initialInvoiceOrder,navigationOnly:true}}));
-    onInitialInvoiceOrderHandled?.();
+    const open=()=>{
+      if(!hub.isConnected||!hub.querySelector("[data-purchase-orders-launch]"))return false;
+      hub.dispatchEvent(new CustomEvent("purchase-orders:open",{bubbles:true,detail:{...initialInvoiceOrder,navigationOnly:true}}));
+      onInitialInvoiceOrderHandled?.();
+      return true;
+    };
+    if(open())return;
+    const observer=new MutationObserver(()=>{if(open())observer.disconnect()});
+    observer.observe(hub,{childList:true,subtree:true});
+    return()=>observer.disconnect();
   },[initialInvoiceOrder,onInitialInvoiceOrderHandled]);
   const [cachedActiveModules,setActiveModules]=useState(readActive);
   // The selected-store entry owns fresh module checks. Events/catalog reads
