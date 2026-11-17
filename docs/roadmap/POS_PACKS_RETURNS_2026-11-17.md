@@ -1,3 +1,7 @@
+## Release status — DEPLOYED / AWAITING GROUPED LAB
+
+PR #4006 is merged as `a7bb1c4c00662118dc0c5e794172ca6e3817b0d2`. Main CI 44183245449 attempt 2 and guarded deployment 44188819828 passed; public health confirms that exact live revision. Both features are implemented and deployed. Only grouped real LAB acceptance remains pending; no user login or role switching requested now. See [release evidence](../../CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-release.md). Entries below are implementation history and their earlier pending merge/CI statements are superseded by this release status.
+
 ## 17/11/2026 — POS-PACK-STOCK-01 / POS-SCAN-RETURN-01 — IMPLEMENTED / AWAITING CI + MERGE + LAB
 
 Owner /root; source branch `feat/pos-packs-cash-returns`; PR #4006. Documentation claims #4001/#4005 are merged. The earlier foundation-only entry is superseded for implementation scope, retained as history.
