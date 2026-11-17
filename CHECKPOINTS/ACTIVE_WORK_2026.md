@@ -430,3 +430,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 7 · [Δοκιμή προσωπικού υπευθύνου LAB](CHANGES/2026-11-17-lab-manager-invoice-and-shift-report.md). Επαναφορά και ακύρωση επιβεβαιώθηκαν. Εκκρεμούν αναφορά βαρδιών και έλεγχος περιορισμού δικαιωμάτων.
 
 17/11/2026 — Νο 7 · Διόρθωση πρόσβασης αναφοράς βαρδιών μετά τη δοκιμή LAB.
+
+- Νο 34 · [Έγκριση Super Admin στη μηνιαία αποστολή](CHANGES/2026-11-17-supplier-admin-eligibility.md). Τοπικοί έλεγχοι PASS. Παράδοση LAB εκκρεμεί.

@@ -88,7 +88,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   const eligible=[],authorities={};
   for(const {recipient,consent} of recipients){
    const authority=reportRecipientAuthority(recipient,consent,{generation:lifecycle.generation,principalId:principal.id});
-   if(!authority||supplier&&authority.basis!=='RECIPIENT'||!consent.allowedFrequencies.includes(scope.frequency)||authority.authorizedAt<control.issuedAt||authority.authorizedAt>now||from<authority.authorizedAt||authority.basis==='RECIPIENT'&&iso(recipient.verifiedAt)>now)continue;
+   if(!authority||!consent.allowedFrequencies.includes(scope.frequency)||authority.authorizedAt<control.issuedAt||authority.authorizedAt>now||from<authority.authorizedAt||authority.basis==='RECIPIENT'&&iso(recipient.verifiedAt)>now)continue;
    const recipientVersion=safe(recipient.version),consentRevision=safe(consent.revision);
    if(typeof recipient.email!=='string'||!recipient.recipientId)hold();
    const policyFingerprint=persistence.dispatchPolicyFingerprint?persistence.dispatchPolicyFingerprint({policy,grant,recipient}):createHash('sha256').update(canonical({format:'MWS_DISPATCH_AUTHORIZATION_V1',policy,grant,recipientId:recipient.recipientId})).digest('hex');
