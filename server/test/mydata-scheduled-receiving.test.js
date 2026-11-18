@@ -55,3 +55,37 @@ test('delayed receiving rechecks scope after admission before any credentials or
   const pending=f.mod.syncMyDataStore(req);req.body.storeId='customer-demo-store-revoked';release();
   await assert.rejects(pending,error=>error.code==='CUSTOMER_DEMO_OUTBOUND_BLOCKED');assert.equal(f.owners,0);assert.equal(f.locks,1);
 });
+
+test('historical original recovery is explicitly store-scoped, production-only, bounded and attachment-only',async()=>{
+  const {mod}=await fixture();
+  const calls=[];
+  const db={
+    $queryRaw:async(strings,...values)=>{
+      assert.match(strings.join("?"), /i\."attachmentId" IS NULL AND i\."status"='RECEIVED'/);
+      assert.match(strings.join("?"), /"rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM/);
+      assert.match(strings.join("?"), /ORDER BY m\."fetchedAt",m\."id" LIMIT 2/);
+      assert.deepEqual(values.slice(0,3), ['company','store','AADE_MYDATA_PRODUCTION']);
+      calls.push('query');
+      return [{inboxId:'downloadable'},{inboxId:'unavailable'}];
+    },
+    $executeRaw:async(strings,...values)=>{
+      assert.match(strings.join("?"), /i\."attachmentId" IS NULL/);
+      assert.deepEqual(values.slice(1), ['company','store','unavailable']);
+      calls.push('version-stamped');
+    },
+  };
+  const acquire=async(...args)=>{
+    assert.deepEqual(args.slice(0,3),[db,'company','store']);
+    assert.deepEqual(args.slice(4),['actor',false]);
+    calls.push(args[3]);
+    if(args[3]==='unavailable')throw new Error('Provider did not return PDF');
+    return {downloaded:true};
+  };
+  const options={db,companyId:'company',storeId:'store',userId:'actor',source:'AADE_MYDATA_PRODUCTION',acquire};
+  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:''}),{downloaded:0,failed:0});
+  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:'other'}),{downloaded:0,failed:0});
+  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:'store',source:'AADE_MYDATA_SANDBOX'}),{downloaded:0,failed:0});
+  assert.deepEqual(calls,[]);
+  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:'other, store'}),{downloaded:1,failed:1});
+  assert.deepEqual(calls,['query','downloadable','unavailable','version-stamped']);
+});
