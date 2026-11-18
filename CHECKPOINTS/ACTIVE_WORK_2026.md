@@ -680,10 +680,12 @@ Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compa
 - 2026-11-18 · 13–14 · Μερικό LAB PASS κατάστασης CSV τιμολογίων και ενεργών πληρωμών ως Super Admin στο υπάρχον LAB. 16/8 και 3/7 γραμμές/στήλες, εγκεκριμένα 7,44 €, πληρωμές 3,00 €. [Τεκμήριο](CHANGES/2026-11-18-no13-no14-supplier-csv-lab-pass.md). Συνολικό 13–14 OPEN, PDF/εκτύπωση και πλήρης οικονομική συμφωνία εκκρεμούν. Ετήσιο CSV στην ίδια συνεδρία: 18 γραμμές / 7 στήλες, 17 ΕΝΕΡΓΗ 4.917,72 € και 1 ΑΝΤΙΛΟΓΙΣΜΟΣ 46,92 €, σε συμφωνία με την οθόνη· μερικό LAB PASS ένδειξης αντιλογισμού.
 
 
-- 2026-11-19 · 13-SALES-STATS-REVERSAL-COST · /root σελίδας 13–14, βοηθός /root/cost · Ανάληψη πριν από κώδικα για ιστορικό κόστος επιστροφής στις δύο προβολές Στατιστικών Πωλήσεων. [Checkpoint](CHANGES/2026-11-19-no13-sales-reversal-cost.md). LAB NOT TESTED. CI και συγχώνευση ανάληψης εκκρεμούν.
+- 2026-11-19 · 13-SALES-STATS-REVERSAL-COST · /root σελίδας 13–14, βοηθός /root/cost · Ανάληψη #4046 / b5bde1ec συγχωνευμένη πριν από κώδικα. Υποψήφιος #4050 επιλέγει αρχικό κόστος επιστροφής στις δύο προβολές Στατιστικών Πωλήσεων, άκυρη σύνδεση→άγνωστο, UI/CSV παύλες/κενά. PGlite πραγματικό SQL1PASS και30 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-19-no13-sales-reversal-cost.md). CI και κοινό LAB/PDF/χαρτί εκκρεμούν.
 
 
 - 2026-11-19 · Νο 14 · ASSIGNED /root, συνέχεια #4004: επιβεβαιωμένη αναμενόμενη ποσότητα και σύνδεση υπάρχουσας καταχωρισμένης παραλαβής για τις προτάσεις. BEFORE SOURCE / NOT TESTED, σχέδιο και έλεγχος ανάθεσης για ανασκόπηση. [Checkpoint](CHANGES/2026-11-19-no14-expected-receipts-claim-design.md). Οι παλαιές αναθέσεις προτάσεων και Full Audit διατηρούνται εκτός του συγκεκριμένου νέου υποσυστήματος.
 
 
-- 2026-11-19 · 13-SALES-STATS-REVERSAL-COST · Υποψήφιος κώδικας μετά την πράσινη ανάληψη #4046 / b5bde1ec. Στατιστικά Πωλήσεων σύνοψη/ανάλυση με κόστος αρχικής πώλησης, άκυρη σύνδεση→άγνωστο, UI/CSV παύλες/κενά. PGlite πραγματικό SQL1PASS και30 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-19-no13-sales-reversal-cost.md). CI και κοινό LAB/PDF/χαρτί εκκρεμούν.
+## 19/11/2026 00:15 Athens — WAREHOUSE-INVOICE-REVIEW-UI-01 — TECHNICALLY LIVE / COMMON LAB PENDING
+
+Owner /root retained. #4040 merged885f00f047cfe0a734cc0d526c68f01b4d7e279d. Exact candidateCI44403379025 and mainCI44405403976 all five jobs SUCCESS; main6279PASS/0FAIL/3optionalSKIP plus8backupPASS, native taxonomy/control/rollback and staff regression executed. Guarded release44408590060 SUCCESS; Render dep-dbv23qgu01pc73cj5cmg LIVE19/11 00:13:53 Athens exact885f00f0. Public health200/exactrevision, HTML200, delivered JS taxonomy marker and CSS compact filter markers independently verified00:15:32. No hosted business action; no new manual PASS. Compact archive, draft taxonomy and linked markup await grouped common LAB acceptance. Peer source/claims and prior PASS retained. Checkpoint CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
