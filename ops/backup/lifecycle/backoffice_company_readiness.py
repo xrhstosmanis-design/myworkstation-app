@@ -14,6 +14,8 @@ SOURCE_PATHS += ('ops/backup/lifecycle/backoffice-company-current-columns.propos
 
 SOURCE_PATHS += ('ops/backup/lifecycle/backoffice-company-current-defaults.proposed.json', 'server/scripts/backoffice-company-current-default-review.mjs', 'server/src/services/ftext-cash-schema.js', 'server/src/chat-interactions.mjs', 'server/src/services/monthly-inventory-snapshot-schema.js')
 
+SOURCE_PATHS += ('server/src/services/automatic-report-column-compatibility.js', 'ops/backup/lifecycle/report-column-compatibility.proposed.json')
+
 def compact(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
 

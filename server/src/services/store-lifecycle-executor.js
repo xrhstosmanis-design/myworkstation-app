@@ -1,5 +1,6 @@
 import {assertCompanyCurrentCaptureManifest,inspectCompanyCurrentCaptureSource} from './backoffice-company-current-capture.js';
-import {assertReportOperationalProfile} from './automatic-report-operational-profile.js';
+import {prepareReportColumnInspection} from './automatic-report-column-compatibility.js';
+import {assertReportOperationalProfile,assertReportColumnProfile} from './automatic-report-operational-profile.js';
 import {prepareOperationalReportInspection} from './automatic-report-source-compatibility.js';
 import {prepareAutomaticReportConsentInspection} from './automatic-report-consent-inspection.js';
 // Internal execution core. No production manifest, recovery adapter or HTTP route is registered here.
@@ -29,6 +30,7 @@ const drainFingerprint=(plan,scope,mode,operationId)=>hash({phase:'DRAINING',ope
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
  if(manifest.purpose!==undefined)assertCompanyCurrentCaptureManifest(manifest);
+ if(manifest.reviewedColumnExtensions!==undefined)assertReportColumnProfile(manifest);
  if(manifest.preservedOperationalTables!==undefined)assertReportOperationalProfile(manifest);
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
  if(manifest.resetPolicy!==undefined&&manifest.resetPolicy!=='FRESH_STORE_V1')fail('Unknown reset policy.');
@@ -63,7 +65,7 @@ function planFor(manifest){
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!validColumns(row.owner.columns))fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
  if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
- return {id:manifest.id,executionDisabled:manifest.executionDisabled===true,purpose:manifest.purpose,preservedOperationalTables:manifest.companyCurrentCatalogue?.nonOwningTables||manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
+ return {id:manifest.id,executionDisabled:manifest.executionDisabled===true,purpose:manifest.purpose,reviewedColumnExtensions:manifest.reviewedColumnExtensions||[],preservedOperationalTables:manifest.companyCurrentCatalogue?.nonOwningTables||manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
 }
 function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='ROOT')return `${alias}."id"=$1`;
@@ -156,6 +158,7 @@ function bindDatabaseReferences(plan,schema,fks){
  plan.databaseReferences=references;
 }
 async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
+ const columnCompatibility=plan.reviewedColumnExtensions.length?await prepareReportColumnInspection(tx,schema):null;
  const operational=plan.purpose==='COMPANY_READ_ONLY'?await inspectCompanyCurrentCaptureSource(tx,schema,{phase:plan.id==='BACKOFFICE_COMPANY_CURRENT_CAPTURE_PROPOSED_V1'?'TARGET':'SOURCE'}):plan.preservedOperationalTables.length?await prepareOperationalReportInspection(tx,schema):null;
  const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name,c.relkind::text AS kind,c.relispartition AS partition,c.relrowsecurity AS rls,c.relforcerowsecurity AS forced,EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhparent=c.oid OR i.inhrelid=c.oid) AS inherited,EXISTS(SELECT 1 FROM pg_rewrite w WHERE w.ev_class=c.oid AND w.rulename<>'_RETURN') AS rewritten FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname`,schema);
  const columns=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS "notNull",a.attidentity::text AS identity,a.attgenerated::text AS generated,pg_get_expr(d.adbin,d.adrelid) AS "defaultExpression" FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') AND a.attnum>0 AND NOT a.attisdropped ORDER BY c.relname,a.attnum`,schema);
@@ -195,7 +198,7 @@ async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
  }
  const primaryKeys=plan.streaming?await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,k.p::int AS position FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN LATERAL unnest(i.indkey) WITH ORDINALITY k(n,p) ON k.p<=i.indnkeyatts JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.n WHERE n.nspname=$1 AND i.indisprimary ORDER BY c.relname,k.p`,schema):[];
  if(plan.streaming)for(const node of plan.ordered)if(!primaryKeys.some(k=>k.table===node.name))fail('Streaming requires a reviewed primary key: '+node.name);
- const descriptor={...(operational?{preservedOperationalMetadata:operational.evidence}:{}),relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})};
+ const descriptor={...(columnCompatibility?{reviewedColumnMetadata:columnCompatibility.evidence}:{}),...(operational?{preservedOperationalMetadata:operational.evidence}:{}),relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})};
  return {columns:byTable,fks:[...fks,...links],primaryKeys,descriptor,guardsInstalled:installedCounts.every(n=>n===2),signature:hash(descriptor)};
 }
 async function* scopedRows(tx,plan,schema,scope,node,meta){
@@ -348,10 +351,11 @@ export function createLifecycleInstallationCore(manifest,{sourceRevision}={}){
   async inspectAdditiveInTransaction(tx,actor,options){
    requireLifecycleAdmin(actor);
    const schema=await schemaFor(tx);
-   const operational=options?.operationalReportsOnly?await prepareOperationalReportInspection(tx,schema):null;
-   const prepared=await prepareAutomaticReportConsentInspection(operational?.tx||tx,schema,reviewed,options);
+   const columnCompatibility=options?.columnReportsOnly?await prepareReportColumnInspection(tx,schema):null;
+   const operational=options?.operationalReportsOnly?await prepareOperationalReportInspection(columnCompatibility?.tx||tx,schema):null;
+   const prepared=await prepareAutomaticReportConsentInspection(operational?.tx||columnCompatibility?.tx||tx,schema,reviewed,options);
    const metadata=await validateDatabase(prepared.tx,plan,schema,{allowUninstalled:true});
-   return {...metadata,signature:hash({source:metadata.signature,additions:prepared.evidence,...(operational?{operational:operational.evidence}:{})})};
+   return {...metadata,signature:hash({source:metadata.signature,additions:prepared.evidence,...(columnCompatibility?{columns:columnCompatibility.evidence}:{}),...(operational?{operational:operational.evidence}:{})})};
   },
   installInTransaction,
   async install(db,actor,scope){requireLifecycleAdmin(actor);return db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL extra_float_digits=3");await tx.$executeRawUnsafe("SET LOCAL bytea_output='hex'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return installInTransaction(tx,actor,scope)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000})}

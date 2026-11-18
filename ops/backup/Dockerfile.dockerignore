@@ -66,3 +66,6 @@
 !server/src/services/ftext-cash-schema.js
 !server/src/chat-interactions.mjs
 !server/src/services/monthly-inventory-snapshot-schema.js
+
+!ops/backup/lifecycle/report-column-compatibility.proposed.json
+!server/src/services/automatic-report-column-compatibility.js

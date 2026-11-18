@@ -38,6 +38,13 @@ class CompanyReadRouting(unittest.TestCase):
     with patch.dict(os.environ,{'DATABASE_URL':'postgresql://isolated.invalid/current_test','MWS_STORE_LIFECYCLE_PROFILE':'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1','BACKUP_MONITOR_SECRET':'isolated-company-read-worker-secret','RENDER_GIT_COMMIT':'b'*40}),patch.object(readiness,'observe_company_read_state',return_value={'phase':phase,'manifestHash':CURRENT_PHASE_HASHES[phase]}),patch.object(worker,'query',side_effect=lambda sql:queries.append(sql)),patch.object(worker,'s3',side_effect=AssertionError('No storage calls')),patch.object(worker,'publish_capability',side_effect=AssertionError('No legacy recovery capability')):
      result=worker.process_one(path,None)
     self.assertEqual(result['phase'],phase);self.assertIs(result['scopedRecovery'],False);self.assertEqual(len(queries),1);self.assertNotIn('StoreLifecycleExecution',queries[0]);self.assertNotIn('MWS_STORE_RECOVERY',queries[0])
+ def test_company_current_and_report_v2_are_independent_closed_catalogues(self):
+  current=worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'})
+  reports=worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2'})
+  self.assertEqual(current['purpose'],'COMPANY_READ_ONLY');self.assertNotIn('executionDisabled',current);self.assertNotIn('reviewedColumnExtensions',current)
+  self.assertNotIn('AutomaticReportEventConsent',current['knownTables']);self.assertIn('AutomaticReportEventConsent',reports['knownTables']);self.assertTrue(reports['executionDisabled'])
+  self.assertEqual(len(reports['reviewedColumnExtensions']),6);self.assertNotIn('companyCapabilities',[c[0]for c in reports['knownColumns']['BackofficeStaffAccount']]);self.assertEqual(current['knownColumns']['BackofficeStaffAccount'][-1],['companyCapabilities','jsonb',True])
+  self.assertNotEqual(current['id'],reports['id']);self.assertEqual(hashlib.sha256(worker.compact(current).encode()).hexdigest(),CURRENT_PHASE_HASHES['TARGET'])
  def test_both_company_phases_reject_scoped_archive_jobs_before_opening_archive(self):
   source=json.loads((pathlib.Path(worker.__file__).parent/'monthly-inventory-capture-manifest.proposed.json').read_text())
   for phase in ['SOURCE','TARGET']:

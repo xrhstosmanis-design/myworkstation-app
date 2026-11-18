@@ -14,6 +14,7 @@ COPY ops/backup/lifecycle /backup/lifecycle
 COPY ops/backup/lifecycle /backup/company-source/ops/backup/lifecycle
 COPY server/src/services/store-lifecycle-executor.js \
      server/src/services/automatic-report-operational-profile.js \
+     server/src/services/automatic-report-column-compatibility.js \
      server/src/services/automatic-report-source-compatibility.js \
      server/src/services/backoffice-company-current-capture.js \
      server/src/services/backoffice-company-read-worker-ready.js \

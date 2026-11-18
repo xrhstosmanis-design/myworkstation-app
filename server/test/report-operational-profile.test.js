@@ -26,3 +26,21 @@ test('old profile hashes remain exact and Python composes the identical reports-
  assert.equal(result.status,0,result.stderr);
  assert.deepEqual(JSON.parse(result.stdout),selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile}));
 });
+
+test('V2 pins six additional columns while V1 hash remains immutable and scoped operations stay closed',()=>{
+ const base=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'BASE'});
+ assert.equal(createHash('sha256').update(JSON.stringify(base)).digest('hex'),'ba554503bbb839524a1217af0149a6bf86b11384cb2dcb1bfc41d75a6d4290d4');
+ const v1=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile});
+ assert.equal(createHash('sha256').update(JSON.stringify(v1)).digest('hex'),'beaa37279a59ffe0c1e8d1e81026321e4c457c3b9e4a8a162ef9e52fcae78f26');
+ const v2profile='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2';
+ const v2=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:v2profile});
+ assert.equal(v2.reviewedColumnExtensions.length,6);
+ assert.ok(v2.reviewedColumns.includes('TableOrder.cashParts'));
+ assert.ok(v2.reviewedColumns.includes('StoreProduct.categoryIdOverride'));
+ const old=structuredClone(v2);old.knownColumns.PurchaseOrder=old.knownColumns.PurchaseOrder.filter(column=>column[0]!=='awaitingInvoice');
+ assert.throws(()=>createLifecycleInstallationCore(old,{sourceRevision:revision}),/column layout differs/);
+ assert.throws(()=>createLifecycleExecutionCore(v2,{}),{code:'STORE_LIFECYCLE_REPORTS_ONLY'});
+ const script="import sys,json;sys.path.insert(0,sys.argv[1]);import worker;print(json.dumps(worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':sys.argv[2]})))";
+ const result=spawnSync('python3',['-c',script,fileURLToPath(new URL('../../ops/backup/lifecycle',import.meta.url)),v2profile],{encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);assert.deepEqual(JSON.parse(result.stdout),v2);
+});
