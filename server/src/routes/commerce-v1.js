@@ -377,8 +377,24 @@ router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,n
   try{const rows=await prisma.$queryRaw`SELECT COUNT(*)::int AS drafts FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "sourceType" IN ('OCR_DRAFT','AI_DRAFT') AND "status"='DRAFT'`;res.json({twoStageReader:true,drafts:rows[0]?.drafts||0,localConfidenceThreshold:65,aiAutomatic:false,aiProviderConnected:false,message:"Η βάση και το workflow δύο σταδίων είναι έτοιμα. Η πραγματική κλήση AI θα ενεργοποιηθεί μόνο μετά τη σύνδεση provider/API και χειροκίνητη επιλογή «Επανέλεγχος με AI»."})}catch(error){next(error)}
 });
 
+const invoiceReadFields=(value,keys)=>Object.fromEntries(keys.filter(key=>value?.[key]!==undefined&&['string','number','boolean'].includes(typeof value[key])).map(key=>[key,value[key]]));
+function invoiceReadDiagnostics(result){
+  const lineKeys=['code','description','quantity','unitCost','netAmount','grossAmount','vatRate','confidence','sourceColumnsVerified','quantitySource'];
+  const compact=evidence=>evidence?{...invoiceReadFields(evidence,['stage','lineCount','truncated']),lines:(Array.isArray(evidence.lines)?evidence.lines:[]).map(line=>invoiceReadFields(line,[...lineKeys,'discount1']))}:null;
+  const reading=result?.posReadingEvidence||{};
+  return {...invoiceReadFields(result,['pdfNote','tableRecheckCalled','tableRecheckRecovered','tableRecheckError','azurePageRecoveryCalled','azurePageRecoveryRecovered','duplicateTableReplayCollapsed','duplicateTableReplayRemoved','unverifiedTrailingReplayDiscarded','unverifiedTrailingReplayRemoved','productLinesGrossBeforeRecovery','productLinesGrossAfterRecovery','invoiceTotalForCompleteness','productLinesTotalDifference','productLinesComplete']),
+    posHandoff:invoiceReadFields(result?.posHandoff,['documentNumber']),posBackground:invoiceReadFields(result?.posBackground,['status','error']),
+    productLines:(Array.isArray(result?.productLines)?result.productLines:[]).map(line=>invoiceReadFields(line,lineKeys)),
+    posReadingEvidence:{original:compact(reading.original),provider:compact(reading.provider),reread:compact(reading.reread)}};
+}
+
 router.get("/ai-reader/jobs",requireCompanyModule("AI_READER"),async(req,res,next)=>{
-  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT j."id",j."stage",j."status",j."localConfidence",j."aiConfidence",j."purchaseDocumentId",j."resultJson" AS "result",j."createdAt",a."filename",a."mimeType",d."documentNumber",d."totalGross",CASE WHEN d."status"='DRAFT' AND d."purchaseOrderId" IS NULL AND d."sourceType"='OCR_DRAFT' THEN true ELSE false END AS "standaloneDraft" FROM "AiReaderJob" j LEFT JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" LEFT JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" AND d."storeId"=j."storeId" WHERE j."companyId"=${req.user.companyId} AND j."storeId"=${store.id} AND COALESCE(j."status",'')<>'MERGED_PAGE' ORDER BY j."createdAt" DESC LIMIT 100`;const canApprove=req.user.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user.role);res.json(rows.map(row=>({...row,canApproveStandaloneDraft:canApprove&&row.standaloneDraft})))}catch(error){next(error)}
+  try{const delegated=req.user?.staffAccess===true;
+    if(delegated){if(req.query.storeId!==req.user.storeId||req.staffGrant?.capability!=='invoice-ai.read')throw staffError();await requireStaffGrant(prisma,req.user,req.user.storeId,'invoice-ai.read');}
+    const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT j."id",j."stage",j."status",j."localConfidence",j."aiConfidence",j."purchaseDocumentId",j."resultJson" AS "result",j."createdAt",a."filename",a."mimeType",d."documentNumber",d."totalGross",CASE WHEN d."status"='DRAFT' AND d."purchaseOrderId" IS NULL AND d."sourceType"='OCR_DRAFT' THEN true ELSE false END AS "standaloneDraft" FROM "AiReaderJob" j LEFT JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId" LEFT JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" AND d."storeId"=j."storeId" WHERE j."companyId"=${req.user.companyId} AND j."storeId"=${store.id} AND COALESCE(j."status",'')<>'MERGED_PAGE' ORDER BY j."createdAt" DESC LIMIT 100`;const canApprove=!delegated&&req.user.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user.role);
+    const items=rows.map(row=>({...row,...(delegated?{companyId:req.user.companyId,storeId:store.id,result:invoiceReadDiagnostics(row.result)}:{}),canApproveStandaloneDraft:canApprove&&row.standaloneDraft}));
+    if(delegated)await requireStaffGrant(prisma,req.user,store.id,'invoice-ai.read');
+    res.json(delegated?{companyId:req.user.companyId,storeId:store.id,items}:items)}catch(error){next(error)}
 });
 
 router.post("/ai-reader/jobs",requireCompanyModule("AI_READER"),async(req,res,next)=>{

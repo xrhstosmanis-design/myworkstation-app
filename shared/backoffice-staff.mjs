@@ -5,8 +5,14 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read']);
 export const staffPermissionSections=Object.freeze([
+  {key:'stock-transfers',label:'Μεταφορές αποθήκης',actions:[
+    {key:'stock-transfers.read',label:'Προβολή μεταφορών και υπολοίπων',description:'Βλέπει τα υπόλοιπα μεταφορών, τις εκκρεμείς εισπράξεις και το ιστορικό εξωτερικών μεταφορών του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'invoice-ai',label:'Αναγνώσεις τιμολογίων',actions:[
+    {key:'invoice-ai.read',label:'Προβολή αποθηκευμένων αναγνώσεων',description:'Βλέπει τις αποθηκευμένες αναγνώσεις και τα εμφανιζόμενα διαγνωστικά του επιλεγμένου καταστήματος, χωρίς νέα ανάγνωση ή καταχώριση.'}
+  ]},
   {key:'online-orders',label:'Online παραγγελίες',actions:[
     {key:'online-orders.read',label:'Προβολή Online παραγγελιών',description:'Βλέπει τις Online παραγγελίες και τις συνδεδεμένες πωλήσεις, πληρωμές και κινήσεις του επιλεγμένου καταστήματος.'}
   ]},
@@ -105,6 +111,8 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/internal-transfers\/(?:credit|pending-cash-receipts|external-history)$/.test(path))return 'stock-transfers.read';
+  if(method==='GET'&&path==='/api/commerce/ai-reader/jobs')return 'invoice-ai.read';
   if(method==='GET'&&/^\/api\/public\/kat\/backoffice-managed\/stores\/[^/]+\/orders$/.test(path))return 'online-orders.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/table-service(?:\/(?:history|preparation-queue))?$/.test(path))return 'table-service.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/baking$/.test(path))return 'baking.read';

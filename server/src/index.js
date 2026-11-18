@@ -312,6 +312,16 @@ app.use("/api/store-pos",(req,res,next)=>{
     requireCompanyModule("STORE_MODE")(req,res,error=>error?next(error):storeTableOrdersRoutes(req,res,next));
   });
 });
+// Read-only transfer history uses the same native reader before generic POS
+// catalogue/schema preparation. Transfer writers retain their existing chain.
+app.use("/api/store-pos",(req,res,next)=>{
+  if(req.method!=="GET"||!/^\/stores\/[^/]+\/internal-transfers\/(?:credit|pending-cash-receipts|external-history)$/.test(req.path))return next();
+  auth(req,res,error=>{
+    if(error)return next(error);
+    if(req.user?.staffAccess!==true)return next();
+    requireCompanyModule("STORE_MODE")(req,res,error=>error?next(error):storePosInternalTransferRoutes(req,res,next));
+  });
+});
 app.use("/api/store-pos/stores/:storeId/inventory",auth,posOperatorInventoryRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeBakingRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);

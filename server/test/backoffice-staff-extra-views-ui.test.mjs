@@ -238,3 +238,80 @@ test('native Owner table view keeps configuration and production actions by defa
  const m=await mount(Tables,{api:async path=>tableService(path),stores:[{id:'a1',name:'A1'}],activeStoreId:'a1'});
  try{assert.ok(button('ΔΗΜΙΟΥΡΓΙΑ ΣΑΛΑΣ'));assert.ok(button('ΔΗΜΙΟΥΡΓΙΑ ΤΡΑΠΕΖΙΟΥ'));assert.ok(button('ΕΠΕΞΕΡΓΑΣΙΑ'));assert.ok(button('ΕΤΟΙΜΗ ΣΤΟ'));assert.ok(!document.querySelector('.table-floor-item').disabled)}finally{await m.close()}
 });
+
+const aiJobs=(storeId='a1',name=rowText)=>({companyId:'a',storeId,items:[{id:'job1',companyId:'a',storeId,filename:name,stage:'LOCAL',status:'AWAITING_APPROVAL',localConfidence:91,documentNumber:'INV1',totalGross:12,purchaseDocumentId:'draft1',canApproveStandaloneDraft:true,result:{pdfNote:'Persisted OCR',productLines:[{code:'X',description:name,quantity:2,netAmount:10,grossAmount:12,vatRate:24}],posHandoff:{documentNumber:'INV1'}}}]});
+const transferHistory=(path,storeId='a1',name=rowText)=>({companyId:'a',storeId,items:path.endsWith('/credit')?[{id:'credit1',createdAt:'2026-11-17T12:00:00Z',sourceName:name,destinationName:'Other store',payable:12,canPayCash:true}]:path.endsWith('/pending-cash-receipts')?[{id:'receipt1',destinationName:name,amount:4}]:[{id:'external1',createdAt:'2026-11-17T12:00:00Z',destinationName:name}]});
+const transferAiCases=[
+ {name:'store/PosInternalTransfer',right:'stock-transfers.read',label:'Διακινήσεις αποθήκης',refresh:'Ανανέωση διακινήσεων',fixture:transferHistory,path:/^\/api\/store-pos\/stores\/a1\/internal-transfers\/(credit|pending-cash-receipts|external-history)$/,id:path=>path.match(/\/stores\/([^/]+)/)?.[1]},
+ {name:'commerce/AiReaderPanel',right:'invoice-ai.read',label:'Αναγνώσεις τιμολογίων',refresh:'Ανανέωση',fixture:(path,id,name)=>aiJobs(id,name),path:/^\/api\/commerce\/ai-reader\/jobs\?storeId=a1$/,id:path=>new URL(path,'https://isolated.invalid').searchParams.get('storeId')}
+];
+
+test('transfer and invoice AI views grant only existing history reads and never expose producers or company bootstraps',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const c of transferAiCases){
+  const calls=[];
+  const api=async(path,options={})=>{
+   calls.push(path);assert.equal(options.method||'GET','GET');
+   if(path.endsWith('/me'))return {companyId:'a',stores:[{id:'a1',name:'A1',profile:'MANAGER',capabilities:[c.right]},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:[]}]};
+   assert.equal(options.headers['x-backoffice-store-id'],'a1');assert.match(path,c.path);return c.fixture(path,'a1',rowText);
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout(){}});
+  try{
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button(c.label).click());await m.act(async()=>new Promise(r=>setTimeout(r,60)));
+   assert.ok(document.body.textContent.includes(rowText));assert.equal(document.querySelector('img'),null);
+   for(const text of ['Εξόφληση','Καταχώριση είσπραξης','Αποστολή PDF','Υπολογισμός αξίας','Ελαχιστοποίηση','Έναρξη τοπικού OCR','Έλεγχος & αντιστοίχιση','Επανέλεγχος με AI','Έγκριση αποθήκης'])assert.ok(!button(text),text);
+   assert.equal(document.querySelector('input[type="file"]'),null);assert.ok(!calls.some(path=>/destinations|products|suppliers|status/.test(path)));
+   if(c.right==='invoice-ai.read')assert.ok(document.querySelector('summary').textContent.includes('Διαγνωστικά OCR'));
+   if(c.right==='stock-transfers.read'){
+    await m.act(async()=>button('Κλείσιμο').click());assert.equal(document.querySelector('.pos-transfer-overlay'),null);
+    await m.act(async()=>button(c.label).click());await m.act(async()=>new Promise(r=>setTimeout(r,30)));
+   }
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a2';select.dispatchEvent(new Event('change',{bubbles:true}))});assert.ok(!document.body.textContent.includes(rowText));assert.ok(!button(c.label));
+  }finally{await m.close()}
+ }
+});
+
+test('transfer and invoice job reads clear withdrawn data and discard delayed stores',async()=>{
+ for(const c of transferAiCases){
+  const Component=await component(c.name);let mode='ok',late=[];
+  const api=async(path,options={})=>{
+   assert.equal(options.method||'GET','GET');const id=c.id(path);
+   if(mode==='deny')throw Error('HISTORY_WITHDRAWN');
+   if(mode==='late'&&id==='a1')return new Promise(resolve=>late.push(()=>resolve(c.fixture(path,id,'LATE_HISTORY'))));
+   return c.fixture(path,id,id==='a2'?'SECOND_HISTORY':rowText);
+  };
+  const props=id=>({api,companyId:'a',storeId:id,readOnly:true,onClose(){},focusJobId:'job1'}),m=await mount(Component,props('a1'));
+  try{
+   assert.ok(document.body.textContent.includes(rowText));mode='late';await m.act(async()=>button(c.refresh).click());assert.ok(!document.body.textContent.includes(rowText));
+   await m.render(props('a2'));assert.ok(document.body.textContent.includes('SECOND_HISTORY'));await m.act(async()=>late.forEach(resolve=>resolve()));assert.ok(!document.body.textContent.includes('LATE_HISTORY'));
+   mode='deny';await m.act(async()=>button(c.refresh).click());assert.ok(!document.body.textContent.includes('SECOND_HISTORY'));assert.match(document.querySelector('[role="alert"]').textContent,/HISTORY_WITHDRAWN/);
+   assert.equal(document.querySelector('.ai-confirm'),null);
+  }finally{await m.close()}
+ }
+});
+
+test('transfer histories publish atomically after all scoped responses and invoice jobs validate nested scope',async()=>{
+ for(const c of transferAiCases){
+  const Component=await component(c.name),suffixes=c.right==='stock-transfers.read'?['/credit','/pending-cash-receipts','/external-history']:['/jobs'];
+  for(const suffix of suffixes)for(const field of ['companyId','storeId']){
+   const api=async path=>{const r=c.fixture(path,'a1',rowText);if(path.split('?')[0].endsWith(suffix))r[field]='foreign';return r};
+   const m=await mount(Component,{api,companyId:'a',storeId:'a1',readOnly:true,onClose(){}});
+   try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await m.close()}
+  }
+ }
+ const Ai=await component('commerce/AiReaderPanel');
+ for(const field of ['companyId','storeId']){
+  const api=async()=>{const r=aiJobs();r.items[0][field]='foreign';return r},m=await mount(Ai,{api,companyId:'a',storeId:'a1',readOnly:true});
+  try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await m.close()}
+ }
+});
+
+test('native transfer and OCR Owner modes retain destinations and producer controls',async()=>{
+ const Transfer=await component('store/PosInternalTransfer');
+ const a=await mount(Transfer,{api:async path=>path.endsWith('/destinations')?[{id:'a2',name:'Other store'}]:transferHistory(path).items,storeId:'a1',scanCatalog:{exact(){}},onClose(){},onMinimize(){}});
+ try{assert.ok(button('Ελαχιστοποίηση'));assert.ok(button('Εξόφληση'));assert.ok(button('Καταχώριση είσπραξης'));assert.ok(button('Αποστολή PDF'));assert.ok(button('Υπολογισμός αξίας'))}finally{await a.close()}
+ const Ai=await component('commerce/AiReaderPanel'),paths=[];
+ const b=await mount(Ai,{api:async path=>{paths.push(path);return path.includes('/jobs?')?aiJobs().items:[]},storeId:'a1',status:{localConfidenceThreshold:65}});
+ try{assert.ok(button('Έναρξη τοπικού OCR'));assert.ok(button('Έλεγχος & αντιστοίχιση'));assert.ok(button('Επανέλεγχος με AI'));assert.ok(button('Έγκριση αποθήκης'));assert.ok(paths.includes('/api/commerce/products'));assert.ok(paths.includes('/api/commerce/suppliers'))}finally{await b.close()}
+});

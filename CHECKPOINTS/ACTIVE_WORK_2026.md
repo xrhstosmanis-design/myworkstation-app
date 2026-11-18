@@ -480,3 +480,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 Νο 5, ίδια παρτίδα: build PASS, 154 τοπικοί έλεγχοι PASS, 7 PostgreSQL SKIP, 1 Chromium launch FAIL λόγω socket Operation not permitted. Εκκρεμεί νέο CI· δεν χαρακτηρίζεται συνολική πράσινη σουίτα ή LAB PASS.
 
 18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007: `online-orders.read` και `table-service.read`, native προβολές επιλεγμένου καταστήματος χωρίς προετοιμασίες/συμφιλίωση δεδομένων σε προσωπική ανάγνωση. Προηγούμενο CI44243250136 PASS, πλήρης κάλυψη OPEN και κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-online-table-views.md).
+
+18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007: `stock-transfers.read` και `invoice-ai.read`, native ιστορικό μεταφορών και αποθηκευμένες εργασίες βοηθού ανά κατάστημα χωρίς ενέργειες/παραγωγικές κλήσεις. Πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-transfer-ai-views.md).
