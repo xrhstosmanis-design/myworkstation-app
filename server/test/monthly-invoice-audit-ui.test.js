@@ -104,3 +104,39 @@ test('preview shows unknown coverage and unavailable recipients and refuses mism
 test('preview unmount aborts an outstanding GET and cannot publish its late result',async()=>mounted(async({setResponder,click,calls,unmount,act})=>{
  let release;setResponder(()=>new Promise(resolve=>{release=resolve}));await click('Προεπισκόπηση μηνιαίου email');const signal=calls[0].options.signal;await unmount();assert.equal(signal.aborted,true);await act(async()=>release(previewResponse()));assert.equal(document.getElementById('root').textContent,'');
 }));
+
+const financialSummary=patch=>({paid:0,financialPending:0,reviewRequired:0,notLinked:0,notApplicable:0,...patch});
+const paymentPatch=(payment,patch={})=>({paymentCoverage:{available:true,reason:null},financialSummary:financialSummary(),items:[{...row,payment}],...patch});
+
+test('paid draft is visibly settled while its independent purchase review stays in closed details',async()=>mounted(async({setResponder,submit,act,calls})=>{
+ const payment={status:'PAID',paidCents:1234,remainingCents:0,overpaymentCents:0,paymentCount:1};
+ setResponder(async()=>response('s','2026-10',paymentPatch(payment,{financialSummary:financialSummary({paid:1}),items:[{...row,categories:['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW'],payment}]})));await submit();
+ const invoice=document.querySelector('.ima-rows>li'),observation=invoice.querySelector('.ima-payment');
+ assert.equal(observation.querySelector('b').textContent,'Εξοφλημένο');assert.match(observation.textContent,/12,34/);assert.equal(invoice.querySelectorAll('.ima-payment-paid').length,1);
+ const details=invoice.querySelector('details.ima-workflow-review');assert.ok(details);assert.equal(details.open,false);assert.equal(details.querySelector('summary').textContent,'Έλεγχος καταχώρισης αγοράς');assert.match(details.textContent,/Δεν έχει καταχωριστεί/);assert.match(details.textContent,/Ανεβασμένο - προς έλεγχο/);await act(async()=>details.querySelector('summary').click());assert.equal(details.open,true);assert.equal(calls.length,1);assert.equal(calls[0].options.method,undefined);
+ const visibleTags=[...invoice.children].filter(element=>element.classList.contains('ima-tag')).map(element=>element.textContent);assert.deepEqual(visibleTags,['Πιθανό διπλό','Χρειάζεται ταυτοποίηση']);
+ assert.match(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]').textContent,/Εξοφλημένα1.*Οικονομικές εκκρεμότητες0/);assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Δεν έχουν καταχωριστεί120/);
+}));
+
+test('partial payment retains the real amount remaining and does not claim full settlement',async()=>mounted(async({setResponder,submit})=>{
+ setResponder(async()=>response('s','2026-10',paymentPatch({status:'PARTIALLY_PAID',paidCents:434,remainingCents:800,overpaymentCents:0,paymentCount:1},{financialSummary:financialSummary({financialPending:1}),allClear:true})));await submit();
+ const observation=document.querySelector('.ima-payment');assert.equal(observation.querySelector('b').textContent,'Μερική πληρωμή');assert.match(observation.textContent,/Καταγεγραμμένες πληρωμές: 4,34/);assert.match(observation.textContent,/Υπόλοιπο προς πληρωμή: 8,00/);assert.equal(document.querySelector('.ima-workflow-review'),null);assert.equal(document.querySelector('.ima-safe'),null);
+ assert.match(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]').textContent,/Οικονομικές εκκρεμότητες1/);
+}));
+
+test('missing ambiguous and unconfirmed payment observations remain unknown instead of a zero balance',async()=>mounted(async({setResponder,submit})=>{
+ for(const status of ['NOT_LINKED','REVIEW_REQUIRED','UNCONFIRMED']){
+  setResponder(async()=>response('s','2026-10',paymentPatch({status,paidCents:null,remainingCents:null,overpaymentCents:null,paymentCount:null},{financialSummary:financialSummary(status==='NOT_LINKED'?{notLinked:1}:{reviewRequired:1}),allClear:true})));await submit();
+  const observation=document.querySelector('.ima-payment');assert.match(observation.textContent,/Το οικονομικό υπόλοιπο δεν έχει επιβεβαιωθεί/);assert.doesNotMatch(observation.textContent,/0,00|Εξοφλημένο/);assert.equal(document.querySelector('.ima-safe'),null);
+ }
+}));
+
+test('unavailable payment coverage suppresses numeric financial totals and all-clear while preserving workflow',async()=>mounted(async({setResponder,submit})=>{
+ setResponder(async()=>response('s','2026-10',paymentPatch({status:'UNAVAILABLE',paidCents:null,remainingCents:null},{paymentCoverage:{available:false,reason:'PAYMENT_SOURCE_UNAVAILABLE'},allClear:true})));await submit();
+ assert.match(document.querySelector('.ima-financial').textContent,/οικονομικό υπόλοιπο είναι άγνωστο/);assert.equal(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]'),null);assert.ok(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]'));assert.equal(document.querySelector('.ima-safe'),null);
+}));
+
+test('credit notes have no payment badge and legacy responses preserve their existing display',async()=>mounted(async({setResponder,submit})=>{
+ setResponder(async()=>response('s','2026-10',paymentPatch({status:'NOT_APPLICABLE',paidCents:null,remainingCents:null},{items:[{...row,documentType:'CREDIT_NOTE',payment:{status:'NOT_APPLICABLE'}}],financialSummary:financialSummary({notApplicable:1})})));await submit();assert.equal(document.querySelector('.ima-payment'),null);assert.match(document.querySelector('.ima-rows').textContent,/Πιστωτικό/);
+ setResponder(async()=>response());await submit();assert.equal(document.querySelector('.ima-financial'),null);assert.equal(document.querySelector('.ima-payment'),null);assert.match(document.querySelector('.ima-rows').textContent,/Δεν έχει καταχωριστεί/);
+}));

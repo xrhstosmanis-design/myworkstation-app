@@ -26,6 +26,8 @@ const definitions={
  PurchaseOrderPosting:'"orderId" text PRIMARY KEY,"companyId" text,"purchaseDocumentId" text',
  InvoiceStockPosting:'"companyId" text,"storeId" text,"orderId" text,"sourceDocumentId" text,"postedDocumentId" text,"path" text',
  StoreTransaction:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"supplierName" text,"amount" numeric,"actorId" text,"actorName" text,"occurredAt" timestamptz,"invoiceDocumentNumber" text,"attachmentMimeType" text,"attachmentFilename" text,"attachmentChecksum" text,"attachmentData" text,"paymentMethod" text,"subtractFromShift" bool,"sessionId" text,"type" text,"reversedAt" timestamptz',
+ SupplierPaymentSettlement:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"transactionId" text,"supplierId" text,"status" text',
+ SupplierPaymentAllocation:'"id" text PRIMARY KEY,"companyId" text,"settlementId" text,"purchaseDocumentId" text,"amount" numeric',
  StoreOperatorAudit:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"eventType" text,"actorId" text,"details" jsonb',
  PosInvoiceBackgroundTask:'"jobId" text,"companyId" text,"storeId" text'
 };
@@ -149,6 +151,36 @@ test('native monthly invoice audit executes the registered reader with complete 
    // Missing resultJson also fails closed without referencing the absent column.
    await db.$executeRawUnsafe(`UPDATE "DocumentInbox" SET "receivedAt"='2026-10-28' WHERE "storeId"='control'`);
    const beforeCapabilityLoss=await report();await db.$executeRawUnsafe('ALTER TABLE "AiReaderJob" RENAME COLUMN "resultJson" TO "SavedResultJson"');try{const missing=await report();assert.equal(missing.coverage.complete,true);assert.notEqual(missing.fingerprint,beforeCapabilityLoss.fingerprint);assert.ok((await snapshot()).freezeEligibility.reasons.includes('INVOICE_ISSUE_DATE_UNKNOWN'))}finally{await db.$executeRawUnsafe('ALTER TABLE "AiReaderJob" RENAME COLUMN "SavedResultJson" TO "resultJson"')}
+  });
+
+  await t.test('native financial observation keeps paid draft separate, counts installments once, rejects foreign payment and invalidates cursor',async()=>{
+   const input={storeId:'control',month:'2026-10'},report=()=>read(input),row=r=>r.items.find(x=>x.id==='doc:financial-source');
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES('financial-source','c','control','sup','INVOICE','PP 1','2026-10-01',12.34,'DRAFT','MYDATA','financial-order','financial-payment','2026-10-01')`);
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrder" VALUES('financial-order','c','control','sup','FINAL','PP 1','financial-source','2026-10-01')`);
+   await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","amount","invoiceDocumentNumber","type","subtractFromShift") VALUES('financial-payment','c','control','sup',12.34,'PP 1','SUPPLIER_PAYMENT',false)`);
+   let before=await digest(),r=await report();assert.equal(row(r).payment.status,'PAID');assert.equal(row(r).status,'UNPOSTED');assert.ok(row(r).categories.includes('UNPOSTED_DOCUMENT'));assert.equal(row(r).payment.paymentCount,1);assert.equal(await digest(),before);
+   await db.$executeRawUnsafe(`UPDATE "StoreTransaction" SET "storeId"='s' WHERE "id"='financial-payment'`);
+   before=await digest();r=await report();assert.notEqual(row(r).payment.status,'PAID');assert.equal(row(r).payment.remainingCents,null);assert.equal(await digest(),before);
+   await db.$executeRawUnsafe(`UPDATE "StoreTransaction" SET "storeId"='control',"amount"=6 WHERE "id"='financial-payment'`);
+   before=await digest();r=await report();assert.equal(row(r).payment.status,'PARTIALLY_PAID');assert.equal(row(r).payment.remainingCents,634);assert.equal(await digest(),before);
+   await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","amount","invoiceDocumentNumber","type","attachmentMimeType","attachmentFilename","subtractFromShift") VALUES('financial-installment','c','control','sup',6.34,'PP 1','SUPPLIER_PAYMENT','application/vnd.myworkstation.purchase-document','financial-source',false)`);
+   before=await digest();r=await report();assert.equal(row(r).payment.status,'PAID');assert.equal(row(r).payment.paidCents,1234);assert.equal(row(r).payment.paymentCount,2);assert.equal(await digest(),before);
+   await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentSettlement" VALUES('financial-settlement','c','control','financial-payment','sup','PENDING')`);
+   before=await digest();r=await report();assert.equal(row(r).payment.status,'UNCONFIRMED');assert.equal(row(r).payment.remainingCents,null);assert.equal(await digest(),before);
+   await db.$executeRawUnsafe(`UPDATE "SupplierPaymentSettlement" SET "status"='CONFIRMED'`);
+   await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentAllocation" VALUES('financial-allocation','c','financial-settlement','financial-source',6)`);
+   const first=await report();assert.ok(first.nextPage);
+   await db.$executeRawUnsafe(`UPDATE "StoreTransaction" SET "reversedAt"=NOW() WHERE "id"='financial-payment'`);
+   before=await digest();r=await report();assert.equal(row(r).payment.status,'PARTIALLY_PAID');assert.equal(row(r).payment.remainingCents,600);await assert.rejects(read({...input,page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');assert.equal(await digest(),before);
+  });
+
+  await t.test('native allocation-only payment uses assigned amount instead of whole transaction',async()=>{
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES('financial-allocated','c','control','sup','INVOICE','ALLOC 1','2026-10-01',5,'APPROVED','MANUAL',NULL,NULL,'2026-10-01')`);
+   await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","amount","type","subtractFromShift") VALUES('allocation-only-payment','c','control','sup',10,'SUPPLIER_PAYMENT',false)`);
+   await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentSettlement" VALUES('allocation-only-settlement','c','control','allocation-only-payment','sup','CONFIRMED')`);
+   await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentAllocation" VALUES('allocation-only','c','allocation-only-settlement','financial-allocated',5)`);
+   const before=await digest(),r=await read({storeId:'control',month:'2026-10'}),row=r.items.find(x=>x.id==='doc:financial-allocated');
+   assert.equal(r.paymentCoverage.allocationsAvailable,true);assert.equal(row.payment.status,'PAID');assert.equal(row.payment.paidCents,500);assert.equal(row.payment.overpaymentCents,0);assert.equal(row.payment.paymentCount,1);assert.equal(await digest(),before);
   });
 
   await t.test('actual SQL count above safe source cap suppresses findings rather than exposing partial exact totals',async()=>{

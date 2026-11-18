@@ -1,0 +1,2095 @@
+{
+  "format": "MWS_REPORT_OPERATIONAL_COMPATIBILITY_V1",
+  "policy": "PRESERVED_NONOWNING_REPORT_INSTALLATION_ONLY",
+  "ddl": [
+    "CREATE TABLE IF NOT EXISTS \"InventoryWarehouseEditAudit\" (\n  \"id\" TEXT PRIMARY KEY,\n  \"storeId\" TEXT NOT NULL,\n  \"productId\" TEXT NOT NULL,\n  \"stocktakeId\" TEXT NOT NULL,\n  \"grantId\" TEXT NOT NULL,\n  \"before\" JSONB NOT NULL,\n  \"after\" JSONB NOT NULL,\n  \"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW()\n)",
+    "CREATE TABLE IF NOT EXISTS \"InvoiceQrSupplierLearning\" (\n      \"companyId\" TEXT NOT NULL,\n      \"supplierVat\" TEXT NOT NULL,\n      \"providerFormat\" TEXT NOT NULL,\n      \"supplierName\" TEXT,\n      \"verifiedCount\" INTEGER NOT NULL DEFAULT 0,\n      \"firstVerifiedAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n      \"lastVerifiedAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n      PRIMARY KEY (\"companyId\",\"supplierVat\",\"providerFormat\")\n    )",
+    "CREATE TABLE IF NOT EXISTS \"InvoiceStockExclusionEmail\" (\n        \"companyId\" TEXT NOT NULL, \"storeId\" TEXT NOT NULL, \"orderId\" TEXT NOT NULL,\n        \"reopenVersion\" INTEGER NOT NULL, \"payload\" JSONB NOT NULL,\n        \"attempts\" INTEGER NOT NULL DEFAULT 0, \"nextAttemptAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n        \"sentAt\" TIMESTAMPTZ, PRIMARY KEY (\"companyId\",\"storeId\",\"orderId\",\"reopenVersion\")\n      )",
+    "ALTER TABLE \"InvoiceStockExclusionEmail\" ADD COLUMN IF NOT EXISTS \"messageId\" TEXT, ADD COLUMN IF NOT EXISTS \"lastFailure\" TEXT",
+    "CREATE TABLE IF NOT EXISTS \"PosInternalTransfer\" (\n    \"id\" TEXT PRIMARY KEY,\n    \"companyId\" TEXT NOT NULL,\n    \"sourceStoreId\" TEXT NOT NULL,\n    \"destinationStoreId\" TEXT,\n    \"externalDestinationName\" TEXT,\n    \"createdByUserId\" TEXT NOT NULL,\n    \"idempotencyKey\" TEXT NOT NULL,\n    \"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    CHECK (num_nonnulls(\"destinationStoreId\", \"externalDestinationName\") = 1),\n    CHECK (\"sourceStoreId\" <> \"destinationStoreId\"),\n    CHECK (length(btrim(\"externalDestinationName\")) > 0),\n    UNIQUE (\"companyId\", \"sourceStoreId\", \"idempotencyKey\")\n)",
+    "CREATE TABLE IF NOT EXISTS \"PosInternalTransferLine\" (\n    \"transferId\" TEXT NOT NULL REFERENCES \"PosInternalTransfer\" (\"id\"),\n    \"productId\" TEXT NOT NULL,\n    \"quantity\" NUMERIC(14,4) NOT NULL CHECK (\"quantity\" > 0),\n    \"unitCost\" NUMERIC(14,6) NOT NULL CHECK (\"unitCost\" >= 0),\n    \"vatRate\" NUMERIC(7,4) NOT NULL CHECK (\"vatRate\" BETWEEN 0 AND 100),\n    PRIMARY KEY (\"transferId\", \"productId\")\n)",
+    "CREATE TABLE IF NOT EXISTS \"PosInternalTransferSettlement\" (\n    \"transferId\" TEXT PRIMARY KEY REFERENCES \"PosInternalTransfer\" (\"id\"),\n    \"method\" TEXT NOT NULL CHECK (\"method\" IN ('CASH', 'BANK_TRANSFER')),\n    \"amount\" NUMERIC(14,2) NOT NULL CHECK (\"amount\" >= 0),\n    \"bankReference\" TEXT,\n    \"cashReceiptTransactionId\" TEXT UNIQUE,\n    \"recordedByUserId\" TEXT NOT NULL,\n    \"recordedAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    CHECK ((\"method\" = 'BANK_TRANSFER') = (\"bankReference\" IS NOT NULL)),\n    CHECK (length(btrim(\"bankReference\")) > 0)\n)",
+    "CREATE INDEX IF NOT EXISTS \"PosInternalTransfer_destination_idx\"\n    ON \"PosInternalTransfer\" (\"companyId\", \"destinationStoreId\", \"createdAt\")",
+    "CREATE TABLE IF NOT EXISTS \"StoreStockPackage\" (\"companyId\" TEXT NOT NULL,\"storeId\" TEXT NOT NULL,\"productId\" TEXT NOT NULL,\"baseProductId\" TEXT NOT NULL,\"unitsPerPackage\" INTEGER NOT NULL CHECK(\"unitsPerPackage\">1),\"updatedBy\" TEXT NOT NULL,\"updatedAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(\"storeId\",\"productId\"),CHECK(\"productId\"<>\"baseProductId\"))",
+    "CREATE TABLE IF NOT EXISTS \"PosPackageStockPosting\" (\"id\" TEXT PRIMARY KEY,\"companyId\" TEXT NOT NULL,\"storeId\" TEXT NOT NULL,\"saleId\" TEXT NOT NULL,\"lineId\" TEXT NOT NULL,\"productId\" TEXT NOT NULL,\"baseProductId\" TEXT NOT NULL,\"unitsPerPackage\" INTEGER NOT NULL,\"quantity\" NUMERIC(14,4) NOT NULL,\"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(\"storeId\",\"lineId\"))",
+    "CREATE OR REPLACE FUNCTION \"mws_guard_package_stock\"() RETURNS trigger AS $$ BEGIN\n   IF EXISTS(SELECT 1 FROM \"StoreStockPackage\" x WHERE x.\"storeId\"=NEW.\"storeId\" AND x.\"productId\"=NEW.\"productId\") THEN\n     IF (TG_OP='INSERT' AND COALESCE(NEW.\"currentStock\",0)<>0) OR (TG_OP='UPDATE' AND COALESCE(NEW.\"currentStock\",0)<>COALESCE(OLD.\"currentStock\",0)) THEN\n       RAISE EXCEPTION 'Το απόθεμα συσκευασίας τηρείται στο βασικό είδος. Καταχώρησε τα τεμάχια στο βασικό είδος.' USING ERRCODE='23514';\n     END IF;\n   END IF; RETURN NEW; END $$ LANGUAGE plpgsql",
+    "DO $guard$ BEGIN\n   PERFORM pg_advisory_xact_lock(hashtext('mws_guard_package_stock_change'));\n   IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='mws_guard_package_stock_change' AND tgrelid='\"StoreProduct\"'::regclass) THEN\n     CREATE TRIGGER \"mws_guard_package_stock_change\" BEFORE INSERT OR UPDATE OF \"currentStock\" ON \"StoreProduct\" FOR EACH ROW EXECUTE FUNCTION \"mws_guard_package_stock\"();\n   END IF;\n END $guard$",
+    "CREATE TABLE IF NOT EXISTS \"PosScannedCashReturn\"(\"id\" TEXT PRIMARY KEY,\"companyId\" TEXT NOT NULL,\"storeId\" TEXT NOT NULL,\"terminalPos\" TEXT NOT NULL,\"actorId\" TEXT NOT NULL,\"requestHash\" TEXT NOT NULL,\"resultJson\" JSONB NOT NULL,\"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW())"
+  ],
+  "tables": [
+    {
+      "name": "InventoryWarehouseEditAudit",
+      "columns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "stocktakeId",
+          "text",
+          true
+        ],
+        [
+          "grantId",
+          "text",
+          true
+        ],
+        [
+          "before",
+          "jsonb",
+          true
+        ],
+        [
+          "after",
+          "jsonb",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "InvoiceQrSupplierLearning",
+      "columns": [
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "supplierVat",
+          "text",
+          true
+        ],
+        [
+          "providerFormat",
+          "text",
+          true
+        ],
+        [
+          "supplierName",
+          "text",
+          false
+        ],
+        [
+          "verifiedCount",
+          "integer",
+          true
+        ],
+        [
+          "firstVerifiedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "lastVerifiedAt",
+          "timestamp with time zone",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "InvoiceStockExclusionEmail",
+      "columns": [
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "orderId",
+          "text",
+          true
+        ],
+        [
+          "reopenVersion",
+          "integer",
+          true
+        ],
+        [
+          "payload",
+          "jsonb",
+          true
+        ],
+        [
+          "attempts",
+          "integer",
+          true
+        ],
+        [
+          "nextAttemptAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "sentAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "messageId",
+          "text",
+          false
+        ],
+        [
+          "lastFailure",
+          "text",
+          false
+        ]
+      ]
+    },
+    {
+      "name": "PosInternalTransfer",
+      "columns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "sourceStoreId",
+          "text",
+          true
+        ],
+        [
+          "destinationStoreId",
+          "text",
+          false
+        ],
+        [
+          "externalDestinationName",
+          "text",
+          false
+        ],
+        [
+          "createdByUserId",
+          "text",
+          true
+        ],
+        [
+          "idempotencyKey",
+          "text",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "PosInternalTransferLine",
+      "columns": [
+        [
+          "transferId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "quantity",
+          "numeric(14,4)",
+          true
+        ],
+        [
+          "unitCost",
+          "numeric(14,6)",
+          true
+        ],
+        [
+          "vatRate",
+          "numeric(7,4)",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "PosInternalTransferSettlement",
+      "columns": [
+        [
+          "transferId",
+          "text",
+          true
+        ],
+        [
+          "method",
+          "text",
+          true
+        ],
+        [
+          "amount",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "bankReference",
+          "text",
+          false
+        ],
+        [
+          "cashReceiptTransactionId",
+          "text",
+          false
+        ],
+        [
+          "recordedByUserId",
+          "text",
+          true
+        ],
+        [
+          "recordedAt",
+          "timestamp with time zone",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "PosPackageStockPosting",
+      "columns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "saleId",
+          "text",
+          true
+        ],
+        [
+          "lineId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "baseProductId",
+          "text",
+          true
+        ],
+        [
+          "unitsPerPackage",
+          "integer",
+          true
+        ],
+        [
+          "quantity",
+          "numeric(14,4)",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "PosScannedCashReturn",
+      "columns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "terminalPos",
+          "text",
+          true
+        ],
+        [
+          "actorId",
+          "text",
+          true
+        ],
+        [
+          "requestHash",
+          "text",
+          true
+        ],
+        [
+          "resultJson",
+          "jsonb",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "StoreStockPackage",
+      "columns": [
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "baseProductId",
+          "text",
+          true
+        ],
+        [
+          "unitsPerPackage",
+          "integer",
+          true
+        ],
+        [
+          "updatedBy",
+          "text",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ]
+      ]
+    }
+  ],
+  "packageTrigger": {
+    "name": "mws_guard_package_stock_change",
+    "enabled": "O",
+    "mask": 23,
+    "condition": null,
+    "attributeNames": [
+      "currentStock"
+    ],
+    "functionSchema": "public",
+    "functionName": "mws_guard_package_stock",
+    "language": "plpgsql",
+    "definer": false,
+    "bodySha256": "0c8c1e913cc9114bbfaa358bd1af6b54e6f696c456ee50021e442c748a050539"
+  },
+  "catalogue": {
+    "relations": [
+      {
+        "name": "InventoryWarehouseEditAudit",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "InvoiceQrSupplierLearning",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "InvoiceStockExclusionEmail",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "PosInternalTransfer",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "PosInternalTransferLine",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "PosInternalTransferSettlement",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "PosPackageStockPosting",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "PosScannedCashReturn",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "StoreStockPackage",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      }
+    ],
+    "columns": [
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "id",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "storeId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "productId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "stocktakeId",
+        "position": 4,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "grantId",
+        "position": 5,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "before",
+        "position": 6,
+        "type": "jsonb",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "after",
+        "position": 7,
+        "type": "jsonb",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "createdAt",
+        "position": 8,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "companyId",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "supplierVat",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "providerFormat",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "supplierName",
+        "position": 4,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "verifiedCount",
+        "position": 5,
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "0",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "firstVerifiedAt",
+        "position": 6,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "lastVerifiedAt",
+        "position": 7,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "companyId",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "storeId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "orderId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "reopenVersion",
+        "position": 4,
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "payload",
+        "position": 5,
+        "type": "jsonb",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "attempts",
+        "position": 6,
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "0",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "nextAttemptAt",
+        "position": 7,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "sentAt",
+        "position": 8,
+        "type": "timestamp with time zone",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "messageId",
+        "position": 9,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "lastFailure",
+        "position": 10,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "id",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "companyId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "sourceStoreId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "destinationStoreId",
+        "position": 4,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "externalDestinationName",
+        "position": 5,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "createdByUserId",
+        "position": 6,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "idempotencyKey",
+        "position": 7,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "createdAt",
+        "position": 8,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosInternalTransferLine",
+        "name": "transferId",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransferLine",
+        "name": "productId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransferLine",
+        "name": "quantity",
+        "position": 3,
+        "type": "numeric(14,4)",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosInternalTransferLine",
+        "name": "unitCost",
+        "position": 4,
+        "type": "numeric(14,6)",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosInternalTransferLine",
+        "name": "vatRate",
+        "position": 5,
+        "type": "numeric(7,4)",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "transferId",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "method",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "amount",
+        "position": 3,
+        "type": "numeric(14,2)",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "bankReference",
+        "position": 4,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "cashReceiptTransactionId",
+        "position": 5,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "recordedByUserId",
+        "position": 6,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "recordedAt",
+        "position": 7,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "id",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "companyId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "storeId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "saleId",
+        "position": 4,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "lineId",
+        "position": 5,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "productId",
+        "position": 6,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "baseProductId",
+        "position": 7,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "unitsPerPackage",
+        "position": 8,
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "quantity",
+        "position": 9,
+        "type": "numeric(14,4)",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "createdAt",
+        "position": 10,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "id",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "companyId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "storeId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "terminalPos",
+        "position": 4,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "actorId",
+        "position": 5,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "requestHash",
+        "position": 6,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "resultJson",
+        "position": 7,
+        "type": "jsonb",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "createdAt",
+        "position": 8,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "companyId",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "storeId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "productId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "baseProductId",
+        "position": 4,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "unitsPerPackage",
+        "position": 5,
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "updatedBy",
+        "position": 6,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "updatedAt",
+        "position": 7,
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      }
+    ],
+    "constraints": [
+      {
+        "schema": "__SCHEMA__",
+        "table": "InventoryWarehouseEditAudit",
+        "name": "InventoryWarehouseEditAudit_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "InvoiceQrSupplierLearning",
+        "name": "InvoiceQrSupplierLearning_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (\"companyId\", \"supplierVat\", \"providerFormat\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "InvoiceStockExclusionEmail",
+        "name": "InvoiceStockExclusionEmail_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (\"companyId\", \"storeId\", \"orderId\", \"reopenVersion\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (num_nonnulls(\"destinationStoreId\", \"externalDestinationName\") = 1)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_check1",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (\"sourceStoreId\" <> \"destinationStoreId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_companyId_sourceStoreId_idempotencyKey_key",
+        "kind": "u",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "UNIQUE (\"companyId\", \"sourceStoreId\", \"idempotencyKey\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_externalDestinationName_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (length(btrim(\"externalDestinationName\")) > 0)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferLine",
+        "name": "PosInternalTransferLine_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (\"transferId\", \"productId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferLine",
+        "name": "PosInternalTransferLine_quantity_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (quantity > 0::numeric)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferLine",
+        "name": "PosInternalTransferLine_transferId_fkey",
+        "kind": "f",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": "__SCHEMA__",
+        "parentTable": "PosInternalTransfer",
+        "onDelete": "a",
+        "onUpdate": "a",
+        "definition": "FOREIGN KEY (\"transferId\") REFERENCES \"PosInternalTransfer\"(id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferLine",
+        "name": "PosInternalTransferLine_unitCost_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (\"unitCost\" >= 0::numeric)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferLine",
+        "name": "PosInternalTransferLine_vatRate_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (\"vatRate\" >= 0::numeric AND \"vatRate\" <= 100::numeric)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_amount_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (amount >= 0::numeric)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_bankReference_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (length(btrim(\"bankReference\")) > 0)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_cashReceiptTransactionId_key",
+        "kind": "u",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "UNIQUE (\"cashReceiptTransactionId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK ((method = 'BANK_TRANSFER'::text) = (\"bankReference\" IS NOT NULL))"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_method_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (method = ANY (ARRAY['CASH'::text, 'BANK_TRANSFER'::text]))"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (\"transferId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_transferId_fkey",
+        "kind": "f",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": "__SCHEMA__",
+        "parentTable": "PosInternalTransfer",
+        "onDelete": "a",
+        "onUpdate": "a",
+        "definition": "FOREIGN KEY (\"transferId\") REFERENCES \"PosInternalTransfer\"(id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosPackageStockPosting",
+        "name": "PosPackageStockPosting_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosPackageStockPosting",
+        "name": "PosPackageStockPosting_storeId_lineId_key",
+        "kind": "u",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "UNIQUE (\"storeId\", \"lineId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "PosScannedCashReturn",
+        "name": "PosScannedCashReturn_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreStockPackage",
+        "name": "StoreStockPackage_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (\"productId\" <> \"baseProductId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreStockPackage",
+        "name": "StoreStockPackage_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (\"storeId\", \"productId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreStockPackage",
+        "name": "StoreStockPackage_unitsPerPackage_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (\"unitsPerPackage\" > 1)"
+      }
+    ],
+    "indexes": [
+      {
+        "table": "InventoryWarehouseEditAudit",
+        "name": "InventoryWarehouseEditAudit_pkey",
+        "definition": "CREATE UNIQUE INDEX \"InventoryWarehouseEditAudit_pkey\" ON __SCHEMA__.\"InventoryWarehouseEditAudit\" USING btree (id)",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "InvoiceQrSupplierLearning",
+        "name": "InvoiceQrSupplierLearning_pkey",
+        "definition": "CREATE UNIQUE INDEX \"InvoiceQrSupplierLearning_pkey\" ON __SCHEMA__.\"InvoiceQrSupplierLearning\" USING btree (\"companyId\", \"supplierVat\", \"providerFormat\")",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "InvoiceStockExclusionEmail",
+        "name": "InvoiceStockExclusionEmail_pkey",
+        "definition": "CREATE UNIQUE INDEX \"InvoiceStockExclusionEmail_pkey\" ON __SCHEMA__.\"InvoiceStockExclusionEmail\" USING btree (\"companyId\", \"storeId\", \"orderId\", \"reopenVersion\")",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_companyId_sourceStoreId_idempotencyKey_key",
+        "definition": "CREATE UNIQUE INDEX \"PosInternalTransfer_companyId_sourceStoreId_idempotencyKey_key\" ON __SCHEMA__.\"PosInternalTransfer\" USING btree (\"companyId\", \"sourceStoreId\", \"idempotencyKey\")",
+        "primary": false,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_destination_idx",
+        "definition": "CREATE INDEX \"PosInternalTransfer_destination_idx\" ON __SCHEMA__.\"PosInternalTransfer\" USING btree (\"companyId\", \"destinationStoreId\", \"createdAt\")",
+        "primary": false,
+        "unique": false,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosInternalTransfer",
+        "name": "PosInternalTransfer_pkey",
+        "definition": "CREATE UNIQUE INDEX \"PosInternalTransfer_pkey\" ON __SCHEMA__.\"PosInternalTransfer\" USING btree (id)",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosInternalTransferLine",
+        "name": "PosInternalTransferLine_pkey",
+        "definition": "CREATE UNIQUE INDEX \"PosInternalTransferLine_pkey\" ON __SCHEMA__.\"PosInternalTransferLine\" USING btree (\"transferId\", \"productId\")",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_cashReceiptTransactionId_key",
+        "definition": "CREATE UNIQUE INDEX \"PosInternalTransferSettlement_cashReceiptTransactionId_key\" ON __SCHEMA__.\"PosInternalTransferSettlement\" USING btree (\"cashReceiptTransactionId\")",
+        "primary": false,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosInternalTransferSettlement",
+        "name": "PosInternalTransferSettlement_pkey",
+        "definition": "CREATE UNIQUE INDEX \"PosInternalTransferSettlement_pkey\" ON __SCHEMA__.\"PosInternalTransferSettlement\" USING btree (\"transferId\")",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "PosPackageStockPosting_pkey",
+        "definition": "CREATE UNIQUE INDEX \"PosPackageStockPosting_pkey\" ON __SCHEMA__.\"PosPackageStockPosting\" USING btree (id)",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosPackageStockPosting",
+        "name": "PosPackageStockPosting_storeId_lineId_key",
+        "definition": "CREATE UNIQUE INDEX \"PosPackageStockPosting_storeId_lineId_key\" ON __SCHEMA__.\"PosPackageStockPosting\" USING btree (\"storeId\", \"lineId\")",
+        "primary": false,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "PosScannedCashReturn",
+        "name": "PosScannedCashReturn_pkey",
+        "definition": "CREATE UNIQUE INDEX \"PosScannedCashReturn_pkey\" ON __SCHEMA__.\"PosScannedCashReturn\" USING btree (id)",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "StoreStockPackage",
+        "name": "StoreStockPackage_pkey",
+        "definition": "CREATE UNIQUE INDEX \"StoreStockPackage_pkey\" ON __SCHEMA__.\"StoreStockPackage\" USING btree (\"storeId\", \"productId\")",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      }
+    ],
+    "triggers": [
+      {
+        "table": "StoreProduct",
+        "name": "mws_guard_package_stock_change",
+        "enabled": "O",
+        "mask": 23,
+        "condition": null,
+        "attributeNames": [
+          "currentStock"
+        ],
+        "args": "",
+        "argumentCount": 0,
+        "constraintTrigger": false,
+        "deferrable": false,
+        "deferred": false,
+        "oldTransitionTable": null,
+        "newTransitionTable": null,
+        "functionSchema": "__SCHEMA__",
+        "functionName": "mws_guard_package_stock",
+        "body": " BEGIN\n   IF EXISTS(SELECT 1 FROM \"StoreStockPackage\" x WHERE x.\"storeId\"=NEW.\"storeId\" AND x.\"productId\"=NEW.\"productId\") THEN\n     IF (TG_OP='INSERT' AND COALESCE(NEW.\"currentStock\",0)<>0) OR (TG_OP='UPDATE' AND COALESCE(NEW.\"currentStock\",0)<>COALESCE(OLD.\"currentStock\",0)) THEN\n       RAISE EXCEPTION 'Το απόθεμα συσκευασίας τηρείται στο βασικό είδος. Καταχώρησε τα τεμάχια στο βασικό είδος.' USING ERRCODE='23514';\n     END IF;\n   END IF; RETURN NEW; END ",
+        "definer": false,
+        "language": "plpgsql",
+        "ownedByCurrentUser": true,
+        "functionKind": "f",
+        "returnsSet": false,
+        "returnType": "trigger",
+        "functionArgumentCount": 0,
+        "functionArgumentTypes": "",
+        "settings": null,
+        "acl": null,
+        "binary": null,
+        "strict": false,
+        "leakproof": false,
+        "volatility": "v",
+        "parallel": "u",
+        "cost": "100",
+        "rows": "0",
+        "support": "-"
+      }
+    ]
+  },
+  "reviewedColumns": [
+    "InventoryWarehouseEditAudit.productId",
+    "InventoryWarehouseEditAudit.stocktakeId",
+    "InventoryWarehouseEditAudit.grantId",
+    "InventoryWarehouseEditAudit.before",
+    "InventoryWarehouseEditAudit.after",
+    "InvoiceStockExclusionEmail.orderId",
+    "InvoiceStockExclusionEmail.payload",
+    "InvoiceStockExclusionEmail.messageId",
+    "PosInternalTransfer.sourceStoreId",
+    "PosInternalTransfer.destinationStoreId",
+    "PosInternalTransfer.createdByUserId",
+    "PosInternalTransferLine.transferId",
+    "PosInternalTransferLine.productId",
+    "PosInternalTransferSettlement.transferId",
+    "PosInternalTransferSettlement.cashReceiptTransactionId",
+    "PosInternalTransferSettlement.recordedByUserId",
+    "PosPackageStockPosting.saleId",
+    "PosPackageStockPosting.lineId",
+    "PosPackageStockPosting.productId",
+    "PosPackageStockPosting.baseProductId",
+    "PosScannedCashReturn.actorId",
+    "PosScannedCashReturn.resultJson",
+    "StoreStockPackage.productId",
+    "StoreStockPackage.baseProductId",
+    "StoreStockPackage.updatedBy"
+  ],
+  "reviewSemantics": {
+    "InventoryWarehouseEditAudit": "Store-scoped audit retains product, stocktake and access-grant identity plus before/after values. No rewriting or scoped export under this profile.",
+    "InvoiceStockExclusionEmail": "Store-scoped outbox retains order identity, original payload and external SMTP message identifier. No queue reset, replay or writer changes.",
+    "PosInternalTransfer": "Shared source/destination store and actor identities remain intact. This profile assigns no store ownership and disables scoped lifecycle execution.",
+    "PosInternalTransferLine": "Transfer child identity and company product identity remain intact with the original physical FK.",
+    "PosInternalTransferSettlement": "Transfer, receiving cash transaction and recording actor references remain intact with the original financial record.",
+    "PosPackageStockPosting": "Store-scoped historical sale, sale-line, package and base-product references remain intact.",
+    "PosScannedCashReturn": "Actor and immutable idempotency response preserve sale/session references inside resultJson. No replay or scoped removal.",
+    "StoreStockPackage": "Package configuration retains product/base-product and updating actor identities. Existing stock guard remains enforced."
+  }
+}

@@ -240,3 +240,85 @@ test('native event installation preserves CAPTURE generation and atomically roll
   assert.equal((await service.inspect(actor,scope)).packet.installed,true);
  }finally{await f.close();}
 });
+
+// Operational additions are created from the production SQL, including the
+// existing package trigger, before installing the reports-only extension.
+test('native reports-only installation preserves operational tables, package protection and atomic enrollment',{
+ skip:!isolated()&&!process.env.CI?'Actual isolated PostgreSQL unavailable locally':false,timeout:300000
+},async t=>{
+ const {createAutomaticReportEventInstallation:createEvents}=await import('../src/services/automatic-report-event-installation.js');
+ const {packageStatements}=await import('../src/lib/pos-stock-packages.js');
+ const {scannedReturnStatements}=await import('../src/lib/pos-scanned-cash-return.js');
+ const f=await fixture(true);
+ const names=['InventoryWarehouseEditAudit','InvoiceQrSupplierLearning','InvoiceStockExclusionEmail','PosInternalTransfer','PosInternalTransferLine','PosInternalTransferSettlement','PosPackageStockPosting','PosScannedCashReturn','StoreStockPackage'];
+ try{
+  await f.service.install(actor,await request(f));
+  await f.db.$executeRawUnsafe(`INSERT INTO "User"("id","email","passwordHash","fullName","companyId","role","updatedAt") VALUES ('synthetic-admin','synthetic@example.invalid','SYNTHETIC','SYNTHETIC','fixture-company','SUPER_ADMIN',NOW())`);
+  const sources=['commercial-bootstrap.js','lib/invoice-qr-supplier-learning.js','routes/purchase-order-posting-guard.js'];
+  for(const file of sources){
+   const source=readFileSync(new URL('../src/'+file,import.meta.url),'utf8');
+   for(const match of source.matchAll(/`(CREATE TABLE IF NOT EXISTS "([^"]+)"[\s\S]*?)`/g)){
+    if(names.includes(match[2]))await f.db.$executeRawUnsafe(match[1]);
+   }
+   for(const match of source.matchAll(/`(CREATE INDEX IF NOT EXISTS "PosInternalTransfer_destination_idx"[\s\S]*?)`/g))await f.db.$executeRawUnsafe(match[1]);
+  }
+  await f.db.$executeRawUnsafe('ALTER TABLE "InvoiceStockExclusionEmail" ADD COLUMN "messageId" TEXT,ADD COLUMN "lastFailure" TEXT');
+  for(const sql of [...packageStatements,...scannedReturnStatements])await f.db.$executeRawUnsafe(sql);
+  const supplierSql=readFileSync(new URL('../scripts/sql/automatic-report-supplier-comparison.sql',import.meta.url),'utf8');
+  for(const sql of supplierSql.split(';').map(value=>value.trim()).filter(value=>value&&value!=='BEGIN'&&value!=='COMMIT'))await f.db.$executeRawUnsafe(sql);
+  const seed=[
+   `INSERT INTO "InventoryWarehouseEditAudit" VALUES ('audit','target','shared-product','historical-stocktake','historical-grant','{}','{}',NOW())`,
+   `INSERT INTO "InvoiceQrSupplierLearning"("companyId","supplierVat","providerFormat","supplierName") VALUES ('fixture-company','123456789','epsilon','SYNTHETIC')`,
+   `INSERT INTO "InvoiceStockExclusionEmail"("companyId","storeId","orderId","reopenVersion","payload") VALUES ('fixture-company','target','historical-order',0,'{}')`,
+   `INSERT INTO "PosInternalTransfer"("id","companyId","sourceStoreId","destinationStoreId","createdByUserId","idempotencyKey") VALUES ('transfer','fixture-company','target','sibling','synthetic-admin','transfer-key')`,
+   `INSERT INTO "PosInternalTransferLine" VALUES ('transfer','shared-product',1,1,24)`,
+   `INSERT INTO "PosInternalTransferSettlement"("transferId","method","amount","bankReference","recordedByUserId") VALUES ('transfer','BANK_TRANSFER',1,'SYNTHETIC','synthetic-admin')`,
+   `INSERT INTO "PosPackageStockPosting"("id","companyId","storeId","saleId","lineId","productId","baseProductId","unitsPerPackage","quantity") VALUES ('package-post','fixture-company','target','historical-sale','historical-line','package-product','shared-product',2,-1)`,
+   `INSERT INTO "PosScannedCashReturn"("id","companyId","storeId","terminalPos","actorId","requestHash","resultJson") VALUES ('return','fixture-company','target','MAIN','synthetic-admin','synthetic-hash','{}')`,
+   `INSERT INTO "StoreStockPackage"("companyId","storeId","productId","baseProductId","unitsPerPackage","updatedBy") VALUES ('fixture-company','target','package-product','shared-product',2,'synthetic-admin')`
+  ];
+  for(const sql of seed)await f.db.$executeRawUnsafe(sql);
+  const readOperational=()=>f.db.$queryRawUnsafe(names.map(name=>`SELECT ${literal(name)} AS table_name,row_to_json(t)::text AS row FROM ${q(name)} t`).join(' UNION ALL ')+' ORDER BY table_name,row');
+  const before=await readOperational();assert.equal(before.length,9);
+  const service=createEvents(f.db,{sourceRevision:revision,enabled:true,profile:'CAPTURE_REPORTS_ONLY'});
+  const fenceBefore=await f.db.$queryRawUnsafe('SELECT * FROM "StoreLifecycleFence" ORDER BY "storeId"');
+  const input={...scope,packet:(await service.inspect(actor,scope)).packet,explicitAuthorization:true};
+  await t.test('operational schema drift refuses inspection and stale installation without mutation',async()=>{
+   await f.db.$executeRawUnsafe('ALTER TABLE "InvoiceQrSupplierLearning" ADD COLUMN "unreviewed" text');
+   const drift=await state(f);await assert.rejects(service.inspect(actor,scope));await assert.rejects(service.install(actor,input));assert.deepEqual(await state(f),drift);
+   await f.db.$executeRawUnsafe('ALTER TABLE "InvoiceQrSupplierLearning" DROP COLUMN "unreviewed"');
+  });
+  const fresh={...scope,packet:(await service.inspect(actor,scope)).packet,explicitAuthorization:true};
+  await t.test('late failure rolls back event schema, enrollment and guards together',async()=>{
+   const original=await state(f);
+   const late=createEvents({$transaction:(fn,options)=>f.db.$transaction(async tx=>{const result=await fn(tx);assert.equal(result.installed,true);throw Error('REPORT_ONLY_LATE_ROLLBACK')},options)},{sourceRevision:revision,enabled:true,profile:'CAPTURE_REPORTS_ONLY'});
+   await assert.rejects(late.install(actor,fresh),/REPORT_ONLY_LATE_ROLLBACK/);assert.deepEqual(await state(f),original);
+  });
+  await service.install(actor,fresh);
+  assert.deepEqual(await readOperational(),before);
+  const fenceAfter=await f.db.$queryRawUnsafe('SELECT * FROM "StoreLifecycleFence" ORDER BY "storeId"');
+  assert.deepEqual(fenceAfter.map(({planHash,...row})=>row),fenceBefore.map(({planHash,...row})=>row));
+  assert(fenceAfter.every(row=>row.planHash===service.describe().targetPlanHash));
+  assert.equal((await service.inspect(actor,scope)).packet.installed,true);
+  const triggers=await f.db.$queryRawUnsafe(`SELECT c.relname AS name FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid WHERE NOT t.tgisinternal AND c.relname=ANY($1::text[])`,names);
+  assert.deepEqual(triggers,[],'preserved operational tables receive no lifecycle execution guards');
+  // Existing business writers must retain insert/update/delete access after
+  // report enrollment. Roll back the probe so all original rows stay exact.
+  await f.db.$transaction(async tx=>{
+   for(const name of names){
+    const column=name==='InvoiceQrSupplierLearning'?'supplierName':name==='PosInternalTransferLine'?'quantity':name==='PosInternalTransferSettlement'?'amount':name==='StoreStockPackage'?'updatedBy':name==='PosPackageStockPosting'?'quantity':name==='InvoiceStockExclusionEmail'?'attempts':name==='InventoryWarehouseEditAudit'?'grantId':name==='PosInternalTransfer'?'createdByUserId':'actorId';
+    assert.equal(await tx.$executeRawUnsafe(`UPDATE ${q(name)} SET ${q(column)}=${q(column)}`),1);
+   }
+   for(const name of [...names].reverse())assert.equal(await tx.$executeRawUnsafe(`DELETE FROM ${q(name)}`),1);
+   for(const row of before){
+    // Parent transfer must precede its line and settlement when restoring.
+    if(['PosInternalTransferLine','PosInternalTransferSettlement'].includes(row.table_name))continue;
+    await tx.$executeRawUnsafe(`INSERT INTO ${q(row.table_name)} SELECT * FROM jsonb_populate_record(NULL::${q(row.table_name)},$1::jsonb)`,row.row);
+   }
+   for(const row of before.filter(row=>['PosInternalTransferLine','PosInternalTransferSettlement'].includes(row.table_name)))await tx.$executeRawUnsafe(`INSERT INTO ${q(row.table_name)} SELECT * FROM jsonb_populate_record(NULL::${q(row.table_name)},$1::jsonb)`,row.row);
+   await assert.rejects(tx.$executeRawUnsafe(`INSERT INTO "StoreProduct"("id","storeId","productId","currentStock") VALUES ('package-stock','target','package-product',1)`),/απόθεμα συσκευασίας/);
+   throw Error('ROLLBACK_OPERATIONAL_PROBE');
+  }).then(()=>assert.fail('Probe must roll back'),error=>assert.match(error.message,/ROLLBACK_OPERATIONAL_PROBE/));
+  assert.deepEqual(await readOperational(),before);
+ }finally{await f.close();}
+});
