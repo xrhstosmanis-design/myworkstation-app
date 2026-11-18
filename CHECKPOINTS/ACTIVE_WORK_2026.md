@@ -1,3 +1,39 @@
+## 18/11/2026 — NETLINK explicit-store E2E caller correction / AWAITING FINAL CI
+
+Corrected source head `bd0e268f27ea2c5d39a97397e3ad426130fff5cc`, CI `44322976065` / job `134866723229`: full server suite **6178 tests / 6177 PASS / 0 FAIL / 1 optional PGlite SKIP**, plus **8/8 backup-monitor tests PASS**. Native PostgreSQL credentials/migration/HTTP and legacy EFOOD SQL checks passed. Node20 client build, browser pointer/geometry checks, production safety invariants, full isolated archive import and the other four jobs passed. This is CI evidence, not a LAB or deployed feature PASS.
+
+The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejected the old owner catalogue call without storeId: HTTP400 / NETLINK_STORE_REQUIRED, formerly expected200 at line70. Causal correction updates the E2E caller's status/menu URLs to the fixture's explicit selected store, asserts the returned storeId and adds a retained missing-store400/code assertion. Runtime source and all existing auth/licensing/fiscal/idempotency/settlement assertions are unchanged. No global-store fallback or production guard is relaxed. The retained POS header browser fixture also recognizes the selected-store status query when simulating a disabled Netlink module; its prior disabled-module geometry intent is preserved.
+
+Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
+
+## 18/11/2026 — NETLINK source CI correction, still AWAITING FULL CI / LAB
+
+First source head `2e2a1054a258c6563d7a0f5941671559b0cfe169`, CI run `44320432551`, full server suite **6176 PASS / 1 FAIL / 1 SKIP**. New native PostgreSQL migration/HTTP/atomic-audit test and ordinary selected-store HTTP test both passed with no skip. All new credential/mounted/scoped tests passed. Existing Windows checks and isolated wholesale browser/offline job passed.
+
+Only failure: retained `store-installation-terminals-v1.test.js` rejects a direct Netlink label in the general PlatformAdminApp installation surface. Causal fix: keep the generic selected-store launcher named «Διασυνδέσεις»; the credential form remains inside its existing integrations dialog. The protective installation test is unchanged. Review also scoped the new transport deadline/redirect restriction to authentication/read-only catalogue calls: existing prepare/execute transport behavior remains intact, with an explicit retained execute assertion. No financial flow was run.
+
+Corrected local Node20 validation: **46 tests / 44 PASS / 0 FAIL / 2 local SQL skips**, including the unchanged installation test; Node20 frontend build PASS (Vite 27.03s, TABLE_SERVICE verifier PASS). The earlier remote native SQL PASS is separate evidence for the first head.
+
+The first head's full suite failure is not hidden by its native SQL PASS. New exact-head full CI/build/E2E is required. No production change, LAB/manual PASS or owner testing requested. Same owner and source PR #4016.
+
+## 18/11/2026 — NETLINK-STORE-CREDENTIALS-01 — SOURCE CANDIDATE / AWAITING CI AND LAB
+
+Owner /root; source branch `codex/netlink-store-connection-source-20261118`. Documentation claim PR #4015 passed its documentation checks and merged `8a9c433329e224011fe5a352ec4057e85a78a4b9` before source edits. This source does not transfer Netlink certification or another page's cash/report work.
+
+Implemented per-store encrypted username/password and Station ID within existing `StoreIntegrationCredential` kind NETLINK. Versioned migration expands the existing kind constraint, preserves MYDATA/VAT_LOOKUP/EFOOD, handles legacy kind-check names and is repeatable. Existing integration bootstrap retains NETLINK on later EFOOD initialization. No new table/columns or ownership/backup layout. Existing lifecycle RESET value guard is deliberately unchanged: configured NETLINK stores remain blocked from an unreviewed fresh-store reset; no destructive credential/reset scope is silently expanded.
+
+Platform Super Admin: existing selected-store integration dialog now includes Netlink save, explicit enable/disable and authentication/catalogue check. Fresh saved connections default disabled. Admin can explicitly run the read-only check while disabled; normal POS requests cannot use disabled/missing connections. Username/password never return in response/status/audit. Saving and its credential audit are one DB transaction. Current `INTEGRATION_CREDENTIALS_KEY` or `PARAMETERS_ENCRYPTION_KEY` is required; do not enter real credentials in chat/repository. Provider app URL/client credentials stay in server environment; no user-supplied outbound URL.
+
+Connector resolves encrypted credentials for the authorized company/store on every operation; no global-credential fallback and no cross-request singleton/token cache. Ordinary status/menu use explicit selected store; STORE_OPERATOR cannot request another store. Same-store refresh, store changes and unmount discard late UI catalogue/report/form responses. Save is serialized; form secrets clear after success. Authentication/catalogue checks have bounded requests and reject redirects; prepare/execute request timeout/redirect behavior remains unchanged. Invalid access tokens are rejected.
+
+Only documented Netlink authentication and GET catalogue are used by the check. It explicitly returns `storeIdentityVerified:false`: no provider report API contract is available in source. MyWorkStation reports remain its own ledger. Before real store activation, compare the requested Station ID to the store's Netlink report as recommended by the provider. No invented report endpoint, prepare/execute, PIN, real charge, production secret/configuration, migration or deployment has been performed.
+
+Protected: ordinary auth/licensing/module mount, demo outbound fence, required issued fiscal receipt, execute lock, fee/product mapping, commission/idempotency and old LAB/USER PASS. Test assertions changed only where the deliberate selected-store string, additive NETLINK kind or extra non-nested form changed; prior behavioral coverage remains.
+
+Validation on Node 20.20.2: targeted Netlink, ordinary selected-store HTTP, mounted React store/unmount/save tests, customer-demo and retained efood suites: **42 tests / 40 PASS / 0 FAIL / 2 SKIP**. The two skips are native PostgreSQL connection/migration/HTTP and legacy EFOOD SQL checks; local environment has no isolated PostgreSQL server, so these remain pending the full CI environment. Frontend `npm run build` PASS on Node20 (Vite 34.93s, TABLE_SERVICE bundle verifier PASS). `git diff --check` PASS. Full exact-head CI/native PostgreSQL/E2E remains pending. No manual/LAB/live functional PASS is claimed.
+
+Remaining: full exact-head CI and native migration/HTTP tests, review/approved source installation with the versioned migration, verify deployed revision, then grouped acceptance in existing MYWORKSTATION LAB. Actual Αχαρνών 309 / Ριζαρείου–Χασόγια credentials, provider report identity, printers and production acceptance remain NOT TESTED. Do not replay real transactions or ask owner to reopen multiple roles for partial tests.
+
 ## 18/11/2026 — NETLINK-STORE-CREDENTIALS-01 — ASSIGNED / NOT TESTED
 
 Owner /root, branch `codex/netlink-store-credentials-20261118`. Explicit owner request: implement separate Netlink connection credentials for each selected store, with safe configuration and a non-issuing connection check. Scope does not transfer provider certification, cash reconciliation or another page's work.

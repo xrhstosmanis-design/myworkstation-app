@@ -40,6 +40,8 @@ test("Netlink execute sends the provider-required requestId and payload wrapper"
   try{
     await new NetlinkClient(config).execute("164",{requestId:"request-123",payload:{},confirmation:undefined});
     assert.equal(calls[1].url,"https://api.example/164/execute");
+    assert.equal(calls[1].options.signal,undefined,"read-only check deadlines must not change card execution transport");
+    assert.equal(calls[1].options.redirect,undefined);
     assert.equal(calls[1].options.headers["X-Request-Id"],"request-123");
     assert.deepEqual(JSON.parse(calls[1].options.body),{requestId:"request-123",payload:{}});
   }finally{globalThis.fetch=originalFetch}
