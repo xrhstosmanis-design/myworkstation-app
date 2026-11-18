@@ -590,3 +590,8 @@ The final failed-job retry was on the same source after a Chromium Target.create
 Implementation and automated verification are complete for per-store connection configuration and non-issuing authentication/catalogue check. Owner stays /root. **No source merge, production installation, reviewed schema application, real credentials, provider check, transaction or financial action has been performed.** No LAB/LIVE/USER functional PASS or manual release is claimed. Existing provider certification and store identity by Netlink statement remain separate and unverified.
 
 Single next action: owner's separate approval for production source merge/deploy, then the existing guarded installation and exact deployed revision check. Preserve the requested final grouped acceptance on the existing LAB; do not ask for partial role-switching or repeat real transactions. Source remains assigned to /root until an explicit named handoff.
+
+
+## 18/11/2026 — Νο2 / #4019 — συγκεκριμένη μεταφορά οικονομικής ένδειξης
+
+ΑΝΑΛΗΨΗ ΑΠΟ `feat/invoice-month-audit-20261028` / `/root/invoice_new` — ASSIGNED `/root`, branch `fix/no2-paid-monthly-status`, με ρητή έγκριση ιδιοκτήτη. Μόνο οικονομική κατάσταση συνδεδεμένης πληρωμής στη μηνιαία αναφορά, όχι υπόλοιπο C, snapshots/απογραφή ή email. Ο παλιός owner διατηρεί όλα τα άλλα scopes· καμία παράλληλη αλλαγή #4019. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md). CLAIM / source NOT STARTED / CI και LAB NOT TESTED. Υλοποίηση και τεχνικοί έλεγχοι πρώτα, μία τελική συνεδρία ανά ρόλο στο τέλος.
