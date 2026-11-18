@@ -1,8 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {buildBackofficeCompanyProposal} from './backoffice-company-compatibility.js';
-import {createLifecycleCatalogueReadiness} from './store-lifecycle-executor.js';
-import {validateLifecycleWorkerCapability} from './store-lifecycle-worker-ready.js';
 const read=path=>JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/'+path,import.meta.url),'utf8'));
 export function backofficeCompanyProfile(env=process.env){
  const key=env.MWS_STORE_LIFECYCLE_PROFILE;
@@ -12,9 +10,14 @@ export function backofficeCompanyProfile(env=process.env){
  return {key,profile,manifest,planHash:createHash('sha256').update(JSON.stringify(manifest)).digest('hex')};
 }
 export async function isBackofficeCompanyInstalled(db,{env=process.env}={}){
- const selected=backofficeCompanyProfile(env);
- if(!selected)return false;
  try{
+  const selected=backofficeCompanyProfile(env);
+  if(!selected)return false;
+  // Legacy runtimes, including the independent wholesale image, do not carry
+  // the optional recovery package. Load it only for an explicitly selected
+  // COMPANY profile; importing ordinary staff authorization stays inert.
+  const {createLifecycleCatalogueReadiness}=await import('./store-lifecycle-executor.js');
+  const {validateLifecycleWorkerCapability}=await import('./store-lifecycle-worker-ready.js');
   // Native closed catalogue inspection verifies exact columns, references and
   // installed guard definitions. Merely adding a JSON column is insufficient.
   const metadata=await createLifecycleCatalogueReadiness(selected.manifest)(db);

@@ -118,7 +118,7 @@ test('sales analytics requires its view dependencies, three modules and an expli
     return [];
   }};
   const user={id:'staff',companyId:'company',role:'EMPLOYEE',staffAccess:true,tokenType:'BACKOFFICE_USER',sessionId:'session',sessionVersion:0};
-  const request=query=>({user:{...user},originalUrl:'/api/commerce/sales/advanced-report',method:'GET',query,get:()=> 'store'});
+  const request=query=>({user:{...user},originalUrl:'/api/commerce/sales/advanced-report',method:'GET',query,get:key=>key.toLowerCase()==='x-backoffice-store-id'?'store':undefined});
   const response={setHeader(){}};
   const req=request({storeId:'store'});
   await enforceBackofficeStaff(db,req,response);

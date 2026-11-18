@@ -247,6 +247,12 @@ app.use("/api/platform/mail",mailRoutes);
 app.use("/api/license",licenseRoutes);
 app.use("/api/video-admin",auth,backofficeVideoAdminRoutes);
 app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operatorManagementV2Routes);
+// Exact company reads precede legacy Owner routers. Requests without an
+// authenticated company grant continue through their original middleware.
+app.get(['/api/owner-products/stores','/api/commerce/suppliers','/api/commerce/customers','/api/management/expense-categories','/api/management/customer-categories','/api/management/professions','/api/management/business-units/shipping-methods'],auth,async(req,res,next)=>{
+  if(!req.staffCompanyGrant)return next();
+  try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffCompanyDirectory(prisma,req))}catch(error){next(error)}
+});
 app.use("/api/management/vat-departments",auth,requireCompanyModule("INVENTORY"),managementVatDepartmentsRoutes);
 app.use("/api/management/expense-categories",auth,requireCompanyModule("CASH_CONTROL"),managementExpenseCategoriesRoutes);
 app.use("/api/management/product-companies",auth,requireCompanyModule("INVENTORY"),managementProductCompaniesRoutes);
@@ -268,12 +274,7 @@ app.use("/api/owner-assistant",ownerAssistantRoutes);
 app.use('/api/ai-wallet',aiOwnerWalletRoutes);
 startAiOwnerWalletNotices();
 app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
-// Exact company reads precede legacy Owner routers. Requests without an
-// authenticated company grant continue through their original middleware.
-app.get(['/api/owner-products/stores','/api/commerce/suppliers','/api/commerce/customers'],auth,async(req,res,next)=>{
-  if(!req.staffCompanyGrant)return next();
-  try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffCompanyDirectory(prisma,req))}catch(error){next(error)}
-});
+
 app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce",auth,invoiceCommonDraftRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderUnresolvedGuardRoutes);

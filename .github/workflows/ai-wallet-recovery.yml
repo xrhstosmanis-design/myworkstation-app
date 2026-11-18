@@ -49,6 +49,10 @@ jobs:
         run: docker build --file ops/backup/Dockerfile --tag mws-wallet-recovery:ci .
       - name: Use matching PG16 dump and private restore tools
         run: |
+          if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ]; then
+            sudo apt-get update -qq
+            sudo apt-get install --yes --no-install-recommends postgresql-client-16
+          fi
           test -x /usr/lib/postgresql/16/bin/pg_dump
           echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
       - name: Verify actual schema, archive/COPY, pending and stale controls

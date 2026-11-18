@@ -89,3 +89,16 @@ Required isolated checks include company-only login/navigation, empty defaults, 
 Mounted tests must exercise every initial directory with only its own grant, inspect actual requests, reject foreign/missing envelopes, clear denied refreshes, discard delayed responses after navigation/session changes, and preserve ordinary Owner controls outside the delegated mode. Recovery compatibility and rollback are tested separately against the exact reviewed app/worker/profile pair. A source/UI test or CI run alone does not activate this company contract or certify hosted acceptance.
 
 Live account tests stay in the consolidated final session requested by the Owner. No hosted grants, schema installation, financial operation, or repeated accepted LAB transaction is part of this document.
+
+## Follow-on management directories — source candidate 18 November 2026
+
+The account policy now has seven individually integrated keys. The initial three directory projections remain unchanged. Four additional precise GETs accept the same explicit company header and no store header or query/body selectors:
+
+| Capability | Exact GET | Module | Safe projection |
+| --- | --- | --- | --- |
+| expense-categories.read | /api/management/expense-categories | CASH_CONTROL | id, description, active, createdAt, updatedAt, usageCount |
+| customer-categories.read | /api/management/customer-categories | CORE | id, description, selectable, allowCredit, saleAtCostOrWholesale, deferred, active, createdAt, updatedAt, usageCount |
+| professions.read | /api/management/professions | CORE | id, code, description, active, createdAt, updatedAt, customerCount |
+| shipping-methods.read | /api/management/business-units/shipping-methods | CORE | id, code, description, active, createdAt, updatedAt; native active-only list |
+
+The exact early delegated bridge runs before native management bootstrap/mapping middleware. It never ensures schemas or creates defaults; unavailable tables fail unavailable, not as an empty list. Tenant predicates apply to both sides of usage-count joins. The presentation uses native field labels in a pure read-only table, without importing editor/synchronization/bank/terminal hooks. All account/session/revision/module/response and stale-data rules above apply unchanged. Existing policies containing only the first three keys remain valid and gain no additional rights.

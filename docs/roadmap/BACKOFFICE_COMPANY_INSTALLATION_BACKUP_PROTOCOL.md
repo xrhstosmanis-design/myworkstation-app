@@ -28,3 +28,7 @@ Semantic restore comparison excludes only source relation/function owners and AC
 - `createBackofficeCompanyInstallation(...).inspect(actor)` returns native state and old/new worker readiness evidence. `install(actor,{explicitAuthorization,packet,requestEnvelope,proofEnvelope})` rechecks the exact packet and performs the guarded transaction only when explicitly enabled.
 
 Isolated mocked-boundary security tests verify rejection paths; they do not establish actual PostgreSQL restoration or hosted object storage acceptance. Native isolated PostgreSQL/CLI coverage and matching app-worker-profile deployment remain required before live activation.
+
+## Scope of restore equivalence
+
+The private PostgreSQL cluster uses C locale. Canonical catalogue identifier ordering is explicitly COLLATE C, independent of the source locale. The acceptance checks full dumped row/sequence multisets and the selected supported semantic catalogue; it does not certify universal query-behaviour equivalence to a source database with a different default collation/provider. Source ownership/ACL metadata is separately bound rather than applied inside the private restore. A controlled transition without external DDL remains required; no claim of complete production operational restore acceptance follows solely from the isolated source tests.
