@@ -35,7 +35,7 @@ export function createAutomaticReportEventInstallationRouter(db,{env=process.env
    const input=exact(read?req.query:req.body,method==='install'?['profile','packet','explicitAuthorization']:['profile']);
    if(!read)exact(req.query,[]);
    if(read&&(req.headers['transfer-encoding']||Number(req.headers['content-length']||0)>0))throw inputError();
-   if(!['BASE','CAPTURE'].includes(input.profile)||method==='install'&&input.explicitAuthorization!==true)throw inputError();
+   if(!['BASE','CAPTURE','CAPTURE_REPORTS_ONLY'].includes(input.profile)||method==='install'&&input.explicitAuthorization!==true)throw inputError();
    const sourceRevision=env.RENDER_GIT_COMMIT||env.GIT_COMMIT;
    if(typeof sourceRevision!=='string'||!/^[a-f0-9]{40}$/.test(sourceRevision))return res.status(503).json({code:'REPORT_EVENT_INSTALL_REVISION_REQUIRED',error:'Δεν επιβεβαιώθηκε η έκδοση εγκατάστασης.'});
    const service=await createInstallation(db,{sourceRevision,enabled:env.AUTOMATIC_REPORT_EVENT_INSTALL_ENABLED==='1',profile:input.profile});
@@ -43,7 +43,7 @@ export function createAutomaticReportEventInstallationRouter(db,{env=process.env
    const result=method==='describe'?await service.describe():await service[method](req.user,{...scope,...(method==='install'?{packet:input.packet,explicitAuthorization:true}:{})});
    res.json(result);
   }catch(error){
-   const known=[400,401,403,409,422].includes(error?.status)&&typeof error?.code==='string'&&/^(?:REPORT_EVENT|AUTOMATIC_REPORT|STORE_LIFECYCLE|LIFECYCLE)_[A-Z_]+$/.test(error.code);
+   const known=[400,401,403,409,422].includes(error?.status)&&typeof error?.code==='string'&&/^(?:REPORT_EVENT|REPORT_OPERATIONAL|AUTOMATIC_REPORT|STORE_LIFECYCLE|LIFECYCLE)_[A-Z_]+$/.test(error.code);
    res.status(known?error.status:503).json({code:known?error.code:'REPORT_EVENT_INSTALL_UNCONFIRMED',error:'Η προετοιμασία δεν επιβεβαιώθηκε. Ανανέωσε τον έλεγχο πριν από νέα ενέργεια.'});
   }
  };
