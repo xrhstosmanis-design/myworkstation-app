@@ -5,8 +5,17 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read']);
 export const staffPermissionSections=Object.freeze([
+  {key:'chat',label:'Chat καταστήματος',actions:[
+    {key:'chat.read',label:'Προβολή μηνυμάτων Chat',description:'Βλέπει μηνύματα, θέματα, αναζήτηση και προεπισκόπηση συνημμένων του επιλεγμένου καταστήματος, χωρίς αποστολή, λήψη αρχείων ή αλλαγή κατάστασης.'}
+  ]},
+  {key:'radio',label:'Online Ράδιο',actions:[
+    {key:'radio.read',label:'Προβολή κατάστασης ραδιοφώνου',description:'Βλέπει την κατάσταση και τα ονόματα επιτρεπόμενων σταθμών του επιλεγμένου καταστήματος, χωρίς αναπαραγωγή ή ρυθμίσεις.'}
+  ]},
+  {key:'approvals',label:'Εκκρεμείς επιβεβαιώσεις',actions:[
+    {key:'approvals.read',label:'Προβολή εκκρεμών επιβεβαιώσεων',description:'Βλέπει εκκρεμείς πληρωμές προμηθευτών, έξοδα και τραπεζικές κινήσεις μόνο του επιλεγμένου καταστήματος, χωρίς έγκριση ή αλλαγή.'}
+  ]},
   {key:'wholesale',label:'Χονδρική',actions:[
     {key:'wholesale.read',label:'Προβολή παραγγελιών χονδρικής',description:'Βλέπει τις καταχωρισμένες παραγγελίες χονδρικής και την ανάλυσή τους στο επιλεγμένο κατάστημα.'}
   ]},
@@ -120,6 +129,9 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if(method==='GET'&&/^\/api\/store-chat\/stores\/[^/]+\/messages(?:\/search|\/[^/]+\/attachment)?$/.test(path))return 'chat.read';
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/online-radio$/.test(path))return 'radio.read';
+  if(method==='GET'&&['/api/transactions/supplier-settlements/review','/api/transactions/other-expenses/review','/api/transactions/bank-ledger/review'].includes(path))return 'approvals.read';
   if(method==='GET'&&/^\/api\/wholesale\/orders(?:\/[^/]+)?$/.test(path))return 'wholesale.read';
   if(method==='GET'&&/^\/api\/video-admin\/stores\/[^/]+$/.test(path))return 'video.read';
   if(method==='GET'&&/^\/api\/production-printers\/stores\/[^/]+$/.test(path))return 'printers.read';

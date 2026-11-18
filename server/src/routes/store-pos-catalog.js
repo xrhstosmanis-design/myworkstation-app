@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {packageCatalog} from '../lib/pos-stock-packages.js';
 import {revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
 import {readLifecycleGeneration} from '../services/store-lifecycle-generation.js';
@@ -91,6 +92,11 @@ function layoutForAccess(rawLayout,access){if(!rawLayout||typeof rawLayout!=="ob
 
 router.use("/stores/:storeId",async(req,res,next)=>{
   try{
+    if(req.user?.staffAccess===true&&req.staffGrant?.capability==='radio.read'){
+      if(req.method!=='GET'||req.path!=='/online-radio'||req.user.storeId!==req.params.storeId)throw staffError();
+      await requireStaffGrant(prisma,req.user,req.params.storeId,'radio.read');
+      req.storeOperatorStore=await storeFor(req,req.params.storeId);req.storeOperatorAccess={};return next();
+    }
     assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);const access=await operatorAccess(req,store.id);req.storeOperatorAccess=access;req.storeOperatorStore=store;
     if(req.method==="POST"&&/^\/(?:waste|table-orders\/[^/]+\/waste)\/?$/i.test(req.path)&&access.closeWithoutPrint!==true)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Κλείσιμο χωρίς εκτύπωση» από το BackOffice."});
     if(req.method==="POST"&&req.path.endsWith("/checkout")){const methods=requestedPaymentMethods(req.body||{}),needsCash=methods.includes("CASH"),needsCards=methods.includes("CARD")||methods.includes("IRIS");if(needsCash&&!access.cash){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cash",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Μετρητά» από το BackOffice."})}if(needsCards&&!access.cards){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cards",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Κάρτες» από το BackOffice."})}}
@@ -201,6 +207,22 @@ router.get("/stores/:storeId/barcode-sales-report",async(req,res,next)=>{
 
 router.get("/stores/:storeId/online-radio",async(req,res,next)=>{
   try{
+    if(req.user?.staffAccess===true){
+      const store=req.storeOperatorStore,companyId=req.user.companyId,storeId=store.id;
+      const readRadioAccess=async()=>{
+        const modules=await prisma.$queryRaw`SELECT EXISTS(SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW())) AS enabled`;
+        const config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`)[0];
+        if(!modules[0]?.enabled)throw staffError(403,'MODULE_DISABLED','Το πληρωμένο Online Ράδιο δεν είναι ενεργό.');
+        return {moduleActive:true,enabled:Boolean(config?.enabled),allowed:Array.isArray(config?.allowedStationIds)?config.allowedStationIds:[]};
+      };
+      const access=await readRadioAccess(),terminal=String(req.user.terminalPos||'MAIN').trim().toUpperCase();
+      const state=(await prisma.$queryRaw`SELECT "stationId","volume" FROM "PosOnlineRadioState" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "terminalPos"=${terminal} LIMIT 1`)[0];
+      const stations=access.enabled&&access.allowed.length?await prisma.$queryRaw`SELECT "id","name" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${access.allowed}::text[]) ORDER BY "sortOrder","name"`:[];
+      await requireStaffGrant(prisma,req.user,storeId,'radio.read');
+      const current=await readRadioAccess();
+      if(JSON.stringify(current)!==JSON.stringify(access))throw staffError(409,'STAFF_SOURCE_CHANGED','Η ρύθμιση ραδιοφώνου άλλαξε. Κάνε ανανέωση.');
+      return res.json({companyId,storeId,moduleActive:true,enabled:access.enabled,stations:stations.map(({id,name})=>({id,name})),state:{stationId:stations.some(row=>row.id===state?.stationId)?state.stationId:null,volume:state?.volume==null?.7:money(state.volume)},terminalPos:terminal});
+    }
     const store=req.storeOperatorStore,moduleRows=await prisma.$queryRaw`SELECT EXISTS(SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW())) AS enabled`,config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0],terminal=String(req.user.terminalPos||"MAIN").trim().toUpperCase(),state=(await prisma.$queryRaw`SELECT "stationId","volume" FROM "PosOnlineRadioState" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminal} LIMIT 1`)[0];
     const moduleActive=Boolean(moduleRows[0]?.enabled),enabled=moduleActive&&Boolean(config?.enabled),allowed=Array.isArray(config?.allowedStationIds)?config.allowedStationIds:[];
     const stations=enabled&&allowed.length?await prisma.$queryRaw`SELECT "id","name","streamUrl" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${allowed}::text[]) ORDER BY "sortOrder","name"`:[];
