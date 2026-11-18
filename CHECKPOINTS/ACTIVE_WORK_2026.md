@@ -591,3 +591,8 @@ CENTRAL-BACKOFFICE-ACCESS-01, baseline24abf7b2/local1a2d8d4 tree57685e53. Source
 ## 18/11/2026 — No5 δεκαπέντε αναφορές επιλεγμένου καταστήματος / AWAITING CI
 
 CENTRAL-BACKOFFICE-ACCESS-01, baseline f04444d1/local2f934daa/tree72f7d3f6. Source74STORE(56reads18actions)+32COMPANY, χωρίς νέα εταιρική εξουσία. Τελική70fileσουίτα361PASS/18nativeSKIP/0FAIL+buildPASS. Προηγούμενοmain32 έξιFAIL: διορθώθηκαν4Supplierfixtures και2Employeejoins σύμφωνα μεπραγματικόschema· νέοnative8columnBASE/CAPTUREhelper εκκρεμείσεCI. Wallet32 9/9PASS καιChatSUCCESS. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςμίαφοράστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-store-report-reads.md).
+
+
+## 18/11/2026 — No5 τέσσερις εταιρικές αναφορές συναλλασσομένων / AWAITING CI
+
+CENTRAL-BACKOFFICE-ACCESS-01, baseline815b50b8/local0b0a4847/treed7821bd4. Source74STORE+36COMPANY, ρητοί κατάλογοι γονέων/modules, nativeοικονομικάπαράθυρα και signed/reversal semantics. Τελική72fileσουίτα374PASS/18nativeSKIP/0FAIL+buildPASS. Προηγούμενο74actualBASE/CAPTURE legacy8STORE15καιCOMPANY32 PASS, Wallet9/9PASS/ChatPASS· κύριοrunπαρακολουθείται. Νέο23rowseed/native4helperκαιmetadata preflight, actualCOMPANY36CIεκκρεμεί. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-party-reports.md).

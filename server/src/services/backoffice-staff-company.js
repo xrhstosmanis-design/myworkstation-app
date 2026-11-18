@@ -1,6 +1,6 @@
 import {companyReportFilters,readCompanyReports} from './backoffice-staff-company-reports.js';
 import {PERSONNEL_BASIC,resolvePersonnelPackageStates} from '../personnel-packages.js';
-import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities} from '../../../shared/backoffice-staff-company.mjs';
+import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies} from '../../../shared/backoffice-staff-company.mjs';
 import {readCompanyCommerceData} from './backoffice-staff-company-commerce.js';
 import {managementVatExemptions} from '../lib/management-vat-exemptions.js';
 import {liveStaff,staffError} from './backoffice-staff-access.js';
@@ -30,6 +30,12 @@ export async function requireStaffCompanyGrant(db,user,capability){
   const nativeFree=['reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read'];
   if(module===null){if(!nativeFree.includes(capability))throw staffError(403,'MODULE_DISABLED')}
   else if(typeof module!=='string'||!license.activeModules?.includes(module))throw staffError(403,'MODULE_DISABLED');
+ }
+ // A visible directory parent is real authority, including its own native
+ // module boundary; persisting its key does not bypass a disabled module.
+ for(const parent of staffCompanyCapabilityDependencies(capability)){
+  const module=staffCompanyModules[parent];
+  if(typeof module!=='string'||!license.activeModules?.includes(module))throw staffError(403,'MODULE_DISABLED');
  }
  return {capability,companyId:account.companyId,revision:account.revision};
 }

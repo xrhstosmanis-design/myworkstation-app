@@ -15,6 +15,7 @@ import {provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js
 import {provisionMonthlyInventorySnapshotSchema} from '../src/services/monthly-inventory-snapshot-schema.js';
 import {provisionMonthlyInventoryCaptureSchema} from '../src/services/monthly-inventory-capture-schema.js';
 import {createLifecycleInstallationCore} from '../src/services/store-lifecycle-executor.js';
+import {verifyNativeCompanyPartyReports} from './fixtures/backoffice-company-party-reports-native.mjs';
 import {verifyNativeLegacyStoreReports} from './fixtures/backoffice-store-reports-legacy-native.mjs';
 import {verifyNativeCompanyInventoryReports} from './fixtures/backoffice-company-inventory-reports-native.mjs';
 import {verifyNativeCompanyAuditReports} from './fixtures/backoffice-company-audit-reports-native.mjs';
@@ -133,5 +134,6 @@ for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installa
   await verifyNativeCompanyReports({db:f.db,profile,revision,secret});
   await verifyNativeCompanyAuditReports({db:f.db,profile,revision,secret});
   await verifyNativeCompanyInventoryReports({db:f.db,profile,revision,secret});
+  await verifyNativeCompanyPartyReports({db:f.db,profile,revision,secret});
  }finally{await f.close()}
 });

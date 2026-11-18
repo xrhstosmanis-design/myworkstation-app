@@ -1,3 +1,4 @@
+import {companyPartyReportCapabilities,companyPartyReportFilters,readCompanyPartyReport} from './backoffice-staff-company-party-reports.js';
 import {inventoryReportCapabilities,inventoryReportFilters,readCompanyInventoryReport} from './backoffice-staff-company-inventory-reports.js';
 import {readCompanyAuditReport} from './backoffice-staff-company-audit-reports.js';
 import {staffError} from './backoffice-staff-access.js';
@@ -14,6 +15,7 @@ const bound=(rows,n)=>{if(!Array.isArray(rows))bad();if(rows.length>n)throw staf
 const sum=values=>num(values.reduce((s,v)=>s+v,0));
 function day(v){if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))invalid();const d=new Date(v+'T00:00:00.000Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==v)invalid();return v}
 export function companyReportFilters(query,capability,path,options={}){
+ if(companyPartyReportCapabilities.includes(capability))return companyPartyReportFilters(query,capability);
  if(inventoryReportCapabilities.includes(capability))return inventoryReportFilters(query,capability,path);
  if(!query||typeof query!=='object'||Array.isArray(query))invalid();
  const detail=staffCompanyDeliveryNoteId(path)!==null,keys=Reflect.ownKeys(query);
@@ -27,6 +29,7 @@ export function companyReportFilters(query,capability,path,options={}){
  return {detail:false,from,to,fromDay,toDay,storeId,q,text:q?`%${q}%`:null};
 }
 export async function readCompanyReports(db,companyId,capability,path,query,user,options={}){
+ if(companyPartyReportCapabilities.includes(capability))return readCompanyPartyReport(db,companyId,capability,query);
  if(inventoryReportCapabilities.includes(capability))return readCompanyInventoryReport(db,companyId,capability,path,query,user,options);
  const f=companyReportFilters(query,capability,path,options);
  if(f.detail)return deliveryLines(db,companyId,staffCompanyDeliveryNoteId(path),options.storeScope??null);
