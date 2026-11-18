@@ -1,3 +1,7 @@
+## 18/11/2026 — Νο2 / #4019 — workflow-only identity gate / AWAITING CI AND LAB
+
+Ίδιος owner `/root`, branch `fix/no2-stock-warning-payment`, συνέχεια #4020/#4022/#4026. Πλήρης read-only έλεγχος επιλεγμένου μήνα αποκάλυψε πρόσθετο FAIL: μοναδική προειδοποίηση posting/αποθήκης μπλόκαρε αποδεδειγμένη πληρωμή. Η αυστηρή εξαίρεση αφορά μόνο αυτό το ένα reason· πραγματικά/άγνωστα/μικτά identity reasons και όλα τα payment proofs διατηρούνται. 39 pure Node20 tests PASS· reader/snapshot/full CI/deploy και νέο hosted acceptance προς καταγραφή. Το προηγούμενο περιορισμένο LIVE δείγμα παραμένει τεκμήριο, όχι κάλυψη όλου του μήνα. Καμία οικονομική/stock μεταβολή. [Checkpoint](CHANGES/2026-11-18-no2-stock-warning-financial-review.md). Άλλοι owners και τελική ομαδική LAB αποδοχή παραμένουν.
+
 ## 18/11/2026 — Νο 15 — Μερική πληρωμή φόρμας POS / AWAITING CI AND LAB
 
 Η κανονική φόρμα CASH έστελνε payments:null και απορριπτόταν από το υπάρχον checkout schema πριν από συναλλαγή. Μονογραμμική διόρθωση του caller και regression πραγματικού callback/serializer/schema. [Checkpoint](CHANGES/2026-11-18-table-service-partial-cash-form.md). Ίδια ανάθεση TABLE_SERVICE, πλήρες CI και επαναδοκιμή υπάρχοντος LAB εκκρεμούν.
