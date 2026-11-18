@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {staffProfiles,staffCapabilities,staffPermissionSections,changeStaffCapability} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
-import {staffCompanyCapabilities,staffCompanyPermissionSections,validStaffCompanyCapabilities} from '../../../shared/backoffice-staff-company.mjs';
+import {staffCompanyCapabilities,staffCompanyPermissionSections,validStaffCompanyCapabilities,changeStaffCompanyCapability} from '../../../shared/backoffice-staff-company.mjs';
 const OperatorManagementPanel=React.lazy(()=>import('./commerce/OperatorManagementPanel.jsx'));
 const viewCapabilities=staffCapabilities.filter(capability=>capability.endsWith('.read'));
 
@@ -77,7 +77,7 @@ export default function BackofficeStaffAdmin({api}){
       <label>{edit.id?'Νέο PIN (προαιρετικά)':'Προσωπικό PIN, 4–12 ψηφία'}<input name="pin" type="password" inputMode="numeric" autoComplete="new-password" required={!edit.id} pattern="[0-9]{4,12}"/></label>
       {!edit.id&&<p>Για απλή είσοδο αρκούν το username και το PIN. Ο ξεχωριστός κωδικός είναι προαιρετικός.</p>}
       {edit.id&&<label className="staff-check"><input name="active" type="checkbox" defaultChecked={edit.active}/>Ενεργός λογαριασμός</label>}
-      {companySupported&&(!edit.id||validStaffCompanyCapabilities(edit.companyCapabilities))&&<fieldset disabled={busy}><legend>Εταιρικές προβολές</legend><p>Αφορούν ολόκληρη την εταιρεία, ανεξάρτητα από τα επιλεγμένα καταστήματα.</p>{staffCompanyPermissionSections.flatMap(section=>section.actions).map(action=><label key={action.key} className="staff-check"><input type="checkbox" aria-label={`Εταιρεία: ${action.label}`} checked={companyCapabilities.includes(action.key)} onChange={e=>setCompanyCapabilities(rows=>e.target.checked?[...rows,action.key]:rows.filter(key=>key!==action.key))}/><span><b>{action.label}</b><small>{action.description}</small></span></label>)}</fieldset>}
+      {companySupported&&(!edit.id||validStaffCompanyCapabilities(edit.companyCapabilities))&&<fieldset disabled={busy}><legend>Εταιρικές προβολές</legend><p>Αφορούν ολόκληρη την εταιρεία, ανεξάρτητα από τα επιλεγμένα καταστήματα.</p>{staffCompanyPermissionSections.flatMap(section=>section.actions).map(action=><label key={action.key} className="staff-check"><input type="checkbox" aria-label={`Εταιρεία: ${action.label}`} checked={companyCapabilities.includes(action.key)} onChange={e=>setCompanyCapabilities(rows=>changeStaffCompanyCapability(rows,action.key,e.target.checked))}/><span><b>{action.label}</b><small>{action.description}</small>{action.requires?.includes('suppliers.read')&&<small>Επιλέγεται επίσης η προβολή προμηθευτών εταιρείας.</small>}</span></label>)}</fieldset>}
       <fieldset disabled={busy}>
         <legend>Καταστήματα και δικαιώματα</legend>
         <p>Επίλεξε κατάστημα και όρισε τι μπορεί να βλέπει και τι μπορεί να κάνει ο χειριστής εκεί. Αποεπίλεξε κατάστημα για να ανακαλέσεις την πρόσβασή του σε αυτό.</p>

@@ -1,4 +1,5 @@
 import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities} from '../../../shared/backoffice-staff-company.mjs';
+import {readCompanyCommerceData} from './backoffice-staff-company-commerce.js';
 import {managementVatExemptions} from '../lib/management-vat-exemptions.js';
 import {liveStaff,staffError} from './backoffice-staff-access.js';
 import {companyModuleState} from '../middleware/module-access.js';
@@ -24,9 +25,10 @@ function validCompanyQuery(query,capability){
  if(query!==undefined&&(!query||typeof query!=='object'||Array.isArray(query)))return false;
  const names=Reflect.ownKeys(query||{});
  if(names.length===0)return true;
- if(capability!=='categories.read'||names.length!==1||names[0]!=='categoryId')return false;
- const descriptor=Object.getOwnPropertyDescriptor(query,'categoryId');
- return Object.hasOwn(descriptor,'value')&&typeof descriptor.value==='string'&&descriptor.value.length>0&&descriptor.value.length<=160&&descriptor.value.trim()===descriptor.value&&!/[\u0000-\u001f\u007f]/.test(descriptor.value);
+ const key=capability==='categories.read'?'categoryId':capability==='company-products.read'?'q':null;
+ if(!key||names.length!==1||names[0]!==key)return false;
+ const descriptor=Object.getOwnPropertyDescriptor(query,key);
+ return Object.hasOwn(descriptor,'value')&&typeof descriptor.value==='string'&&(key==='q'||descriptor.value.length>0)&&descriptor.value.length<=(key==='q'?120:160)&&descriptor.value.trim()===descriptor.value&&!/[\u0000-\u001f\u007f]/.test(descriptor.value);
 }
 export async function enforceStaffCompanyRequest(db,req){
  const companyId=req.get('x-backoffice-company-id'),path=String(req.originalUrl||req.path||'').split('?')[0];
@@ -40,6 +42,12 @@ export async function readStaffCompanyDirectory(db,req){
  if(!capability||req.user?.staffAccess!==true||req.staffCompanyGrant?.capability!==capability||req.staffCompanyGrant.companyId!==req.user.companyId)throw staffError();
  await enforceStaffCompanyRequest(db,req);
  const companyId=req.user.companyId;
+ if(['company-products.read','purchases.read','recipes.read','supplier-details.read'].includes(capability)){
+  const payload=await readCompanyCommerceData(db,{companyId,capability,path:String(req.originalUrl||req.path||'').split('?')[0],query:req.query||{}});
+  const after=await requireStaffCompanyGrant(db,req.user,capability);
+  if(after.revision!==req.staffCompanyGrant.revision)throw staffError();
+  return {scope:'COMPANY',companyId,...payload};
+ }
  if(['categories.read','vat-departments.read','product-companies.read'].includes(capability)){
   const payload=await readCompanyStructures(db,companyId,capability,req.query?.categoryId);
   const after=await requireStaffCompanyGrant(db,req.user,capability);

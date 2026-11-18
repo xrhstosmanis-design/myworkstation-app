@@ -1,8 +1,8 @@
 // Company authority is independent of STORE membership and profile presets.
 // These keys become selectable only after the installed protocol is verified.
 export const staffCompanyProtocol='MWS_BACKOFFICE_COMPANY_V1';
-export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read']);
-export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE'});
+export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read']);
+export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY'});
 export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:'Εταιρικές προβολές',actions:Object.freeze([
   {key:'stores.read',label:'Προβολή καταστημάτων εταιρείας',description:'Βλέπει τον κατάλογο καταστημάτων της εταιρείας, χωρίς ρυθμίσεις ή είσοδο στη διαχείρισή τους.'},
   {key:'suppliers.read',label:'Προβολή προμηθευτών εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας και ΑΦΜ προμηθευτών της εταιρείας, χωρίς πληρωμές ή αλλαγές.'},
@@ -14,10 +14,32 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   {key:'vat-departments.read',label:'Προβολή εταιρικών τμημάτων ΦΠΑ',description:'Βλέπει τμήματα ΦΠΑ, καταχωρισμένους συντελεστές και απαλλαγές, χωρίς αλλαγές.'},
   {key:'product-companies.read',label:'Προβολή εταιρειών προϊόντων',description:'Βλέπει τις εταιρείες προϊόντων και τα πλήθη τους στην εταιρεία, χωρίς αντιστοιχίσεις ή αλλαγές.'},
   {key:'banks.read',label:'Προβολή εταιρικού καταλόγου τραπεζών',description:'Βλέπει τις ενεργές εγγραφές τραπεζών και τους λογιστικούς κωδικούς τους, χωρίς λογαριασμούς ή κινήσεις.'},
+  {key:'company-products.read',label:'Προβολή εταιρικών προϊόντων και τιμών κόστους',description:'Βλέπει έως 500 εταιρικά προϊόντα ή αποτελέσματα αναζήτησης, με τιμές πώλησης και κόστους, χωρίς αλλαγές.'},
+  {key:'purchases.read',label:'Προβολή πρόσφατων εταιρικών αγορών',description:'Βλέπει μεταδεδομένα έως 300 πρόσφατων αγορών της εταιρείας, χωρίς αρχεία ή εγκρίσεις.'},
+  {key:'recipes.read',label:'Προβολή εταιρικών συνταγών και κόστους',description:'Βλέπει συνταγές και διαθέσιμο κόστος εταιρικών συστατικών, χωρίς αλλαγές ή παρασκευή.'},
+  {key:'supplier-details.read',requires:['suppliers.read'],label:'Προβολή εταιρικής καρτέλας προμηθευτή',description:'Βλέπει στοιχεία προμηθευτή, έως 200 αγορές και πληρωμές και εκτιμώμενο υπόλοιπο του παραθύρου, χωρίς αλλαγές.'},
   {key:'customers.read',label:'Προβολή πελατών, υπολοίπων και πιστωτικών ορίων εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας, έκπτωση, οικονομικό υπόλοιπο και πιστωτικό όριο πελατών όλης της εταιρείας, χωρίς κινήσεις ή αλλαγές.'}
 ])}]);
 export function validStaffCompanyCapabilities(value){
-  return Array.isArray(value)&&value.length<=staffCompanyCapabilities.length&&new Set(value).size===value.length&&value.every(key=>staffCompanyCapabilities.includes(key));
+  return Array.isArray(value)&&value.length<=staffCompanyCapabilities.length&&new Set(value).size===value.length&&value.every(key=>staffCompanyCapabilities.includes(key))&&staffCompanyPermissionSections.flatMap(section=>section.actions).every(action=>!value.includes(action.key)||(action.requires||[]).every(key=>value.includes(key)));
+}
+export function changeStaffCompanyCapability(capabilities,key,enabled){
+ if(!staffCompanyCapabilities.includes(key))return [...capabilities];
+ const next=new Set(capabilities);enabled?next.add(key):next.delete(key);
+ const actions=staffCompanyPermissionSections.flatMap(section=>section.actions);
+ let changed=true;
+ while(changed){changed=false;for(const action of actions){
+  if(!next.has(action.key))continue;
+  for(const dependency of action.requires||[])if(!next.has(dependency)){
+   enabled?next.add(dependency):next.delete(action.key);changed=true;
+  }
+ }}
+ return [...next];
+}
+export function staffCompanySupplierId(path){
+ const match=/^\/api\/commerce\/suppliers\/([^/]+)\/detail$/.exec(path);if(!match)return null;
+ let value;try{value=decodeURIComponent(match[1])}catch{return null}
+ return value&&value.length<=160&&value.trim()===value&&!/[\/\\\u0000-\u001f\u007f]/.test(value)?value:null;
 }
 export function staffCompanyRequestCapability(method,path){
   if(method!=='GET')return null;
@@ -32,5 +54,9 @@ export function staffCompanyRequestCapability(method,path){
   if(path==='/api/management/vat-departments')return 'vat-departments.read';
   if(path==='/api/management/product-companies')return 'product-companies.read';
   if(path==='/api/management/business-units/banks')return 'banks.read';
+  if(path==='/api/commerce/products')return 'company-products.read';
+  if(path==='/api/commerce/purchases')return 'purchases.read';
+  if(path==='/api/commerce/recipes')return 'recipes.read';
+  if(staffCompanySupplierId(path)!==null)return 'supplier-details.read';
   return null;
 }

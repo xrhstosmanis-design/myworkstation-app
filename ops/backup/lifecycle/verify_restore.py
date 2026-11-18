@@ -64,7 +64,7 @@ def delete_order(snapshot, descriptor, schema):
     return order
 
 PRIVATE_POSTGRES_COMMANDS = frozenset({'initdb', 'pg_ctl', 'psql', 'pg_dump', 'pg_restore'})
-PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'UNKNOWN'})
+PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'DUPLICATE_SCHEMA', 'MISSING_SCHEMA', 'MISSING_FUNCTION', 'MISSING_EXTENSION', 'MISSING_RELATION', 'MISSING_COLUMN', 'MISSING_OPERATOR', 'CONSTRAINT', 'SQL_SYNTAX', 'UNKNOWN'})
 
 
 class PrivatePostgresCommandError(ValueError):
@@ -89,6 +89,15 @@ def private_command_failure_category(stderr):
         ('ENCODING', r'invalid byte sequence|character [^\n]{0,200} has no equivalent|encoding mismatch|conversion between[^\n]{0,200}encoding'),
         ('MEMORY', r'out of memory|cannot allocate memory|memory exhausted|could not resize shared memory'),
         ('PRIVATE_CONNECTION', r'could not connect to server|connection (?:refused|timed out)|connection to server[^\n]{0,200}failed|server closed[^\n]{0,200}connection'),
+        ('DUPLICATE_SCHEMA', r'schema [^\n]{0,200} already exists'),
+        ('MISSING_SCHEMA', r'schema [^\n]{0,200} does not exist'),
+        ('MISSING_FUNCTION', r'function [^\n]{0,200} does not exist'),
+        ('MISSING_EXTENSION', r'could not open extension control file|extension [^\n]{0,200} (?:does not exist|is not available)|no installation script[^\n]{0,200}extension'),
+        ('MISSING_COLUMN', r'column [^\n]{0,200} does not exist'),
+        ('MISSING_RELATION', r'relation [^\n]{0,200} does not exist'),
+        ('MISSING_OPERATOR', r'operator(?: [^\n]{0,200})? does not exist'),
+        ('CONSTRAINT', r'violates (?:not-null|unique|foreign key|check|exclusion) constraint|contains null values|could not create unique index'),
+        ('SQL_SYNTAX', r'syntax error (?:at|in)|unterminated (?:quoted|dollar-quoted)|invalid input syntax'),
     ]
     return next((category for category, pattern in patterns if re.search(pattern, text)), 'UNKNOWN')
 

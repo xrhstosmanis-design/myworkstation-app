@@ -14,6 +14,15 @@ const cases=[
  ['ENCODING','ERROR: invalid byte sequence for encoding UTF8'],
  ['MEMORY','ERROR: out of memory'],
  ['PRIVATE_CONNECTION','connection to server on socket "/private/location" failed: Connection refused'],
+ ['DUPLICATE_SCHEMA','ERROR: schema "secret_schema" already exists'],
+ ['MISSING_SCHEMA','ERROR: schema "secret_schema" does not exist'],
+ ['MISSING_FUNCTION','ERROR: function secret_function(integer) does not exist'],
+ ['MISSING_EXTENSION','ERROR: could not open extension control file "/private/secret_extension.control"'],
+ ['MISSING_RELATION','ERROR: relation "secret_relation" does not exist'],
+ ['MISSING_COLUMN','ERROR: column "secret_column" of relation "secret_relation" does not exist'],
+ ['MISSING_OPERATOR','ERROR: operator does not exist: secret_type + secret_type'],
+ ['CONSTRAINT','ERROR: duplicate key value violates unique constraint "secret_constraint"'],
+ ['SQL_SYNTAX','ERROR: syntax error at or near "PRIVATE_QUERY"'],
  ['UNKNOWN','ERROR: unknown private failure']
 ];
 

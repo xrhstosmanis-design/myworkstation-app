@@ -16,7 +16,7 @@ import {validateCompanyInstallationBackupRequest,validateCompanyInstallationBack
 const execute=promisify(execFile),script=fileURLToPath(new URL('../../../ops/backup/lifecycle/company-installation-backup.py',import.meta.url));
 const q=value=>'"'+value.replaceAll('"','""')+'"';
 const fail=(code='COMPANY_INSTALL_REFUSED')=>{throw Object.assign(Error('Company authority installation refused.'),{status:409,code})};
-const backupDiagnosticCategories=new Set(['UNSUPPORTED_SETTING','ARCHIVE_VERSION','PERMISSION','MISSING_ROLE','MISSING_TYPE','COLLATION','DUPLICATE_RELATION','ENCODING','MEMORY','PRIVATE_CONNECTION','UNKNOWN']);
+const backupDiagnosticCategories=new Set(['UNSUPPORTED_SETTING','ARCHIVE_VERSION','PERMISSION','MISSING_ROLE','MISSING_TYPE','COLLATION','DUPLICATE_RELATION','ENCODING','MEMORY','PRIVATE_CONNECTION','DUPLICATE_SCHEMA','MISSING_SCHEMA','MISSING_FUNCTION','MISSING_EXTENSION','MISSING_RELATION','MISSING_COLUMN','MISSING_OPERATOR','CONSTRAINT','SQL_SYNTAX','UNKNOWN']);
 export function companyInstallationBackupDiagnostic(stderr){
  if(typeof stderr!=='string'||Buffer.byteLength(stderr)>4096)return null;
  let value;try{value=JSON.parse(stderr.trim())}catch{return null}
