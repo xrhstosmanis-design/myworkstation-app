@@ -62,11 +62,15 @@ async function main(){
   assert.equal(disabled.response.status,403,"Netlink must remain inaccessible without its licensed company module");
   await prisma.companyModule.update({where:{companyId_moduleKey:{companyId,moduleKey:"NETLINK_PREPAID"}},data:{active:true,startsAt:null,endsAt:null}});
 
-  const status=await request("/api/netlink/status",{token:ownerToken});
+  const status=await request(`/api/netlink/status?storeId=${encodeURIComponent(storeId)}`,{token:ownerToken});
   assert.equal(status.response.status,200,JSON.stringify(status.payload));
+  assert.equal(status.payload.storeId,storeId,"status must identify the explicitly selected store");
   assert.deepEqual({configured:status.payload.configured,provider:status.payload.provider,executeEnabled:status.payload.executeEnabled,testMode:status.payload.testMode},{configured:true,provider:"MOCK",executeEnabled:true,testMode:true});
 
-  const menu=await request("/api/netlink/menu",{token:ownerToken});
+  const missingStoreMenu=await request("/api/netlink/menu",{token:ownerToken});
+  assert.equal(missingStoreMenu.response.status,400,"catalogue must reject a missing selected store");
+  assert.equal(missingStoreMenu.payload.code,"NETLINK_STORE_REQUIRED");
+  const menu=await request(`/api/netlink/menu?storeId=${encodeURIComponent(storeId)}`,{token:ownerToken});
   assert.equal(menu.response.status,200,JSON.stringify(menu.payload));
   assert.ok((menu.payload?.groups||[]).flatMap(group=>group.products||[]).some(product=>product.id==="MOCK-20"));
 

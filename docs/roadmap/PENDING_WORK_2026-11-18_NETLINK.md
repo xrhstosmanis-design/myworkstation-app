@@ -1,3 +1,11 @@
+## 18/11/2026 — NETLINK explicit-store E2E caller correction / AWAITING FINAL CI
+
+Corrected source head `bd0e268f27ea2c5d39a97397e3ad426130fff5cc`, CI `44322976065` / job `134866723229`: full server suite **6178 tests / 6177 PASS / 0 FAIL / 1 optional PGlite SKIP**, plus **8/8 backup-monitor tests PASS**. Native PostgreSQL credentials/migration/HTTP and legacy EFOOD SQL checks passed. Node20 client build, browser pointer/geometry checks, production safety invariants, full isolated archive import and the other four jobs passed. This is CI evidence, not a LAB or deployed feature PASS.
+
+The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejected the old owner catalogue call without storeId: HTTP400 / NETLINK_STORE_REQUIRED, formerly expected200 at line70. Causal correction updates the E2E caller's status/menu URLs to the fixture's explicit selected store, asserts the returned storeId and adds a retained missing-store400/code assertion. Runtime source and all existing auth/licensing/fiscal/idempotency/settlement assertions are unchanged. No global-store fallback or production guard is relaxed.
+
+Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
+
 ## 18/11/2026 — NETLINK source CI correction, still AWAITING FULL CI / LAB
 
 First source head `2e2a1054a258c6563d7a0f5941671559b0cfe169`, CI run `44320432551`, full server suite **6176 PASS / 1 FAIL / 1 SKIP**. New native PostgreSQL migration/HTTP/atomic-audit test and ordinary selected-store HTTP test both passed with no skip. All new credential/mounted/scoped tests passed. Existing Windows checks and isolated wholesale browser/offline job passed.
