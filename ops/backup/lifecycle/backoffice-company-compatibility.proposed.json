@@ -1,0 +1,65 @@
+{
+  "format": "MWS_BACKOFFICE_COMPANY_COMPATIBILITY_PROPOSAL_V1",
+  "executionEnabled": false,
+  "productionActivated": false,
+  "column": {
+    "table": "BackofficeStaffAccount",
+    "name": "companyCapabilities",
+    "type": "jsonb",
+    "notNull": true,
+    "default": [],
+    "owner": "COMPANY_SECURITY",
+    "storeDeletionSelector": false
+  },
+  "variants": [
+    {
+      "profile": "BASE",
+      "sourceManifest": "ops/backup/lifecycle/manifest.json",
+      "sourceReview": "ops/backup/lifecycle/column-review.json",
+      "proposedProfileId": "BACKOFFICE_COMPANY_BASE_PROPOSED_V1",
+      "proposedPlanHash": "87531261fbaaed42f2a25282042cd8f817c5991a0aa9e62bef1f1c92f727a20f",
+      "proposedReviewHash": "1fec682a7404108ac79ca49297e84abf972c918c11aaec6be8b6de85faa98132"
+    },
+    {
+      "profile": "CAPTURE",
+      "sourceManifest": "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json",
+      "sourceReview": "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json",
+      "proposedProfileId": "BACKOFFICE_COMPANY_CAPTURE_PROPOSED_V1",
+      "proposedPlanHash": "8b298f318699a72d4b88b077d309953b9dc5f014f6f2ee763600103d0df93d95",
+      "proposedReviewHash": "a5d2aa8894d07d3116c939577df5725c0e8a57600fffbe7e8298961d4a55a9e2"
+    }
+  ],
+  "sourceHashes": {
+    "ops/backup/lifecycle/manifest.json": "ebcf6739449cca8049dae3e74e8ab8842e51b92447a7e31b42f303c7dae3f9db",
+    "ops/backup/lifecycle/column-review.json": "6a298105bb95bd4260fd1e38640c0c15518b6a198579a34527410c7bd7056300",
+    "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json": "363d168d3cdaad93eb350da616a764f73ac3556b92d37d09bd47ecd453fece03",
+    "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json": "186a879072dec4796d878477233b887fdab8f9952ea8c5a35bb44ecd46a8e931",
+    "server/src/services/store-lifecycle-executor.js": "9857d8ff4cab1eecf9da3d796b3f72de56f273599588d941cbf9c325e89cbf70",
+    "server/src/services/store-lifecycle-worker-ready.js": "35730d0f89545a1d5bbfcd5feec74390cc4465363e102d34bb748f6c5ace12b8",
+    "server/src/services/store-lifecycle-manifest.js": "e9aaf44ad8838f710d2d36ff32173674c91c10fd991d310bebbc1afc0ad75834",
+    "ops/backup/lifecycle/worker.py": "091e1326c25a2d8392520ab1a0bed1029da59b7a36610bdce9e56e9afa633c90",
+    "ops/backup/lifecycle/verify_restore.py": "2a7fc2d157fc926e77386b6989eb6908fd2c661395670cc22b8b566258efe431"
+  },
+  "runtimeProfilesUnchanged": [
+    "BASE",
+    "MONTHLY_INVENTORY_CAPTURE_V1",
+    "AUTOMATIC_EVENT_REPORTS_V1",
+    "MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1"
+  ],
+  "eventReportVariantsPrepared": false,
+  "rollbackRequires": {
+    "nonFinalOperations": 0,
+    "nonEmptyCompanyPolicies": 0,
+    "sessionsRevoked": true,
+    "verifiedBackup": true
+  },
+  "patch": {
+    "accountColumn": [
+      "companyCapabilities",
+      "jsonb",
+      true
+    ],
+    "reviewedColumn": "BackofficeStaffAccount.companyCapabilities",
+    "classification": "COMPANY_SECURITY_POLICY_NEVER_STORE_OWNERSHIP_OR_DELETION_SELECTOR"
+  }
+}
