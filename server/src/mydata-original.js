@@ -16,11 +16,22 @@ const epsilonOriginalFormats = new Map([
   ["epsilondigitalsmart10.epsilonnet.gr", "227"],
 ]);
 
-export function epsilonOriginalRecoveryLinkPattern() {
-  const formats = Array.from(epsilonOriginalFormats, ([host, code]) =>
-    host.replaceAll(".", "[.]") + "/fd/[a-f0-9]{32}:" + code).join("|");
+function originalRecoveryLinkPattern(formats) {
   return "<(?:[[:alnum:]_]+:)?downloadingInvoiceUrl[^>]*>[[:space:]]*https://(?:"
-    + formats + ")/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>";
+    + formats.join("|") + ")/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>";
+}
+
+const epsilonRecoveryFormats = Array.from(epsilonOriginalFormats, ([host, code]) =>
+  host.replaceAll(".", "[.]") + "/fd/[a-f0-9]{32}:" + code);
+
+// PostgreSQL ARE syntax, with host and paths anchored inside the XML value.
+export function providerOriginalRecoveryLinkPattern() {
+  return originalRecoveryLinkPattern([
+    ...epsilonRecoveryFormats,
+    "einvoice[.]s1ecos[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}",
+    "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}",
+    String.raw`vs[.]gr/iv/invoice/download/([a-z0-9]{4}_[0-9])/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}`,
+  ]);
 }
 
 export function originalDownloadUrl(xml,issuerVat){
