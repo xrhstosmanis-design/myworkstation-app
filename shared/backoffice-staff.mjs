@@ -5,8 +5,14 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read']);
 export const staffPermissionSections=Object.freeze([
+  {key:'workforce-settings',label:'Προσωπικό καταστήματος',actions:[
+    {key:'workforce-roles.read',label:'Προβολή σχετικών ρόλων καταστήματος',description:'Βλέπει μόνο ρόλους εργαζομένων και προτύπων του επιλεγμένου καταστήματος, με τοπικά πλήθη.'},
+    {key:'workforce-rules.read',label:'Προβολή κανόνων προσωπικού καταστήματος',description:'Βλέπει κανόνες των ορατών εργαζομένων του καταστήματος, χωρίς αλλαγές.'},
+    {key:'shift-templates.read',label:'Προβολή προτύπων βαρδιών καταστήματος',description:'Βλέπει πρότυπα και πλήθη αναθέσεων μόνο του επιλεγμένου καταστήματος.'},
+    {key:'workforce-audit.read',label:'Προβολή ιστορικού προσωπικού καταστήματος',description:'Βλέπει έως 100 πρόσφατες περιγραφικές ενέργειες του καταστήματος, χωρίς εσωτερικά JSON ή στοιχεία πρόσβασης.'}
+  ]},
   {key:'chat',label:'Chat καταστήματος',actions:[
     {key:'chat.read',label:'Προβολή μηνυμάτων Chat',description:'Βλέπει μηνύματα, θέματα, αναζήτηση και προεπισκόπηση συνημμένων του επιλεγμένου καταστήματος, χωρίς αποστολή, λήψη αρχείων ή αλλαγή κατάστασης.'}
   ]},
@@ -149,6 +155,8 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&['/api/price-catalog/promotions/scoped','/api/price-catalog/promotions/analysis'].includes(path))return 'promotions.read';
   if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/payroll\/(?:preview|periods(?:\/[^/]+)?)$/.test(path))return 'payroll.read';
   if(method==='GET'&&/^\/api\/inventory-ledger\/[^/]+\/movements$/.test(path))return 'stock.read';
+  const workforceSettings=method==='GET'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/(roles|rules|shift-templates|audit)$/);
+  if(workforceSettings)return {roles:'workforce-roles.read',rules:'workforce-rules.read','shift-templates':'shift-templates.read',audit:'workforce-audit.read'}[workforceSettings[1]];
   const workforceRead=method==='GET'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/(schedules|attendance|leaves)$/);
   if(workforceRead)return {schedules:'schedule.read',attendance:'attendance.read',leaves:'leaves.read'}[workforceRead[1]];
   if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/employees(?:\/[^/]+)?$/.test(path))return 'employees.read';

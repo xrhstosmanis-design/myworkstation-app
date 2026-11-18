@@ -15,6 +15,7 @@ import {provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js
 import {provisionMonthlyInventorySnapshotSchema} from '../src/services/monthly-inventory-snapshot-schema.js';
 import {provisionMonthlyInventoryCaptureSchema} from '../src/services/monthly-inventory-capture-schema.js';
 import {createLifecycleInstallationCore} from '../src/services/store-lifecycle-executor.js';
+import {verifyNativeWorkforceReads} from './fixtures/backoffice-staff-workforce-native.mjs';
 import {verifyInstalledCompanyRuntime} from './fixtures/backoffice-company-installed-runtime.mjs';
 import {createBackofficeCompanyInstallation} from '../src/services/backoffice-company-installation.js';
 import {lifecycleWorkerCapabilityMac} from '../src/services/store-lifecycle-worker-ready.js';
@@ -121,5 +122,6 @@ for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installa
   const fresh=await f.service.inspect(actor);assert.equal(fresh.eligible,false,'old signed worker cannot authorize the new profile');assert.equal(fresh.packet.installed,true);
   const replay=await f.service.install(actor,{...input,packet:fresh.packet});assert.equal(replay.idempotentReplay,true);assert.equal((await f.db.$queryRawUnsafe(`SELECT 1 FROM "BackofficeStaffAudit" WHERE "event"='COMPANY_AUTHORITY_SCHEMA_INSTALLED'`)).length,2);
   await verifyInstalledCompanyRuntime({db:f.db,profile,revision,secret,planHash:f.service.describe().targetPlanHash});
+  await verifyNativeWorkforceReads({db:f.db});
  }finally{await f.close()}
 });

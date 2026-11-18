@@ -23,6 +23,9 @@ const cases=[
  ['MISSING_OPERATOR','ERROR: operator does not exist: secret_type + secret_type'],
  ['CONSTRAINT','ERROR: duplicate key value violates unique constraint "secret_constraint"'],
  ['SQL_SYNTAX','ERROR: syntax error at or near "PRIVATE_QUERY"'],
+ ['ARCHIVE_IO','pg_restore: input file does not appear to be a valid archive'],
+ ['FILE_IO','pg_restore: could not open input file "/private/archive.dump": No such file or directory'],
+ ['RESOURCE','pg_restore: could not write output: No space left on device'],
  ['UNKNOWN','ERROR: unknown private failure']
 ];
 
@@ -55,6 +58,52 @@ assert producer.safe_failure_payload(ValueError(values['canary']))=={'state':'RE
 print(json.dumps(messages))`;
  const result=spawnSync('python3',['-c',script],{cwd:root,encoding:'utf8',input:JSON.stringify({cases,canary}),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},timeout:10000,maxBuffer:16000});
  assert.equal(result.status,0,(result.stderr||result.stdout).slice(-8000));assert.equal(JSON.parse(result.stdout).length,cases.length);assert.doesNotMatch(result.stdout,/PRIVATE_PERSON|INSERT INTO|private\.invalid|secret-token/);
+});
+
+test('SQLSTATE diagnostics inspect only fresh private log bytes and retain no unrecognized code or stale error',()=>{
+ const script=String.raw`import sys,json,types,importlib.util,pathlib,tempfile
+from unittest.mock import patch
+sys.path.insert(0,'ops/backup/lifecycle')
+import verify_restore
+spec=importlib.util.spec_from_file_location('diag_producer','ops/backup/lifecycle/company-installation-backup.py');producer=importlib.util.module_from_spec(spec);spec.loader.exec_module(producer)
+canary=json.load(sys.stdin)['canary'];payloads=[]
+prefix='2026-11-18 12:00:00 UTC [123] ERROR:  '
+def line(code): return (prefix+code+': '+canary+'\nSTATEMENT: INSERT INTO Customer VALUES (user@private.invalid,password=secret-token);\n').encode()
+with tempfile.TemporaryDirectory() as directory:
+ pg=object.__new__(verify_restore.PrivatePostgres);pg.env={};pg.user=None;pg.root=pathlib.Path(directory)
+ logfile=pg.root/'postgres.log'
+ result=types.SimpleNamespace(returncode=1,stderr=b'unknown client failure')
+ def command(code):
+  def run(*args,**options):
+   if code is not None:
+    with open(logfile,'ab') as stream: stream.write(line(code))
+   return result
+  return run
+ for code,category in verify_restore.PRIVATE_SQLSTATE_CATEGORIES.items():
+  logfile.write_bytes(line('42P07'));logfile.chmod(0o600)
+  with patch.object(verify_restore.subprocess,'run',side_effect=command(code)):
+   try: pg.run(['/private/'+canary+'/pg_restore'])
+   except verify_restore.PrivatePostgresCommandError as error:
+    assert error.category==category;payloads.append(producer.safe_failure_payload(error));assert canary not in str(error)
+   else: raise AssertionError('Unknown private failure was admitted')
+ for code in [None,'SECRT']:
+  logfile.write_bytes(line('42P07'))
+  with patch.object(verify_restore.subprocess,'run',side_effect=command(code)):
+   try: pg.run(['pg_restore'])
+   except verify_restore.PrivatePostgresCommandError as error: assert error.category=='UNKNOWN';assert 'SECRT' not in str(error);assert '42P07' not in str(error)
+   else: raise AssertionError('Unknown failure was admitted')
+ logfile.write_bytes(line('42P06')+line('SECRT'));assert verify_restore.private_server_log_category(logfile)=='UNKNOWN'
+ assert verify_restore.private_command_failure_category(b'warning '*30000+b'\nERROR: schema "'+canary.encode()+b'" already exists')=='DUPLICATE_SCHEMA'
+ pg.data=pg.root/'pgdata';pg.socket=pg.root/'socket';calls=[]
+ with patch.object(pg,'run',side_effect=lambda args,**options:calls.append(args)): assert pg.__enter__() is pg
+ assert '--auth-host=reject' in calls[0]
+ startup=calls[1][calls[1].index('-o')+1];assert '-c log_error_verbosity=verbose' in startup;assert "-h ''" in startup
+print(json.dumps(payloads))`;
+ const result=spawnSync('python3',['-c',script],{cwd:root,encoding:'utf8',input:JSON.stringify({canary}),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},timeout:10000,maxBuffer:16000});
+ assert.equal(result.status,0,(result.stderr||result.stdout).slice(-8000));const payloads=JSON.parse(result.stdout);assert.equal(payloads.length,24);
+ for(const payload of payloads)assert.equal(companyInstallationBackupDiagnostic(JSON.stringify(payload)),payload.code);
+ assert.doesNotMatch(result.stdout,/PRIVATE_PERSON|INSERT INTO|private\.invalid|secret-token|SECRT/);
+ assert.equal(companyInstallationBackupDiagnostic(JSON.stringify({state:'REFUSED',error:'PrivatePostgresCommandError',code:'PRIVATE_PG_SQLSTATE_SECRT_UNKNOWN',command:'pg_restore',exitCode:1})),null);
 });
 
 test('installer accepts only strict known diagnostic JSON and never reflects arbitrary stderr or extra data',()=>{

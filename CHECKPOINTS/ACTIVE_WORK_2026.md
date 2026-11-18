@@ -561,3 +561,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: κατηγορίες/ΦΠΑ/εταιρείες προϊόντων/τραπεζικές ρυθμίσεις,11COMPANY+53STORE, finite105-family Ownercoverage inventory.186PASS/6PG-or-DockerSKIP/buildPASS. D90 actualbackup/install/Docker checkpoints πέρασαν πρινCOREfixtureFAIL· πλήρεςnative11/walletCI απαιτείται, χωρίς παραγωγική πράξη. [Checkpoint](CHANGES/2026-11-18-no5-company-catalog-views.md).
 
 18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: εταιρικά προϊόντα/αγορές/συνταγές/καρτέλα προμηθευτή,15COMPANY+53STORE, ορατόsupplierparent και μη παραπλανητικό recipecost.195PASS/6PG-or-DockerSKIP/buildPASS. Προηγούμενο κύριοCI44281732440 PASS/native11· walletανεξάρτητοFAIL παραμένειδιάγνωση, νέοnative15CI απαιτείται. [Checkpoint](CHANGES/2026-11-18-no5-company-business-views.md).
+
+
+## 18/11/2026 — No5 workforce settings, source candidate / AWAITING CI
+
+CENTRAL-BACKOFFICE-ACCESS-01 retains ownership. Baseline remote22f8fffc/local885e3af; native15BASE/CAPTURE acceptance passed but mainCI44288331027 failed one Greek time format policy, separatewallet44288331019 stillFAIL. Four scoped workforce read rights (57STORE=39reads18actions), bounded pureUI/live grants/modules/revision; frozen29-file cohort175PASS/8nativePG-or-DockerSKIP/0FAIL andclientbuildPASS; all Owner scope remainsOPEN. Checkpoint [2026-11-18-no5-workforce-settings](CHANGES/2026-11-18-no5-workforce-settings.md). No production or human acceptance; tests at final combined session.

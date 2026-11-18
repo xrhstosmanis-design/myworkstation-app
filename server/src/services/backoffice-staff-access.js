@@ -29,10 +29,10 @@ export async function requireStaffGrant(db,user,storeId,capability,{additionalMo
   if(!grant||!staffProfiles[grant.profile]||!validStaffCapabilities(grant.capabilities)||!grant.capabilities.includes(capability))throw staffError();
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
-  if(['employees.read','schedule.read','attendance.read','leaves.read','payroll.read'].includes(capability)){
+  if(['employees.read','schedule.read','attendance.read','leaves.read','payroll.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(capability)){
     const rows=await db.$queryRaw`SELECT "moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId}`;
     const states=resolvePersonnelPackageStates(rows).states;
-    if(!states[capability==='attendance.read'?PERSONNEL_PRO:PERSONNEL_BASIC].effectiveActive||(capability==='payroll.read'&&!states[PERSONNEL_PAYROLL].effectiveActive))throw staffError(403,'MODULE_DISABLED','Το πακέτο προσωπικού δεν είναι ενεργό στο κατάστημα.');
+    if(!states[['attendance.read','workforce-rules.read'].includes(capability)?PERSONNEL_PRO:PERSONNEL_BASIC].effectiveActive||(capability==='payroll.read'&&!states[PERSONNEL_PAYROLL].effectiveActive))throw staffError(403,'MODULE_DISABLED','Το πακέτο προσωπικού δεν είναι ενεργό στο κατάστημα.');
   }
   const modules=[...new Set([...modulesForCapability(capability),...additionalModules])];
   for(const moduleKey of modules){
@@ -59,7 +59,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(capability==='LIFECYCLE'){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
-    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read'].includes(c)):[];
+    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(c)):[];
     let disabled;
     for(const read of reads){
       try{await requireStaffGrant(db,user,storeId,read);req.user={...req.user,storeId};return true}
@@ -70,7 +70,7 @@ export async function enforceBackofficeStaff(db,req,res){
   const storeId=req.get('x-backoffice-store-id');
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
   if(['analytics.read','handover.read','stock.read','pending.read','promotions.read','monthly-invoice-audit.read','invoice-ai.read','wholesale.read','approvals.read','monthly-inventory.read'].includes(capability)&&req.query?.storeId!==storeId)throw staffError();
-  const workforce=path.match(/^\/api\/platform\/store-modules\/companies\/([^/]+)\/stores\/([^/]+)\/workforce-v2\/(?:employees(?:\/[^/]+)?|schedules|attendance|leaves|payroll\/(?:preview|periods(?:\/[^/]+)?))$/);
+  const workforce=path.match(/^\/api\/platform\/store-modules\/companies\/([^/]+)\/stores\/([^/]+)\/workforce-v2\/(?:employees(?:\/[^/]+)?|schedules|attendance|leaves|roles|rules|shift-templates|audit|payroll\/(?:preview|periods(?:\/[^/]+)?))$/);
   if(workforce&&(workforce[1]!==user.companyId||workforce[2]!==storeId))throw staffError();
   const chatRead=path.match(/^\/api\/store-chat\/stores\/([^/]+)\/messages(?:\/search|\/[^/]+\/attachment)?$/);
   if(chatRead&&(chatRead[1]!==storeId||path.endsWith('/attachment')&&req.query?.download==='1'))throw staffError();
@@ -124,7 +124,7 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
-  return capability==='chat.read'?['STORE_CHAT']:capability==='radio.read'?['STORE_MODE','ONLINE_RADIO']:capability==='approvals.read'?['STORE_MODE','CASH_CONTROL']:capability==='wholesale.read'?['WHOLESALE_B2B']:capability==='video.read'?['VIDEO_EVENTS']:capability==='printers.read'?['STORE_MODE']:capability==='stock-transfers.read'?['STORE_MODE']:capability==='invoice-ai.read'?['AI_READER']:capability==='online-orders.read'?['ONLINE_ORDERING']:capability==='table-service.read'?['STORE_MODE','TABLE_SERVICE']:capability==='baking.read'?['STORE_MODE']:capability==='pending.read'?['PENDING_CENTER']:['employees.read','schedule.read','attendance.read','leaves.read','payroll.read'].includes(capability)?[]:capability==='handover.read'?['SHIFT_HANDOVER']:capability==='analytics.read'?['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']:capability==='order-suggestions.read'?['ORDER_SUGGESTIONS']:capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
+  return capability==='chat.read'?['STORE_CHAT']:capability==='radio.read'?['STORE_MODE','ONLINE_RADIO']:capability==='approvals.read'?['STORE_MODE','CASH_CONTROL']:capability==='wholesale.read'?['WHOLESALE_B2B']:capability==='video.read'?['VIDEO_EVENTS']:capability==='printers.read'?['STORE_MODE']:capability==='stock-transfers.read'?['STORE_MODE']:capability==='invoice-ai.read'?['AI_READER']:capability==='online-orders.read'?['ONLINE_ORDERING']:capability==='table-service.read'?['STORE_MODE','TABLE_SERVICE']:capability==='baking.read'?['STORE_MODE']:capability==='pending.read'?['PENDING_CENTER']:['employees.read','schedule.read','attendance.read','leaves.read','payroll.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(capability)?[]:capability==='handover.read'?['SHIFT_HANDOVER']:capability==='analytics.read'?['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']:capability==='order-suggestions.read'?['ORDER_SUGGESTIONS']:capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
 }
 
 // Must run inside each canonical writer transaction, before writes or replay.

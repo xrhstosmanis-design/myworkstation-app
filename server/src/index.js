@@ -1,3 +1,4 @@
+import {readStaffWorkforceView} from './services/backoffice-staff-workforce.js';
 import {createInvoiceStockExclusionEmailScheduler} from "./services/invoice-stock-exclusion-email.js";
 import {readStaffCompanyDirectory} from './services/backoffice-staff-company.js';
 import {createAutomaticReportSmtpTransport} from "./services/mail.js";
@@ -220,6 +221,11 @@ app.use("/api/backoffice-staff",createBackofficeStaffRouter({db:prisma,authentic
 app.use("/api/lifecycle",storeLifecycleStateRoutes);
 app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
 app.use("/api/system/backup-monitor",backupMonitorRoutes);
+// Exact delegated workforce settings bypass broad platform/bootstrap middleware.
+app.get('/api/platform/store-modules/companies/:companyId/stores/:storeId/workforce-v2/:view',auth,async(req,res,next)=>{
+ if(!req.user?.staffAccess||!['workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(req.staffGrant?.capability))return next();
+ try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffWorkforceView(prisma,req))}catch(error){next(error)}
+});
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",blockPreparedDemoMutation);
 app.use("/api/platform/customer-demos",customerDemoRoutes);

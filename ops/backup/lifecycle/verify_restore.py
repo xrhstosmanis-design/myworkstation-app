@@ -64,7 +64,21 @@ def delete_order(snapshot, descriptor, schema):
     return order
 
 PRIVATE_POSTGRES_COMMANDS = frozenset({'initdb', 'pg_ctl', 'psql', 'pg_dump', 'pg_restore'})
-PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'DUPLICATE_SCHEMA', 'MISSING_SCHEMA', 'MISSING_FUNCTION', 'MISSING_EXTENSION', 'MISSING_RELATION', 'MISSING_COLUMN', 'MISSING_OPERATOR', 'CONSTRAINT', 'SQL_SYNTAX', 'UNKNOWN'})
+PRIVATE_SQLSTATE_CATEGORIES = {
+    '42601': 'SQLSTATE_42601_SQL_SYNTAX', '42704': 'SQLSTATE_42704_UNDEFINED_OBJECT',
+    '42P01': 'SQLSTATE_42P01_MISSING_RELATION', '42703': 'SQLSTATE_42703_MISSING_COLUMN',
+    '42883': 'SQLSTATE_42883_MISSING_FUNCTION_OR_OPERATOR', '3F000': 'SQLSTATE_3F000_MISSING_SCHEMA',
+    '42P06': 'SQLSTATE_42P06_DUPLICATE_SCHEMA', '42P07': 'SQLSTATE_42P07_DUPLICATE_RELATION',
+    '42710': 'SQLSTATE_42710_DUPLICATE_OBJECT', '42501': 'SQLSTATE_42501_PERMISSION',
+    '22023': 'SQLSTATE_22023_INVALID_PARAMETER_VALUE', '0A000': 'SQLSTATE_0A000_FEATURE_NOT_SUPPORTED',
+    'XX000': 'SQLSTATE_XX000_INTERNAL_ERROR', '23502': 'SQLSTATE_23502_NOT_NULL_CONSTRAINT',
+    '23503': 'SQLSTATE_23503_FOREIGN_KEY_CONSTRAINT', '23505': 'SQLSTATE_23505_UNIQUE_CONSTRAINT',
+    '23514': 'SQLSTATE_23514_CHECK_CONSTRAINT', '53100': 'SQLSTATE_53100_DISK_FULL',
+    '53200': 'SQLSTATE_53200_MEMORY', '08006': 'SQLSTATE_08006_CONNECTION_FAILURE',
+    '58P01': 'SQLSTATE_58P01_UNDEFINED_FILE', '42P16': 'SQLSTATE_42P16_INVALID_TABLE_DEFINITION',
+    '42P17': 'SQLSTATE_42P17_INVALID_OBJECT_DEFINITION', '42804': 'SQLSTATE_42804_DATATYPE_MISMATCH',
+}
+PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'DUPLICATE_SCHEMA', 'MISSING_SCHEMA', 'MISSING_FUNCTION', 'MISSING_EXTENSION', 'MISSING_RELATION', 'MISSING_COLUMN', 'MISSING_OPERATOR', 'CONSTRAINT', 'SQL_SYNTAX', 'ARCHIVE_IO', 'FILE_IO', 'RESOURCE', 'UNKNOWN'}) | frozenset(PRIVATE_SQLSTATE_CATEGORIES.values())
 
 
 class PrivatePostgresCommandError(ValueError):
@@ -77,7 +91,11 @@ class PrivatePostgresCommandError(ValueError):
 
 def private_command_failure_category(stderr):
     """Return only an allowlisted diagnostic; never return captured stderr."""
-    text = (stderr.decode('utf-8', errors='replace') if isinstance(stderr, bytes) else stderr if isinstance(stderr, str) else '')[:65536].lower()
+    if isinstance(stderr, (bytes, str)):
+        sample = stderr if len(stderr) <= 131072 else stderr[:65536] + (b'\n' if isinstance(stderr, bytes) else '\n') + stderr[-65536:]
+        text = (sample.decode('utf-8', errors='replace') if isinstance(sample, bytes) else sample).lower()
+    else:
+        text = ''
     patterns = [
         ('UNSUPPORTED_SETTING', r'(?:unrecognized|unsupported) configuration parameter'),
         ('ARCHIVE_VERSION', r'unsupported version.*file header|archive version|unsupported archive format'),
@@ -98,8 +116,33 @@ def private_command_failure_category(stderr):
         ('MISSING_OPERATOR', r'operator(?: [^\n]{0,200})? does not exist'),
         ('CONSTRAINT', r'violates (?:not-null|unique|foreign key|check|exclusion) constraint|contains null values|could not create unique index'),
         ('SQL_SYNTAX', r'syntax error (?:at|in)|unterminated (?:quoted|dollar-quoted)|invalid input syntax'),
+        ('ARCHIVE_IO', r'could not read from input file|input file is too short|unexpected end of file|does not appear to be a valid archive|input file appears to be a text format dump|could not uncompress data|decompression failed'),
+        ('FILE_IO', r'could not open (?:input|output) file|could not read (?:input|output) file|could not write (?:to )?(?:file|output file)|no such file or directory'),
+        ('RESOURCE', r'no space left on device|disk quota exceeded|too many open files|resource temporarily unavailable'),
     ]
     return next((category for category, pattern in patterns if re.search(pattern, text)), 'UNKNOWN')
+
+
+def private_server_log_category(logfile, start_offset=0):
+    """Inspect bounded private log bytes; publish only explicitly known states."""
+    try:
+        with open(logfile, 'rb') as stream:
+            stream.seek(0, 2)
+            end = stream.tell()
+            if type(start_offset) is not int or start_offset < 0 or start_offset >= end:
+                return 'UNKNOWN'
+            stream.seek(start_offset)
+            if end - start_offset <= 131072:
+                sample = stream.read(131072)
+            else:
+                sample = stream.read(65536)
+                stream.seek(end - 65536)
+                sample += b'\n' + stream.read(65536)
+            text = sample.decode('utf-8', errors='replace')
+    except (OSError, TypeError, ValueError):
+        return 'UNKNOWN'
+    codes = re.findall(r'(?m)^\d{4}-\d{2}-\d{2}[^\n]{0,160}\b(?:ERROR|FATAL|PANIC):\s+([A-Z0-9]{5}):', text)
+    return PRIVATE_SQLSTATE_CATEGORIES.get(codes[-1], 'UNKNOWN') if codes else 'UNKNOWN'
 
 
 class PrivatePostgres:
@@ -118,6 +161,11 @@ class PrivatePostgres:
         self.started = False
 
     def run(self, args, **options):
+        logfile = self.root / 'postgres.log' if getattr(self, 'root', None) is not None else None
+        try:
+            log_offset = logfile.stat().st_size if logfile is not None else 0
+        except OSError:
+            log_offset = 0
         result = subprocess.run(args, timeout=300, env=self.env, **(self.user or {}), stderr=subprocess.PIPE, **options)
         if result.returncode:
             # Do not expose row values, SQL, archive paths or credentials.
@@ -126,12 +174,14 @@ class PrivatePostgres:
                 command = 'UNKNOWN_COMMAND'
             code = result.returncode if type(result.returncode) is int and -255 <= result.returncode <= 255 else -1
             category = private_command_failure_category(result.stderr)
+            if category == 'UNKNOWN' and logfile is not None:
+                category = private_server_log_category(logfile, log_offset)
             raise PrivatePostgresCommandError(command, code, category)
         return result
 
     def __enter__(self):
         self.run(['initdb', '-D', str(self.data), '-U', 'postgres', '--auth-local=trust', '--auth-host=reject', '--no-locale', '--encoding=UTF8'], stdout=subprocess.DEVNULL)
-        self.run(['pg_ctl', '-D', str(self.data), '-l', str(self.root / 'postgres.log'), '-o', "-F -k " + str(self.socket) + " -h '' -p 55439 -c max_connections=5 -c shared_buffers=16MB -c work_mem=1MB -c maintenance_work_mem=16MB -c max_parallel_workers=0 -c max_worker_processes=0", '-w', 'start'], stdout=subprocess.DEVNULL)
+        self.run(['pg_ctl', '-D', str(self.data), '-l', str(self.root / 'postgres.log'), '-o', "-F -k " + str(self.socket) + " -h '' -p 55439 -c max_connections=5 -c shared_buffers=16MB -c work_mem=1MB -c maintenance_work_mem=16MB -c max_parallel_workers=0 -c max_worker_processes=0 -c log_error_verbosity=verbose", '-w', 'start'], stdout=subprocess.DEVNULL)
         self.started = True
         return self
 

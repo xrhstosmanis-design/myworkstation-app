@@ -37,7 +37,7 @@ function valid(data,companyId,capability,query,supplierId){
  return exact(summary,['purchaseTotal','paymentTotal','estimatedBalance','purchaseCount','paymentCount'])&&num(summary.purchaseTotal)&&num(summary.paymentTotal)&&num(summary.estimatedBalance)&&summary.purchaseCount===data.purchases.length&&summary.paymentCount===data.payments.length&&Math.abs(summary.purchaseTotal-data.purchases.reduce((sum,row)=>sum+row.totalGross,0))<0.00001&&Math.abs(summary.paymentTotal-data.payments.reduce((sum,row)=>sum+row.amount,0))<0.00001&&Math.abs(summary.estimatedBalance-(summary.purchaseTotal-summary.paymentTotal))<0.00001;
 }
 const money=value=>value===null?'—':value.toLocaleString('el-GR',{style:'currency',currency:'EUR'});
-const date=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens'}):'—';
+const date=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false}):'—';
 const yes=value=>value?'Ναι':'Όχι';
 function Table({label,columns,items}){return <div style={{overflowX:'auto'}}><table aria-label={label}><thead><tr>{columns.map(([key,title])=><th key={key} scope="col">{title}</th>)}</tr></thead><tbody>{items.map(row=><tr key={row.id}>{columns.map(([key,,format])=><td key={key}>{format?format(row[key],row):row[key]??'—'}</td>)}</tr>)}</tbody></table></div>}
 const products=[['sku','Κωδικός'],['name','Είδος'],['barcodes','Barcode',value=>value.join(' · ')||'—'],['categoryName','Κατηγορία'],['unit','Μονάδα'],['vatRate','ΦΠΑ'],['salePrice','Λιανική',money],['costPrice','Τιμή αγοράς / κόστους',money],['trackStock','Παρακολούθηση αποθήκης',yes],['active','Ενεργό',yes]];
