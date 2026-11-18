@@ -8,9 +8,13 @@ Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
 
-### Νεότερη κατάσταση 18/11/2026 — Νο2 — ενιαία διόρθωση πραγματικών εκκρεμοτήτων και clickable counters / AWAITING FULL CI
+### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / BEFORE SOURCE
 
-Owner `/root`, branch `feat/no2-counter-reconciliation`, μετά merged claims #4032/e90b29c1 και #4033/e05cd112. Ενοποιεί την πράσινη #4031 payment proof με ordinary-only proven posting projection και φίλτρα ολόκληρου μήνα πριν pagination. Κρατά raw provenance/fingerprint, scoped cursors, C classifier/D1/email/writers αμετάβλητα και άλλους owners.83pure/reader/D1 PASS,22mounted PASS, frontend build PASS· τοπική Chromiumstartup ECONNRESET και nativePG SKIP δεν αποκρύπτονται, απαιτείται actual PG/browser full CI. Καμία νέα πληρωμή/καταχώριση/stock πράξη. Το παλιό limited LIVE δεν μετατρέπεται σε πλήρη μήνα/ρόλους PASS. [Counters](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md), [Projection](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). Επόμενο source/main CI, exact deploy και read-only hosted επανέλεγχος· κοινές δοκιμές στο τέλος.
+Ο ιδιοκτήτης επιβεβαίωσε νέο FAIL: η παλιά κατηγορία μη καταχωρισμένων αναμειγνύει ασύνδετες myDATA/πιστωτικές/merged εγγραφές και ο αριθμός δεν ανοίγει την υπάρχουσα αγορά. Ίδιος owner `/root`, branch `fix/no2-invoice-open-review`, μόνο ordinary eligibility/navigation και αυστηρή ανάγνωση υφιστάμενου detail χωρίς implicit repair/bootstrap. Raw C/D1/writers και άλλων σελίδων markup/εμφάνιση διατηρούνται. Το περιορισμένο LIVE counter PASS παρακάτω παραμένει, όχι PASS της σημασιολογίας ή νέας πλοήγησης. [Claim](CHANGES/2026-11-18-no2-invoice-opening-review.md). Source μετά green merged claim, καμία νέα πληρωμή/καταχώριση.
+
+### Νεότερη κατάσταση 18/11/2026 — Νο2 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ / LIMITED LIVE UI PASS
+
+Source#4037/head8975b1ca, mergec36a4ffb. PR CI44393082061:6264PASS/0FAIL/2optionalPG-WASM skips+8backupPASS. Main CI44395223533:6271PASS/0FAIL/3optionalPG-WASM skips+8backupPASS· actual nativePG και Chromium counter flows PASS χωρίς skip. Render c36 LIVE23:13:02Ελλάδας, descendant893e009c LIVE23:16:14 με ίδια τέσσερα runtime blobs Νο2 και exact health. LIVE προσωπικό Super Admin/Chromium desktop23:17:23: «Δεν έχουν καταχωριστεί» ακριβές υποσύνολο, «Εξοφλημένα» πρώτη50+τελευταία σελίδα μόνο πράσινα, «Οικονομικές εκκρεμότητες» μόνο καταγεγραμμένες διαφορές. Χωρίς νέα πληρωμή/ανέβασμα/έγκριση/stock πράξη. Η συνεδρία άλλαξε έπειτα· άλλοι μετρητές έχουν CI PASS αλλά όχι νέο hosted PASS, λοιποί ρόλοι/συσκευές και κοινή τελική Νο2 αποδοχή OPEN. [Receipt](CHANGES/2026-11-18-no2-counter-live-receipt.md), [Manual](../docs/manual/monthly-invoice-audit/PASS.md). C classifier/D1/writers/dispatch και άλλοι owners διατηρούνται. Το email preview κληρονομεί τα διορθωμένα ordinary workflow counts, χωρίς νέα financial μορφοποίηση ή αποστολή. Δεν επαναλαμβάνουμε τεκμηριωμένες συναλλαγές.
 
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
@@ -147,6 +151,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · 13–14 · Διόρθωση ιστορικού κόστους και επισκόπηση εκκρεμών αγορών · [Checkpoint](CHANGES/2026-11-17-no13-no14-batch-source.md) · Τοπικοί έλεγχοι, CI και κοινή αποδοχή LAB σε συνέχεια.
 
 - 2026-11-17 · Νο 13 · LAB PASS για CSV και εκτυπώσιμη προβολή «Χωρίς ΦΠΑ» στο c19e099 · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · PDF, φυσική εκτύπωση και υπόλοιπο 13–14 ανοιχτά.
+- 2026-11-17 · Νο 4 · POS → Βοηθός → BackOffice · [Checkpoint](CHANGES/2026-11-17-no4-pos-assistant-backoffice.md) · Ενιαία συναλλαγή μεταφοράς, 64 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
@@ -660,7 +665,9 @@ Next: source PR/full CI; owner approval for source merge/publication; existing L
 
 Explicit owner request/start in same warehouse/invoice conversation. Bounded independent extension: compact archive filters/footer; draft line editor VAT department/category/dependent subcategory for existing/new items; display markup for previously matched lines without saving or changing retail. Owner /root, branch feat/warehouse-invoice-review-ui-20261118. Existing invoice/No2/OCR/report owners retained; no OCR, matching algorithm, financial posting, finalization, stock or production data tests. Current new requirements NOT TESTED; prior warehouse release #4029 and invoice/POS acceptance preserved. Checkpoint CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
 
+- 2026-11-18 · 13–14 · Κατάσταση τιμολογίων και αντιλογισμών στο CSV προμηθευτών · [Checkpoint](CHANGES/2026-11-18-no13-no14-supplier-csv-status.md) · 2 τοπικές δοκιμές PASS, CI και LAB εκκρεμούν.
 
-## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — SOURCE CANDIDATE / AWAITING CI AND COMMON LAB
 
-Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compact warehouse chrome, draft VAT/category/subcategory and read-only linked markup implemented; selected-store overrides saved only on explicit line submit in same transaction/audit, other stores/global product unchanged. Local build and mounted checks passed, native PostgreSQL awaiting CI; no hosted financial/stock actions. Details in CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
+## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — SOURCE RECONCILED / AWAITING CI AND COMMON LAB
+
+Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compact warehouse chrome, draft VAT/category/subcategory and read-only linked markup implemented. Real isolated PostgreSQL taxonomy/control/rollback and staff regression passed in CI44400676745;6274PASS/1 old test-harness dependencyFAIL/3optionalSKIP. Dependency corrected without runtime change. Main a9639f31 reconciled: preserve No4 atomic assistant transfer and shared transaction helpers, No13–14 CSV status and No2 claim. Taxonomy hooks now use current shared patchPurchaseLine transaction; no hosted financial/stock action. Full exact combined CI and common LAB pending. See own checkpoint.

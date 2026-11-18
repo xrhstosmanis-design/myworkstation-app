@@ -102,7 +102,7 @@ test("confirmed edits of matched invoice lines update supplier learning",()=>{
   assert.match(source,/"lastDiscount3"=EXCLUDED\."lastDiscount3"/);
   assert.match(source,/learnConfirmedLineCorrection\(tx,\{companyId,supplierId:found\.supplierId,line:corrected,actor:req\.user\}\)/);
   assert.match(source,/learnCentralInvoiceCorrection\(tx,\{actor:req\.user,companyId,supplierId:found\.supplierId,line:corrected\}\)/);
-  assert.match(source,/res\.json\(\{ok:true,\.\.\.c,invoiceUnit,stockUnitsPerInvoiceUnit,stockQuantity:c\.quantity\*stockUnitsPerInvoiceUnit,mappingLearned,centralLearning\}\)/);
+  assert.match(source,/return \{ok:true,\.\.\.c,invoiceUnit,stockUnitsPerInvoiceUnit,stockQuantity:c\.quantity\*stockUnitsPerInvoiceUnit,mappingLearned:learned,centralLearning\}/);
 });
 
 test("matched invoice line editor persists and learns package to pieces conversion",()=>{

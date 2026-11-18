@@ -63,3 +63,11 @@ test('POS operators can read reopened purchases but correction stays in BackOffi
   assert.equal(result.res.body.code,'POS_ORDERS_REOPEN_DENIED');
  }
 });
+
+test('assistant line transfer requires a scoped writable POS draft',async()=>{
+ const request={path:'/one/assistant-line-transfer',method:'POST',body:{storeId:'A'}};
+ assert.equal((await fixture().run(request)).next,true);
+ assert.equal((await fixture().run({...request,body:{storeId:'B'}})).res.code,403);
+ assert.equal((await fixture({orderStore:'B'}).run(request)).res.code,404);
+ assert.equal((await fixture({reopenVersion:1}).run(request)).res.body.code,'POS_ORDERS_REOPEN_DENIED');
+});
