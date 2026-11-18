@@ -443,16 +443,48 @@
 
 .ia-merge-body{padding:18px;overflow:auto;display:grid;gap:14px;font-size:16px;line-height:1.5}.ia-merge-body p{margin:0}.ia-merge-body label{display:grid;gap:6px}.ia-merge-body label.check{display:flex;align-items:center}.ia-merge-body select,.ia-merge-body input:not([type=checkbox]),.ia-merge-body>button{min-height:44px;padding:8px;border:1px solid #b9cad9;border-radius:8px;background:#fff;color:#17324b}.ia-merge-body table{width:100%;border-collapse:collapse}.ia-merge-body th,.ia-merge-body td{padding:10px;text-align:left;border-bottom:1px solid #d9e4ec}.ia-merge-body [role=alert]{padding:12px;background:#fff4e5;color:#85500d;border-radius:8px}
 
-/* Keep the same complete filter panel in Central/Owner and the POS archive. */
+/* Compact shared archive chrome; keep room for product rows. */
+.ia-shell{gap:8px}
+.ia-titlebar{min-height:0;padding:10px 14px}
+.ia-titlebar b{font-size:22px}
+.ia-titlebar small{font-size:13px}
+.ia-titlebar button{min-height:34px;padding:6px 12px;font-size:13px}
 .ia-filters.ia-filters-expanded{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));
+ display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));
+ gap:7px 10px;padding:9px 12px;
 }
-.ia-filters-expanded .ia-filter-title,
-.ia-filters-expanded form{grid-column:1/-1}
+.ia-filters-expanded .ia-filter-title{grid-column:1/-1;font-size:15px}
+.ia-filters-expanded label{gap:3px;font-size:12px;min-width:0}
+.ia-filters-expanded select,.ia-filters-expanded input{
+ min-height:34px;height:34px;padding:5px 8px;font-size:13px;border-radius:7px;width:100%;min-width:0;
+}
+.ia-filters-expanded .ia-search-form{grid-column:span 2;grid-row:2;grid-template-columns:18px minmax(0,1fr) auto}
 .ia-filters-expanded .ia-status{grid-column:auto}
+.ia-filters-expanded .ia-margin-form{grid-column:span 2;grid-template-columns:minmax(80px,1fr) minmax(80px,1fr) auto}
+.ia-filters-expanded form{gap:6px;min-width:0}
+.ia-filters-expanded form>svg{width:16px;height:16px;margin-bottom:9px}
+.ia-filters-expanded form button{min-width:0;min-height:34px;padding:5px 10px;font-size:12px;border-radius:7px}
+.ia-toolbar{padding:6px 9px;gap:6px;flex-direction:row;align-items:center}
+.ia-toolbar-actions{gap:5px;flex:1;min-width:0}
+.ia-toolbar button{min-width:0;min-height:34px;padding:5px 8px;font-size:12px;border-radius:7px}
+.ia-toolbar button svg{width:15px;height:15px}
+.ia-page-size{font-size:12px;gap:6px;margin-left:auto}
+.ia-page-size select{min-width:65px;min-height:34px;padding:4px 7px;font-size:13px}
+.ia-horizontal-control{gap:6px;font-size:11px}
+.ia-grid-caption{min-height:42px;padding:6px 12px}
+.ia-grid-caption>b{font-size:15px}
+@media(max-width:900px){
+ .ia-filters.ia-filters-expanded{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ia-filters-expanded .ia-search-form{grid-column:1/-1;grid-row:auto}
+ .ia-filters-expanded .ia-margin-form{grid-column:1/-1}
+ .ia-toolbar-actions{display:flex;flex-wrap:wrap}
+ .ia-toolbar button{width:auto}
+}
 @media(max-width:600px){
-  .ia-filters-expanded form{grid-template-columns:1fr}
-  .ia-filters-expanded form>svg{display:none}
-  .ia-filters-expanded form button{width:100%}
+ .ia-filters-expanded .ia-search-form{grid-template-columns:minmax(0,1fr) auto}
+ .ia-filters-expanded form>svg{display:none}
+ .ia-filters-expanded select,.ia-filters-expanded input,.ia-filters-expanded form button,.ia-toolbar button{min-height:40px;height:auto}
+ .ia-filters-expanded .ia-margin-form{grid-template-columns:1fr 1fr}
+ .ia-margin-form button{grid-column:1/-1}
+ .ia-toolbar{position:static}
 }

@@ -659,3 +659,8 @@ Next: source PR/full CI; owner approval for source merge/publication; existing L
 ## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — ASSIGNED /root BEFORE SOURCE
 
 Explicit owner request/start in same warehouse/invoice conversation. Bounded independent extension: compact archive filters/footer; draft line editor VAT department/category/dependent subcategory for existing/new items; display markup for previously matched lines without saving or changing retail. Owner /root, branch feat/warehouse-invoice-review-ui-20261118. Existing invoice/No2/OCR/report owners retained; no OCR, matching algorithm, financial posting, finalization, stock or production data tests. Current new requirements NOT TESTED; prior warehouse release #4029 and invoice/POS acceptance preserved. Checkpoint CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
+
+
+## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — SOURCE CANDIDATE / AWAITING CI AND COMMON LAB
+
+Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compact warehouse chrome, draft VAT/category/subcategory and read-only linked markup implemented; selected-store overrides saved only on explicit line submit in same transaction/audit, other stores/global product unchanged. Local build and mounted checks passed, native PostgreSQL awaiting CI; no hosted financial/stock actions. Details in CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
