@@ -11,6 +11,17 @@ import * as common from '../src/lib/invoice-common-draft.js';
 import {lockEditablePurchaseOrder} from "../src/services/purchase-order-reopen.js";
 import {purchasePrintedRounding} from '../src/lib/purchase-printed-rounding.js';
 
+function metadataEditSource(source){
+ const start=source.indexOf('router.patch("/:orderId",'),end=source.indexOf('\nfunction invoiceDisplayMarkup(',start);
+ assert.ok(start>=0&&end>start,'extract exactly the existing metadata handler before detail-only readers');
+ return source.slice(start,end);
+}
+
+test('metadata action harness extracts only its handler when detail readers export additional functions',async()=>{
+ const source=await readFile(new URL('../src/routes/purchase-orders.js',import.meta.url),'utf8');
+ assert.doesNotThrow(()=>new Function('router',metadataEditSource(source)));
+});
+
 test('native delegated invoice metadata and canonical approval preserve one posting, actor, control stock and live withdrawal',{skip:!isolatedInvoiceDb(),timeout:90000},async()=>{
  const f=await invoiceDbFixture(),db=f.db;
  try{
@@ -20,12 +31,12 @@ test('native delegated invoice metadata and canonical approval preserve one post
   await db.$executeRawUnsafe('ALTER TABLE "StockMovement" ADD CONSTRAINT "staff_actor_fk" FOREIGN KEY ("createdByUserId") REFERENCES "User"("id")');
   await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "reopenVersion" int DEFAULT 0');
   const source=await readFile(new URL('../src/routes/purchase-orders.js',import.meta.url),'utf8');
-  const start=source.indexOf('router.patch("/:orderId",'),end=source.indexOf('\nrouter.get("/:orderId/detail",',start);let edit;
+  let edit;
   const audit=source.slice(source.indexOf('async function writePurchaseAudit('),source.indexOf('const lineSchema='));
   const deps={router:{patch:(_path,h)=>edit=h},z,prisma:db,id:()=>crypto.randomUUID(),requireStaffOrderAction,
    order:async(companyId,orderId)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId}`)[0],
    editable:()=>{},lockPurchaseSupplierMetadata:async()=>{},supplier:()=>assert.fail('supplier must not change')};
-  new Function(...Object.keys(deps),audit+source.slice(start,end))(...Object.values(deps));
+  new Function(...Object.keys(deps),audit+metadataEditSource(source))(...Object.values(deps));
   const invoke=async(handler,capability,body)=>{let result,failure,status=200;const req={params:{orderId:'pos',lineId:'line-pos'},body,user,staffGrant:{capability},get:()=> 'POS2'},res={json:value=>{result=value},status:value=>(status=value,res)};await handler(req,res,error=>failure=error);return {result,failure,status}};
   const before=await f.snapshot();const edited=await invoke(edit,'invoices.edit',{description:'Native reviewed metadata'});assert.ifError(edited.failure);assert.equal(edited.result.ok,true);
   assert.equal(await f.snapshot(),before);assert.equal((await db.$queryRaw`SELECT "description" FROM "PurchaseOrder" WHERE "id"='pos'`)[0].description,'Native reviewed metadata');
