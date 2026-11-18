@@ -1,5 +1,9 @@
 - 2026-11-18 · 13–14 · Κατάσταση τιμολογίων και αντιλογισμών στο CSV προμηθευτών · [Checkpoint](CHANGES/2026-11-18-no13-no14-supplier-csv-status.md) · 2 τοπικές δοκιμές PASS, CI και LAB εκκρεμούν.
 
+## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
+
+Νέο ρητό αίτημα ιδιοκτήτη: εμφάνιση αντίστοιχων παραστατικών όταν πατά κάθε σύνολο· πρώτα οι μη καταχωρισμένες αγορές. Owner `/root` Νο2, branch `feat/no2-monthly-counter-drilldown`, μόνο ordinary GET filter/UI και regressions. Όλο το month subset πριν pagination, bound cursors και αμετάβλητα global totals. Άλλοι owners/C/D1/email/classifier/writers διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md). NOT STARTED / NOT TESTED, source μετά merged claim, καμία οικονομική/stock πράξη.
+
 ## 18/11/2026 — Νο 15 — Μερική πληρωμή φόρμας POS / AWAITING CI AND LAB
 
 Η κανονική φόρμα CASH έστελνε payments:null και απορριπτόταν από το υπάρχον checkout schema πριν από συναλλαγή. Μονογραμμική διόρθωση του caller και regression πραγματικού callback/serializer/schema. [Checkpoint](CHANGES/2026-11-18-table-service-partial-cash-form.md). Ίδια ανάθεση TABLE_SERVICE, πλήρες CI και επαναδοκιμή υπάρχοντος LAB εκκρεμούν.
