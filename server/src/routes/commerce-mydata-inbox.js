@@ -210,9 +210,12 @@ async function performSync(req){
     if(page){const key=`${page.partition}:${page.row}`;if(pages.has(key))throw syncError("Η σελιδοποίηση myDATA επανέλαβε την ίδια σελίδα.");pages.add(key)}
     if(pages.size>=100)throw syncError("Η λήψη σταμάτησε στο όριο 100 σελίδων. Επαναλάβετε τον συγχρονισμό.");
   }while(page);
+  const recovery = await recoverHistoricalOriginals({
+    db: prisma, companyId: req.user.companyId, storeId: store.id, userId: req.user.id, source,
+  });
   // Bounded retries only for records received after this feature; no historic mass ingestion.
   const pending=await prisma.$queryRaw`SELECT m."inboxId" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id} AND m."rawPayload"->>'originalPending'='true' AND i."attachmentId" IS NULL AND i."status"='RECEIVED' AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)<3 ORDER BY m."fetchedAt" ASC LIMIT 3`;
-  let originalsDownloaded=0,originalsFailed=0;
+  let originalsDownloaded=recovery.downloaded,originalsFailed=recovery.failed;
   for(const item of pending){try{
     const result=await acquireOriginal(prisma,req.user.companyId,store.id,item.inboxId,req.user.id,Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY"))));
     if(result.downloaded)originalsDownloaded++;
@@ -220,11 +223,6 @@ async function performSync(req){
     originalsFailed++;
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
-  const recovery = await recoverHistoricalOriginals({
-    db: prisma, companyId: req.user.companyId, storeId: store.id, userId: req.user.id, source,
-  });
-  originalsDownloaded += recovery.downloaded;
-  originalsFailed += recovery.failed;
   const canPrepareDraft=Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY")));
   const existingPhotosLinked=canPrepareDraft?await prisma.$transaction(tx=>linkStoredPosInvoicePhotos(tx,{companyId:req.user.companyId,storeId:store.id})):0;
   if(canPrepareDraft){
