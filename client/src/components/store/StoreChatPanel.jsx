@@ -31,6 +31,7 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
   const [menuRow,setMenuRow]=useState(null),[toolsOpen,setToolsOpen]=useState(false),[attachOpen,setAttachOpen]=useState(false),[photo,setPhoto]=useState(null);
   const previewEpoch=useRef(0),press=useRef(null),suppressPreview=useRef(null);
   const mounted=useRef(true),interactionBusy=useRef(false),unknownSend=useRef(false),session=useRef(authToken());
+  const messageList=useRef(null),photoReads=useRef(new Set()),replyGesture=useRef(null);
   const active=()=>mounted.current&&session.current===authToken();
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false}},[]);
   const topicToolsReady=topic==="GENERAL"||topicsReady;
@@ -91,6 +92,35 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
   const senders=[...new Map(rows.map(row=>[row.senderId,row.senderName||row.senderId])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"el"));
   const visibleRows=rows.filter(row=>(!query.trim()||`${row.body} ${row.attachmentName||""} ${row.senderName||""} ${labels[row.category]||row.category}`.toLocaleLowerCase("el-GR").includes(query.trim().toLocaleLowerCase("el-GR")))&&(!dateFilter||new Date(row.createdAt).toLocaleDateString("en-CA",{timeZone:"Europe/Athens"})===dateFilter)&&(!senderFilter||row.senderId===senderFilter)&&(!taskFilter||row.taskId)),unreadCount=rows.filter(row=>!row.readByMe).length,taskCount=rows.filter(row=>row.taskId&&row.taskStatus==="OPEN").length;
 
+  useEffect(()=>{
+    const list=messageList.current;
+    if(!list||!window.IntersectionObserver||photo||announcementsOpen||menuRow||historyOpen)return;
+    const pending=photoReads.current;
+    const observer=new IntersectionObserver(entries=>{
+      if(document.hidden||!active())return;
+      for(const entry of entries){
+        const id=entry.target.dataset.photoReadId;
+        if(!entry.isIntersecting||entry.intersectionRatio<0.5||pending.has(id))continue;
+        pending.add(id);
+        observer.unobserve(entry.target);
+        api(`/api/store-chat/stores/${encodeURIComponent(store.id)}/messages/${encodeURIComponent(id)}/read`,{method:"POST"})
+          .then(()=>{if(active())setRows(current=>current.map(row=>row.id===id?{...row,readByMe:true}:row))})
+          .catch(()=>{})
+          .finally(()=>pending.delete(id));
+      }
+    },{threshold:0.5});
+    const observeVisiblePhotos=()=>{
+      observer.disconnect();
+      if(!document.hidden)list.querySelectorAll("[data-photo-read-id]").forEach(message=>observer.observe(message));
+    };
+    observeVisiblePhotos();
+    document.addEventListener("visibilitychange",observeVisiblePhotos);
+    return()=>{
+      observer.disconnect();
+      document.removeEventListener("visibilitychange",observeVisiblePhotos);
+    };
+  },[rows,query,dateFilter,senderFilter,taskFilter,store.id,photo,announcementsOpen,menuRow,historyOpen]);
+
   return <div className="shift-overlay"><section className="store-chat-modal">
     <header><div><small>MYWORKSTATION · CHAT ΚΑΤΑΣΤΗΜΑΤΟΣ</small><h2><MessageCircle/>{store.name}</h2><p>Η ομάδα του καταστήματος, σε μία συνομιλία</p></div><button type="button" className="chat-overflow" aria-label="Περισσότερα εργαλεία συνομιλίας" aria-expanded={toolsOpen} onClick={()=>setToolsOpen(v=>!v)}>⋮</button><button type="button" className="store-chat-close" aria-label="Επιστροφή στα καταστήματα" onClick={()=>{if(!onDraftChange&&(body.trim()||attachment)&&!window.confirm("Υπάρχει μήνυμα που δεν στάλθηκε. Θέλεις να το αφήσεις και να αλλάξεις κατάστημα;"))return;onClose()}}><X/></button></header>
     <nav className="store-chat-topics" aria-label="Ενότητες Chat">{CHAT_TOPICS.map(item=><button type="button" key={item.id} aria-pressed={topic===item.id} onClick={()=>selectTopic(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>
@@ -103,7 +133,21 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
     {historyOpen&&chatStore&&topicToolsReady&&<ChatHistorySearch api={api} store={chatStore} getToken={authToken} initialQuery={query} canForward={!!permissions.canForward} onClose={()=>setHistoryOpen(false)} topic={topicsReady?topic:null} onReply={beginReply} onForward={row=>{if(beginForward(row))setHistoryOpen(false)}}/>}
     {forwardRow&&chatStore&&topicToolsReady&&<ChatForwardDialog api={api} store={chatStore} row={forwardRow} topic={topicsReady?topic:null} getToken={authToken} onClose={()=>setForwardRow(null)} onUncertain={setForwardWarning} onSent={target=>setForwardNotice("Προωθήθηκε στο "+target.name)} />}
 
-    <div className="store-chat-messages">{busy&&!rows.length?<div>Φόρτωση…</div>:!visibleRows.length?<div className="store-chat-empty"><MessageCircle/><b>{query||dateFilter||senderFilter||taskFilter?"Δεν βρέθηκαν μηνύματα.":"Δεν υπάρχουν ακόμη μηνύματα στην ενότητα."}</b><span>{topicLabel(topic)} · {store.name}</span></div>:visibleRows.map(row=>{const readers=readerNames(row.readers),acknowledgements=readerNames(row.acknowledgements),unread=!row.readByMe;return <article key={row.id} className={`${row.ownMessage?"is-own ":""}${row.important?"is-important ":""}${row.pinned?"is-pinned ":""}${row.completed?"is-completed ":""}${unread?"is-unread":""}`} role="button" tabIndex={0} aria-label="Μήνυμα · ενέργειες" onClick={()=>openMenu(row)} onContextMenu={e=>{e.preventDefault();suppressPreview.current=e.target.closest('.store-chat-attachment button');openMenu(row)}} onClickCapture={e=>{const media=e.target.closest('.store-chat-attachment button');if(media&&media===suppressPreview.current){e.preventDefault();e.stopPropagation();suppressPreview.current=null}}} onPointerDown={e=>{suppressPreview.current=null;clearTimeout(press.current);const media=e.target.closest('.store-chat-attachment button');if(!media&&e.target.closest('button,input,select,a,video,audio'))return;press.current=setTimeout(()=>{suppressPreview.current=media;openMenu(row)},500)}} onPointerMove={()=>clearTimeout(press.current)} onPointerUp={()=>clearTimeout(press.current)} onPointerCancel={()=>clearTimeout(press.current)} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openMenu(row)}}}>
+    <div className="store-chat-messages" ref={messageList}>{busy&&!rows.length?<div>Φόρτωση…</div>:!visibleRows.length?<div className="store-chat-empty"><MessageCircle/><b>{query||dateFilter||senderFilter||taskFilter?"Δεν βρέθηκαν μηνύματα.":"Δεν υπάρχουν ακόμη μηνύματα στην ενότητα."}</b><span>{topicLabel(topic)} · {store.name}</span></div>:visibleRows.map(row=>{const readers=readerNames(row.readers),acknowledgements=readerNames(row.acknowledgements),unread=!row.readByMe;return <article key={row.id} data-photo-read-id={unread&&!row.ownMessage&&row.hasAttachment&&row.attachmentMimeType?.startsWith("image/")?row.id:undefined} className={`${row.ownMessage?"is-own ":""}${row.important?"is-important ":""}${row.pinned?"is-pinned ":""}${row.completed?"is-completed ":""}${unread?"is-unread":""}`} role="button" tabIndex={0} aria-label="Μήνυμα · ενέργειες" onClick={e=>{if(replyGesture.current?.handled){replyGesture.current=null;e.preventDefault();return}openMenu(row)}} onContextMenu={e=>{e.preventDefault();suppressPreview.current=e.target.closest('.store-chat-attachment button');openMenu(row)}} onClickCapture={e=>{const media=e.target.closest('.store-chat-attachment button');if(media&&media===suppressPreview.current){e.preventDefault();e.stopPropagation();suppressPreview.current=null}}} onPointerDown={e=>{suppressPreview.current=null;clearTimeout(press.current);const media=e.target.closest('.store-chat-attachment button');replyGesture.current=null;if(!media&&e.target.closest('button,input,select,a,video,audio'))return;if(e.pointerType==="touch"&&interactionsReady&&!media)replyGesture.current={id:e.pointerId,x:e.clientX,y:e.clientY};press.current=setTimeout(()=>{replyGesture.current=null;suppressPreview.current=media;openMenu(row)},500)}}
+      style={{touchAction:"pan-y pinch-zoom"}}
+      onPointerMove={e=>{
+        clearTimeout(press.current);
+        const gesture=replyGesture.current;
+        if(!gesture||gesture.id!==e.pointerId||gesture.handled)return;
+        const horizontal=e.clientX-gesture.x,vertical=Math.abs(e.clientY-gesture.y);
+        if(vertical>24){replyGesture.current=null;return}
+        if(horizontal>=56){
+          gesture.handled=true;
+          setReplyTo(row);
+        }
+      }}
+      onPointerUp={()=>clearTimeout(press.current)}
+      onPointerCancel={()=>{clearTimeout(press.current);replyGesture.current=null}} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openMenu(row)}}}>
       <small>{row.pinned&&<b className="store-chat-pinned-label"><Pin/>ΚΑΡΦΙΤΣΩΜΕΝΗ · </b>}{unread&&<b className="store-chat-new">ΝΕΟ · </b>}<b className="store-chat-category">{labels[row.category]||row.category}</b> · {new Date(row.createdAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}</small><b className="store-chat-sender">Από: {row.senderName||row.senderId}</b>{row.body&&<p>{row.body}</p>}
       {row.forwarded&&<small className="store-chat-read">Προωθημένο μήνυμα</small>}
       {row.replyTo&&<blockquote className="store-chat-quote"><b>Απάντηση σε: {row.replyTo.senderName||"Χρήστης"}</b><p>{row.replyTo.body||row.replyTo.attachmentName||"Μήνυμα"}</p></blockquote>}
