@@ -1,3 +1,5 @@
+> 18/11/2026 follow-on: this contract now has a source implementation gated by actual installed schema, exact lifecycle catalogue, opt-in paired profile and fresh signed worker at the identical application revision. Existing production grants remain unchanged; native installed PostgreSQL and final hosted acceptance are separately required. The initial three directories do not cover every company screen.
+
 # Company read access — proposed UI/API contract
 
 18/11/2026 · `CENTRAL-BACKOFFICE-ACCESS-01` · PROPOSED / NOT INSTALLED.

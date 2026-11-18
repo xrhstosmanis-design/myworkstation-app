@@ -3,6 +3,7 @@ import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-ac
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {PERSONNEL_BASIC,PERSONNEL_PRO,PERSONNEL_PAYROLL,resolvePersonnelPackageStates} from '../personnel-packages.js';
 import {lifecycleContext} from './store-lifecycle-context.js';
+import {enforceStaffCompanyRequest} from './backoffice-staff-company.js';
 export const staffError=(status=403,code='STAFF_ACCESS_DENIED',message='Δεν υπάρχει δικαίωμα για αυτή την ενέργεια.')=>Object.assign(new Error(message),{status,code});
 export async function staffAccount(db,user){
   if(!user?.id)return null;
@@ -48,6 +49,7 @@ export async function enforceBackofficeStaff(db,req,res){
   // This flag is emitted only by the shared server session issuer for newly
   // provisioned staff Users. No pre-existing User is converted into staff.
   if(user?.tokenType!=='BACKOFFICE_USER'||user.staffAccess!==true)return true;
+  if(req.get?.('x-backoffice-company-id')!==undefined)return enforceStaffCompanyRequest(db,req);
   await liveStaff(db,user);
   const path=String(req.originalUrl||'').split('?')[0],capability=staffRequestCapability(req.method,path,req.body||{});
   if(!capability)throw staffError();

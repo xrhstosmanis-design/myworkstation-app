@@ -1,6 +1,8 @@
 # Company read authority: inactive compatibility preparation
 
-Status: PROPOSAL ONLY. No schema, runtime profile, account policy, worker selector or route admission is changed. The existing 52 STORE capabilities remain independent. This preparation follows BACKOFFICE_COMPANY_AUTHORITY_COMPATIBILITY.md and does not satisfy production activation or hosted acceptance.
+> 18/11/2026 follow-on source candidate: the separate signed installation-backup protocol, explicit unmounted installer, paired opt-in app/worker selectors and initial company account/read UI are now implemented in this branch. They supersede the preparation-only statements below as a description of available source. No production migration/profile activation or hosted acceptance has occurred. See BACKOFFICE_COMPANY_INSTALLATION_BACKUP_PROTOCOL.md and CHECKPOINTS/CHANGES/2026-11-18-no5-company-authority-candidate.md. The packet now binds eighteen exact guard/profile/installer/observer source files; BASE/CAPTURE plan hashes and the one-column proposal remain unchanged.
+
+Status at initial preparation: PROPOSAL ONLY. No schema, runtime profile, account policy, worker selector or route admission is changed. The existing 52 STORE capabilities remain independent. This preparation follows BACKOFFICE_COMPANY_AUTHORITY_COMPATIBILITY.md and does not satisfy production activation or hosted acceptance.
 
 ## Exact proposed delta
 

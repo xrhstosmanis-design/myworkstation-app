@@ -1,4 +1,5 @@
 import {createInvoiceStockExclusionEmailScheduler} from "./services/invoice-stock-exclusion-email.js";
+import {readStaffCompanyDirectory} from './services/backoffice-staff-company.js';
 import {createAutomaticReportSmtpTransport} from "./services/mail.js";
 import attendedRemoteRoutes from './routes/attended-remote.js';
 import ftextRoutes from './routes/ftext-v1.js';
@@ -267,6 +268,12 @@ app.use("/api/owner-assistant",ownerAssistantRoutes);
 app.use('/api/ai-wallet',aiOwnerWalletRoutes);
 startAiOwnerWalletNotices();
 app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
+// Exact company reads precede legacy Owner routers. Requests without an
+// authenticated company grant continue through their original middleware.
+app.get(['/api/owner-products/stores','/api/commerce/suppliers','/api/commerce/customers'],auth,async(req,res,next)=>{
+  if(!req.staffCompanyGrant)return next();
+  try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffCompanyDirectory(prisma,req))}catch(error){next(error)}
+});
 app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce",auth,invoiceCommonDraftRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderUnresolvedGuardRoutes);

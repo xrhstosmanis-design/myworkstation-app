@@ -292,6 +292,13 @@ export function createLifecycleInspectionCore(manifest,{sourceRevision}={}){
  if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
  return Object.freeze({inspect:inspectionFor(plan)});
 }
+// Internal catalogue readiness only. Does not accept an actor, impersonate an
+// administrator, inspect business rows, install guards or authorize execution.
+export function createLifecycleCatalogueReadiness(manifest){
+ const reviewed=structuredClone(manifest),plan=planFor(reviewed);
+ plan.reviewedColumns=reviewed.reviewedColumns||[];
+ return async db=>validateDatabase(db,plan,await schemaFor(db));
+}
 async function installLifecyclePlanInTransaction(tx,actor,scope,plan){requireLifecycleAdmin(actor);
    const schema=await schemaFor(tx);
    if(!(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope?.storeId,scope?.companyId)).length)fail('Store not found in selected company.',404);

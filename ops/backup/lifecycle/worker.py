@@ -21,9 +21,9 @@ PROTOCOL = 'MWS_STORE_RECOVERY_PROOF_V1'
 def selected_manifest_file(env=None):
     configuration = os.environ if env is None else env
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
-    if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1'):
+    if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_BASE_V1'):
         filename = 'manifest.json'
-    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'):
+    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1'):
         filename = 'monthly-inventory-capture-manifest.proposed.json'
     else:
         raise ValueError('Invalid store lifecycle profile')
@@ -34,6 +34,9 @@ def selected_manifest_document(env=None):
     configuration = os.environ if env is None else env
     document = json.loads(selected_manifest_file(configuration).read_text())
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if profile in ('BACKOFFICE_COMPANY_BASE_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1'):
+        from backoffice_company_profile import company_manifest
+        return company_manifest(document, 'BASE' if profile == 'BACKOFFICE_COMPANY_BASE_V1' else 'CAPTURE')
     if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'):
         return document
     extension_file = pathlib.Path(__file__).resolve().parent / 'automatic-report-consent-extension.proposed.json'

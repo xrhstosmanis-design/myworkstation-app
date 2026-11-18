@@ -1,13 +1,13 @@
 // Delegated status only; never creates personal enrollment/capture authority.
 import {requireStaffGrant,staffError} from './backoffice-staff-access.js';
-import {validateMonthlyInventoryCaptureSchema,monthlyInventoryCaptureLifecycleManifestProposal} from './monthly-inventory-capture-schema.js';
+import {validateMonthlyInventoryCaptureSchema,monthlyInventoryCaptureRuntimeManifest} from './monthly-inventory-capture-schema.js';
 import {createHash} from 'node:crypto';
 import {monthlyInventorySnapshotPeriod} from './monthly-inventory-snapshot-period.js';
-const planHash=createHash('sha256').update(JSON.stringify(monthlyInventoryCaptureLifecycleManifestProposal())).digest('hex');
+const currentPlanHash=()=>createHash('sha256').update(JSON.stringify(monthlyInventoryCaptureRuntimeManifest())).digest('hex');
 const unavailable=()=>{throw Object.assign(Error('Monthly status unavailable.'),{status:503})};
 async function readFence(db,companyId,storeId){
  const fences=await db.$queryRaw`SELECT "planHash","maintenance","retired","operationId","generation"::text AS generation FROM "StoreLifecycleFence" WHERE "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 2`;
- if(fences.length!==1||fences[0].planHash!==planHash||fences[0].maintenance!==false||fences[0].retired!==false||fences[0].operationId!==null||typeof fences[0].generation!=='string'||!/^(0|[1-9][0-9]*)$/.test(fences[0].generation))unavailable();
+ if(fences.length!==1||fences[0].planHash!==currentPlanHash()||fences[0].maintenance!==false||fences[0].retired!==false||fences[0].operationId!==null||typeof fences[0].generation!=='string'||!/^(0|[1-9][0-9]*)$/.test(fences[0].generation))unavailable();
  return fences[0].generation;
 }
 const date=value=>{if(value===null)return null;const parsed=new Date(value);if(!Number.isFinite(parsed.getTime()))unavailable();return parsed.toISOString()};

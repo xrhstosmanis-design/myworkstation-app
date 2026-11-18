@@ -5,13 +5,13 @@ import {createHash} from 'node:crypto';
 import express from 'express';
 import {enforceBackofficeStaff,requireStaffGrant,staffError} from '../src/services/backoffice-staff-access.js';
 import {monthlyInventorySnapshotPeriod} from '../src/services/monthly-inventory-snapshot-period.js';
-import {monthlyInventoryCaptureLifecycleManifestProposal} from '../src/services/monthly-inventory-capture-schema.js';
+import {monthlyInventoryCaptureRuntimeManifest} from '../src/services/monthly-inventory-capture-schema.js';
 const forbidden=()=>assert.fail('status read entered writer, personal manager, capture, DDL or worker');
 const actor=()=>({id:'staff',companyId:'company',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true,sessionId:'session',sessionVersion:0});
 
 test('native delegated monthly status binds current generation, redacts authority and refuses stale grant/module/schema without writes',async()=>{
  let capabilities=['monthly-inventory.read'],active=true,withdraw=false,disable=false,schemaAvailable=true,profile=true,rows=[],reads=0,account=true,generation='0',changeGeneration=false,maintenance=false;
- const hash=createHash('sha256').update(JSON.stringify(monthlyInventoryCaptureLifecycleManifestProposal())).digest('hex');
+ const hash=createHash('sha256').update(JSON.stringify(monthlyInventoryCaptureRuntimeManifest())).digest('hex');
  const db={company:{findUnique:async()=>({id:'company',active:true,licenseStatus:'ACTIVE',modules:[{moduleKey:'INVENTORY',active}]})},$transaction:forbidden,$executeRaw:forbidden,$executeRawUnsafe:forbidden,$queryRawUnsafe:forbidden,
   $queryRaw:async(strings,...values)=>{
    const sql=strings.join('?');
@@ -27,7 +27,7 @@ test('native delegated monthly status binds current generation, redacts authorit
  // Evaluate the actual service with the separately tested native schema validator
  // represented by its available/unavailable contract. The PG suite uses it intact.
  const source=await readFile(new URL('../src/services/monthly-inventory-capture-status.js',import.meta.url),'utf8');
- const readStatus=new Function('requireStaffGrant','staffError','validateMonthlyInventoryCaptureSchema','monthlyInventoryCaptureLifecycleManifestProposal','createHash','monthlyInventorySnapshotPeriod',source.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+'\nreturn readMonthlyInventoryCaptureStatus;')(requireStaffGrant,staffError,async()=>({available:schemaAvailable,lifecycleGuardsInstalled:schemaAvailable}),monthlyInventoryCaptureLifecycleManifestProposal,createHash,monthlyInventorySnapshotPeriod);
+ const readStatus=new Function('requireStaffGrant','staffError','validateMonthlyInventoryCaptureSchema','monthlyInventoryCaptureRuntimeManifest','createHash','monthlyInventorySnapshotPeriod',source.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+'\nreturn readMonthlyInventoryCaptureStatus;')(requireStaffGrant,staffError,async()=>({available:schemaAvailable,lifecycleGuardsInstalled:schemaAvailable}),monthlyInventoryCaptureRuntimeManifest,createHash,monthlyInventorySnapshotPeriod);
  const routerSource=await readFile(new URL('../src/routes/monthly-inventory-capture.js',import.meta.url),'utf8');
  const makeRouter=new Function('Router','readMonthlyInventoryCaptureStatus','createMonthlyInventoryCaptureGrantManager','createMonthlyPersonalCaptureNowService',routerSource.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+'\nreturn createMonthlyInventoryCaptureRouter;')(express.Router,readStatus,()=>new Proxy({},{get:()=>forbidden}),()=>new Proxy({},{get:()=>forbidden}));
  const app=express();app.use(express.json());app.use(async(req,res,next)=>{req.user=actor();try{await enforceBackofficeStaff(db,req,res);next()}catch(error){next(error)}});app.use('/api/monthly-inventory-capture',makeRouter(db));app.use((error,_req,res,_next)=>res.status(error.status||500).json({code:error.code||'ERROR'}));
@@ -53,7 +53,7 @@ test('native delegated monthly status binds current generation, redacts authorit
 test('ordinary employee fails native monthly personal authorization before any lock or writer',async()=>{
  const source=await readFile(new URL('../src/services/monthly-inventory-capture-authorization.js',import.meta.url),'utf8');
  const names=['authorizeMonthlyCaptureGrantManagementInTransaction','authorizeMonthlyPersonalCaptureNowLookupInTransaction','authorizeMonthlyPersonalCaptureNowSourceInTransaction','authorizeMonthlyPersonalCaptureNowWriteInTransaction'];
- const runtime=new Function('createHash','timingSafeEqual','readCurrentMonthlyCaptureActivation','companyModuleState','isCurrentlyActive','monthlyInventorySnapshotPeriod','validateMonthlyInventoryCaptureSchema','monthlyInventoryCaptureLifecycleManifestProposal',source.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+'\nreturn {'+names.join(',')+'};')(createHash,forbidden,forbidden,forbidden,forbidden,forbidden,async()=>({available:true,lifecycleGuardsInstalled:true}),monthlyInventoryCaptureLifecycleManifestProposal);
+ const runtime=new Function('createHash','timingSafeEqual','readCurrentMonthlyCaptureActivation','companyModuleState','isCurrentlyActive','monthlyInventorySnapshotPeriod','validateMonthlyInventoryCaptureSchema','monthlyInventoryCaptureRuntimeManifest',source.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+'\nreturn {'+names.join(',')+'};')(createHash,forbidden,forbidden,forbidden,forbidden,forbidden,async()=>({available:true,lifecycleGuardsInstalled:true}),monthlyInventoryCaptureRuntimeManifest);
  for(const name of names){
   let reads=0;const tx={$executeRawUnsafe:forbidden,$queryRawUnsafe:async sql=>{reads++;if(sql.includes('current_setting'))return [{readOnly:name.includes('Source')?'on':'off',isolation:name.includes('Source')?'repeatable read':'read committed',transactionStartedAt:'2026-11-18T12:00:00.000Z',readAt:'2026-11-18T12:00:00.000Z'}];assert.match(sql,/FROM "User"/);return [{id:'staff',companyId:'company',role:'EMPLOYEE',sessionVersion:0,mustChangePassword:false}]}};
   await assert.rejects(runtime[name](tx,actor(),name.includes('Management')?{companyId:'company',storeId:'store'}:{storeId:'store',...(name.includes('Write')||name.includes('Source')?{lifecycleGeneration:'0',expectedIssueMonth:'2026-10'}:{})}),{code:'MONTHLY_CAPTURE_AUTHORITY_DENIED'});assert.equal(reads,2);
