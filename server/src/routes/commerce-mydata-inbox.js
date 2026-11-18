@@ -117,6 +117,7 @@ const originalRecoveryVersion = "verified-provider-formats-202611-v1";
 export async function recoverHistoricalOriginals({
   db, companyId, storeId, userId, source, excludeInboxIds = [],
   storeIds = process.env.MYDATA_ORIGINAL_RECOVERY_STORE_IDS ?? "",
+  reconcileExisting = false,
   acquire = acquireOriginal,
 }) {
   if (source !== "AADE_MYDATA_PRODUCTION" || !storeIds.split(",").map(id => id.trim()).includes(storeId)) {
@@ -144,7 +145,7 @@ export async function recoverHistoricalOriginals({
   let downloaded = 0, failed = 0;
   for (const {inboxId} of candidates) {
     try {
-      const result = await acquire(db, companyId, storeId, inboxId, userId, false);
+      const result = await acquire(db, companyId, storeId, inboxId, userId, false, undefined, {reconcileExisting});
       if (result.downloaded) downloaded++;
     } catch {
       failed++;
@@ -224,13 +225,14 @@ async function performSync(req){
     originalsFailed++;
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
+  const canPrepareDraft=Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY")));
   const recovery = await recoverHistoricalOriginals({
     db: prisma, companyId: req.user.companyId, storeId: store.id, userId: req.user.id, source,
+    reconcileExisting: canPrepareDraft,
     excludeInboxIds: [...pending.map(item => item.inboxId), ...created.map(item => item.id)],
   });
   originalsDownloaded += recovery.downloaded;
   originalsFailed += recovery.failed;
-  const canPrepareDraft=Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY")));
   const existingPhotosLinked=canPrepareDraft?await prisma.$transaction(tx=>linkStoredPosInvoicePhotos(tx,{companyId:req.user.companyId,storeId:store.id})):0;
   if(canPrepareDraft){
     const emptyDrafts=await prisma.$queryRaw`
