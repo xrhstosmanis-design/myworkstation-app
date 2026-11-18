@@ -70,7 +70,7 @@
     "ops/backup/lifecycle/backoffice-company-current-capture.proposed.json": "53b9d6453351eb44b31c3ec844e6db58e4fe61632995c8916c9659054eb09b93",
     "ops/backup/lifecycle/backoffice-company-current-capture-guards.proposed.json": "4c3158e2a8634bbbe6a9a99957f03a4d3ea214db675e9ca43f2296ec1c4b4704",
     "ops/backup/lifecycle/backoffice_company_readiness.py": "4d92c7dbda5fab48fd3babf351d654bbd8108a29ceff7e1cc2b73dc3883f3d0b",
-    "ops/backup/lifecycle/backoffice-company-current-readiness.sql": "e7e2e19749a24aa72f762c253202ce0c7b32c213692f0eee3bf560d37462030c",
+    "ops/backup/lifecycle/backoffice-company-current-readiness.sql": "11d2b1722b96065aa0404fefe2beec189879c52caf569ae680e621a590596a25",
     "server/test/fixtures/ftext-full-schema-metadata-20261024.json": "3958f78d444bc92ebef5f9ae95d92605264c193b5b893ea092e8711cf2e9ec4b",
     "server/src/backoffice-staff-bootstrap.js": "2c9cb29576a050c0cc938cbc5931f5e184ea043869b1ff77edb6678ccd8a3b42",
     "server/src/services/ai-owner-wallet-schema.js": "3b06c5f0db1d13e548d426064d44c0e1f5db1c896ae81f0329f365d20e05aafa",

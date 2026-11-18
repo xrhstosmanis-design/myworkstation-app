@@ -140,3 +140,59 @@ test('credit notes have no payment badge and legacy responses preserve their exi
  setResponder(async()=>response('s','2026-10',paymentPatch({status:'NOT_APPLICABLE',paidCents:null,remainingCents:null},{items:[{...row,documentType:'CREDIT_NOTE',payment:{status:'NOT_APPLICABLE'}}],financialSummary:financialSummary({notApplicable:1})})));await submit();assert.equal(document.querySelector('.ima-payment'),null);assert.match(document.querySelector('.ima-rows').textContent,/Πιστωτικό/);
  setResponder(async()=>response());await submit();assert.equal(document.querySelector('.ima-financial'),null);assert.equal(document.querySelector('.ima-payment'),null);assert.match(document.querySelector('.ima-rows').textContent,/Δεν έχει καταχωριστεί/);
 }));
+
+async function clickCounter(act,label,count){
+ const button=[...document.querySelectorAll('.ima-summary button')].find(element=>element.textContent.replace(/\s+/g,' ').trim()===label+String(count)||element.textContent.replace(/\s+/g,' ').trim()===label+' '+String(count));
+ assert.ok(button,'Missing clickable counter '+label+' '+count);
+ await act(async()=>button.click());
+}
+const filterResponse=(url,patch={})=>response(url.searchParams.get('storeId'),url.searchParams.get('month'),{filter:url.searchParams.get('filter')||'ALL',matchedRecords:87,...patch});
+
+test('all monthly summary counters request their whole-month server filter and keep global totals',async()=>mounted(async({setResponder,submit,act,calls})=>{
+ const counts={logicalRecords:195,unposted:87,uploadedAwaitingReview:63,possibleDuplicates:2,identityReview:147,credits:11,inactive:0};
+ const financial=financialSummary({paid:13,financialPending:1,reviewRequired:62,notLinked:108,notApplicable:11});
+ setResponder(async url=>filterResponse(url,{summary:counts,financialSummary:financial,paymentCoverage:{available:true},items:[{...row,documentNumber:'ONLY-'+(url.searchParams.get('filter')||'ALL')}]}));
+ await submit();assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
+ for(const[label,count,filter]of [['Δεν έχουν καταχωριστεί',87,'UNPOSTED_DOCUMENT'],['Ανεβασμένα προς έλεγχο',63,'UPLOADED_AWAITING_REVIEW'],['Πιθανά διπλά',2,'POSSIBLE_DUPLICATE'],['Ταυτοποίηση / συνδέσεις',147,'IDENTITY_OR_LINK_REVIEW'],['Πιστωτικά (χωριστή ένδειξη)',11,'CREDIT_NOTE'],['Εξοφλημένα',13,'PAID'],['Οικονομικές εκκρεμότητες',1,'FINANCIAL_PENDING'],['Συνδέσεις πληρωμής προς έλεγχο',62,'PAYMENT_REVIEW'],['Χωρίς σύνδεση πληρωμής',108,'PAYMENT_UNLINKED']]){
+  await clickCounter(act,label,count);const request=calls.at(-1);assert.equal(request.url.searchParams.get('filter'),filter);assert.equal(request.url.searchParams.has('page'),false);assert.equal(request.options.method,undefined);assert.match(document.querySelector('.ima-rows').textContent,new RegExp('ONLY-'+filter));
+  assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Δεν έχουν καταχωριστεί87/);
+  assert.match(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]').textContent,/Συνδέσεις πληρωμής προς έλεγχο62.*Χωρίς σύνδεση πληρωμής108/);
+ }
+ await clickCounter(act,'Εγγραφές ελέγχου',195);assert.equal(calls.at(-1).url.searchParams.has('filter'),false);assert.match(document.querySelector('.ima-rows').textContent,/ONLY-ALL/);
+}));
+
+test('unposted drilldown reaches the filtered second page and preserves its filter on refresh and clear',async()=>mounted(async({setResponder,submit,click,act,calls})=>{
+ setResponder(async url=>{
+  const filter=url.searchParams.get('filter'),page=url.searchParams.get('page');
+  const items=filter?Array.from({length:page?37:50},(_,index)=>({...row,id:'doc:filtered-'+(page?index+50:index),documentNumber:'UNPOSTED-'+(page?index+51:index+1)})):[{...row,documentNumber:'UNFILTERED-POSTED'}];
+  return filterResponse(url,{summary:{logicalRecords:195,unposted:87,uploadedAwaitingReview:63,possibleDuplicates:0,identityReview:147,credits:11,inactive:0},matchedRecords:filter?87:195,items,nextPage:filter&&!page?'filtered-page-2':null});
+ });
+ await submit();await clickCounter(act,'Δεν έχουν καταχωριστεί',87);assert.match(document.querySelector('.ima-filter-status').textContent,/Προβολή: Δεν έχουν καταχωριστεί.*87 εγγραφές/);assert.equal(document.querySelectorAll('.ima-rows')[0].children.length,50);assert.doesNotMatch(document.querySelector('.ima-rows').textContent,/UNFILTERED-POSTED/);
+ await click('Επόμενη σελίδα');assert.equal(calls.at(-1).url.searchParams.get('filter'),'UNPOSTED_DOCUMENT');assert.equal(calls.at(-1).url.searchParams.get('page'),'filtered-page-2');assert.equal(document.querySelectorAll('.ima-rows')[0].children.length,37);assert.match(document.querySelector('.ima-rows').textContent,/UNPOSTED-87/);
+ await click('Πρώτη σελίδα / Ανανέωση');assert.equal(calls.at(-1).url.searchParams.get('filter'),'UNPOSTED_DOCUMENT');assert.equal(calls.at(-1).url.searchParams.has('page'),false);assert.match(document.querySelector('.ima-rows').textContent,/UNPOSTED-1/);
+ await click('Όλες οι εγγραφές');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);assert.match(document.querySelector('.ima-rows').textContent,/UNFILTERED-POSTED/);
+}));
+
+test('zero-match filter shows an explicit empty result without treating global counts as zero',async()=>mounted(async({setResponder,submit,act,calls})=>{
+ setResponder(async url=>filterResponse(url,{matchedRecords:url.searchParams.has('filter')?0:120,items:url.searchParams.has('filter')?[]:[row],nextPage:null}));await submit();await clickCounter(act,'Πιθανά διπλά',0);
+ assert.equal(calls.at(-1).url.searchParams.get('filter'),'POSSIBLE_DUPLICATE');assert.equal(document.querySelector('.ima-rows').children.length,0);assert.match(document.querySelector('.invoice-month-audit').textContent,/Δεν υπάρχουν.*(?:παραστατικά|εγγραφές)/);assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Εγγραφές ελέγχου120/);
+}));
+
+test('filtered requests reject missing or mismatched server filter instead of displaying legacy all-row results',async()=>mounted(async({setResponder,submit,act})=>{
+ for(const resultPatch of [{filter:undefined,matchedRecords:undefined},{filter:'PAID',matchedRecords:1}]){
+  setResponder(async url=>url.searchParams.has('filter')?response('s','2026-10',{...resultPatch,items:[{...row,documentNumber:'WRONG-FILTER-DISCLOSURE'}]}):response());
+  await submit();await clickCounter(act,'Δεν έχουν καταχωριστεί',120);assert.match(document.querySelector('[role=alert]').textContent,/δεν αντιστοιχεί/);assert.doesNotMatch(document.querySelector('.invoice-month-audit').textContent,/WRONG-FILTER-DISCLOSURE/);
+ }
+}));
+
+test('new filter aborts and rejects older filter responses; month and store changes reset to all',async()=>mounted(async({setResponder,submit,click,changeMonth,render,act,calls})=>{
+ setResponder(async url=>filterResponse(url));await submit();let release;
+ setResponder(url=>url.searchParams.get('filter')==='UNPOSTED_DOCUMENT'?new Promise(resolve=>{release=resolve}):Promise.resolve(filterResponse(url,{items:[{...row,documentNumber:'CURRENT-ALL'}]})));
+ await clickCounter(act,'Δεν έχουν καταχωριστεί',120);const oldSignal=calls.at(-1).options.signal;
+ // Submit is a fresh explicit monthly audit. Its new ALL selection must not be
+ // overwritten by an earlier filtered response even if that API ignores abort.
+ await submit();assert.equal(calls.at(-1).url.searchParams.has('filter'),false);assert.equal(oldSignal.aborted,true);await act(async()=>release(response('s','2026-10',{filter:'UNPOSTED_DOCUMENT',matchedRecords:1,items:[{...row,documentNumber:'LATE-FILTER'}]})));assert.doesNotMatch(document.querySelector('.invoice-month-audit').textContent,/LATE-FILTER/);
+ setResponder(async url=>filterResponse(url));await clickCounter(act,'Δεν έχουν καταχωριστεί',120);await changeMonth('2026-09');await submit();assert.equal(calls.at(-1).url.searchParams.get('month'),'2026-09');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
+ await clickCounter(act,'Δεν έχουν καταχωριστεί',120);await render({storeId:'other',storeName:'Other'});await submit();assert.equal(calls.at(-1).url.searchParams.get('storeId'),'other');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
+ await clickCounter(act,'Δεν έχουν καταχωριστεί',120);const replacementCalls=[];await render({api:async path=>{const url=new URL(path,'https://isolated.invalid');replacementCalls.push(url);return filterResponse(url)}});await submit();assert.equal(replacementCalls.at(-1).searchParams.get('storeId'),'other');assert.equal(replacementCalls.at(-1).searchParams.has('filter'),false);
+}));

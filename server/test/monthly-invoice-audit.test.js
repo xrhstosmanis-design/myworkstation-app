@@ -141,6 +141,56 @@ test('complete findings counts survive paging and changed source invalidates the
  await assert.rejects(read(f,{storeId:'s',month:'2026-11',page:first.nextPage}));
 });
 
+test('counter drill-down pages the entire matching month while keeping global totals and paid workflow distinct',async()=>{
+ const facts=empty();facts.documents=Array.from({length:195},(_,index)=>doc(String(index).padStart(3,'0'),{status:index<174&&index%2===0?'DRAFT':'APPROVED',paymentTransactionId:index<174&&index%2===0?'p'+index:null}));
+ facts.payments=facts.documents.filter(d=>d.paymentTransactionId).map(d=>({id:d.paymentTransactionId,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:d.documentNumber,amount:'12.34',settlementConfirmed:true}));
+ const pending={count:3,missingCount:3,uploadedCount:0,reviewCount:0,rows:[]},f=fixture({facts,pending}),all=await read(f),input={storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'};
+ const first=await read(f,input),second=await read(f,{...input,page:first.nextPage});
+ assert.equal(first.filter,'UNPOSTED_DOCUMENT');assert.equal(first.matchedRecords,87);assert.equal(first.items.length,50);assert.equal(second.items.length,37);assert.equal(second.nextPage,null);
+ const selected=[...first.items,...second.items];assert.equal(new Set(selected.map(x=>x.id)).size,87);assert.ok(selected.every(x=>x.categories.includes('UNPOSTED_DOCUMENT')&&x.payment.status==='PAID'));
+ assert.deepEqual(selected.map(x=>x.id),facts.documents.filter(d=>d.status==='DRAFT').map(d=>'doc:'+d.id));
+ for(const page of [first,second]){assert.deepEqual(page.summary,all.summary);assert.deepEqual(page.financialSummary,all.financialSummary);assert.deepEqual(page.pendingOriginals,all.pendingOriginals);assert.equal(page.allClear,all.allClear)}
+ assert.equal(all.summary.logicalRecords,195);assert.equal(all.summary.unposted,87);assert.equal(all.financialSummary.paid,87);assert.equal(all.filter,'ALL');assert.equal(all.matchedRecords,195);
+ const paid=await read(f,{...input,filter:'PAID'});assert.equal(paid.matchedRecords,87);assert.deepEqual(paid.items,first.items);
+ const explicitAll=await read(f,{storeId:'s',month:'2026-10',filter:'ALL',page:all.nextPage});assert.equal(explicitAll.items.length,50);
+});
+
+test('all supported counter filters select exact full-result predicates with independent payment review and missing links',async()=>{
+ const facts=empty();facts.documents=Array.from({length:12},(_,i)=>doc(String(i),{status:'APPROVED',paymentTransactionId:i<5?'p'+i:null}));
+ facts.documents[5].documentType='CREDIT_NOTE';facts.documents[6].supplierTaxId=null;facts.documents[7].status='DRAFT';facts.documents[8].status='DRAFT';facts.documents[9].documentNumber=facts.documents[10].documentNumber;
+ facts.attachments=[{id:'attachment',hasContent:true,checksum:'a'.repeat(64),mimeType:'image/jpeg'}];facts.jobs=[{id:'job',purchaseDocumentId:'8',attachmentId:'attachment',status:'AWAITING_APPROVAL'}];
+ facts.payments=Array.from({length:5},(_,i)=>({id:'p'+i,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A '+i,amount:i===1?'5.00':i===2?'13.00':'12.34',settlementConfirmed:i!==3,reversedAt:i===4?'2026-10-03':null}));
+ const f=fixture({facts}),all=await read(f),predicates={ALL:()=>true,UNPOSTED_DOCUMENT:x=>x.categories.includes('UNPOSTED_DOCUMENT'),UPLOADED_AWAITING_REVIEW:x=>x.categories.includes('UPLOADED_AWAITING_REVIEW'),POSSIBLE_DUPLICATE:x=>x.categories.includes('POSSIBLE_DUPLICATE'),IDENTITY_OR_LINK_REVIEW:x=>x.categories.includes('IDENTITY_OR_LINK_REVIEW'),CREDIT_NOTE:x=>x.documentType==='CREDIT_NOTE',PAID:x=>x.payment.status==='PAID',FINANCIAL_PENDING:x=>['PARTIALLY_PAID','OVERPAID','REVERSED'].includes(x.payment.status),PAYMENT_REVIEW:x=>['REVIEW_REQUIRED','UNCONFIRMED','UNAVAILABLE'].includes(x.payment.status),PAYMENT_UNLINKED:x=>x.payment.status==='NOT_LINKED'};
+ for(const[filter,predicate]of Object.entries(predicates)){
+  const r=await read(f,{storeId:'s',month:'2026-10',filter}),expected=all.items.filter(predicate);
+  assert.equal(r.filter,filter);assert.equal(r.matchedRecords,expected.length,filter);assert.ok(expected.length>0,filter);assert.deepEqual(r.items,expected,filter);assert.deepEqual(r.summary,all.summary);assert.deepEqual(r.financialSummary,all.financialSummary);
+ }
+ const unavailable=await read(fixture({facts,missing:['SupplierPaymentSettlement']}),{storeId:'s',month:'2026-10',filter:'PAYMENT_REVIEW'});assert.equal(unavailable.matchedRecords,11);assert.ok(unavailable.items.every(x=>x.payment.status==='UNAVAILABLE'));
+});
+
+test('invalid counter filters fail before database access and incomplete coverage never asserts zero matches',async()=>{
+ for(const filter of [null,'','all',' ALL','ALL ','__proto__','PAID\n',[],['ALL'],{},1,true]){
+  const f=fixture();await assert.rejects(read(f,{storeId:'s',month:'2026-10',filter}),e=>e.status===400);assert.equal(f.trace.length,0);
+ }
+ const r=await read(fixture({missing:['PurchaseDocument']}),{storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'});assert.equal(r.filter,'UNPOSTED_DOCUMENT');assert.equal(r.matchedRecords,null);assert.deepEqual(r.items,[]);assert.equal(r.nextPage,null);assert.equal(r.allClear,false);
+ const emptyResult=await read(fixture(),{storeId:'s',month:'2026-10',filter:'CREDIT_NOTE'});assert.equal(emptyResult.matchedRecords,0);assert.deepEqual(emptyResult.items,[]);assert.equal(emptyResult.nextPage,null);
+});
+
+test('counter cursors bind filter, company, store and month and cannot skip using a row outside the subset',async()=>{
+ const facts=empty();facts.documents=Array.from({length:80},(_,i)=>doc(String(i).padStart(3,'0'),{status:i<60?'DRAFT':'APPROVED'}));const f=fixture({facts}),input={storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'},first=await read(f,input);
+ for(const [patch,user]of [[{filter:'ALL'},actor],[{filter:'PAID'},actor],[{storeId:'other'},actor],[{month:'2026-11'},actor],[{}, {...actor,companyId:'foreign'}]]){
+  const blocked=fixture({facts});await assert.rejects(read(blocked,{...input,...patch,page:first.nextPage},user),e=>e.status===400);assert.equal(blocked.trace.length,0);
+ }
+ const cursor=JSON.parse(Buffer.from(first.nextPage,'base64url').toString('utf8'));cursor.after='doc:079';await assert.rejects(read(f,{...input,page:Buffer.from(JSON.stringify(cursor)).toString('base64url')}),e=>e.status===409);
+ facts.documents.push(doc('new'));await assert.rejects(read(f,{...input,page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
+test('filtered financial pages reject a cursor after a payment changes',async()=>{
+ const facts=empty();facts.documents=Array.from({length:55},(_,i)=>doc(String(i),{paymentTransactionId:'p'+i}));facts.payments=facts.documents.map(d=>({id:d.paymentTransactionId,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:d.documentNumber,amount:'12.34',settlementConfirmed:true}));
+ const f=fixture({facts}),input={storeId:'s',month:'2026-10',filter:'PAID'},first=await read(f,input);assert.equal(first.matchedRecords,55);assert.ok(first.nextPage);
+ facts.payments[0].reversedAt='2026-10-28';await assert.rejects(read(f,{...input,page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
 test('registered route is GET-only, no-store and rejects malformed/scope input through the real reader',async()=>{
  const f=fixture(),app=express();app.use((req,res,next)=>{req.user=actor;next()});app.use('/api/reports/invoice-month-audit',createMonthlyInvoiceAuditRouter(f.db));
  const server=app.listen(0,'127.0.0.1');await once(server,'listening');const base='http://127.0.0.1:'+server.address().port+'/api/reports/invoice-month-audit';
@@ -227,6 +277,16 @@ test('monthly ordinary report observes payment without changing draft posting or
  assert.match(query.sql, /t\."companyId"=/);assert.match(query.sql,/t\."storeId"=/);assert.match(query.sql,/SUPPLIER_PAYMENT/);assert.match(query.sql,/ss\."status"<>/);
  assert.ok(query.values.includes('c'));assert.ok(query.values.includes('s'));assert.ok(query.values.some(v=>Array.isArray(v)&&v.includes('paid')));
  assert.ok(fix.trace.filter(x=>x.sql).every(x=>!/^(INSERT|UPDATE|DELETE|CREATE|ALTER)/.test(x.sql.trim())));
+});
+
+test('ordinary report proves posted projection using original header while retaining raw fingerprint and provenance',async()=>{
+ const facts=empty();facts.documents=[doc('source',{documentNumber:'A 1',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'order',paymentTransactionId:'paid'}),doc('order',{documentNumber:'A 1',sourceType:'PURCHASE_ORDER',status:'APPROVED',issueDay:'2026-10-05',totalGross:'12.3432'})];
+ facts.orders=[{id:'order',sourceDocumentId:'source',supplierId:'sup',invoiceNumber:'A 1',status:'INVOICED',createdAt:'2026-10-05'}];facts.postings=[{orderId:'order',purchaseDocumentId:'order'}];facts.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'order',path:'PURCHASE_ORDER'}];facts.payments=[{id:'paid',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 1',amount:'12.34',settlementConfirmed:true}];
+ const before=JSON.stringify(facts),raw=classifyInvoiceMonth(facts,period),f=fixture({facts}),r=await read(f);
+ assert.equal(raw.counts.logicalRecords,2);assert.equal(raw.counts.unposted,1);assert.equal(r.summary.logicalRecords,1);assert.equal(r.summary.unposted,0);assert.equal(r.items[0].status,'POSTED');assert.equal(r.items[0].payment.status,'PAID');assert.equal(r.items[0].totalCents,1234);
+ assert.deepEqual(r.items[0].postingProjections,[{sourceDocumentId:'source',projectionDocumentId:'order',sourceIssueDay:'2026-10-02',sourceTotalGross:'12.34',recordedIssueDay:'2026-10-05',recordedTotalGross:'12.3432'}]);assert.equal(JSON.stringify(facts),before);assert.deepEqual(classifyInvoiceMonth(facts,period),raw);
+ const unposted=await read(f,{storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'});assert.equal(unposted.matchedRecords,0);assert.equal(unposted.financialSummary.paid,1);
+ facts.documents[1].totalGross='12.344';const changed=await read(f);assert.notEqual(changed.fingerprint,r.fingerprint);assert.equal(changed.items[0].totalCents,1234);assert.equal(changed.items[0].postingProjections[0].recordedTotalGross,'12.344');assert.equal(changed.summary.unposted,0);
 });
 
 test('payment availability cannot turn a missing schema into zero unpaid balance',async()=>{

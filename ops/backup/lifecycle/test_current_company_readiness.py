@@ -54,6 +54,11 @@ class CurrentReadObservation(unittest.TestCase):
    with self.subTest(mutation=mutate.__name__):
     actual=observation();mutate(actual)
     with self.assertRaises(ValueError):ready.validate_company_read_observation(actual)
+ def test_fixed_observer_limits_column_attributes_to_the_observed_relation_kinds(self):
+  sql=(HERE/'backoffice-company-current-readiness.sql').read_text()
+  columns_query=sql.split("'columns',",1)[1].split("'currentChecks',",1)[0]
+  self.assertIn("c.relkind IN ('r','p','v','m','f') AND a.attnum>0",columns_query)
+  self.assertNotIn("'i'",columns_query)
  def test_target_default_and_fence_must_not_reuse_source(self):
   actual=observation('TARGET');actual['fences'][0]['planHash']=CURRENT_SOURCE_FENCE_PLAN_HASH
   with self.assertRaises(ValueError):ready.validate_company_read_observation(actual)

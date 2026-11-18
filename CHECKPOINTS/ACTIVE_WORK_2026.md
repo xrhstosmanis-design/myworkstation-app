@@ -1,6 +1,16 @@
+## 18/11/2026 — Νο 15 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ c88b7aad / ΜΕΡΙΚΗ LIVE ΑΠΟΔΟΧΗ / OPEN
+
+Ίδιος υπεύθυνος /root, ίδια ανάθεση TABLE_SERVICE. #4023/#4024 εγκαταστάθηκαν μέσω πλήρους main CI44385977787 (5SUCCESS, 6241PASS/0FAIL/2προαιρετικάSKIP +8backupPASS) και κανονικού guarded release44390636363· Render dep-dbv0j1brjlhs73aguvl0 LIVE 18/11 22:29:52 Ελλάδας, ακριβές c88b7aad, ανεξάρτητο health200/oktrue από τον συντονιστή. Νέο scoped LIVE PASS: μεταφορά/διαίρεση/ένωση, αλλαγή σερβιτόρου, μπλοκάρισμα επαναποστολής φορτωμένων γραμμών, 3 ανεξάρτητα KDS READY (3→2→1→0), πραγματική κινητή ροή responsive browser με χρέωση0,50€ σε καφέ1€ και μία αποστολή1,50€ / μία γραμμή / ένα δελτίο / ένα request / ένα Audit. Δεν επαναλαμβάνονται αυτά ή το ιστορικό τραπέζι3€.
+
+Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό έλεγχο δύο ενεργών συνθετικών ταμειακών στο κοινό LAB· cashParts[]/saleIdnull/μηδέν ledger μερικής/stock-2 αμετάβλητα. Καμία αλλαγή συσκευής ή παράκαμψη. Νέο χρεώσιμο δελτίο: KDS persistence PASS, δικό του οπτικό READY εκκρεμεί μετά την αλλαγή κοινής OWNER συνεδρίας. Φυσικό Android offline/αμφίβολη απόκριση και εκτυπωτής NOT TESTED. Τα CI/native αποτελέσματα είναι χωριστά. [Ακριβές checkpoint](CHANGES/2026-11-18-table-service-live-acceptance.md) · [Επιβεβαιωμένες οδηγίες](../docs/manual/table-service/PASS.md). Το παρόν υπερισχύει μόνο των παλιών AWAITING CI/εγκατάστασης για τα ίδια #4023/#4024· το συνολικό scope παραμένει OPEN.
+
 ## 18/11/2026 — Νο2 — verified ordinary posting projection / ASSIGNED BEFORE SOURCE
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
+
+### Νεότερη κατάσταση 18/11/2026 — Νο2 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ / LIMITED LIVE UI PASS
+
+Source#4037/head8975b1ca, mergec36a4ffb. PR CI44393082061:6264PASS/0FAIL/2optionalPG-WASM skips+8backupPASS. Main CI44395223533:6271PASS/0FAIL/3optionalPG-WASM skips+8backupPASS· actual nativePG και Chromium counter flows PASS χωρίς skip. Render c36 LIVE23:13:02Ελλάδας, descendant893e009c LIVE23:16:14 με ίδια τέσσερα runtime blobs Νο2 και exact health. LIVE προσωπικό Super Admin/Chromium desktop23:17:23: «Δεν έχουν καταχωριστεί» ακριβές υποσύνολο, «Εξοφλημένα» πρώτη50+τελευταία σελίδα μόνο πράσινα, «Οικονομικές εκκρεμότητες» μόνο καταγεγραμμένες διαφορές. Χωρίς νέα πληρωμή/ανέβασμα/έγκριση/stock πράξη. Η συνεδρία άλλαξε έπειτα· άλλοι μετρητές έχουν CI PASS αλλά όχι νέο hosted PASS, λοιποί ρόλοι/συσκευές και κοινή τελική Νο2 αποδοχή OPEN. [Receipt](CHANGES/2026-11-18-no2-counter-live-receipt.md), [Manual](../docs/manual/monthly-invoice-audit/PASS.md). C classifier/D1/writers/dispatch και άλλοι owners διατηρούνται. Το email preview κληρονομεί τα διορθωμένα ordinary workflow counts, χωρίς νέα financial μορφοποίηση ή αποστολή. Δεν επαναλαμβάνουμε τεκμηριωμένες συναλλαγές.
 
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
@@ -102,6 +112,10 @@ ActualCurrentfb7CI:6677PASS/2FAIL/2optionalSKIP. DockerκαιlegacyBASE/CAPTURE1
 Main6992085 warehouseVAT/Marginparity+No2claimsενσωματώθηκε·σύγκρουσηστοίδιοarchive λύθηκεκρατώνταςnativeOwner/POSφίλτρα καιdelegatedreadOnlyόρια. Νέοmountedparity1PASS,build22.13sPASS. Source45αμετάβλητα. Τοπικόmergeμενέοmain προςδημοσίευση γιαναξεκινήσειexactCI,όχιπαραγωγή.
 
 Νεότεροmaine614529ReportV2ενσωματώθηκεμερητήεπίλυσηexecutor/worker/Docker. Closure45→47(6reviewedbytechanges+2newcolumninputs),όλαBASE/CAPTURE/Currenttarget-identitiesαμετάβλητα.34targeted:31PASS/0FAIL/3localSKIP,Python23PASS,bridge/warehouse14PASS,build33.07sPASS. Company291καιReportsV2292έχουνχωριστάfences·κανέναcomposedproductioneligibility. FreshCIυποχρεωτικό·όλεςοιανθρώπινεςδοκιμέςστοτέλος.
+
+Συνέχεια:6700PASS/1FAIL/3optionalSKIP στο013ef85·SQLobserverπεριλάμβανεindexattributesσανcolumns. Διορθώθηκεrelkindfilter,strictcatalogueαμετάβλητο,47hashesverified. ActualSOURCE+10driftcasesPASS·fullnative17ENV-BLOCKEDστοprivateUnixsocketpg_ctl(1FAIL,όχιPASS). Python24PASS. ΥποστηριζόμεναVAT/Marginφίλτραφαίνονταιπλέονκαιμεproducts.read/readOnlyχωρίςwriters·UI53PASS/build18.05sPASS. NativeCurrentfullproofκαιproductionεκκρεμούν,όλεςhumanδοκιμέςστοτέλος.
+
+Main42601f0No2counters/postingενσωματώθηκε·κοινόreadonlycoreκρατάpeerπροβολές/φίλτρα/cursorκαιγνήσιοNo5pre/postgrant. Server85PASS,actualReactUI44PASS(πραγματικόChromiumεξαιρέθηκετοπικά),build26.45sPASS. Νέοdelegatedcounterfilterέχειίδιαcompany/store/month/filterταυτότητακαικαμίαemailενέργεια. Source47αμετάβλητααπόobserverfix·freshCurrentCIεκκρεμεί.
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
@@ -676,3 +690,8 @@ Local validation on Node24.22.1: retained inventory-bulk-merge-mounted, inventor
 Final frontend build PASS (Vite30.18s), TABLE_SERVICE bundle verification PASS, diff --check PASS. Local Chromium visual execution was unavailable because the execution environment denied its process-singleton socket; no screenshot or visual/device PASS is claimed. The CSS reuses the existing POS filter layout and adds single-column narrow forms. Full exact-head Node20 CI and installed Central/physical-device acceptance remain outstanding.
 
 Next: source PR/full CI; owner approval for source merge/publication; existing LAB/common final acceptance without changing stock, prices, permissions or stores. Do not repeat prior POS Filters USER PASS, and do not confuse the earlier PDF/shift-close acceptance with this independent warehouse request. Manual PASS is unchanged until genuine acceptance.
+
+
+## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — ASSIGNED /root BEFORE SOURCE
+
+Explicit owner request/start in same warehouse/invoice conversation. Bounded independent extension: compact archive filters/footer; draft line editor VAT department/category/dependent subcategory for existing/new items; display markup for previously matched lines without saving or changing retail. Owner /root, branch feat/warehouse-invoice-review-ui-20261118. Existing invoice/No2/OCR/report owners retained; no OCR, matching algorithm, financial posting, finalization, stock or production data tests. Current new requirements NOT TESTED; prior warehouse release #4029 and invoice/POS acceptance preserved. Checkpoint CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
