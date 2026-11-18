@@ -302,6 +302,16 @@ app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Ro
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ProductRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ImportRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2AuditRoutes);
+// Exact delegated table reads reach the native reader before broad POS
+// middleware that prepares schemas or persists operator catalogue state.
+app.use("/api/store-pos",(req,res,next)=>{
+  if(req.method!=="GET"||!/^\/stores\/[^/]+\/table-service(?:\/(?:history|preparation-queue))?$/.test(req.path))return next();
+  auth(req,res,error=>{
+    if(error)return next(error);
+    if(req.user?.staffAccess!==true)return next();
+    requireCompanyModule("STORE_MODE")(req,res,error=>error?next(error):storeTableOrdersRoutes(req,res,next));
+  });
+});
 app.use("/api/store-pos/stores/:storeId/inventory",auth,posOperatorInventoryRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeBakingRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);

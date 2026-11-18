@@ -149,3 +149,92 @@ test('delegated monthly audit clears old month pages and denial, hides mail prev
   try{await n.act(async()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await n.close()}
  }
 });
+
+const onlineOrders=(storeId='a1',name=rowText)=>({companyId:'a',storeId,store:{id:storeId,name:storeId,isTest:false},rows:[{id:'online1',companyId:'a',storeId,orderNumber:'123',customerName:name,customerPhone:'2100000000',status:'NEW',createdAt:'2026-11-17T12:00:00Z',total:5,paymentMethod:'CASH',fulfillmentType:'PICKUP'}],count:1});
+const tableService=(path,storeId='a1',name=rowText)=>{
+ const scope={companyId:'a',storeId};
+ if(path.endsWith('/history'))return {...scope,orders:[{id:'table-order',companyId:'a',storeId,tableName:name,operatorName:'Waiter',status:'OPEN',createdAt:'2026-11-17T12:00:00Z',total:4,items:[{quantity:1,name:'Coffee',lineTotal:4}]}],waste:[]};
+ if(path.endsWith('/preparation-queue'))return {...scope,rows:[{id:'queue1',tableName:name,operatorName:'Waiter',status:'SENT',productionStation:'BAR',createdAt:'2026-11-17T12:00:00Z',items:[{quantity:1,name:'Coffee',notes:'No sugar'}]}]};
+ return {...scope,areas:[],tables:[{id:'table1',name,areaId:null,capacity:4,shape:'ROUND',positionX:20,positionY:20}],canConfigure:true};
+};
+const orderViewCases=[
+ {name:'commerce/OnlineOrdersBackofficePanel',right:'online-orders.read',label:'Online Παραγγελίες',match:/^\/api\/public\/kat\/backoffice-managed\/stores\/a1\/orders\?limit=250$/,response:onlineOrders,fixture:(path,id,name)=>onlineOrders(id,name)},
+ {name:'commerce/TableServiceBackofficePanel',right:'table-service.read',label:'Τραπέζια και σερβιτόροι',match:/^\/api\/store-pos\/stores\/a1\/table-service(?:\/history|\/preparation-queue)?$/,fixture:tableService}
+];
+
+test('delegated online orders and tables reuse native store views without managed store lookups or producers',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const c of orderViewCases){
+  const calls=[];
+  const api=async(path,options={})=>{
+   calls.push(path);assert.equal(options.method||'GET','GET');
+   if(path.endsWith('/me'))return {companyId:'a',stores:[{id:'a1',name:'A1',profile:'MANAGER',capabilities:[c.right]},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:[]}]};
+   assert.equal(options.headers['x-backoffice-store-id'],'a1');assert.match(path,c.match);return c.fixture(path,'a1',rowText);
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout(){}});
+  try{
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button(c.label).click());await m.act(async()=>new Promise(r=>setTimeout(r,60)));
+   assert.ok(document.body.textContent.includes(rowText));assert.equal(document.querySelector('img'),null);
+   assert.ok(!calls.includes('/api/public/kat/backoffice-managed/stores'));
+   for(const text of ['ΔΗΜΙΟΥΡΓΙΑ ΣΑΛΑΣ','ΔΗΜΙΟΥΡΓΙΑ ΤΡΑΠΕΖΙΟΥ','ΕΠΕΞΕΡΓΑΣΙΑ','ΕΤΟΙΜΗ ΣΤΟ'])assert.ok(!button(text));
+   if(c.right==='table-service.read'){
+    assert.ok(document.querySelector('.table-floor-canvas'));assert.ok(document.querySelector('.table-floor-item').disabled);
+    assert.equal(document.querySelector('.table-config-forms'),null);
+   }else{await m.act(async()=>button('#123').click());assert.match(document.body.textContent,/Εμπορική εγγραφή σε αναμονή/)}
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a2';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   assert.ok(!document.body.textContent.includes(rowText));assert.ok(!button(c.label));
+  }finally{await m.close()}
+ }
+});
+
+test('delegated order views discard delayed stores, clear revoked refreshes and table reads do not poll',async()=>{
+ for(const c of orderViewCases){
+  const Component=await component(c.name);let mode='ok',late=[];const calls=[];
+  const api=async(path,options={})=>{
+   calls.push(path);assert.equal(options.method||'GET','GET');assert.notEqual(path,'/api/public/kat/backoffice-managed/stores');
+   const id=path.match(/\/stores\/([^/]+)/)?.[1];
+   if(mode==='deny')throw Error('ORDER_VIEW_WITHDRAWN');
+   if(mode==='late'&&id==='a1')return new Promise(resolve=>late.push(()=>resolve(c.fixture(path,id,'LATE_ORDER_VIEW'))));
+   return c.fixture(path,id,id==='a2'?'SECOND_ORDER_VIEW':rowText);
+  };
+  const props=id=>({api,companyId:'a',stores:[{id,name:id}],activeStoreId:id,readOnly:true});
+  const original=globalThis.setInterval;let polls=0;globalThis.setInterval=(...args)=>{polls++;return original(...args)};
+  const m=await mount(Component,props('a1'));
+  try{
+   assert.ok(document.body.textContent.includes(rowText));mode='late';await m.act(async()=>button('Ανανέωση').click());assert.ok(!document.body.textContent.includes(rowText));
+   await m.render(props('a2'));assert.ok(document.body.textContent.includes('SECOND_ORDER_VIEW'));await m.act(async()=>late.forEach(resolve=>resolve()));assert.ok(!document.body.textContent.includes('LATE_ORDER_VIEW'));
+   mode='deny';await m.act(async()=>button('Ανανέωση').click());assert.ok(!document.body.textContent.includes('SECOND_ORDER_VIEW'));assert.match(document.querySelector('[role="alert"]').textContent,/ORDER_VIEW_WITHDRAWN/);
+   assert.equal(polls,0);assert.ok(calls.every(path=>path.includes('/stores/a1/')||path.includes('/stores/a2/')));
+  }finally{await m.close();globalThis.setInterval=original}
+ }
+});
+
+test('order views reject foreign envelope members and table histories publish only after all three validated responses',async()=>{
+ for(const c of orderViewCases){
+  const Component=await component(c.name),paths=c.right==='table-service.read'?['/history','/preparation-queue','/table-service']:['/orders'];
+  for(const suffix of paths){
+   for(const field of ['companyId','storeId']){
+    const api=async path=>{const value=c.fixture(path,'a1',rowText);if(path.split('?')[0].endsWith(suffix))value[field]='foreign';return value};
+    const m=await mount(Component,{api,companyId:'a',stores:[{id:'a1',name:'A1'}],activeStoreId:'a1',readOnly:true});
+    try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await m.close()}
+   }
+  }
+ }
+ for(const c of orderViewCases){
+  const Component=await component(c.name);
+  for(const field of ['companyId','storeId']){
+   const api=async path=>{const value=c.fixture(path,'a1',rowText);if(c.right==='online-orders.read')value.rows[0][field]='foreign';else if(path.endsWith('/history'))value.orders[0][field]='foreign';return value};
+   const n=await mount(Component,{api,companyId:'a',stores:[{id:'a1',name:'A1'}],activeStoreId:'a1',readOnly:true});
+   try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await n.close()}
+  }
+ }
+ const Online=await component('commerce/OnlineOrdersBackofficePanel'),m=await mount(Online,{api:async()=>({...onlineOrders(),store:{id:'a2',name:'Foreign'}}),companyId:'a',stores:[{id:'a1',name:'A1'}],activeStoreId:'a1',readOnly:true});
+ try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await m.close()}
+});
+
+test('native Owner table view keeps configuration and production actions by default',async()=>{
+ const Tables=await component('commerce/TableServiceBackofficePanel');
+ const m=await mount(Tables,{api:async path=>tableService(path),stores:[{id:'a1',name:'A1'}],activeStoreId:'a1'});
+ try{assert.ok(button('ΔΗΜΙΟΥΡΓΙΑ ΣΑΛΑΣ'));assert.ok(button('ΔΗΜΙΟΥΡΓΙΑ ΤΡΑΠΕΖΙΟΥ'));assert.ok(button('ΕΠΕΞΕΡΓΑΣΙΑ'));assert.ok(button('ΕΤΟΙΜΗ ΣΤΟ'));assert.ok(!document.querySelector('.table-floor-item').disabled)}finally{await m.close()}
+});
