@@ -473,20 +473,21 @@ test('owner can replace extra store rights with four exact grants, verify the sa
     const grants=[{storeId:'a1',profile:'MANAGER',capabilities:['invoices.reopen','invoices.read','invoices.cancel','shifts.read']},otherStore];
     assert.deepEqual(writes[0].grants,grants);
     assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκαν/);
-    assert.equal(document.querySelector('[role="status"]'),null);
+    assert.equal(document.querySelector('[role="status"]:not([aria-label="Διαθεσιμότητα εταιρικών προβολών"])'),null);
 
+    assert.match(document.querySelector('[aria-label="Διαθεσιμότητα εταιρικών προβολών"]').textContent,/Δεν επιβεβαιώθηκε/);
     retainExtra=false;
     await m.act(async()=>button('Δικαιώματα / Απενεργοποίηση').click());
     await m.act(async()=>select('Έλεγχος ταμείων — Προβολή αναφοράς'));
     await m.act(async()=>submit());
-    assert.match(document.querySelector('[role="status"]').textContent,/Αποθηκεύτηκε και επαληθεύτηκε/);
+    assert.match(document.querySelector('[role="status"]:not([aria-label="Διαθεσιμότητα εταιρικών προβολών"])').textContent,/Αποθηκεύτηκε και επαληθεύτηκε/);
     assert.deepEqual(new Set(writes[1].grants[0].capabilities),new Set(grants[0].capabilities));
 
     await m.act(async()=>button('Δικαιώματα / Απενεργοποίηση').click());
     await m.act(async()=>store().querySelector('input[type="checkbox"]').click());
     await m.act(async()=>submit());
     assert.deepEqual(writes[2].grants,[otherStore]);
-    assert.match(document.querySelector('[role="status"]').textContent,/Αποθηκεύτηκε και επαληθεύτηκε/);
+    assert.match(document.querySelector('[role="status"]:not([aria-label="Διαθεσιμότητα εταιρικών προβολών"])').textContent,/Αποθηκεύτηκε και επαληθεύτηκε/);
   }finally{await m.close()}
 });
 

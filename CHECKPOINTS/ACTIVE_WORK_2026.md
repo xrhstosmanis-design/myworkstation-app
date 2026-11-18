@@ -86,6 +86,10 @@ Main199916bc ενσωματώθηκεμεpeer4021/4022: διατηρούνται
 18/11 νέα τεκμηρίωση: δημοσιευμένο f6d8c740 πλήρεςCI44378280707 SUCCESS6654PASS/0FAIL/2optionalSKIP, πραγματικά BASE/CAPTURE privatebackup/restore/native106 και Docker,8HTTP E2E και browser jobs PASS. Προετοιμάστηκε χωριστό CURRENT_CAPTURE291tables Company-read-only, SOURCE8/TARGET9 Account,45sourceclosure,6canonical runtimecolumns/240FK/388guards και source-derived defaults. Δεν υπάρχει νέο πραγματικόCurrent PostgreSQL/Docker proof ή παραγωγική εγκατάσταση. Combined179PASS/1legacy-importFAIL/5SKIP: γνήσια regression διορθώθηκε χωρίς αλλαγήfixture, focused19PASS/2PG-DockerSKIP. BuildPASS48.02s· Python8PASS. Ενσωμάτωση νεότερουmain και freshCI εκκρεμούν. Human tests μία φορά στο τέλος.
 
 Mainc88b7aad ενσωματώθηκεκαθαρά·τελικό192tests187PASS/0FAIL/5PG-Docker-browserSKIP,build55.84sPASS. FreshCurrentactualCIεκκρεμεί.
+
+Επόμενηγέφυρα: προσωπικόSA HTTPdescribe/inspect/install στο υπάρχονInstallationCenter· strictsession/DTO/υπογεγραμμέναreceipts/defaultOFF. Runtimeprerequisitesμόνοread-onlyflags, όχιprovisioning. Affected23PASS/1actualPGSKIP/0FAIL,build18.83sPASS·45sourcebindingsαμετάβλητα. ΔημοσιευμένοCurrentfb7cc753 CI44389809351τρέχει·chat/wallet/wholesaleSUCCESS. Bridgeεκκρεμείpublication,παραγωγή/ανθρώπινηαποδοχήNOTTESTED.
+
+ActualCurrentfb7CI:6677PASS/2FAIL/2optionalSKIP. DockerκαιlegacyBASE/CAPTURE106PASS. CurrentfixtureέλειπεcanonicalMONTHLYcheck·διορθώθηκεμόνοfixture,όχιinspector. OwnerUItestξεχωρίζειnamedavailabilitystatusαπόsaveconfirmation·48/48PASS. CurrentnativeinstallationπαραμένειNOTTESTEDμέχρινέοCI.
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB

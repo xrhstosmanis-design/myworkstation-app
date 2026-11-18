@@ -150,6 +150,7 @@ import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-onlin
 import commerceAdvancedOnlineSearchRoutes from "./routes/commerce-advanced-online-search.js";
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import {createBackofficeCompanyInstallationRouter} from './routes/backoffice-company-installation.js';
 import {createAutomaticReportEventInstallationRouter} from './routes/automatic-report-event-installation.js';
 import {createAutomaticReportDispatchRouter} from './routes/automatic-report-dispatch.js';
 import {createAutomaticReportInvitationRouter} from './routes/automatic-report-invitations.js';
@@ -248,6 +249,7 @@ app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformSuperAdminAnalyticsDetailsRoutes);
 app.use("/api/platform/store-modules",platformStoreModulesRoutes);
 app.use('/api/report-invitations',createAutomaticReportInvitationRouter(prisma));
+app.use('/api/platform/backoffice-company-installation',auth,createBackofficeCompanyInstallationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-event-installation',auth,createAutomaticReportEventInstallationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',auth,createAutomaticReportDispatchRouter(prisma));
 app.use("/api/platform",platformAdminRoutes);

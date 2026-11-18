@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const metadata=JSON.parse(readFileSync(new URL('./ftext-full-schema-metadata-20261024.json',import.meta.url)));
 const operational=JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/report-operational-compatibility.proposed.json',import.meta.url)));
 const q=name=>'"'+name.replaceAll('"','""')+'"';
 export const currentCapturePreservedTables=Object.freeze([...operational.tables.map(t=>t.name),'AutomaticReportSupplierComparisonConsent']);
@@ -22,14 +21,19 @@ export function nativeCurrentCapturePreservedSeedPlan(){
  add('StoreStockPackage',{companyId:'company',storeId:'selected',productId:'item',baseProductId:'current-capture-base-item',unitsPerPackage:2,updatedBy:'admin',updatedAt:at});
  return rows;
 }
+export function nativeCurrentCaptureSupplierDDL(){
+ const source=readFileSync(new URL('../../scripts/sql/automatic-report-supplier-comparison.sql',import.meta.url),'utf8');
+ const statements=source.match(/CREATE TABLE IF NOT EXISTS "AutomaticReportSupplierComparisonConsent" \([\s\S]*?\n\);/g);
+ assert.equal(statements?.length,1,'canonical migration must contain exactly one Supplier CREATE');
+ return statements[0];
+}
 export async function createNativeCurrentCaptureSource(db){
  // Explicit isolated test provisioning only. The installer never invokes this.
  for(const sql of operational.ddl)await db.$executeRawUnsafe(sql);
  const currentColumns=JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/backoffice-company-current-columns.proposed.json',import.meta.url)));for(const column of currentColumns.columns)await db.$executeRawUnsafe(`ALTER TABLE ${q(column.table)} ADD COLUMN ${q(column.name)} ${column.type}${column.notNull?' NOT NULL':''}${column.defaultExpression===null?'':' DEFAULT '+column.defaultExpression}`);const check=currentColumns.costCheck;await db.$executeRawUnsafe(`ALTER TABLE ${q(check.table)} ADD CONSTRAINT ${q(check.name)} ${check.definition}`);
- const supplier='AutomaticReportSupplierComparisonConsent',columns=metadata.columns.filter(c=>c.table==='AutomaticReportRecipientConsent');
- await db.$executeRawUnsafe(`CREATE TABLE ${q(supplier)} (${columns.map(c=>`${q(c.name)} ${c.type}${c.required?' NOT NULL':''}${c.default!==null?' DEFAULT '+c.default:''}`).join(',')})`);
- for(const c of metadata.constraints.filter(c=>c.table==='AutomaticReportRecipientConsent'&&c.kind==='c'))await db.$executeRawUnsafe(`ALTER TABLE ${q(supplier)} ADD CONSTRAINT ${q(c.name)} ${c.definition}`);
- for(const kind of ['p','f'])for(const c of metadata.constraints.filter(c=>c.table==='AutomaticReportRecipientConsent'&&c.kind===kind))await db.$executeRawUnsafe(`ALTER TABLE ${q(supplier)} ADD ${c.definition}`);
+ // Use the actual reviewed Supplier migration CREATE, including its extra
+ // MONTHLY-only CHECK. Do not execute its unrelated DispatchPolicy ALTERs.
+ await db.$executeRawUnsafe(nativeCurrentCaptureSupplierDDL());
  assert.equal((await db.$queryRawUnsafe(`SELECT to_regclass('"AutomaticReportEventConsent"')::text AS name`))[0].name,null,'CURRENT source has no event consent table');
  await db.$transaction(async tx=>{await tx.$queryRawUnsafe("SELECT set_config('mws.lifecycle_generations',$1,true)",JSON.stringify({selected:'7',sibling:'0',foreign:'0'}));for(const{table,row,json=[]}of nativeCurrentCapturePreservedSeedPlan()){const entries=Object.entries(row);await tx.$executeRawUnsafe(`INSERT INTO ${q(table)}(${entries.map(([k])=>q(k)).join(',')}) VALUES(${entries.map(([k],i)=>'$'+(i+1)+(json.includes(k)?'::jsonb':'')).join(',')})`,...entries.map(([k,v])=>json.includes(k)?JSON.stringify(v):v))}},{timeout:60000});
  await db.$transaction(async tx=>{await tx.$queryRawUnsafe("SELECT set_config('mws.lifecycle_generations',$1,true)",JSON.stringify({selected:'7',sibling:'0',foreign:'0'}));await tx.$executeRawUnsafe(`UPDATE "StoreProduct" SET "costPriceOverride"=0,"vatDepartmentIdOverride"='current-opaque-vat',"categoryIdOverride"='current-opaque-category',"subcategoryIdOverride"='current-opaque-subcategory' WHERE "id"='stock'`)});
