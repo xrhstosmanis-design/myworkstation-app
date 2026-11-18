@@ -675,3 +675,6 @@ Explicit owner request/start in same warehouse/invoice conversation. Bounded ind
 ## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — SOURCE RECONCILED / AWAITING CI AND COMMON LAB
 
 Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compact warehouse chrome, draft VAT/category/subcategory and read-only linked markup implemented. Real isolated PostgreSQL taxonomy/control/rollback and staff regression passed in CI44400676745;6274PASS/1 old test-harness dependencyFAIL/3optionalSKIP. Dependency corrected without runtime change. Main a9639f31 reconciled: preserve No4 atomic assistant transfer and shared transaction helpers, No13–14 CSV status and No2 claim. Taxonomy hooks now use current shared patchPurchaseLine transaction; no hosted financial/stock action. Full exact combined CI and common LAB pending. See own checkpoint.
+
+
+- 2026-11-18 · 13–14 · Μερικό LAB PASS κατάστασης CSV τιμολογίων και ενεργών πληρωμών ως Super Admin στο υπάρχον LAB. 16/8 και 3/7 γραμμές/στήλες, εγκεκριμένα 7,44 €, πληρωμές 3,00 €. [Τεκμήριο](CHANGES/2026-11-18-no13-no14-supplier-csv-lab-pass.md). Συνολικό 13–14 OPEN, PDF/εκτύπωση και πλήρης οικονομική συμφωνία εκκρεμούν. Ετήσιο CSV στην ίδια συνεδρία: 18 γραμμές / 7 στήλες, 17 ΕΝΕΡΓΗ 4.917,72 € και 1 ΑΝΤΙΛΟΓΙΣΜΟΣ 46,92 €, σε συμφωνία με την οθόνη· μερικό LAB PASS ένδειξης αντιλογισμού.
