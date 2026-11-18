@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {nativeLegacyStoreReportSeedPlan} from './fixtures/backoffice-store-reports-legacy-native.mjs';
 import {nativeCompanyInventorySeedPlan} from './fixtures/backoffice-company-inventory-reports-native.mjs';
 const metadata=JSON.parse(readFileSync(new URL('./fixtures/ftext-full-schema-metadata-20261024.json',import.meta.url),'utf8'));
 function validateSeedPlan(plan){
@@ -14,6 +15,7 @@ function validateSeedPlan(plan){
    else if(type==='boolean')assert.equal(typeof value,'boolean',`${table}.${name} boolean`);
    else if(type==='integer'||type==='bigint')assert.ok(Number.isSafeInteger(value),`${table}.${name} integer`);
    else if(type.startsWith('numeric')||type==='double precision')assert.ok(typeof value==='number'&&Number.isFinite(value),`${table}.${name} finite numeric`);
+   else if(type==='jsonb'||type==='json'){assert.ok(typeof value==='object'&&!(value instanceof Date),`${table}.${name} JSON`);assert.equal(typeof JSON.stringify(value),'string')}
    else if(type.startsWith('timestamp'))assert.ok(value instanceof Date&&Number.isFinite(value.getTime()),`${table}.${name} timestamp`);
    else assert.fail(`Unreviewed seed type ${table}.${name}: ${type}`);
   }
@@ -34,3 +36,5 @@ test('preflight rejects explicit NULL even when NOT NULL has a default, unknown 
  assert.throws(()=>validateSeedPlan([{table:'Product',row:{...product.row,notAColumn:1}}]),/Unknown column/);
  const {companyId,...missing}=product.row;assert.throws(()=>validateSeedPlan([{table:'Product',row:missing}]),/Missing required Product.companyId/);
 });
+
+test('STORE74 legacy eight-column financial seed plan passes metadata preflight without COMPANY authority fields',()=>{const plan=nativeLegacyStoreReportSeedPlan();assert.ok(plan.length>40);validateSeedPlan(plan);assert.ok(plan.every(({row})=>!Object.hasOwn(row,'companyCapabilities')));});

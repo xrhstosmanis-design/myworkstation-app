@@ -20,8 +20,9 @@ export async function runSalesCountsRegression(db){
    'CREATE TABLE "PurchaseOrder"("id" text,"companyId" text,"storeId" text,"supplierId" text,"invoiceNumber" text,"status" text)',
    'CREATE TABLE "PurchaseOrderLine"("orderId" text,"productId" text,"quantity" numeric,"netAmount" numeric,"resolutionStatus" text,"invoiceUnit" text,"stockUnitsPerInvoiceUnit" numeric)',
    'CREATE TABLE "StockMovement"("id" text,"sourceType" text,"sourceId" text,"storeId" text,"productId" text,"movementType" text,"unitCost" numeric,"createdAt" timestamp)',
-   'CREATE TABLE "Supplier"("id" text,"name" text)'
+   'CREATE TABLE "Supplier"("id" text,"companyId" text NOT NULL,"name" text)'
   ])await db.$executeRawUnsafe(sql);
+ await db.$executeRaw`INSERT INTO "Supplier"("id","companyId","name") VALUES('canonical-supplier-own','c','Canonical own supplier'),('canonical-supplier-foreign','x','Canonical foreign supplier')`;
  await db.$executeRaw`INSERT INTO "Store" VALUES('s','c','LAB'),('control','c','CONTROL'),('foreign','x','FOREIGN')`;
  await db.$executeRaw`INSERT INTO "Product" VALUES('p','c','Alpha','A','PIECE',NULL,NULL,.2),('q','c','Beta','B','PIECE',NULL,NULL,.3)`;
  await db.$executeRaw`INSERT INTO "PriceCatalogPromotion" VALUES('promo','c',false)`;

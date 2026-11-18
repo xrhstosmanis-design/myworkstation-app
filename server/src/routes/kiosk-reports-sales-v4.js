@@ -206,8 +206,8 @@ router.get("/sales-analysis",async(req,res,next)=>{try{
   res.json(comparison?await readSalesReportComparison({...selected,compareFrom:req.query.compareFrom,compareTo:req.query.compareTo},{db:prisma,readReport:readSalesAnalysisReport}):await readSalesAnalysisReport(selected));
 }catch(error){next(error)}});
 
-export async function readSalesAnalysisProductReport({companyId,productId,from,to,storeId},{db=prisma,strictRead=false}={}){
-  const owned=await db.$queryRaw`SELECT "id","name" FROM "Product" WHERE "companyId"=${companyId} AND "id"=${productId} LIMIT 1`;
+export async function readSalesAnalysisProductReport({companyId,productId,from,to,storeId},{db=prisma,strictRead=false,storeScope=null}={}){
+  const owned=await db.$queryRaw`SELECT "id","name" FROM "Product" WHERE "companyId"=${companyId} AND "id"=${productId} AND (${storeScope}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" associated WHERE associated."productId"="Product"."id" AND associated."storeId"=${storeScope}) OR EXISTS(SELECT 1 FROM "SaleLine" knownLine JOIN "Sale" knownSale ON knownSale."id"=knownLine."saleId" AND knownSale."companyId"=${companyId} AND knownSale."storeId"=${storeScope} AND knownSale."status"='COMPLETED' WHERE knownLine."productId"="Product"."id" AND knownSale."occurredAt">=${from} AND knownSale."occurredAt"<${to})) LIMIT 1`;
   if(!owned[0])throw Object.assign(new Error("Δεν βρέθηκε το είδος."),{status:404});
   const rows=await db.$queryRaw`
     SELECT sa."id" AS "saleId",sa."occurredAt",sa."createdAt",sa."receiptNumber",sa."source",sa."transactionMode",sa."reversalKind",original."id" AS "originalSaleId",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
@@ -219,7 +219,7 @@ export async function readSalesAnalysisProductReport({companyId,productId,from,t
     JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
     JOIN "Store" s ON s."id"=sa."storeId" AND s."companyId"=${companyId}
     LEFT JOIN "Sale" original ON original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId"
-    LEFT JOIN "Employee" e ON e."id"=sa."operatorEmployeeId" AND e."companyId"=sa."companyId"
+    LEFT JOIN "Employee" e ON e."id"=sa."operatorEmployeeId" AND e."storeId"=sa."storeId"
     LEFT JOIN "Customer" cu ON cu."id"=sa."customerId" AND cu."companyId"=sa."companyId"
     LEFT JOIN LATERAL (
       SELECT COALESCE(

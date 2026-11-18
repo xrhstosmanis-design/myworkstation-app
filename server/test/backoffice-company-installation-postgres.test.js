@@ -15,6 +15,7 @@ import {provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js
 import {provisionMonthlyInventorySnapshotSchema} from '../src/services/monthly-inventory-snapshot-schema.js';
 import {provisionMonthlyInventoryCaptureSchema} from '../src/services/monthly-inventory-capture-schema.js';
 import {createLifecycleInstallationCore} from '../src/services/store-lifecycle-executor.js';
+import {verifyNativeLegacyStoreReports} from './fixtures/backoffice-store-reports-legacy-native.mjs';
 import {verifyNativeCompanyInventoryReports} from './fixtures/backoffice-company-inventory-reports-native.mjs';
 import {verifyNativeCompanyAuditReports} from './fixtures/backoffice-company-audit-reports-native.mjs';
 import {verifyNativeCompanyReports} from './fixtures/backoffice-company-reports-native.mjs';
@@ -100,6 +101,7 @@ async function fixture(profile){
 for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installation consumes actual full backup/private restore and preserves existing epochs and STORE policies`,{skip:!isolated()&&!process.env.CI?'Actual isolated PostgreSQL unavailable locally':false,timeout:600000},async()=>{
  assert.ok(isolated(),'Actual isolated PostgreSQL is mandatory in CI');const f=await fixture(profile);
  try{
+  await verifyNativeLegacyStoreReports({db:f.db});
   for(const changes of [{supportContext:{companyId:'company'}},{storeId:'selected'},{staffAccess:true},{ownerCompanyId:'company'},{mustChangePassword:true},{sessionVersion:-1},{isSuperAdmin:false},{platformRole:'OWNER'},{role:'EMPLOYEE'},{role:'SUPER_ADMIN'}])await assert.rejects(async()=>f.service.inspect({...actor,...changes}),{code:'COMPANY_INSTALL_ACTOR_REQUIRED'});
   assert.equal((await f.db.$queryRawUnsafe(`SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='BackofficeStaffAccount' AND column_name='companyCapabilities'`)).length,0,'scoped/masked identities cannot create schema');
   const inspect=await f.service.inspect(actor);assert.equal(inspect.eligible,true);assert.equal(inspect.productionActivated,false);

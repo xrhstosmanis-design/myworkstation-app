@@ -1,3 +1,4 @@
+import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
 import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
 import {readStaffWorkforceView} from './services/backoffice-staff-workforce.js';
 import {createInvoiceStockExclusionEmailScheduler} from "./services/invoice-stock-exclusion-email.js";
@@ -262,8 +263,8 @@ app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operato
 // Exact company reads precede legacy Owner routers. Requests without an
 // authenticated company grant continue through their original middleware.
 app.get(['/api/owner-products/stores','/api/commerce/suppliers','/api/commerce/customers','/api/management/expense-categories','/api/management/customer-categories','/api/management/professions','/api/management/business-units/shipping-methods','/api/management/categories','/api/management/vat-departments','/api/management/product-companies','/api/management/business-units/banks','/api/commerce/products','/api/commerce/purchases','/api/commerce/recipes','/api/commerce/suppliers/:supplierId/detail','/api/reports/price-changes','/api/reports/departments','/api/reports/documents','/api/reports/delivery','/api/reports/delivery/:noteId/lines','/api/reports/deactivations','/api/reports/logins','/api/reports/sale-deletions','/api/reports/pos-sale-actions','/api/reports/destructions','/api/reports/movements','/api/reports/stocktakes','/api/reports/stock-snapshot','/api/reports/item-snapshot','/api/reports/stock-analysis','/api/reports/sales-analysis','/api/reports/recorded-payroll-expenses','/api/reports/stock-analysis/:productId/movements','/api/reports/sales-analysis/:productId'],auth,async(req,res,next)=>{
-  if(!req.staffCompanyGrant)return next();
-  try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffCompanyDirectory(prisma,req))}catch(error){next(error)}
+  if(!req.staffCompanyGrant&&!req.staffGrant?.capability?.startsWith('store-reports-'))return next();
+  try{res.setHeader('Cache-Control','private, no-store');res.json(req.staffCompanyGrant?await readStaffCompanyDirectory(prisma,req):await readStaffStoreReport(prisma,req))}catch(error){next(error)}
 });
 app.use("/api/management/vat-departments",auth,requireCompanyModule("INVENTORY"),managementVatDepartmentsRoutes);
 app.use("/api/management/expense-categories",auth,requireCompanyModule("CASH_CONTROL"),managementExpenseCategoriesRoutes);

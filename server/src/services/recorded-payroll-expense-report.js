@@ -1,3 +1,4 @@
+import {requireStaffGrant} from './backoffice-staff-access.js';
 import {requireStaffCompanyGrant} from './backoffice-staff-company.js';
 import {salesReportCalendar} from "./sales-report-calendar.js";
 import {PERSONNEL_BASIC,PERSONNEL_PAYROLL,resolvePersonnelPackageStates} from "../personnel-packages.js";
@@ -175,5 +176,19 @@ export async function readDelegatedRecordedPayrollExpenseReport(input,{db,now=ne
  await scopeAndPackages(db,scope,new Date());
  const after=await requireStaffCompanyGrant(db,user,'reports-payroll-expenses.read');
  if(after.revision!==before.revision)throw failure(403,'RECORDED_EXPENSE_AUTHORITY_CHANGED','Τα δικαιώματα άλλαξαν κατά την ανάγνωση.');
+ return result;
+}
+
+export async function readStoreDelegatedRecordedPayrollExpenseReport(input,{db,now=new Date()}={}){
+ const user=input?.user,storeId=input?.storeId;
+ if(!user||user.staffAccess!==true||user.tokenType!=='BACKOFFICE_USER'||user.role!=='EMPLOYEE'||!storeId||user.storeId!==storeId||user.platformRole==='SUPER_ADMIN')throw failure(403,'RECORDED_EXPENSE_ROLE_DENIED','Απαιτείται ρητή προσωπική παραχώρηση καταστήματος.');
+ if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw failure(500,'RECORDED_EXPENSE_CLOCK_INVALID','Δεν επιβεβαιώθηκε ο χρόνος αναφοράς.');
+ const before=await requireStaffGrant(db,user,storeId,'store-reports-payroll-expenses.read');
+ const asOf=new Date(now.getTime()),scope=scopeValues({...input,companyId:user.companyId,superAdmin:false},asOf);
+ await scopeAndPackages(db,scope,asOf);
+ const result=await readSnapshot(scope,asOf,db);
+ await scopeAndPackages(db,scope,new Date());
+ const after=await requireStaffGrant(db,user,storeId,'store-reports-payroll-expenses.read');
+ if(before.account.revision!==after.account.revision||before.grant.revision!==after.grant.revision)throw failure(403,'RECORDED_EXPENSE_AUTHORITY_CHANGED','Τα δικαιώματα άλλαξαν κατά την ανάγνωση.');
  return result;
 }

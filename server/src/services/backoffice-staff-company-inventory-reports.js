@@ -5,7 +5,7 @@ import {salesReportCalendar} from './sales-report-calendar.js';
 import {readStockAnalysisReport} from '../routes/kiosk-reports-stock-v3.js';
 import {readSalesAnalysisReport,readSalesAnalysisProductReport} from '../routes/kiosk-reports-sales-v4.js';
 import {readSalesReportComparison} from './sales-report-comparison.js';
-import {readDelegatedRecordedPayrollExpenseReport} from './recorded-payroll-expense-report.js';
+import {readDelegatedRecordedPayrollExpenseReport,readStoreDelegatedRecordedPayrollExpenseReport} from './recorded-payroll-expense-report.js';
 const invalid=()=>{throw staffError(400,'STAFF_REPORT_QUERY_INVALID')};
 const bad=()=>{throw staffError(503,'STAFF_REPORT_DATA_INVALID')};
 const text=(v,nullable=true)=>{if(nullable&&v===null)return null;if(typeof v!=='string'||v.length>10000)bad();return v};
@@ -31,14 +31,14 @@ export function inventoryReportFilters(query,capability,path){
  if(query.compareFrom!==undefined){day(query.compareFrom);day(query.compareTo);if(!storeId)invalid()}
  return {from,to,fromDay,toDay,storeId,q,text:q?`%${q}%`:null,snapshot,detail,calendar,includeHourly:query.includeHourly==='1',compareFrom:query.compareFrom,compareTo:query.compareTo};
 }
-export async function readCompanyInventoryReport(db,companyId,capability,path,query,user){
- const f=inventoryReportFilters(query,capability,path);
+export async function readCompanyInventoryReport(db,companyId,capability,path,query,user,options={}){
+ const f=inventoryReportFilters(query,capability,path);f.storeScope=options.storeScope??null;
  const check=async()=>{if(f.storeId&&!await db.store.findFirst({where:{id:f.storeId,companyId,active:true},select:{id:true}}))throw staffError(404,'STAFF_REPORT_STORE_NOT_FOUND')};await check();let data;
  if(capability==='reports-stocktakes.read')data=await stocktakes(db,companyId,f);
- else if(f.snapshot)data=await snapshot(db,companyId,f,capability==='reports-item-snapshot.read');
+ else if(f.snapshot)data=await snapshot(db,companyId,f,capability==='reports-item-snapshot.read',options.storeScope??null);
  else if(capability==='reports-stock-analysis.read')data=f.detail?await stockMovements(db,companyId,f):await stockAnalysis(db,companyId,f);
  else if(capability==='reports-sales-analysis.read')data=f.detail?await salesDetail(db,companyId,f):await salesAnalysis(db,companyId,f);
- else if(capability==='reports-payroll-expenses.read')data=await readDelegatedRecordedPayrollExpenseReport({user,storeId:f.storeId,from:f.fromDay,to:f.toDay,timeZone:'Europe/Athens'},{db});
+ else if(capability==='reports-payroll-expenses.read')data=await (options.storeScope?readStoreDelegatedRecordedPayrollExpenseReport:readDelegatedRecordedPayrollExpenseReport)({user,storeId:f.storeId,from:f.fromDay,to:f.toDay,timeZone:'Europe/Athens'},{db});
  else throw staffError();await check();if(capability==='reports-payroll-expenses.read')return data;return {...(!f.snapshot?{from:f.fromDay}:{}),to:f.toDay,storeId:f.storeId,q:f.q,...data};
 }
 async function stocktakes(db,companyId,f){
@@ -55,7 +55,7 @@ async function stocktakes(db,companyId,f){
  const items=bound(raw,10000).map(r=>{const v=dto(r,['stocktakeId','stocktakeName','status','id','productId','sku','name','unit','categoryName','subcategoryName','storeName','operatorName'],['expectedQuantity','countedQuantity','unitCost','salePrice'],['startedAt','finalizedAt','countedAt']);num(v.expectedQuantity,false);v.difference=v.countedQuantity===null?null:num(v.countedQuantity-v.expectedQuantity,false);v.differenceValue=v.difference===null||v.unitCost===null?null:num(v.difference*v.unitCost,false);v.incomplete=v.differenceValue===null;return v});
  return {items,count:items.length,totalDifferenceValue:sum(items,'differenceValue'),incomplete:items.some(v=>v.incomplete),window:{limit:10000}};
 }
-async function snapshot(db,companyId,f,itemScoped){
+async function snapshot(db,companyId,f,itemScoped,storeScope){
  const {storeId,text}=f,snapshotAt=new Date(f.to.getTime()-1);
  const raw=await db.$queryRaw`
     WITH qty AS (
@@ -63,23 +63,23 @@ async function snapshot(db,companyId,f,itemScoped){
       FROM "StockMovement" sm JOIN "Store" sx ON sx."id"=sm."storeId" AND sx."companyId"=${companyId}
       WHERE sm."createdAt"<=${snapshotAt} AND (${storeId}::text IS NULL OR sm."storeId"=${storeId}) GROUP BY sm."storeId",sm."productId"
     )
-    SELECT p."id" AS "productId",p."sku",p."name",p."salePrice"::double precision AS "salePrice",p."vatRate"::double precision AS "vatRate",p."unit",p."costPrice"::double precision AS "costPrice",c."name" AS "categoryName",mp."subcategoryName",
+    SELECT p."id" AS "productId",p."sku",p."name",p."salePrice"::double precision AS "salePrice",p."vatRate"::double precision AS "vatRate",p."unit",CASE WHEN ${storeScope}::text IS NULL THEN p."costPrice" ELSE NULL END::double precision AS "costPrice",c."name" AS "categoryName",mp."subcategoryName",
       s."id" AS "storeId",s."name" AS "storeName",COALESCE(qty."quantity",0)::double precision AS "quantity",
-      COALESCE(lp."unitCost",p."costPrice")::double precision AS "purchasePrice",lp."supplierName",lp."documentDate" AS "lastPurchaseAt"
+      COALESCE(lp."unitCost",CASE WHEN ${storeScope}::text IS NULL THEN p."costPrice" ELSE NULL END)::double precision AS "purchasePrice",lp."supplierName",lp."documentDate" AS "lastPurchaseAt"
     FROM "Product" p CROSS JOIN "Store" s
     LEFT JOIN qty ON qty."productId"=p."id" AND qty."storeId"=s."id"
     LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=p."companyId" LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
     LEFT JOIN LATERAL (
       SELECT CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END AS "unitCost",d."documentDate",sup."name" AS "supplierName"
       FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId" AND sup."companyId"=d."companyId"
-      WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId"=p."id" AND d."documentDate"<=${snapshotAt}
+      WHERE d."companyId"=${companyId} AND (${storeScope}::text IS NULL OR d."storeId"=${storeScope}) AND d."status"='APPROVED' AND l."productId"=p."id" AND d."documentDate"<=${snapshotAt}
       ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
     ) lp ON true
-    WHERE p."companyId"=${companyId} AND s."companyId"=${companyId} AND (${storeId}::text IS NULL OR s."id"=${storeId})
+    WHERE p."companyId"=${companyId} AND s."companyId"=${companyId} AND (${storeScope}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" associated WHERE associated."productId"=p."id" AND associated."storeId"=${storeScope})) AND (${storeId}::text IS NULL OR s."id"=${storeId})
       AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
     ORDER BY p."name",s."name" LIMIT 10001`;
  const items=bound(raw,10000).map(r=>{const v=dto(r,['productId','sku','name','unit','categoryName','subcategoryName','storeId','storeName','supplierName'],['salePrice','vatRate','costPrice','quantity','purchasePrice'],['lastPurchaseAt']);num(v.quantity,false);v.saleValue=v.salePrice===null?null:num(v.quantity*v.salePrice,false);v.costValue=v.purchasePrice===null?null:num(v.quantity*v.purchasePrice,false);const net=v.salePrice===null||v.vatRate===null?null:v.salePrice/(1+v.vatRate/100);v.marginNet=net===null||net===0||v.purchasePrice===null?null:num((net-v.purchasePrice)/net*100,false);v.incomplete=v.salePrice===null||v.purchasePrice===null||v.vatRate===null;return v});
- return {snapshotAt:snapshotAt.toISOString(),items,count:items.length,totalSaleValue:sum(items,'saleValue'),totalCostValue:sum(items,'costValue'),incomplete:items.some(v=>v.incomplete),ledgerBased:true,itemScoped,window:{limit:10000}};
+ return {...(storeScope?{valuationBasis:'SELECTED_STORE_PURCHASE_HISTORY'}:{}),snapshotAt:snapshotAt.toISOString(),items,count:items.length,totalSaleValue:sum(items,'saleValue'),totalCostValue:sum(items,'costValue'),incomplete:items.some(v=>v.incomplete),ledgerBased:true,itemScoped,window:{limit:10000}};
 }
 async function stockAnalysis(db,companyId,f){
  const raw=await readStockAnalysisReport({companyId,...f},{db,strictRead:true});
@@ -87,7 +87,7 @@ async function stockAnalysis(db,companyId,f){
  return {items,count:items.length,totalStockQuantity:sum(items,'currentStock'),totalSalesQuantity:sum(items,'salesQuantity'),totalReversalQuantity:sum(items,'reversalQuantity'),totalRetailValue:sum(items,'retailValue'),totalPurchaseValue:sum(items,'purchaseValue'),incomplete:items.some(v=>v.incomplete),reversalAware:true,window:{limit:10000}};
 }
 async function stockMovements(db,companyId,f){
- const products=await db.$queryRaw`SELECT "id","name","sku" FROM "Product" WHERE "id"=${f.detail} AND "companyId"=${companyId} LIMIT 1`;
+ const products=await db.$queryRaw`SELECT "id","name","sku" FROM "Product" WHERE "id"=${f.detail} AND "companyId"=${companyId} AND (${f.storeScope}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" associated WHERE associated."productId"="Product"."id" AND associated."storeId"=${f.storeScope})) LIMIT 1`;
  if(products.length!==1)throw staffError(404,'STAFF_REPORT_PRODUCT_NOT_FOUND');const product=dto(products[0],['id','name','sku']);
  const raw=await db.$queryRaw`SELECT sm."id",sm."createdAt",sm."movementType",sm."quantity"::double precision AS quantity,sm."unitCost"::double precision AS "unitCost",sm."sourceType",sm."note",s."name" AS "storeName",u."fullName" AS "operatorName" FROM "StockMovement" sm JOIN "Store" s ON s."id"=sm."storeId" AND s."companyId"=${companyId} LEFT JOIN "User" u ON u."id"=sm."createdByUserId" AND u."companyId"=s."companyId" WHERE sm."productId"=${f.detail} AND sm."createdAt">=${f.from} AND sm."createdAt"<${f.to} AND (${f.storeId}::text IS NULL OR sm."storeId"=${f.storeId}) ORDER BY sm."createdAt" DESC,sm."id" LIMIT 2000`;
  const items=bound(raw,2000).map(r=>{const v=dto(r,['id','movementType','sourceType','note','storeName','operatorName'],['quantity','unitCost'],['createdAt']);num(v.quantity,false);return {...v,value:v.unitCost===null?null:num(Math.abs(v.quantity)*v.unitCost,false),incomplete:v.unitCost===null}});return {product,items,count:items.length,window:{limit:2000}};
@@ -106,7 +106,7 @@ async function salesAnalysis(db,companyId,f){
  return r;
 }
 async function salesDetail(db,companyId,f){
- const raw=await readSalesAnalysisProductReport({companyId,productId:f.detail,from:f.from,to:f.to,storeId:f.storeId},{db,strictRead:true});
+ const raw=await readSalesAnalysisProductReport({companyId,productId:f.detail,from:f.from,to:f.to,storeId:f.storeId},{db,strictRead:true,storeScope:f.storeScope});
  const product=dto(raw.product,['id','name']);
  const items=bound(raw.items,5000).map(r=>{if(typeof r._costIncomplete!=='boolean'||typeof r.isReversal!=='boolean')bad();const v=dto(r,['saleId','receiptNumber','source','transactionMode','reversalKind','originalSaleId','storeName','operatorName','customerName','supplierName','paymentMethods'],['quantity','unitPrice','discount','vatRate','lineTotal','netValue','vatValue','unitCost','costValue','profit','margin'],['occurredAt','createdAt']);for(const k of ['quantity','unitPrice','discount','vatRate','lineTotal','netValue','vatValue'])num(v[k],false);v.isReversal=r.isReversal;v.incomplete=r._costIncomplete;if(v.incomplete)v.unitCost=v.costValue=v.profit=v.margin=null;return v});
  return {product,items,count:items.length,reversalAware:true,incomplete:items.some(v=>v.incomplete),window:{limit:5000}};
