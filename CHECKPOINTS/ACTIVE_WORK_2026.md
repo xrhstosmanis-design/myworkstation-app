@@ -654,3 +654,8 @@ Local validation on Node24.22.1: retained inventory-bulk-merge-mounted, inventor
 Final frontend build PASS (Vite30.18s), TABLE_SERVICE bundle verification PASS, diff --check PASS. Local Chromium visual execution was unavailable because the execution environment denied its process-singleton socket; no screenshot or visual/device PASS is claimed. The CSS reuses the existing POS filter layout and adds single-column narrow forms. Full exact-head Node20 CI and installed Central/physical-device acceptance remain outstanding.
 
 Next: source PR/full CI; owner approval for source merge/publication; existing LAB/common final acceptance without changing stock, prices, permissions or stores. Do not repeat prior POS Filters USER PASS, and do not confuse the earlier PDF/shift-close acceptance with this independent warehouse request. Manual PASS is unchanged until genuine acceptance.
+
+
+## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — ASSIGNED /root BEFORE SOURCE
+
+Explicit owner request/start in same warehouse/invoice conversation. Bounded independent extension: compact archive filters/footer; draft line editor VAT department/category/dependent subcategory for existing/new items; display markup for previously matched lines without saving or changing retail. Owner /root, branch feat/warehouse-invoice-review-ui-20261118. Existing invoice/No2/OCR/report owners retained; no OCR, matching algorithm, financial posting, finalization, stock or production data tests. Current new requirements NOT TESTED; prior warehouse release #4029 and invoice/POS acceptance preserved. Checkpoint CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
