@@ -16,3 +16,5 @@
 !ops/backup/lifecycle/automatic-report-consent-extension.proposed.json
 
 !ops/backup/lifecycle/report-operational-compatibility.proposed.json
+
+!ops/backup/lifecycle/report-column-compatibility.proposed.json

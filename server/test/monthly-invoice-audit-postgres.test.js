@@ -183,6 +183,43 @@ test('native monthly invoice audit executes the registered reader with complete 
    assert.equal(r.paymentCoverage.allocationsAvailable,true);assert.equal(row.payment.status,'PAID');assert.equal(row.payment.paidCents,500);assert.equal(row.payment.overpaymentCents,0);assert.equal(row.payment.paymentCount,1);assert.equal(await digest(),before);
   });
 
+  await t.test('native counter drill-down selects all 87 matches before paging and preserves tenant boundaries and global counts',async()=>{
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" SELECT 'drill-'||lpad(n::text,3,'0'),'c','control','sup','INVOICE','DRILL '||n,'2026-08-10'::timestamp,1,CASE WHEN n<=174 AND n%2=1 THEN 'DRAFT' ELSE 'APPROVED' END,'MANUAL',NULL,CASE WHEN n<=174 AND n%2=1 THEN 'drill-payment-'||n ELSE NULL END,'2026-08-10'::timestamp FROM generate_series(1,195)n`);
+   await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","amount","invoiceDocumentNumber","type","subtractFromShift") SELECT 'drill-payment-'||n,'c','control','sup',1,'DRILL '||n,'SUPPLIER_PAYMENT',false FROM generate_series(1,173,2)n`);
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES('drill-foreign','x','foreign',NULL,'INVOICE','DRILL FOREIGN','2026-08-10',999,'DRAFT','MANUAL',NULL,NULL,'2026-08-10'),('drill-other-store','c','s','sup','INVOICE','DRILL OTHER','2026-08-10',999,'DRAFT','MANUAL',NULL,NULL,'2026-08-10')`);
+   const before=await digest(),input={storeId:'control',month:'2026-08',filter:'UNPOSTED_DOCUMENT'},all=await read({storeId:'control',month:'2026-08'}),first=await read(input),second=await read({...input,page:first.nextPage});
+   assert.equal(first.filter,'UNPOSTED_DOCUMENT');assert.equal(first.matchedRecords,87);assert.equal(first.items.length,50);assert.equal(second.items.length,37);assert.equal(second.nextPage,null);
+   const combined=[...first.items,...second.items];assert.equal(new Set(combined.map(x=>x.id)).size,87);assert.ok(combined.every(x=>x.status==='UNPOSTED'&&x.payment.status==='PAID'));
+   assert.deepEqual(combined.map(x=>x.id),Array.from({length:87},(_,i)=>'doc:drill-'+String(i*2+1).padStart(3,'0')));
+   for(const result of [first,second]){assert.deepEqual(result.summary,all.summary);assert.deepEqual(result.financialSummary,all.financialSummary);assert.deepEqual(result.pendingOriginals,all.pendingOriginals);assert.equal(result.summary.logicalRecords,195)}
+   assert.equal(first.financialSummary.paid,87);assert.equal(first.financialSummary.notLinked,108);assert.equal(JSON.stringify(first).includes('drill-foreign'),false);assert.equal(JSON.stringify(first).includes('drill-other-store'),false);
+   const paid=await read({...input,filter:'PAID'});assert.equal(paid.matchedRecords,87);assert.deepEqual(paid.items,first.items);
+   const unlinked=await read({...input,filter:'PAYMENT_UNLINKED'});assert.equal(unlinked.matchedRecords,108);assert.ok(unlinked.items.every(x=>x.payment.status==='NOT_LINKED'));
+   const review=await read({...input,filter:'PAYMENT_REVIEW'});assert.equal(review.matchedRecords,0);assert.deepEqual(review.items,[]);assert.equal(review.nextPage,null);
+   for(const patch of [{filter:'ALL'},{filter:'PAID'},{storeId:'s'},{month:'2026-09'}])await assert.rejects(read({...input,...patch,page:first.nextPage}),e=>e.status===400);
+   await assert.rejects(read({...input,filter:['UNPOSTED_DOCUMENT']}),e=>e.status===400);assert.equal(await digest(),before);
+  });
+
+  await t.test('native ordinary projection follows original month and amount while raw D1 and database remain untouched',async()=>{
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES
+    ('proof-current-source','c','control','sup','INVOICE','PROOF 1','2026-07-31',34.34,'DRAFT','POS_OCR_DRAFT','proof-current','proof-payment','2026-07-31'),
+    ('proof-current','c','control','sup','INVOICE','PROOF 1','2026-08-03',34.3432,'APPROVED','PURCHASE_ORDER',NULL,NULL,'2026-08-03'),
+    ('proof-prior-source','c','control','sup','INVOICE','PROOF 2','2026-06-30',12.34,'DRAFT','POS_OCR_DRAFT','proof-prior',NULL,'2026-06-30'),
+    ('proof-prior','c','control','sup','INVOICE','PROOF 2','2026-07-05',12.34,'APPROVED','PURCHASE_ORDER',NULL,NULL,'2026-07-05')`);
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrder" VALUES('proof-current','c','control','sup','INVOICED','PROOF 1','proof-current-source','2026-08-03'),('proof-prior','c','control','sup','INVOICED','PROOF 2','proof-prior-source','2026-07-05')`);
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrderPosting" VALUES('proof-current','c','proof-current'),('proof-prior','c','proof-prior')`);
+   await db.$executeRawUnsafe(`INSERT INTO "InvoiceStockPosting" VALUES('c','control','proof-current','proof-current-source','proof-current','PURCHASE_ORDER'),('c','control','proof-prior','proof-prior-source','proof-prior','PURCHASE_ORDER')`);
+   await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","amount","invoiceDocumentNumber","type","subtractFromShift") VALUES('proof-payment','c','control','sup',34.34,'PROOF 1','SUPPLIER_PAYMENT',false)`);
+   const input={storeId:'control',month:'2026-07'},before=await digest(),ordinary=await read(input);
+   assert.equal(ordinary.summary.logicalRecords,1);assert.equal(ordinary.summary.unposted,0);assert.equal(ordinary.financialSummary.paid,1);assert.equal(ordinary.items[0].issueDay,'2026-07-31');assert.equal(ordinary.items[0].totalCents,3434);assert.equal(ordinary.items[0].payment.status,'PAID');
+   assert.deepEqual(ordinary.items[0].postingProjections,[{sourceDocumentId:'proof-current-source',projectionDocumentId:'proof-current',sourceIssueDay:'2026-07-31',sourceTotalGross:'34.34',recordedIssueDay:'2026-08-03',recordedTotalGross:'34.3432'}]);
+   assert.equal((await read({...input,filter:'UNPOSTED_DOCUMENT'})).matchedRecords,0);
+   const prior=await read({...input,month:'2026-06'});assert.equal(prior.summary.logicalRecords,1);assert.equal(prior.summary.unposted,0);assert.equal(prior.items[0].issueDay,'2026-06-30');
+   const snapshot=await db.$transaction(async tx=>{await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');return readMonthlyInvoiceSnapshotProjectionInTransaction(tx,owner,input)},{isolationLevel:'RepeatableRead',timeout:30000});
+   assert.equal(snapshot.invoices.items.length,2);assert.equal(snapshot.invoices.items.find(x=>x.id==='doc:proof-current-source').issueDay,'2026-07-31');assert.equal(snapshot.invoices.items.find(x=>x.id==='doc:proof-prior').issueDay,'2026-07-05');assert.ok(snapshot.invoices.items.every(x=>!Object.hasOwn(x,'postingProjections')));
+   const raw=await db.$queryRawUnsafe(`SELECT "documentDate"::date::text AS day,"totalGross"::text AS gross FROM "PurchaseDocument" WHERE "id"='proof-current'`);assert.deepEqual(raw,[{day:'2026-08-03',gross:'34.3432'}]);assert.equal(await digest(),before);
+  });
+
   await t.test('actual SQL count above safe source cap suppresses findings rather than exposing partial exact totals',async()=>{
    await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" SELECT 'large-'||n,'c','s','sup','INVOICE','LARGE '||n,'2026-10-12'::timestamp,1,'DRAFT','MANUAL',NULL,NULL,'2026-10-12'::timestamp FROM generate_series(1,20001)n`);
    const before=await digest(),r=await read();assert.equal(r.coverage.complete,false);assert.ok(r.coverage.sourceCounts.documents>20000);assert.ok(r.coverage.limited.includes('documents'));assert.equal(r.summary,null);assert.deepEqual(r.items,[]);assert.equal(r.nextPage,null);assert.equal(r.allClear,false);assert.equal(await digest(),before);
