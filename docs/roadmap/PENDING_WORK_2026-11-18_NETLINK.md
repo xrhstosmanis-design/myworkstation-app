@@ -1,3 +1,13 @@
+## 18/11/2026 — NETLINK source CI correction, still AWAITING FULL CI / LAB
+
+First source head `2e2a1054a258c6563d7a0f5941671559b0cfe169`, CI run `44320432551`, full server suite **6176 PASS / 1 FAIL / 1 SKIP**. New native PostgreSQL migration/HTTP/atomic-audit test and ordinary selected-store HTTP test both passed with no skip. All new credential/mounted/scoped tests passed. Existing Windows checks and isolated wholesale browser/offline job passed.
+
+Only failure: retained `store-installation-terminals-v1.test.js` rejects a direct Netlink label in the general PlatformAdminApp installation surface. Causal fix: keep the generic selected-store launcher named «Διασυνδέσεις»; the credential form remains inside its existing integrations dialog. The protective installation test is unchanged. Review also scoped the new transport deadline/redirect restriction to authentication/read-only catalogue calls: existing prepare/execute transport behavior remains intact, with an explicit retained execute assertion. No financial flow was run.
+
+Corrected local Node20 validation: **46 tests / 44 PASS / 0 FAIL / 2 local SQL skips**, including the unchanged installation test; Node20 frontend build PASS (Vite 27.03s, TABLE_SERVICE verifier PASS). The earlier remote native SQL PASS is separate evidence for the first head.
+
+The first head's full suite failure is not hidden by its native SQL PASS. New exact-head full CI/build/E2E is required. No production change, LAB/manual PASS or owner testing requested. Same owner and source PR #4016.
+
 ## 18/11/2026 — NETLINK-STORE-CREDENTIALS-01 — SOURCE CANDIDATE / AWAITING CI AND LAB
 
 Owner /root; source branch `codex/netlink-store-connection-source-20261118`. Documentation claim PR #4015 passed its documentation checks and merged `8a9c433329e224011fe5a352ec4057e85a78a4b9` before source edits. This source does not transfer Netlink certification or another page's cash/report work.
@@ -6,7 +16,7 @@ Implemented per-store encrypted username/password and Station ID within existing
 
 Platform Super Admin: existing selected-store integration dialog now includes Netlink save, explicit enable/disable and authentication/catalogue check. Fresh saved connections default disabled. Admin can explicitly run the read-only check while disabled; normal POS requests cannot use disabled/missing connections. Username/password never return in response/status/audit. Saving and its credential audit are one DB transaction. Current `INTEGRATION_CREDENTIALS_KEY` or `PARAMETERS_ENCRYPTION_KEY` is required; do not enter real credentials in chat/repository. Provider app URL/client credentials stay in server environment; no user-supplied outbound URL.
 
-Connector resolves encrypted credentials for the authorized company/store on every operation; no global-credential fallback and no cross-request singleton/token cache. Ordinary status/menu use explicit selected store; STORE_OPERATOR cannot request another store. Same-store refresh, store changes and unmount discard late UI catalogue/report/form responses. Save is serialized; form secrets clear after success. Provider transport has bounded requests, rejects redirects and rejects success responses lacking a valid token.
+Connector resolves encrypted credentials for the authorized company/store on every operation; no global-credential fallback and no cross-request singleton/token cache. Ordinary status/menu use explicit selected store; STORE_OPERATOR cannot request another store. Same-store refresh, store changes and unmount discard late UI catalogue/report/form responses. Save is serialized; form secrets clear after success. Authentication/catalogue checks have bounded requests and reject redirects; prepare/execute request timeout/redirect behavior remains unchanged. Invalid access tokens are rejected.
 
 Only documented Netlink authentication and GET catalogue are used by the check. It explicitly returns `storeIdentityVerified:false`: no provider report API contract is available in source. MyWorkStation reports remain its own ledger. Before real store activation, compare the requested Station ID to the store's Netlink report as recommended by the provider. No invented report endpoint, prepare/execute, PIN, real charge, production secret/configuration, migration or deployment has been performed.
 
