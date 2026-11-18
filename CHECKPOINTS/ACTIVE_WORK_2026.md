@@ -1,3 +1,11 @@
+## 18/11/2026 — Νο2 — verified ordinary posting projection / ASSIGNED BEFORE SOURCE
+
+Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
+
+## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
+
+Νέο ρητό αίτημα ιδιοκτήτη: εμφάνιση αντίστοιχων παραστατικών όταν πατά κάθε σύνολο· πρώτα οι μη καταχωρισμένες αγορές. Owner `/root` Νο2, branch `feat/no2-monthly-counter-drilldown`, μόνο ordinary GET filter/UI και regressions. Όλο το month subset πριν pagination, bound cursors και αμετάβλητα global totals. Άλλοι owners/C/D1/email/classifier/writers διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md). NOT STARTED / NOT TESTED, source μετά merged claim, καμία οικονομική/stock πράξη.
+
 ## 18/11/2026 — Νο 15 — Μερική πληρωμή φόρμας POS / AWAITING CI AND LAB
 
 Η κανονική φόρμα CASH έστελνε payments:null και απορριπτόταν από το υπάρχον checkout schema πριν από συναλλαγή. Μονογραμμική διόρθωση του caller και regression πραγματικού callback/serializer/schema. [Checkpoint](CHANGES/2026-11-18-table-service-partial-cash-form.md). Ίδια ανάθεση TABLE_SERVICE, πλήρες CI και επαναδοκιμή υπάρχοντος LAB εκκρεμούν.
@@ -90,6 +98,8 @@ Mainc88b7aad ενσωματώθηκεκαθαρά·τελικό192tests187PASS/0
 Επόμενηγέφυρα: προσωπικόSA HTTPdescribe/inspect/install στο υπάρχονInstallationCenter· strictsession/DTO/υπογεγραμμέναreceipts/defaultOFF. Runtimeprerequisitesμόνοread-onlyflags, όχιprovisioning. Affected23PASS/1actualPGSKIP/0FAIL,build18.83sPASS·45sourcebindingsαμετάβλητα. ΔημοσιευμένοCurrentfb7cc753 CI44389809351τρέχει·chat/wallet/wholesaleSUCCESS. Bridgeεκκρεμείpublication,παραγωγή/ανθρώπινηαποδοχήNOTTESTED.
 
 ActualCurrentfb7CI:6677PASS/2FAIL/2optionalSKIP. DockerκαιlegacyBASE/CAPTURE106PASS. CurrentfixtureέλειπεcanonicalMONTHLYcheck·διορθώθηκεμόνοfixture,όχιinspector. OwnerUItestξεχωρίζειnamedavailabilitystatusαπόsaveconfirmation·48/48PASS. CurrentnativeinstallationπαραμένειNOTTESTEDμέχρινέοCI.
+
+Main6992085 warehouseVAT/Marginparity+No2claimsενσωματώθηκε·σύγκρουσηστοίδιοarchive λύθηκεκρατώνταςnativeOwner/POSφίλτρα καιdelegatedreadOnlyόρια. Νέοmountedparity1PASS,build22.13sPASS. Source45αμετάβλητα. Τοπικόmergeμενέοmain προςδημοσίευση γιαναξεκινήσειexactCI,όχιπαραγωγή.
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
@@ -649,3 +659,17 @@ Single next action: owner's separate approval for production source merge/deploy
 ## 18/11/2026 — Νο 15 · Χρεώσιμες επιλογές από κινητό
 
 Συνέχεια TABLE_SERVICE /root, υποβοηθός /root/mobile, branch `feat/table-service-mobile-priced-options-20261118`. Η κινητή παραγγελιοληψία επιλέγει πραγματικές χρεώσιμες επιλογές και εμφανίζει γραμμή/σύνολο/επιβεβαίωση με την επιβάρυνση. Ο server επαληθεύει τιμές και προϊόντα. Εισφορά/SET διατηρούνται στο POS. Τοπικά Node20: 5/5 πραγματικές mounted React δοκιμές και production build PASS. CI, εγκατάσταση και κοινή δοκιμή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-18-table-service-mobile-priced-options.md).
+
+## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — PUBLICATION APPROVED / RECONCILED MAIN
+
+Ο ιδιοκτήτης ενέκρινε τη συγχώνευση και δημοσίευση του #4029 και επανέλαβε «συνεχισε»/«ξεκινα». Η έγκριση ισχύει. Τοπική συμφιλίωση με main c88b7aad (διατηρούνται οι αλλαγές εστίασης #4023/#4024) επιλύει μόνο σύγκρουση προθέματος στην κοινή ενεργή καταγραφή. Οι δύο εγκεκριμένοι warehouse UI/CSS blobs παραμένουν ακριβώς ίδιοι με eee2f0e997140fc207f8d9d9575c295e2b401306. Καμία αλλαγή της ζητούμενης λειτουργίας, δικαιωμάτων ή δεδομένων. Το προηγούμενο PR CI 44383411469 παραμένει ιστορικό PASS της αρχικής έκδοσης· η νέα συνδυασμένη έκδοση απαιτεί δικό της πλήρες CI πριν από merge και κανονικό guarded deploy. Καμία νέα έγκριση ή επανάληψη δοκιμής χρήστη δεν ζητείται.
+
+## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — SOURCE CANDIDATE / AWAITING CI AND LAB
+
+Before-source claim #4027 merged `44ccf51976ba7baa03e37f582e260fd914bf9796`. Same /root owner, independent source scope retained. The Central/Owner archive now renders the existing VAT department and margin range controls already used by POS, with the same responsive filter panel and visible Filters focus/scroll action. Category/subcategory/status selections apply immediately like POS and reset pagination. Search, VAT, margin, selected-store read binding, capabilities, readOnly and staff edit boundaries retain their existing semantics. No backend/API, product/stock/price, permission, module, schema or financial/fiscal change.
+
+Local validation on Node24.22.1: retained inventory-bulk-merge-mounted, inventory-archive-kiosk-v1 and product-card-vat-mounted suites 16/16 PASS, 0 FAIL/SKIP. An initial heading-only compatibility failure was corrected by retaining the existing Central heading. Separate temporary mounted actual-React verification with synthetic API responses passed for Central, POS and readOnly: VAT/margin combined with category/subcategory/status/text, first-page reset, selected-store replacement and header focus. 27 GET requests, zero writes. No permanent test mirroring this low-impact rendering change was added.
+
+Final frontend build PASS (Vite30.18s), TABLE_SERVICE bundle verification PASS, diff --check PASS. Local Chromium visual execution was unavailable because the execution environment denied its process-singleton socket; no screenshot or visual/device PASS is claimed. The CSS reuses the existing POS filter layout and adds single-column narrow forms. Full exact-head Node20 CI and installed Central/physical-device acceptance remain outstanding.
+
+Next: source PR/full CI; owner approval for source merge/publication; existing LAB/common final acceptance without changing stock, prices, permissions or stores. Do not repeat prior POS Filters USER PASS, and do not confuse the earlier PDF/shift-close acceptance with this independent warehouse request. Manual PASS is unchanged until genuine acceptance.
