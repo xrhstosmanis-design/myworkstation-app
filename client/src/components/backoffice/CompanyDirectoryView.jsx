@@ -1,3 +1,7 @@
+import CompanyObserverLogisticsReadView from './CompanyObserverLogisticsReadView.jsx';
+import {observerLogisticsActions} from '../../../../shared/backoffice-staff-company-observer-logistics.mjs';
+import CompanyWholesaleReadView from './CompanyWholesaleReadView.jsx';
+import {companyWholesaleActions} from '../../../../shared/backoffice-staff-company-wholesale.mjs';
 import CompanyPartyControlReadView from './CompanyPartyControlReadView.jsx';
 import {companyPartyControlActions} from '../../../../shared/backoffice-staff-company-party-control.mjs';
 import React,{useEffect,useRef,useState} from 'react';
@@ -41,10 +45,12 @@ function CompanySimpleDirectoryView({api,companyId,capability,authorityKey,onOpe
 }
 
 export default function CompanyDirectoryView(props){
- if(companyPartyControlActions.some(action=>action.key===props.capability))return <CompanyPartyControlReadView {...props}/>;
  const [supplier,setSupplier]=useState(null);const own=JSON.stringify([props.companyId,props.capability,props.authorityKey]);
  const detailsAllowed=Array.isArray(props.companyCapabilities)&&props.companyCapabilities.includes('supplier-details.read');
  const selected=detailsAllowed&&supplier?.own===own&&supplier.api===props.api?supplier.id:'';
+ if(observerLogisticsActions.some(action=>action.key===props.capability))return <CompanyObserverLogisticsReadView {...props}/>;
+ if(companyWholesaleActions.some(action=>action.key===props.capability))return <CompanyWholesaleReadView {...props}/>;
+ if(companyPartyControlActions.some(action=>action.key===props.capability))return <CompanyPartyControlReadView {...props}/>;
  if(['dashboard.read','master-catalog.read','financial-store-options.read','financial-supplier-options.read'].includes(props.capability))return <CompanyOwnerOverviewReadView {...props}/>;
  if(['owner-shifts.read','owner-payments-report.read','business-picture.read'].includes(props.capability))return <CompanyOwnerFinancialReadView {...props}/>;
  if(props.capability==='audit-events.read')return <CompanyOwnerAuditReadView {...props}/>;

@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from "react";
 import {Copy,KeyRound,ShieldCheck,X} from "lucide-react";
 import EfoodEventPreview from "./EfoodEventPreview.jsx";
+import NetlinkConnectionForm from "./NetlinkConnectionForm.jsx";
 
 const definitions=[
   {kind:"MYDATA",title:"myDATA / Ηλεκτρονική τιμολόγηση",account:"User ID / Αναγνωριστικό",secret:"Κωδικός / Subscription key"},
@@ -148,6 +149,7 @@ export default function StoreFiscalIntegrations({manager,request,onClose,onChang
     <div className="terminal-explainer"><ShieldCheck/><span>Οι κωδικοί κρυπτογραφούνται στον server, δεν επιστρέφονται ποτέ στην οθόνη και δεν αποθηκεύονται στον κώδικα ή στο GitHub.</span></div>
     {error&&<div className="platform-error">{error}</div>}
     <div className="fiscal-integrations-grid">
+      <NetlinkConnectionForm companyId={manager.company.id} storeId={manager.store.id} request={request}/>
       {definitions.map(def=>{const row=current(def.kind);return <form key={def.kind} onSubmit={submit(def.kind)}>
         <div className="fiscal-integration-heading"><KeyRound/><div><h3>{def.title}</h3><span className={row?.enabled?"configured":""}>{row?`${row.enabled?"ΕΝΕΡΓΗ":"ΑΝΕΝΕΡΓΗ"} · ${row.accountHint}`:"ΔΕΝ ΕΧΕΙ ΡΥΘΜΙΣΤΕΙ"}</span></div></div>
         <label>Πάροχος / Υπηρεσία<input name="providerName" defaultValue={row?.providerName||""} placeholder="π.χ. AADE ή όνομα παρόχου" required/></label>

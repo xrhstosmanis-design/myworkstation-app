@@ -3,6 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import {createPlatformNetlinkConnectionsRouter} from "./platform-netlink-connections.js";
 
 const router=Router();
 const kinds=new Set(["MYDATA","VAT_LOOKUP"]);
@@ -13,6 +14,7 @@ router.use((req,res,next)=>{
   if(req.user?.isSuperAdmin!==true&&req.user?.platformRole!=="SUPER_ADMIN")return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   next();
 });
+router.use(createPlatformNetlinkConnectionsRouter(prisma));
 
 function encryptionKey(){
   const source=String(process.env.INTEGRATION_CREDENTIALS_KEY||process.env.PARAMETERS_ENCRYPTION_KEY||"");

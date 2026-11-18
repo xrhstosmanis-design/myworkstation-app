@@ -1,3 +1,5 @@
+import {nativeCompanyOperationsSeedPlan} from './fixtures/backoffice-company-operations-native.mjs';
+import {nativeCompanyWholesaleSeedPlan} from './fixtures/backoffice-company-wholesale-native.mjs';
 import {nativeCompanyPartyControlSeedPlan} from './fixtures/backoffice-company-party-control-native.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -52,3 +54,31 @@ test('COMPANY53 configuration seed plan validates every JSON, terminal type and 
 test('COMPANY61 owner-report seed plan matches actual schema including real employee enum labels and nullable financial columns',()=>{const plan=nativeCompanyOwnerReportSeedPlan();validateSeedPlan(plan);assert.ok(plan.length>30);const employee=plan.find(e=>e.table==='Employee');assert.throws(()=>validateSeedPlan([{...employee,row:{...employee.row,type:'INVALID_EMPLOYEE_TYPE'}}]),/valid enum label/);assert.ok(plan.some(e=>e.table==='MasterProduct'&&e.row.defaultCostPrice===0));});
 
 test('COMPANY74 supplier/customer native control seeds validate every real column, enum and explicit NULL',()=>{const plan=nativeCompanyPartyControlSeedPlan();validateSeedPlan(plan);assert.equal(plan.length,55);assert.ok(plan.some(e=>e.table==='CustomerOperatorCardLink'));assert.ok(plan.some(e=>e.table==='Customer'&&e.row.points===12.5));assert.ok(plan.every(e=>e.table!=='CustomerLoyaltyLedger'));});
+
+test('native work-card seed hashes obey the actual global non-null unique index',()=>{
+ assert.ok(metadata.indexes.includes('CREATE UNIQUE INDEX \"StoreOperatorCredential_card_hash_idx\" ON public.\"StoreOperatorCredential\" USING btree (\"cardCodeHash\") WHERE (\"cardCodeHash\" IS NOT NULL)'));
+ const validate=plan=>{const hashes=plan.filter(e=>e.table==='StoreOperatorCredential'&&e.row.cardCodeHash!==null&&e.row.cardCodeHash!==undefined).map(e=>e.row.cardCodeHash);assert.equal(new Set(hashes).size,hashes.length,'duplicate non-null StoreOperatorCredential.cardCodeHash');};
+ const plan=nativeCompanyPartyControlSeedPlan();validate(plan);const credentials=plan.filter(e=>e.table==='StoreOperatorCredential');assert.throws(()=>validate(credentials.map(e=>({...e,row:{...e.row,cardCodeHash:'DUPLICATE_SYNTHETIC_HASH'}}))),/duplicate non-null/);
+});
+
+test('COMPANY82 paid wholesale seed plan uses real nullable tiers, composite tenant references and native user enum',()=>{const plan=nativeCompanyWholesaleSeedPlan();validateSeedPlan(plan);assert.equal(plan.length,84);const tiers=plan.filter(e=>e.table==='WholesalePriceListProduct'&&e.row.companyId==='company'&&e.row.productId==='whole82-product-own');assert.equal(tiers.length,51);assert.ok(tiers.some(e=>e.row.unitPrice===0));assert.ok(tiers.some(e=>e.row.unitPrice===null&&e.row.priceBasis===null));});
+
+test('COMPANY88 operations seeds match actual connector/provider/dispatch schema without invented columns',()=>{const plan=nativeCompanyOperationsSeedPlan();validateSeedPlan(plan);assert.equal(plan.length,19);assert.ok(plan.some(e=>e.table==='ConnectorEvent'&&Object.hasOwn(e.row,'connectorDeviceId')));assert.ok(plan.some(e=>e.table==='DispatchNoteLine'));});
+
+test('wholesale native plan obeys actual composite company foreign keys while retaining permitted scalar-FK corruption controls',()=>{
+ const plan=nativeCompanyWholesaleSeedPlan(),get=(table,id)=>plan.find(e=>e.table===table&&e.row.id===id)?.row,stores={selected:'company',sibling:'company',foreign:'foreign'};
+ for(const e of plan){const r=e.row;
+  if(['WholesalePortalAccount','WholesalePortalPublication'].includes(e.table)){assert.equal(get('WholesalePortalSite',r.siteId)?.companyId,r.companyId);assert.equal(stores[r.storeId],r.companyId);assert.equal(get(e.table==='WholesalePortalAccount'?'WholesaleCustomer':'Product',r.customerId??r.productId)?.companyId,r.companyId)}
+  if(e.table==='WholesaleSellerMembership')assert.equal(get('User',r.userId)?.companyId,r.companyId);
+  if(e.table==='WholesaleSellerAssignment'){assert.equal(get('User',r.userId)?.companyId,r.companyId);assert.equal(get('WholesaleCustomer',r.customerId)?.companyId,r.companyId);assert.equal(stores[r.storeId],r.companyId);assert.ok(plan.some(e=>e.table==='WholesaleSellerMembership'&&e.row.userId===r.userId&&e.row.companyId===r.companyId))}
+ }
+ for(const table of ['WholesalePortalAccount','WholesalePortalPublication','WholesaleSellerMembership','WholesaleSellerAssignment'])assert.ok(metadata.constraints.some(c=>c.table===table&&c.kind==='f'&&c.definition.includes('"companyId"')));
+ assert.ok(plan.some(e=>e.table==='WholesalePriceListProduct'&&e.row.companyId==='company'&&get('Product',e.row.productId)?.companyId==='foreign'),'scalar product FK permits the genuine redaction control');
+});
+test('operations native plan obeys immutable connector/event, dispatch and provider unique indexes',()=>{
+ const plan=nativeCompanyOperationsSeedPlan();
+ for(const [name,table,columns,partial]of [['ConnectorDevice_store_type_key','ConnectorDevice',['storeId','connectorType'],false],['ConnectorDevice_cloud_device_key','ConnectorDevice',['cloudDeviceId'],true],['ConnectorEvent_device_event_key','ConnectorEvent',['connectorDeviceId','eventKey'],true],['DispatchNote_company_number_key','DispatchNote',['companyId','documentNumber'],false],['ProviderOutbox_idempotency_key','ProviderOutbox',['idempotencyKey'],false]]){
+  assert.ok(metadata.indexes.some(sql=>sql.startsWith('CREATE UNIQUE INDEX "'+name+'" ')),name+' actual metadata index');
+  const tuples=plan.filter(e=>e.table===table&&(!partial||columns.every(c=>e.row[c]!==undefined&&e.row[c]!==null))).map(e=>JSON.stringify(columns.map(c=>e.row[c])));assert.equal(new Set(tuples).size,tuples.length,name+' unique native seed values');
+ }
+});

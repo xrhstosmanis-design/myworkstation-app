@@ -11,7 +11,7 @@ test("POS exposes a dedicated Netlink catalogue",()=>{
   assert.match(pos,/NetlinkPosPanel/);
   assert.match(pos,/>NETLINK</);
   assert.match(pos,/netlinkAvailable&&<button/);
-  assert.match(operatorPos,/api\("\/api\/netlink\/status"\)/);
+  assert.match(operatorPos,/\/api\/netlink\/status\?/);
   assert.match(operatorPos,/netlinkAvailable&&<button className="store-pos-netlink"/);
   assert.match(operatorPos,/netlinkPanel&&netlinkAvailable&&<NetlinkPosPanel/);
   assert.match(panel,/\/api\/netlink\/status/);

@@ -16,7 +16,7 @@ test("legacy integration kind constraints are replaced before EFOOD is added",()
   assert.match(storeBootstrap,/attname='kind'/);
   assert.match(storeBootstrap,/= ANY \(conkey\)/);
   assert.match(storeBootstrap,/DROP CONSTRAINT IF EXISTS %I/);
-  assert.match(storeBootstrap,/CHECK \("kind" IN \('MYDATA','VAT_LOOKUP','EFOOD'\)\)/);
+  assert.match(storeBootstrap,/CHECK \("kind" IN \('MYDATA','VAT_LOOKUP','EFOOD','NETLINK'\)\)/);
   assert.doesNotMatch(storeBootstrap,/pg_get_constraintdef\(oid\)\s+LIKE\s+'%"kind"%'/);
 });
 

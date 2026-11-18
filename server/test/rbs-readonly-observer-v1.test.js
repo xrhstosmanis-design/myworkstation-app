@@ -23,7 +23,9 @@ test("observer event input accepts metadata only and deduplicates event keys",()
 });
 
 test("operator API is tenant scoped and returns no raw payload",()=>{
-  assert.match(api,/d\."companyId"=\$\{req\.user\.companyId\}/);
+  assert.match(api,/d\."companyId"=\$\{companyId\}/);
+  assert.match(api,/readConnectorObserverStatus\(req\.user\.companyId,req\.query\)/);
+  assert.match(api,/readConnectorObserverEvents\(req\.user\.companyId,req\.query\)/);
   assert.doesNotMatch(api,/e\."rawPayload"/);
   assert.match(api,/outboundCommands:false,fiscalIssuance:false/);
   assert.match(api,/fiscalConfirmation:false/);
