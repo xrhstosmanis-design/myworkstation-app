@@ -2,6 +2,10 @@
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
 
+### Νεότερη κατάσταση 18/11/2026 — Νο2 — ενιαία διόρθωση πραγματικών εκκρεμοτήτων και clickable counters / AWAITING FULL CI
+
+Owner `/root`, branch `feat/no2-counter-reconciliation`, μετά merged claims #4032/e90b29c1 και #4033/e05cd112. Ενοποιεί την πράσινη #4031 payment proof με ordinary-only proven posting projection και φίλτρα ολόκληρου μήνα πριν pagination. Κρατά raw provenance/fingerprint, scoped cursors, C classifier/D1/email/writers αμετάβλητα και άλλους owners.83pure/reader/D1 PASS,22mounted PASS, frontend build PASS· τοπική Chromiumstartup ECONNRESET και nativePG SKIP δεν αποκρύπτονται, απαιτείται actual PG/browser full CI. Καμία νέα πληρωμή/καταχώριση/stock πράξη. Το παλιό limited LIVE δεν μετατρέπεται σε πλήρη μήνα/ρόλους PASS. [Counters](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md), [Projection](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). Επόμενο source/main CI, exact deploy και read-only hosted επανέλεγχος· κοινές δοκιμές στο τέλος.
+
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
 Νέο ρητό αίτημα ιδιοκτήτη: εμφάνιση αντίστοιχων παραστατικών όταν πατά κάθε σύνολο· πρώτα οι μη καταχωρισμένες αγορές. Owner `/root` Νο2, branch `feat/no2-monthly-counter-drilldown`, μόνο ordinary GET filter/UI και regressions. Όλο το month subset πριν pagination, bound cursors και αμετάβλητα global totals. Άλλοι owners/C/D1/email/classifier/writers διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md). NOT STARTED / NOT TESTED, source μετά merged claim, καμία οικονομική/stock πράξη.

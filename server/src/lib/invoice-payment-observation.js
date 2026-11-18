@@ -18,6 +18,12 @@ const sameNumber=(a,b)=>{
 };
 const result=(status,extra={})=>({status,paidCents:null,remainingCents:null,overpaymentCents:null,paymentCount:null,transactionIds:[],...extra});
 const scopeConflict=(a,b)=>['companyId','storeId'].some(key=>text(a[key])&&text(b[key])&&a[key]!==b[key]);
+// The workflow classifier also puts this posting-only warning in the identity
+// category. It does not contradict an independently proven payment. Exempt
+// only this exact, sole reason; absent, malformed or mixed reasons fail closed.
+const postingOnlyReason='Η καταχώριση αγοράς δεν διαθέτει επιβεβαιωμένο εγκεκριμένο παραστατικό και σύνδεση αποθήκης.';
+const financialIdentityReview=item=>(item.categories||[]).includes('IDENTITY_OR_LINK_REVIEW')&&
+ !(Array.isArray(item.reasons)&&item.reasons.length===1&&item.reasons[0]===postingOnlyReason);
 
 /**
  * Payment observation for already scoped, classified monthly invoice facts.
@@ -109,7 +115,7 @@ export function observeInvoicePayments(items,facts,transactions,{available=false
    }
    const gross=exactCents(docs[0].totalGross);
    let invalid=gross===null||gross<=0||(Number.isSafeInteger(item.totalCents)&&item.totalCents!==gross)||
-    (item.categories||[]).includes('IDENTITY_OR_LINK_REVIEW')||
+    financialIdentityReview(item)||
     docs.some(document=>duplicateDocuments.has(document.id)||!text(document.supplierId)||document.documentType!=='INVOICE'||exactCents(document.totalGross)!==gross||
      !sameNumber(document.documentNumber,docs[0].documentNumber)||document.supplierId!==docs[0].supplierId||scopeConflict(document,docs[0])||
      (document.issueDay&&docs[0].issueDay&&document.issueDay!==docs[0].issueDay));
