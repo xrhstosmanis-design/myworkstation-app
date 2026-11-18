@@ -18,6 +18,8 @@ const schema={
  InvoiceDraftAlias:['aliasOrderId','aliasDocumentId','companyId','storeId','canonicalOrderId','canonicalDocumentId','inboxId','mark','details'],
  PurchaseOrderPosting:['orderId','companyId','purchaseDocumentId'],InvoiceStockPosting:['companyId','storeId','orderId','sourceDocumentId','postedDocumentId','path'],
  StoreTransaction:['id','companyId','storeId','supplierId','supplierName','amount','actorId','actorName','occurredAt','invoiceDocumentNumber','attachmentMimeType','attachmentFilename','attachmentChecksum','attachmentData','paymentMethod','subtractFromShift','sessionId','type','reversedAt'],
+ SupplierPaymentSettlement:['id','companyId','storeId','transactionId','supplierId','status'],
+ SupplierPaymentAllocation:['id','companyId','settlementId','purchaseDocumentId','amount'],
  StoreOperatorAudit:['id','companyId','storeId','eventType','actorId','details']
 };
 const tables={documents:'PurchaseDocument',orders:'PurchaseOrder',inbound:'MyDataInboundDocument',inbox:'DocumentInbox',jobs:'AiReaderJob',attachments:'DocumentAttachment',aliases:'InvoiceDraftAlias',postings:'PurchaseOrderPosting',stockPostings:'InvoiceStockPosting'};
@@ -32,7 +34,9 @@ function fixture({facts=empty(),missing=[],role='OWNER',currentCompany='c',store
    for(const[name,table]of Object.entries(tables))if(sql.startsWith('SELECT source.')&&sql.includes('FROM "'+table+'"'))return facts[name].map(row=>({...row,_sourceCount:String(totals[name]??facts[name].length)}));
    throw Error('Unexpected metadata query: '+sql);
   },
-  async $queryRaw(strings,...values){const sql=Array.isArray(strings)?strings.join('?'):strings.sql;trace.push({sql,values});
+  async $queryRaw(strings,...values){const sql=Array.isArray(strings)?strings.join('?'):strings.sql;trace.push({sql,values:Array.isArray(strings)?values:strings.values});
+   if(sql.startsWith('SELECT a.'))return facts.allocations||[];
+   if(sql.includes('FROM "StoreTransaction" t'))return facts.payments||[];
    if(sql.includes('WITH required('))return [{full:true,jobs:true,jobTable:true,hasIntents:Boolean(pending)}];
    if(sql.includes('WITH scoped_audits'))return [{...pending,digest:'unchanged'}];
    throw Error('Unexpected trusted pending query: '+sql);
@@ -208,4 +212,53 @@ test('new projected header and capability facts invalidate report cursors withou
  const f=pageFacts();for(let i=0;i<55;i++)f.documents.push(doc('paged'+i));const target=fixture({facts:f}),first=await read(target);assert.ok(first.nextPage);
  f.jobs[1].posHeader.documentDate='2026-10-08';await assert.rejects(read(target,{storeId:'s',month:'2026-10',page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
  assert.equal(JSON.stringify(first.items).includes('POS_FAST_HANDOFF'),false);assert.equal(JSON.stringify(first.items).includes('pageJobIds'),false);
+});
+
+
+test('monthly ordinary report observes payment without changing draft posting or persisted snapshot sources',async()=>{
+ const f=empty();f.documents=[doc('77',{paymentTransactionId:'paid',purchaseOrderId:'order',sourceType:'MYDATA'})];
+ f.orders=[{id:'order',sourceDocumentId:'77',supplierId:'sup',invoiceNumber:'A 77',status:'FINAL',createdAt:'2026-10-03'}];
+ f.payments=[{id:'paid',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 77',amount:'12.34',reversedAt:null,settlementConfirmed:true,attachmentMimeType:null,attachmentFilename:null}];
+ const fix=fixture({facts:f}),r=await read(fix);
+ assert.equal(r.items[0].status,'UNPOSTED');assert.ok(r.items[0].categories.includes('UNPOSTED_DOCUMENT'));
+ assert.equal(r.items[0].payment.status,'PAID');assert.equal(r.financialSummary.paid,1);assert.equal(r.financialSummary.financialPending,0);
+ assert.equal(r.paymentCoverage.available,true);
+ const query=fix.trace.find(x=>x.sql?.includes('FROM "StoreTransaction" t'));
+ assert.match(query.sql, /t\."companyId"=/);assert.match(query.sql,/t\."storeId"=/);assert.match(query.sql,/SUPPLIER_PAYMENT/);assert.match(query.sql,/ss\."status"<>/);
+ assert.ok(query.values.includes('c'));assert.ok(query.values.includes('s'));assert.ok(query.values.some(v=>Array.isArray(v)&&v.includes('paid')));
+ assert.ok(fix.trace.filter(x=>x.sql).every(x=>!/^(INSERT|UPDATE|DELETE|CREATE|ALTER)/.test(x.sql.trim())));
+});
+
+test('payment availability cannot turn a missing schema into zero unpaid balance',async()=>{
+ const f=empty();f.documents=[doc('77',{paymentTransactionId:'paid'})];
+ const fix=fixture({facts:f,missing:['SupplierPaymentSettlement']}),r=await read(fix);
+ assert.equal(r.paymentCoverage.available,false);assert.equal(r.items[0].payment.status,'UNAVAILABLE');
+ assert.equal(r.items[0].payment.remainingCents,null);assert.equal(r.financialSummary.paid,0);
+ assert.equal(fix.trace.some(x=>x.sql?.includes('FROM "StoreTransaction" t')),false);
+});
+
+test('payment change invalidates a monthly pagination cursor',async()=>{
+ const f=empty();f.documents=Array.from({length:55},(_,n)=>doc(String(n+1),{paymentTransactionId:n===0?'paid':null}));
+ f.payments=[{id:'paid',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 1',amount:'12.34',reversedAt:null,settlementConfirmed:true}];
+ const fix=fixture({facts:f}),r=await read(fix);assert.ok(r.nextPage);
+ f.payments[0].reversedAt='2026-10-28T12:00:00Z';
+ await assert.rejects(read(fix,{storeId:'s',month:'2026-10',page:r.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
+test('ordinary reader includes allocation-only payments and assigns each invoice its own amount',async()=>{
+ const f=empty();f.documents=[doc('1',{status:'APPROVED',totalGross:'40.00'}),doc('2',{status:'APPROVED',totalGross:'60.00'})];
+ f.payments=[{id:'split',companyId:'c',storeId:'s',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'Supplier settlement',amount:'100.00',hasSettlement:true,settlementCount:1,settlementScopeValid:true,reversedAt:null,settlementConfirmed:true}];
+ f.allocations=[{id:'a1',transactionId:'split',documentId:'1',amount:'40.00',companyId:'c',storeId:'s',supplierId:'sup',allocationCompanyId:'c',settlementStatus:'CONFIRMED'},{id:'a2',transactionId:'split',documentId:'2',amount:'60.00',companyId:'c',storeId:'s',supplierId:'sup',allocationCompanyId:'c',settlementStatus:'CONFIRMED'}];
+ const fix=fixture({facts:f}),r=await read(fix);
+ assert.equal(r.paymentCoverage.allocationsAvailable,true);assert.equal(r.financialSummary.paid,2);assert.equal(r.financialSummary.financialPending,0);
+ assert.deepEqual(r.items.map(x=>x.payment.paidCents),[4000,6000]);assert.ok(r.items.every(x=>x.payment.paymentCount===1));
+ const allocationQuery=fix.trace.find(x=>x.sql?.startsWith('SELECT a.'));
+ assert.match(allocationQuery.sql,/d\."companyId"=a\."companyId"/);assert.match(allocationQuery.sql,/d\."storeId"=ss\."storeId"/);
+});
+
+test('missing allocation schema never verifies an existing settlement from its whole transaction amount',async()=>{
+ const f=empty();f.documents=[doc('1',{paymentTransactionId:'split'})];
+ f.payments=[{id:'split',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 1',amount:'12.34',hasSettlement:true,settlementCount:1,settlementScopeValid:true,settlementConfirmed:true}];
+ const r=await read(fixture({facts:f,missing:['SupplierPaymentAllocation']}));
+ assert.equal(r.paymentCoverage.allocationsAvailable,false);assert.equal(r.items[0].payment.status,'REVIEW_REQUIRED');assert.equal(r.items[0].payment.remainingCents,null);
 });
