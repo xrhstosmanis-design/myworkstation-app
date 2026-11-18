@@ -1,3 +1,4 @@
+import {nativeCompanyProductCenterSeedPlan} from './fixtures/backoffice-company-product-center-native.mjs';
 import {nativeCompanyOperationsSeedPlan} from './fixtures/backoffice-company-operations-native.mjs';
 import {nativeCompanyWholesaleSeedPlan} from './fixtures/backoffice-company-wholesale-native.mjs';
 import {nativeCompanyPartyControlSeedPlan} from './fixtures/backoffice-company-party-control-native.mjs';
@@ -81,4 +82,15 @@ test('operations native plan obeys immutable connector/event, dispatch and provi
   assert.ok(metadata.indexes.some(sql=>sql.startsWith('CREATE UNIQUE INDEX "'+name+'" ')),name+' actual metadata index');
   const tuples=plan.filter(e=>e.table===table&&(!partial||columns.every(c=>e.row[c]!==undefined&&e.row[c]!==null))).map(e=>JSON.stringify(columns.map(c=>e.row[c])));assert.equal(new Set(tuples).size,tuples.length,name+' unique native seed values');
  }
+});
+
+test('COMPANY100 product native seeds validate actual nullable values, JSON and immutable schema without package inventions',()=>{const plan=nativeCompanyProductCenterSeedPlan();validateSeedPlan(plan);assert.equal(plan.length,450);assert.ok(plan.every(e=>!['StoreStockPackage','PosPackageStockPosting'].includes(e.table)));assert.ok(plan.some(e=>e.table==='ProductBarcode'&&e.row.salePrice===null));assert.ok(plan.some(e=>e.table==='ProductPriceHistory'&&e.row.newPrice===null));assert.ok(plan.some(e=>e.table==='ProductSetItem'&&e.row.relatedProductId==='product100-missing'));});
+
+test('product native seeds satisfy actual scoped uniqueness without confusing repeated archive response document IDs',()=>{
+ const plan=nativeCompanyProductCenterSeedPlan();
+ for(const [table,columns]of [['Product',['companyId','sku']],['ProductBarcode',['productId','barcode']],['ProductSetItem',['companyId','productId','relatedProductId']],['SupplierProductLink',['companyId','supplierId','productId']],['StocktakeLine',['stocktakeId','productId']],['StoreProductAudienceDiscount',['storeId','productId','audience']],['CustomerWholesalePrice',['companyId','customerId','productId']]]){
+  assert.ok(metadata.constraints.some(c=>c.table===table&&c.kind==='u')||metadata.indexes.some(sql=>sql.startsWith('CREATE UNIQUE INDEX')&&sql.includes('public."'+table+'"')),'actual unique metadata '+table);
+  const tuples=plan.filter(e=>e.table===table).map(e=>JSON.stringify(columns.map(c=>e.row[c])));assert.equal(new Set(tuples).size,tuples.length,table+' unique native seeds');
+ }
+ assert.equal(plan.filter(e=>e.table==='PurchaseDocumentLine'&&e.row.purchaseDocumentId==='product100-doc-own').length,252,'many distinct lines legitimately share one document');
 });

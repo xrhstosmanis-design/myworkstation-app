@@ -1,3 +1,4 @@
+import {verifyNativeCompanyProductCenter} from './fixtures/backoffice-company-product-center-native.mjs';
 import {verifyNativeCompanyOperations} from './fixtures/backoffice-company-operations-native.mjs';
 import {verifyNativeCompanyWholesale} from './fixtures/backoffice-company-wholesale-native.mjs';
 import {verifyNativeCompanyPartyControl} from './fixtures/backoffice-company-party-control-native.mjs';
@@ -145,5 +146,6 @@ for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installa
   await verifyNativeCompanyPartyControl({db:f.db,profile,revision,secret});
   await verifyNativeCompanyWholesale({db:f.db,profile,revision,secret});
   await verifyNativeCompanyOperations({db:f.db,profile,revision,secret});
+  await verifyNativeCompanyProductCenter({db:f.db,profile,revision,secret});
  }finally{await f.close()}
 });
