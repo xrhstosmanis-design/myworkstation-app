@@ -1,4 +1,16 @@
-- 2026-11-18 · 13–14 · Κατάσταση τιμολογίων και αντιλογισμών στο CSV προμηθευτών · [Checkpoint](CHANGES/2026-11-18-no13-no14-supplier-csv-status.md) · 2 τοπικές δοκιμές PASS, CI και LAB εκκρεμούν.
+## 18/11/2026 — Νο 15 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ c88b7aad / ΜΕΡΙΚΗ LIVE ΑΠΟΔΟΧΗ / OPEN
+
+Ίδιος υπεύθυνος /root, ίδια ανάθεση TABLE_SERVICE. #4023/#4024 εγκαταστάθηκαν μέσω πλήρους main CI44385977787 (5SUCCESS, 6241PASS/0FAIL/2προαιρετικάSKIP +8backupPASS) και κανονικού guarded release44390636363· Render dep-dbv0j1brjlhs73aguvl0 LIVE 18/11 22:29:52 Ελλάδας, ακριβές c88b7aad, ανεξάρτητο health200/oktrue από τον συντονιστή. Νέο scoped LIVE PASS: μεταφορά/διαίρεση/ένωση, αλλαγή σερβιτόρου, μπλοκάρισμα επαναποστολής φορτωμένων γραμμών, 3 ανεξάρτητα KDS READY (3→2→1→0), πραγματική κινητή ροή responsive browser με χρέωση0,50€ σε καφέ1€ και μία αποστολή1,50€ / μία γραμμή / ένα δελτίο / ένα request / ένα Audit. Δεν επαναλαμβάνονται αυτά ή το ιστορικό τραπέζι3€.
+
+Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό έλεγχο δύο ενεργών συνθετικών ταμειακών στο κοινό LAB· cashParts[]/saleIdnull/μηδέν ledger μερικής/stock-2 αμετάβλητα. Καμία αλλαγή συσκευής ή παράκαμψη. Νέο χρεώσιμο δελτίο: KDS persistence PASS, δικό του οπτικό READY εκκρεμεί μετά την αλλαγή κοινής OWNER συνεδρίας. Φυσικό Android offline/αμφίβολη απόκριση και εκτυπωτής NOT TESTED. Τα CI/native αποτελέσματα είναι χωριστά. [Ακριβές checkpoint](CHANGES/2026-11-18-table-service-live-acceptance.md) · [Επιβεβαιωμένες οδηγίες](../docs/manual/table-service/PASS.md). Το παρόν υπερισχύει μόνο των παλιών AWAITING CI/εγκατάστασης για τα ίδια #4023/#4024· το συνολικό scope παραμένει OPEN.
+
+## 18/11/2026 — Νο2 — verified ordinary posting projection / ASSIGNED BEFORE SOURCE
+
+Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
+
+### Νεότερη κατάσταση 18/11/2026 — Νο2 — ενιαία διόρθωση πραγματικών εκκρεμοτήτων και clickable counters / AWAITING FULL CI
+
+Owner `/root`, branch `feat/no2-counter-reconciliation`, μετά merged claims #4032/e90b29c1 και #4033/e05cd112. Ενοποιεί την πράσινη #4031 payment proof με ordinary-only proven posting projection και φίλτρα ολόκληρου μήνα πριν pagination. Κρατά raw provenance/fingerprint, scoped cursors, C classifier/D1/email/writers αμετάβλητα και άλλους owners.83pure/reader/D1 PASS,22mounted PASS, frontend build PASS· τοπική Chromiumstartup ECONNRESET και nativePG SKIP δεν αποκρύπτονται, απαιτείται actual PG/browser full CI. Καμία νέα πληρωμή/καταχώριση/stock πράξη. Το παλιό limited LIVE δεν μετατρέπεται σε πλήρη μήνα/ρόλους PASS. [Counters](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md), [Projection](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). Επόμενο source/main CI, exact deploy και read-only hosted επανέλεγχος· κοινές δοκιμές στο τέλος.
 
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
@@ -159,6 +171,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · Νο 9 · Αυτόματα email προσφορών και απογραφής · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Προσφορές CI 5/5, προστέθηκαν απογραφή και lifecycle, ενιαίο CI και τελικό LAB εκκρεμούν.
 - 2026-11-18 · 7–9 · Κεντρική οθόνη προετοιμασίας αναφορών · /root · fix/report-event-installation-ui-20261118 · [Checkpoint](CHANGES/2026-11-18-report-event-installation-ui.md) · Συνέχεια #4000/#4021: UI και reports-only συμβατότητα εννέα πραγματικών πινάκων, strict hosted preflight PASS, native εγκατάσταση/CI σε εξέλιξη· hosted SQL/profile και επιχειρησιακή αποδοχή OPEN.
 - 2026-11-18 · 7–9 · Canonical session installer · /root · fix/report-installer-backoffice-session-20261118 · [Checkpoint](CHANGES/2026-11-18-report-installer-backoffice-session.md) · Real central preflight403 λόγω BACKOFFICE_USER, περιορισμένη διόρθωση τύπου συνεδρίας με ίδιους role/session ελέγχους· hosted SQL ακόμη OPEN.
+- 2026-11-18 · 7–9 · Strict έξι στήλες εγκαταστάτη V2 · /root · fix/report-installer-column-compatibility-20261118 · [Checkpoint](CHANGES/2026-11-18-report-installer-column-compatibility-v2.md) · Νέο αμετάβλητο προφίλ,8 Node+14 Python+3 strict/WASM+4 native PASS χωρίς FAIL/SKIP· hosted κατάλογος συμφωνεί· CI/εγκατάσταση/αποστολή OPEN.
 
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 
@@ -627,3 +640,24 @@ Single next action: owner's separate approval for production source merge/deploy
 ## 18/11/2026 — Νο 15 · Χρεώσιμες επιλογές από κινητό
 
 Συνέχεια TABLE_SERVICE /root, υποβοηθός /root/mobile, branch `feat/table-service-mobile-priced-options-20261118`. Η κινητή παραγγελιοληψία επιλέγει πραγματικές χρεώσιμες επιλογές και εμφανίζει γραμμή/σύνολο/επιβεβαίωση με την επιβάρυνση. Ο server επαληθεύει τιμές και προϊόντα. Εισφορά/SET διατηρούνται στο POS. Τοπικά Node20: 5/5 πραγματικές mounted React δοκιμές και production build PASS. CI, εγκατάσταση και κοινή δοκιμή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-18-table-service-mobile-priced-options.md).
+
+## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — PUBLICATION APPROVED / RECONCILED MAIN
+
+Ο ιδιοκτήτης ενέκρινε τη συγχώνευση και δημοσίευση του #4029 και επανέλαβε «συνεχισε»/«ξεκινα». Η έγκριση ισχύει. Τοπική συμφιλίωση με main c88b7aad (διατηρούνται οι αλλαγές εστίασης #4023/#4024) επιλύει μόνο σύγκρουση προθέματος στην κοινή ενεργή καταγραφή. Οι δύο εγκεκριμένοι warehouse UI/CSS blobs παραμένουν ακριβώς ίδιοι με eee2f0e997140fc207f8d9d9575c295e2b401306. Καμία αλλαγή της ζητούμενης λειτουργίας, δικαιωμάτων ή δεδομένων. Το προηγούμενο PR CI 44383411469 παραμένει ιστορικό PASS της αρχικής έκδοσης· η νέα συνδυασμένη έκδοση απαιτεί δικό της πλήρες CI πριν από merge και κανονικό guarded deploy. Καμία νέα έγκριση ή επανάληψη δοκιμής χρήστη δεν ζητείται.
+
+## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — SOURCE CANDIDATE / AWAITING CI AND LAB
+
+Before-source claim #4027 merged `44ccf51976ba7baa03e37f582e260fd914bf9796`. Same /root owner, independent source scope retained. The Central/Owner archive now renders the existing VAT department and margin range controls already used by POS, with the same responsive filter panel and visible Filters focus/scroll action. Category/subcategory/status selections apply immediately like POS and reset pagination. Search, VAT, margin, selected-store read binding, capabilities, readOnly and staff edit boundaries retain their existing semantics. No backend/API, product/stock/price, permission, module, schema or financial/fiscal change.
+
+Local validation on Node24.22.1: retained inventory-bulk-merge-mounted, inventory-archive-kiosk-v1 and product-card-vat-mounted suites 16/16 PASS, 0 FAIL/SKIP. An initial heading-only compatibility failure was corrected by retaining the existing Central heading. Separate temporary mounted actual-React verification with synthetic API responses passed for Central, POS and readOnly: VAT/margin combined with category/subcategory/status/text, first-page reset, selected-store replacement and header focus. 27 GET requests, zero writes. No permanent test mirroring this low-impact rendering change was added.
+
+Final frontend build PASS (Vite30.18s), TABLE_SERVICE bundle verification PASS, diff --check PASS. Local Chromium visual execution was unavailable because the execution environment denied its process-singleton socket; no screenshot or visual/device PASS is claimed. The CSS reuses the existing POS filter layout and adds single-column narrow forms. Full exact-head Node20 CI and installed Central/physical-device acceptance remain outstanding.
+
+Next: source PR/full CI; owner approval for source merge/publication; existing LAB/common final acceptance without changing stock, prices, permissions or stores. Do not repeat prior POS Filters USER PASS, and do not confuse the earlier PDF/shift-close acceptance with this independent warehouse request. Manual PASS is unchanged until genuine acceptance.
+
+
+## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — ASSIGNED /root BEFORE SOURCE
+
+Explicit owner request/start in same warehouse/invoice conversation. Bounded independent extension: compact archive filters/footer; draft line editor VAT department/category/dependent subcategory for existing/new items; display markup for previously matched lines without saving or changing retail. Owner /root, branch feat/warehouse-invoice-review-ui-20261118. Existing invoice/No2/OCR/report owners retained; no OCR, matching algorithm, financial posting, finalization, stock or production data tests. Current new requirements NOT TESTED; prior warehouse release #4029 and invoice/POS acceptance preserved. Checkpoint CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
+
+- 2026-11-18 · 13–14 · Κατάσταση τιμολογίων και αντιλογισμών στο CSV προμηθευτών · [Checkpoint](CHANGES/2026-11-18-no13-no14-supplier-csv-status.md) · 2 τοπικές δοκιμές PASS, CI και LAB εκκρεμούν.

@@ -164,6 +164,40 @@ const splitFixture=()=>({
 });
 const allocatedRun=(f,options={available:true,allocationsAvailable:true})=>observeInvoicePayments(f.items,{documents:f.documents,paymentAllocations:f.allocations},f.transactions,options);
 
+const postingOnlyReason='Η καταχώριση αγοράς δεν διαθέτει επιβεβαιωμένο εγκεκριμένο παραστατικό και σύνδεση αποθήκης.';
+const postingReview=(patch={})=>invoice({categories:['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','IDENTITY_OR_LINK_REVIEW'],reasons:[postingOnlyReason],...patch});
+
+test('sole stock-posting warning retains workflow while independently bound payment is observed',()=>{
+ for(const [amount,status,remaining,extra]of [['60.48','PAID',0,0],['20.00','PARTIALLY_PAID',4048,0],['61.00','OVERPAID',0,52]]){
+  const items=[postingReview()],before=JSON.stringify(items),actual=run(undefined,[transaction({amount})],items);
+  assert.equal(actual.items[0].payment.status,status);assert.equal(actual.items[0].payment.remainingCents,remaining);assert.equal(actual.items[0].payment.overpaymentCents,extra);
+  assert.deepEqual({...actual.items[0],payment:undefined},{...items[0],payment:undefined});assert.equal(JSON.stringify(items),before);
+ }
+});
+
+test('identity review with missing, malformed, unknown or mixed reasons remains blocked',()=>{
+ for(const reasons of [undefined,null,[],postingOnlyReason,{},[null],['Unknown identity conflict'],[postingOnlyReason,'Supplier identity conflict'],[postingOnlyReason,postingOnlyReason]]){
+  const actual=run(undefined,undefined,[postingReview({reasons})]);
+  assert.equal(actual.items[0].payment.status,'REVIEW_REQUIRED',JSON.stringify(reasons));assert.equal(actual.items[0].payment.paidCents,null);assert.equal(actual.summary.reviewRequired,1);
+ }
+});
+
+test('stock-posting warning exemption retains all payment proof boundaries',()=>{
+ for(const patch of [{supplierId:'foreign'},{storeId:'foreign'},{invoiceDocumentNumber:'016 19687'},{amount:'60.481'},{settlementScopeValid:false}]){
+  assert.equal(run(undefined,[transaction(patch)],[postingReview()]).items[0].payment.status,'REVIEW_REQUIRED',JSON.stringify(patch));
+ }
+ assert.equal(run(undefined,[transaction({settlementConfirmed:false})],[postingReview()]).items[0].payment.status,'UNCONFIRMED');
+ assert.equal(run(undefined,[transaction({reversedAt:'2026-11-18T14:00:00Z'})],[postingReview()]).items[0].payment.status,'REVERSED');
+ assert.equal(run(undefined,[],[postingReview()]).items[0].payment.status,'REVIEW_REQUIRED');
+});
+
+test('stock-posting warning does not duplicate split allocations or hide an invalid other target',()=>{
+ const f=splitFixture();f.items=f.items.map(item=>({...item,categories:['IDENTITY_OR_LINK_REVIEW'],reasons:[postingOnlyReason]}));
+ const before=JSON.stringify(f),actual=allocatedRun(f);
+ assert.deepEqual(actual.items.map(item=>item.payment.status),['PAID','PAID']);assert.deepEqual(actual.items.map(item=>item.payment.paidCents),[4000,6000]);assert.equal(JSON.stringify(f),before);
+ f.allocations[1].supplierId='foreign';assert.ok(allocatedRun(f).items.every(item=>item.payment.status==='REVIEW_REQUIRED'));
+});
+
 test('one explicitly allocated payment splits into two paid invoices without whole-transaction duplication',()=>{
  const f=splitFixture(),before=JSON.stringify(f),observed=allocatedRun(f);
  assert.deepEqual(observed.items.map(item=>item.payment.status),['PAID','PAID']);assert.deepEqual(observed.items.map(item=>item.payment.paidCents),[4000,6000]);

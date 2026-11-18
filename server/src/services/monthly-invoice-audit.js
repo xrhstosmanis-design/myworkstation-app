@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import {Prisma} from '@prisma/client';
 import {postedSupplierPayment} from '../lib/supplier-payment-reporting.js';
 import {observeInvoicePayments} from '../lib/invoice-payment-observation.js';
+import {normalizePostingProjections,withPostingProjectionProvenance} from '../lib/invoice-posting-projection-view.js';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
 import {readPendingInvoices,readPendingInvoiceSnapshotRows,readPendingInvoiceSnapshotRowsForAutomationInTransaction} from './pos-pending-invoices.js';
 import {requireMonthlyCaptureContext} from './monthly-inventory-capture-authorization.js';
@@ -10,6 +11,15 @@ import {companyModuleState,isCurrentlyActive} from '../middleware/module-access.
 
 const roles=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const PAGE_SIZE=50,MAX_SOURCE_ROWS=20000;
+const detailFilters=new Map([
+ ['ALL',()=>true],
+ ...['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW'].map(category=>[category,item=>item.categories.includes(category)]),
+ ['CREDIT_NOTE',item=>item.documentType==='CREDIT_NOTE'],
+ ['PAID',item=>item.payment.status==='PAID'],
+ ['FINANCIAL_PENDING',item=>['PARTIALLY_PAID','OVERPAID','REVERSED'].includes(item.payment.status)],
+ ['PAYMENT_REVIEW',item=>['REVIEW_REQUIRED','UNCONFIRMED','UNAVAILABLE'].includes(item.payment.status)],
+ ['PAYMENT_UNLINKED',item=>item.payment.status==='NOT_LINKED']
+]);
 const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const fail=(message,status=400,code='INVOICE_MONTH_AUDIT_INVALID')=>{throw Object.assign(new Error(message),{status,code})};
 const safeText=(value,max=160)=>typeof value==='string'&&value.trim()===value&&value.length>0&&value.length<=max&&!/[\u0000-\u001f\u007f]/.test(value);
@@ -302,22 +312,29 @@ async function readInvoicePaymentMetadata(tx,companyId,storeId,facts,available,a
 
 export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}){
  if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input?.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
- if(!input||Object.keys(input).some(k=>!['storeId','month','page'].includes(k))||!safeText(input.storeId))fail('Επίλεξε συγκεκριμένο κατάστημα.');
- const period=invoiceAuditMonth(input.month);let cursor=null;
- if(input.page!==undefined){if(!safeText(input.page,1024))fail('Μη έγκυρη σελίδα.');try{cursor=JSON.parse(Buffer.from(input.page,'base64url').toString('utf8'))}catch{fail('Μη έγκυρη σελίδα.')}if(!cursor||Object.keys(cursor).sort().join(',')!=='after,fingerprint,scope'||!safeText(cursor.after,200)||!/^[0-9a-f]{64}$/.test(cursor.fingerprint)||cursor.scope!==hash([actor.companyId,input.storeId,input.month]))fail('Μη έγκυρη σελίδα.');}
+ if(!input||Object.keys(input).some(k=>!['storeId','month','page','filter'].includes(k))||!safeText(input.storeId))fail('Επίλεξε συγκεκριμένο κατάστημα.');
+ const filter=input.filter===undefined?'ALL':input.filter;
+ if(!detailFilters.has(filter))fail('Μη έγκυρο φίλτρο παραστατικών.');
+ const period=invoiceAuditMonth(input.month),scope=hash([actor.companyId,input.storeId,input.month,filter]);let cursor=null;
+ if(input.page!==undefined){if(!safeText(input.page,1024))fail('Μη έγκυρη σελίδα.');try{cursor=JSON.parse(Buffer.from(input.page,'base64url').toString('utf8'))}catch{fail('Μη έγκυρη σελίδα.')}if(!cursor||Object.keys(cursor).sort().join(',')!=='after,fingerprint,scope'||!safeText(cursor.after,200)||!/^[0-9a-f]{64}$/.test(cursor.fingerprint)||cursor.scope!==scope)fail('Μη έγκυρη σελίδα.');}
  return db.$transaction(async tx=>{
   await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
   await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8000ms'");
   const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending,paymentMetadataAvailable,allocationMetadataAvailable}=await readInvoiceSources(tx,actor,input,now);
-  const complete=unavailable.length===0&&limited.length===0,analysis=complete?classifyInvoiceMonth(facts,period):{counts:null,items:[]};
+  const complete=unavailable.length===0&&limited.length===0;
+  const ordinary=complete?normalizePostingProjections(facts,{companyId:actor.companyId,storeId:store.id}):{facts,projections:[]};
+  const analysis=complete?classifyInvoiceMonth(ordinary.facts,period):{counts:null,items:[]};
   const paymentMetadata=complete?await readInvoicePaymentMetadata(tx,actor.companyId,store.id,facts,paymentMetadataAvailable,allocationMetadataAvailable):{available:false,allocationsAvailable:false,reason:'INVOICE_SOURCE_INCOMPLETE',rows:[],allocations:[]};
-  const financial=observeInvoicePayments(analysis.items,{...facts,paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const fingerprint=hash({period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const financial=observeInvoicePayments(withPostingProjectionProvenance(analysis.items,ordinary.projections),{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const fingerprint=hash({ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V1',period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
-  const after=cursor?analysis.items.findIndex(item=>item.id===cursor.after):-1;
+  // Select from the complete month, then paginate. Global counts, financial
+  // observations and all-month pending originals keep their original scope.
+  const matching=financial.items.filter(detailFilters.get(filter));
+  const after=cursor?matching.findIndex(item=>item.id===cursor.after):-1;
   if(cursor&&after<0)fail('Η σελίδα δεν ανήκει στο τρέχον αποτέλεσμα.',409);
-  const items=financial.items.slice(after+1,after+1+PAGE_SIZE),hasMore=after+1+items.length<analysis.items.length;
-  return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,coverage:{complete,sourceCounts,sourceCountBasis:'ALL_STORED_METADATA_FOR_LINK_CONTEXT',unavailable,limited,sourceLimit:MAX_SOURCE_ROWS,detailsPageSize:PAGE_SIZE,scope:'STORED_SELECTED_STORE_SOURCES'},summary:analysis.counts,financialSummary:complete?financial.summary:null,paymentCoverage:{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,reason:paymentMetadata.reason},items,nextPage:hasMore?Buffer.from(JSON.stringify({after:items.at(-1).id,fingerprint,scope:hash([actor.companyId,store.id,input.month])})).toString('base64url'):null,pendingOriginals:{period:'ALL_MONTHS',label:'Όλοι οι μήνες',available:pendingAvailable,counts:pending?{total:pending.count,missingOriginal:pending.missingCount,uploadedAwaitingReview:pending.uploadedCount,reviewRequired:pending.reviewCount}:null,items:(pending?.rows||[]).map(row=>({id:row.id,supplierName:row.supplierName,amount:row.amount,documentNumber:row.documentNumber,documentDate:row.documentDate,status:row.status,occurredAt:row.occurredAt})),truncated:pending?.truncated||false,detailLimit:50},allClear:complete&&paymentMetadata.available&&financial.summary.financialPending===0&&financial.summary.reviewRequired===0&&financial.summary.notLinked===0&&pendingAvailable&&analysis.counts.unposted===0&&analysis.counts.possibleDuplicates===0&&analysis.counts.identityReview===0&&pending.count===0,immutableSnapshot:false,readOnly:true};
+  const items=matching.slice(after+1,after+1+PAGE_SIZE),hasMore=after+1+items.length<matching.length;
+  return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,coverage:{complete,sourceCounts,sourceCountBasis:'ALL_STORED_METADATA_FOR_LINK_CONTEXT',unavailable,limited,sourceLimit:MAX_SOURCE_ROWS,detailsPageSize:PAGE_SIZE,scope:'STORED_SELECTED_STORE_SOURCES'},summary:analysis.counts,financialSummary:complete?financial.summary:null,paymentCoverage:{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,reason:paymentMetadata.reason},filter,matchedRecords:complete?matching.length:null,items,nextPage:hasMore?Buffer.from(JSON.stringify({after:items.at(-1).id,fingerprint,scope})).toString('base64url'):null,pendingOriginals:{period:'ALL_MONTHS',label:'Όλοι οι μήνες',available:pendingAvailable,counts:pending?{total:pending.count,missingOriginal:pending.missingCount,uploadedAwaitingReview:pending.uploadedCount,reviewRequired:pending.reviewCount}:null,items:(pending?.rows||[]).map(row=>({id:row.id,supplierName:row.supplierName,amount:row.amount,documentNumber:row.documentNumber,documentDate:row.documentDate,status:row.status,occurredAt:row.occurredAt})),truncated:pending?.truncated||false,detailLimit:50},allClear:complete&&paymentMetadata.available&&financial.summary.financialPending===0&&financial.summary.reviewRequired===0&&financial.summary.notLinked===0&&pendingAvailable&&analysis.counts.unposted===0&&analysis.counts.possibleDuplicates===0&&analysis.counts.identityReview===0&&pending.count===0,immutableSnapshot:false,readOnly:true};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});
 }
 
