@@ -1,3 +1,5 @@
+import CompanyPartyControlReadView from './CompanyPartyControlReadView.jsx';
+import {companyPartyControlActions} from '../../../../shared/backoffice-staff-company-party-control.mjs';
 import React,{useEffect,useRef,useState} from 'react';
 import BackofficeStores from './BackofficeStores.jsx';
 import CompanyAuditReportsReadView from './CompanyAuditReportsReadView.jsx';
@@ -39,6 +41,7 @@ function CompanySimpleDirectoryView({api,companyId,capability,authorityKey,onOpe
 }
 
 export default function CompanyDirectoryView(props){
+ if(companyPartyControlActions.some(action=>action.key===props.capability))return <CompanyPartyControlReadView {...props}/>;
  const [supplier,setSupplier]=useState(null);const own=JSON.stringify([props.companyId,props.capability,props.authorityKey]);
  const detailsAllowed=Array.isArray(props.companyCapabilities)&&props.companyCapabilities.includes('supplier-details.read');
  const selected=detailsAllowed&&supplier?.own===own&&supplier.api===props.api?supplier.id:'';

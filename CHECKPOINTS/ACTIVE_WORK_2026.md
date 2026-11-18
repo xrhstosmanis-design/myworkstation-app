@@ -15,9 +15,11 @@ This small continuation preserves the oversized historical tracker/roadmap uncha
 <!-- NO5-STATUS:BEGIN -->
 ## No5 — Δικαιώματα προβολών Ιδιοκτήτη / ASSIGNED — OPEN
 
-CENTRAL-BACKOFFICE-ACCESS-01. Συνεχίζεται η ίδια εργασία. Δημοσιευμένος κώδικας61COMPANY και74STORE (56reads/18actions), baselineb430e657 και συγχρονισμοί μόνο τεκμηρίωσης. Τελική104fileσουίτα517PASS/25nativeSKIP/0FAIL καιclientbuild42.04PASS. ΠραγματικόCI61 εκκρεμεί· τα πρώταhead δεν είχανruns λόγω σύγκρουσης του κοινούMarkdown, όχι αποτυχίαςruntime. Προηγούμενοaligned53 main6417PASS/0FAIL/1SKIP και8/8E2E, actual17BASE/CAPTUREPASS, Wallet/ChatSUCCESS.
+CENTRAL-BACKOFFICE-ACCESS-01. Νέα πηγή COMPANY74 και STORE74 (56 reads / 18 actions): δεκατρείς χωριστές προβολές πελατών/προμηθευτών, χωρίς αυτόματες παραχωρήσεις. Συνδυασμένη εκτέλεση119 αρχείων: 622 tests,596 PASS /26 environment-native SKIP /0 FAIL,126.99s. Μετά τις τελευταίες διορθώσεις, συμπληρωματικά μόνο τα αλλαγμένα σημεία: party tenant3/3, legacy QR10/10, native4046/6, VAT+minimal-package6/6 PASS· οι αριθμοί επικαλύπτονται. Τελικό client build21.76s PASS. Όλα20 bound source hashes αμετάβλητα.
 
-Η κατάσταση No5 ενημερώνεται μόνο σε αυτό το σταθερό block, ανεξάρτητα από τις προσθήκες άλλων σελίδωνEOF. Το πλήρες προηγούμενο ιστορικό διατηρείται ακριβώς στο [No5 αρχείο ιστορικού](NO5_ACTIVE_HISTORY_2026-11-18.md), μεSHAsnapshot. [Τελευταία υλοποίηση](CHANGES/2026-11-18-no5-company-owner-reports.md) · [Ανοικτή κάλυψη Owner](../docs/roadmap/BACKOFFICE_OWNER_VIEW_COVERAGE.md). Επόμενες καρτέλες προμηθευτών/πελατών μόνο υποψήφια πηγή. Καμία παραγωγική εγκατάσταση/merge/deploy ή ανθρώπινη αποδοχή. Μία κοινή συνεδρία στο υπάρχον LAB στο τέλος, χωρίς επανάληψη παλιών οικονομικών/stockPASS.
+Το προηγούμενο CI61 44331763006 απέτυχε: wholesale eager-client import και security6436 PASS/6 FAIL/1 SKIP. Οι δύο native BASE/CAPTURE πέρασαν8 θετικές προβολές/κανονικές οικονομικές συγκρίσεις, αλλά σταμάτησαν σε foreign-shift503 αντί404· τα επόμενα module/revocation σενάρια και η native13 αποδοχή δεν εκτελέστηκαν. Διορθώθηκαν το lazy loading, το ασφαλές404 και το VAT VM fixture, χωρίς χαλάρωση guards. Εκκρεμεί νέο πραγματικό CI74, όχι παραγωγική εγκατάσταση.
+
+Η κατάσταση No5 ενημερώνεται μόνο σε αυτό το block. Το πλήρες προηγούμενο ιστορικό διατηρείται στο [αρχείο ιστορικού](NO5_ACTIVE_HISTORY_2026-11-18.md). [Τρέχον checkpoint](CHANGES/2026-11-18-no5-company-party-control.md) · [Ανοικτή κάλυψη Owner](../docs/roadmap/BACKOFFICE_OWNER_VIEW_COVERAGE.md). Μία κοινή συνεδρία στο υπάρχον LAB στο τέλος, χωρίς επανάληψη οικονομικών/stock PASS. Παραμένουν Owner οικογένειες PARTIAL/OPEN.
 
 <!-- NO5-STATUS:END -->
 

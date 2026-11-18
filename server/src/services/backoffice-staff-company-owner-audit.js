@@ -1,5 +1,4 @@
 import {Prisma} from '@prisma/client';
-import {readOwnerAuditReport} from '../routes/kiosk-reports-audit.js';
 import {auditReadableRecord,auditActorName,auditBusinessText} from '../../../shared/audit-readable.mjs';
 import {staffError} from './backoffice-staff-access.js';
 
@@ -30,6 +29,7 @@ const sourceOfSql=sql=>sql.includes('FROM "StoreTransaction" t')?'StoreTransacti
 
 export async function readCompanyOwnerAudit(db,companyId,f){
  if(typeof companyId!=='string'||!companyId||!(f.from instanceof Date)||!(f.toExclusive instanceof Date))invalid();
+ const {readOwnerAuditReport}=await import('../routes/kiosk-reports-audit.js');
  const metadata=new Map();
  const payload=await db.$transaction(async tx=>{
   await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');

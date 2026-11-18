@@ -1,3 +1,4 @@
+import {verifyNativeCompanyPartyControl} from './fixtures/backoffice-company-party-control-native.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -139,5 +140,6 @@ for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installa
   await verifyNativeCompanyPartyReports({db:f.db,profile,revision,secret});
   await verifyNativeCompanyConfiguration({db:f.db,profile,revision,secret});
   await verifyNativeCompanyOwnerReports({db:f.db,profile,revision,secret});
+  await verifyNativeCompanyPartyControl({db:f.db,profile,revision,secret});
  }finally{await f.close()}
 });

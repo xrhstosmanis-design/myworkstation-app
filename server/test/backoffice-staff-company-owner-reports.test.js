@@ -20,7 +20,7 @@ async function fixture(){
   else if(sql.startsWith('SELECT "id" FROM "Store"')||sql.startsWith('SELECT "id" FROM "Supplier"'))result=values[0]==='foreign'?[]:[{id:values[0]}];
   else if(sql.startsWith('SELECT "id","name","taxId" FROM "Supplier"'))result=[{id:'supplier',name:'Own supplier',taxId:null}];
   else if(sql.startsWith('SELECT "id","name" FROM "Store"'))result=Array.from({length:state.overflow?10001:1},()=>({id:'selected',name:'Own store'}));
-  else if(sql.includes('SELECT s.*,st."name"'))result=[shiftRow()];
+  else if(sql.includes('SELECT s.*,st."name"'))result=state.missingShift?[]:[shiftRow()];
   else if(sql.includes('WITH ledger_tokens'))result=[{id:'sale'}];
   else if(sql.includes('FROM "StoreTransaction" t WHERE')&&sql.includes('t."sessionId"'))result=[{id:'transaction',type:'SALE_CASH',amount:12,description:'POS sale sale',supplierId:'foreign',supplierName:'PRIVATE_FOREIGN',subtractFromShift:false,actorName:'Own actor',occurredAt:at,createdAt:at,reversedAt:null,reversedByName:null,reversalReason:null,sourceType:'POS',hasAttachment:false,attachmentFilename:null,saleLines:[{id:'line',productId:'foreign',description:'Own historical product',quantity:1,unitPrice:12,lineTotal:12}],secret:'PRIVATE'}];
   else if(sql.includes('AS category'))result=[{category:'Own category',quantity:1,revenue:12,sales:1}];
@@ -61,3 +61,5 @@ test('unknown costs remain unknown; missing sources, overflow, strict dates/quer
 test('mounted audit metadata authenticates once, uses the native readonly snapshot and rechecks authority after it',async()=>{const f=await fixture();try{const before=f.state.authCalls??0,r=await f.get('/audit',period);assert.equal(r.status,200,JSON.stringify(r));assert.equal(f.state.authCalls,before+1);assert.deepEqual(r.body.items,[]);assert.equal(r.body.videoAccessAllowed,false);assert.equal(r.body.onlineEventsIncluded,false);assert.equal(f.state.auditSets.length,2);f.state.cash=false;assert.equal((await f.get('/audit',period)).status,200);f.state.afterAudit=()=>{f.state.caps=f.state.caps.filter(c=>c!=='audit-events.read')};assert.equal((await f.get('/audit',period)).status,403)}finally{await f.close()}});
 
 test('shift detail rejects a global line budget overflow before owned-product lookup',async()=>{const f=await fixture();try{f.state.lineOverflow=true;const r=await f.get('/shifts/shift/detail');assert.equal(r.status,503);assert.equal(r.body.code,'STAFF_OWNER_REPORT_LIMIT')}finally{await f.close()}});
+
+test('canonical foreign or missing shift404 is translated to a safe staff404 without exposing raw errors',async()=>{const f=await fixture();try{f.state.missingShift=true;const r=await f.get('/shifts/foreign/detail');assert.equal(r.status,404);assert.equal(r.body.code,'STAFF_OWNER_SHIFT_NOT_FOUND');assert.doesNotMatch(JSON.stringify(r.body),/stack|query|CashShiftSession/)}finally{await f.close()}});

@@ -1,3 +1,4 @@
+import {nativeCompanyPartyControlSeedPlan} from './fixtures/backoffice-company-party-control-native.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -49,3 +50,5 @@ test('COMPANY36 party-report financial seeds obey actual schema nullable/default
 test('COMPANY53 configuration seed plan validates every JSON, terminal type and explicit nullable/default column',()=>{const plan=nativeCompanyConfigurationSeedPlan();validateSeedPlan(plan);assert.ok(plan.length>20);assert.ok(plan.some(e=>e.mode==='UPDATE'&&e.table==='Company'));assert.ok(plan.some(e=>e.table==='ManagementParameters'));});
 
 test('COMPANY61 owner-report seed plan matches actual schema including real employee enum labels and nullable financial columns',()=>{const plan=nativeCompanyOwnerReportSeedPlan();validateSeedPlan(plan);assert.ok(plan.length>30);const employee=plan.find(e=>e.table==='Employee');assert.throws(()=>validateSeedPlan([{...employee,row:{...employee.row,type:'INVALID_EMPLOYEE_TYPE'}}]),/valid enum label/);assert.ok(plan.some(e=>e.table==='MasterProduct'&&e.row.defaultCostPrice===0));});
+
+test('COMPANY74 supplier/customer native control seeds validate every real column, enum and explicit NULL',()=>{const plan=nativeCompanyPartyControlSeedPlan();validateSeedPlan(plan);assert.equal(plan.length,55);assert.ok(plan.some(e=>e.table==='CustomerOperatorCardLink'));assert.ok(plan.some(e=>e.table==='Customer'&&e.row.points===12.5));assert.ok(plan.every(e=>e.table!=='CustomerLoyaltyLedger'));});
