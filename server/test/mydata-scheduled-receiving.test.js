@@ -65,6 +65,8 @@ test('historical original recovery is explicitly store-scoped, production-only, 
       assert.match(strings.join("?"), /"rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM/);
       assert.match(strings.join("?"), /m\."issueDate">=DATE '2026-11-01' AND m\."issueDate"<DATE '2026-12-01'/);
       assert.equal(values[4],'supported-link-pattern');
+      assert.match(strings.join("?"), /originalPending' IS DISTINCT FROM 'true'/);
+      assert.match(strings.join("?"), /originalAttempts'\)::int,0\)>=3/);
       assert.match(strings.join("?"), /ORDER BY m\."fetchedAt",m\."id" LIMIT 2/);
       assert.deepEqual(values.slice(0,3), ['company','store','AADE_MYDATA_PRODUCTION']);
       calls.push('query');
@@ -72,7 +74,9 @@ test('historical original recovery is explicitly store-scoped, production-only, 
     },
     $executeRaw:async(strings,...values)=>{
       assert.match(strings.join("?"), /i\."attachmentId" IS NULL/);
-      assert.deepEqual(values.slice(1), ['company','store','unavailable']);
+      assert.match(strings.join("?"), /originalDownloaded' IS DISTINCT FROM 'true'/);
+      assert.deepEqual(values.slice(1,4), ['company','store','unavailable']);
+      assert.equal(values[0],values[4]);
       calls.push('version-stamped');
     },
   };
@@ -84,10 +88,10 @@ test('historical original recovery is explicitly store-scoped, production-only, 
     return {downloaded:true};
   };
   const options={db,companyId:'company',storeId:'store',userId:'actor',source:'AADE_MYDATA_PRODUCTION',acquire};
-  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:''}),{downloaded:0,failed:0});
-  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:'other'}),{downloaded:0,failed:0});
-  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:'store',source:'AADE_MYDATA_SANDBOX'}),{downloaded:0,failed:0});
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:''}),{downloaded:0,failed:0});
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'other'}),{downloaded:0,failed:0});
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'store',source:'AADE_MYDATA_SANDBOX'}),{downloaded:0,failed:0});
   assert.deepEqual(calls,[]);
-  assert.deepEqual(await mod.recoverExhaustedOriginals({...options,storeIds:'other, store'}),{downloaded:1,failed:1});
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'other, store'}),{downloaded:1,failed:1});
   assert.deepEqual(calls,['query','downloadable','unavailable','version-stamped']);
 });
