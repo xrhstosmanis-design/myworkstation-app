@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -16,6 +17,7 @@ import android.text.InputFilter;
 import android.text.InputType;
 import android.util.Base64;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
@@ -53,6 +55,8 @@ public final class MainActivity extends Activity {
     private boolean foreground, busy, photosEnabled = true;
     private LinearLayout root, content, messages;
     private ScrollView scroll;
+    private ScrollView photoReadInFlight;
+    private final java.util.Set<String> visiblePhotoReceipts = new java.util.HashSet<>();
     private ScrollView contentScroll;
     private TextView notice, attachmentLabel;
     private EditText composer;
@@ -344,6 +348,8 @@ public final class MainActivity extends Activity {
         root.removeView(contentScroll); scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.setBackgroundColor(0xfff4f1f8);
         messages = new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL); messages.setPadding(dp(12), dp(8), dp(12), dp(8)); scroll.addView(messages);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        visiblePhotoReceipts.clear();
+        scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> markVisiblePhotoRead());
         root.removeView(notice); root.addView(notice);
         if (tab.equals("ai") && (staff() || (!platform() && !identity.optString("role").equals("OWNER")))) {
             bubble("Ο βοηθός δεν είναι διαθέσιμος με τα δικαιώματα αυτού του λογαριασμού.", false, "", null); return;
@@ -424,7 +430,13 @@ public final class MainActivity extends Activity {
                     uncertainStoreId = ""; composer.setText(""); clearQuote(); messageCategory = "GENERAL"; clearPhoto(); clearVoice(); clearVideo(); updatePhotoLabel(); updateVoiceLabel(); updateVideoLabel(); loadMessages(false);
                 }));
             }
-            scroll.post(() -> { if (initial || atBottom) scroll.fullScroll(View.FOCUS_DOWN); else scroll.scrollTo(0, oldY); });
+            final ScrollView timeline = scroll;
+            timeline.post(() -> {
+                if (scroll != timeline) return;
+                if (initial || atBottom) timeline.fullScroll(View.FOCUS_DOWN);
+                else timeline.scrollTo(0, oldY);
+                markVisiblePhotoRead();
+            });
             if (interactionsReady) {
                 JSONArray received = new JSONArray(); for (JSONObject row : sorted) received.put(row); for (int i = 0; i < pinnedAnnouncements.length(); i++) received.put(pinnedAnnouncements.optJSONObject(i));
                 JSONArray ids = ChatInteractions.deliveryIds(received, identity.optString("id"));
@@ -432,6 +444,43 @@ public final class MainActivity extends Activity {
             }
 
         });
+    }
+    @Override public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused);
+        if (focused) markVisiblePhotoRead();
+    }
+    private void markVisiblePhotoRead() {
+        final ScrollView timeline = scroll;
+        if (!foreground || !hasWindowFocus() || selected == null || timeline == null || messages == null
+                || !tab.equals("chat") || photoReadInFlight == timeline) return;
+        Rect visible = new Rect();
+        for (int i = 0; i < messages.getChildCount(); i++) {
+            View card = messages.getChildAt(i);
+            if (!(card.getTag() instanceof JSONObject)) continue;
+            JSONObject row = (JSONObject) card.getTag();
+            String messageId = row.optString("id");
+            if (row.optBoolean("readByMe") || visiblePhotoReceipts.contains(messageId)
+                    || !card.getLocalVisibleRect(visible) || visible.height() * 2 < card.getHeight()) continue;
+            final long generation = epoch.capture();
+            final String captured = token, store = id(selected, "id"), company = id(selected, "companyId");
+            final String path = chatBase() + "/messages/" + enc(messageId) + "/read";
+            final ChatApi client = api;
+            photoReadInFlight = timeline;
+            worker.execute(() -> {
+                boolean acknowledged;
+                try { acknowledged = client.json(path, "POST", object(), captured).optBoolean("ok"); }
+                catch (Exception ignored) { acknowledged = false; }
+                final boolean received = acknowledged;
+                ui.post(() -> {
+                    if (photoReadInFlight == timeline) photoReadInFlight = null;
+                    if (scroll != timeline || !chatScope(generation, captured, store, company) || !received) return;
+                    visiblePhotoReceipts.add(messageId);
+                    try { row.put("readByMe", true); } catch (org.json.JSONException ignored) {}
+                    markVisiblePhotoRead();
+                });
+            });
+            return;
+        }
     }
     private String assistantBase() { return platform() ? "/api/platform/ai-command-center" : "/api/owner-assistant/stores/" + enc(id(selected, "id")); }
     private String assistantQuery() { return "?readScope=selected_store" + (platform() ? "&companyId=" + enc(id(selected, "companyId")) + "&storeId=" + enc(id(selected, "id")) : ""); }
@@ -523,8 +572,48 @@ public final class MainActivity extends Activity {
             card.setContentDescription("Μήνυμα · πάτησε για ενέργειες");
             Runnable open=scopedMessageAction(() -> showMessageActions(row,own));
             card.setOnClickListener(v -> open.run());card.setOnLongClickListener(v -> {open.run();return true;});
+            if (interactionsReady) enableSwipeReply(card, scopedMessageAction(() -> chooseChatReply(row)));
         }
+        if (row != null && !own && !row.optBoolean("readByMe") && row.optBoolean("hasAttachment")
+                && row.optString("attachmentMimeType").startsWith("image/")
+                && ChatInteractions.validId(row.optString("id"))) card.setTag(row);
         messages.addView(card, lp);
+    }
+    private void enableSwipeReply(View card, Runnable reply) {
+        card.setOnTouchListener(new View.OnTouchListener() {
+            private float startX, startY;
+            private boolean tracking, swiped;
+
+            @Override public boolean onTouch(View view, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = event.getX();
+                        startY = event.getY();
+                        tracking = true;
+                        swiped = false;
+                        return false;
+                    case MotionEvent.ACTION_MOVE:
+                        if (tracking && Math.abs(event.getY() - startY) > dp(24)) tracking = false;
+                        if (tracking && event.getX() - startX >= dp(56)) {
+                            swiped = true;
+                            view.cancelLongPress();
+                            view.setPressed(false);
+                        }
+                        return swiped;
+                    case MotionEvent.ACTION_UP:
+                        if (!swiped) return false;
+                        reply.run();
+                        return true;
+                    case MotionEvent.ACTION_CANCEL:
+                    case MotionEvent.ACTION_POINTER_DOWN:
+                        tracking = false;
+                        swiped = false;
+                        return false;
+                    default:
+                        return false;
+                }
+            }
+        });
     }
     private Button messageMediaButton(String label,Runnable previewAction,JSONObject row,boolean own) {
         Button button=chatButton(label,previewAction,false);Runnable open=scopedMessageAction(() -> showMessageActions(row,own));
