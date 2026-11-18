@@ -12,7 +12,7 @@ import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "
 import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
-import {acquireOriginal,epsilonOriginalRecoveryLinkPattern} from "../mydata-original.js";
+import {acquireOriginal,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
@@ -111,8 +111,8 @@ export function syncMyDataStore(req,{db=prisma}={}){
   },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{if(admitted)syncStatus.set(key,{...syncStatus.get(key),lastSyncError:error.code==='MYDATA_HTTP_ERROR'?error.message:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
   syncInFlight.set(key,run);return run;
 }
-// Opt-in historical recovery for URLs already proven by the Epsilon adapter.
-const originalRecoveryVersion = "epsilon-verified-pairs-202611-v1";
+// Opt-in historical recovery for verified provider URL formats.
+const originalRecoveryVersion = "verified-provider-formats-202611-v1";
 
 export async function recoverHistoricalOriginals({
   db, companyId, storeId, userId, source, excludeInboxIds = [],
@@ -135,7 +135,7 @@ export async function recoverHistoricalOriginals({
         WHERE excluded."inboxId"=m."inboxId"
       )
       AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
-      AND m."rawPayload"->>'xml' ~* ${epsilonOriginalRecoveryLinkPattern()}
+      AND m."rawPayload"->>'xml' ~* ${providerOriginalRecoveryLinkPattern()}
     ORDER BY m."fetchedAt",m."id" LIMIT 2`;
   let downloaded = 0, failed = 0;
   for (const {inboxId} of candidates) {
