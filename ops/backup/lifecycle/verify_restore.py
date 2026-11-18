@@ -9,6 +9,7 @@ import json
 import os
 import pathlib
 import pwd
+import re
 import shutil
 import subprocess
 import tempfile
@@ -62,6 +63,36 @@ def delete_order(snapshot, descriptor, schema):
         remaining.difference_update(ready)
     return order
 
+PRIVATE_POSTGRES_COMMANDS = frozenset({'initdb', 'pg_ctl', 'psql', 'pg_dump', 'pg_restore'})
+PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'UNKNOWN'})
+
+
+class PrivatePostgresCommandError(ValueError):
+    def __init__(self, command, exit_code, category):
+        self.command = command if isinstance(command, str) and command in PRIVATE_POSTGRES_COMMANDS else 'UNKNOWN_COMMAND'
+        self.exit_code = exit_code if type(exit_code) is int and -255 <= exit_code <= 255 else -1
+        self.category = category if isinstance(category, str) and category in PRIVATE_POSTGRES_CATEGORIES else 'UNKNOWN'
+        super().__init__(f'Private PostgreSQL command failed: {self.command} [exit={self.exit_code}, category={self.category}]')
+
+
+def private_command_failure_category(stderr):
+    """Return only an allowlisted diagnostic; never return captured stderr."""
+    text = (stderr.decode('utf-8', errors='replace') if isinstance(stderr, bytes) else stderr if isinstance(stderr, str) else '')[:65536].lower()
+    patterns = [
+        ('UNSUPPORTED_SETTING', r'(?:unrecognized|unsupported) configuration parameter'),
+        ('ARCHIVE_VERSION', r'unsupported version.*file header|archive version|unsupported archive format'),
+        ('PERMISSION', r'permission denied|must be (?:owner|superuser)|not permitted|authentication failed'),
+        ('MISSING_ROLE', r'role [^\n]{0,200} does not exist'),
+        ('MISSING_TYPE', r'type [^\n]{0,200} does not exist'),
+        ('COLLATION', r'collation [^\n]{0,200} does not exist|collation[^\n]{0,200}version mismatch|invalid locale|invalid collation'),
+        ('DUPLICATE_RELATION', r'relation [^\n]{0,200} already exists|duplicate table'),
+        ('ENCODING', r'invalid byte sequence|character [^\n]{0,200} has no equivalent|encoding mismatch|conversion between[^\n]{0,200}encoding'),
+        ('MEMORY', r'out of memory|cannot allocate memory|memory exhausted|could not resize shared memory'),
+        ('PRIVATE_CONNECTION', r'could not connect to server|connection (?:refused|timed out)|connection to server[^\n]{0,200}failed|server closed[^\n]{0,200}connection'),
+    ]
+    return next((category for category, pattern in patterns if re.search(pattern, text)), 'UNKNOWN')
+
+
 class PrivatePostgres:
     def __init__(self, root):
         self.root = pathlib.Path(root)
@@ -81,7 +112,12 @@ class PrivatePostgres:
         result = subprocess.run(args, timeout=300, env=self.env, **(self.user or {}), stderr=subprocess.PIPE, **options)
         if result.returncode:
             # Do not expose row values, SQL, archive paths or credentials.
-            raise ValueError('Private PostgreSQL command failed: ' + pathlib.Path(args[0]).name)
+            command = pathlib.Path(str(args[0])).name
+            if command not in PRIVATE_POSTGRES_COMMANDS:
+                command = 'UNKNOWN_COMMAND'
+            code = result.returncode if type(result.returncode) is int and -255 <= result.returncode <= 255 else -1
+            category = private_command_failure_category(result.stderr)
+            raise PrivatePostgresCommandError(command, code, category)
         return result
 
     def __enter__(self):

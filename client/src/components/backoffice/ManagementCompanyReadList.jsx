@@ -1,6 +1,7 @@
 import React from 'react';
 // Native management field labels and values, isolated from editor/bootstrap hooks.
 const columns={
+ 'banks.read':[['internalCode','Εσωτ. κωδ'],['name','Ονομασία'],['accountingAccount','Λογ. Λογιστικής'],['auxiliaryName','Βοηθητική ονομασία'],['active','Ενεργή']],
  'expense-categories.read':[['description','Περιγραφή'],['usageCount','Χρήσεις'],['active','Ενεργή']],
  'customer-categories.read':[['description','Περιγραφή'],['selectable','Με επιλογή'],['allowCredit','Με πίστωση'],['saleAtCostOrWholesale','Πώληση στην αγορά ή χονδρική'],['deferred','Ετεροχρονισμένη'],['usageCount','Χρήσεις'],['active','Ενεργή']],
  'professions.read':[['code','Κωδ'],['description','Περιγραφή'],['customerCount','Πελάτες'],['active','Ενεργό']],

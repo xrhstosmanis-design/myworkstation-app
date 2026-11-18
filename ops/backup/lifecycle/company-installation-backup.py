@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 import uuid
 from worker import run, query, s3, file_sha
-from verify_restore import compact, PrivatePostgres
+from verify_restore import compact, PrivatePostgres, PrivatePostgresCommandError
 from company_source_root import source_root, source_file, verify_runtime_copy
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -267,6 +267,14 @@ def consume_backed_proof(request_envelope, proof_envelope):
     return observed
 
 
+def safe_failure_payload(error):
+    result = {'state': 'REFUSED', 'error': type(error).__name__}
+    if isinstance(error, PrivatePostgresCommandError):
+        safe = PrivatePostgresCommandError(error.command, error.exit_code, error.category)
+        result.update(error='PrivatePostgresCommandError', code='PRIVATE_PG_' + safe.category, command=safe.command, exitCode=safe.exit_code)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description='Inactive company installation backup candidate; no migrations.')
     parser.add_argument('--request')
@@ -298,5 +306,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as error:
-        print(compact({'state': 'REFUSED', 'error': type(error).__name__}), file=__import__('sys').stderr)
+        print(compact(safe_failure_payload(error)), file=__import__('sys').stderr)
         raise SystemExit(1)

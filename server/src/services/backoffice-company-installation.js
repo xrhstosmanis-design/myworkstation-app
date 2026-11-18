@@ -16,6 +16,13 @@ import {validateCompanyInstallationBackupRequest,validateCompanyInstallationBack
 const execute=promisify(execFile),script=fileURLToPath(new URL('../../../ops/backup/lifecycle/company-installation-backup.py',import.meta.url));
 const q=value=>'"'+value.replaceAll('"','""')+'"';
 const fail=(code='COMPANY_INSTALL_REFUSED')=>{throw Object.assign(Error('Company authority installation refused.'),{status:409,code})};
+const backupDiagnosticCategories=new Set(['UNSUPPORTED_SETTING','ARCHIVE_VERSION','PERMISSION','MISSING_ROLE','MISSING_TYPE','COLLATION','DUPLICATE_RELATION','ENCODING','MEMORY','PRIVATE_CONNECTION','UNKNOWN']);
+export function companyInstallationBackupDiagnostic(stderr){
+ if(typeof stderr!=='string'||Buffer.byteLength(stderr)>4096)return null;
+ let value;try{value=JSON.parse(stderr.trim())}catch{return null}
+ if(!value||Array.isArray(value)||Object.keys(value).sort().join(',')!=='code,command,error,exitCode,state'||value.state!=='REFUSED'||value.error!=='PrivatePostgresCommandError'||typeof value.code!=='string'||!value.code.startsWith('PRIVATE_PG_')||!backupDiagnosticCategories.has(value.code.slice(11))||!['initdb','pg_ctl','psql','pg_dump','pg_restore'].includes(value.command)||!Number.isInteger(value.exitCode)||value.exitCode<-255||value.exitCode>255)return null;
+ return value.code;
+}
 const read=name=>JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/'+name,import.meta.url),'utf8'));
 function installerActor(input){
  if(!input||typeof input!=='object'||Array.isArray(input)||![Object.prototype,null].includes(Object.getPrototypeOf(input)))fail('COMPANY_INSTALL_ACTOR_REQUIRED');
@@ -72,7 +79,7 @@ export function createBackofficeCompanyInstallation(db,{sourceRevision,enabled=f
    // Fixed local reviewed program; no caller-supplied executable/SQL/adapter.
    await execute('python3',[script,'--request',request,'--proof',proof,'--output',output,'--authorize-isolated-installation-backup'],{env,maxBuffer:16384,timeout:540000});
    return JSON.parse(await readFile(output,'utf8'));
-  }catch{fail('COMPANY_INSTALL_BACKUP_READBACK_FAILED')}
+  }catch(error){const diagnostic=companyInstallationBackupDiagnostic(error?.stderr);fail(diagnostic?'COMPANY_INSTALL_BACKUP_'+diagnostic:'COMPANY_INSTALL_BACKUP_READBACK_FAILED')}
   finally{await rm(directory,{recursive:true,force:true})}
  }
  return Object.freeze({

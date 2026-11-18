@@ -1,3 +1,4 @@
+import {managementVatExemptions as EXEMPTIONS} from '../lib/management-vat-exemptions.js';
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -9,20 +10,7 @@ const uid=()=>crypto.randomUUID();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 let schemaReady=null;
 
-const EXEMPTIONS=[
-  {code:"7",description:"Χωρίς ΦΠΑ - άρθρο 27 του Κώδικα ΦΠΑ"},
-  {code:"8",description:"Χωρίς ΦΠΑ - άρθρο 29 του Κώδικα ΦΠΑ"},
-  {code:"9",description:"Χωρίς ΦΠΑ - άρθρο 30 του Κώδικα ΦΠΑ"},
-  {code:"10",description:"Χωρίς ΦΠΑ - άρθρο 31 του Κώδικα ΦΠΑ"},
-  {code:"11",description:"Χωρίς ΦΠΑ - άρθρο 32 του Κώδικα ΦΠΑ"},
-  {code:"14",description:"Χωρίς ΦΠΑ - άρθρο 33 του Κώδικα ΦΠΑ"},
-  {code:"15",description:"Χωρίς ΦΠΑ - άρθρο 44 του Κώδικα ΦΠΑ"},
-  {code:"16",description:"Χωρίς ΦΠΑ - άρθρο 45 του Κώδικα ΦΠΑ"},
-  {code:"17",description:"Χωρίς ΦΠΑ - άρθρο 47 του Κώδικα ΦΠΑ"},
-  {code:"18",description:"Χωρίς ΦΠΑ - άρθρο 48 του Κώδικα ΦΠΑ"},
-  // AADE myDATA API v1.0.11, VAT exemption table: other VAT exemptions.
-  {code:"27",description:"Λοιπές Εξαιρέσεις ΦΠΑ"}
-];
+
 
 function requireAccess(req,res,next){
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Τα Τμήματα ΦΠΑ είναι διαθέσιμα μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
