@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {nativeCompanyOwnerReportSeedPlan} from './fixtures/backoffice-company-owner-reports-native.mjs';
 import {nativeCompanyConfigurationSeedPlan} from './fixtures/backoffice-company-configuration-native.mjs';
 import {nativeCompanyPartyReportSeedPlan} from './fixtures/backoffice-company-party-reports-native.mjs';
 import {nativeLegacyStoreReportSeedPlan} from './fixtures/backoffice-store-reports-legacy-native.mjs';
@@ -20,6 +21,7 @@ function validateSeedPlan(plan){
    else if(type.startsWith('numeric')||type==='double precision')assert.ok(typeof value==='number'&&Number.isFinite(value),`${table}.${name} finite numeric`);
    else if(type==='jsonb'||type==='json'){assert.ok(typeof value==='object'&&!(value instanceof Date),`${table}.${name} JSON`);assert.equal(typeof JSON.stringify(value),'string')}
    else if(type.startsWith('timestamp'))assert.ok(value instanceof Date&&Number.isFinite(value.getTime()),`${table}.${name} timestamp`);
+   else if(/^"[^"]+"$/.test(type)){const definition=metadata.enums.find(e=>e.name===type.slice(1,-1));assert.ok(definition,`Unknown enum ${type}`);assert.ok(definition.labels.includes(value),`${table}.${name} valid enum label`)}
    else assert.fail(`Unreviewed seed type ${table}.${name}: ${type}`);
   }
   for(const column of columns.filter(c=>mode==='INSERT'&&c.required&&c.default===null))assert.ok(Object.hasOwn(row,column.name),`Missing required ${table}.${column.name}`);
@@ -45,3 +47,5 @@ test('STORE74 legacy eight-column financial seed plan passes metadata preflight 
 test('COMPANY36 party-report financial seeds obey actual schema nullable/default rules',()=>{const plan=nativeCompanyPartyReportSeedPlan();assert.equal(plan.length,23);validateSeedPlan(plan);assert.ok(plan.some(({row})=>row.totalGross===-30));assert.ok(plan.some(({row})=>row.amount===0));});
 
 test('COMPANY53 configuration seed plan validates every JSON, terminal type and explicit nullable/default column',()=>{const plan=nativeCompanyConfigurationSeedPlan();validateSeedPlan(plan);assert.ok(plan.length>20);assert.ok(plan.some(e=>e.mode==='UPDATE'&&e.table==='Company'));assert.ok(plan.some(e=>e.table==='ManagementParameters'));});
+
+test('COMPANY61 owner-report seed plan matches actual schema including real employee enum labels and nullable financial columns',()=>{const plan=nativeCompanyOwnerReportSeedPlan();validateSeedPlan(plan);assert.ok(plan.length>30);const employee=plan.find(e=>e.table==='Employee');assert.throws(()=>validateSeedPlan([{...employee,row:{...employee.row,type:'INVALID_EMPLOYEE_TYPE'}}]),/valid enum label/);assert.ok(plan.some(e=>e.table==='MasterProduct'&&e.row.defaultCostPrice===0));});

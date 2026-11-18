@@ -1,7 +1,8 @@
+import {companyOwnerReportFilters,readCompanyOwnerReport} from './backoffice-staff-company-owner-reports.js';
 import {companyConfigurationFilters,readCompanyConfiguration} from './backoffice-staff-company-configuration.js';
 import {companyReportFilters,readCompanyReports} from './backoffice-staff-company-reports.js';
 import {PERSONNEL_BASIC,resolvePersonnelPackageStates} from '../personnel-packages.js';
-import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies,companyConfigurationRequest} from '../../../shared/backoffice-staff-company.mjs';
+import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies,companyConfigurationRequest,companyOwnerReportRequest} from '../../../shared/backoffice-staff-company.mjs';
 import {readCompanyCommerceData} from './backoffice-staff-company-commerce.js';
 import {managementVatExemptions} from '../lib/management-vat-exemptions.js';
 import {liveStaff,staffError} from './backoffice-staff-access.js';
@@ -28,7 +29,7 @@ export async function requireStaffCompanyGrant(db,user,capability){
   const now=new Date();if(![...grouped.values()].some(rows=>resolvePersonnelPackageStates(rows,now).states[PERSONNEL_BASIC].effectiveActive))throw staffError(403,'MODULE_DISABLED');
  }else {
   const module=staffCompanyModules[capability];
-  const nativeFree=['reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','license-status.read'];
+  const nativeFree=['reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','license-status.read','audit-events.read'];
   if(module===null){if(!nativeFree.includes(capability))throw staffError(403,'MODULE_DISABLED')}
   else if(typeof module!=='string'||!license.activeModules?.includes(module))throw staffError(403,'MODULE_DISABLED');
  }
@@ -41,6 +42,7 @@ export async function requireStaffCompanyGrant(db,user,capability){
  return {capability,companyId:account.companyId,revision:account.revision};
 }
 function validCompanyQuery(query,capability,path){
+ const ownerReport=companyOwnerReportRequest('GET',path);if(ownerReport){try{companyOwnerReportFilters(query||{},ownerReport);return true}catch{return false}}
  const config=companyConfigurationRequest('GET',path);if(config){try{companyConfigurationFilters(query||{},config);return true}catch{return false}}
  if(capability?.startsWith('reports-')){try{companyReportFilters(query,capability,path);return true}catch{return false}}
  if(query!==undefined&&(!query||typeof query!=='object'||Array.isArray(query)))return false;
@@ -63,6 +65,8 @@ export async function readStaffCompanyDirectory(db,req){
  if(!capability||req.user?.staffAccess!==true||req.staffCompanyGrant?.capability!==capability||req.staffCompanyGrant.companyId!==req.user.companyId)throw staffError();
  await enforceStaffCompanyRequest(db,req);
  const companyId=req.user.companyId;
+ const ownerReport=companyOwnerReportRequest(req.method,String(req.originalUrl||req.path||'').split('?')[0]);
+ if(ownerReport){const data=await readCompanyOwnerReport(db,companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{});const after=await requireStaffCompanyGrant(db,req.user,capability);if(after.revision!==req.staffCompanyGrant.revision)throw staffError();return data}
  const configuration=companyConfigurationRequest(req.method,String(req.originalUrl||req.path||'').split('?')[0]);
  if(configuration){
   const data=await readCompanyConfiguration(db,companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{});

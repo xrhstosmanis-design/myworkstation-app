@@ -618,3 +618,8 @@ CENTRAL-BACKOFFICE-ACCESS-01, baselinebc98004e/locala9d6f2b4/treec41b7483. Sourc
 
 
 18/11/2026 — No5 συγχρονισμός main8a9c4333 μόνο τεκμηρίωσης. Διατηρήθηκαν όλες οι προσθήκες Netlink και No5, ίδιο runtime COMPANY53/STORE74 χωρίς νέα ανθρώπινη δοκιμή. [Checkpoint](CHANGES/2026-11-18-no5-main-documentation-sync.md).
+
+
+## 18/11/2026 — No5 οκτώ αρχικές/οικονομικές εταιρικές προβολές / AWAITING CI
+
+CENTRAL-BACKOFFICE-ACCESS-01, baselineaac5fb26/locale4e0601/tree84a2f6ec. Source74STORE+61COMPANY, canonicaldashboard/Master/shift/payments/businesspicture/audit καιδύοCASHCONTROL-onlyselectors. Metadataauditreadonly, privateJSONsearchdenied, ιστορικάSQLhashesδιατηρημένα· publicrecorderutilityκαιnavsearch/scroll. Τελική104fileσουίτα517PASS/25nativeSKIP/0FAIL+build42.04PASS. Προηγούμενοaligned53main6417PASS/0FAIL/1SKIP+8/8E2E καιactual17BASE/CAPTUREPASS, Wallet/ChatSUCCESS· αρχικό7ddcancellednotPASS. Νέο44rowseed/native61helperκαιenum-awaremetadata preflight, actual61CIεκκρεμεί. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-owner-reports.md).

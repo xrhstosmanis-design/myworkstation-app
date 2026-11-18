@@ -69,13 +69,12 @@ function range(query){
   const now=new Date();const from=query.from?greeceRangeDate(query.from):greeceMonthStart(now);const to=query.to?greeceRangeDate(query.to,true):now;
   if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const error=new Error("Μη έγκυρο διάστημα ημερομηνιών.");error.status=400;throw error}return {from,to};
 }
-async function assertStore(companyId,storeId){if(!storeId)return null;const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα.");error.status=404;throw error}return store}
+async function assertStore(companyId,storeId,{db=prisma}={}){if(!storeId)return null;const store=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα.");error.status=404;throw error}return store}
 
 router.use(requireOwner);
-router.get("/report",async(req,res,next)=>{
-  try{
-    await ensureSchema();const query=querySchema.parse(req.query||{}),{from,to}=range(query),companyId=req.user.companyId,storeId=query.storeId||null,status=query.status,q=query.q||null;
-    await assertStore(companyId,storeId);
+export async function readOwnerShiftReport(scopeCompanyId,rawQuery,{db=prisma}={}){
+ const prisma=db;const query=querySchema.parse(rawQuery||{}),{from,to}=range(query),companyId=scopeCompanyId,storeId=query.storeId||null,status=query.status,q=query.q||null;
+    await assertStore(companyId,storeId,{db:prisma});
     const stores=await prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}});
     const rows=await prisma.$queryRaw`
       SELECT s.*,st."name" AS "storeName",
@@ -101,19 +100,19 @@ router.get("/report",async(req,res,next)=>{
     `;
     const shifts=rows.map(normalizeShift);
     const summary=shifts.reduce((a,row)=>{a.count++;if(row.status==="OPEN")a.open++;else a.closed++;a.cashSales+=n(row.cashSales);a.cardSales+=n(row.cardSales);a.eftpos+=n(row.eftposTotal);a.expenses+=n(row.expenses);a.variance+=n(row.variance);a.openingVariance+=n(row.openingVariance);a.cardVariance+=n(row.cardVariance);a.alerts+=(Math.abs(n(row.variance))>.009?1:0)+(Math.abs(n(row.openingVariance))>.009?1:0)+(Math.abs(n(row.cardVariance))>.009?1:0)+n(row.reversedCount);return a},{count:0,open:0,closed:0,cashSales:0,cardSales:0,eftpos:0,expenses:0,variance:0,openingVariance:0,cardVariance:0,alerts:0});
-    res.json({generatedAt:new Date().toISOString(),from,to,stores,summary,shifts});
-  }catch(error){next(error)}
-});
+    return ({generatedAt:new Date().toISOString(),from,to,stores,summary,shifts});
 
-router.get("/:sessionId/detail",async(req,res,next)=>{
-  try{
-    await ensureSchema();const companyId=req.user.companyId;
+}
+router.get("/report",async(req,res,next)=>{try{await ensureSchema();res.json(await readOwnerShiftReport(req.user.companyId,req.query||{}))}catch(error){next(error)}});
+
+export async function readOwnerShiftDetail(scopeCompanyId,sessionId,{db=prisma}={}){
+ const prisma=db;const companyId=scopeCompanyId;
     const shiftRows=await prisma.$queryRaw`
       SELECT s.*,st."name" AS "storeName",EXTRACT(EPOCH FROM (COALESCE(s."closedAt",NOW())-s."openedAt"))/60 AS "durationMinutes"
       FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId"
-      WHERE s."id"=${req.params.sessionId} AND s."companyId"=${companyId} LIMIT 1
+      WHERE s."id"=${sessionId} AND s."companyId"=${companyId} LIMIT 1
     `;
-    const shift=shiftRows[0]?normalizeShift(shiftRows[0]):null;if(!shift)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια."});
+    const shift=shiftRows[0]?normalizeShift(shiftRows[0]):null;if(!shift)throw Object.assign(new Error("Δεν βρέθηκε η βάρδια."),{status:404});
     // A time window can overlap another terminal's shift. Resolve each sale's
     // original session instead; mixed payment rows must not multiply sales.
     // Conflicting valid session evidence is excluded rather than guessed.
@@ -178,9 +177,10 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
       formula:"Διαφορά = Πραγματικό λειτουργικό κλείσιμο − Αναμενόμενο λειτουργικό κλείσιμο"
     };
     const alerts=[];if(Math.abs(difference.openingVariance)>.009)alerts.push({kind:"OPENING_VARIANCE",amount:difference.openingVariance,label:"Διαφορά έναρξης"});if(Math.abs(difference.cardVariance)>.009)alerts.push({kind:"CARD_VARIANCE",amount:difference.cardVariance,label:"Διαφορά Καρτών − EFTPOS"});if(Math.abs(difference.variance)>.009)alerts.push({kind:"CLOSING_VARIANCE",amount:difference.variance,label:"Διαφορά κλεισίματος"});for(const row of transactions.filter(row=>row.reversedAt))alerts.push({kind:"REVERSAL",amount:n(row.amount),label:`Αντιλογισμός: ${row.auditDescription||row.description||row.type}`,transactionId:row.id});for(const item of shift.duplicateReview||[])alerts.push({kind:"DUPLICATE_REVIEW",amount:n(item.total),label:"Πιθανή διαδοχική ίδια πώληση για έλεγχο",detail:item});
-    res.json({shift,transactions,categories,paymentMethods,sales,difference,alerts,sourceStatus:{vatFiscal:false,note:"Η ανάλυση Τμήματος ΦΠΑ παραμένει κλειδωμένη μέχρι πραγματική φορολογική πηγή/Connector."}});
-  }catch(error){next(error)}
-});
+    return ({shift,transactions,categories,paymentMethods,sales,difference,alerts,sourceStatus:{vatFiscal:false,note:"Η ανάλυση Τμήματος ΦΠΑ παραμένει κλειδωμένη μέχρι πραγματική φορολογική πηγή/Connector."}});
+
+}
+router.get("/:sessionId/detail",async(req,res,next)=>{try{await ensureSchema();res.json(await readOwnerShiftDetail(req.user.companyId,req.params.sessionId))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 router.post("/:sessionId/force-close",async(req,res,next)=>{
   try{

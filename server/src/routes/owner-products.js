@@ -10,6 +10,23 @@ import {createScopedPromotionBatch} from "./price-catalog-promotion-guard.js";
 import {parsePromotionDate} from "../promotion-time.js";
 import {requireCompanyModule as defaultRequireCompanyModule} from "../middleware/module-access.js";
 
+export async function readOwnerMasterCatalog(companyId,q,{db=prisma}={}){
+ if(q.length<2)return [];const like=`%${q}%`;
+    const rows=await db.$queryRaw`
+      SELECT mp."id",mp."sourceCode",mp."name",mp."categoryName",mp."subcategoryName",mp."supplierName",mp."brandName",
+             mp."defaultRetailPrice",mp."defaultCostPrice",mp."vatRate",mp."vatVerified",
+             COALESCE(json_agg(mb."barcode") FILTER (WHERE mb."barcode" IS NOT NULL AND mb."scanEnabled"=true),'[]') AS "safeBarcodes",
+             COUNT(mb."barcode") FILTER (WHERE mb."duplicateBarcode"=true)::int AS "duplicateBarcodeCount",
+             p."id" AS "companyProductId"
+      FROM "MasterProduct" mp
+      LEFT JOIN "MasterProductBarcode" mb ON mb."masterProductId"=mp."id"
+      LEFT JOIN "Product" p ON p."companyId"=${companyId} AND p."masterProductId"=mp."id"
+      WHERE mp."active"=true AND (mp."name" ILIKE ${like} OR mp."sourceCode" ILIKE ${like} OR mb."barcode" ILIKE ${like})
+      GROUP BY mp."id",p."id"
+      ORDER BY mp."name" LIMIT 100`;
+ return rows;
+}
+
 export function createOwnerProductsRouter({db=prisma,scope=null}={}){
 const prisma=db;
 const scopedStoreId=scope?.storeId||null;
@@ -47,19 +64,7 @@ router.get("/master",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
     const company=companyId(req);
     const q=String(req.query.q||"").trim();
     if(q.length<2)return res.json([]);
-    const like=`%${q}%`;
-    const rows=await prisma.$queryRaw`
-      SELECT mp."id",mp."sourceCode",mp."name",mp."categoryName",mp."subcategoryName",mp."supplierName",mp."brandName",
-             mp."defaultRetailPrice",mp."defaultCostPrice",mp."vatRate",mp."vatVerified",
-             COALESCE(json_agg(mb."barcode") FILTER (WHERE mb."barcode" IS NOT NULL AND mb."scanEnabled"=true),'[]') AS "safeBarcodes",
-             COUNT(mb."barcode") FILTER (WHERE mb."duplicateBarcode"=true)::int AS "duplicateBarcodeCount",
-             p."id" AS "companyProductId"
-      FROM "MasterProduct" mp
-      LEFT JOIN "MasterProductBarcode" mb ON mb."masterProductId"=mp."id"
-      LEFT JOIN "Product" p ON p."companyId"=${company} AND p."masterProductId"=mp."id"
-      WHERE mp."active"=true AND (mp."name" ILIKE ${like} OR mp."sourceCode" ILIKE ${like} OR mb."barcode" ILIKE ${like})
-      GROUP BY mp."id",p."id"
-      ORDER BY mp."name" LIMIT 100`;
+    const rows=await readOwnerMasterCatalog(company,q,{db:prisma});
     res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
     res.setHeader("Pragma","no-cache");
     res.setHeader("Expires","0");
