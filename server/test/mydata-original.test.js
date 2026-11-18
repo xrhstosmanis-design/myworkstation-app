@@ -25,6 +25,25 @@ test("provider adapter rejects arbitrary hosts, credentials, redirects targets a
   for(const url of [base.replace("https:","http:"),base.replace("einvoice.impact.gr","127.0.0.1"),base.replace("einvoice.impact.gr","einvoice.impact.gr.evil.test"),base.replace("//","//user:pass@"),base+"?redirect=evil",base.replace("099999999","088888888")])assert.throws(()=>originalDownloadUrl(`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`,row.issuerVat));
   assert.throws(()=>originalDownloadUrl("<qrCodeUrl>https://mydatapi.aade.gr</qrCodeUrl>",row.issuerVat),/δεν έχει/);
 });
+test("Epsilon Digital original uses a restricted provider URL and verifies PDF identity", async () => {
+  const original = "https://epsilondigital.epsilonnet.gr/fd/" + "a".repeat(32) + ":8";
+  const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
+  const epsilonRow = {...row, rawPayload: {xml: xml(original)}};
+  assert.equal(originalDownloadUrl(xml(original), row.issuerVat), original + "/pdf");
+  for (const url of [original + "?redirect=1", original.replace(".gr/", ".gr.example/"), original.replace("/fd/", "/other/")]) {
+    assert.throws(() => originalDownloadUrl(xml(url), row.issuerVat));
+  }
+  const bytes = Buffer.from("%PDF-" + "x".repeat(110));
+  const fetchPdf = async (url, options) => {
+    assert.equal(url, original + "/pdf");
+    assert.equal(options.redirect, "error");
+    return new Response(bytes, {headers: {"content-type": "application/pdf"}});
+  };
+  const text = "099999999 088888888 400000000000001 42";
+  const result = await fetchOriginalPdf(epsilonRow, fetchPdf, async () => ({text, pageCount: 1}));
+  assert.deepEqual(result.bytes, bytes);
+  await assert.rejects(fetchOriginalPdf(epsilonRow, fetchPdf, async () => ({text: text.replace(row.mark, "0"), pageCount: 1})), /δεν επιβεβαιώνει/);
+});
 test("download accepts bounded real PDF bytes only and verifies invoice identity",async()=>{
   const bytes=Buffer.from("%PDF-"+ "x".repeat(110)),text="099999999 088888888 400000000000001 42";
   const reader=async()=>({text,pageCount:1});
