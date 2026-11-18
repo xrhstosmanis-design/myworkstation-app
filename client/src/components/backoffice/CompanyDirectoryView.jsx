@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import BackofficeStores from './BackofficeStores.jsx';
+import CompanyRoleRegistryReadView from './CompanyRoleRegistryReadView.jsx';
 import CompanyBusinessReadView from './CompanyBusinessReadView.jsx';
 import CompanyCatalogReadView from './CompanyCatalogReadView.jsx';
 import ManagementCompanyReadList from './ManagementCompanyReadList.jsx';
@@ -32,6 +33,7 @@ export default function CompanyDirectoryView(props){
  const [supplier,setSupplier]=useState(null);const own=JSON.stringify([props.companyId,props.capability,props.authorityKey]);
  const detailsAllowed=Array.isArray(props.companyCapabilities)&&props.companyCapabilities.includes('supplier-details.read');
  const selected=detailsAllowed&&supplier?.own===own&&supplier.api===props.api?supplier.id:'';
+ if(props.capability==='workforce-role-registry.read')return <CompanyRoleRegistryReadView {...props}/>;
  if(['company-products.read','purchases.read','recipes.read','supplier-details.read'].includes(props.capability))return <CompanyBusinessReadView {...props}/>;
  if(['categories.read','vat-departments.read','product-companies.read'].includes(props.capability))return <CompanyCatalogReadView {...props}/>;
  return <><CompanySimpleDirectoryView {...props} onOpenSupplier={props.capability==='suppliers.read'&&detailsAllowed?id=>setSupplier({own,api:props.api,id}):undefined}/>{props.capability==='suppliers.read'&&selected&&<section aria-label="Οικονομική καρτέλα προμηθευτή"><button type="button" onClick={()=>setSupplier(null)}>Κλείσιμο οικονομικής καρτέλας</button><CompanyBusinessReadView key={selected} {...props} capability="supplier-details.read" initialSupplierId={selected}/></section>}</>;

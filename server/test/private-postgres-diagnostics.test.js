@@ -106,6 +106,39 @@ print(json.dumps(payloads))`;
  assert.equal(companyInstallationBackupDiagnostic(JSON.stringify({state:'REFUSED',error:'PrivatePostgresCommandError',code:'PRIVATE_PG_SQLSTATE_SECRT_UNKNOWN',command:'pg_restore',exitCode:1})),null);
 });
 
+test('22023 details expose only fixed setting, server-template or statement-family constants',()=>{
+ const script=String.raw`import sys,json,pathlib,tempfile,importlib.util
+sys.path.insert(0,'ops/backup/lifecycle')
+import verify_restore
+spec=importlib.util.spec_from_file_location('diag22023','ops/backup/lifecycle/company-installation-backup.py');producer=importlib.util.module_from_spec(spec);spec.loader.exec_module(producer)
+canary=json.load(sys.stdin)['canary'];payloads=[]
+templates={'SETTING_NAME':'unrecognized parameter "'+canary+'"','SETTING_CONTEXT':'parameter "'+canary+'" cannot be changed now','SEQUENCE_BOUNDS':'setval: value 0 is out of bounds for sequence "'+canary+'"','SEQUENCE_OPTIONS':'START value cannot be less than MINVALUE','LOCALE':'could not create locale "'+canary+'"','JSON_ARGUMENT':'cannot get array length of a scalar','STORAGE_OPTION':'unrecognized option "'+canary+'"','EXTENSION_OPTION':'extension "'+canary+'" has no update script'}
+operations={'SET':'SET '+canary+' = 1','CREATE_COLLATION':'CREATE COLLATION "'+canary+'"','CREATE_FUNCTION':'CREATE OR REPLACE FUNCTION "'+canary+'"','CREATE_INDEX':'CREATE UNIQUE INDEX "'+canary+'"','CREATE_TABLE':'CREATE TABLE "'+canary+'"','ALTER_TABLE':'ALTER TABLE "'+canary+'"','COPY':'COPY "'+canary+'"','SELECT_SETVAL':'SELECT pg_catalog.setval(\''+canary+'\',0)','SELECT_SET_CONFIG':'SELECT pg_catalog.set_config(\''+canary+'\',\'secret\',false)'}
+operations.update({name:name.replace('_',' ')+(' ON ' if name=='COMMENT' else ' ')+canary for name in ['CREATE_SCHEMA','CREATE_SEQUENCE','ALTER_SEQUENCE','CREATE_EXTENSION','ALTER_TYPE','CREATE_TYPE','CREATE_TRIGGER','COMMENT','GRANT','ALTER_FUNCTION','ALTER_DATABASE']})
+cases=[]
+for name in verify_restore.PRIVATE_22023_SETTINGS: cases.append(('SQLSTATE_22023_SETTING_'+name.upper(),'invalid value for parameter "'+name+'": "'+canary+'"',''))
+for name,message in templates.items(): cases.append(('SQLSTATE_22023_'+name,message,''))
+cases.append(('SQLSTATE_22023_SETTING_VALUE','invalid value for parameter "'+canary+'": "secret"',''))
+for name,statement in operations.items(): cases.append(('SQLSTATE_22023_OPERATION_'+name,canary,'STATEMENT: '+statement))
+assert {expected for expected,_,_ in cases}==verify_restore.PRIVATE_22023_CATEGORIES
+with tempfile.TemporaryDirectory() as directory:
+ logfile=pathlib.Path(directory)/'postgres.log'
+ for expected,primary,statement in cases:
+  logfile.write_text('2026-11-18 12:00:00 UTC [123] ERROR:  22023: '+primary+'\nLOCATION: internal_private_name\n'+statement+'\n')
+  category=verify_restore.private_server_log_category(logfile)
+  assert category==expected,(category,expected)
+  payload=producer.safe_failure_payload(verify_restore.PrivatePostgresCommandError('pg_restore',1,category));assert canary not in json.dumps(payload);payloads.append(payload)
+ logfile.write_text('2026-11-18 12:00:00 UTC [123] ERROR:  22023: '+canary+'\nSTATEMENT: '+canary+'\n')
+ assert verify_restore.private_server_log_category(logfile)=='SQLSTATE_22023_INVALID_PARAMETER_VALUE'
+ logfile.write_text('2026-11-18 12:00:00 UTC [123] ERROR:  SECRT: '+canary+'\nSTATEMENT: SET '+canary+'=1\n')
+ assert verify_restore.private_server_log_category(logfile)=='UNKNOWN'
+print(json.dumps(payloads))`;
+ const result=spawnSync('python3',['-c',script],{cwd:root,encoding:'utf8',input:JSON.stringify({canary}),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},timeout:10000,maxBuffer:20000});
+ assert.equal(result.status,0,(result.stderr||result.stdout).slice(-3000));const payloads=JSON.parse(result.stdout);assert.equal(payloads.length,50);
+ for(const payload of payloads)assert.equal(companyInstallationBackupDiagnostic(JSON.stringify(payload)),payload.code);
+ assert.doesNotMatch(result.stdout,/PRIVATE_PERSON|STATEMENT:|LOCATION:|private_name|secret|SECRT/);
+});
+
 test('installer accepts only strict known diagnostic JSON and never reflects arbitrary stderr or extra data',()=>{
  for(const[category]of cases){const payload={state:'REFUSED',error:'PrivatePostgresCommandError',code:'PRIVATE_PG_'+category,command:'pg_restore',exitCode:1};assert.equal(companyInstallationBackupDiagnostic(JSON.stringify(payload)),payload.code)}
  const valid={state:'REFUSED',error:'PrivatePostgresCommandError',code:'PRIVATE_PG_UNKNOWN',command:'pg_restore',exitCode:1};

@@ -15,6 +15,7 @@ import {provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js
 import {provisionMonthlyInventorySnapshotSchema} from '../src/services/monthly-inventory-snapshot-schema.js';
 import {provisionMonthlyInventoryCaptureSchema} from '../src/services/monthly-inventory-capture-schema.js';
 import {createLifecycleInstallationCore} from '../src/services/store-lifecycle-executor.js';
+import {verifyNativeSalesAndCompanyRoles} from './fixtures/backoffice-staff-sales-native.mjs';
 import {verifyNativeWorkforceReads} from './fixtures/backoffice-staff-workforce-native.mjs';
 import {verifyInstalledCompanyRuntime} from './fixtures/backoffice-company-installed-runtime.mjs';
 import {createBackofficeCompanyInstallation} from '../src/services/backoffice-company-installation.js';
@@ -123,5 +124,6 @@ for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installa
   const replay=await f.service.install(actor,{...input,packet:fresh.packet});assert.equal(replay.idempotentReplay,true);assert.equal((await f.db.$queryRawUnsafe(`SELECT 1 FROM "BackofficeStaffAudit" WHERE "event"='COMPANY_AUTHORITY_SCHEMA_INSTALLED'`)).length,2);
   await verifyInstalledCompanyRuntime({db:f.db,profile,revision,secret,planHash:f.service.describe().targetPlanHash});
   await verifyNativeWorkforceReads({db:f.db});
+  await verifyNativeSalesAndCompanyRoles({db:f.db,profile,revision,secret});
  }finally{await f.close()}
 });

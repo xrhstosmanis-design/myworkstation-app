@@ -566,3 +566,8 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 ## 18/11/2026 — No5 workforce settings, source candidate / AWAITING CI
 
 CENTRAL-BACKOFFICE-ACCESS-01 retains ownership. Baseline remote22f8fffc/local885e3af; native15BASE/CAPTURE acceptance passed but mainCI44288331027 failed one Greek time format policy, separatewallet44288331019 stillFAIL. Four scoped workforce read rights (57STORE=39reads18actions), bounded pureUI/live grants/modules/revision; frozen29-file cohort175PASS/8nativePG-or-DockerSKIP/0FAIL andclientbuildPASS; all Owner scope remainsOPEN. Checkpoint [2026-11-18-no5-workforce-settings](CHANGES/2026-11-18-no5-workforce-settings.md). No production or human acceptance; tests at final combined session.
+
+
+## 18/11/2026 — No5 full company roles and two sales readers / AWAITING CI
+
+Retained CENTRAL-BACKOFFICE-ACCESS-01 owner; baseline21ad4230/local40fff12 tree39be6363. New59STORE(41reads18actions)+16COMPANY source: full licensed company role registry, scoped unsold and journal reads. Final32-file cohort188PASS/10nativePG-or-DockerSKIP/0FAIL, clientbuildPASS; native3 fixture added toBASE/CAPTURE, actual acceptance pending. Dedicatedwallet44292095077 hostrestore now actualSQLSTATE22023, not fixed; strict50constant subdiagnostics without rawlogs added and20hashes refreshed. Current57mainCI44292095096 andChat44292095037 SUCCESS; actualBASE/CAPTURE4workforce+15COMPANY andnativeauditnullmerge passed. WholeOwnercoverageOPEN; one final human session, no production actions. [Checkpoint](CHANGES/2026-11-18-no5-company-role-and-sales-reads.md).

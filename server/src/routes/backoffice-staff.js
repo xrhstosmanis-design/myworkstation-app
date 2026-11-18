@@ -8,7 +8,7 @@ import {authorizeStaffAdmin,createStaffAccount,updateStaffAccount,verifyStaffLog
 import {periodSchema} from '../services/cash-reconciliation-contract.js';
 import {createCashReconciliationRepository} from '../services/cash-reconciliation-repository.js';
 import {isBackofficeCompanyInstalled} from '../services/backoffice-company-profile.js';
-import {companyAuthorityDescription,readStaffCompanyPolicy} from '../services/backoffice-staff-company.js';
+import {companyAuthorityDescription,readStaffCompanyPolicy,readStaffCompanyDirectory} from '../services/backoffice-staff-company.js';
 
 const failure=(res,error)=>{
   if(error?.name==='ZodError')return res.status(400).json({error:'Έλεγξε username, κωδικό, PIN και δικαιώματα.',code:'STAFF_INVALID_INPUT'});
@@ -66,6 +66,7 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     res.json(result.session);
   }catch(error){failure(res,error)}});
   router.use(authenticate);
+ router.get('/company/workforce-roles',async(req,res)=>{try{res.json(await readStaffCompanyDirectory(db,req))}catch(error){failure(res,error)}});
   router.get('/me',async(req,res)=>{try{
     const account=await liveStaff(db,req.user);
     const companyInstalled=await isBackofficeCompanyInstalled(db);

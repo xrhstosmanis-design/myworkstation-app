@@ -3,6 +3,8 @@
 // STORE rights cannot authorize COMPANY operations. Existing persisted rights
 // stay unchanged; adding a catalogue entry never grants access automatically.
 export const backofficeFunctionCatalogue=Object.freeze([
+ {key:"unsold-products",label:"Απούλητα είδη καταστήματος",scope:"STORE",actions:["read"]},
+ {key:"sales-journal",label:"Ημερολόγιο πωλήσεων καταστήματος",scope:"STORE",actions:["read"]},
   {key:"workforce-roles",label:"Ρόλοι σχετικοί με το κατάστημα",scope:"STORE",actions:["read"]},
   {key:"workforce-rules",label:"Κανόνες προσωπικού καταστήματος",scope:"STORE",actions:["read"]},
   {key:"shift-templates",label:"Πρότυπα βαρδιών καταστήματος",scope:"STORE",actions:["read"]},

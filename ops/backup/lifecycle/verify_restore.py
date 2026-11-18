@@ -78,7 +78,42 @@ PRIVATE_SQLSTATE_CATEGORIES = {
     '58P01': 'SQLSTATE_58P01_UNDEFINED_FILE', '42P16': 'SQLSTATE_42P16_INVALID_TABLE_DEFINITION',
     '42P17': 'SQLSTATE_42P17_INVALID_OBJECT_DEFINITION', '42804': 'SQLSTATE_42804_DATATYPE_MISMATCH',
 }
-PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'DUPLICATE_SCHEMA', 'MISSING_SCHEMA', 'MISSING_FUNCTION', 'MISSING_EXTENSION', 'MISSING_RELATION', 'MISSING_COLUMN', 'MISSING_OPERATOR', 'CONSTRAINT', 'SQL_SYNTAX', 'ARCHIVE_IO', 'FILE_IO', 'RESOURCE', 'UNKNOWN'}) | frozenset(PRIVATE_SQLSTATE_CATEGORIES.values())
+PRIVATE_22023_SETTINGS = frozenset({'timezone', 'lc_collate', 'lc_ctype', 'lc_messages', 'lc_monetary', 'lc_numeric', 'lc_time', 'client_encoding', 'server_encoding', 'default_toast_compression', 'default_table_access_method', 'default_tablespace', 'temp_tablespaces', 'session_replication_role', 'xmloption', 'row_security', 'transaction_timeout', 'restrict_nonsystem_relation_kind', 'search_path', 'datestyle', 'extra_float_digits'})
+PRIVATE_22023_OPERATIONS = frozenset({'SET', 'CREATE_COLLATION', 'CREATE_FUNCTION', 'CREATE_INDEX', 'CREATE_TABLE', 'ALTER_TABLE', 'COPY', 'SELECT_SETVAL', 'SELECT_SET_CONFIG', 'CREATE_SCHEMA', 'CREATE_SEQUENCE', 'ALTER_SEQUENCE', 'CREATE_EXTENSION', 'ALTER_TYPE', 'CREATE_TYPE', 'CREATE_TRIGGER', 'COMMENT', 'GRANT', 'ALTER_FUNCTION', 'ALTER_DATABASE'})
+PRIVATE_22023_DETAILS = frozenset({'SETTING_VALUE', 'SETTING_NAME', 'SETTING_CONTEXT', 'SEQUENCE_BOUNDS', 'SEQUENCE_OPTIONS', 'LOCALE', 'JSON_ARGUMENT', 'STORAGE_OPTION', 'EXTENSION_OPTION'})
+PRIVATE_22023_CATEGORIES = (frozenset('SQLSTATE_22023_SETTING_' + name.upper() for name in PRIVATE_22023_SETTINGS)
+    | frozenset('SQLSTATE_22023_' + name for name in PRIVATE_22023_DETAILS)
+    | frozenset('SQLSTATE_22023_OPERATION_' + name for name in PRIVATE_22023_OPERATIONS))
+PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'DUPLICATE_SCHEMA', 'MISSING_SCHEMA', 'MISSING_FUNCTION', 'MISSING_EXTENSION', 'MISSING_RELATION', 'MISSING_COLUMN', 'MISSING_OPERATOR', 'CONSTRAINT', 'SQL_SYNTAX', 'ARCHIVE_IO', 'FILE_IO', 'RESOURCE', 'UNKNOWN'}) | frozenset(PRIVATE_SQLSTATE_CATEGORIES.values()) | PRIVATE_22023_CATEGORIES
+
+
+def private_22023_category(primary, remainder):
+    """Map known server templates/operation families to constants, never text."""
+    setting = re.search(r'invalid value for parameter "([a-z_]+)"', primary.lower())
+    if setting:
+        name = setting.group(1)
+        return 'SQLSTATE_22023_SETTING_' + name.upper() if name in PRIVATE_22023_SETTINGS else 'SQLSTATE_22023_SETTING_VALUE'
+    patterns = [
+        ('SETTING_NAME', r'unrecognized (?:configuration )?parameter'),
+        ('SETTING_CONTEXT', r'parameter .{0,200} cannot be changed|cannot set parameter'),
+        ('SEQUENCE_BOUNDS', r'setval: value .{0,200} is out of bounds'),
+        ('SEQUENCE_OPTIONS', r'(?:minvalue|maxvalue|increment|cache|start value).{0,200}(?:must be|cannot|invalid|out of)'),
+        ('LOCALE', r'invalid locale|could not create locale|invalid collation|collation .{0,200} is incompatible'),
+        ('JSON_ARGUMENT', r'cannot (?:get|call|extract|delete).{0,100}(?:array|object|scalar)|json.{0,100}(?:must be|cannot)'),
+        ('STORAGE_OPTION', r'unrecognized (?:storage )?option|invalid value for .{0,100} option'),
+        ('EXTENSION_OPTION', r'extension .{0,200}(?:version|update script|installation script)'),
+    ]
+    for name, pattern in patterns:
+        if re.search(pattern, primary.lower()):
+            return 'SQLSTATE_22023_' + name
+    statement = re.search(r'\bSTATEMENT:\s+([^\n]{0,100})', remainder)
+    if statement:
+        text = statement.group(1).upper()
+        operations = [('SELECT_SETVAL', r'SELECT\s+(?:PG_CATALOG\.)?SETVAL\s*\('), ('SELECT_SET_CONFIG', r'SELECT\s+(?:PG_CATALOG\.)?SET_CONFIG\s*\('), ('CREATE_COLLATION', r'CREATE\s+COLLATION\b'), ('CREATE_FUNCTION', r'CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\b'), ('CREATE_INDEX', r'CREATE\s+(?:UNIQUE\s+)?INDEX\b'), ('CREATE_TABLE', r'CREATE\s+TABLE\b'), ('ALTER_TABLE', r'ALTER\s+TABLE\b'), ('COPY', r'COPY\b'), ('SET', r'SET\b'), ('CREATE_SCHEMA', r'CREATE\s+SCHEMA\b'), ('CREATE_SEQUENCE', r'CREATE\s+SEQUENCE\b'), ('ALTER_SEQUENCE', r'ALTER\s+SEQUENCE\b'), ('CREATE_EXTENSION', r'CREATE\s+EXTENSION\b'), ('ALTER_TYPE', r'ALTER\s+TYPE\b'), ('CREATE_TYPE', r'CREATE\s+TYPE\b'), ('CREATE_TRIGGER', r'CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\b'), ('COMMENT', r'COMMENT\s+ON\b'), ('GRANT', r'GRANT\b'), ('ALTER_FUNCTION', r'ALTER\s+FUNCTION\b'), ('ALTER_DATABASE', r'ALTER\s+DATABASE\b')]
+        for name, pattern in operations:
+            if re.match(pattern, text):
+                return 'SQLSTATE_22023_OPERATION_' + name
+    return PRIVATE_SQLSTATE_CATEGORIES['22023']
 
 
 class PrivatePostgresCommandError(ValueError):
@@ -141,8 +176,13 @@ def private_server_log_category(logfile, start_offset=0):
             text = sample.decode('utf-8', errors='replace')
     except (OSError, TypeError, ValueError):
         return 'UNKNOWN'
-    codes = re.findall(r'(?m)^\d{4}-\d{2}-\d{2}[^\n]{0,160}\b(?:ERROR|FATAL|PANIC):\s+([A-Z0-9]{5}):', text)
-    return PRIVATE_SQLSTATE_CATEGORIES.get(codes[-1], 'UNKNOWN') if codes else 'UNKNOWN'
+    errors = list(re.finditer(r'(?m)^\d{4}-\d{2}-\d{2}[^\n]{0,160}\b(?:ERROR|FATAL|PANIC):\s+([A-Z0-9]{5}):([^\n]{0,4096})', text))
+    if not errors:
+        return 'UNKNOWN'
+    error = errors[-1]
+    if error.group(1) == '22023':
+        return private_22023_category(error.group(2), text[error.end():])
+    return PRIVATE_SQLSTATE_CATEGORIES.get(error.group(1), 'UNKNOWN')
 
 
 class PrivatePostgres:

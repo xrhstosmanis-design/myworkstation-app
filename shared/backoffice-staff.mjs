@@ -5,8 +5,12 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read','unsold-products.read','sales-journal.read']);
 export const staffPermissionSections=Object.freeze([
+ {key:'sales-extra',label:'Πρόσθετες προβολές πωλήσεων',actions:[
+  {key:'unsold-products.read',label:'Προβολή απούλητων ειδών καταστήματος',description:'Βλέπει τα ενεργά απούλητα είδη του καταστήματος στο επιλεγμένο διάστημα, χωρίς κόστη ή αλλαγές.'},
+  {key:'sales-journal.read',label:'Προβολή ημερολογίου πωλήσεων και οικονομικών στοιχείων',description:'Βλέπει έως 500 κινήσεις με ποσά, πελάτες, ιστορικό χειριστή, πληρωμές και γραμμές, χωρίς ακύρωση ή επιστροφές.'}
+ ]},
   {key:'workforce-settings',label:'Προσωπικό καταστήματος',actions:[
     {key:'workforce-roles.read',label:'Προβολή σχετικών ρόλων καταστήματος',description:'Βλέπει μόνο ρόλους εργαζομένων και προτύπων του επιλεγμένου καταστήματος, με τοπικά πλήθη.'},
     {key:'workforce-rules.read',label:'Προβολή κανόνων προσωπικού καταστήματος',description:'Βλέπει κανόνες των ορατών εργαζομένων του καταστήματος, χωρίς αλλαγές.'},
@@ -138,6 +142,8 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+ if(method==='GET'&&path==='/api/commerce/sales/unsold-products')return 'unsold-products.read';
+ if(method==='GET'&&path==='/api/store-pos/sales/journal')return 'sales-journal.read';
   if(method==='GET'&&/^\/api\/store-chat\/stores\/[^/]+\/messages(?:\/search|\/[^/]+\/attachment)?$/.test(path))return 'chat.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/online-radio$/.test(path))return 'radio.read';
   if(method==='GET'&&['/api/transactions/supplier-settlements/review','/api/transactions/other-expenses/review','/api/transactions/bank-ledger/review'].includes(path))return 'approvals.read';

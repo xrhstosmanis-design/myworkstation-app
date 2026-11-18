@@ -1,8 +1,8 @@
 // Company authority is independent of STORE membership and profile presets.
 // These keys become selectable only after the installed protocol is verified.
 export const staffCompanyProtocol='MWS_BACKOFFICE_COMPANY_V1';
-export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read']);
-export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY'});
+export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read']);
+export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC'});
 export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:'Εταιρικές προβολές',actions:Object.freeze([
   {key:'stores.read',label:'Προβολή καταστημάτων εταιρείας',description:'Βλέπει τον κατάλογο καταστημάτων της εταιρείας, χωρίς ρυθμίσεις ή είσοδο στη διαχείρισή τους.'},
   {key:'suppliers.read',label:'Προβολή προμηθευτών εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας και ΑΦΜ προμηθευτών της εταιρείας, χωρίς πληρωμές ή αλλαγές.'},
@@ -18,6 +18,7 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   {key:'purchases.read',label:'Προβολή πρόσφατων εταιρικών αγορών',description:'Βλέπει μεταδεδομένα έως 300 πρόσφατων αγορών της εταιρείας, χωρίς αρχεία ή εγκρίσεις.'},
   {key:'recipes.read',label:'Προβολή εταιρικών συνταγών και κόστους',description:'Βλέπει συνταγές και διαθέσιμο κόστος εταιρικών συστατικών, χωρίς αλλαγές ή παρασκευή.'},
   {key:'supplier-details.read',requires:['suppliers.read'],label:'Προβολή εταιρικής καρτέλας προμηθευτή',description:'Βλέπει στοιχεία προμηθευτή, έως 200 αγορές και πληρωμές και εκτιμώμενο υπόλοιπο του παραθύρου, χωρίς αλλαγές.'},
+  {key:'workforce-role-registry.read',label:'Προβολή πλήρους εταιρικού καταλόγου ρόλων προσωπικού',description:'Βλέπει όλους τους ρόλους προσωπικού και τα συνολικά εταιρικά πλήθη, εφόσον υπάρχει ενεργό κατάστημα με BASIC προσωπικό.'},
   {key:'customers.read',label:'Προβολή πελατών, υπολοίπων και πιστωτικών ορίων εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας, έκπτωση, οικονομικό υπόλοιπο και πιστωτικό όριο πελατών όλης της εταιρείας, χωρίς κινήσεις ή αλλαγές.'}
 ])}]);
 export function validStaffCompanyCapabilities(value){
@@ -58,5 +59,6 @@ export function staffCompanyRequestCapability(method,path){
   if(path==='/api/commerce/purchases')return 'purchases.read';
   if(path==='/api/commerce/recipes')return 'recipes.read';
   if(staffCompanySupplierId(path)!==null)return 'supplier-details.read';
+  if(path==='/api/backoffice-staff/company/workforce-roles')return 'workforce-role-registry.read';
   return null;
 }
