@@ -243,7 +243,7 @@ export default function PlatformAdminApp(){
     setAiTwinNavigationError("Το κατάστημα δεν είναι πλέον διαθέσιμο. Επίλεξε ξανά κατάστημα στο Full Digital Twin.");setShowAiCommandCenter(true);
   },[data,aiTwinOrigin]);
   const routingFormValues=useMemo(()=>deviceRoutingFormValues(terminalManager?.routing,routingTerminalPos),[terminalManager?.routing,routingTerminalPos]);
-  const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName,routingFormValues.storeTransactionMode,routingFormValues.deliveryTransactionMode].join("|");
+  const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName,routingFormValues.storeTransactionMode,routingFormValues.deliveryTransactionMode,routingFormValues.fiscalActive,routingFormValues.storeEftposActive,routingFormValues.deliveryEftposActive].join("|");
 
   useEffect(()=>{
     if(!readiness)return undefined;
@@ -790,17 +790,21 @@ export default function PlatformAdminApp(){
         <option value="" disabled>Επίλεξε terminal</option>
         {terminalManager.terminals.filter(row=>row.active).map(row=><option key={row.id} value={row.terminalPos}>{row.terminalPos} · {row.displayName}</option>)}
       </select>
+      <label>Κατάσταση ταμειακής<select name="fiscalActive" defaultValue={String(routingFormValues.fiscalActive)} disabled={!routingTerminalPos}><option value="true">Ενεργή</option><option value="false">Ανενεργή</option></select></label>
       <input name="fiscalDeviceCode" defaultValue={routingFormValues.fiscalDeviceCode} placeholder="π.χ. KAT-FISCAL-02" pattern="[A-Za-z0-9_-]+" required disabled={!routingTerminalPos}/>
       <input name="fiscalDisplayName" defaultValue={routingFormValues.fiscalDisplayName} placeholder="π.χ. Ταμειακή 2" required disabled={!routingTerminalPos}/>
       <input name="storeEftposCode" defaultValue={routingFormValues.storeEftposCode} placeholder="π.χ. KAT-EFTPOS-02A" pattern="[A-Za-z0-9_-]+" required disabled={!routingTerminalPos}/>
       <input name="storeEftposName" defaultValue={routingFormValues.storeEftposName} placeholder="EFTPOS καταστήματος" required disabled={!routingTerminalPos}/>
       <input name="deliveryEftposCode" defaultValue={routingFormValues.deliveryEftposCode} placeholder="Προαιρετικό: κωδικός δεύτερου EFTPOS" pattern="[A-Za-z0-9_-]+" disabled={!routingTerminalPos}/>
       <input name="deliveryEftposName" defaultValue={routingFormValues.deliveryEftposName} placeholder="Προαιρετικό: όνομα δεύτερου EFTPOS" disabled={!routingTerminalPos}/>
+      <label>Κατάσταση πρώτου EFTPOS<select name="storeEftposActive" defaultValue={String(routingFormValues.storeEftposActive)} disabled={!routingTerminalPos}><option value="true">Ενεργό</option><option value="false">Ανενεργό</option></select></label>
+      <label>Κατάσταση δεύτερου EFTPOS<select name="deliveryEftposActive" defaultValue={String(routingFormValues.deliveryEftposActive)} disabled={!routingTerminalPos}><option value="true">Ενεργό</option><option value="false">Ανενεργό</option></select></label>
       <label>Συναλλαγή πρώτου EFTPOS<select name="storeTransactionMode" defaultValue={routingFormValues.storeTransactionMode} disabled={!routingTerminalPos}><option value="IMMEDIATE">Άμεση</option><option value="DEFERRED">Ετεροχρονισμένη</option></select></label>
       <label>Συναλλαγή δεύτερου EFTPOS<select name="deliveryTransactionMode" defaultValue={routingFormValues.deliveryTransactionMode} disabled={!routingTerminalPos}><option value="IMMEDIATE">Άμεση</option><option value="DEFERRED">Ετεροχρονισμένη</option></select></label>
       <small>Η επιλογή περιγράφει τη ρυθμισμένη λειτουργία της RBS. Επιβεβαίωσε τον αντίστοιχο κωδικό πληρωμής στον οδηγό εγκατάστασης.</small>
       <button disabled={!routingTerminalPos||busy==="device-routing"}>{busy==="device-routing"?"Αποθήκευση…":"Αποθήκευση mapping"}</button>
       <small>{!routingTerminalPos?"Επίλεξε πρώτα terminal.":routingFormValues.complete?`Φορτώθηκε το αποθηκευμένο mapping του ${routingTerminalPos}.`:`Δεν υπάρχει αποθηκευμένο mapping για ${routingTerminalPos}.`}</small>
+      <small>Η απενεργοποίηση διατηρεί τους κωδικούς και την αντιστοίχιση για επαναφορά. Δεν απενεργοποιεί αυτόματα άλλες συσκευές ή διασυνδέσεις του καταστήματος.</small>
       <small>Fail-closed: δεν γίνεται αυτόματη επιλογή άλλου EFTPOS.</small>
     </form>}
     {onlineStoreManager&&<OnlineStoreManager key={`${onlineStoreManager.company.id}:${onlineStoreManager.store.id}`} manager={onlineStoreManager} setManager={setOnlineStoreManager} request={request} onClose={()=>setOnlineStoreManager(null)} setBusy={setBusy} busy={busy} setError={setError} setMessage={setMessage}/>}

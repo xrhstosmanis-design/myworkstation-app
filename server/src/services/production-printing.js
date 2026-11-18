@@ -46,6 +46,22 @@ export function createProductionPrinting({db,moduleState}){
    return{ok:true};
   });
  }
+ // Table orders already own their KDS batch and transaction. Queue that batch
+ // atomically; calling dispatch here would create a second preparation batch.
+ async function enqueueTableBatch(tx,{companyId,storeId,batchId,requestId,items,products,operatorName,productionStation,tableName,roundNumber,note}){
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`production:${companyId}:${storeId}`},0))`;
+  const rows=await tx.$queryRaw`SELECT "settings","lifecycleGeneration",("tokenHash" IS NOT NULL) AS "paired" FROM "ProductionPrinter" WHERE "companyId"=${companyId} AND "storeId"=${storeId}`;
+  const printer=rows[0];
+  if(!printer?.settings.enabled)return{printStatus:'NOT_CONFIGURED',jobId:null};
+  if(!requestId)throw fail(409,'Ανανέωσε το POS πριν από την αποστολή τραπεζιού στον εκτυπωτή.');
+  if(!printer.paired)throw fail(409,'Ο εκτυπωτής δεν έχει συνδεθεί ακόμη.');
+  await assertLifecycleMutation(tx,{companyId,storeId},printer.lifecycleGeneration);
+  const ids=new Set(printer.settings.productIds),selected=items.filter(item=>ids.has(item.productId));
+  if(!selected.length)return{printStatus:'NO_MATCH',jobId:null};
+  const jobId=crypto.randomUUID(),ticket={settings:printer.settings,batchId,priority:'NORMAL',operatorName:printableText(operatorName),productionStation:printableText(productionStation),tableName:printableText(tableName),roundNumber,note:printableText(note),items:productionTicket(selected.map(item=>({...item,note:item.notes})),products)};
+  await tx.$executeRaw`INSERT INTO "ProductionPrintJob" ("id","companyId","storeId","batchId","ticket") VALUES (${jobId},${companyId},${storeId},${batchId},${JSON.stringify(ticket)}::jsonb)`;
+  return{printStatus:'QUEUED',jobId};
+ }
  async function dispatch({companyId,storeId,requestId,body,products,operatorName,operatorId,validate}){
   await ensure();const fingerprint=hash(JSON.stringify(body));return db.$transaction(async tx=>{
    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`production:${companyId}:${storeId}`},0))`;
@@ -64,5 +80,5 @@ export function createProductionPrinting({db,moduleState}){
    return response;
   });
  }
- return{ensure,view,configure,pairing,pair,claim,acknowledge,dispatch,resolve};
+ return{ensure,view,configure,pairing,pair,claim,acknowledge,dispatch,enqueueTableBatch,resolve};
 }
