@@ -114,7 +114,7 @@ export function syncMyDataStore(req,{db=prisma}={}){
 // Opt-in historical recovery for URLs already proven by the Epsilon adapter.
 const originalRecoveryVersion = "epsilon-verified-pairs-202611-v1";
 
-export async function recoverExhaustedOriginals({
+export async function recoverHistoricalOriginals({
   db, companyId, storeId, userId, source,
   storeIds = process.env.MYDATA_ORIGINAL_RECOVERY_STORE_IDS ?? "",
   acquire = acquireOriginal,
@@ -127,9 +127,13 @@ export async function recoverExhaustedOriginals({
     JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
     WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
       AND m."issueDate">=DATE '2026-11-01' AND m."issueDate"<DATE '2026-12-01'
-      AND m."rawPayload"->>'source'=${source} AND m."rawPayload"->>'originalPending'='true'
+      AND m."rawPayload"->>'source'=${source}
       AND i."attachmentId" IS NULL AND i."status"='RECEIVED'
-      AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)>=3
+      AND m."rawPayload"->>'originalDownloaded' IS DISTINCT FROM 'true'
+      AND (
+        m."rawPayload"->>'originalPending' IS DISTINCT FROM 'true'
+        OR COALESCE((m."rawPayload"->>'originalAttempts')::int,0)>=3
+      )
       AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
       AND m."rawPayload"->>'xml' ~* ${epsilonOriginalRecoveryLinkPattern()}
     ORDER BY m."fetchedAt",m."id" LIMIT 2`;
@@ -145,6 +149,8 @@ export async function recoverExhaustedOriginals({
           'originalRecoveryVersion',${originalRecoveryVersion},'originalError',
           'Το πρωτότυπο δεν κατέβηκε κατά την επανάληψη. Δοκιμάστε από τη Θυρίδα.')
         WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId}
+          AND m."rawPayload"->>'originalDownloaded' IS DISTINCT FROM 'true'
+          AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
           AND EXISTS (
             SELECT 1 FROM "DocumentInbox" i
             WHERE i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
@@ -214,7 +220,7 @@ async function performSync(req){
     originalsFailed++;
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
-  const recovery = await recoverExhaustedOriginals({
+  const recovery = await recoverHistoricalOriginals({
     db: prisma, companyId: req.user.companyId, storeId: store.id, userId: req.user.id, source,
   });
   originalsDownloaded += recovery.downloaded;
