@@ -12,6 +12,15 @@ Acceptance: isolated crypto/storage isolation and HTTP route tests; cross-compan
 
 This small continuation preserves the oversized historical tracker/roadmap unchanged. Prior tracker: [OPEN_WORK_TRACKER.md](OPEN_WORK_TRACKER.md). Prior roadmap: [PENDING_WORK.md](PENDING_WORK.md). Companion checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-netlink-store-credentials.md`.
 
+<!-- NO5-STATUS:BEGIN -->
+## No5 — Δικαιώματα προβολών Ιδιοκτήτη / ASSIGNED — OPEN
+
+CENTRAL-BACKOFFICE-ACCESS-01. Συνεχίζεται η ίδια εργασία. Δημοσιευμένος κώδικας61COMPANY και74STORE (56reads/18actions), baselineb430e657 και συγχρονισμοί μόνο τεκμηρίωσης. Τελική104fileσουίτα517PASS/25nativeSKIP/0FAIL καιclientbuild42.04PASS. ΠραγματικόCI61 εκκρεμεί· τα πρώταhead δεν είχανruns λόγω σύγκρουσης του κοινούMarkdown, όχι αποτυχίαςruntime. Προηγούμενοaligned53 main6417PASS/0FAIL/1SKIP και8/8E2E, actual17BASE/CAPTUREPASS, Wallet/ChatSUCCESS.
+
+Η κατάσταση No5 ενημερώνεται μόνο σε αυτό το σταθερό block, ανεξάρτητα από τις προσθήκες άλλων σελίδωνEOF. Το πλήρες προηγούμενο ιστορικό διατηρείται ακριβώς στο [No5 αρχείο ιστορικού](NO5_ACTIVE_HISTORY_2026-11-18.md), μεSHAsnapshot. [Τελευταία υλοποίηση](CHANGES/2026-11-18-no5-company-owner-reports.md) · [Ανοικτή κάλυψη Owner](../docs/roadmap/BACKOFFICE_OWNER_VIEW_COVERAGE.md). Επόμενες καρτέλες προμηθευτών/πελατών μόνο υποψήφια πηγή. Καμία παραγωγική εγκατάσταση/merge/deploy ή ανθρώπινη αποδοχή. Μία κοινή συνεδρία στο υπάρχον LAB στο τέλος, χωρίς επανάληψη παλιών οικονομικών/stockPASS.
+
+<!-- NO5-STATUS:END -->
+
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
 
 Owner approved source merge and publication on 17/11/2026. PR #4011 exact head `0c4f97cc7ea83cc6d1a4d15d3e173351d60c67fa` passed full Node20 CI `44169632000` (all five jobs SUCCESS). Expected-head squash merged `1af6d3173a462cf1f610307db14af5202a5cbf04`. Main retains the unrelated #4010 table-service documentation; runtime source matches the reviewed candidate. Full combined-main CI `44172996676` also passed all five jobs. No required check was bypassed or manually replaced.
@@ -528,101 +537,6 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 - Νο 3 — [Πληρωτέο φωτογραφιών OCR](CHANGES/2026-11-17-no3-ocr-photo-payable.md) · PR #3996.
 
 - 17/11/2026 · Νο 2 · Συμβατότητα παλιών κοινών πληρωμών myDATA–POS. 39 τοπικοί έλεγχοι PASS και στοχευμένος SQL έλεγχος. Πλήρες CI και τελική κοινή συνεδρία LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no2-mydata-pos-reconciliation.md).
-17/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / Νο 5. Τοπική υλοποίηση διαθέσιμων προβολών ανά κατάστημα και επαλήθευσης των αποθηκευμένων δικαιωμάτων. Εκκρεμούν CI, PostgreSQL και υπάρχον LAB. [Νέα λίστα](../docs/roadmap/MyWorkStation_FINAL_LIST_2026-11-17.md) και [checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκαν παραχωρούμενες προβολές Σύγκρισης Προμηθευτών και Προϊόντων Χαμηλής Απόδοσης ανά χειριστή και κατάστημα. Ίδιο PR #4007, νέο CI και κοινή δοκιμή LAB στο τέλος εκκρεμούν. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκαν προσωπικές προβολές Προτάσεων Παραγγελίας και Ανάλυσης Πωλήσεων, με ξεχωριστά δικαιώματα και ακριβή επιλογή καταστήματος. Συνέχεια PR #4007, νέο CI και κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκε προβολή Παράδοσης Βάρδιας και συνημμένων ανά χειριστή/κατάστημα. Προσωπικές εγγραφές και επιβεβαιώσεις απαιτούν χωριστή υλοποίηση. Ίδιο PR #4007, οι δοκιμές LAB συγκεντρώνονται στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκε `employees.read` για προσωπική προβολή λίστας και καρτέλας εργαζομένων επιλεγμένου καταστήματος, με πακέτο προσωπικού και χωρίς συγχρονισμό διαπιστευτηρίων POS κατά την ανάγνωση. Ίδιο PR #4007. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκαν χωριστές προσωπικές προβολές προγράμματος, παρουσιών και αδειών ανά κατάστημα, με έλεγχο πακέτου προσωπικού και χωρίς ενέργειες ή μισθοδοσία. Συνέχεια PR #4007, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκε `stock.read` για τις υπάρχουσες κινήσεις είδους ανά επιλεγμένο κατάστημα, με χωριστό έλεγχο LOSS_DETECTION. Συνέχεια PR #4007, οι ζωντανές δοκιμές στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκε χωριστό `payroll.read` για περιόδους, ανάλυση και προεπισκόπηση μισθοδοσίας επιλεγμένου καταστήματος, με BASIC και PAYROLL. Ίδιο PR #4007, ενιαίο LAB στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007: ανεξάρτητη προβολή προσφορών/ανάλυσης και εργασιών chat ανά κατάστημα (`promotions.read`, `pending.read`). Προηγούμενο CI44184785433 PASS· πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-pending-promotions-views.md).
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007 με `baking.read` και `monthly-invoice-audit.read`, native προβολές ανά κατάστημα και νέο έλεγχο grant έξω από το snapshot. Πλήρης κάλυψη OPEN, ενιαίες δοκιμές λογαριασμών στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-baking-monthly-audit-views.md).
-
-Νο 5, ίδια παρτίδα: build PASS, 154 τοπικοί έλεγχοι PASS, 7 PostgreSQL SKIP, 1 Chromium launch FAIL λόγω socket Operation not permitted. Εκκρεμεί νέο CI· δεν χαρακτηρίζεται συνολική πράσινη σουίτα ή LAB PASS.
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007: `online-orders.read` και `table-service.read`, native προβολές επιλεγμένου καταστήματος χωρίς προετοιμασίες/συμφιλίωση δεδομένων σε προσωπική ανάγνωση. Προηγούμενο CI44243250136 PASS, πλήρης κάλυψη OPEN και κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-online-table-views.md).
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007: `stock-transfers.read` και `invoice-ai.read`, native ιστορικό μεταφορών και αποθηκευμένες εργασίες βοηθού ανά κατάστημα χωρίς ενέργειες/παραγωγικές κλήσεις. Πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-transfer-ai-views.md).
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Διόρθωση native PostgreSQL fixture στο αποτυχημένο CI44247752200: authenticated Owner request αντί null, runtime αμετάβλητο. Main31c8c46 ενσωματώθηκε με διατήρηση αλλαγών άλλων σελίδων. Τοπικά3PASS/1PGSKIP, νέοCI υποχρεωτικό. [Checkpoint](CHANGES/2026-11-18-no5-ci-native-owner-bootstrap-fixture.md).
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007 με `wholesale.read`, `video.read`, `printers.read`: scoped native παραγγελίες/κατάσταση καμερών/κατάσταση εκτυπώσεων, χωρίς εταιρικούς καταλόγους, credentials ή παραγωγικές ενέργειες. Η προηγούμενη διόρθωση native PG fixture αναμένει νέοCI· πλήρης κάλυψη OPEN, LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-wholesale-video-printer-views.md).
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007 με `chat.read`, `radio.read`, `approvals.read`: scoped native προβολές χωρίς αποστολές, playback ή εγκρίσεις. Συνημμένα chat μόνο με native security audit. Προηγούμενο CI44251494175 PASS· πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-chat-radio-approvals-views.md).
-
-18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: αδρανής προετοιμασία COMPANY compatibility και UI/API συμβολαίου, χωρίς εγκατάσταση σχήματος ή ενεργά εταιρικά grants. Δύο CI fixture failures διορθώθηκαν με πραγματικές dependencies, runtime guard αμετάβλητο. Πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-compatibility-preparation.md).
-
-18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: monthly-inventory.read για SELECT-only κατάσταση μηνιαίας απογραφής,53 STORE capabilities, native Owner ενέργειες χωριστές. Τοπικά53PASS/3PGSKIP/buildPASS· νέοCI απαιτείται, πλήρης κάλυψη OPEN, κοινόLAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-monthly-status-view.md).
-
-18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: λειτουργικός COMPANY source candidate για3χωριστές παραχωρήσεις, native account/revocation/UI, paired profiles και πραγματικό signed full-backup/private-restore installer, defaultανενεργός/χωρίς παραγωγική πράξη.156PASS/5PGSKIP/buildPASS· mandatory nativeBASE/CAPTURE CI εκκρεμεί. Διορθώθηκε η δημοσιευμένη μερική Workspace JSX· πλήρης κάλυψη OPEN, ενιαίοLAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-authority-candidate.md).
-
-18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: lazy optional COMPANY recovery imports για ανεξάρτητο wholesale runtime, canonical C identifier ordering στον backup observer και νέο minimal-package regression. Προηγούμενο CI packaging FAIL καταγεγραμμένο· targeted checks/νέοCI υποχρεωτικά, πλήρης κάλυψη OPEN. [Checkpoint](CHANGES/2026-11-18-no5-company-legacy-runtime-isolation.md).
-
-18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007:4νέες εταιρικές λίστες (εξόδων/πελατών/επαγγελμάτων/αποστολής), συνολικά7COMPANY+53STORE, χωρίς bootstrap/writes ή νέα αυτόματα grants.163PASS/5PGSKIP/buildPASS· νέοnativeCI απαιτείται, πλήρης κάλυψη OPEN και ενιαίοLAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-management-views.md).
-
-18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: canonical πραγματικός SA issuer, reviewed source-root/20-file packaging για actualbackupimage, actualDocker regression και PG16 walletjob σε γνωστόubuntu24.04.20PASS/4PG-or-DockerSKIP· native/fullrestore CI παραμένει υποχρεωτικό, χωρίς παραγωγική πράξη. [Checkpoint](CHANGES/2026-11-18-no5-company-packaged-worker-issuer.md).
-
-18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: κατηγορίες/ΦΠΑ/εταιρείες προϊόντων/τραπεζικές ρυθμίσεις,11COMPANY+53STORE, finite105-family Ownercoverage inventory.186PASS/6PG-or-DockerSKIP/buildPASS. D90 actualbackup/install/Docker checkpoints πέρασαν πρινCOREfixtureFAIL· πλήρεςnative11/walletCI απαιτείται, χωρίς παραγωγική πράξη. [Checkpoint](CHANGES/2026-11-18-no5-company-catalog-views.md).
-
-18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: εταιρικά προϊόντα/αγορές/συνταγές/καρτέλα προμηθευτή,15COMPANY+53STORE, ορατόsupplierparent και μη παραπλανητικό recipecost.195PASS/6PG-or-DockerSKIP/buildPASS. Προηγούμενο κύριοCI44281732440 PASS/native11· walletανεξάρτητοFAIL παραμένειδιάγνωση, νέοnative15CI απαιτείται. [Checkpoint](CHANGES/2026-11-18-no5-company-business-views.md).
-
-
-## 18/11/2026 — No5 workforce settings, source candidate / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01 retains ownership. Baseline remote22f8fffc/local885e3af; native15BASE/CAPTURE acceptance passed but mainCI44288331027 failed one Greek time format policy, separatewallet44288331019 stillFAIL. Four scoped workforce read rights (57STORE=39reads18actions), bounded pureUI/live grants/modules/revision; frozen29-file cohort175PASS/8nativePG-or-DockerSKIP/0FAIL andclientbuildPASS; all Owner scope remainsOPEN. Checkpoint [2026-11-18-no5-workforce-settings](CHANGES/2026-11-18-no5-workforce-settings.md). No production or human acceptance; tests at final combined session.
-
-
-## 18/11/2026 — No5 full company roles and two sales readers / AWAITING CI
-
-Retained CENTRAL-BACKOFFICE-ACCESS-01 owner; baseline21ad4230/local40fff12 tree39be6363. New59STORE(41reads18actions)+16COMPANY source: full licensed company role registry, scoped unsold and journal reads. Final32-file cohort188PASS/10nativePG-or-DockerSKIP/0FAIL, clientbuildPASS; native3 fixture added toBASE/CAPTURE, actual acceptance pending. Dedicatedwallet44292095077 hostrestore now actualSQLSTATE22023, not fixed; strict50constant subdiagnostics without rawlogs added and20hashes refreshed. Current57mainCI44292095096 andChat44292095037 SUCCESS; actualBASE/CAPTURE4workforce+15COMPANY andnativeauditnullmerge passed. WholeOwnercoverageOPEN; one final human session, no production actions. [Checkpoint](CHANGES/2026-11-18-no5-company-role-and-sales-reads.md).
-
-
-## 18/11/2026 — No5 four company reports / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01 retained. Baseline81e6a680/localb2ca36b treebbd76758,59STORE+20COMPANY candidate. Four exactcompanyfinancialreports, strictGreecequeries/tenantDTOs/unknownvalues/noDDL/nativeOwnerpreserved; broad46file231PASS/10PG-DockerSKIP/0FAIL+buildPASS. Prior59main44294260275FAILonlystalejournalfixture(nowfixed), actualnative3BASE/CAPTUREpassed. Native4helperadded/actualpending. Wallet44294260260unrecognizedparameter22023stillOPEN;140fixedsubdiagnostics andlatest16server-clientCIrefresh/sourceversiontrace, noacceptanceweakening. WholeOwnercoverageOPEN, humanonceatend. [Checkpoint](CHANGES/2026-11-18-no5-company-report-reads.md).
-
-
-## 18/11/2026 — No5 έξι εταιρικές αναφορές audit / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01, συνέχεια83b02754/local0d0475c, tree397e0293. Source59STORE+26COMPANY, έξι scoped αναφορές με ακριβή native free/INVENTORY gates, PII disclosure και typed cart projections. Τελική50fileσουίτα244PASS/12PG-DockerSKIP/0FAIL καιbuildPASS. Προηγούμενοmain44297500073/ChatSUCCESS καιactual4reportsBASE/CAPTUREPASS. Νέοnative6helper απαιτεί πραγματικόCI. Wallet απέδειξεsource16.16/private16.15 καιCREATE_TABLEparametererror· νέοmatching16container καιυποχρεωτικήPG18δεύτερηεπαναφορά, μεαμετάβληταassertions/mainHOSTpath. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςμίαφοράστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-audit-report-reads.md).
-
-
-## 18/11/2026 — No5 αναφορές inventory/sales/linked payroll / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01, baseline24abf7b2/local1a2d8d4 tree57685e53. Source59STORE+32COMPANY με ρητές εξαρτήσεις store directory και χωριστά named linked payments. Canonical stock/sales/payroll διατηρούνται, fresh auth εκτός readonly snapshots. Τελική66fileσουίτα347PASS/16PG-DockerSKIP/0FAIL+buildPASS. Νέο native helper και32-row actual-schema preflight, όχι fake native PASS. Παλιόmain26FAILμόνο2seedNOTNULL, διορθώθηκαν χωρίςschema/runtimeχαλάρωση. Wallet44301623598καιChatSUCCESS, actualmatching16.16καιPG18fullrestorePASS. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-inventory-sales-payroll-reports.md).
-
-
-## 18/11/2026 — No5 δεκαπέντε αναφορές επιλεγμένου καταστήματος / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01, baseline f04444d1/local2f934daa/tree72f7d3f6. Source74STORE(56reads18actions)+32COMPANY, χωρίς νέα εταιρική εξουσία. Τελική70fileσουίτα361PASS/18nativeSKIP/0FAIL+buildPASS. Προηγούμενοmain32 έξιFAIL: διορθώθηκαν4Supplierfixtures και2Employeejoins σύμφωνα μεπραγματικόschema· νέοnative8columnBASE/CAPTUREhelper εκκρεμείσεCI. Wallet32 9/9PASS καιChatSUCCESS. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςμίαφοράστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-store-report-reads.md).
-
-
-## 18/11/2026 — No5 τέσσερις εταιρικές αναφορές συναλλασσομένων / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01, baseline815b50b8/local0b0a4847/treed7821bd4. Source74STORE+36COMPANY, ρητοί κατάλογοι γονέων/modules, nativeοικονομικάπαράθυρα και signed/reversal semantics. Τελική72fileσουίτα374PASS/18nativeSKIP/0FAIL+buildPASS. Προηγούμενο74actualBASE/CAPTURE legacy8STORE15καιCOMPANY32 PASS, Wallet9/9PASS/ChatPASS· κύριοrunπαρακολουθείται. Νέο23rowseed/native4helperκαιmetadata preflight, actualCOMPANY36CIεκκρεμεί. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-party-reports.md).
-
-
-## 18/11/2026 — No5 δεκαεπτά εταιρικές προβολές ρυθμίσεων / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01, baselinebc98004e/locala9d6f2b4/treec41b7483. Source74STORE+53COMPANY,176typedπαράμετροι/10χωριστέςενότητες, POS/modifiers/παρασκευές/statusάδειας, ονομαστικοίγονείς καιfreshgrant/module/revision. ΔεκαοκτώexactGETμέσαστονυπάρχονταrouterμεμίαauth, nativeCompany5fallbackκαισελιδοποίηση100rows/10groups. Τελική74fileσουίτα393PASS/18nativeSKIP/0FAIL+clientbuildPASS. Προηγούμενο36main6396PASS/0FAIL/1SKIP+8/8E2E καιactualBASE/CAPTURE36PASS, Wallet9/9/ChatSUCCESS. Νέο30rowseedupdates/native17helperκαιmetadata5PASS, actual53CIεκκρεμεί.20boundsourcehashesαμετάβλητα. WholeOwnercoverageOPEN, κοινέςανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-configuration-reads.md).
-
-
-18/11/2026 — No5 συγχρονισμός main8a9c4333 μόνο τεκμηρίωσης. Διατηρήθηκαν όλες οι προσθήκες Netlink και No5, ίδιο runtime COMPANY53/STORE74 χωρίς νέα ανθρώπινη δοκιμή. [Checkpoint](CHANGES/2026-11-18-no5-main-documentation-sync.md).
-
-
-## 18/11/2026 — No5 οκτώ αρχικές/οικονομικές εταιρικές προβολές / AWAITING CI
-
-CENTRAL-BACKOFFICE-ACCESS-01, baselineaac5fb26/locale4e0601/tree84a2f6ec. Source74STORE+61COMPANY, canonicaldashboard/Master/shift/payments/businesspicture/audit καιδύοCASHCONTROL-onlyselectors. Metadataauditreadonly, privateJSONsearchdenied, ιστορικάSQLhashesδιατηρημένα· publicrecorderutilityκαιnavsearch/scroll. Τελική104fileσουίτα517PASS/25nativeSKIP/0FAIL+build42.04PASS. Προηγούμενοaligned53main6417PASS/0FAIL/1SKIP+8/8E2E καιactual17BASE/CAPTUREPASS, Wallet/ChatSUCCESS· αρχικό7ddcancellednotPASS. Νέο44rowseed/native61helperκαιenum-awaremetadata preflight, actual61CIεκκρεμεί. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-owner-reports.md).
 
 ## 18/11/2026 — NETLINK-STORE-CREDENTIALS-01 — retained handoff / SOURCE CANDIDATE, NOT RELEASED
 
@@ -640,5 +554,12 @@ Single next sequence: observe exact-head final CI to completion and correct any 
 
 Source checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-netlink-store-connection-source.md` on the source branch. Oversized historical trackers remain preserved; this record and the 18Nov Netlink continuations provide the bounded current scope.
 
+## 18/11/2026 — NETLINK final exact-head CI SUCCESS / READY FOR RELEASE REVIEW, AWAITING OWNER AND LAB
 
-18/11/2026 — No5 συγχρονισμός Netlink handoff main e386d075, ίδιο runtime COMPANY61/STORE74. Το b430e657 δεν είχε CI runs λόγω σύγκρουσης τεκμηρίωσης· η επίλυση διατηρεί byte-for-byte όλες τις καταγραφές και ανοίγει τον πραγματικό έλεγχο. [Checkpoint](CHANGES/2026-11-18-no5-main-handoff-sync.md).
+Source PR [#4016](https://github.com/xrhstosmanis-design/myworkstation-app/pull/4016) is ready for review (not draft), still unmerged. Exact head `f073c815435e01c4e2a48409bd4b8c3599db0d58`, tree `5d712b5cb0a46490218a687622b2e6fb6f47e264`. [CI 44325741634 attempt 2](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/44325741634/attempts/2): **all five jobs SUCCESS**, including build/test, isolated wholesale browser/offline, both Windows checks and change classification. Node20 full server suite **6178 tests / 6177 PASS / 0 FAIL / 1 optional PGlite SKIP**; actual isolated PostgreSQL migration, encrypted credentials, atomic audit rollback, company/store/role HTTP and legacy EFOOD checks all executed and passed. Backup monitor **8/8 PASS, 0 SKIP**. Node20 client build, actual browser geometry/pointer checks, production safety invariants, isolated archive import and complete real HTTP E2E batch passed. Retained Netlink E2E explicitly passed auth/licensing, selected-store catalogue, fiscal receipt, once-only POS/execute, commission, settlement and shift close.
+
+The final failed-job retry was on the same source after a Chromium Target.createTarget startup timeout in the unchanged device-dialog test. No code, assertion, deadline or skip was changed for that retry. Earlier genuine label/caller compatibility failures remain documented in the source checkpoint. The final successful run supersedes the earlier CI-in-progress snapshot for this exact source head only.
+
+Implementation and automated verification are complete for per-store connection configuration and non-issuing authentication/catalogue check. Owner stays /root. **No source merge, production installation, reviewed schema application, real credentials, provider check, transaction or financial action has been performed.** No LAB/LIVE/USER functional PASS or manual release is claimed. Existing provider certification and store identity by Netlink statement remain separate and unverified.
+
+Single next action: owner's separate approval for production source merge/deploy, then the existing guarded installation and exact deployed revision check. Preserve the requested final grouped acceptance on the existing LAB; do not ask for partial role-switching or repeat real transactions. Source remains assigned to /root until an explicit named handoff.
