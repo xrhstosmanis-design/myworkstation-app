@@ -1,3 +1,7 @@
+## 18/11/2026 — Νο 15 — Μερική πληρωμή φόρμας POS / AWAITING CI AND LAB
+
+Η κανονική φόρμα CASH έστελνε payments:null και απορριπτόταν από το υπάρχον checkout schema πριν από συναλλαγή. Μονογραμμική διόρθωση του caller και regression πραγματικού callback/serializer/schema. [Checkpoint](CHANGES/2026-11-18-table-service-partial-cash-form.md). Ίδια ανάθεση TABLE_SERVICE, πλήρες CI και επαναδοκιμή υπάρχοντος LAB εκκρεμούν.
+
 ## 18/11/2026 — NETLINK explicit-store E2E caller correction / AWAITING FINAL CI
 
 Corrected source head `bd0e268f27ea2c5d39a97397e3ad426130fff5cc`, CI `44322976065` / job `134866723229`: full server suite **6178 tests / 6177 PASS / 0 FAIL / 1 optional PGlite SKIP**, plus **8/8 backup-monitor tests PASS**. Native PostgreSQL credentials/migration/HTTP and legacy EFOOD SQL checks passed. Node20 client build, browser pointer/geometry checks, production safety invariants, full isolated archive import and the other four jobs passed. This is CI evidence, not a LAB or deployed feature PASS.
