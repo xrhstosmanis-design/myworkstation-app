@@ -83,12 +83,12 @@ test('historical original recovery is explicitly store-scoped, production-only, 
   };
   const acquire=async(...args)=>{
     assert.deepEqual(args.slice(0,3),[db,'company','store']);
-    assert.deepEqual(args.slice(4),['actor',false]);
+    assert.deepEqual(args.slice(4),['actor',false,undefined,{reconcileExisting:true}]);
     calls.push(args[3]);
     if(args[3]==='unavailable')throw new Error('Provider did not return PDF');
     return {downloaded:true};
   };
-  const options={db,companyId:'company',storeId:'store',userId:'actor',source:'AADE_MYDATA_PRODUCTION',excludeInboxIds:['ordinary-pending','newly-received'],acquire};
+  const options={db,companyId:'company',storeId:'store',userId:'actor',source:'AADE_MYDATA_PRODUCTION',reconcileExisting:true,excludeInboxIds:['ordinary-pending','newly-received'],acquire};
   assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:''}),{downloaded:0,failed:0});
   assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'other'}),{downloaded:0,failed:0});
   assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'store',source:'AADE_MYDATA_SANDBOX'}),{downloaded:0,failed:0});
