@@ -1,8 +1,8 @@
 // Company authority is independent of STORE membership and profile presets.
 // These keys become selectable only after the installed protocol is verified.
 export const staffCompanyProtocol='MWS_BACKOFFICE_COMPANY_V1';
-export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read']);
-export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY'});
+export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read','reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read']);
+export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY','reports-deactivations.read':null,'reports-logins.read':'INVENTORY','reports-sale-deletions.read':null,'reports-pos-sale-actions.read':null,'reports-destructions.read':null,'reports-movements.read':'INVENTORY'});
 export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:'Εταιρικές προβολές',actions:Object.freeze([
   {key:'stores.read',label:'Προβολή καταστημάτων εταιρείας',description:'Βλέπει τον κατάλογο καταστημάτων της εταιρείας, χωρίς ρυθμίσεις ή είσοδο στη διαχείρισή τους.'},
   {key:'suppliers.read',label:'Προβολή προμηθευτών εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας και ΑΦΜ προμηθευτών της εταιρείας, χωρίς πληρωμές ή αλλαγές.'},
@@ -23,6 +23,12 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   {key:'reports-departments.read',label:'Προβολή εταιρικής διοικητικής αναφοράς τμημάτων',description:'Βλέπει ποσότητες και αξίες ολοκληρωμένων εταιρικών πωλήσεων ανά κατηγορία και ΦΠΑ· δεν αποτελεί φορολογικό Ζ.'},
   {key:'reports-documents.read',label:'Προβολή εταιρικής αναφοράς παραστατικών',description:'Βλέπει έως 5.000 αγορές και 5.000 πωλήσεις με οικονομικά μεταδεδομένα και στοιχεία συναλλασσομένων, χωρίς αρχεία ή φορολογική διαβίβαση.'},
   {key:'reports-delivery.read',label:'Προβολή εταιρικής αναφοράς δελτίων delivery',description:'Βλέπει έως 5.000 δελτία και τις γραμμές τους με στοιχεία παραλήπτη και διαθέσιμες αξίες, χωρίς αποστολή ή διαβίβαση.'},
+  {key:'reports-deactivations.read',label:'Εταιρική αναφορά απενεργοποιήσεων προϊόντων',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
+  {key:'reports-logins.read',label:'Εταιρική αναφορά συνδέσεων χρηστών (email/IP)',description:'Βλέπει ονόματα, email, ρόλους, συσκευές και διευθύνσεις IP των συνδέσεων της εταιρείας.'},
+  {key:'reports-sale-deletions.read',label:'Εταιρική αναφορά διαγραφών καλαθιού',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
+  {key:'reports-pos-sale-actions.read',label:'Εταιρική αναφορά ενεργειών πωλήσεων POS',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
+  {key:'reports-destructions.read',label:'Εταιρική αναφορά καταστροφών POS και κόστους',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
+  {key:'reports-movements.read',label:'Εταιρική αναφορά κινήσεων αποθέματος και κόστους',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
   {key:'customers.read',label:'Προβολή πελατών, υπολοίπων και πιστωτικών ορίων εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας, έκπτωση, οικονομικό υπόλοιπο και πιστωτικό όριο πελατών όλης της εταιρείας, χωρίς κινήσεις ή αλλαγές.'}
 ])}]);
 export function validStaffCompanyCapabilities(value){
@@ -73,5 +79,11 @@ export function staffCompanyRequestCapability(method,path){
   if(path==='/api/reports/departments')return 'reports-departments.read';
   if(path==='/api/reports/documents')return 'reports-documents.read';
   if(path==='/api/reports/delivery'||staffCompanyDeliveryNoteId(path)!==null)return 'reports-delivery.read';
+  if(path==='/api/reports/deactivations')return 'reports-deactivations.read';
+  if(path==='/api/reports/logins')return 'reports-logins.read';
+  if(path==='/api/reports/sale-deletions')return 'reports-sale-deletions.read';
+  if(path==='/api/reports/pos-sale-actions')return 'reports-pos-sale-actions.read';
+  if(path==='/api/reports/destructions')return 'reports-destructions.read';
+  if(path==='/api/reports/movements')return 'reports-movements.read';
   return null;
 }

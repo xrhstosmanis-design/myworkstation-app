@@ -1,3 +1,4 @@
+import {readCompanyAuditReport} from './backoffice-staff-company-audit-reports.js';
 import {staffError} from './backoffice-staff-access.js';
 import {staffCompanyDeliveryNoteId} from '../../../shared/backoffice-staff-company.mjs';
 import {greeceRangeDate} from '../../../shared/greece-time.mjs';
@@ -15,7 +16,7 @@ export function companyReportFilters(query,capability,path){
  if(!query||typeof query!=='object'||Array.isArray(query))invalid();
  const detail=staffCompanyDeliveryNoteId(path)!==null,keys=Reflect.ownKeys(query);
  if(detail){if(keys.length)invalid();return {detail:true}}
- const allowed=['from','to','storeId',...(capability==='reports-departments.read'?[]:['q'])];
+ const allowed=['from','to',...(capability==='reports-logins.read'?[]:['storeId']),...(capability==='reports-departments.read'?[]:['q'])];
  if(keys.some(k=>!allowed.includes(k)||typeof query[k]!=='string')||!Object.hasOwn(query,'from')||!Object.hasOwn(query,'to'))invalid();
  const fromDay=day(query.from),toDay=day(query.to),from=greeceRangeDate(fromDay),to=new Date(greeceRangeDate(toDay,true).getTime()+1);
  if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>=to)invalid();
@@ -32,7 +33,7 @@ export async function readCompanyReports(db,companyId,capability,path,query){
  else if(capability==='reports-departments.read')payload=await departments(db,companyId,f);
  else if(capability==='reports-documents.read')payload=await documents(db,companyId,f);
  else if(capability==='reports-delivery.read')payload=await delivery(db,companyId,f);
- else throw staffError();
+ else payload=await readCompanyAuditReport(db,companyId,capability,f);
  await checkStore();return {from:f.fromDay,to:f.toDay,storeId:f.storeId,q:f.q,...payload};
 }
 async function priceChanges(db,c,f){

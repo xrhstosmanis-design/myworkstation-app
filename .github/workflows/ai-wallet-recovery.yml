@@ -39,6 +39,7 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/wallet_recovery_test
       MWS_LIFECYCLE_RECOVERY_IMAGE: mws-wallet-recovery:ci
+      MWS_LIFECYCLE_MATCHING_RECOVERY_IMAGE: mws-wallet-recovery-pg16:ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,6 +49,10 @@ jobs:
       - run: npx prisma generate --schema server/prisma/schema.prisma
       - name: Build actual PG18 recovery image
         run: docker build --file ops/backup/Dockerfile --tag mws-wallet-recovery:ci .
+      - name: Build source-major private recovery image
+        # Use the same worker and full verifier with current PG16 binaries.
+        # Runner apt repositories may lag the floating source minor release.
+        run: docker build --build-arg POSTGRES_IMAGE=postgres:16-alpine --file ops/backup/Dockerfile --tag mws-wallet-recovery-pg16:ci .
       - name: Refresh matching PG16 dump and private restore tools
         run: |
           # The floating postgres:16 service receives minor security releases.

@@ -25,7 +25,12 @@ export async function requireStaffCompanyGrant(db,user,capability){
   if(rows.length>50000)throw staffError(503,'STAFF_COMPANY_LIMIT');
   const grouped=new Map();for(const row of rows){if(!grouped.has(row.storeId))grouped.set(row.storeId,[]);grouped.get(row.storeId).push(row)}
   const now=new Date();if(![...grouped.values()].some(rows=>resolvePersonnelPackageStates(rows,now).states[PERSONNEL_BASIC].effectiveActive))throw staffError(403,'MODULE_DISABLED');
- }else if(!license.activeModules?.includes(staffCompanyModules[capability]))throw staffError(403,'MODULE_DISABLED');
+ }else {
+  const module=staffCompanyModules[capability];
+  const nativeFree=['reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read'];
+  if(module===null){if(!nativeFree.includes(capability))throw staffError(403,'MODULE_DISABLED')}
+  else if(typeof module!=='string'||!license.activeModules?.includes(module))throw staffError(403,'MODULE_DISABLED');
+ }
  return {capability,companyId:account.companyId,revision:account.revision};
 }
 function validCompanyQuery(query,capability,path){

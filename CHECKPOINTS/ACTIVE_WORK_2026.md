@@ -576,3 +576,8 @@ Retained CENTRAL-BACKOFFICE-ACCESS-01 owner; baseline21ad4230/local40fff12 tree3
 ## 18/11/2026 — No5 four company reports / AWAITING CI
 
 CENTRAL-BACKOFFICE-ACCESS-01 retained. Baseline81e6a680/localb2ca36b treebbd76758,59STORE+20COMPANY candidate. Four exactcompanyfinancialreports, strictGreecequeries/tenantDTOs/unknownvalues/noDDL/nativeOwnerpreserved; broad46file231PASS/10PG-DockerSKIP/0FAIL+buildPASS. Prior59main44294260275FAILonlystalejournalfixture(nowfixed), actualnative3BASE/CAPTUREpassed. Native4helperadded/actualpending. Wallet44294260260unrecognizedparameter22023stillOPEN;140fixedsubdiagnostics andlatest16server-clientCIrefresh/sourceversiontrace, noacceptanceweakening. WholeOwnercoverageOPEN, humanonceatend. [Checkpoint](CHANGES/2026-11-18-no5-company-report-reads.md).
+
+
+## 18/11/2026 — No5 έξι εταιρικές αναφορές audit / AWAITING CI
+
+CENTRAL-BACKOFFICE-ACCESS-01, συνέχεια83b02754/local0d0475c, tree397e0293. Source59STORE+26COMPANY, έξι scoped αναφορές με ακριβή native free/INVENTORY gates, PII disclosure και typed cart projections. Τελική50fileσουίτα244PASS/12PG-DockerSKIP/0FAIL καιbuildPASS. Προηγούμενοmain44297500073/ChatSUCCESS καιactual4reportsBASE/CAPTUREPASS. Νέοnative6helper απαιτεί πραγματικόCI. Wallet απέδειξεsource16.16/private16.15 καιCREATE_TABLEparametererror· νέοmatching16container καιυποχρεωτικήPG18δεύτερηεπαναφορά, μεαμετάβληταassertions/mainHOSTpath. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςμίαφοράστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-audit-report-reads.md).
