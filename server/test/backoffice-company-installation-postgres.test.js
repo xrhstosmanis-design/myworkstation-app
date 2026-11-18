@@ -23,7 +23,18 @@ const execute=promisify(execFile),revision='a'.repeat(40),secret='isolated-compa
 const metadata=JSON.parse(readFileSync(new URL('./fixtures/ftext-full-schema-metadata-20261024.json',import.meta.url)));
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}};
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const actor={id:'admin',tokenType:'BACKOFFICE_USER',sessionId:'admin-session',sessionVersion:0,isSuperAdmin:true,platformRole:'SUPER_ADMIN',role:'SUPER_ADMIN',mustChangePassword:false};
+const actor={id:'admin',tokenType:'BACKOFFICE_USER',sessionId:'admin-session',sessionVersion:0,isSuperAdmin:true,platformRole:'SUPER_ADMIN',role:'OWNER',mustChangePassword:false};
+test('actual personal Super Admin issuer matches the unscoped installer fixture claims',async()=>{
+ const {issueSession}=await import('../src/routes/auth.js'),{default:jwt}=await import('jsonwebtoken');
+ const prior=process.env.JWT_SECRET;process.env.JWT_SECRET='isolated-company-installer-issuer-regression';
+ try{
+  const user={id:'admin',companyId:'company',role:'SUPER_ADMIN',sessionVersion:0,mustChangePassword:false,fullName:'SYNTHETIC',email:'admin@company-install.invalid',company:{id:'company',name:'SYNTHETIC'}};
+  const issued=await issueSession(user,{headers:{}},'Isolated installer',{userSession:{create:async()=>({id:'admin-session',deviceName:'Isolated installer',expiresAt:new Date(Date.now()+60000)})}});
+  const claims=jwt.verify(issued.token,process.env.JWT_SECRET);
+  for(const [key,value] of Object.entries(actor))assert.equal(claims[key],value,key);
+  for(const key of ['supportContext','storeId','staffAccess'])assert.equal(Object.hasOwn(claims,key),false,key);
+ }finally{if(prior===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=prior}
+});
 // Only the AWS object-storage process is substituted. psql/pg_dump/pg_restore,
 // catalogue validation, full COPY audit, guards and the installer remain native.
 const awsFixture=`#!/usr/bin/env python3
@@ -71,7 +82,7 @@ async function fixture(profile){
   await db.$transaction(tx=>core.installInTransaction(tx,actor,{companyId:'company',storeId:'selected'}),{timeout:120000,maxWait:3000});
   await db.$executeRawUnsafe(`INSERT INTO "StoreLifecycleFence"("storeId","companyId","planHash") VALUES ('sibling','company',$1),('foreign','foreign',$1)`,core.describe().planHash);
   await db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "generation"=7 WHERE "storeId"='selected'`);
-  await db.$executeRawUnsafe(`CREATE TABLE "StoreLifecycleRuntime" ("id" text PRIMARY KEY,"heartbeatJson" text NOT NULL,"mac" text NOT NULL)`);
+  await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreLifecycleRuntime" ("id" text PRIMARY KEY,"heartbeatJson" text NOT NULL,"mac" text NOT NULL)`);
   const heartbeatJson=JSON.stringify({protocol:'MWS_STORE_RECOVERY_CAPABILITY_V1',manifestHash:core.describe().planHash,workerRevision:revision,checkedAt:new Date().toISOString(),storagePolicyVerified:true,rowDigestFormat:LIFECYCLE_ROW_DIGEST_FORMAT});
   await db.$executeRawUnsafe(`INSERT INTO "StoreLifecycleRuntime" VALUES('backup-worker',$1,$2)`,heartbeatJson,lifecycleWorkerCapabilityMac(secret,heartbeatJson));
   await writeFile(join(directory,'aws'),awsFixture,{mode:0o700});await chmod(join(directory,'aws'),0o700);
@@ -84,7 +95,7 @@ async function fixture(profile){
 for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installation consumes actual full backup/private restore and preserves existing epochs and STORE policies`,{skip:!isolated()&&!process.env.CI?'Actual isolated PostgreSQL unavailable locally':false,timeout:600000},async()=>{
  assert.ok(isolated(),'Actual isolated PostgreSQL is mandatory in CI');const f=await fixture(profile);
  try{
-  for(const changes of [{supportContext:{companyId:'company'}},{storeId:'selected'},{staffAccess:true},{ownerCompanyId:'company'},{mustChangePassword:true},{sessionVersion:-1},{isSuperAdmin:false},{platformRole:'OWNER'},{role:'OWNER'}])await assert.rejects(async()=>f.service.inspect({...actor,...changes}),{code:'COMPANY_INSTALL_ACTOR_REQUIRED'});
+  for(const changes of [{supportContext:{companyId:'company'}},{storeId:'selected'},{staffAccess:true},{ownerCompanyId:'company'},{mustChangePassword:true},{sessionVersion:-1},{isSuperAdmin:false},{platformRole:'OWNER'},{role:'EMPLOYEE'},{role:'SUPER_ADMIN'}])await assert.rejects(async()=>f.service.inspect({...actor,...changes}),{code:'COMPANY_INSTALL_ACTOR_REQUIRED'});
   assert.equal((await f.db.$queryRawUnsafe(`SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='BackofficeStaffAccount' AND column_name='companyCapabilities'`)).length,0,'scoped/masked identities cannot create schema');
   const inspect=await f.service.inspect(actor);assert.equal(inspect.eligible,true);assert.equal(inspect.productionActivated,false);
   const originalWorker=(await f.db.$queryRawUnsafe(`SELECT "heartbeatJson","mac" FROM "StoreLifecycleRuntime" WHERE "id"='backup-worker'`))[0];

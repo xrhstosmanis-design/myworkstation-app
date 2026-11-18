@@ -40,14 +40,16 @@
     "ops/backup/lifecycle/worker.py": "de532763eb1bb5849beb24f9331b824b9040ae72a332b277e8ea6961905fbadf",
     "ops/backup/lifecycle/verify_restore.py": "2a7fc2d157fc926e77386b6989eb6908fd2c661395670cc22b8b566258efe431",
     "server/src/services/backoffice-company-profile.js": "1efdcfde10f9fb079a4a7efbfb7f8c2384b016b8299dc1445b36f18b0a76c67a",
-    "ops/backup/lifecycle/backoffice_company_profile.py": "ccb9b99d23d17415c76ab2181e5d033adaf6df1696567bbe38bcff62375185f7",
+    "ops/backup/lifecycle/backoffice_company_profile.py": "48ad34c21cf3df299c41f012acd4377f25cab6449db456f6557308d4aae08e34",
     "server/src/services/backoffice-company-installation-proof.js": "95c595abda03bf913caa3291d2c2c6d587ef497b2d9b361a75eadd8024915eaa",
-    "server/src/services/backoffice-company-installation.js": "edb32cba32ef56396f319cd9fdd398941d66912c3ba1c23b173afe0bf5fc4d9c",
-    "ops/backup/lifecycle/company-installation-backup.py": "72f4a9392bf34d787e120e155e83b52ab383911f04e831244aa9eda190f5e65b",
+    "server/src/services/backoffice-company-installation.js": "d2830a035ff26c8023ded61dcdc40569341dc13dd889303a3ce4cea4bf61846e",
+    "ops/backup/lifecycle/company-installation-backup.py": "4706eac8a699ae723c0bee1804ec1d638517005a07706a4fce119217d45f5b5b",
     "ops/backup/lifecycle/company-installation-observe.sql": "360de622fd576932dcb7495129b1485835a8664c6bd1948a842a870fbb6e1c5a",
     "server/src/services/monthly-inventory-capture-schema.js": "4e16ab3eb99b6202b34d9d4bde1e7f21c8e03b219e70f461e1d1d88b9c991425",
     "server/src/services/monthly-inventory-capture-authorization.js": "bdce7571c588445882ca8e5568e12e23748f0e0893c816e4b621f5befd053a92",
-    "server/src/services/monthly-inventory-capture-status.js": "6f3c79ceb28c079a7e37093f9d90b39995c89eb48982201752f3fd5e12393547"
+    "server/src/services/monthly-inventory-capture-status.js": "6f3c79ceb28c079a7e37093f9d90b39995c89eb48982201752f3fd5e12393547",
+    "ops/backup/lifecycle/company_source_root.py": "2c9985e29890a5ec1d46892f0100b6bc7b0bf4d4d7aa01bef6d923a01dac8d2a",
+    "server/scripts/store-lifecycle-verify-copy.py": "e3f6436c830a5cdeaefe1f0ef9637234ea0e5bab9d44cda27cafeaf05c70c765"
   },
   "runtimeProfilesUnchanged": [
     "BASE",

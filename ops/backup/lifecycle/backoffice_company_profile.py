@@ -3,6 +3,7 @@ import copy
 import hashlib
 import json
 import pathlib
+from company_source_root import source_file, verify_runtime_copy
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -10,7 +11,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 def company_manifest(document, profile):
     if profile not in ('BASE', 'CAPTURE'):
         raise ValueError('Invalid company lifecycle profile')
-    packet = json.loads((HERE / 'backoffice-company-compatibility.proposed.json').read_text())
+    verify_runtime_copy(__file__, 'ops/backup/lifecycle/backoffice_company_profile.py')
+    packet = json.loads(source_file('ops/backup/lifecycle/backoffice-company-compatibility.proposed.json').read_text())
     if packet.get('format') != 'MWS_BACKOFFICE_COMPANY_COMPATIBILITY_PROPOSAL_V1':
         raise ValueError('Invalid company compatibility packet')
     variant = next(v for v in packet['variants'] if v['profile'] == profile)
@@ -19,7 +21,7 @@ def company_manifest(document, profile):
     column = 'BackofficeStaffAccount.companyCapabilities'
     if target.get('knownColumns', {}).get('BackofficeStaffAccount') != expected or column in target.get('reviewedColumns', []) or any(t['name'] == 'BackofficeStaffAccount' for t in target['tables']):
         raise ValueError('Unreviewed company security layout')
-    source = HERE.parents[2] / variant['sourceManifest']
+    source = source_file(variant['sourceManifest'])
     if hashlib.sha256(source.read_bytes()).hexdigest() != packet['sourceHashes'][variant['sourceManifest']] or json.loads(source.read_text()) != document:
         raise ValueError('Company profile source changed')
     target['id'] = 'BACKOFFICE_COMPANY_' + profile + '_PROPOSED_V1'

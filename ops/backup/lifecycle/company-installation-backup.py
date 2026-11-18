@@ -18,9 +18,10 @@ import tempfile
 import uuid
 from worker import run, query, s3, file_sha
 from verify_restore import compact, PrivatePostgres
+from company_source_root import source_root, source_file, verify_runtime_copy
 
 HERE = pathlib.Path(__file__).resolve().parent
-ROOT = HERE.parents[2]
+ROOT = source_root()
 OBSERVER = HERE / 'company-installation-observe.sql'
 REQUEST = 'MWS_BACKOFFICE_COMPANY_INSTALL_BACKUP_REQUEST_V1'
 PROOF = 'MWS_BACKOFFICE_COMPANY_INSTALL_BACKUP_PROOF_V1'
@@ -65,6 +66,8 @@ def storage_identity():
 
 
 def parse_request(envelope):
+    verify_runtime_copy(__file__, 'ops/backup/lifecycle/company-installation-backup.py')
+    verify_runtime_copy(OBSERVER, 'ops/backup/lifecycle/company-installation-observe.sql')
     if not isinstance(envelope, dict) or set(envelope) != {'requestJson', 'mac'} or not isinstance(envelope['requestJson'], str) or len(envelope['requestJson'].encode()) > 8192 or not isinstance(envelope['mac'], str) or not re.fullmatch('[a-f0-9]{64}', envelope['mac']) or not hmac.compare_digest(signature(REQUEST, envelope['requestJson']), envelope['mac']):
         raise ValueError('Request authentication refused')
     value = json.loads(envelope['requestJson'])
@@ -79,21 +82,21 @@ def parse_request(envelope):
     issued, expires = stamp(value['issuedAt']), stamp(value['expiresAt'])
     if issued > now + datetime.timedelta(seconds=30) or expires <= now or expires <= issued or expires - issued > datetime.timedelta(minutes=30):
         raise ValueError('Request expired')
-    packet = json.loads((HERE / 'backoffice-company-compatibility.proposed.json').read_text())
+    packet = json.loads(source_file('ops/backup/lifecycle/backoffice-company-compatibility.proposed.json').read_text())
     if packet['executionEnabled'] is not False or packet['productionActivated'] is not False:
         raise ValueError('Unexpected preparation packet')
     for name, digest in packet['sourceHashes'].items():
-        if file_sha(ROOT / name) != digest:
+        if file_sha(source_file(name)) != digest:
             raise ValueError('Reviewed source differs')
     variant = next(v for v in packet['variants'] if v['profile'] == value['profile'])
-    source = json.loads((ROOT / variant['sourceManifest']).read_text())
+    source = json.loads(source_file(variant['sourceManifest']).read_text())
     if value['storageIdentity'] != storage_identity() or sha(compact(source)) != value['sourcePlanHash'] or variant['proposedPlanHash'] != value['targetPlanHash'] or file_sha(OBSERVER) != value['observerSha256'] or os.environ.get('RENDER_GIT_COMMIT') != value['workerRevision']:
         raise ValueError('Worker/profile differs')
     return value
 
 
 def auditor_module():
-    spec = importlib.util.spec_from_file_location('company_copy_audit', ROOT / 'server/scripts/store-lifecycle-verify-copy.py')
+    spec = importlib.util.spec_from_file_location('company_copy_audit', source_file('server/scripts/store-lifecycle-verify-copy.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -217,9 +220,9 @@ def run_backup(request_envelope, *, authorized=False):
 def prepare_request(profile, source_revision):
     if profile not in ('BASE', 'CAPTURE') or not re.fullmatch('[a-f0-9]{40}', source_revision or ''):
         raise ValueError('Explicit source/profile required')
-    packet = json.loads((HERE / 'backoffice-company-compatibility.proposed.json').read_text())
+    packet = json.loads(source_file('ops/backup/lifecycle/backoffice-company-compatibility.proposed.json').read_text())
     variant = next(v for v in packet['variants'] if v['profile'] == profile)
-    source = json.loads((ROOT / variant['sourceManifest']).read_text())
+    source = json.loads(source_file(variant['sourceManifest']).read_text())
     now = utc_now()
     request = {'protocol': REQUEST, 'requestId': str(uuid.uuid4()), 'sourceRevision': source_revision, 'workerRevision': os.environ.get('RENDER_GIT_COMMIT'), 'profile': profile, 'sourcePlanHash': sha(compact(source)), 'targetPlanHash': variant['proposedPlanHash'], 'schema': 'public', 'observerSha256': file_sha(OBSERVER), 'sourceObservationSha256': '0' * 64, 'sourceOwnershipSha256': '0' * 64, 'fullDataDigest': '0' * 64, 'storageIdentity': storage_identity(), 'issuedAt': canonical_stamp(now), 'expiresAt': canonical_stamp(now + datetime.timedelta(minutes=30))}
     # Verify source/worker/profile before any potentially expensive observation.

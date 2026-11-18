@@ -32,3 +32,9 @@ Isolated mocked-boundary security tests verify rejection paths; they do not esta
 ## Scope of restore equivalence
 
 The private PostgreSQL cluster uses C locale. Canonical catalogue identifier ordering is explicitly COLLATE C, independent of the source locale. The acceptance checks full dumped row/sequence multisets and the selected supported semantic catalogue; it does not certify universal query-behaviour equivalence to a source database with a different default collation/provider. Source ownership/ACL metadata is separately bound rather than applied inside the private restore. A controlled transition without external DDL remains required; no claim of complete production operational restore acceptance follows solely from the isolated source tests.
+
+## Packaged source and canonical operator identity
+
+The backup image explicitly configures MWS_COMPANY_SOURCE_ROOT=/backup/company-source and carries a repo-shaped copy of the twenty source-bound files. The executing resolver/profile/producer/observer must match their reviewed copies; the native COPY auditor is source-bound too. A checkout resolves its own root without relying on a fixed parent depth. The actual-image regression performs imports/hash/profile checks under network none, without DB or S3 operations. No profile activation follows from configuring this filesystem root.
+
+The normal verified SuperAdmin issuer uses role OWNER, platformRole SUPER_ADMIN and isSuperAdmin true. Installation additionally verifies the real database SUPER_ADMIN and current session, and refuses support/store/staff contexts. The apparent OWNER claim is the canonical issuer representation, not permission to impersonate an Owner or accept an ordinary Owner token.

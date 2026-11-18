@@ -25,7 +25,7 @@ function installerActor(input){
   if(descriptors[key]){if(!Object.hasOwn(descriptors[key],'value'))fail('COMPANY_INSTALL_ACTOR_REQUIRED');actor[key]=descriptors[key].value;}
  }
  const text=value=>typeof value==='string'&&value.trim()===value&&value.length>0&&value.length<=160&&!/[\u0000-\u001f\u007f]/.test(value);
- if(actor.tokenType!=='BACKOFFICE_USER'||!text(actor.id)||!text(actor.sessionId)||actor.companyId!==undefined&&!text(actor.companyId)||!Number.isInteger(actor.sessionVersion)||actor.sessionVersion<0||actor.sessionVersion>2147483647||actor.isSuperAdmin!==true||actor.platformRole!=='SUPER_ADMIN'||actor.role!=='SUPER_ADMIN'||actor.mustChangePassword!==undefined&&actor.mustChangePassword!==false)fail('COMPANY_INSTALL_ACTOR_REQUIRED');
+ if(actor.tokenType!=='BACKOFFICE_USER'||!text(actor.id)||!text(actor.sessionId)||actor.companyId!==undefined&&!text(actor.companyId)||!Number.isInteger(actor.sessionVersion)||actor.sessionVersion<0||actor.sessionVersion>2147483647||actor.isSuperAdmin!==true||actor.platformRole!=='SUPER_ADMIN'||actor.role!=='OWNER'||actor.mustChangePassword!==undefined&&actor.mustChangePassword!==false)fail('COMPANY_INSTALL_ACTOR_REQUIRED');
  return Object.freeze(actor);
 }
 export function createBackofficeCompanyInstallation(db,{sourceRevision,enabled=false,profile='BASE',env=process.env}={}){

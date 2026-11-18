@@ -18,7 +18,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   native-full-schema:
-    runs-on: ubuntu-latest
+    # Match the native PG16 toolchain already exercised by the main CI job.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     services:
       postgres:
