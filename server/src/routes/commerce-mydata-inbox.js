@@ -135,7 +135,11 @@ export async function recoverHistoricalOriginals({
         WHERE excluded."inboxId"=m."inboxId"
       )
       AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
-      AND m."rawPayload"->>'xml' ~* ${providerOriginalRecoveryLinkPattern()}
+      AND m."rawPayload"->>'xml' ~* CASE
+        WHEN COALESCE((m."rawPayload"->>'originalAttempts')::int,0)=0
+        THEN ${providerOriginalRecoveryLinkPattern({includeExistingImpact:true})}
+        ELSE ${providerOriginalRecoveryLinkPattern()}
+      END
     ORDER BY m."fetchedAt",m."id" LIMIT 2`;
   let downloaded = 0, failed = 0;
   for (const {inboxId} of candidates) {
