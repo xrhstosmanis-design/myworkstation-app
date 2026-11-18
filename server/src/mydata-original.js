@@ -9,8 +9,14 @@ export function originalDownloadUrl(xml,issuerVat){
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
   const decoded=raw.trim().replace(/&amp;/g,"&").replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(n[0].toLowerCase()==="x"?parseInt(n.slice(1),16):Number(n)));
   let url;try{url=new URL(decoded)}catch{throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.")}
-  // First verified provider adapter. Never fetch arbitrary hosts or redirects.
-  if(url.protocol!=="https:"||url.hostname!=="einvoice.impact.gr"||url.username||url.password||url.port||url.search||url.hash||!/^\d{9}$/.test(issuerVat)||!new RegExp("^/p/EL"+issuerVat+"/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname))throw error("Ο σύνδεσμος απαιτεί διαφορετικό υποστηριζόμενο πάροχο ή δεν συμφωνεί με το ΑΦΜ εκδότη.");
+  const validIssuer = /^\d{9}$/.test(issuerVat);
+  const impact = validIssuer && url.hostname === "einvoice.impact.gr"
+    && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
+  const epsilon = validIssuer && url.hostname === "epsilondigital.epsilonnet.gr"
+    && /^\/fd\/[a-f0-9]{32}:8\/?$/i.test(url.pathname);
+  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon)) {
+    throw error("Ο σύνδεσμος απαιτεί διαφορετικό υποστηριζόμενο πάροχο ή δεν συμφωνεί με το ΑΦΜ εκδότη.");
+  }
   url.pathname=url.pathname.replace(/\/$/,"")+"/pdf";
   return url.href;
 }
