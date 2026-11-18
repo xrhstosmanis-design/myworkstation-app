@@ -1,3 +1,4 @@
+import {companyReportFilters,readCompanyReports} from './backoffice-staff-company-reports.js';
 import {PERSONNEL_BASIC,resolvePersonnelPackageStates} from '../personnel-packages.js';
 import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities} from '../../../shared/backoffice-staff-company.mjs';
 import {readCompanyCommerceData} from './backoffice-staff-company-commerce.js';
@@ -27,7 +28,8 @@ export async function requireStaffCompanyGrant(db,user,capability){
  }else if(!license.activeModules?.includes(staffCompanyModules[capability]))throw staffError(403,'MODULE_DISABLED');
  return {capability,companyId:account.companyId,revision:account.revision};
 }
-function validCompanyQuery(query,capability){
+function validCompanyQuery(query,capability,path){
+ if(capability?.startsWith('reports-')){try{companyReportFilters(query,capability,path);return true}catch{return false}}
  if(query!==undefined&&(!query||typeof query!=='object'||Array.isArray(query)))return false;
  const names=Reflect.ownKeys(query||{});
  if(names.length===0)return true;
@@ -39,7 +41,7 @@ function validCompanyQuery(query,capability){
 export async function enforceStaffCompanyRequest(db,req){
  const companyId=req.get('x-backoffice-company-id'),path=String(req.originalUrl||req.path||'').split('?')[0];
  const capability=staffCompanyRequestCapability(req.method,path);
- if(!capability||companyId!==req.user?.companyId||req.get('x-backoffice-store-id')!==undefined||req.user?.storeId||!validCompanyQuery(req.query,capability)||req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length)throw staffError();
+ if(!capability||companyId!==req.user?.companyId||req.get('x-backoffice-store-id')!==undefined||req.user?.storeId||!validCompanyQuery(req.query,capability,path)||req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length)throw staffError();
  req.staffCompanyGrant=await requireStaffCompanyGrant(db,req.user,capability);
  return true;
 }
@@ -48,6 +50,12 @@ export async function readStaffCompanyDirectory(db,req){
  if(!capability||req.user?.staffAccess!==true||req.staffCompanyGrant?.capability!==capability||req.staffCompanyGrant.companyId!==req.user.companyId)throw staffError();
  await enforceStaffCompanyRequest(db,req);
  const companyId=req.user.companyId;
+ if(capability.startsWith('reports-')){
+  const payload=await readCompanyReports(db,req.user.companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{});
+  const after=await requireStaffCompanyGrant(db,req.user,capability);if(after.revision!==req.staffCompanyGrant.revision)throw staffError();
+  return {scope:'COMPANY',companyId,...payload};
+ }
+
  if(capability==='workforce-role-registry.read'){
   const raw=await db.$queryRaw`SELECT r."id",r."companyId",r."name",r."code",r."description",r."active",r."createdAt",r."updatedAt",(SELECT COUNT(*)::int FROM "WorkforceEmployeeRole" a JOIN "WorkforceEmployee" e ON e."id"=a."employeeId" AND e."companyId"=r."companyId" WHERE a."roleId"=r."id") AS "employeeCount",(SELECT COUNT(*)::int FROM "WorkforceShiftTemplate" t JOIN "Store" s ON s."id"=t."storeId" AND s."companyId"=t."companyId" WHERE t."requiredRoleId"=r."id" AND t."companyId"=r."companyId") AS "shiftTemplateCount" FROM "WorkforceRole" r WHERE r."companyId"=${companyId} ORDER BY r."active" DESC,r."name",r."id" LIMIT 10001`;
   const items=boundedRows(raw).map(row=>{const v=namedActive(fields(row,['id','companyId','name','code','description','active','employeeCount','shiftTemplateCount','createdAt','updatedAt']));if(v.companyId!==companyId)structureInvalid();textField(v.code);textField(v.description,true);finiteField(v.employeeCount,{integer:true});finiteField(v.shiftTemplateCount,{integer:true});for(const key of ['createdAt','updatedAt']){const d=new Date(v[key]);if(v[key]==null||!Number.isFinite(d.getTime()))structureInvalid();v[key]=d.toISOString()}return v});

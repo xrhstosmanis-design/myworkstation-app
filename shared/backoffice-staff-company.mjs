@@ -1,8 +1,8 @@
 // Company authority is independent of STORE membership and profile presets.
 // These keys become selectable only after the installed protocol is verified.
 export const staffCompanyProtocol='MWS_BACKOFFICE_COMPANY_V1';
-export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read']);
-export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC'});
+export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read']);
+export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY'});
 export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:'Εταιρικές προβολές',actions:Object.freeze([
   {key:'stores.read',label:'Προβολή καταστημάτων εταιρείας',description:'Βλέπει τον κατάλογο καταστημάτων της εταιρείας, χωρίς ρυθμίσεις ή είσοδο στη διαχείρισή τους.'},
   {key:'suppliers.read',label:'Προβολή προμηθευτών εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας και ΑΦΜ προμηθευτών της εταιρείας, χωρίς πληρωμές ή αλλαγές.'},
@@ -19,6 +19,10 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   {key:'recipes.read',label:'Προβολή εταιρικών συνταγών και κόστους',description:'Βλέπει συνταγές και διαθέσιμο κόστος εταιρικών συστατικών, χωρίς αλλαγές ή παρασκευή.'},
   {key:'supplier-details.read',requires:['suppliers.read'],label:'Προβολή εταιρικής καρτέλας προμηθευτή',description:'Βλέπει στοιχεία προμηθευτή, έως 200 αγορές και πληρωμές και εκτιμώμενο υπόλοιπο του παραθύρου, χωρίς αλλαγές.'},
   {key:'workforce-role-registry.read',label:'Προβολή πλήρους εταιρικού καταλόγου ρόλων προσωπικού',description:'Βλέπει όλους τους ρόλους προσωπικού και τα συνολικά εταιρικά πλήθη, εφόσον υπάρχει ενεργό κατάστημα με BASIC προσωπικό.'},
+  {key:'reports-price-changes.read',label:'Προβολή εταιρικής αναφοράς μεταβολών τιμών',description:'Βλέπει έως 5.000 εταιρικές μεταβολές τιμών, περιλαμβανομένων γενικών μεταβολών χωρίς κατάστημα.'},
+  {key:'reports-departments.read',label:'Προβολή εταιρικής διοικητικής αναφοράς τμημάτων',description:'Βλέπει ποσότητες και αξίες ολοκληρωμένων εταιρικών πωλήσεων ανά κατηγορία και ΦΠΑ· δεν αποτελεί φορολογικό Ζ.'},
+  {key:'reports-documents.read',label:'Προβολή εταιρικής αναφοράς παραστατικών',description:'Βλέπει έως 5.000 αγορές και 5.000 πωλήσεις με οικονομικά μεταδεδομένα και στοιχεία συναλλασσομένων, χωρίς αρχεία ή φορολογική διαβίβαση.'},
+  {key:'reports-delivery.read',label:'Προβολή εταιρικής αναφοράς δελτίων delivery',description:'Βλέπει έως 5.000 δελτία και τις γραμμές τους με στοιχεία παραλήπτη και διαθέσιμες αξίες, χωρίς αποστολή ή διαβίβαση.'},
   {key:'customers.read',label:'Προβολή πελατών, υπολοίπων και πιστωτικών ορίων εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας, έκπτωση, οικονομικό υπόλοιπο και πιστωτικό όριο πελατών όλης της εταιρείας, χωρίς κινήσεις ή αλλαγές.'}
 ])}]);
 export function validStaffCompanyCapabilities(value){
@@ -42,6 +46,11 @@ export function staffCompanySupplierId(path){
  let value;try{value=decodeURIComponent(match[1])}catch{return null}
  return value&&value.length<=160&&value.trim()===value&&!/[\/\\\u0000-\u001f\u007f]/.test(value)?value:null;
 }
+export function staffCompanyDeliveryNoteId(path){
+ const match=/^\/api\/reports\/delivery\/([^/]+)\/lines$/.exec(path);if(!match)return null;
+ let value;try{value=decodeURIComponent(match[1])}catch{return null}
+ return value&&value.length<=160&&value.trim()===value&&!/[\/\\\u0000-\u001f\u007f]/.test(value)?value:null;
+}
 export function staffCompanyRequestCapability(method,path){
   if(method!=='GET')return null;
   if(path==='/api/owner-products/stores')return 'stores.read';
@@ -60,5 +69,9 @@ export function staffCompanyRequestCapability(method,path){
   if(path==='/api/commerce/recipes')return 'recipes.read';
   if(staffCompanySupplierId(path)!==null)return 'supplier-details.read';
   if(path==='/api/backoffice-staff/company/workforce-roles')return 'workforce-role-registry.read';
+  if(path==='/api/reports/price-changes')return 'reports-price-changes.read';
+  if(path==='/api/reports/departments')return 'reports-departments.read';
+  if(path==='/api/reports/documents')return 'reports-documents.read';
+  if(path==='/api/reports/delivery'||staffCompanyDeliveryNoteId(path)!==null)return 'reports-delivery.read';
   return null;
 }

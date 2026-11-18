@@ -48,12 +48,13 @@ jobs:
       - run: npx prisma generate --schema server/prisma/schema.prisma
       - name: Build actual PG18 recovery image
         run: docker build --file ops/backup/Dockerfile --tag mws-wallet-recovery:ci .
-      - name: Use matching PG16 dump and private restore tools
+      - name: Refresh matching PG16 dump and private restore tools
         run: |
-          if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ] || [ ! -x /usr/lib/postgresql/16/bin/initdb ]; then
-            sudo apt-get update -qq
-            sudo apt-get install --yes --no-install-recommends postgresql-16 postgresql-client-16
-          fi
+          # The floating postgres:16 service receives minor security releases.
+          # Existing runner binaries can be an older minor even with major 16.
+          # Refresh both server and client instead of accepting stale binaries.
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends postgresql-16 postgresql-client-16
           test -x /usr/lib/postgresql/16/bin/pg_dump
           test -x /usr/lib/postgresql/16/bin/initdb
           echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
@@ -61,6 +62,9 @@ jobs:
           pg_dump --version
           pg_restore --version
           initdb --version
+          postgres --version
+          pg_ctl --version
+          psql "$DATABASE_URL" -X -A -t -c 'SHOW server_version_num'
       - name: Verify actual schema, archive/COPY, pending and stale controls
         working-directory: server
         run: node --test test/ai-wallet-recovery.test.js test/ai-wallet-recovery-postgres.test.js test/ai-owner-wallet-postgres.test.js test/store-lifecycle-manifest.test.js

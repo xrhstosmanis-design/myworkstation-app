@@ -78,13 +78,27 @@ PRIVATE_SQLSTATE_CATEGORIES = {
     '58P01': 'SQLSTATE_58P01_UNDEFINED_FILE', '42P16': 'SQLSTATE_42P16_INVALID_TABLE_DEFINITION',
     '42P17': 'SQLSTATE_42P17_INVALID_OBJECT_DEFINITION', '42804': 'SQLSTATE_42804_DATATYPE_MISMATCH',
 }
-PRIVATE_22023_SETTINGS = frozenset({'timezone', 'lc_collate', 'lc_ctype', 'lc_messages', 'lc_monetary', 'lc_numeric', 'lc_time', 'client_encoding', 'server_encoding', 'default_toast_compression', 'default_table_access_method', 'default_tablespace', 'temp_tablespaces', 'session_replication_role', 'xmloption', 'row_security', 'transaction_timeout', 'restrict_nonsystem_relation_kind', 'search_path', 'datestyle', 'extra_float_digits'})
+PRIVATE_22023_SETTINGS = frozenset({'composite_type_mismatch', 'timezone', 'lc_collate', 'lc_ctype', 'lc_messages', 'lc_monetary', 'lc_numeric', 'lc_time', 'client_encoding', 'server_encoding', 'default_toast_compression', 'default_table_access_method', 'default_tablespace', 'temp_tablespaces', 'session_replication_role', 'xmloption', 'row_security', 'transaction_timeout', 'restrict_nonsystem_relation_kind', 'search_path', 'datestyle', 'extra_float_digits'})
 PRIVATE_22023_OPERATIONS = frozenset({'SET', 'CREATE_COLLATION', 'CREATE_FUNCTION', 'CREATE_INDEX', 'CREATE_TABLE', 'ALTER_TABLE', 'COPY', 'SELECT_SETVAL', 'SELECT_SET_CONFIG', 'CREATE_SCHEMA', 'CREATE_SEQUENCE', 'ALTER_SEQUENCE', 'CREATE_EXTENSION', 'ALTER_TYPE', 'CREATE_TYPE', 'CREATE_TRIGGER', 'COMMENT', 'GRANT', 'ALTER_FUNCTION', 'ALTER_DATABASE'})
 PRIVATE_22023_DETAILS = frozenset({'SETTING_VALUE', 'SETTING_NAME', 'SETTING_CONTEXT', 'SEQUENCE_BOUNDS', 'SEQUENCE_OPTIONS', 'LOCALE', 'JSON_ARGUMENT', 'STORAGE_OPTION', 'EXTENSION_OPTION'})
+PRIVATE_22023_PARAMETER_NAMES = PRIVATE_22023_SETTINGS | frozenset({'autovacuum_enabled', 'fillfactor', 'deduplicate_items', 'toast_tuple_target', 'vacuum_index_cleanup', 'vacuum_truncate', 'parallel_workers', 'autovacuum_vacuum_threshold', 'autovacuum_vacuum_max_threshold', 'autovacuum_vacuum_scale_factor', 'autovacuum_vacuum_insert_threshold', 'autovacuum_vacuum_insert_scale_factor', 'autovacuum_analyze_threshold', 'autovacuum_analyze_scale_factor', 'autovacuum_vacuum_cost_delay', 'autovacuum_vacuum_cost_limit', 'autovacuum_freeze_min_age', 'autovacuum_freeze_max_age', 'autovacuum_freeze_table_age', 'autovacuum_multixact_freeze_min_age', 'autovacuum_multixact_freeze_max_age', 'autovacuum_multixact_freeze_table_age', 'user_catalog_table', 'security_barrier', 'security_invoker', 'check_option', 'buffering', 'pages_per_range', 'autosummarize', 'fastupdate', 'gin_pending_list_limit', 'siglen', 'default_version', 'module_pathname', 'relocatable', 'requires', 'schema', 'superuser', 'trusted', 'no_relocate', 'locale', 'provider', 'deterministic', 'version', 'rules', 'publish_generated_columns', 'publish_via_partition_root'})
 PRIVATE_22023_CATEGORIES = (frozenset('SQLSTATE_22023_SETTING_' + name.upper() for name in PRIVATE_22023_SETTINGS)
     | frozenset('SQLSTATE_22023_' + name for name in PRIVATE_22023_DETAILS)
-    | frozenset('SQLSTATE_22023_OPERATION_' + name for name in PRIVATE_22023_OPERATIONS))
+    | frozenset('SQLSTATE_22023_OPERATION_' + name for name in PRIVATE_22023_OPERATIONS)
+    | frozenset('SQLSTATE_22023_PARAMETER_NAME_' + name.upper() for name in PRIVATE_22023_PARAMETER_NAMES)
+    | frozenset('SQLSTATE_22023_PARAMETER_OPERATION_' + name for name in PRIVATE_22023_OPERATIONS))
 PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'DUPLICATE_SCHEMA', 'MISSING_SCHEMA', 'MISSING_FUNCTION', 'MISSING_EXTENSION', 'MISSING_RELATION', 'MISSING_COLUMN', 'MISSING_OPERATOR', 'CONSTRAINT', 'SQL_SYNTAX', 'ARCHIVE_IO', 'FILE_IO', 'RESOURCE', 'UNKNOWN'}) | frozenset(PRIVATE_SQLSTATE_CATEGORIES.values()) | PRIVATE_22023_CATEGORIES
+
+
+def private_22023_operation(remainder):
+    statement = re.search(r'\bSTATEMENT:\s+([^\n]{0,100})', remainder)
+    if statement:
+        text = statement.group(1).upper()
+        operations = [('SELECT_SETVAL', r'SELECT\s+(?:PG_CATALOG\.)?SETVAL\s*\('), ('SELECT_SET_CONFIG', r'SELECT\s+(?:PG_CATALOG\.)?SET_CONFIG\s*\('), ('CREATE_COLLATION', r'CREATE\s+COLLATION\b'), ('CREATE_FUNCTION', r'CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\b'), ('CREATE_INDEX', r'CREATE\s+(?:UNIQUE\s+)?INDEX\b'), ('CREATE_TABLE', r'CREATE\s+TABLE\b'), ('ALTER_TABLE', r'ALTER\s+TABLE\b'), ('COPY', r'COPY\b'), ('SET', r'SET\b'), ('CREATE_SCHEMA', r'CREATE\s+SCHEMA\b'), ('CREATE_SEQUENCE', r'CREATE\s+SEQUENCE\b'), ('ALTER_SEQUENCE', r'ALTER\s+SEQUENCE\b'), ('CREATE_EXTENSION', r'CREATE\s+EXTENSION\b'), ('ALTER_TYPE', r'ALTER\s+TYPE\b'), ('CREATE_TYPE', r'CREATE\s+TYPE\b'), ('CREATE_TRIGGER', r'CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\b'), ('COMMENT', r'COMMENT\s+ON\b'), ('GRANT', r'GRANT\b'), ('ALTER_FUNCTION', r'ALTER\s+FUNCTION\b'), ('ALTER_DATABASE', r'ALTER\s+DATABASE\b')]
+        for name, pattern in operations:
+            if re.match(pattern, text):
+                return name
+    return None
 
 
 def private_22023_category(primary, remainder):
@@ -105,14 +119,17 @@ def private_22023_category(primary, remainder):
     ]
     for name, pattern in patterns:
         if re.search(pattern, primary.lower()):
+            if name == 'SETTING_NAME':
+                parameter = re.search(r'unrecognized (?:configuration )?parameter \"([a-z_]+)\"', primary.lower())
+                if parameter and parameter.group(1) in PRIVATE_22023_PARAMETER_NAMES:
+                    return 'SQLSTATE_22023_PARAMETER_NAME_' + parameter.group(1).upper()
+                operation = private_22023_operation(remainder)
+                if operation:
+                    return 'SQLSTATE_22023_PARAMETER_OPERATION_' + operation
             return 'SQLSTATE_22023_' + name
-    statement = re.search(r'\bSTATEMENT:\s+([^\n]{0,100})', remainder)
-    if statement:
-        text = statement.group(1).upper()
-        operations = [('SELECT_SETVAL', r'SELECT\s+(?:PG_CATALOG\.)?SETVAL\s*\('), ('SELECT_SET_CONFIG', r'SELECT\s+(?:PG_CATALOG\.)?SET_CONFIG\s*\('), ('CREATE_COLLATION', r'CREATE\s+COLLATION\b'), ('CREATE_FUNCTION', r'CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\b'), ('CREATE_INDEX', r'CREATE\s+(?:UNIQUE\s+)?INDEX\b'), ('CREATE_TABLE', r'CREATE\s+TABLE\b'), ('ALTER_TABLE', r'ALTER\s+TABLE\b'), ('COPY', r'COPY\b'), ('SET', r'SET\b'), ('CREATE_SCHEMA', r'CREATE\s+SCHEMA\b'), ('CREATE_SEQUENCE', r'CREATE\s+SEQUENCE\b'), ('ALTER_SEQUENCE', r'ALTER\s+SEQUENCE\b'), ('CREATE_EXTENSION', r'CREATE\s+EXTENSION\b'), ('ALTER_TYPE', r'ALTER\s+TYPE\b'), ('CREATE_TYPE', r'CREATE\s+TYPE\b'), ('CREATE_TRIGGER', r'CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\b'), ('COMMENT', r'COMMENT\s+ON\b'), ('GRANT', r'GRANT\b'), ('ALTER_FUNCTION', r'ALTER\s+FUNCTION\b'), ('ALTER_DATABASE', r'ALTER\s+DATABASE\b')]
-        for name, pattern in operations:
-            if re.match(pattern, text):
-                return 'SQLSTATE_22023_OPERATION_' + name
+    operation = private_22023_operation(remainder)
+    if operation:
+        return 'SQLSTATE_22023_OPERATION_' + operation
     return PRIVATE_SQLSTATE_CATEGORIES['22023']
 
 

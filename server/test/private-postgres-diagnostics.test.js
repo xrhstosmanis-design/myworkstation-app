@@ -120,6 +120,8 @@ for name in verify_restore.PRIVATE_22023_SETTINGS: cases.append(('SQLSTATE_22023
 for name,message in templates.items(): cases.append(('SQLSTATE_22023_'+name,message,''))
 cases.append(('SQLSTATE_22023_SETTING_VALUE','invalid value for parameter "'+canary+'": "secret"',''))
 for name,statement in operations.items(): cases.append(('SQLSTATE_22023_OPERATION_'+name,canary,'STATEMENT: '+statement))
+for name in verify_restore.PRIVATE_22023_PARAMETER_NAMES: cases.append(('SQLSTATE_22023_PARAMETER_NAME_'+name.upper(),'unrecognized parameter \"'+name+'\"',''))
+for name,statement in operations.items(): cases.append(('SQLSTATE_22023_PARAMETER_OPERATION_'+name,'unrecognized parameter \"'+canary+'\"','STATEMENT: '+statement))
 assert {expected for expected,_,_ in cases}==verify_restore.PRIVATE_22023_CATEGORIES
 with tempfile.TemporaryDirectory() as directory:
  logfile=pathlib.Path(directory)/'postgres.log'
@@ -133,8 +135,8 @@ with tempfile.TemporaryDirectory() as directory:
  logfile.write_text('2026-11-18 12:00:00 UTC [123] ERROR:  SECRT: '+canary+'\nSTATEMENT: SET '+canary+'=1\n')
  assert verify_restore.private_server_log_category(logfile)=='UNKNOWN'
 print(json.dumps(payloads))`;
- const result=spawnSync('python3',['-c',script],{cwd:root,encoding:'utf8',input:JSON.stringify({canary}),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},timeout:10000,maxBuffer:20000});
- assert.equal(result.status,0,(result.stderr||result.stdout).slice(-3000));const payloads=JSON.parse(result.stdout);assert.equal(payloads.length,50);
+ const result=spawnSync('python3',['-c',script],{cwd:root,encoding:'utf8',input:JSON.stringify({canary}),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},timeout:10000,maxBuffer:64000});
+ assert.equal(result.status,0,(result.stderr||result.stdout).slice(-3000));const payloads=JSON.parse(result.stdout);assert.equal(payloads.length,140);
  for(const payload of payloads)assert.equal(companyInstallationBackupDiagnostic(JSON.stringify(payload)),payload.code);
  assert.doesNotMatch(result.stdout,/PRIVATE_PERSON|STATEMENT:|LOCATION:|private_name|secret|SECRT/);
 });

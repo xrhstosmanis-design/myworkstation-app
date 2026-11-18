@@ -571,3 +571,8 @@ CENTRAL-BACKOFFICE-ACCESS-01 retains ownership. Baseline remote22f8fffc/local885
 ## 18/11/2026 — No5 full company roles and two sales readers / AWAITING CI
 
 Retained CENTRAL-BACKOFFICE-ACCESS-01 owner; baseline21ad4230/local40fff12 tree39be6363. New59STORE(41reads18actions)+16COMPANY source: full licensed company role registry, scoped unsold and journal reads. Final32-file cohort188PASS/10nativePG-or-DockerSKIP/0FAIL, clientbuildPASS; native3 fixture added toBASE/CAPTURE, actual acceptance pending. Dedicatedwallet44292095077 hostrestore now actualSQLSTATE22023, not fixed; strict50constant subdiagnostics without rawlogs added and20hashes refreshed. Current57mainCI44292095096 andChat44292095037 SUCCESS; actualBASE/CAPTURE4workforce+15COMPANY andnativeauditnullmerge passed. WholeOwnercoverageOPEN; one final human session, no production actions. [Checkpoint](CHANGES/2026-11-18-no5-company-role-and-sales-reads.md).
+
+
+## 18/11/2026 — No5 four company reports / AWAITING CI
+
+CENTRAL-BACKOFFICE-ACCESS-01 retained. Baseline81e6a680/localb2ca36b treebbd76758,59STORE+20COMPANY candidate. Four exactcompanyfinancialreports, strictGreecequeries/tenantDTOs/unknownvalues/noDDL/nativeOwnerpreserved; broad46file231PASS/10PG-DockerSKIP/0FAIL+buildPASS. Prior59main44294260275FAILonlystalejournalfixture(nowfixed), actualnative3BASE/CAPTUREpassed. Native4helperadded/actualpending. Wallet44294260260unrecognizedparameter22023stillOPEN;140fixedsubdiagnostics andlatest16server-clientCIrefresh/sourceversiontrace, noacceptanceweakening. WholeOwnercoverageOPEN, humanonceatend. [Checkpoint](CHANGES/2026-11-18-no5-company-report-reads.md).

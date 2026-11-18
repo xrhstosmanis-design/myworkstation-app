@@ -39,7 +39,9 @@ test('revoked sales grant refuses late overview before sending a response',async
 test('sales permission admits only three exact GET endpoints and no correction/payment/shift action',()=>{
   for(const path of ['/api/transactions/stores/s/overview','/api/cash/stores/s/overview','/api/store-pos/stores/s/sales/recent'])assert.equal(staffRequestCapability('GET',path),'sales.read');
   assert.equal(staffRequestCapability('GET','/api/cash/stores/s/reporting-overview'),'shifts.read');
-  for(const [method,path] of [['POST','/api/transactions/stores/s'],['POST','/api/owner-shifts/shift/force-close'],['POST','/api/transactions/stores/s/payments/p/correct-amount'],['GET','/api/store-pos/sales/journal']])assert.equal(staffRequestCapability(method,path),null);
+  assert.equal(staffRequestCapability('GET','/api/store-pos/sales/journal'),'sales-journal.read','journal requires its independently granted right');
+  assert.notEqual(staffRequestCapability('GET','/api/store-pos/sales/journal'),'sales.read');
+  for(const [method,path] of [['POST','/api/transactions/stores/s'],['POST','/api/owner-shifts/shift/force-close'],['POST','/api/transactions/stores/s/payments/p/correct-amount']])assert.equal(staffRequestCapability(method,path),null);
 });
 
 test('shift reporting grant passes only its own GET endpoint and admitted store through the cash middleware', async()=>{
