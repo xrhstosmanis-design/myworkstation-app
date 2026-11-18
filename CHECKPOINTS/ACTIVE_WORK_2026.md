@@ -1,3 +1,19 @@
+## 18/11/2026 — Νο 15 — Μερική πληρωμή φόρμας POS / AWAITING CI AND LAB
+
+Η κανονική φόρμα CASH έστελνε payments:null και απορριπτόταν από το υπάρχον checkout schema πριν από συναλλαγή. Μονογραμμική διόρθωση του caller και regression πραγματικού callback/serializer/schema. [Checkpoint](CHANGES/2026-11-18-table-service-partial-cash-form.md). Ίδια ανάθεση TABLE_SERVICE, πλήρες CI και επαναδοκιμή υπάρχοντος LAB εκκρεμούν.
+
+## 18/11/2026 21:31 Αθήνας — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — ASSIGNED /root / BEFORE SOURCE
+
+Νέο αίτημα ιδιοκτήτη της 18/11/2026 με δύο εικόνες: ίδια επάνω φίλτρα στην αποθήκη της Κεντρικής Διαχείρισης όπως στην αποθήκη από POS. Branch `feat/central-warehouse-filter-parity-20261118`, base `0a45f48d6`. Ανεξάρτητο στενό scope εμφάνισης/αναζήτησης, χωρίς ανάληψη δικαιωμάτων, επεξεργασίας προϊόντων, imports, merges ή αποθέματος άλλων σελίδων.
+
+Before-source scope: μόνο `client/src/components/commerce/InventoryArchivePanel.jsx` για κοινά φίλτρα/κουμπί μετάβασης και `client/src/components/commerce/inventory-archive.css` για το αντίστοιχο responsive πλαίσιο. Επαναχρησιμοποίηση υπαρχόντων VAT department και marginMin/marginMax controls, state και selected-store GET query, χωρίς νέο API ή server αλλαγή. Κατηγορία, υποκατηγορία, Περιγραφή/SKU/Barcode, ενεργά/όλα/ανενεργά, Τμήμα ΦΠΑ/χωρίς τμήμα και Margin από–έως παραμένουν στο ίδιο κατάστημα και επαναφέρουν τη σελιδοποίηση κατά την εφαρμογή. Τα POS capabilities/readOnly/staff permissions, writers, ποσότητες/τιμές, stock/financial/fiscal και οι λοιπές αναθέσεις παραμένουν ανέπαφα.
+
+Έγινε ανάγνωση τρέχοντος AGENTS/COMMON_WORK_RULE, tracker, pending roadmap, ενεργών/ιστορικών checkpoints, αριθμημένης λίστας, εγχειριδίου inventory και σχετικών warehouse checkpoints της 14/11. Το source επιβεβαιώνει ότι το ίδιο component ήδη έχει τα δύο νέα φίλτρα μόνο υπό operatorMode. Το POS layout παρέχεται από το scoped overlay CSS. Το existing USER PASS του POS κουμπιού Φίλτρα προστατεύεται, δεν επαναλαμβάνεται. Δεν βρέθηκε ξεχωριστή τρέχουσα ανάθεση για αυτήν τη γενική parity επέκταση.
+
+Κατάσταση BEFORE SOURCE / NOT TESTED. Η καταγραφή πρέπει να δημοσιευτεί στο main πριν τη συγκεκριμένη αλλαγή κώδικα. Έλεγχοι: υφιστάμενες στοχευμένες δοκιμές archive/filters και build, με συνθετική μη οικονομική επαλήθευση ότι Κεντρική και POS στέλνουν τα ίδια scoped φίλτρα. Καμία παραγωγική αλλαγή δεδομένων, νέα άδεια ή οικονομική δοκιμή. Πραγματική αποδοχή Κεντρικής παραμένει για την κοινή συνεδρία στο τέλος. Source publication/deployment προς τελική έγκριση μετά από συγκεκριμένο ελεγμένο PR.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-central-warehouse-filter-parity.md`.
+
 ## 18/11/2026 — NETLINK explicit-store E2E caller correction / AWAITING FINAL CI
 
 Corrected source head `bd0e268f27ea2c5d39a97397e3ad426130fff5cc`, CI `44322976065` / job `134866723229`: full server suite **6178 tests / 6177 PASS / 0 FAIL / 1 optional PGlite SKIP**, plus **8/8 backup-monitor tests PASS**. Native PostgreSQL credentials/migration/HTTP and legacy EFOOD SQL checks passed. Node20 client build, browser pointer/geometry checks, production safety invariants, full isolated archive import and the other four jobs passed. This is CI evidence, not a LAB or deployed feature PASS.
@@ -66,6 +82,10 @@ Exactb9 CI44368265130:6591PASS/2FAIL/1SKIP. ActualPGregclassprobePASS και BAS
 Νεότεροb64CI:6591PASS/2FAIL/1SKIP. ΠλήρηςlegacySTORE7+new4 μεόλααρνητικά, πραγματικόbackup/restore/install/epochs/audit καιCompanyhelpersέωςOperations88PASS. Product100catalogPASS, card503σενόμιμοStoreProductminStockNULL. SalePrice/minStock πλέονnullableχωρίςμετατροπήσε0, UIδείχνεικληρονομούμενητιμή/μηορισμένοόριο. 40PASS/2PGSKIP/0FAILκαιbuild34.47sPASS. ΥπόλοιποProduct100/Company106εκκρεμεί. Νέοmain199916bc περιέχειreportoperational/core20καιmonthlypayments· ηενσωμάτωσηκαιελεγχόμενοproposalrebind/nativeproofεκκρεμούν, όχιτυφλήαλλαγήhashesήαυτόματηCOMPANYoperationaleligibility.
 
 Main199916bc ενσωματώθηκεμεpeer4021/4022: διατηρούνταιNo5readonly/freshgrant/UI-scopesκαιηχωριστήπαρατήρησηπληρωμής. Ελεγχόμενοsourceclosure20→23 (4reviewedrebind+3newdependencies,16παλιάσταθερά), BASE/CAPTUREtarget/review/authorityαμετάβλητα. Dockerσυσκευασία+PythonselectorsκρατούνCompanyκαιREPORTS_ONLYχωριστά·τα9operationaltablesδενκάνουνCompanyeligibleαυτόματα. Integrated19file175tests:170PASS/5native-image-browserSKIP/0FAIL,build36.42sPASS. Fresh23-sourcepairedworker/fullprivatebackup/restoreκαιυπόλοιποProduct100/Company106CIεκκρεμούν. Καμίαπαραγωγικήδιάθεση/εγκατάστασηήανθρώπινηδοκιμή.
+
+18/11 νέα τεκμηρίωση: δημοσιευμένο f6d8c740 πλήρεςCI44378280707 SUCCESS6654PASS/0FAIL/2optionalSKIP, πραγματικά BASE/CAPTURE privatebackup/restore/native106 και Docker,8HTTP E2E και browser jobs PASS. Προετοιμάστηκε χωριστό CURRENT_CAPTURE291tables Company-read-only, SOURCE8/TARGET9 Account,45sourceclosure,6canonical runtimecolumns/240FK/388guards και source-derived defaults. Δεν υπάρχει νέο πραγματικόCurrent PostgreSQL/Docker proof ή παραγωγική εγκατάσταση. Combined179PASS/1legacy-importFAIL/5SKIP: γνήσια regression διορθώθηκε χωρίς αλλαγήfixture, focused19PASS/2PG-DockerSKIP. BuildPASS48.02s· Python8PASS. Ενσωμάτωση νεότερουmain και freshCI εκκρεμούν. Human tests μία φορά στο τέλος.
+
+Mainc88b7aad ενσωματώθηκεκαθαρά·τελικό192tests187PASS/0FAIL/5PG-Docker-browserSKIP,build55.84sPASS. FreshCurrentactualCIεκκρεμεί.
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
@@ -619,3 +639,9 @@ Single next action: owner's separate approval for production source merge/deploy
 ΑΝΑΛΗΨΗ ΑΠΟ `feat/invoice-month-audit-20261028` / `/root/invoice_new` — ASSIGNED `/root`, branch `fix/no2-paid-monthly-status`, με ρητή έγκριση ιδιοκτήτη. Μόνο οικονομική κατάσταση συνδεδεμένης πληρωμής στη μηνιαία αναφορά, όχι υπόλοιπο C, snapshots/απογραφή ή email. Ο παλιός owner διατηρεί όλα τα άλλα scopes· καμία παράλληλη αλλαγή #4019. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md). CLAIM / source NOT STARTED / CI και LAB NOT TESTED. Υλοποίηση και τεχνικοί έλεγχοι πρώτα, μία τελική συνεδρία ανά ρόλο στο τέλος.
 
 - 18/11/2026 · Νο2 #4019 · claim #4020 merged `61989ed5` μετά green docs checks. Source `fix/no2-paid-monthly-observation`: χωριστή οικονομική κατάσταση με κοινό settlement predicate, ακριβείς δόσεις και read-only scoped πηγές. Node20 build/στοχευμένοι έλεγχοι PASS· local Chromium launch ECONNRESET και native PG SKIP διατηρούνται, πλήρες CI/εγκατάσταση/LAB OPEN. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md). Καμία νέα πληρωμή ή αλλαγή αποθέματος.
+
+- 18/11/2026 · Νο2 #4019 · source #4022 merged/installed `199916bc`, Render `dep-dbuva7mk1f9s73aq3gu0` LIVE και exact health επιβεβαιωμένα. PR/main CI SUCCESS, main 6.233 application PASS/0FAIL/2optionalWASM-SKIP +8backupPASS· actual PostgreSQL financial/allocation και Chromium μηνιαίας οθόνης PASS. Περιορισμένο LIVE Super Admin: υπάρχον πληρωμένο myDATA/POS παραστατικό εμφανίζεται Εξοφλημένο, με χωριστές workflow λεπτομέρειες. Όχι νέα πληρωμή ή αλλαγή αποθέματος. Υπόλοιπη ομαδική LAB αποδοχή/άλλοι ρόλοι και email παραμένουν εκτός αυτού του PASS. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md), [Manual](../docs/manual/monthly-invoice-audit/PASS.md).
+
+## 18/11/2026 — Νο 15 · Χρεώσιμες επιλογές από κινητό
+
+Συνέχεια TABLE_SERVICE /root, υποβοηθός /root/mobile, branch `feat/table-service-mobile-priced-options-20261118`. Η κινητή παραγγελιοληψία επιλέγει πραγματικές χρεώσιμες επιλογές και εμφανίζει γραμμή/σύνολο/επιβεβαίωση με την επιβάρυνση. Ο server επαληθεύει τιμές και προϊόντα. Εισφορά/SET διατηρούνται στο POS. Τοπικά Node20: 5/5 πραγματικές mounted React δοκιμές και production build PASS. CI, εγκατάσταση και κοινή δοκιμή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-18-table-service-mobile-priced-options.md).

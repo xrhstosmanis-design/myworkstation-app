@@ -278,6 +278,8 @@ def row_digest(filename):
     return {'rowCount': count, 'sha256': digest.hexdigest(), 'sourceBytes': size}
 
 def verify_archive(archive, job, manifest, audit_module):
+    if manifest.get('purpose') == 'COMPANY_READ_ONLY':
+        raise ValueError('Scoped store recovery is unavailable for the COMPANY read-only profile')
     if manifest.get('executionDisabled') is True:
         raise ValueError('Scoped store recovery is unavailable for the reports-only profile')
     if job.get('protocol') != 'MWS_STORE_RECOVERY_JOB_V1':

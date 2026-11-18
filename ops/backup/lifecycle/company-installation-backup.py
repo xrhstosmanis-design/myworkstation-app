@@ -71,12 +71,12 @@ def parse_request(envelope):
     if not isinstance(envelope, dict) or set(envelope) != {'requestJson', 'mac'} or not isinstance(envelope['requestJson'], str) or len(envelope['requestJson'].encode()) > 8192 or not isinstance(envelope['mac'], str) or not re.fullmatch('[a-f0-9]{64}', envelope['mac']) or not hmac.compare_digest(signature(REQUEST, envelope['requestJson']), envelope['mac']):
         raise ValueError('Request authentication refused')
     value = json.loads(envelope['requestJson'])
-    if not isinstance(value, dict) or list(value) != REQUEST_KEYS or compact(value) != envelope['requestJson']:
+    if not isinstance(value, dict) or list(value) != (REQUEST_KEYS[:6] + ['sourceFencePlanHash'] + REQUEST_KEYS[6:] if value.get('profile') == 'CURRENT_CAPTURE' else REQUEST_KEYS) or compact(value) != envelope['requestJson']:
         raise ValueError('Noncanonical request')
     now = utc_now()
-    if value['protocol'] != REQUEST or str(uuid.UUID(value['requestId'], version=4)) != value['requestId'] or value['profile'] not in ('BASE', 'CAPTURE') or value['schema'] != 'public':
+    if value['protocol'] != REQUEST or str(uuid.UUID(value['requestId'], version=4)) != value['requestId'] or value['profile'] not in ('BASE', 'CAPTURE', 'CURRENT_CAPTURE') or value['schema'] != 'public':
         raise ValueError('Request scope differs')
-    for name in ('sourceRevision', 'workerRevision', 'sourcePlanHash', 'targetPlanHash', 'observerSha256', 'sourceObservationSha256', 'sourceOwnershipSha256', 'fullDataDigest', 'storageIdentity'):
+    for name in ('sourceRevision', 'workerRevision', 'sourcePlanHash', *(('sourceFencePlanHash',) if value['profile'] == 'CURRENT_CAPTURE' else ()), 'targetPlanHash', 'observerSha256', 'sourceObservationSha256', 'sourceOwnershipSha256', 'fullDataDigest', 'storageIdentity'):
         if not isinstance(value[name], str) or not re.fullmatch('[a-f0-9]{' + ('40' if name.endswith('Revision') else '64') + '}', value[name]):
             raise ValueError('Invalid request binding')
     issued, expires = stamp(value['issuedAt']), stamp(value['expiresAt'])
@@ -90,6 +90,13 @@ def parse_request(envelope):
             raise ValueError('Reviewed source differs')
     variant = next(v for v in packet['variants'] if v['profile'] == value['profile'])
     source = json.loads(source_file(variant['sourceManifest']).read_text())
+    if value['profile'] == 'CURRENT_CAPTURE':
+        from backoffice_company_profile import current_company_manifest, CURRENT_SOURCE_FENCE_PLAN_HASH
+        from backoffice_company_readiness import verify_current_sources
+        verify_current_sources()
+        if value.get('sourceFencePlanHash') != CURRENT_SOURCE_FENCE_PLAN_HASH:
+            raise ValueError('Current source fence binding differs')
+        source = current_company_manifest(source, 'SOURCE')
     if value['storageIdentity'] != storage_identity() or sha(compact(source)) != value['sourcePlanHash'] or variant['proposedPlanHash'] != value['targetPlanHash'] or file_sha(OBSERVER) != value['observerSha256'] or os.environ.get('RENDER_GIT_COMMIT') != value['workerRevision']:
         raise ValueError('Worker/profile differs')
     return value
@@ -112,7 +119,7 @@ def observation(metadata, data_file, request, auditor):
     if metadata.get('schema') != request['schema'] or metadata.get('nonFinalOperations') != 0 or not metadata.get('fences'):
         raise ValueError('Source is not drained')
     for fence in metadata['fences']:
-        if fence.get('planHash') != request['sourcePlanHash'] or fence.get('maintenance') is not False or fence.get('retired') is not False or fence.get('operationId') is not None:
+        if fence.get('planHash') != request.get('sourceFencePlanHash', request['sourcePlanHash']) or fence.get('maintenance') is not False or fence.get('retired') is not False or fence.get('operationId') is not None:
             raise ValueError('Source profile/fence differs')
     if not re.fullmatch('[a-f0-9]{64}', metadata.get('accountSecurityDigest', '')):
         raise ValueError('Account policy digest unavailable')
@@ -123,6 +130,11 @@ def observation(metadata, data_file, request, auditor):
 
 
 def observe_source(directory, label, request, auditor):
+    if request['profile'] == 'CURRENT_CAPTURE':
+        from backoffice_company_readiness import observe_company_read_state
+        state = observe_company_read_state(query)
+        if state != {'phase': 'SOURCE', 'manifestHash': request['sourcePlanHash']}:
+            raise ValueError('Current installation requires exact source-phase proof')
     metadata = json.loads(query("BEGIN READ ONLY; SET LOCAL TimeZone='UTC'; SET LOCAL DateStyle='ISO,YMD'; SET LOCAL extra_float_digits=3; SET LOCAL bytea_output='hex';\n" + OBSERVER.read_text() + '\nCOMMIT;'))
     filename = pathlib.Path(directory) / (label + '.sql')
     dump_data(filename)
@@ -147,6 +159,10 @@ def restore_archive(archive, directory, request, auditor):
                 os.chmod(restored, 0o600)
                 pg.run(['pg_dump', '--data-only', '--no-owner', '--no-privileges', 'postgres'], stdout=output)
             audit = auditor.compare(expected, restored)
+            if request['profile'] == 'CURRENT_CAPTURE':
+                from backoffice_company_readiness import observe_company_read_state
+                if observe_company_read_state(pg.query) != {'phase': 'SOURCE', 'manifestHash': request['sourcePlanHash']}:
+                    raise ValueError('Private current source phase differs')
             metadata = json.loads(pg.query(OBSERVER.read_text()))
             observed = observation(metadata, restored, request, auditor)
         if observed['fullDataDigest'] != audit['sha256']:
@@ -218,13 +234,16 @@ def run_backup(request_envelope, *, authorized=False):
 
 
 def prepare_request(profile, source_revision):
-    if profile not in ('BASE', 'CAPTURE') or not re.fullmatch('[a-f0-9]{40}', source_revision or ''):
+    if profile not in ('BASE', 'CAPTURE', 'CURRENT_CAPTURE') or not re.fullmatch('[a-f0-9]{40}', source_revision or ''):
         raise ValueError('Explicit source/profile required')
     packet = json.loads(source_file('ops/backup/lifecycle/backoffice-company-compatibility.proposed.json').read_text())
     variant = next(v for v in packet['variants'] if v['profile'] == profile)
     source = json.loads(source_file(variant['sourceManifest']).read_text())
+    if profile == 'CURRENT_CAPTURE':
+        from backoffice_company_profile import current_company_manifest, CURRENT_SOURCE_FENCE_PLAN_HASH
+        source = current_company_manifest(source, 'SOURCE')
     now = utc_now()
-    request = {'protocol': REQUEST, 'requestId': str(uuid.uuid4()), 'sourceRevision': source_revision, 'workerRevision': os.environ.get('RENDER_GIT_COMMIT'), 'profile': profile, 'sourcePlanHash': sha(compact(source)), 'targetPlanHash': variant['proposedPlanHash'], 'schema': 'public', 'observerSha256': file_sha(OBSERVER), 'sourceObservationSha256': '0' * 64, 'sourceOwnershipSha256': '0' * 64, 'fullDataDigest': '0' * 64, 'storageIdentity': storage_identity(), 'issuedAt': canonical_stamp(now), 'expiresAt': canonical_stamp(now + datetime.timedelta(minutes=30))}
+    request = {'protocol': REQUEST, 'requestId': str(uuid.uuid4()), 'sourceRevision': source_revision, 'workerRevision': os.environ.get('RENDER_GIT_COMMIT'), 'profile': profile, 'sourcePlanHash': sha(compact(source)), **({'sourceFencePlanHash': CURRENT_SOURCE_FENCE_PLAN_HASH} if profile == 'CURRENT_CAPTURE' else {}), 'targetPlanHash': variant['proposedPlanHash'], 'schema': 'public', 'observerSha256': file_sha(OBSERVER), 'sourceObservationSha256': '0' * 64, 'sourceOwnershipSha256': '0' * 64, 'fullDataDigest': '0' * 64, 'storageIdentity': storage_identity(), 'issuedAt': canonical_stamp(now), 'expiresAt': canonical_stamp(now + datetime.timedelta(minutes=30))}
     # Verify source/worker/profile before any potentially expensive observation.
     raw = compact(request)
     parse_request({'requestJson': raw, 'mac': signature(REQUEST, raw)})
@@ -280,7 +299,7 @@ def main():
     parser.add_argument('--request')
     parser.add_argument('--proof')
     parser.add_argument('--prepare', action='store_true')
-    parser.add_argument('--profile', choices=('BASE', 'CAPTURE'))
+    parser.add_argument('--profile', choices=('BASE', 'CAPTURE', 'CURRENT_CAPTURE'))
     parser.add_argument('--source-revision')
     parser.add_argument('--output', required=True)
     parser.add_argument('--authorize-isolated-installation-backup', action='store_true')

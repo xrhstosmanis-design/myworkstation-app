@@ -10,7 +10,7 @@ const document=JSON.parse(readFileSync(baseUrl,'utf8'));
 export const reviewedFreshStoreManifest=()=>structuredClone(document);
 export function selectedStoreLifecycleManifest(env=process.env){
  const profile=env.MWS_STORE_LIFECYCLE_PROFILE;
- if(['BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1'].includes(profile))return backofficeCompanyProfile(env).manifest;
+ if(['BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'].includes(profile))return backofficeCompanyProfile(env).manifest;
  if(profile===undefined||profile==='BASE')return reviewedFreshStoreManifest();
  if(profile==='AUTOMATIC_EVENT_REPORTS_V1')return withAutomaticReportEventConsent(document);
  if(profile==='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1')return withReportOperationalCompatibility(withAutomaticReportEventConsent(JSON.parse(readFileSync(captureUrl,'utf8'))));

@@ -1,3 +1,4 @@
+import CompanyAuthorityReadiness,{companyAuthoritySupported} from './backoffice/CompanyAuthorityReadiness.jsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {staffProfiles,staffCapabilities,staffPermissionSections,changeStaffCapability} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
@@ -20,7 +21,7 @@ export default function BackofficeStaffAdmin({api}){
   const [area,setArea]=useState('BACKOFFICE'),[posStoreId,setPosStoreId]=useState('');
   const [data,setData]=useState(null),[edit,setEdit]=useState(null),[grants,setGrants]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [companyCapabilities,setCompanyCapabilities]=useState([]);
-  const companySupported=data?.companyAuthority?.protocol==='MWS_BACKOFFICE_COMPANY_V1'&&capabilitiesMatch(staffCompanyCapabilities,data.companyAuthority.capabilities);
+  const companySupported=companyAuthoritySupported(data?.companyAuthority);
   const currentApi=useRef(api),formApi=useRef(null);currentApi.current=api;
   const sequence=useRef(0),saving=useRef(false);
   const load=async()=>{
@@ -55,7 +56,7 @@ export default function BackofficeStaffAdmin({api}){
       form.reset();setEdit(null);setGrants([]);
       const refreshed=await load();
       const account=refreshed?.accounts.find(row=>row.id===saved?.id);
-      if(account&&account.revision===saved.revision&&account.active===(body.active??true)&&grantsMatch(body.grants,account.grants)&&(!Object.hasOwn(body,'companyCapabilities')||refreshed.companyAuthority?.protocol==='MWS_BACKOFFICE_COMPANY_V1'&&capabilitiesMatch(body.companyCapabilities,account.companyCapabilities))){
+      if(account&&account.revision===saved.revision&&account.active===(body.active??true)&&grantsMatch(body.grants,account.grants)&&(!Object.hasOwn(body,'companyCapabilities')||companyAuthoritySupported(refreshed.companyAuthority)&&capabilitiesMatch(body.companyCapabilities,account.companyCapabilities))){
         setMessage('Αποθηκεύτηκε και επαληθεύτηκε η πρόσβαση. Απαιτείται νέα προσωπική σύνδεση.');
       }else{
         setError('Δεν επιβεβαιώθηκαν τα επιλεγμένα δικαιώματα μετά την αποθήκευση. Άνοιξε ξανά τον χειριστή και έλεγξε την πρόσβαση ανά κατάστημα.');
@@ -70,6 +71,7 @@ export default function BackofficeStaffAdmin({api}){
     <p>Ο ρόλος περιγράφει τη θέση του χειριστή. Τα επιλεγμένα δικαιώματα ορίζουν την πρόσβασή του. Η αλλαγή ρόλου δεν αλλάζει αυτόματα τα δικαιώματα.</p>
     {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
     <div className="staff-actions"><button type="button" disabled={busy} onClick={()=>{setEdit(null);load()}}>Ανανέωση λίστας</button><button type="button" disabled={busy||!data} onClick={()=>open(null)}>Νέος χειριστής</button></div>
+    {data&&<CompanyAuthorityReadiness authority={data.companyAuthority}/>}
     {data&&<><ul className="staff-accounts">{data.accounts.map(a=><li key={a.id}><b>{a.fullName}</b> · {a.username} · {a.active?'Ενεργός':'Ανενεργός'}<span>{a.grants.length} καταστήματα</span><button type="button" disabled={busy} onClick={()=>open(a)}>Δικαιώματα / Απενεργοποίηση</button></li>)}</ul>{!data.accounts.length&&<p>Δεν έχουν δημιουργηθεί προσωπικές προσβάσεις.</p>}</>}
     {edit&&data&&formApi.current===api&&<form key={edit.id||'new'} onSubmit={save} autoComplete="off"><h3>{edit.id?`${edit.fullName} · ${edit.username}`:'Νέος λογαριασμός'}</h3>
       {!edit.id&&<><label>Ονοματεπώνυμο<input name="fullName" required minLength={2} maxLength={180}/></label><label>Username<input name="username" required pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,79}" minLength={3} maxLength={80} autoComplete="off"/></label></>}

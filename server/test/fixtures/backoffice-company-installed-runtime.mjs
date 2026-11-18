@@ -1,3 +1,4 @@
+import {companyReadWorkerMac} from '../../src/services/backoffice-company-read-worker-ready.js';
 import assert from 'node:assert/strict';
 import {isBackofficeCompanyInstalled,backofficeCompanyProfile} from '../../src/services/backoffice-company-profile.js';
 import {lifecycleWorkerCapabilityMac} from '../../src/services/store-lifecycle-worker-ready.js';
@@ -8,13 +9,16 @@ import {requireStaffCompanyGrant,enforceStaffCompanyRequest,readStaffCompanyDire
 export async function verifyInstalledCompanyRuntime({db,profile,revision,secret,planHash}){
  const keys=['MWS_STORE_LIFECYCLE_PROFILE','RENDER_GIT_COMMIT','BACKUP_MONITOR_SECRET'],saved=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
  const env={MWS_STORE_LIFECYCLE_PROFILE:`BACKOFFICE_COMPANY_${profile}_V1`,RENDER_GIT_COMMIT:revision,BACKUP_MONITOR_SECRET:secret};Object.assign(process.env,env);
- const writeHeartbeat=async(changes={},wrongMac=false)=>{const json=JSON.stringify({protocol:'MWS_STORE_RECOVERY_CAPABILITY_V1',manifestHash:planHash,workerRevision:revision,checkedAt:new Date().toISOString(),storagePolicyVerified:true,rowDigestFormat:LIFECYCLE_ROW_DIGEST_FORMAT,...changes});await db.$executeRawUnsafe('UPDATE "StoreLifecycleRuntime" SET "heartbeatJson"=$1,"mac"=$2 WHERE "id"=\'backup-worker\'',json,wrongMac?'0'.repeat(64):lifecycleWorkerCapabilityMac(secret,json))};
+ const current=profile==='CURRENT_CAPTURE',workerId=current?'company-read-worker':'backup-worker',realWorker=current?(await db.$queryRawUnsafe('SELECT "heartbeatJson","mac" FROM "StoreLifecycleRuntime" WHERE "id"=$1',workerId))[0]:null;
+ const writeHeartbeat=async(changes={},wrongMac=false)=>{const base=current?JSON.parse(realWorker.heartbeatJson):{protocol:'MWS_STORE_RECOVERY_CAPABILITY_V1',manifestHash:planHash,workerRevision:revision,checkedAt:new Date().toISOString(),storagePolicyVerified:true,rowDigestFormat:LIFECYCLE_ROW_DIGEST_FORMAT},json=JSON.stringify({...base,...changes});await db.$executeRawUnsafe('UPDATE "StoreLifecycleRuntime" SET "heartbeatJson"=$1,"mac"=$2 WHERE "id"=$3',json,wrongMac?'0'.repeat(64):(current?companyReadWorkerMac:lifecycleWorkerCapabilityMac)(secret,json),workerId)};
  try{
   assert.equal(backofficeCompanyProfile(env).planHash,planHash);
+  if(current){assert.equal(JSON.parse(realWorker.heartbeatJson).phase,'TARGET');assert.equal(await isBackofficeCompanyInstalled(db),true,'actual Python worker TARGET proof must authorize current runtime before any synthetic negative');}
   await writeHeartbeat();assert.equal(await isBackofficeCompanyInstalled(db),true,'actual installed catalogue and paired signed worker must authorize runtime');
   await writeHeartbeat({workerRevision:'b'.repeat(40)});assert.equal(await isBackofficeCompanyInstalled(db),false,'signed worker from other revision is unavailable');
   await writeHeartbeat({manifestHash:'0'.repeat(64)});assert.equal(await isBackofficeCompanyInstalled(db),false,'old/foreign plan is unavailable');
   await writeHeartbeat({},true);assert.equal(await isBackofficeCompanyInstalled(db),false,'invalid MAC is unavailable');
+  if(current){await writeHeartbeat({phase:'SOURCE'});assert.equal(await isBackofficeCompanyInstalled(db),false,'source-phase capability cannot authorize installed target reads');await writeHeartbeat({scopedRecovery:true});assert.equal(await isBackofficeCompanyInstalled(db),false,'a company worker cannot advertise scoped recovery');}
   await writeHeartbeat();assert.equal(await isBackofficeCompanyInstalled(db,{env:{...env,MWS_STORE_LIFECYCLE_PROFILE:'BASE'}}),false,'legacy runtime profile cannot activate new policy');
   await db.$executeRawUnsafe('UPDATE "Company" SET "active"=true,"licenseStatus"=\'ACTIVE\',"subscriptionEndsAt"=NOW()+INTERVAL \'1 year\' WHERE "id"=\'company\'');
   for(const module of ['CORE','INVENTORY','POS','CASH_CONTROL'])await db.$executeRawUnsafe('INSERT INTO "CompanyModule"("id","companyId","moduleKey","active","updatedAt") VALUES ($1,\'company\',$2,true,NOW()) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "active"=true,"updatedAt"=NOW()',`native-company-${module}`,module);

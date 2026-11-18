@@ -17,13 +17,14 @@ import uuid
 from verify_restore import compact, ident, literal, verify_archive, ROW_DIGEST_FORMAT
 
 PROTOCOL = 'MWS_STORE_RECOVERY_PROOF_V1'
+COMPANY_READ_PROTOCOL = 'MWS_BACKOFFICE_COMPANY_READ_CAPABILITY_V1'
 
 def selected_manifest_file(env=None):
     configuration = os.environ if env is None else env
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
     if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_BASE_V1'):
         filename = 'manifest.json'
-    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1'):
+    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'):
         filename = 'monthly-inventory-capture-manifest.proposed.json'
     else:
         raise ValueError('Invalid store lifecycle profile')
@@ -34,6 +35,9 @@ def selected_manifest_document(env=None):
     configuration = os.environ if env is None else env
     document = json.loads(selected_manifest_file(configuration).read_text())
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if profile == 'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1':
+        from backoffice_company_profile import current_company_manifest
+        return current_company_manifest(document, 'TARGET')
     if profile in ('BACKOFFICE_COMPANY_BASE_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1'):
         from backoffice_company_profile import company_manifest
         return company_manifest(document, 'BASE' if profile == 'BACKOFFICE_COMPANY_BASE_V1' else 'CAPTURE')
@@ -106,8 +110,50 @@ def publish_capability(schema, manifest_hash):
     query('CREATE TABLE IF NOT EXISTS ' + ident(schema) + '."StoreLifecycleRuntime" ("id" text PRIMARY KEY,"heartbeatJson" text NOT NULL,"mac" text NOT NULL);')
     query('INSERT INTO ' + ident(schema) + '."StoreLifecycleRuntime" ("id","heartbeatJson","mac") VALUES(' + literal('backup-worker') + ',' + literal(heartbeat) + ',' + literal(mac) + ') ON CONFLICT("id") DO UPDATE SET "heartbeatJson"=EXCLUDED."heartbeatJson","mac"=EXCLUDED."mac";')
 
+def company_read_capability_envelope(manifest_hash, phase, revision, secret, checked_at=None):
+    """A separate signed read capability; it conveys no storage/recovery proof."""
+    if phase not in ('SOURCE', 'TARGET') or not isinstance(manifest_hash, str) or len(manifest_hash) != 64 or any(c not in '0123456789abcdef' for c in manifest_hash):
+        raise ValueError('Invalid company read phase binding')
+    if not isinstance(revision, str) or len(revision) != 40 or any(c not in '0123456789abcdef' for c in revision) or not isinstance(secret, str) or len(secret) < 24:
+        raise ValueError('Company read signing configuration unavailable')
+    clock = datetime.datetime.now(datetime.timezone.utc) if checked_at is None else checked_at
+    if not isinstance(clock, datetime.datetime) or clock.tzinfo is None or clock.utcoffset() != datetime.timedelta(0):
+        raise ValueError('Company read clock must be UTC')
+    heartbeat = compact({'protocol': COMPANY_READ_PROTOCOL, 'manifestHash': manifest_hash, 'workerRevision': revision, 'scope': 'COMPANY_READ_ONLY', 'scopedRecovery': False, 'phase': phase, 'checkedAt': clock.isoformat(timespec='milliseconds').replace('+00:00', 'Z')})
+    mac = hmac.new(secret.encode(), (COMPANY_READ_PROTOCOL + '\n' + heartbeat).encode(), hashlib.sha256).hexdigest()
+    return {'heartbeatJson': heartbeat, 'mac': mac}
+
+
+def publish_company_read_capability(schema, manifest_hash, phase):
+    # Caller must first validate the exact reviewed current catalogue and guards.
+    # This uses the existing metadata table only; it neither bootstraps schema
+    # nor calls storage nor advertises the recovery protocol.
+    if schema != 'public':
+        raise ValueError('Company read schema differs')
+    envelope = company_read_capability_envelope(manifest_hash, phase, os.environ.get('RENDER_GIT_COMMIT', ''), os.environ.get('BACKUP_MONITOR_SECRET', ''))
+    query('INSERT INTO ' + ident(schema) + '."StoreLifecycleRuntime" ("id","heartbeatJson","mac") VALUES(' + literal('company-read-worker') + ',' + literal(envelope['heartbeatJson']) + ',' + literal(envelope['mac']) + ') ON CONFLICT("id") DO UPDATE SET "heartbeatJson"=EXCLUDED."heartbeatJson","mac"=EXCLUDED."mac";')
+    return envelope
+
+
+def process_company_read(manifest):
+    from backoffice_company_profile import current_company_manifest
+    from backoffice_company_readiness import observe_company_read_state
+    source = json.loads((pathlib.Path(__file__).resolve().parent / 'monthly-inventory-capture-manifest.proposed.json').read_text())
+    if manifest != current_company_manifest(source, 'TARGET') or manifest.get('purpose') != 'COMPANY_READ_ONLY':
+        raise ValueError('Current company target selection differs')
+    if not os.environ.get('DATABASE_URL') or len(os.environ.get('BACKUP_MONITOR_SECRET', '')) < 24:
+        raise ValueError('Current company signing configuration unavailable')
+    # Independently verify native phase/catalogue/guards before signing. The
+    # returned phase hash comes from reviewed policy, never from caller input.
+    state = observe_company_read_state(query)
+    publish_company_read_capability('public', state['manifestHash'], state['phase'])
+    return {'state': 'COMPANY_READ_READY', **state, 'scope': 'COMPANY_READ_ONLY', 'scopedRecovery': False}
+
+
 def process_one(manifest_file, audit_module):
     manifest = json.loads(pathlib.Path(manifest_file).read_text())
+    if manifest.get('purpose') == 'COMPANY_READ_ONLY' or os.environ.get('MWS_STORE_LIFECYCLE_PROFILE') == 'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1':
+        return process_company_read(manifest)
     if manifest.get('executionDisabled') is True:
         return {'state': 'DISABLED', 'reason': 'REPORTS_ONLY_PROFILE'}
     os.umask(0o077)

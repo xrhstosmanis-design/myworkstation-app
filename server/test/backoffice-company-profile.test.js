@@ -10,7 +10,7 @@ import {getReviewedMonthlyCaptureLifecycleGuardDefinitions} from '../src/service
 const root=new URL('../../',import.meta.url),hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 test('company profiles are explicit, preserve existing defaults and exactly pair the real application and backup worker',()=>{
- const profiles=['BASE','MONTHLY_INVENTORY_CAPTURE_V1','AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1'];
+ const profiles=['BASE','MONTHLY_INVENTORY_CAPTURE_V1','AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'];
  const python=`import sys,json,hashlib\nsys.path.insert(0,'ops/backup/lifecycle')\nimport worker\nfrom verify_restore import compact\nprint(json.dumps({p:hashlib.sha256(compact(worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':p})).encode()).hexdigest() for p in ${JSON.stringify(profiles)}}))`;
  const worker=JSON.parse(execFileSync('python3',['-c',python],{cwd:root,encoding:'utf8',timeout:10000}));
  for(const profile of profiles)assert.equal(hash(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile})),worker[profile],profile);

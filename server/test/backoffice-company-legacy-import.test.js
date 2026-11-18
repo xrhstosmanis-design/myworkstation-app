@@ -17,7 +17,7 @@ const db=new Proxy({},{get(){throw Error('Legacy import/readiness must not touch
 for(const profile of [undefined,'BASE','MONTHLY_INVENTORY_CAPTURE_V1','AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1']){
  const env={MWS_STORE_LIFECYCLE_PROFILE:profile};assert.equal(backofficeCompanyProfile(env),null);assert.equal(await isBackofficeCompanyInstalled(db,{env}),false);
 }
-for(const profile of ['BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1'])assert.equal(await isBackofficeCompanyInstalled(db,{env:{MWS_STORE_LIFECYCLE_PROFILE:profile}}),false,'missing explicit company package must fail closed');
+for(const profile of ['BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'])assert.equal(await isBackofficeCompanyInstalled(db,{env:{MWS_STORE_LIFECYCLE_PROFILE:profile}}),false,'missing explicit company package must fail closed');
 console.log('ISOLATED_LEGACY_IMPORT_PASS');`;
   const child=spawnSync(process.execPath,['--input-type=module','--eval',source],{encoding:'utf8',cwd:root,timeout:15000,maxBuffer:16000});
   assert.equal(child.status,0,(child.stderr||child.stdout).slice(-8000));assert.match(child.stdout,/ISOLATED_LEGACY_IMPORT_PASS/);

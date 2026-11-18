@@ -13,7 +13,7 @@ import {managementVatExemptions} from '../lib/management-vat-exemptions.js';
 import {liveStaff,staffError} from './backoffice-staff-access.js';
 import {companyModuleState} from '../middleware/module-access.js';
 import {isBackofficeCompanyInstalled} from './backoffice-company-profile.js';
-export const companyAuthorityDescription=()=>({protocol:staffCompanyProtocol,capabilities:[...staffCompanyCapabilities]});
+export const companyAuthorityDescription=()=>({protocol:staffCompanyProtocol,capabilities:[...staffCompanyCapabilities],...(process.env.MWS_STORE_LIFECYCLE_PROFILE==='BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'?{readiness:{protocol:'MWS_BACKOFFICE_COMPANY_READ_CAPABILITY_V1',profile:'CURRENT_CAPTURE',scope:'COMPANY_READ_ONLY',scopedRecovery:false}}:{})});
 export async function readStaffCompanyPolicy(db,userId,companyId){
  const rows=await db.$queryRaw`SELECT "companyCapabilities" FROM "BackofficeStaffAccount" WHERE "userId"=${userId} AND "companyId"=${companyId} AND "active"=true FOR SHARE`;
  if(rows.length!==1||!validStaffCompanyCapabilities(rows[0].companyCapabilities))throw staffError();

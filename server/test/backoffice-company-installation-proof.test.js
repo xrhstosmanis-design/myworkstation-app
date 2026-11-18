@@ -13,13 +13,14 @@ const signed=(protocol,value,key)=>{const text=JSON.stringify(value);return {[ke
 function fixture(profile='CAPTURE'){
  const variant=verifyBackofficeCompanyCompatibility().variants.find(v=>v.profile===profile);
  const input={protocol:REQUEST,requestId:'12345678-1234-4567-89ab-123456789abc',sourceRevision:'a'.repeat(40),workerRevision:'b'.repeat(40),profile,sourcePlanHash:variant.sourcePlanHash,targetPlanHash:variant.proposedPlanHash,schema:'public',observerSha256:hash(readFileSync(new URL('../../ops/backup/lifecycle/company-installation-observe.sql',import.meta.url))),sourceObservationSha256:'c'.repeat(64),sourceOwnershipSha256:'d'.repeat(64),fullDataDigest:'e'.repeat(64),storageIdentity:companyInstallationStorageIdentity(storage),issuedAt:new Date(now-1000).toISOString(),expiresAt:new Date(now+600000).toISOString()};
+ if(profile==='CURRENT_CAPTURE'){const entries=Object.entries(input),ordered=Object.fromEntries(entries.flatMap(([key,value])=>key==='sourcePlanHash'?[[key,value],['sourceFencePlanHash',variant.sourceFencePlanHash]]:[[key,value]]));for(const key of Object.keys(input))delete input[key];Object.assign(input,ordered)}
  const requestEnvelope=signCompanyInstallationBackupRequest(input,{secret,now,storage});
  const proof={protocol:PROOF,requestSha256:hash(requestEnvelope.requestJson),sourceObservationSha256:input.sourceObservationSha256,sourceOwnershipSha256:input.sourceOwnershipSha256,storageIdentity:input.storageIdentity,restoredObservationSha256:input.sourceObservationSha256,fullDataDigest:input.fullDataDigest,artifactSha256:'f'.repeat(64),sizeBytes:1234,objectKey:'myworkstation/company-installation/'+input.requestId+'/12345678-1234-4567-89ab-123456789abc.dump',objectVersion:'immutable-fixture-version',workerRevision:input.workerRevision,verifiedAt:new Date(now).toISOString()};
  return {input,requestEnvelope,proof,options:{secret,requestEnvelope,now,storage}};
 }
 
 test('separate company installation request/proof binds exact prepared BASE and CAPTURE pairs without granting execution',()=>{
- for(const profile of ['BASE','CAPTURE']){
+ for(const profile of ['BASE','CAPTURE','CURRENT_CAPTURE']){
   const f=fixture(profile),request=validateCompanyInstallationBackupRequest(f.requestEnvelope,{secret,now,storage}),proof=validateCompanyInstallationBackupProof(signed(PROOF,f.proof,'proofJson'),f.options);
   assert.deepEqual(request,f.input);assert.equal(Object.isFrozen(request),true);assert.equal(Object.isFrozen(proof),true);assert.deepEqual(proof.request,f.input);
   for(const key of ['executionEnabled','executionAuthorized','productionActivated','mode','state'])assert.equal(Object.hasOwn(proof,key),false);
@@ -52,3 +53,5 @@ test('explicit Python backup producer refuses failed privacy/version/readback/re
  const result=spawnSync('python3',[new URL('./company-installation-backup-producer.py',import.meta.url).pathname],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},timeout:30000,maxBuffer:16000});
  assert.equal(result.status,0,(result.stderr||result.stdout).slice(-8000));assert.match(result.stderr,/Ran 6 tests/);
 });
+
+test('CURRENT proof binds the new SOURCE catalogue hash separately from its actual legacy fence authority',()=>{const f=fixture('CURRENT_CAPTURE');assert.notEqual(f.input.sourcePlanHash,f.input.sourceFencePlanHash);for(const change of[r=>r.sourcePlanHash=r.sourceFencePlanHash,r=>r.sourceFencePlanHash=r.sourcePlanHash,r=>delete r.sourceFencePlanHash,r=>r.sourceFencePlanHash='0'.repeat(64)]){const input=structuredClone(f.input);change(input);refuse(()=>signCompanyInstallationBackupRequest(input,{secret,now,storage}))}const legacy=fixture('CAPTURE');refuse(()=>signCompanyInstallationBackupRequest({...legacy.input,sourceFencePlanHash:f.input.sourceFencePlanHash},{secret,now,storage}))});

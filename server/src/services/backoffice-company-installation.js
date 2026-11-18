@@ -1,3 +1,5 @@
+import {buildCompanyCurrentCaptureProposal,inspectCompanyCurrentCaptureSource} from './backoffice-company-current-capture.js';
+import {validateCompanyReadWorkerCapability} from './backoffice-company-read-worker-ready.js';
 // Explicit operator-only installation candidate. Unmounted; no startup work.
 import {readFileSync} from 'node:fs';
 import {createHash,randomUUID} from 'node:crypto';
@@ -36,14 +38,16 @@ function installerActor(input){
  return Object.freeze(actor);
 }
 export function createBackofficeCompanyInstallation(db,{sourceRevision,enabled=false,profile='BASE',env=process.env}={}){
- if(!/^[a-f0-9]{40}$/.test(sourceRevision||'')||typeof enabled!=='boolean'||!['BASE','CAPTURE'].includes(profile))fail();
+ if(!/^[a-f0-9]{40}$/.test(sourceRevision||'')||typeof enabled!=='boolean'||!['BASE','CAPTURE','CURRENT_CAPTURE'].includes(profile))fail();
  verifyBackofficeCompanyCompatibility();
  const source=read(profile==='BASE'?'manifest.json':'monthly-inventory-capture-manifest.proposed.json'),review=read(profile==='BASE'?'column-review.json':'monthly-inventory-capture-column-review.proposed.json');
- const {manifest:target}=buildBackofficeCompanyProposal(source,review,{profile});
+ const current=profile==='CURRENT_CAPTURE';
+ const {manifest:target}=current?buildCompanyCurrentCaptureProposal(source,review):buildBackofficeCompanyProposal(source,review,{profile});
+ const sourceManifestHash=current?createHash('sha256').update(JSON.stringify(buildCompanyCurrentCaptureProposal(source,review,{phase:'SOURCE'}).manifest)).digest('hex'):null;
  const oldCore=createLifecycleInstallationCore(source,{sourceRevision}),targetCore=createLifecycleInstallationCore(target,{sourceRevision});
  const oldPlanHash=oldCore.describe().planHash,targetPlanHash=targetCore.describe().planHash;
  const storage={bucket:env.S3_BUCKET_NAME,region:env.AWS_REGION,endpoint:env.S3_ENDPOINT_URL};
- const description={sourceRevision,profile,oldPlanHash,targetPlanHash,targetRuntimeProfile:profile==='BASE'?'BACKOFFICE_COMPANY_BASE_V1':'BACKOFFICE_COMPANY_CAPTURE_V1',productionActivated:false};
+ const description={sourceRevision,profile,oldPlanHash,targetPlanHash,targetRuntimeProfile:current?'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1':profile==='BASE'?'BACKOFFICE_COMPANY_BASE_V1':'BACKOFFICE_COMPANY_CAPTURE_V1',...(current?{sourceManifestHash,sourceFencePlanHash:oldPlanHash,purpose:'COMPANY_READ_ONLY'}:{}),productionActivated:false};
  async function authorize(tx,actor,readOnly){
   actor=installerActor(actor);
   const rows=await tx.$queryRawUnsafe(`SELECT u."id",u."companyId" FROM "User" u JOIN "UserSession" s ON s."userId"=u."id" WHERE u."id"=$1 AND u."role"::text='SUPER_ADMIN' AND u."sessionVersion"=$2 AND u."mustChangePassword"=false AND s."id"=$3 AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp()${readOnly?'':' FOR SHARE OF u,s NOWAIT'}`,actor.id,actor.sessionVersion,actor.sessionId);
@@ -60,13 +64,14 @@ export function createBackofficeCompanyInstallation(db,{sourceRevision,enabled=f
   const cols=await tx.$queryRawUnsafe(`SELECT data_type AS type,is_nullable AS nullable,column_default AS def FROM information_schema.columns WHERE table_schema=$1 AND table_name='BackofficeStaffAccount' AND column_name='companyCapabilities'`,schema);
   const installed=cols.length===1;
   if(cols.length>1||installed&&(cols[0].type!=='jsonb'||cols[0].nullable!=='NO'||cols[0].def!=="'[]'::jsonb"))fail('COMPANY_INSTALL_ACCOUNT_SCHEMA_CHANGED');
-  const metadata=await (installed?targetCore:oldCore).inspectInTransaction(tx,actor);
+  let metadata;if(current&&!installed){const prepared=await inspectCompanyCurrentCaptureSource(tx,schema);metadata=await oldCore.inspectInTransaction(prepared.tx,actor);metadata={...metadata,signature:createHash('sha256').update(JSON.stringify({legacy:metadata.signature,current:prepared.evidence})).digest('hex')}}else metadata=await (installed?targetCore:oldCore).inspectInTransaction(tx,actor);
   const controls=await readLifecycleInstallationControls(tx,schema),global=await readLifecycleInstallationGlobalState(tx,schema,controls.names,targetPlanHash);
   if(!metadata.guardsInstalled||global.fences.length===0||global.reasons.some(reason=>reason!=='MONTHLY_INSTALL_PLAN_TRANSITION_REQUIRED')||global.fences.some(f=>f.planHash!==(installed?targetPlanHash:oldPlanHash)||f.maintenance||f.retired||f.operationId!==null))fail('COMPANY_INSTALL_NOT_DRAINED');
   return {schema,installed,metadata,controls,global,packet:{...description,schema,installed,catalogueSignature:metadata.signature,controlsSignature:controls.signature,globalStateSignature:global.signature}};
  }
  async function pairedWorker(tx,manifestHash){
   try{
+   if(current){const phase=manifestHash===targetPlanHash?'TARGET':'SOURCE',expectedHash=phase==='TARGET'?targetPlanHash:sourceManifestHash,records=await tx.$queryRawUnsafe(`SELECT "heartbeatJson","mac" FROM "StoreLifecycleRuntime" WHERE "id"='company-read-worker'`);return env.RENDER_GIT_COMMIT===sourceRevision&&records.length===1&&validateCompanyReadWorkerCapability(records[0],{secret:env.BACKUP_MONITOR_SECRET,manifestHash:expectedHash,phase,workerRevision:sourceRevision})}
    const rows=await tx.$queryRawUnsafe(`SELECT "heartbeatJson","mac" FROM "StoreLifecycleRuntime" WHERE "id"='backup-worker'`);
    return env.RENDER_GIT_COMMIT===sourceRevision&&rows.length===1&&validateLifecycleWorkerCapability(rows[0],{secret:env.BACKUP_MONITOR_SECRET,manifestHash})&&JSON.parse(rows[0].heartbeatJson).workerRevision===sourceRevision;
   }catch{return false}
@@ -94,7 +99,7 @@ export function createBackofficeCompanyInstallation(db,{sourceRevision,enabled=f
    if(input?.explicitAuthorization!==true)fail('COMPANY_INSTALL_AUTHORIZATION_REQUIRED');
    const request=validateCompanyInstallationBackupRequest(input.requestEnvelope,{secret:env.BACKUP_MONITOR_SECRET,storage});
    validateCompanyInstallationBackupProof(input.proofEnvelope,{secret:env.BACKUP_MONITOR_SECRET,requestEnvelope:input.requestEnvelope,storage});
-   if(request.sourceRevision!==sourceRevision||request.workerRevision!==sourceRevision||request.profile!==profile)fail('COMPANY_INSTALL_REVISION_CHANGED');
+   if(request.sourceRevision!==sourceRevision||request.workerRevision!==sourceRevision||request.profile!==profile||current&&(request.sourcePlanHash!==sourceManifestHash||request.sourceFencePlanHash!==oldPlanHash))fail('COMPANY_INSTALL_REVISION_CHANGED');
    return transaction(actor,false,async(tx,admitted)=>{
     await tx.$queryRawUnsafe("SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('mws:monthly-snapshot-install-v1',0))");
     const before=await observe(tx,admitted);

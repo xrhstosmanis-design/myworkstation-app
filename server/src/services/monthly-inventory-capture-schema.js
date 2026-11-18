@@ -58,7 +58,7 @@ const fks=table=>[
 const unique=table=>table===grant?[['mws_capture_grant_scope',['companyId','storeId','purpose']],['mws_capture_grant_identity',scoped]]:[['mws_capture_job_slot',['companyId','storeId','lifecycleGeneration','issueMonth']]];
 export const monthlyInventoryCaptureRecoveryColumns=()=>Object.fromEntries(names.map(n=>[n,fields[n].map(c=>c.slice(0,3))]));
 export function monthlyInventoryCaptureLifecycleManifestProposal(){return JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json',import.meta.url),'utf8'))}
-export function monthlyInventoryCaptureRuntimeManifest(env=process.env){return env.MWS_STORE_LIFECYCLE_PROFILE==='BACKOFFICE_COMPANY_CAPTURE_V1'?backofficeCompanyProfile(env).manifest:monthlyInventoryCaptureLifecycleManifestProposal()}
+export function monthlyInventoryCaptureRuntimeManifest(env=process.env){return ['BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'].includes(env.MWS_STORE_LIFECYCLE_PROFILE)?backofficeCompanyProfile(env).manifest:monthlyInventoryCaptureLifecycleManifestProposal()}
 export function assertMonthlyInventoryCaptureLifecycleCatalogue(manifest=monthlyInventoryCaptureLifecycleManifestProposal()){
  const baseline=monthlyInventorySnapshotLifecycleManifestProposal(),without=structuredClone(manifest),columns=monthlyInventoryCaptureRecoveryColumns();
  for(const table of names){

@@ -1,7 +1,16 @@
 // Offline proposal verifier only. No runtime imports, schema mutation or activation.
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
+// The independent legacy image intentionally omits the optional COMPANY
+// catalogue. Preserve its synchronous profile API without importing a missing
+// module; an explicitly requested Current profile still fails closed.
+const currentModuleUrl=new URL('./backoffice-company-current-capture.js',import.meta.url);
+const currentCatalogue=existsSync(currentModuleUrl)?await import(currentModuleUrl.href):null;
+export function buildCompanyCurrentCaptureProposal(...args){
+ if(!currentCatalogue)throw Object.assign(new Error('Optional Current COMPANY package unavailable.'),{code:'COMPANY_CURRENT_CAPTURE_REFUSED'});
+ return currentCatalogue.buildCompanyCurrentCaptureProposal(...args);
+}
 const root=new URL('../../../',import.meta.url);
 const packetPath='ops/backup/lifecycle/backoffice-company-compatibility.proposed.json';
 const column='BackofficeStaffAccount.companyCapabilities';
@@ -26,21 +35,24 @@ export function verifyBackofficeCompanyCompatibility({read=path=>readFileSync(ne
  if(packet.format!=='MWS_BACKOFFICE_COMPANY_COMPATIBILITY_PROPOSAL_V1'||packet.executionEnabled!==false||packet.productionActivated!==false)fail('Proposal must remain inactive.');
  if(!isDeepStrictEqual(packet.column,{table:'BackofficeStaffAccount',name:'companyCapabilities',type:'jsonb',notNull:true,default:[],owner:'COMPANY_SECURITY',storeDeletionSelector:false}))fail('Column ownership changed.');
  if(!isDeepStrictEqual(packet.patch,patch))fail('Unexpected column patch.');
- const sourcePaths=['ops/backup/lifecycle/manifest.json','ops/backup/lifecycle/column-review.json','ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json','ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json','server/src/services/store-lifecycle-executor.js','server/src/services/store-lifecycle-worker-ready.js','server/src/services/store-lifecycle-manifest.js','ops/backup/lifecycle/worker.py','ops/backup/lifecycle/verify_restore.py','server/src/services/backoffice-company-profile.js','ops/backup/lifecycle/backoffice_company_profile.py','server/src/services/backoffice-company-installation-proof.js','server/src/services/backoffice-company-installation.js','ops/backup/lifecycle/company-installation-backup.py','ops/backup/lifecycle/company-installation-observe.sql','server/src/services/monthly-inventory-capture-schema.js','server/src/services/monthly-inventory-capture-authorization.js','server/src/services/monthly-inventory-capture-status.js','ops/backup/lifecycle/company_source_root.py','server/scripts/store-lifecycle-verify-copy.py','server/src/services/automatic-report-operational-profile.js','server/src/services/automatic-report-source-compatibility.js','ops/backup/lifecycle/report-operational-compatibility.proposed.json'];
+ const sourcePaths=['ops/backup/lifecycle/manifest.json','ops/backup/lifecycle/column-review.json','ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json','ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json','server/src/services/store-lifecycle-executor.js','server/src/services/store-lifecycle-worker-ready.js','server/src/services/store-lifecycle-manifest.js','ops/backup/lifecycle/worker.py','ops/backup/lifecycle/verify_restore.py','server/src/services/backoffice-company-profile.js','ops/backup/lifecycle/backoffice_company_profile.py','server/src/services/backoffice-company-installation-proof.js','server/src/services/backoffice-company-installation.js','ops/backup/lifecycle/company-installation-backup.py','ops/backup/lifecycle/company-installation-observe.sql','server/src/services/monthly-inventory-capture-schema.js','server/src/services/monthly-inventory-capture-authorization.js','server/src/services/monthly-inventory-capture-status.js','ops/backup/lifecycle/company_source_root.py','server/scripts/store-lifecycle-verify-copy.py','server/src/services/automatic-report-operational-profile.js','server/src/services/automatic-report-source-compatibility.js','ops/backup/lifecycle/report-operational-compatibility.proposed.json','server/src/services/backoffice-company-current-capture.js','server/src/services/backoffice-company-read-worker-ready.js','server/scripts/backoffice-company-current-guard-review.mjs','ops/backup/lifecycle/backoffice-company-current-capture.proposed.json','ops/backup/lifecycle/backoffice-company-current-capture-guards.proposed.json','ops/backup/lifecycle/backoffice_company_readiness.py','ops/backup/lifecycle/backoffice-company-current-readiness.sql','server/test/fixtures/ftext-full-schema-metadata-20261024.json','server/src/backoffice-staff-bootstrap.js','server/src/services/ai-owner-wallet-schema.js','server/src/services/automatic-report-consent-inspection.js','server/src/services/automatic-report-event-schema.js','ops/backup/lifecycle/automatic-report-consent-extension.proposed.json','ops/backup/lifecycle/backoffice-company-current-columns.proposed.json','server/src/routes/purchase-orders.js','server/src/commercial-bootstrap.js','server/src/routes/store-table-orders.js','ops/backup/lifecycle/backoffice-company-current-defaults.proposed.json','server/scripts/backoffice-company-current-default-review.mjs','server/src/services/ftext-cash-schema.js','server/src/chat-interactions.mjs','server/src/services/monthly-inventory-snapshot-schema.js'];
  if(!isDeepStrictEqual(Object.keys(packet.sourceHashes||{}).sort(),sourcePaths.sort()))fail('Exact app/worker guard sources required.');
  if(!isDeepStrictEqual(packet.runtimeProfilesUnchanged,['BASE','MONTHLY_INVENTORY_CAPTURE_V1','AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'])||packet.eventReportVariantsPrepared!==false)fail('Runtime profiles or unprepared event variants changed.');
  if(!isDeepStrictEqual(packet.rollbackRequires,{nonFinalOperations:0,nonEmptyCompanyPolicies:0,sessionsRevoked:true,verifiedBackup:true}))fail('Rollback evidence requirements changed.');
 
- if(!isDeepStrictEqual(packet.variants.map(v=>v.profile),['BASE','CAPTURE']))fail('Exact two proposed profiles required.');
+ if(!isDeepStrictEqual(packet.variants.map(v=>v.profile),['BASE','CAPTURE','CURRENT_CAPTURE']))fail('Exact three proposed profiles required.');
  for(const [path,hash] of Object.entries(packet.sourceHashes))if(createHash('sha256').update(read(path)).digest('hex')!==hash)fail('Source hash changed: '+path);
  const variants=packet.variants.map(variant=>{
   if(variant.proposedProfileId!=='BACKOFFICE_COMPANY_'+variant.profile+'_PROPOSED_V1'||!Object.hasOwn(packet.sourceHashes,variant.sourceManifest)||!Object.hasOwn(packet.sourceHashes,variant.sourceReview))fail('Unbound proposal source.');
   const expectedPaths=variant.profile==='BASE'?['ops/backup/lifecycle/manifest.json','ops/backup/lifecycle/column-review.json']:['ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json','ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json'];
   if(!isDeepStrictEqual([variant.sourceManifest,variant.sourceReview],expectedPaths))fail('Proposal profile source mismatch.');
   const source=JSON.parse(read(variant.sourceManifest)),oldReview=JSON.parse(read(variant.sourceReview));
-  const {manifest:target,review}=buildBackofficeCompanyProposal(source,oldReview,{profile:variant.profile});
+  const current=variant.profile==='CURRENT_CAPTURE';
+  const {manifest:target,review}=current?buildCompanyCurrentCaptureProposal(source,oldReview):buildBackofficeCompanyProposal(source,oldReview,{profile:variant.profile});
+  const sourcePlanHash=current?companyCompatibilityHash(buildCompanyCurrentCaptureProposal(source,oldReview,{phase:'SOURCE'}).manifest):companyCompatibilityHash(source);
+  if(current&&(variant.sourceFencePlanHash!==companyCompatibilityHash(source)||variant.sourceManifestHash!==sourcePlanHash||variant.preparedState!=='REQUIRES_NATIVE_AND_CURRENT_SOURCE_PROOF'))fail('Current source authority differs.');
   if(companyCompatibilityHash(target)!==variant.proposedPlanHash||companyCompatibilityHash(review)!==variant.proposedReviewHash)fail('Generated target hash differs.');
-  return {profile:variant.profile,sourcePlanHash:companyCompatibilityHash(source),proposedPlanHash:companyCompatibilityHash(target),accountColumns:9};
+  return {profile:variant.profile,sourcePlanHash,...(current?{sourceFencePlanHash:companyCompatibilityHash(source)}:{}),proposedPlanHash:companyCompatibilityHash(target),accountColumns:9};
  });
  return {format:packet.format,executionEnabled:false,productionActivated:false,variants};
 }
