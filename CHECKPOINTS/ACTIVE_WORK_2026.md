@@ -1,3 +1,7 @@
+## 19/11/2026 — Ανάκτηση πρωτότυπων PDF myDATA σε τρία καταστήματα
+
+Διαδόχου Παύλου, Ριζαρείου και Αχαρνών 309. Έλεγχος παρόχων, στοχευμένη επανάκτηση συνδέσμων και ελεγχόμενη επανάληψη λήψης. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md). Κοινές δοκιμές στο LAB πριν από ενέργειες παραγωγής.
+
 ## 18/11/2026 — myDATA Epsilon Digital PDF / AWAITING CI AND LAB
 
 PR #4036. Read-only provider check for Diadochou Pavlou invoice 34795 returned HTTP 200 and PDF from /pdf. [Checkpoint](CHANGES/2026-11-18-mydata-epsilon-original-pdf.md). Attachment verification pending.
