@@ -541,3 +541,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007: `stock-transfers.read` και `invoice-ai.read`, native ιστορικό μεταφορών και αποθηκευμένες εργασίες βοηθού ανά κατάστημα χωρίς ενέργειες/παραγωγικές κλήσεις. Πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-transfer-ai-views.md).
 
 18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Διόρθωση native PostgreSQL fixture στο αποτυχημένο CI44247752200: authenticated Owner request αντί null, runtime αμετάβλητο. Main31c8c46 ενσωματώθηκε με διατήρηση αλλαγών άλλων σελίδων. Τοπικά3PASS/1PGSKIP, νέοCI υποχρεωτικό. [Checkpoint](CHANGES/2026-11-18-no5-ci-native-owner-bootstrap-fixture.md).
+
+18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007 με `wholesale.read`, `video.read`, `printers.read`: scoped native παραγγελίες/κατάσταση καμερών/κατάσταση εκτυπώσεων, χωρίς εταιρικούς καταλόγους, credentials ή παραγωγικές ενέργειες. Η προηγούμενη διόρθωση native PG fixture αναμένει νέοCI· πλήρης κάλυψη OPEN, LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-wholesale-video-printer-views.md).

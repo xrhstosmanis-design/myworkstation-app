@@ -315,3 +315,85 @@ test('native transfer and OCR Owner modes retain destinations and producer contr
  const b=await mount(Ai,{api:async path=>{paths.push(path);return path.includes('/jobs?')?aiJobs().items:[]},storeId:'a1',status:{localConfidenceThreshold:65}});
  try{assert.ok(button('Έναρξη τοπικού OCR'));assert.ok(button('Έλεγχος & αντιστοίχιση'));assert.ok(button('Επανέλεγχος με AI'));assert.ok(button('Έγκριση αποθήκης'));assert.ok(paths.includes('/api/commerce/products'));assert.ok(paths.includes('/api/commerce/suppliers'))}finally{await b.close()}
 });
+
+const wholesaleOrder=(storeId='a1',name=rowText,id='o1')=>({id,companyId:'a',storeId,status:'SUBMITTED',createdAt:'2026-11-17T12:00:00Z',grossTotal:'12.00',notes:'Stored notes',snapshot:{storeId,customerName:name,items:[{productId:'p1',name,unit:'PC',quantity:'2',netTotal:'10.00',vatTotal:'2.00',grossTotal:'12.00'}],totals:{net:'10.00',vat:'2.00',gross:'12.00'}}});
+const wholesaleView=(path,storeId='a1',name=rowText)=>{
+ const q=new URL(path,'https://isolated.invalid').searchParams,id=path.split('?')[0].match(/\/orders\/([^/]+)/)?.[1];
+ return id?{companyId:'a',storeId,order:wholesaleOrder(storeId,name,id)}:{companyId:'a',storeId,items:[wholesaleOrder(storeId,name,Number(q.get('page'))===2?'o2':'o1')],total:51,page:Number(q.get('page')||1),pageSize:50};
+};
+const videoView=(path,storeId='a1',name=rowText)=>({companyId:'a',storeId,store:{id:storeId,name},connection:{provider:'DAHUA',protocol:'ONVIF',connectionStatus:'READY',retentionDays:30},cameras:[{cameraKey:'CAM1',displayName:name,zone:'POS_1',active:true}],connector:{online:true,deviceName:'Connector',version:'2'}});
+const printerView=(path,storeId='a1',name=rowText)=>({companyId:'a',storeId,canConfigure:true,jobs:[{id:'j1',batchId:name,status:'UNKNOWN',createdAt:'2026-11-17T12:00:00Z'}]});
+const otherReadCases=[
+ {key:'wholesale',name:'commerce/WholesaleB2BPanel',right:'wholesale.read',label:'Παραγγελίες χονδρικής',refresh:'Ανανέωση παραγγελιών',fixture:wholesaleView,id:path=>new URL(path,'https://isolated.invalid').searchParams.get('storeId'),props:(api,id='a1')=>({api,companyId:'a',stores:[{id,name:id}],activeStoreId:id,readOnly:true})},
+ {key:'video',name:'commerce/BackofficeVideoAuditPanel',right:'video.read',label:'Κάμερες / Video Audit',refresh:'Ανανέωση κατάστασης',fixture:videoView,id:path=>path.match(/\/stores\/([^/]+)/)?.[1],props:(api,id='a1')=>({api,companyId:'a',storeId:id,readOnly:true})},
+ {key:'printers',name:'store/ProductionPrinterStatusPanel',right:'printers.read',label:'Κατάσταση εκτυπώσεων',refresh:'Ανανέωση εκτυπώσεων',fixture:printerView,id:path=>path.match(/\/stores\/([^/]+)/)?.[1],props:(api,id='a1')=>({api,companyId:'a',store:{id,name:id},onClose(){}})}
+];
+
+test('wholesale video and printer view grants reuse native presentation and admit only their scoped GETs',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const c of otherReadCases){
+  const calls=[];
+  const api=async(path,options={})=>{
+   calls.push(path);assert.equal(options.method||'GET','GET');
+   if(path.endsWith('/me'))return {companyId:'a',stores:[{id:'a1',name:'A1',profile:'MANAGER',capabilities:[c.right]},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:[]}]};
+   assert.equal(options.headers['x-backoffice-store-id'],'a1');assert.equal(c.id(path),'a1');
+   if(c.key==='wholesale')assert.match(path,/^\/api\/wholesale\/orders(?:\/o[12])?\?/);
+   if(c.key==='video')assert.equal(path,'/api/video-admin/stores/a1');
+   if(c.key==='printers')assert.equal(path,'/api/production-printers/stores/a1');
+   return c.fixture(path,'a1',rowText);
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout(){}});
+  try{
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button(c.label).click());await m.act(async()=>new Promise(r=>setTimeout(r,60)));
+   assert.ok(document.body.textContent.includes(rowText));assert.equal(document.querySelector('img'),null);
+   for(const text of ['Νέος πελάτης','Νέος τιμοκατάλογος','Υπολογισμός τιμών','Δημιουργία κωδικού Video Connector','Αποθήκευση καμερών','Λήψη connector Windows','Κωδικός ζεύξης','Καταγραφή ελέγχου','Αποθήκευση σύνδεσης'])assert.ok(!button(text),text);
+   assert.ok(!calls.some(path=>/customers|price-lists|quotes|products|packages|connector|pairing/.test(path)));
+   if(c.key==='wholesale'){
+    await m.act(async()=>document.querySelector('.wholesale-order-list-row').click());assert.ok(document.querySelector('[aria-label="Λεπτομέρειες παραγγελίας"]'));assert.ok(document.querySelector('table').textContent.includes(rowText));
+    await m.act(async()=>button('Επόμενες παραγγελίες').click());assert.ok(calls.some(path=>path.includes('page=2')));assert.equal(document.querySelector('[aria-label="Λεπτομέρειες παραγγελίας"]'),null);
+   }
+   if(c.key==='video'){assert.ok([...document.querySelectorAll('.commerce-form input,.commerce-form select')].every(input=>input.disabled));assert.ok(!document.body.textContent.includes('Δεν έχει ρυθμιστεί'))}
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a2';select.dispatchEvent(new Event('change',{bubbles:true}))});assert.ok(!document.body.textContent.includes(rowText));assert.ok(!button(c.label));
+  }finally{await m.close()}
+ }
+});
+
+test('native wholesale video and printer read views discard late stores and clear denied refreshes',async()=>{
+ for(const c of otherReadCases){
+  const Component=await component(c.name);let mode='ok',late=[];
+  const api=async(path,options={})=>{assert.equal(options.method||'GET','GET');const id=c.id(path);if(mode==='deny')throw Error('NATIVE_READ_WITHDRAWN');if(mode==='late'&&id==='a1')return new Promise(resolve=>late.push(()=>resolve(c.fixture(path,id,'LATE_NATIVE'))));return c.fixture(path,id,id==='a2'?'SECOND_NATIVE':rowText)};
+  const m=await mount(Component,c.props(api));
+  try{
+   assert.ok(document.body.textContent.includes(rowText));mode='late';await m.act(async()=>button(c.refresh).click());assert.ok(!document.body.textContent.includes(rowText));
+   await m.render(c.props(api,'a2'));assert.ok(document.body.textContent.includes('SECOND_NATIVE'));await m.act(async()=>late.forEach(resolve=>resolve()));assert.ok(!document.body.textContent.includes('LATE_NATIVE'));
+   mode='deny';await m.act(async()=>button(c.refresh).click());assert.ok(!document.body.textContent.includes('SECOND_NATIVE'));assert.match(document.querySelector('[role="alert"]').textContent,/NATIVE_READ_WITHDRAWN/);
+  }finally{await m.close()}
+ }
+});
+
+test('new native views reject mismatched envelopes and wholesale nested store or detail identities',async()=>{
+ for(const c of otherReadCases){
+  const Component=await component(c.name);
+  for(const field of ['companyId','storeId']){
+   const api=async path=>{const r=c.fixture(path,'a1',rowText);r[field]='foreign';return r},m=await mount(Component,c.props(api));
+   try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await m.close()}
+  }
+ }
+ const Wholesale=await component('commerce/WholesaleB2BPanel');
+ for(const wrong of ['nestedCompany','nestedStore','snapshotStore','detailId','detailEnvelope','detailNestedStore']){
+  const api=async path=>{const r=wholesaleView(path);if(r.items){if(wrong==='nestedCompany')r.items[0].companyId='foreign';if(wrong==='nestedStore')r.items[0].storeId='a2';if(wrong==='snapshotStore')r.items[0].snapshot.storeId='a2'}else{if(wrong==='detailId')r.order.id='another';if(wrong==='detailEnvelope')r.companyId='foreign';if(wrong==='detailNestedStore')r.order.snapshot.storeId='a2'}return r};
+  const m=await mount(Wholesale,otherReadCases[0].props(api));
+  try{if(wrong.startsWith('detail'))await m.act(async()=>document.querySelector('.wholesale-order-list-row').click());assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await m.close()}
+ }
+ const Video=await component('commerce/BackofficeVideoAuditPanel'),m=await mount(Video,{...otherReadCases[1].props(async()=>({...videoView(),store:{id:'a2',name:rowText}}))});
+ try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await m.close()}
+});
+
+test('native Owner video controls and printer configuration remain available by default',async()=>{
+ const Video=await component('commerce/BackofficeVideoAuditPanel');
+ const a=await mount(Video,{api:async()=>videoView(),storeId:'a1'});
+ try{assert.ok(button('Δημιουργία κωδικού Video Connector'));assert.ok(button('Αποθήκευση καμερών'));assert.ok([...document.querySelectorAll('.commerce-form input')].some(input=>!input.disabled))}finally{await a.close()}
+ const Printer=await component('store/ProductionPrinterSettings'),b=await mount(Printer,{api:async()=>({}),store:{id:'a1',name:'A1'},state:{canConfigure:true,jobs:[]},cart:[],onClose(){},onSaved(){}});
+ try{assert.ok(button('Αποθήκευση σύνδεσης'));assert.ok(button('Λήψη connector Windows'));assert.ok(button('Κωδικός ζεύξης'))}finally{await b.close()}
+});
