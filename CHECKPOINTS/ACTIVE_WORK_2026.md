@@ -1,3 +1,7 @@
+## 18/11/2026 — myDATA Epsilon Digital PDF / AWAITING CI AND LAB
+
+PR #4036. Read-only provider check for Diadochou Pavlou invoice 34795 returned HTTP 200 and PDF from /pdf. [Checkpoint](CHANGES/2026-11-18-mydata-epsilon-original-pdf.md). Attachment verification pending.
+
 ## 18/11/2026 — Νο 15 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ c88b7aad / ΜΕΡΙΚΗ LIVE ΑΠΟΔΟΧΗ / OPEN
 
 Ίδιος υπεύθυνος /root, ίδια ανάθεση TABLE_SERVICE. #4023/#4024 εγκαταστάθηκαν μέσω πλήρους main CI44385977787 (5SUCCESS, 6241PASS/0FAIL/2προαιρετικάSKIP +8backupPASS) και κανονικού guarded release44390636363· Render dep-dbv0j1brjlhs73aguvl0 LIVE 18/11 22:29:52 Ελλάδας, ακριβές c88b7aad, ανεξάρτητο health200/oktrue από τον συντονιστή. Νέο scoped LIVE PASS: μεταφορά/διαίρεση/ένωση, αλλαγή σερβιτόρου, μπλοκάρισμα επαναποστολής φορτωμένων γραμμών, 3 ανεξάρτητα KDS READY (3→2→1→0), πραγματική κινητή ροή responsive browser με χρέωση0,50€ σε καφέ1€ και μία αποστολή1,50€ / μία γραμμή / ένα δελτίο / ένα request / ένα Audit. Δεν επαναλαμβάνονται αυτά ή το ιστορικό τραπέζι3€.
@@ -7,6 +11,10 @@ Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό
 ## 18/11/2026 — Νο2 — verified ordinary posting projection / ASSIGNED BEFORE SOURCE
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
+
+### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / BEFORE SOURCE
+
+Ο ιδιοκτήτης επιβεβαίωσε νέο FAIL: η παλιά κατηγορία μη καταχωρισμένων αναμειγνύει ασύνδετες myDATA/πιστωτικές/merged εγγραφές και ο αριθμός δεν ανοίγει την υπάρχουσα αγορά. Ίδιος owner `/root`, branch `fix/no2-invoice-open-review`, μόνο ordinary eligibility/navigation και αυστηρή ανάγνωση υφιστάμενου detail χωρίς implicit repair/bootstrap. Raw C/D1/writers και άλλων σελίδων markup/εμφάνιση διατηρούνται. Το περιορισμένο LIVE counter PASS παρακάτω παραμένει, όχι PASS της σημασιολογίας ή νέας πλοήγησης. [Claim](CHANGES/2026-11-18-no2-invoice-opening-review.md). Source μετά green merged claim, καμία νέα πληρωμή/καταχώριση.
 
 ### Νεότερη κατάσταση 18/11/2026 — Νο2 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ / LIMITED LIVE UI PASS
 
@@ -116,6 +124,9 @@ Main6992085 warehouseVAT/Marginparity+No2claimsενσωματώθηκε·σύγ�
 Συνέχεια:6700PASS/1FAIL/3optionalSKIP στο013ef85·SQLobserverπεριλάμβανεindexattributesσανcolumns. Διορθώθηκεrelkindfilter,strictcatalogueαμετάβλητο,47hashesverified. ActualSOURCE+10driftcasesPASS·fullnative17ENV-BLOCKEDστοprivateUnixsocketpg_ctl(1FAIL,όχιPASS). Python24PASS. ΥποστηριζόμεναVAT/Marginφίλτραφαίνονταιπλέονκαιμεproducts.read/readOnlyχωρίςwriters·UI53PASS/build18.05sPASS. NativeCurrentfullproofκαιproductionεκκρεμούν,όλεςhumanδοκιμέςστοτέλος.
 
 Main42601f0No2counters/postingενσωματώθηκε·κοινόreadonlycoreκρατάpeerπροβολές/φίλτρα/cursorκαιγνήσιοNo5pre/postgrant. Server85PASS,actualReactUI44PASS(πραγματικόChromiumεξαιρέθηκετοπικά),build26.45sPASS. Νέοdelegatedcounterfilterέχειίδιαcompany/store/month/filterταυτότητακαικαμίαemailενέργεια. Source47αμετάβλητααπόobserverfix·freshCurrentCIεκκρεμεί.
+
+PR4007 CI44402256147 tested the synthetic merge and exposed a stale COMPANY source binding after No4 changed the purchase-order route. Reviewed the scoped invoice transfer and refreshed only its SHA-256 in the inactive COMPANY compatibility packet. Local rights and verifier checks passed; native backup/restore and final shared LAB acceptance remain open.
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
@@ -183,6 +194,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · 13–14 · Διόρθωση ιστορικού κόστους και επισκόπηση εκκρεμών αγορών · [Checkpoint](CHANGES/2026-11-17-no13-no14-batch-source.md) · Τοπικοί έλεγχοι, CI και κοινή αποδοχή LAB σε συνέχεια.
 
 - 2026-11-17 · Νο 13 · LAB PASS για CSV και εκτυπώσιμη προβολή «Χωρίς ΦΠΑ» στο c19e099 · [Checkpoint](CHANGES/2026-11-17-no13-csv-vat-scope.md) · PDF, φυσική εκτύπωση και υπόλοιπο 13–14 ανοιχτά.
+- 2026-11-17 · Νο 4 · POS → Βοηθός → BackOffice · [Checkpoint](CHANGES/2026-11-17-no4-pos-assistant-backoffice.md) · Ενιαία συναλλαγή μεταφοράς, 64 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
@@ -695,3 +707,5 @@ Next: source PR/full CI; owner approval for source merge/publication; existing L
 ## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — ASSIGNED /root BEFORE SOURCE
 
 Explicit owner request/start in same warehouse/invoice conversation. Bounded independent extension: compact archive filters/footer; draft line editor VAT department/category/dependent subcategory for existing/new items; display markup for previously matched lines without saving or changing retail. Owner /root, branch feat/warehouse-invoice-review-ui-20261118. Existing invoice/No2/OCR/report owners retained; no OCR, matching algorithm, financial posting, finalization, stock or production data tests. Current new requirements NOT TESTED; prior warehouse release #4029 and invoice/POS acceptance preserved. Checkpoint CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
+
+- 2026-11-18 · 13–14 · Κατάσταση τιμολογίων και αντιλογισμών στο CSV προμηθευτών · [Checkpoint](CHANGES/2026-11-18-no13-no14-supplier-csv-status.md) · 2 τοπικές δοκιμές PASS, CI και LAB εκκρεμούν.
