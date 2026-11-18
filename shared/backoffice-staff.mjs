@@ -5,8 +5,14 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read']);
 export const staffPermissionSections=Object.freeze([
+  {key:'baking',label:'Ψησίματα',actions:[
+    {key:'baking.read',label:'Προβολή ψησιμάτων',description:'Βλέπει διαθέσιμα ψημένα/άψητα είδη και το πρόσφατο ιστορικό ψησιμάτων του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'monthly-invoice-audit',label:'Μηνιαίος έλεγχος',actions:[
+    {key:'monthly-invoice-audit.read',label:'Προβολή μηνιαίου ελέγχου τιμολογίων',description:'Βλέπει τον έλεγχο τιμολογίων μήνα και τα εκκρεμή πρωτότυπα του επιλεγμένου καταστήματος.'}
+  ]},
   {key:'pending',label:'Εκκρεμότητες Chat',actions:[
     {key:'pending.read',label:'Προβολή εκκρεμοτήτων Chat',description:'Βλέπει τις εκκρεμότητες Chat και την κατάστασή τους στο επιλεγμένο κατάστημα.'}
   ]},
@@ -93,6 +99,8 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/baking$/.test(path))return 'baking.read';
+  if(method==='GET'&&path==='/api/reports/invoice-month-audit')return 'monthly-invoice-audit.read';
   if(method==='GET'&&path==='/api/pending-center/chat-tasks')return 'pending.read';
   if(method==='GET'&&['/api/price-catalog/promotions/scoped','/api/price-catalog/promotions/analysis'].includes(path))return 'promotions.read';
   if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/payroll\/(?:preview|periods(?:\/[^/]+)?)$/.test(path))return 'payroll.read';

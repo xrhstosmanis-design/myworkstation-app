@@ -474,3 +474,7 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 17/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Προστέθηκε χωριστό `payroll.read` για περιόδους, ανάλυση και προεπισκόπηση μισθοδοσίας επιλεγμένου καταστήματος, με BASIC και PAYROLL. Ίδιο PR #4007, ενιαίο LAB στο τέλος. [Checkpoint](CHANGES/2026-11-17-no5-delegated-store-views.md).
 
 18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007: ανεξάρτητη προβολή προσφορών/ανάλυσης και εργασιών chat ανά κατάστημα (`promotions.read`, `pending.read`). Προηγούμενο CI44184785433 PASS· πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-pending-promotions-views.md).
+
+18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007 με `baking.read` και `monthly-invoice-audit.read`, native προβολές ανά κατάστημα και νέο έλεγχο grant έξω από το snapshot. Πλήρης κάλυψη OPEN, ενιαίες δοκιμές λογαριασμών στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-baking-monthly-audit-views.md).
+
+Νο 5, ίδια παρτίδα: build PASS, 154 τοπικοί έλεγχοι PASS, 7 PostgreSQL SKIP, 1 Chromium launch FAIL λόγω socket Operation not permitted. Εκκρεμεί νέο CI· δεν χαρακτηρίζεται συνολική πράσινη σουίτα ή LAB PASS.

@@ -6,15 +6,15 @@ const money=value=>value===null||value===undefined?'Άγνωστο':(value/100).
 const currentMonth=()=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));return p.year+'-'+p.month};
 const styles=`.invoice-month-audit{border:1px solid #c5d4e5;border-radius:12px;padding:16px;background:#fff;color:#18324f;margin:12px 0}.invoice-month-audit h3{margin:0 0 10px}.invoice-month-audit form{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.invoice-month-audit label{display:grid;gap:4px;font-weight:700}.invoice-month-audit input,.invoice-month-audit button{font:inherit;min-height:44px;padding:8px 12px;border:1px solid #6b819b;border-radius:6px}.invoice-month-audit button{background:#f0f6fc;color:#153d68;cursor:pointer}.invoice-month-audit button:disabled{cursor:default;opacity:.6}.invoice-month-audit :focus-visible{outline:3px solid #087f8c;outline-offset:2px}.invoice-month-audit .ima-summary{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.invoice-month-audit .ima-summary span{border:1px solid #d8e2ed;padding:10px;border-radius:8px}.invoice-month-audit .ima-summary b{display:block;font-size:1.3rem}.invoice-month-audit .ima-warning{background:#fff5dd;border-left:4px solid #b16b00;padding:10px}.invoice-month-audit .ima-safe{background:#edf8ef;padding:10px}.invoice-month-audit .ima-rows{padding:0;list-style:none}.invoice-month-audit .ima-rows>li{border-top:1px solid #d7e0eb;padding:12px 0;overflow-wrap:anywhere}.invoice-month-audit .ima-meta{display:flex;gap:12px;flex-wrap:wrap;margin:5px 0}.invoice-month-audit .ima-pending{margin-top:20px;padding-top:16px;border-top:2px solid #8caac5}.invoice-month-audit .ima-tag{display:inline-block;margin:3px 6px 3px 0;padding:3px 7px;border-radius:6px;background:#fff0d6;color:#653a00}.invoice-month-audit .ima-footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap}@media(max-width:600px){.invoice-month-audit{padding:12px}.invoice-month-audit form>*{flex:1 1 100%}.invoice-month-audit input,.invoice-month-audit form button{width:100%}}`;
 
-export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',initialMonth}){
+export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',initialMonth,companyId,delegated=false}){
  const [month,setMonth]=useState(initialMonth||currentMonth),[observation,setObservation]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState('');
- const result=observation?.api===api&&observation?.data?.store?.id===storeId?observation.data:null;
+ const result=observation?.api===api&&observation?.data?.store?.id===storeId&&(!delegated||(observation.data.companyId===companyId&&observation.data.storeId===storeId&&observation.data.period.month===month))?observation.data:null;
  const request=useRef(0),abort=useRef(null),current=useRef({storeId,month,api});current.current={storeId,month,api};
  const [previewObservation,setPreviewObservation]=useState(null),previewRequest=useRef(0),previewAbort=useRef(null);
- const previewScope=previewObservation?.api===api&&previewObservation.storeId===storeId&&previewObservation.month===month?previewObservation:null;
- useEffect(()=>{previewRequest.current++;previewAbort.current?.abort();setPreviewObservation(null);return()=>{previewRequest.current++;previewAbort.current?.abort()}},[storeId,api,month]);
+ const previewScope=!delegated&&previewObservation?.api===api&&previewObservation.storeId===storeId&&previewObservation.month===month?previewObservation:null;
+ useEffect(()=>{previewRequest.current++;previewAbort.current?.abort();setPreviewObservation(null);return()=>{previewRequest.current++;previewAbort.current?.abort()}},[storeId,api,month,companyId,delegated]);
  const loadPreview=async()=>{
-  if(!storeId||!month)return;
+  if(delegated||!storeId||!month)return;
   previewAbort.current?.abort();const controller=new AbortController();previewAbort.current=controller;
   const serial=++previewRequest.current,selected={storeId,month},scope={...selected,api};setPreviewObservation({...scope,loading:true});
   const currentScope=()=>!controller.signal.aborted&&previewRequest.current===serial&&current.current.storeId===selected.storeId&&current.current.month===selected.month&&current.current.api===api;
@@ -25,21 +25,21 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
    setPreviewObservation({...scope,data,loading:false});
   }catch(failure){if(currentScope())setPreviewObservation({...scope,error:failure.message||'Η προεπισκόπηση δεν ολοκληρώθηκε.',loading:false})}
  };
- useEffect(()=>{request.current++;abort.current?.abort();setObservation(null);setError('');setLoading(false);return()=>{request.current++;abort.current?.abort()}},[storeId,api]);
+ useEffect(()=>{request.current++;abort.current?.abort();setObservation(null);setError('');setLoading(false);return()=>{request.current++;abort.current?.abort()}},[storeId,api,companyId,delegated]);
  const load=async(page=null)=>{
   if(!storeId)return;
   abort.current?.abort();const controller=new AbortController();abort.current=controller;
-  const serial=++request.current,selected={storeId,month};setLoading(true);setError('');
+  const serial=++request.current,selected={storeId,month};setLoading(true);setError('');if(delegated)setObservation(null);
   try{
    const query=new URLSearchParams(selected);if(page)query.set('page',page);
    const data=await api('/api/reports/invoice-month-audit?'+query.toString(),{signal:controller.signal});
    if(controller.signal.aborted||request.current!==serial||current.current.storeId!==selected.storeId||current.current.month!==selected.month||current.current.api!==api)return;
-   if(data?.store?.id!==selected.storeId||data?.period?.month!==selected.month||data?.readOnly!==true)throw Error('Το αποτέλεσμα δεν αντιστοιχεί στην τρέχουσα επιλογή.');
+   if(data?.store?.id!==selected.storeId||data?.period?.month!==selected.month||data?.readOnly!==true||(delegated&&(data?.companyId!==companyId||data?.storeId!==selected.storeId)))throw Error('Το αποτέλεσμα δεν αντιστοιχεί στην τρέχουσα επιλογή.');
    setObservation({data,api});
   }catch(failure){if(!controller.signal.aborted&&request.current===serial){setError(failure.message||'Ο έλεγχος δεν ολοκληρώθηκε.');setObservation(null)}}
   finally{if(request.current===serial)setLoading(false)}
  };
- const changeMonth=value=>{request.current++;abort.current?.abort();previewRequest.current++;previewAbort.current?.abort();setLoading(false);setError('');setMonth(value)};
+ const changeMonth=value=>{request.current++;abort.current?.abort();previewRequest.current++;previewAbort.current?.abort();setLoading(false);setError('');if(delegated)setObservation(null);setMonth(value)};
  const edited=result&&result.period.month!==month,pending=result?.pendingOriginals,summary=result?.summary;
  return <section className="invoice-month-audit" aria-labelledby="invoice-month-audit-title">
   <style>{styles}</style>
@@ -47,7 +47,7 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
   <p>Μόνο ανάγνωση αποθηκευμένων στοιχείων. Δεν καταχωρεί, ενοποιεί, πληρώνει ή διαγράφει παραστατικά και δεν στέλνει email.</p>
   {!storeId?<p role="status">Επίλεξε συγκεκριμένο κατάστημα για να ανοίξεις τον έλεγχο.</p>:<>
    <p><b>Κατάστημα:</b> {storeName||storeId}</p>
-   <form onSubmit={event=>{event.preventDefault();load()}}><label>Μήνας έκδοσης<input type="month" value={month} min="2000-01" max="2099-12" required onChange={event=>changeMonth(event.target.value)}/></label><button type="submit" disabled={loading||!month}>{loading?'Έλεγχος...':'Έλεγχος μήνα'}</button><button type="button" disabled={Boolean(previewScope?.loading)||!month} onClick={loadPreview}>{previewScope?.loading?'Προετοιμασία email...':'Προεπισκόπηση μηνιαίου email'}</button></form>
+   <form onSubmit={event=>{event.preventDefault();load()}}><label>Μήνας έκδοσης<input type="month" value={month} min="2000-01" max="2099-12" required onChange={event=>changeMonth(event.target.value)}/></label><button type="submit" disabled={loading||!month}>{loading?'Έλεγχος...':'Έλεγχος μήνα'}</button>{!delegated&&<button type="button" disabled={Boolean(previewScope?.loading)||!month} onClick={loadPreview}>{previewScope?.loading?'Προετοιμασία email...':'Προεπισκόπηση μηνιαίου email'}</button>}</form>
    {previewScope?.error&&<p role="alert" className="ima-warning">{previewScope.error}</p>}
    {previewScope?.data&&<section className="ima-email-preview" aria-labelledby="invoice-email-preview-title" style={{border:'1px solid #8caac5',borderRadius:8,padding:12,marginTop:16,overflowWrap:'anywhere'}}>
     <h4 id="invoice-email-preview-title">Προεπισκόπηση μηνιαίου email — {previewScope.data.period.month}</h4>

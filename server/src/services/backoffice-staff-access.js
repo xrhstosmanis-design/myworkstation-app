@@ -57,7 +57,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(capability==='LIFECYCLE'){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
-    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read'].includes(c)):[];
+    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read'].includes(c)):[];
     let disabled;
     for(const read of reads){
       try{await requireStaffGrant(db,user,storeId,read);req.user={...req.user,storeId};return true}
@@ -67,7 +67,7 @@ export async function enforceBackofficeStaff(db,req,res){
   }
   const storeId=req.get('x-backoffice-store-id');
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
-  if(['analytics.read','handover.read','stock.read','pending.read','promotions.read'].includes(capability)&&req.query?.storeId!==storeId)throw staffError();
+  if(['analytics.read','handover.read','stock.read','pending.read','promotions.read','monthly-invoice-audit.read'].includes(capability)&&req.query?.storeId!==storeId)throw staffError();
   const workforce=path.match(/^\/api\/platform\/store-modules\/companies\/([^/]+)\/stores\/([^/]+)\/workforce-v2\/(?:employees(?:\/[^/]+)?|schedules|attendance|leaves|payroll\/(?:preview|periods(?:\/[^/]+)?))$/);
   if(workforce&&(workforce[1]!==user.companyId||workforce[2]!==storeId))throw staffError();
   const sales=path.match(/^\/api\/(?:transactions|cash|cash-control|store-pos)\/stores\/([^/]+)(?:\/|$)/);
@@ -116,7 +116,7 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
-  return capability==='pending.read'?['PENDING_CENTER']:['employees.read','schedule.read','attendance.read','leaves.read','payroll.read'].includes(capability)?[]:capability==='handover.read'?['SHIFT_HANDOVER']:capability==='analytics.read'?['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']:capability==='order-suggestions.read'?['ORDER_SUGGESTIONS']:capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
+  return capability==='baking.read'?['STORE_MODE']:capability==='pending.read'?['PENDING_CENTER']:['employees.read','schedule.read','attendance.read','leaves.read','payroll.read'].includes(capability)?[]:capability==='handover.read'?['SHIFT_HANDOVER']:capability==='analytics.read'?['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']:capability==='order-suggestions.read'?['ORDER_SUGGESTIONS']:capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
 }
 
 // Must run inside each canonical writer transaction, before writes or replay.

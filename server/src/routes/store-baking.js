@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {changeSameProductBakedStock,sameProductBakingSchema} from '../store-baking-same-product.js';
 import {Router} from 'express';
 import {prisma} from '../prisma.js';
@@ -6,15 +7,22 @@ import {ensureStoreBakingSchema,recordBaking,readBakingPolicy,readStoreBakingSta
 const router=Router();router.use(auth);
 async function context(req){
  const storeId=req.params.storeId;
+ const delegated=req.user?.staffAccess===true;
+ if(delegated){
+  if(req.method!=='GET'||req.staffGrant?.capability!=='baking.read'||req.user.storeId!==storeId)throw staffError();
+  await requireStaffGrant(prisma,req.user,storeId,'baking.read');
+ }
  if(req.user?.tokenType==='STORE_OPERATOR'&&req.user.storeId!==storeId)throw Object.assign(new Error('Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.'),{status:403});
- if(req.user?.tokenType!=='STORE_OPERATOR'&&!['OWNER','ADMIN','MANAGER','SUPER_ADMIN'].includes(req.user?.role))throw Object.assign(new Error('Δεν έχετε δικαίωμα καταχώρισης ψησίματος.'),{status:403});
+ if(!delegated&&req.user?.tokenType!=='STORE_OPERATOR'&&!['OWNER','ADMIN','MANAGER','SUPER_ADMIN'].includes(req.user?.role))throw Object.assign(new Error('Δεν έχετε δικαίωμα καταχώρισης ψησίματος.'),{status:403});
  const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true}});
  if(!store)throw Object.assign(new Error('Δεν βρέθηκε ενεργό κατάστημα.'),{status:404});
- await ensureStoreBakingSchema(prisma);return store;
+ if(!delegated)await ensureStoreBakingSchema(prisma);return store;
 }
 router.get('/stores/:storeId/baking',async(req,res,next)=>{try{
  const store=await context(req),companyId=req.user.companyId;
- res.json(await readStoreBakingState(prisma,companyId,store.id));
+ const delegated=req.user?.staffAccess===true,result=await readStoreBakingState(prisma,companyId,store.id,{delegatedRead:delegated});
+ if(delegated)await requireStaffGrant(prisma,req.user,store.id,'baking.read');
+ res.json({...result,...(delegated?{companyId,storeId:store.id}:{})});
  }catch(e){next(e)}});
 router.post('/stores/:storeId/baking',async(req,res,next)=>{try{
  const store=await context(req),result=await prisma.$transaction(async tx=>{

@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from './backoffice-staff-access.js';
 import {invoiceAuditMonth} from './invoice-audit-month.js';
 import crypto from 'node:crypto';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
@@ -244,8 +245,9 @@ export function classifyInvoiceMonth(facts,period){
  const {counts,items}=classifyInvoiceMonthCore(facts,period);return {counts,items};
 }
 
-async function readInvoiceSources(tx,actor,input,now,fullPending=false){
- const store=await authorize(tx,actor,input.storeId,now);
+async function readInvoiceSources(tx,actor,input,now,fullPending=false,delegatedRead=false){
+ const store=delegatedRead?await tx.store.findFirst({where:{id:input.storeId,companyId:actor.companyId,active:true},select:{id:true,companyId:true,name:true}}):await authorize(tx,actor,input.storeId,now);
+ if(!store)fail('Δεν βρέθηκε ενεργό κατάστημα στην επιλεγμένη εταιρεία.',404);
  return readInvoiceSourcesCore(tx,actor.companyId,store,input,()=> (fullPending?readPendingInvoiceSnapshotRows:readPendingInvoices)(tx,{companyId:actor.companyId,storeId:store.id,user:actor}));
 }
 
@@ -270,13 +272,29 @@ async function readInvoiceSourcesCore(tx,companyId,store,input,readPending){
 
 export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}){
  if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input?.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
+ return readMonthlyInvoiceAuditCore(db,actor,input,{now});
+}
+
+// Only this mounted delegated reader admits a personal read grant. Snapshot,
+// automation and email-preview authorization retain their original entry gates.
+export async function readDelegatedMonthlyInvoiceAudit(db,req,input){
+ const actor=req.user,storeId=input?.storeId;
+ if(req.method!=='GET'||actor?.staffAccess!==true||actor?.role!=='EMPLOYEE'||actor.storeId!==storeId||req.staffGrant?.capability!=='monthly-invoice-audit.read')throw staffError();
+ await requireStaffGrant(db,actor,storeId,'monthly-invoice-audit.read');
+ const result=await readMonthlyInvoiceAuditCore(db,actor,input,{now:new Date(),delegatedRead:true});
+ // Fresh authority observation after the held RepeatableRead source snapshot.
+ await requireStaffGrant(db,actor,storeId,'monthly-invoice-audit.read');
+ return {...result,companyId:actor.companyId,storeId};
+}
+
+async function readMonthlyInvoiceAuditCore(db,actor,input,{now,delegatedRead=false}){
  if(!input||Object.keys(input).some(k=>!['storeId','month','page'].includes(k))||!safeText(input.storeId))fail('Επίλεξε συγκεκριμένο κατάστημα.');
  const period=invoiceAuditMonth(input.month);let cursor=null;
  if(input.page!==undefined){if(!safeText(input.page,1024))fail('Μη έγκυρη σελίδα.');try{cursor=JSON.parse(Buffer.from(input.page,'base64url').toString('utf8'))}catch{fail('Μη έγκυρη σελίδα.')}if(!cursor||Object.keys(cursor).sort().join(',')!=='after,fingerprint,scope'||!safeText(cursor.after,200)||!/^[0-9a-f]{64}$/.test(cursor.fingerprint)||cursor.scope!==hash([actor.companyId,input.storeId,input.month]))fail('Μη έγκυρη σελίδα.');}
  return db.$transaction(async tx=>{
   await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
   await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8000ms'");
-  const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending}=await readInvoiceSources(tx,actor,input,now);
+  const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending}=await readInvoiceSources(tx,actor,input,now,false,delegatedRead);
   const complete=unavailable.length===0&&limited.length===0,analysis=complete?classifyInvoiceMonth(facts,period):{counts:null,items:[]};
   const fingerprint=hash({period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');

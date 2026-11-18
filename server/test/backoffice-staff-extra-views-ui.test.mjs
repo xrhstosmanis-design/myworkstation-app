@@ -87,3 +87,65 @@ test('shared native promotion list preserves Owner toggles and escapes text in b
  const items=promotions().items,m=await mount(List,{items,onToggle(){changed++}});
  try{assert.ok(document.body.textContent.includes(rowText));assert.equal(document.querySelector('img'),null);await m.act(async()=>button('Παύση').click());assert.equal(changed,1);await m.render({items,onToggle(){changed++},readOnly:true});assert.ok(!button('Παύση'));assert.equal(document.querySelector('img'),null)}finally{await m.close()}
 });
+
+const baking=(storeId='a1',name=rowText)=>({companyId:'a',storeId,products:[{productId:'baked',name,sourceName:'Raw',sourceStock:8,currentStock:2,sameProduct:true}],history:[{id:'b1',name,quantity:2,actorName:'Baker',createdAt:'2026-11-17T12:00:00Z',sourceBefore:10,sourceAfter:8,finishedBefore:0,finishedAfter:2}]});
+const invoiceMonth=(storeId='a1',month='2026-10',name=rowText)=>({companyId:'a',storeId,store:{id:storeId},period:{month},readOnly:true,asOf:'2026-11-17T12:00:00Z',coverage:{complete:true},summary:{logicalRecords:1,unposted:1,uploadedAwaitingReview:0,possibleDuplicates:0,identityReview:0,credits:0},items:[{id:'inv1',documentNumber:name,supplierName:'Supplier',issueDay:month+'-01',totalCents:120,categories:['UNPOSTED_DOCUMENT'],reasons:[]}],pendingOriginals:{available:false},nextPage:'page2'});
+
+test('baking and monthly invoice audit are separate scoped native read views without write or email controls',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const kind of ['baking','monthly']){
+  const right=kind==='baking'?'baking.read':'monthly-invoice-audit.read',label=kind==='baking'?'Ψησίματα':'Έλεγχος τιμολογίων μήνα',calls=[];
+  const api=async(path,options={})=>{
+   calls.push(path);assert.equal(options.method||'GET','GET');
+   if(path.endsWith('/me'))return {companyId:'a',stores:[{id:'a1',name:'A1',profile:'MANAGER',capabilities:[right]}]};
+   assert.equal(options.headers['x-backoffice-store-id'],'a1');
+   if(kind==='baking'){assert.equal(path,'/api/store-pos/stores/a1/baking');return baking()}
+   assert.match(path,/^\/api\/reports\/invoice-month-audit\?/);const params=new URL(path,'https://isolated.invalid').searchParams;assert.equal(params.get('storeId'),'a1');return invoiceMonth('a1',params.get('month'));
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout(){}});
+  try{
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button(label).click());await m.act(async()=>new Promise(r=>setTimeout(r,60)));
+   if(kind==='monthly')await m.act(async()=>document.querySelector('.invoice-month-audit form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+   assert.ok(document.body.textContent.includes(rowText));assert.equal(document.querySelector('img'),null);
+   assert.ok(!button('Καταχώριση ψησίματος'));assert.ok(!button('Προεπισκόπηση μηνιαίου email'));
+   assert.ok(!calls.some(path=>path.includes('email-preview')));
+   if(kind==='baking')assert.equal(document.querySelector('input[type="number"]'),null);
+  }finally{await m.close()}
+ }
+});
+
+test('native baking clears delayed scope and revoked reads and validates selected company and store',async()=>{
+ const Baking=await component('store/StoreBakingModal');let mode='ok',resolveLate;
+ const api=async path=>{const id=path.split('/')[4];if(mode==='deny')throw Error('BAKE_WITHDRAWN');if(mode==='late'&&id==='a1')return new Promise(resolve=>{resolveLate=()=>resolve(baking('a1','LATE_BAKE'))});return baking(id,id==='a2'?'SECOND_BAKE':rowText)};
+ const props=id=>({api,companyId:'a',store:{id,name:id},readOnly:true,onClose(){}}),m=await mount(Baking,props('a1'));
+ try{
+  assert.ok(document.body.textContent.includes(rowText));mode='late';await m.act(async()=>button('Ανανέωση ψησιμάτων').click());assert.ok(!document.body.textContent.includes(rowText));
+  await m.render(props('a2'));assert.ok(document.body.textContent.includes('SECOND_BAKE'));await m.act(async()=>resolveLate());assert.ok(!document.body.textContent.includes('LATE_BAKE'));
+  mode='deny';await m.act(async()=>button('Ανανέωση ψησιμάτων').click());assert.ok(!document.body.textContent.includes('SECOND_BAKE'));assert.match(document.querySelector('[role="alert"]').textContent,/BAKE_WITHDRAWN/);
+ }finally{await m.close()}
+ for(const wrong of ['companyId','storeId']){
+  const value=baking();value[wrong]='foreign';const n=await mount(Baking,{...props('a1'),api:async()=>value});
+  try{assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await n.close()}
+ }
+});
+
+test('delegated monthly audit clears old month pages and denial, hides mail preview and rejects foreign envelopes',async()=>{
+ const Audit=await component('commerce/MonthlyInvoiceAuditPanel');let mode='ok',resolveLate;const paths=[];
+ const api=async path=>{paths.push(path);assert.ok(!path.includes('email-preview'));const q=new URL(path,'https://isolated.invalid').searchParams;if(mode==='deny')throw Error('AUDIT_WITHDRAWN');if(mode==='late')return new Promise(resolve=>{resolveLate=()=>resolve(invoiceMonth(q.get('storeId'),q.get('month'),'LATE_AUDIT'))});return invoiceMonth(q.get('storeId'),q.get('month'))};
+ const props={api,companyId:'a',storeId:'a1',storeName:'A1',initialMonth:'2026-10',delegated:true},m=await mount(Audit,props);
+ const submit=()=>m.act(async()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+ try{
+  await submit();assert.ok(document.body.textContent.includes(rowText));assert.ok(!button('Προεπισκόπηση μηνιαίου email'));
+  mode='late';await submit();assert.ok(!document.body.textContent.includes(rowText));
+  await m.act(async()=>{const input=document.querySelector('input[type="month"]');const setter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;setter.call(input,'2026-11');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  await m.act(async()=>resolveLate());assert.ok(!document.body.textContent.includes('LATE_AUDIT'));
+  mode='ok';await submit();assert.ok(document.body.textContent.includes(rowText));
+  await m.act(async()=>button('Επόμενη σελίδα').click());assert.ok(paths.some(path=>path.includes('page=page2')));
+  mode='deny';await submit();assert.ok(!document.body.textContent.includes(rowText));assert.match(document.querySelector('[role="alert"]').textContent,/AUDIT_WITHDRAWN/);
+ }finally{await m.close()}
+ for(const wrong of ['companyId','storeId','nestedStore','month']){
+  const n=await mount(Audit,{...props,api:async()=>{const r=invoiceMonth();if(wrong==='companyId')r.companyId='foreign';if(wrong==='storeId')r.storeId='foreign';if(wrong==='nestedStore')r.store.id='foreign';if(wrong==='month')r.period.month='2026-09';return r}});
+  try{await n.act(async()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.ok(document.querySelector('[role="alert"]'));assert.ok(!document.body.textContent.includes(rowText))}finally{await n.close()}
+ }
+});
