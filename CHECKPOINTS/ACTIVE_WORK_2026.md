@@ -681,3 +681,6 @@ Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compa
 
 
 - 2026-11-19 · 13-SALES-STATS-REVERSAL-COST · /root σελίδας 13–14, βοηθός /root/cost · Ανάληψη πριν από κώδικα για ιστορικό κόστος επιστροφής στις δύο προβολές Στατιστικών Πωλήσεων. [Checkpoint](CHANGES/2026-11-19-no13-sales-reversal-cost.md). LAB NOT TESTED. CI και συγχώνευση ανάληψης εκκρεμούν.
+
+
+- 2026-11-19 · Νο 14 · ASSIGNED /root, συνέχεια #4004: επιβεβαιωμένη αναμενόμενη ποσότητα και σύνδεση υπάρχουσας καταχωρισμένης παραλαβής για τις προτάσεις. BEFORE SOURCE / NOT TESTED, σχέδιο και έλεγχος ανάθεσης για ανασκόπηση. [Checkpoint](CHANGES/2026-11-19-no14-expected-receipts-claim-design.md). Οι παλαιές αναθέσεις προτάσεων και Full Audit διατηρούνται εκτός του συγκεκριμένου νέου υποσυστήματος.
