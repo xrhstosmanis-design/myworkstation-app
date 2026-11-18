@@ -686,6 +686,11 @@ Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compa
 - 2026-11-19 · Νο 14 · ASSIGNED /root, συνέχεια #4004: επιβεβαιωμένη αναμενόμενη ποσότητα και σύνδεση υπάρχουσας καταχωρισμένης παραλαβής για τις προτάσεις. BEFORE SOURCE / NOT TESTED, σχέδιο και έλεγχος ανάθεσης για ανασκόπηση. [Checkpoint](CHANGES/2026-11-19-no14-expected-receipts-claim-design.md). Οι παλαιές αναθέσεις προτάσεων και Full Audit διατηρούνται εκτός του συγκεκριμένου νέου υποσυστήματος.
 
 
+## 19/11/2026 00:15 Athens — WAREHOUSE-INVOICE-REVIEW-UI-01 — TECHNICALLY LIVE / COMMON LAB PENDING
+
+Owner /root retained. #4040 merged885f00f047cfe0a734cc0d526c68f01b4d7e279d. Exact candidateCI44403379025 and mainCI44405403976 all five jobs SUCCESS; main6279PASS/0FAIL/3optionalSKIP plus8backupPASS, native taxonomy/control/rollback and staff regression executed. Guarded release44408590060 SUCCESS; Render dep-dbv23qgu01pc73cj5cmg LIVE19/11 00:13:53 Athens exact885f00f0. Public health200/exactrevision, HTML200, delivered JS taxonomy marker and CSS compact filter markers independently verified00:15:32. No hosted business action; no new manual PASS. Compact archive, draft taxonomy and linked markup await grouped common LAB acceptance. Peer source/claims and prior PASS retained. Checkpoint CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
+
+
 ## 2026-11-19 · Νο15 · Ενιαία τελική παρτίδα — AWAITING FULL CI / LAB
 
 Ίδια ανάθεση /root TABLE_SERVICE, τρεις βοηθοί σε ξεχωριστά worktrees: ανάκτηση αβέβαιης κινητής αποστολής μετά refresh, ατομική ένταξη νέου KDS δελτίου στην υπάρχουσα ουρά εκτύπωσης, αναστρέψιμη fiscal mapping επιλογή χωρίς αλλαγή hostedρύθμισης. Το χρεώσιμο KDS READY έκλεισε πραγματικά19/11,00:04Ελλάδας με UIκαιSQL· παλιότερα pendingτου ίδιου δελτίου υπερκαλύπτονται. Οι υπάρχουσες PASSπράξεις δεν επαναλαμβάνονται. [Checkpoint](CHANGES/2026-11-19-table-service-final-batch.md). Πλήρες CI/deploy/κοινή φυσική αποδοχή εκκρεμούν· συνολικόOPEN.
