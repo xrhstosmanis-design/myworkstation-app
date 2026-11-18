@@ -111,6 +111,50 @@ export function syncMyDataStore(req,{db=prisma}={}){
   },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{if(admitted)syncStatus.set(key,{...syncStatus.get(key),lastSyncError:error.code==='MYDATA_HTTP_ERROR'?error.message:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
   syncInFlight.set(key,run);return run;
 }
+// Opt-in historical recovery for URLs already proven by the Epsilon adapter.
+const originalRecoveryVersion = "epsilon-fd-8-v1";
+const originalRecoveryLink = String.raw`<(?:[[:alnum:]_]+:)?downloadingInvoiceUrl[^>]*>[[:space:]]*https://epsilondigital[.]epsilonnet[.]gr/fd/[a-f0-9]{32}:8/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>`;
+
+export async function recoverExhaustedOriginals({
+  db, companyId, storeId, userId, source,
+  storeIds = process.env.MYDATA_ORIGINAL_RECOVERY_STORE_IDS ?? "",
+  acquire = acquireOriginal,
+}) {
+  if (source !== "AADE_MYDATA_PRODUCTION" || !storeIds.split(",").map(id => id.trim()).includes(storeId)) {
+    return {downloaded: 0, failed: 0};
+  }
+  const candidates = await db.$queryRaw`
+    SELECT m."inboxId" FROM "MyDataInboundDocument" m
+    JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+    WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
+      AND m."rawPayload"->>'source'=${source} AND m."rawPayload"->>'originalPending'='true'
+      AND i."attachmentId" IS NULL AND i."status"='RECEIVED'
+      AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)>=3
+      AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
+      AND m."rawPayload"->>'xml' ~* ${originalRecoveryLink}
+    ORDER BY m."fetchedAt",m."id" LIMIT 2`;
+  let downloaded = 0, failed = 0;
+  for (const {inboxId} of candidates) {
+    try {
+      const result = await acquire(db, companyId, storeId, inboxId, userId, false);
+      if (result.downloaded) downloaded++;
+    } catch {
+      failed++;
+      await db.$executeRaw`
+        UPDATE "MyDataInboundDocument" m SET "rawPayload"=m."rawPayload"||jsonb_build_object(
+          'originalRecoveryVersion',${originalRecoveryVersion},'originalError',
+          'Το πρωτότυπο δεν κατέβηκε κατά την επανάληψη. Δοκιμάστε από τη Θυρίδα.')
+        WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId}
+          AND EXISTS (
+            SELECT 1 FROM "DocumentInbox" i
+            WHERE i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+              AND i."attachmentId" IS NULL AND i."status"='RECEIVED'
+          )`;
+    }
+  }
+  return {downloaded, failed};
+}
+
 async function performSync(req){
   assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
   await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);const storeId=String(req.body?.storeId||"");
@@ -170,6 +214,11 @@ async function performSync(req){
     originalsFailed++;
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
+  const recovery = await recoverExhaustedOriginals({
+    db: prisma, companyId: req.user.companyId, storeId: store.id, userId: req.user.id, source,
+  });
+  originalsDownloaded += recovery.downloaded;
+  originalsFailed += recovery.failed;
   const canPrepareDraft=Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY")));
   const existingPhotosLinked=canPrepareDraft?await prisma.$transaction(tx=>linkStoredPosInvoicePhotos(tx,{companyId:req.user.companyId,storeId:store.id})):0;
   if(canPrepareDraft){
