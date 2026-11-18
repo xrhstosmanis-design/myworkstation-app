@@ -13,7 +13,7 @@ test('installation UI binds inspected scope and packet, requires approval, consu
  const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/platform/ReportEventInstallationManager.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime']});
  const module={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
  const root=createRoot(document.getElementById('root')),calls=[];
- const description={profile:'CAPTURE',sourceRevision:'a'.repeat(40),oldPlanHash:'b'.repeat(64),targetPlanHash:'c'.repeat(64)};
+ const description={profile:'CAPTURE_REPORTS_ONLY',sourceRevision:'a'.repeat(40),oldPlanHash:'b'.repeat(64),targetPlanHash:'c'.repeat(64)};
  let holdDescribe=false,lateDescribe,lateInstall,failInstall=false,wrongScope=false;
  const packet=store=>({...description,companyId:'c',storeId:store,schema:'public',catalogueSignature:'d'.repeat(64),globalStateSignature:'e'.repeat(64)});
  const request=async(path,options={})=>{
@@ -27,15 +27,16 @@ test('installation UI binds inspected scope and packet, requires approval, consu
  const render=store=>act(async()=>root.render(React.createElement(module.exports.default,{company:{id:'c',name:'Company'},store:{id:store,name:store},request})));
  try{
   await render('A');assert.equal(calls.length,0);
-  await act(async()=>{const select=document.querySelector('select');select.value='CAPTURE';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  await act(async()=>{const select=document.querySelector('select');select.value='CAPTURE_REPORTS_ONLY';select.dispatchEvent(new Event('change',{bubbles:true}));});
   assert.equal(calls.length,0);
+  assert.match(document.body.textContent,/επαναφορά, εξαγωγή και διαγραφή/);
   await act(async()=>button('Έλεγχος εγκατάστασης αναφορών').click());
   assert.match(document.body.textContent,/aaaaaaaa/);assert.match(document.body.textContent,/c \/ A/);
   assert.equal(button('Εγκατάσταση προετοιμασίας αναφορών').disabled,true);
   await act(async()=>document.querySelector('input[type=checkbox]').click());
   await act(async()=>{button('Εγκατάσταση προετοιμασίας αναφορών').click();button('Εγκατάσταση προετοιμασίας αναφορών')?.click();});
   const installs=calls.filter(call=>call.path.endsWith('/install'));assert.equal(installs.length,1);
-  assert.deepEqual(JSON.parse(installs[0].body),{profile:'CAPTURE',packet:packet('A'),explicitAuthorization:true});
+  assert.deepEqual(JSON.parse(installs[0].body),{profile:'CAPTURE_REPORTS_ONLY',packet:packet('A'),explicitAuthorization:true});
   await act(async()=>lateInstall({installed:true}));assert.equal(button('Εγκατάσταση προετοιμασίας αναφορών'),undefined);
   holdDescribe=true;await act(async()=>button('Έλεγχος εγκατάστασης αναφορών').click());
   await render('B');const count=calls.length;

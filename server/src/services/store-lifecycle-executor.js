@@ -1,3 +1,5 @@
+import {assertReportOperationalProfile} from './automatic-report-operational-profile.js';
+import {prepareOperationalReportInspection} from './automatic-report-source-compatibility.js';
 import {prepareAutomaticReportConsentInspection} from './automatic-report-consent-inspection.js';
 // Internal execution core. No production manifest, recovery adapter or HTTP route is registered here.
 import {createHash,randomUUID} from 'node:crypto';
@@ -25,6 +27,7 @@ const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for
 const drainFingerprint=(plan,scope,mode,operationId)=>hash({phase:'DRAINING',operationId,companyId:scope.companyId,storeId:scope.storeId,mode,planHash:plan.planHash,sourceRevision:plan.sourceRevision});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
+ if(manifest.preservedOperationalTables!==undefined)assertReportOperationalProfile(manifest);
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
  if(manifest.resetPolicy!==undefined&&manifest.resetPolicy!=='FRESH_STORE_V1')fail('Unknown reset policy.');
  if(manifest.knownTables!==undefined&&(!Array.isArray(manifest.knownTables)||manifest.knownTables.length>600||manifest.knownTables.some(n=>typeof n!=='string'||!n)||new Set(manifest.knownTables).size!==manifest.knownTables.length))fail('Invalid reviewed database catalogue.');
@@ -58,7 +61,7 @@ function planFor(manifest){
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!validColumns(row.owner.columns))fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
  if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
- return {id:manifest.id,nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
+ return {id:manifest.id,executionDisabled:manifest.executionDisabled===true,preservedOperationalTables:manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
 }
 function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='ROOT')return `${alias}."id"=$1`;
@@ -143,19 +146,20 @@ function bindDatabaseReferences(plan,schema,fks){
  plan.databaseReferences=references;
 }
 async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
+ const operational=plan.preservedOperationalTables.length?await prepareOperationalReportInspection(tx,schema):null;
  const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name,c.relkind::text AS kind,c.relispartition AS partition,c.relrowsecurity AS rls,c.relforcerowsecurity AS forced,EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhparent=c.oid OR i.inhrelid=c.oid) AS inherited,EXISTS(SELECT 1 FROM pg_rewrite w WHERE w.ev_class=c.oid AND w.rulename<>'_RETURN') AS rewritten FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname`,schema);
  const columns=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS "notNull",a.attidentity::text AS identity,a.attgenerated::text AS generated,pg_get_expr(d.adbin,d.adrelid) AS "defaultExpression" FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') AND a.attnum>0 AND NOT a.attisdropped ORDER BY c.relname,a.attnum`,schema);
  if(plan.knownTables){for(const relation of relations)if(!INTERNAL.has(relation.name)&&!plan.knownTables.includes(relation.name))fail('Unreviewed database relation: '+relation.name);for(const name of plan.knownTables)if(!relations.some(r=>r.name===name))fail('Reviewed database relation missing: '+name)}
  if(plan.knownColumns)for(const [name,expected] of Object.entries(plan.knownColumns))if(JSON.stringify(columns.filter(c=>c.table===name).map(c=>[c.name,c.type,c.notNull]))!==JSON.stringify(expected))fail('Reviewed column catalogue changed: '+name);
  for(const node of plan.ordered){const r=relations.find(r=>r.name===node.name);if(!r||r.kind!=='r'||r.partition||r.rls||r.forced||r.inherited||r.rewritten)fail('Complex or RLS relation requires a separate executor.');}
  if(columns.length>20000)fail('Schema review limit exceeded.');
- const byTable=new Map();for(const col of columns){if(!byTable.has(col.table))byTable.set(col.table,new Set());byTable.get(col.table).add(col.name);if(col.name==='storeId'&&!INTERNAL.has(col.table)&&!plan.nodes.has(col.table))fail('Unreviewed store table: '+col.table)}
+ const byTable=new Map();for(const col of columns){if(!byTable.has(col.table))byTable.set(col.table,new Set());byTable.get(col.table).add(col.name);if(col.name==='storeId'&&!INTERNAL.has(col.table)&&!plan.nodes.has(col.table)&&!plan.preservedOperationalTables.includes(col.table))fail('Unreviewed store table: '+col.table)}
  for(const node of plan.ordered){const cols=byTable.get(node.name);if(!cols||node.owner.kind==='ROOT'&&!cols.has('id')||node.owner.kind==='DIRECT'&&!cols.has('storeId')||node.owner.kind==='BASE_STORE'&&!cols.has('baseStoreId'))fail('Reviewed table layout changed.');}
  for(const guard of plan.valueGuards)if(!columns.some(c=>c.table===guard.table&&c.name===guard.column&&c.type==='text'))fail('Reviewed value guard layout changed.');
  const fks=await readForeignKeys(tx,schema);
  bindDatabaseReferences(plan,schema,fks);
  if(fks.length>10000)fail('Dependency review limit exceeded.');
- for(const fk of fks){if(fk.parentSchema===schema&&plan.nodes.has(fk.parent)&&(fk.childSchema!==schema||!plan.nodes.has(fk.child)))fail('Unreviewed incoming dependency: '+fk.child)}
+ for(const fk of fks){if(fk.parentSchema===schema&&plan.nodes.has(fk.parent)&&(fk.childSchema!==schema||!plan.nodes.has(fk.child)&&!plan.preservedOperationalTables.includes(fk.child)))fail('Unreviewed incoming dependency: '+fk.child)}
  for(const node of plan.ordered.filter(n=>n.owner.kind==='CHILD'))if(!fks.some(f=>f.childSchema===schema&&f.parentSchema===schema&&f.child===node.name&&f.parent===node.owner.parent&&JSON.stringify(f.local)===JSON.stringify(node.owner.columns.map(p=>p[0]))&&JSON.stringify(f.remote)===JSON.stringify(node.owner.columns.map(p=>p[1]))))fail('Reviewed ownership FK changed.');
  const links=applicationEdges(plan,schema);
  const uniqueKeys=links.length?await tx.$queryRawUnsafe(`SELECT c.relname AS "table",ARRAY(SELECT a.attname::text FROM unnest(i.indkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.n WHERE k.p<=i.indnkeyatts ORDER BY k.p) AS columns FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND i.indisunique AND i.indisvalid AND i.indisready AND i.indimmediate AND i.indpred IS NULL AND i.indexprs IS NULL ORDER BY c.relname,2`,schema):[];
@@ -181,7 +185,7 @@ async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
  }
  const primaryKeys=plan.streaming?await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,k.p::int AS position FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN LATERAL unnest(i.indkey) WITH ORDINALITY k(n,p) ON k.p<=i.indnkeyatts JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.n WHERE n.nspname=$1 AND i.indisprimary ORDER BY c.relname,k.p`,schema):[];
  if(plan.streaming)for(const node of plan.ordered)if(!primaryKeys.some(k=>k.table===node.name))fail('Streaming requires a reviewed primary key: '+node.name);
- const descriptor={relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})};
+ const descriptor={...(operational?{preservedOperationalMetadata:operational.evidence}:{}),relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})};
  return {columns:byTable,fks:[...fks,...links],primaryKeys,descriptor,guardsInstalled:installedCounts.every(n=>n===2),signature:hash(descriptor)};
 }
 async function* scopedRows(tx,plan,schema,scope,node,meta){
@@ -269,6 +273,7 @@ async function persistOwnershipTombstones(tx,plan,schema,snapshot,operationId,ge
  }
 }
 function inspectionFor(plan){return async(db,actor,scope)=>{
+ assertScopedLifecycleEnabled(plan);
  requireLifecycleAdmin(actor);
  if(typeof scope?.companyId!=='string'||!scope.companyId||typeof scope?.storeId!=='string'||!scope.storeId)fail('Explicit selected company and store required.',400);
  return db.$transaction(async tx=>{
@@ -287,7 +292,11 @@ function inspectionFor(plan){return async(db,actor,scope)=>{
   return {...result,inspectionFingerprint:hash(result)};
  },{isolationLevel:'RepeatableRead',timeout:120000,maxWait:5000});
 }}
+function assertScopedLifecycleEnabled(manifest){
+ if(manifest.executionDisabled===true)throw Object.assign(new Error("Οι ενέργειες επαναφοράς και διαγραφής καταστήματος δεν είναι διαθέσιμες στο προφίλ αναφορών."),{status:409,code:"STORE_LIFECYCLE_REPORTS_ONLY"});
+}
 export function createLifecycleInspectionCore(manifest,{sourceRevision}={}){
+ assertScopedLifecycleEnabled(manifest);
  const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
  if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
  return Object.freeze({inspect:inspectionFor(plan)});
@@ -321,15 +330,17 @@ export function createLifecycleInstallationCore(manifest,{sourceRevision}={}){
   async inspectAdditiveInTransaction(tx,actor,options){
    requireLifecycleAdmin(actor);
    const schema=await schemaFor(tx);
-   const prepared=await prepareAutomaticReportConsentInspection(tx,schema,reviewed,options);
+   const operational=options?.operationalReportsOnly?await prepareOperationalReportInspection(tx,schema):null;
+   const prepared=await prepareAutomaticReportConsentInspection(operational?.tx||tx,schema,reviewed,options);
    const metadata=await validateDatabase(prepared.tx,plan,schema,{allowUninstalled:true});
-   return {...metadata,signature:hash({source:metadata.signature,additions:prepared.evidence})};
+   return {...metadata,signature:hash({source:metadata.signature,additions:prepared.evidence,...(operational?{operational:operational.evidence}:{})})};
   },
   installInTransaction,
   async install(db,actor,scope){requireLifecycleAdmin(actor);return db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL extra_float_digits=3");await tx.$executeRawUnsafe("SET LOCAL bytea_output='hex'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return installInTransaction(tx,actor,scope)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000})}
  });
 }
 export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,sourceRevision}={}){
+ assertScopedLifecycleEnabled(manifest);
  const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
  if(typeof persistAndVerifyRecovery!=='function')fail('A durable full-restore verification adapter is required.');if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
  const transaction=(db,fn)=>db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL extra_float_digits=3");await tx.$executeRawUnsafe("SET LOCAL bytea_output='hex'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return fn(tx)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000});

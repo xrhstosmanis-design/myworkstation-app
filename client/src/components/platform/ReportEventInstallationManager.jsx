@@ -9,6 +9,7 @@ export default function ReportEventInstallationManager({company,store,request}){
     <option value="">Επίλεξε διαμόρφωση</option>
     <option value="BASE">Βασική εγκατάσταση</option>
     <option value="CAPTURE">Εγκατάσταση με μηνιαία καταγραφή απογραφής</option>
+    <option value="CAPTURE_REPORTS_ONLY">Μηνιαία καταγραφή και συμβατότητα λειτουργικών πινάκων μόνο για αναφορές</option>
    </select>
   </label>
   {profile&&<Installation key={company.id+':'+store.id+':'+profile} company={company} store={store} request={request} profile={profile}/>}
@@ -48,6 +49,7 @@ function Installation({company,store,request,profile}){
   finally{pending.current=false;if(alive.current)setBusy(false);}
  }
  return <section aria-label="Εγκατάσταση αυτόματων αναφορών">
+  {profile==='CAPTURE_REPORTS_ONLY'&&<p>Το προφίλ επιτρέπει την προετοιμασία αναφορών. Η επαναφορά, εξαγωγή και διαγραφή επιλεγμένου καταστήματος παραμένουν μη διαθέσιμες μέχρι να ολοκληρωθεί ο έλεγχος των λειτουργικών πινάκων.</p>}
   <p>Εταιρεία {company.name||company.id} · Κατάστημα {store.name||store.id}</p>
   <button type="button" disabled={busy} onClick={()=>run(false)}>Έλεγχος εγκατάστασης αναφορών</button>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
