@@ -44,6 +44,37 @@ test("Epsilon Digital original uses a restricted provider URL and verifies PDF i
   assert.deepEqual(result.bytes, bytes);
   await assert.rejects(fetchOriginalPdf(epsilonRow, fetchPdf, async () => ({text: text.replace(row.mark, "0"), pageCount: 1})), /δεν επιβεβαιώνει/);
 });
+test("only verified provider host and path combinations are allowed for inbound PDFs", () => {
+  const short = "a".repeat(32);
+  const uuid = "12345678-1234-1234-1234-123456789abc";
+  const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
+  const providers = [
+    base.replace("einvoice.impact.gr", "einvoice.s1ecos.gr"),
+    `https://epsilondigital3.epsilonnet.gr/fd/${short}:84`,
+    `https://epsilondigital14.epsilonnet.gr/fd/${short}:160`,
+    `https://epsilondigital22.epsilonnet.gr/fd/${short}:190`,
+    `https://epsilondigital-3rdpartd.epsilonnet.gr/fd/${short}:159`,
+    `https://epsilondigital-enetgroup.epsilonnet.gr/fd/${short}:107`,
+    `https://epsilondigital-nbg.epsilonnet.gr/fd/${short}:109`,
+    `https://epsilondigitalsmart10.epsilonnet.gr/fd/${short}:227`,
+    `https://e-invoicing.gr/edocuments/ViewInvoice/-1/${uuid}_abc1234`,
+    `https://vs.gr/iv/invoice/download/test_1/test_1~k1~${"a".repeat(40)}~${"x".repeat(43)}`,
+  ];
+  for (const url of providers) {
+    assert.equal(originalDownloadUrl(xml(url), row.issuerVat), url + "/pdf");
+    assert.throws(() => originalDownloadUrl(xml(url + "?x=1"), row.issuerVat));
+  }
+  for (const url of [
+    providers[0].replace(row.issuerVat, row.counterpartVat),
+    providers[1].replace(":84", ":160"),
+    providers[1].replace("epsilondigital3", "epsilondigital23"),
+    providers[4].replace("epsilonnet.gr", "epsilonnet.gr.example"),
+    providers[8].replace("/-1/", "/1/"),
+    providers[9].replace("/test_1~", "/test_2~"),
+  ]) {
+    assert.throws(() => originalDownloadUrl(xml(url), row.issuerVat));
+  }
+});
 test("download accepts bounded real PDF bytes only and verifies invoice identity",async()=>{
   const bytes=Buffer.from("%PDF-"+ "x".repeat(110)),text="099999999 088888888 400000000000001 42";
   const reader=async()=>({text,pageCount:1});
