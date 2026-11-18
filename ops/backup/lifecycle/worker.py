@@ -23,7 +23,7 @@ def selected_manifest_file(env=None):
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
     if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1'):
         filename = 'manifest.json'
-    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1'):
+    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2'):
         filename = 'monthly-inventory-capture-manifest.proposed.json'
     else:
         raise ValueError('Invalid store lifecycle profile')
@@ -34,7 +34,7 @@ def selected_manifest_document(env=None):
     configuration = os.environ if env is None else env
     document = json.loads(selected_manifest_file(configuration).read_text())
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
-    if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1'):
+    if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2'):
         return document
     extension_file = pathlib.Path(__file__).resolve().parent / 'automatic-report-consent-extension.proposed.json'
     extension = json.loads(extension_file.read_text())
@@ -53,7 +53,7 @@ def selected_manifest_document(env=None):
         document['reviewedColumns'].extend(name + '.' + column for column in ('recipientId', 'consentedBy', 'revokedBy', 'updatedBy'))
     document['id'] += '__AUTOMATIC_EVENT_REPORTS_V1'
     document['valueGuards'].append({'table': 'AutomaticReportEventConsent', 'column': 'reportType', 'allowed': ['PROMOTION_RESULT', 'INVENTORY_RESULT']})
-    if profile == 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1':
+    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2'):
         operational = json.loads((pathlib.Path(__file__).resolve().parent / 'report-operational-compatibility.proposed.json').read_text())
         document['id'] += '__REPORTS_ONLY_OPERATIONAL_V1'
         document['executionDisabled'] = True
@@ -66,6 +66,13 @@ def selected_manifest_document(env=None):
             document['knownColumns'][table['name']] = table['columns']
         stock = next(table for table in document['tables'] if table['name'] == 'StoreProduct')
         stock['existingTriggers'] = stock.get('existingTriggers', []) + [operational['packageTrigger']]
+    if profile == 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2':
+        columns = json.loads((pathlib.Path(__file__).resolve().parent / 'report-column-compatibility.proposed.json').read_text())
+        document['id'] += '__REVIEWED_REPORT_COLUMNS_V1'
+        document['reviewedColumnExtensions'] = [table['name'] + '.' + column[0] for table in columns['tables'] for column in table['columns']]
+        for table in columns['tables']:
+            document['knownColumns'][table['name']].extend(table['columns'])
+        document['reviewedColumns'].extend(columns['reviewedColumns'])
     return document
 
 
