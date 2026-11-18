@@ -1,7 +1,9 @@
+import {packageStatements} from './lib/pos-stock-packages.js';
 import {executeHotTableBootstrap} from "./hot-table-schema.js";
 import {prisma} from "./prisma.js";
 
 const statements=[
+...packageStatements,
 `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatVerified" BOOLEAN NOT NULL DEFAULT false`,
 `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "staffPrice" DECIMAL(14,4)`,
 `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "deliveryPrice" DECIMAL(14,4)`,

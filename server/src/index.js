@@ -146,6 +146,7 @@ import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-onlin
 import commerceAdvancedOnlineSearchRoutes from "./routes/commerce-advanced-online-search.js";
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import {createAutomaticReportEventInstallationRouter} from './routes/automatic-report-event-installation.js';
 import {createAutomaticReportDispatchRouter} from './routes/automatic-report-dispatch.js';
 import {createAutomaticReportInvitationRouter} from './routes/automatic-report-invitations.js';
 import {readActivation} from './services/automatic-report-activation.js';
@@ -233,6 +234,7 @@ app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformSuperAdminAnalyticsDetailsRoutes);
 app.use("/api/platform/store-modules",platformStoreModulesRoutes);
 app.use('/api/report-invitations',createAutomaticReportInvitationRouter(prisma));
+app.use('/api/platform/companies/:companyId/stores/:storeId/report-event-installation',auth,createAutomaticReportEventInstallationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',auth,createAutomaticReportDispatchRouter(prisma));
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);
@@ -411,6 +413,10 @@ const automaticReportDispatcher=createAutomaticReportDispatcher({db:prisma,activ
 const automaticReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:automaticReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain});
 const supplierReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'SUPPLIER_COMPARISON'});
 const supplierReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:supplierReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'SUPPLIER_COMPARISON'});
+const promotionReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'PROMOTION_RESULT'});
+const promotionReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:promotionReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'PROMOTION_RESULT'});
+const inventoryResultDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'INVENTORY_RESULT'});
+const inventoryResultScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:inventoryResultDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'INVENTORY_RESULT'});
 const monthlyInventoryCaptureJobs=createMonthlyInventoryCaptureJobs(prisma);
 const monthlyInventoryCaptureScheduler=createMonthlyInventoryCaptureScheduler({jobs:monthlyInventoryCaptureJobs,work:backgroundDrain});
 const invoiceStockEmailScheduler=createInvoiceStockExclusionEmailScheduler({
@@ -424,6 +430,8 @@ const server=app.listen(process.env.PORT||8080,()=>{
   startWorkforceAutoOutWorker();
   automaticReportScheduler.start();
   supplierReportScheduler.start();
+  promotionReportScheduler.start();
+  inventoryResultScheduler.start();
   invoiceStockEmailScheduler.start();
   monthlyInventoryCaptureScheduler.start();
 });

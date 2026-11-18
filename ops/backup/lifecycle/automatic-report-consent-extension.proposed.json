@@ -1,0 +1,123 @@
+{
+  "format": "MWS_AUTOMATIC_REPORT_CONSENT_EXTENSION_V1",
+  "columns": [
+    [
+      "companyId",
+      "text",
+      true
+    ],
+    [
+      "storeId",
+      "text",
+      true
+    ],
+    [
+      "reportType",
+      "text",
+      true
+    ],
+    [
+      "recipientId",
+      "text",
+      true
+    ],
+    [
+      "revision",
+      "bigint",
+      true
+    ],
+    [
+      "recipientVersion",
+      "bigint",
+      true
+    ],
+    [
+      "active",
+      "boolean",
+      true
+    ],
+    [
+      "allowedFrequencies",
+      "text[]",
+      true
+    ],
+    [
+      "lifecycleGeneration",
+      "bigint",
+      true
+    ],
+    [
+      "consentedBy",
+      "text",
+      false
+    ],
+    [
+      "consentedAt",
+      "timestamp with time zone",
+      false
+    ],
+    [
+      "proofHash",
+      "text",
+      false
+    ],
+    [
+      "revokedBy",
+      "text",
+      false
+    ],
+    [
+      "revokedAt",
+      "timestamp with time zone",
+      false
+    ],
+    [
+      "updatedBy",
+      "text",
+      true
+    ],
+    [
+      "updatedAt",
+      "timestamp with time zone",
+      true
+    ]
+  ],
+  "defaults": {
+    "revision": "1",
+    "active": "false",
+    "allowedFrequencies": "ARRAY[]::text[]"
+  },
+  "checks": {
+    "AutomaticReportSupplierComparisonConsent": [
+      [
+        "CHECK (\"allowedFrequencies\" <@ ARRAY['DAILY'::text, 'WEEKLY'::text, 'MONTHLY'::text] AND array_position(\"allowedFrequencies\", NULL::text) IS NULL AND cardinality(\"allowedFrequencies\") = (\nCASE\n    WHEN 'DAILY'::text = ANY (\"allowedFrequencies\") THEN 1\n    ELSE 0\nEND +\nCASE\n    WHEN 'WEEKLY'::text = ANY (\"allowedFrequencies\") THEN 1\n    ELSE 0\nEND +\nCASE\n    WHEN 'MONTHLY'::text = ANY (\"allowedFrequencies\") THEN 1\n    ELSE 0\nEND))",
+        "CHECK (\"allowedFrequencies\" <@ ARRAY['MONTHLY'::text])",
+        "CHECK (\"lifecycleGeneration\" >= 0)",
+        "CHECK (\"proofHash\" ~ '^[a-f0-9]{64}$'::text)",
+        "CHECK (\"recipientVersion\" > 0 AND \"recipientVersion\" <= '9007199254740991'::bigint)",
+        "CHECK (NOT active OR \"consentedAt\" IS NOT NULL AND \"consentedBy\" IS NOT NULL AND \"proofHash\" IS NOT NULL)",
+        "CHECK (revision >= 1 AND revision <= '9007199254740991'::bigint)"
+      ]
+    ],
+    "AutomaticReportEventConsent": [
+      [
+        "CHECK (\"lifecycleGeneration\" >= 0)",
+        "CHECK (\"proofHash\" ~ '^[a-f0-9]{64}$'::text)",
+        "CHECK (\"recipientVersion\" >= 1 AND \"recipientVersion\" <= '9007199254740991'::bigint)",
+        "CHECK (\"reportType\" = ANY (ARRAY['PROMOTION_RESULT'::text, 'INVENTORY_RESULT'::text]))",
+        "CHECK (NOT active OR \"consentedAt\" IS NOT NULL AND \"consentedBy\" IS NOT NULL AND \"proofHash\" IS NOT NULL)",
+        "CHECK (cardinality(\"allowedFrequencies\") <= 1 AND \"allowedFrequencies\" <@ ARRAY['EVENT'::text] AND array_position(\"allowedFrequencies\", NULL::text) IS NULL)",
+        "CHECK (revision >= 1 AND revision <= '9007199254740991'::bigint)"
+      ],
+      [
+        "CHECK (\"lifecycleGeneration\" >= 0)",
+        "CHECK (\"proofHash\" ~ '^[a-f0-9]{64}$'::text)",
+        "CHECK (\"recipientVersion\" >= 1 AND \"recipientVersion\" <= '9007199254740991'::bigint)",
+        "CHECK (\"reportType\" = 'PROMOTION_RESULT'::text)",
+        "CHECK (NOT active OR \"consentedAt\" IS NOT NULL AND \"consentedBy\" IS NOT NULL AND \"proofHash\" IS NOT NULL)",
+        "CHECK (cardinality(\"allowedFrequencies\") <= 1 AND \"allowedFrequencies\" <@ ARRAY['EVENT'::text] AND array_position(\"allowedFrequencies\", NULL::text) IS NULL)",
+        "CHECK (revision >= 1 AND revision <= '9007199254740991'::bigint)"
+      ]
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+import {packageCatalog} from '../src/lib/pos-stock-packages.js';
 import {posNewProductAllowed} from '../src/lib/pos-new-product-card.js';
 import {readLifecycleGeneration} from '../src/services/store-lifecycle-generation.js';
 import test from 'node:test';
@@ -14,13 +15,13 @@ function handlers(prisma){
   const Router=()=>({get:(path,...fns)=>routes.set(path,fns),post(){},put(){},delete(){},use:(path,fn)=>middleware.push(fn)});
   const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','');
   // Isolate legacy catalogue routes; real new-product registration is covered by its mounted/native tests.
-  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','registerPosNewProductRoutes','posNewProductAllowed','readLifecycleGeneration',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,()=>{},posNewProductAllowed,readLifecycleGeneration);
+  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','registerPosNewProductRoutes','posNewProductAllowed','readLifecycleGeneration','packageCatalog',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,()=>{},posNewProductAllowed,readLifecycleGeneration,packageCatalog);
   const older=fs.readFileSync(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');
   const start=older.indexOf('router.get("/stores/:storeId",');
   const end=older.indexOf('\n',start);
   const guards=older.split('\n').filter(line=>line.startsWith('function assertStore(')||line.startsWith('async function storeFor(')).join('\n');
-  new Function('router','prisma','hasTableService','capDriverV1WriterState','requestTerminal','readLifecycleGeneration',`const money=value=>Number(value||0);${guards}\n${older.slice(start,end)}`)(
-    {get:(_,fn)=>routes.set('older',[fn])},prisma,async()=>false,async()=>({online:false,configured:false}),async()=>"MAIN",readLifecycleGeneration);
+  new Function('router','prisma','hasTableService','capDriverV1WriterState','requestTerminal','readLifecycleGeneration','packageCatalog',`const money=value=>Number(value||0);${guards}\n${older.slice(start,end)}`)(
+    {get:(_,fn)=>routes.set('older',[fn])},prisma,async()=>false,async()=>({online:false,configured:false}),async()=>"MAIN",readLifecycleGeneration,packageCatalog);
   return async(kind,user={id:'owner',role:'OWNER',companyId:'company'},storeId='store')=>{
     const req={user,params:{storeId},method:'GET',path:'/stores/'+storeId},res={statusCode:200,status(code){this.statusCode=code;return this},json(body){this.body=body;return this}};
     for(const fn of [...(kind==='older'?[]:middleware),...routes.get(kind)]){

@@ -13,3 +13,4 @@
 !server/
 !server/scripts/
 !server/scripts/store-lifecycle-verify-copy.py
+!ops/backup/lifecycle/automatic-report-consent-extension.proposed.json

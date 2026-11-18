@@ -116,6 +116,102 @@ for(const line of storedLines)await tx.$executeRaw`INSERT INTO "TableOrderLine" 
     if(body.idempotencyKey){const result={id:orderId,tableId:table.id,tableName:table.name,terminalPos,status:"SENT",roundNumber,addedTotal,total:finalTotal,items:lines,preparationBatches};await tx.$executeRaw`INSERT INTO "TableOrderRequest" ("companyId","storeId","idempotencyKey","actorId","payloadHash","resultJson") VALUES (${req.user.companyId},${store.id},${body.idempotencyKey},${actorId},${payloadHash},${JSON.stringify(result)}::jsonb)`}});if(replayResult)return res.json({...replayResult,idempotentReplay:true});res.status(201).json({id:orderId,tableId:table.id,tableName:table.name,terminalPos,status:"SENT",roundNumber,addedTotal,total:finalTotal,items:lines,preparationBatches})
 }catch(error){next(error)}});
 
+router.post("/stores/:storeId/table-orders/:orderId/restructure", async (req,res,next) => {
+  try {
+    const store=await storeFor(req,req.params.storeId);
+    if(!canConfigure(req))return res.status(403).json({error:"Η αλλαγή λογαριασμού απαιτεί υπεύθυνο."});
+    const body=z.object({
+      operation:z.enum(["MOVE","MERGE","SPLIT"]),
+      targetTableId:z.string().min(1),
+      lineIds:z.array(z.string().min(1)).max(200).optional().default([]),
+      idempotencyKey:z.string().uuid()
+    }).parse(req.body||{});
+    body.lineIds=[...new Set(body.lineIds)].sort();
+    const actorId=req.user.operatorId||req.user.id;
+    const payloadHash=crypto.createHash("sha256").update(JSON.stringify({orderId:req.params.orderId,...body})).digest("hex");
+    const conflict=message=>Object.assign(new Error(message),{status:409});
+    const result=await prisma.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:round:${body.idempotencyKey}`})) IS NULL) AS locked`;
+      const previous=(await tx.$queryRaw`SELECT "actorId","payloadHash","resultJson" FROM "TableOrderRequest" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey}`)[0];
+      if(previous)return {...tableOrderReplay(previous,actorId,payloadHash),idempotentReplay:true};
+      const before=(await tx.$queryRaw`SELECT "tableId" FROM "TableOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id}`)[0];
+      if(!before)throw conflict("Ο λογαριασμός δεν βρέθηκε.");
+      if(before.tableId===body.targetTableId)throw conflict("Επίλεξε διαφορετικό τραπέζι.");
+      // Use the same table locks as new rounds, in deterministic order.
+      for(const tableId of [before.tableId,body.targetTableId].sort()){
+        await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:${tableId}`})) IS NULL) AS locked`;
+      }
+      const tables=await tx.$queryRaw`SELECT "id","name" FROM "DiningTable" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "id"=ANY(${[before.tableId,body.targetTableId]}::text[]) AND "active"=true ORDER BY "id" FOR UPDATE`;
+      if(tables.length!==2)throw conflict("Το τραπέζι δεν είναι διαθέσιμο στο κατάστημα.");
+      const orders=await tx.$queryRaw`SELECT * FROM "TableOrder" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableId"=ANY(${[before.tableId,body.targetTableId]}::text[]) AND "status" IN ('OPEN','SENT','READY') ORDER BY "id" FOR UPDATE`;
+      const source=orders.find(order=>order.id===req.params.orderId);
+      if(!source||source.tableId!==before.tableId)throw conflict("Ο λογαριασμός άλλαξε. Ανανέωσε τα τραπέζια.");
+      const targetOrders=orders.filter(order=>order.tableId===body.targetTableId);
+      const target=targetOrders[0];
+      if(targetOrders.length>1)throw conflict("Το τραπέζι προορισμού έχει πολλούς λογαριασμούς.");
+      if(body.operation==="MERGE"&&!target)throw conflict("Η ένωση απαιτεί ανοικτό λογαριασμό προορισμού.");
+      if(body.operation!=="MERGE"&&target)throw conflict("Η μεταφορά και η διαίρεση απαιτούν ελεύθερο τραπέζι.");
+      if(body.operation!=="MOVE"&&(source.cashParts.length||target?.cashParts.length))throw conflict("Η ένωση ή διαίρεση απαιτεί λογαριασμούς χωρίς μερικές πληρωμές.");
+      let targetOrderId=source.id;
+      if(body.operation==="MOVE"){
+        await tx.$executeRaw`UPDATE "TableOrder" SET "tableId"=${body.targetTableId},"updatedAt"=NOW() WHERE "id"=${source.id}`;
+        await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "note"=COALESCE("note",'')||${` · Μεταφορά στο ${tables.find(table=>table.id===body.targetTableId).name}`} WHERE "tableOrderId"=${source.id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('SENT','READY')`;
+      }else{
+        const lines=await tx.$queryRaw`SELECT * FROM "TableOrderLine" WHERE "orderId"=${source.id} AND "quantity">0 ORDER BY "id" FOR UPDATE`;
+        const sourceLineTotal=Number(lines.reduce((sum,line)=>sum+money(line.lineTotal),0).toFixed(2));
+        if(Math.abs(sourceLineTotal-money(source.total))>.009)throw conflict("Το σύνολο του λογαριασμού δεν συμφωνεί με τις γραμμές.");
+        const selected=body.operation==="MERGE"?lines:lines.filter(line=>body.lineIds.includes(line.id));
+        if(!selected.length||body.operation==="SPLIT"&&(selected.length!==body.lineIds.length||selected.length===lines.length))throw conflict("Επίλεξε ολόκληρες γραμμές και άφησε τουλάχιστον μία στον αρχικό λογαριασμό.");
+        const selectedIds=selected.map(line=>line.id);
+        const batches=await tx.$queryRaw`SELECT * FROM "StorePreparationBatch" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableOrderId"=${source.id} ORDER BY "id" FOR UPDATE`;
+        if(batches.some(batch=>!['SENT','READY'].includes(batch.status)||batch.saleId||batch.consumedAt))throw conflict("Υπάρχει ήδη εκτελεσμένη κίνηση παρασκευής στον λογαριασμό.");
+        const hasUnlinkedPreparation=(tickets,orderLines)=>tickets.some(batch=>
+          !Array.isArray(batch.itemsJson)||batch.itemsJson.some(item=>
+            !item.tableLineId||!orderLines.some(line=>line.id===item.tableLineId&&line.productId===item.productId)));
+        if(hasUnlinkedPreparation(batches,lines))throw conflict("Τα παλιά δελτία παρασκευής πρέπει να παραμείνουν στο υπάρχον τραπέζι. Δεν υποστηρίζουν ασφαλή ένωση ή διαίρεση.");
+        if(target){
+          const targetLines=await tx.$queryRaw`SELECT "id","productId" FROM "TableOrderLine" WHERE "orderId"=${target.id} AND "quantity">0 ORDER BY "id" FOR UPDATE`;
+          const targetBatches=await tx.$queryRaw`SELECT "itemsJson" FROM "StorePreparationBatch" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableOrderId"=${target.id} AND "status" IN ('SENT','READY') ORDER BY "id" FOR UPDATE`;
+          if(hasUnlinkedPreparation(targetBatches,targetLines))throw conflict("Τα παλιά δελτία παρασκευής του προορισμού πρέπει να παραμείνουν στο υπάρχον τραπέζι. Επίλεξε άλλο τραπέζι για την ένωση.");
+        }
+        const selectedTotal=Number(selected.reduce((sum,line)=>sum+money(line.lineTotal),0).toFixed(2));
+        targetOrderId=target?.id||crypto.randomUUID();
+        if(!target){
+          await tx.$executeRaw`INSERT INTO "TableOrder" ("id","companyId","storeId","tableId","operatorId","operatorName","terminalPos","status","notes","total") VALUES (${targetOrderId},${req.user.companyId},${store.id},${body.targetTableId},${source.operatorId},${source.operatorName},${source.terminalPos},${source.status},${source.notes},0)`;
+        }
+        // Keep line IDs, snapshots, modifiers and allergens, so checkout matches KDS exactly.
+        const latestRound=target?(await tx.$queryRaw`SELECT COALESCE(MAX("roundNumber"),0)::int AS n FROM "TableOrderLine" WHERE "orderId"=${targetOrderId}`)[0].n:0;
+        await tx.$executeRaw`UPDATE "TableOrderLine" SET "orderId"=${targetOrderId},"roundNumber"="roundNumber"+${latestRound} WHERE "orderId"=${source.id} AND "id"=ANY(${selectedIds}::text[])`;
+        for(const batch of batches){
+          const destinationNote=`${batch.note||''} · ${body.operation==='MERGE'?'Ένωση':'Διαίρεση'} στο ${tables.find(table=>table.id===body.targetTableId).name}`;
+          const moved=body.operation==="MERGE"?batch.itemsJson:batch.itemsJson.filter(item=>selectedIds.includes(item.tableLineId));
+          if(!moved.length)continue;
+          if(moved.length===batch.itemsJson.length){
+            await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "tableOrderId"=${targetOrderId},"note"=${destinationNote} WHERE "id"=${batch.id}`;
+          }else{
+            const retained=batch.itemsJson.filter(item=>!selectedIds.includes(item.tableLineId));
+            await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "itemsJson"=${JSON.stringify(retained)}::jsonb WHERE "id"=${batch.id}`;
+            await tx.$executeRaw`INSERT INTO "StorePreparationBatch" ("id","companyId","storeId","operatorId","operatorName","productionStation","priority","note","itemsJson","status","tableOrderId","createdAt","readyAt") VALUES (${crypto.randomUUID()},${batch.companyId},${batch.storeId},${batch.operatorId},${batch.operatorName},${batch.productionStation},${batch.priority},${destinationNote},${JSON.stringify(moved)}::jsonb,${batch.status},${targetOrderId},${batch.createdAt},${batch.readyAt})`;
+          }
+        }
+        await tx.$executeRaw`UPDATE "TableOrder" SET "total"="total"+${selectedTotal},"updatedAt"=NOW() WHERE "id"=${targetOrderId}`;
+        await tx.$executeRaw`UPDATE "TableOrder" SET "total"="total"-${selectedTotal},"status"=${body.operation==="MERGE"?'CANCELLED':source.status},"updatedAt"=NOW() WHERE "id"=${source.id}`;
+        for(const orderId of [source.id,targetOrderId]){
+          await tx.$executeRaw`UPDATE "TableOrder" SET "status"=CASE WHEN EXISTS (SELECT 1 FROM "StorePreparationBatch" WHERE "tableOrderId"=${orderId} AND "status"='SENT') THEN 'SENT' ELSE 'READY' END WHERE "id"=${orderId} AND "status" IN ('OPEN','SENT','READY')`;
+        }
+      }
+      const response={ok:true,operation:body.operation,sourceOrderId:source.id,targetOrderId,targetTableId:body.targetTableId};
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${actorId},${req.user.id},'TABLE_ORDER_RESTRUCTURED',${JSON.stringify({...response,sourceTableId:source.tableId,sourceTableName:tables.find(table=>table.id===source.tableId).name,targetTableName:tables.find(table=>table.id===body.targetTableId).name,sourceTotalBefore:money(source.total),lineIds:body.lineIds,actorName:req.user.fullName||req.user.email||'Χειριστής'})}::jsonb)`;
+      await tx.$executeRaw`INSERT INTO "TableOrderRequest" ("companyId","storeId","idempotencyKey","actorId","payloadHash","resultJson") VALUES (${req.user.companyId},${store.id},${body.idempotencyKey},${actorId},${payloadHash},${JSON.stringify(response)}::jsonb)`;
+      return response;
+    });
+    res.json(result);
+  }catch(error){
+    if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε ενέργεια, τραπέζι και γραμμές.",details:error.issues});
+    next(error);
+  }
+});
+
 router.post("/stores/:storeId/table-orders/:orderId/waste",async(req,res,next)=>{try{
   const store=await storeFor(req,req.params.storeId),body=z.object({items:z.array(z.object({productId:z.string().min(1),quantity:z.coerce.number().positive().max(999)})).min(1).max(100),note:z.string().trim().min(1).max(500)}).parse(req.body||{}),terminal=String(req.user?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase(),actor=req.user.fullName||"Χειριστής",saleId=crypto.randomUUID();
   const result=await prisma.$transaction(async tx=>{

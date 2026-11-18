@@ -305,3 +305,32 @@ test('monthly supplier comparison has a delivery identity distinct from cash',()
  assert.equal(fresh(supplier).slotId,fresh(supplier).slotId);
  assert.throws(()=>fresh({...supplier,frequency:'DAILY'}),/Unsupported report kind/);
 });
+
+test('each completed promotion has a separate delivery identity even for identical periods',()=>{
+  const first=input({reportType:'PROMOTION_RESULT',frequency:'EVENT',eventId:'promotion-one'});
+  const second={...first,eventId:'promotion-two'};
+  const a=fresh(first),b=fresh(second);
+  assert.notEqual(a.slotId,b.slotId);
+  assert.equal(a.input.eventId,'promotion-one');
+  const changedPeriod={...first,periodFrom:'2026-10-16T04:00:00.000Z'};
+  assert.equal(fresh(changedPeriod).slotId,a.slotId);
+  code(()=>reconcileDeliverySlot(a,changedPeriod),'DELIVERY_CONFLICT');
+  assert.deepEqual(reconcileDeliverySlot(a,first),a);
+  code(()=>reconcileDeliverySlot(a,second),'DELIVERY_CONFLICT');
+  code(()=>fresh({...first,eventId:''}),'INVALID_INPUT');
+  const {eventId,...missing}=first;
+  code(()=>fresh(missing),'INVALID_INPUT');
+  code(()=>fresh({...input(),eventId:'unexpected'}),'INVALID_INPUT');
+});
+
+test('inventory event identity is independent of promotion events and stable across source dates',()=>{
+ const inventory=input({reportType:'INVENTORY_RESULT',frequency:'EVENT',eventId:'take-one'});
+ const a=fresh(inventory);
+ assert.equal(a.input.eventId,'take-one');
+ assert.notEqual(a.slotId,fresh({...inventory,reportType:'PROMOTION_RESULT'}).slotId);
+ assert.notEqual(a.slotId,fresh({...inventory,eventId:'take-two'}).slotId);
+ const changed={...inventory,periodTo:'2026-10-19T04:00:00.000Z'};
+ assert.equal(a.slotId,fresh(changed).slotId);
+ code(()=>reconcileDeliverySlot(a,changed),'DELIVERY_CONFLICT');
+ const {eventId,...missing}=inventory;code(()=>fresh(missing),'INVALID_INPUT');
+});

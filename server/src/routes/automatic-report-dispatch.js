@@ -21,7 +21,7 @@ const explanations={
 // required here and again by the mutation services. Browser flags are not grants.
 export function createAutomaticReportDispatchRouter(db,{env=process.env,management}={}){
  const router=Router({mergeParams:true});
- const service=management||createAutomaticReportManagement({db,activationProvider:()=>readActivation(env),sendVerification:({companyId,storeId,to,subject,text})=>createAutomaticReportSmtpTransport({companyId,storeId,env}).sendMail({to,subject,text})});
+ const service=management||createAutomaticReportManagement({db,env,activationProvider:()=>readActivation(env),sendVerification:({companyId,storeId,to,subject,text})=>createAutomaticReportSmtpTransport({companyId,storeId,env}).sendMail({to,subject,text})});
  const scope=req=>({actorId:req.user.id,companyId:req.params.companyId,storeId:req.params.storeId});
  router.use(async(req,res,next)=>{
   res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
@@ -44,7 +44,7 @@ export function createAutomaticReportDispatchRouter(db,{env=process.env,manageme
   }
  };
  let supplierService;
- const getSupplierService=()=>supplierService??=createAutomaticReportManagement({db,reportType:'SUPPLIER_COMPARISON',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Supplier invitations are unavailable')}});
+ const getSupplierService=()=>supplierService??=createAutomaticReportManagement({db,env,reportType:'SUPPLIER_COMPARISON',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Supplier invitations are unavailable')}});
  const supplierScope=async req=>{
   const s=scope(req);
   if(req.user.supportContext||s.storeId!==env.MONTHLY_TURNOVER_LAB_STORE_ID||!await db.store.findFirst({where:{id:s.storeId,companyId:s.companyId,active:true,name:'ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ',company:{name:'MYWORKSTATION LAB',active:true}},select:{id:true}})){
@@ -52,6 +52,16 @@ export function createAutomaticReportDispatchRouter(db,{env=process.env,manageme
   }
   return s;
  };
+ let promotionService;
+ const getPromotionService=()=>promotionService??=createAutomaticReportManagement({db,env,reportType:'PROMOTION_RESULT',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Event invitations are unavailable')}});
+ router.get('/promotion-results',handle(req=>getPromotionService().getDispatchManagement(scope(req))));
+ router.post('/promotion-results/recipients/authorize',handle(req=>getPromotionService().authorizeAdministratorRecipient(scope(req),req.body)));
+ router.put('/promotion-results/policy',handle(req=>getPromotionService().saveDispatchPolicy(scope(req),req.body)));
+ let inventoryService;
+ const getInventoryService=()=>inventoryService??=createAutomaticReportManagement({db,env,reportType:'INVENTORY_RESULT',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Event invitations are unavailable')}});
+ router.get('/inventory-result',handle(req=>getInventoryService().getDispatchManagement(scope(req))));
+ router.post('/inventory-result/recipients/authorize',handle(req=>getInventoryService().authorizeAdministratorRecipient(scope(req),req.body)));
+ router.put('/inventory-result/policy',handle(req=>getInventoryService().saveDispatchPolicy(scope(req),req.body)));
  router.get('/supplier-comparison',handle(async req=>{const s=await supplierScope(req);return getSupplierService().getDispatchManagement(s)}));
  router.post('/supplier-comparison/recipients/authorize',handle(async req=>{const s=await supplierScope(req);return getSupplierService().authorizeAdministratorRecipient(s,req.body)}));
  router.put('/supplier-comparison/policy',handle(async req=>{const s=await supplierScope(req);return getSupplierService().saveDispatchPolicy(s,req.body)}));

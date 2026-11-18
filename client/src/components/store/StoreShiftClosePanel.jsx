@@ -1,6 +1,7 @@
 import {declaredEftpos} from "../../../../shared/declared-eftpos.mjs";
-import React,{useEffect,useState} from "react";
-import StorePendingInvoicePanel from "./StorePendingInvoicePanel.jsx";
+import React,{useEffect,useMemo,useRef,useState} from "react";
+import {bundleDocumentPhotos} from "../../lib/document-photo-pdf.js";
+import StorePendingInvoicePanel,{PendingInvoiceCapture} from "./StorePendingInvoicePanel.jsx";
 import WorkCardCamera from "./WorkCardCamera.jsx";
 import {Coins,ScanLine,ShieldCheck,WalletCards} from "lucide-react";
 import "../cloud/cash-control.css";
@@ -44,47 +45,54 @@ export default function StoreShiftClosePanel({api,store,onClosed,backoffice=fals
  const liveExpected=n(data.openSession.openingOperational)+n(form.cashSales)-n(form.expenses)+n(closeTotals?.transferIn)-n(closeTotals?.transferOut);
  return <>{cameraOpen&&<WorkCardCamera onScan={code=>{setCardCode(code);setCameraOpen(false)}} onClose={()=>setCameraOpen(false)}/>}<article className="cloud-panel cash-module"><div className="cloud-panel-head cash-heading"><div><h3><WalletCards/>Κλείσιμο & Παράδοση βάρδιας</h3><p>Άνοιξε πρώτα το συρτάρι από το κουμπί της ταμειακής, μέτρησε τα πραγματικά χρήματα και μετά καταχώρισέ τα εδώ. Ο αναλυτικός Έλεγχος Ταμείου γίνεται αποκλειστικά στο BackOffice.</p></div></div>{shortageDecision&&<div className="shift-shortage-decision" role="alert"><strong>{shortageDecision.message}</strong><div><button type="button" className="recount" onClick={recount} disabled={busy}>ΝΑΙ — Ξαναμέτρηση</button><button type="button" className="close-shortage" onClick={closeWithShortage} disabled={busy||!eftposValid||!credentialReady||Boolean(pending?.count)}>{busy?"Κλείσιμο…":"ΟΧΙ — Κλείσιμο με έλλειμμα"}</button></div></div>}{error&&<div className="cloud-alert cloud-error">{error}</div>}{pending?.count>0&&<section className="cloud-alert" aria-label="Εκκρεμότητες τιμολογίων βάρδιας"><b>Εκκρεμότητες τιμολογίων: {pending.count}</b><p>Προς ανέβασμα: {pending.missingCount||0} · Ανεβασμένα προς σύνδεση/έλεγχο: {pending.uploadedCount||0} · Απαιτούν έλεγχο: {pending.reviewCount||0}</p>{pending.truncated&&<p>Εμφανίζονται έως 50 εγγραφές. Απομένουν συνολικά {pending.count} εκκρεμότητες.</p>}<button type="button" disabled={busy} onClick={()=>{clearCredential();setShowPendingUpload(true)}}>Ανέβασμα τώρα</button>
 {!backoffice&&pending.rows?.filter(row=>row.status==="FAST_PAYMENT_WITHOUT_DRAFT").map(row=>
-  <FastPaymentDraft key={row.id} row={row} api={api} storeId={store.id} onChanged={refreshPending}/>)}
+  <FastPaymentDraft key={`${store.id}:${row.id}:${row.fingerprint}`} row={row} api={api} storeId={store.id} onChanged={refreshPending}/>)}
 </section>}{showPendingUpload&&!backoffice&&<StorePendingInvoicePanel key={store.id} api={api} store={store} allowCreate={false} onChanged={async()=>{try{await refreshPending()}catch(err){setError(err.message)}}}/>}<form autoComplete="off" className="cash-form" onSubmit={close}><div className="cash-wide cloud-alert"><b>1. Άνοιγμα και καταμέτρηση συρταριού</b><br/>Πάτησε το κουμπί ανοίγματος συρταριού στην ταμειακή. Μέτρησε τα πραγματικά μετρητά πριν συμπληρώσεις τα παρακάτω ποσά.</div><label className="cash-wide"><input type="checkbox" checked={countConfirmed} onChange={e=>setCountConfirmed(e.target.checked)}/> Επιβεβαιώνω ότι άνοιξα το συρτάρι από την ταμειακή και μέτρησα τα πραγματικά χρήματα.</label>{closePolicy.showExpectedAmounts&&<><Money label="Πωλήσεις μετρητών" value={form.cashSales} readOnly/><Money label="Πωλήσεις καρτών" value={form.cardSales} readOnly/><Money label="Έξοδα / πληρωμές ίδιας βάρδιας" value={form.expenses} readOnly/><Money label="Αναμενόμενο λειτουργικό σύνολο" value={liveExpected} readOnly/></>}<Money required label="Σύνολο EFTPOS (υποχρεωτικό · γράψε 0 αν δεν υπάρχουν εισπράξεις)" value={form.eftposTotal} onChange={v=>set("eftposTotal",v)}/><div className="cash-divider cash-wide">2. Πραγματική καταμέτρηση παράδοσης</div><Money icon={<WalletCards/>} label="Συρτάρι" value={form.drawer} onChange={v=>set("drawer",v)} disabled={!countConfirmed}/><Money icon={<ShieldCheck/>} label="Φύλαξη" value={form.custody} onChange={v=>set("custody",v)} disabled={!countConfirmed}/><Money icon={<Coins/>} label="Κέρματα" value={form.coins} onChange={v=>set("coins",v)} disabled={!countConfirmed}/><Money icon={<ShieldCheck/>} label="Χρηματοκιβώτιο" value={form.safe} onChange={v=>set("safe",v)} disabled={!countConfirmed}/><label className="cash-wide">Εκκρεμότητες επόμενης βάρδιας<input name="shift-handover-note" autoComplete="off" value={form.note} onChange={e=>set("note",e.target.value)} placeholder="Μήνυμα παράδοσης"/></label>{backoffice?<p className="cash-wide">Το κλείσιμο καταγράφεται στην προσωπική σου σύνδεση BackOffice.</p>:<div className="cash-wide"><b>3. Επιβεβαίωση χειριστή</b><div className="operator-methods" role="group" aria-label="Επιβεβαίωση κλεισίματος βάρδιας"><button type="button" className={closeCredentialMethod==="CARD"?"active":""} disabled={busy} onClick={()=>changeCredentialMethod("CARD")}>Κάρτα / QR</button><button type="button" className={closeCredentialMethod==="PIN"?"active":""} disabled={busy} onClick={()=>changeCredentialMethod("PIN")}>PIN</button></div>{closeCredentialMethod==="CARD"?<label>Σάρωση κάρτας / QR χειριστή<button type="button" className="operator-camera-button" disabled={busy} onClick={()=>{clearCredential();setCameraOpen(true)}}><ScanLine/> Σάρωση QR με κάμερα</button><input type="text" style={{WebkitTextSecurity:"disc"}} name="shift-work-card" autoComplete="off" spellCheck={false} autoCapitalize="off" data-lpignore="true" data-1p-ignore="true" value={cardCode} maxLength={120} disabled={busy} onChange={e=>setCardCode(e.target.value)} placeholder="Σκάναρε την κάρτα του χειριστή που άνοιξε τη βάρδια"/><span>Απαιτείται η ενεργή προσωπική κάρτα του χειριστή της βάρδιας. Άλλη κάρτα δεν επιτρέπει κλείσιμο.</span></label>:<label>Προσωπικό PIN χειριστή<input type="password" name="shift-close-pin" autoComplete="off" inputMode="numeric" pattern="[0-9]{4,8}" maxLength={8} spellCheck={false} data-lpignore="true" data-1p-ignore="true" value={pin} disabled={busy} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder="Το προσωπικό σου PIN (4–8 ψηφία)"/><span>Μόνο το προσωπικό PIN του ενεργού χειριστή που άνοιξε τη βάρδια. Το PIN δεν αποθηκεύεται στην καταμέτρηση.</span></label>}</div>}<button className="cash-submit" disabled={busy||!eftposValid||!countConfirmed||!credentialReady||Boolean(shortageDecision)||Boolean(pending?.count)}>{busy?"Κλείσιμο…":"Κλείσιμο και παράδοση"}</button></form></article></>;
 }
 
 function Money({icon,label,value,onChange,readOnly=false,disabled=false,required=false}){return <label>{icon}{label}<input required={required} inputMode="decimal" value={value} readOnly={readOnly} disabled={disabled} onChange={e=>onChange?.(e.target.value)}/></label>}
 
-function FastPaymentDraft({row,api,storeId,onChanged}){
- const [documentDate,setDocumentDate]=useState("");
- const [working,setWorking]=useState(false);
- const [error,setError]=useState("");
- const link=async(file)=>{
-  if(working||!documentDate)return;
-  setWorking(true);
-  setError("");
+export function FastPaymentDraft({row,api,storeId,onChanged}){
+ const [documentDate,setDocumentDate]=useState(''),[files,setFiles]=useState([]);
+ const [working,setWorking]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const context=useMemo(()=>({api,storeId,id:row.id,fingerprint:row.fingerprint,captureKey:crypto.randomUUID()}),[api,storeId,row.id,row.fingerprint]);
+ const current=useRef(null),submitting=useRef(false),prepared=useRef(null);
+ const active=()=>current.current===context;
+ useEffect(()=>{current.current=context;submitting.current=false;prepared.current=null;setFiles([]);setDocumentDate('');setWorking(false);setError('');setMessage('');return()=>{if(current.current===context)current.current=null}},[context]);
+ const link=async(selectedFiles)=>{
+  if(!active()||submitting.current||!documentDate||!row.supplierId)return;
+  submitting.current=true;setWorking(true);setError('');setMessage('');let confirmed=false;
   try{
-   const pages=file?[{filename:file.name,mimeType:file.type,documentType:"INVOICE",
-    dataUrl:await new Promise((resolve,reject)=>{
-     const reader=new FileReader();
-     reader.onload=()=>resolve(reader.result);
-     reader.onerror=()=>reject(new Error("Δεν διαβάστηκε το αρχείο."));
-     reader.readAsDataURL(file);
-    })}]:undefined;
-   const result=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({
+   let pages;
+   if(selectedFiles?.length){
+    let attempt=prepared.current;
+    if(!attempt||attempt.files!==selectedFiles){
+     const file=await bundleDocumentPhotos(selectedFiles,{maxBytes:6500000});if(!active())return;
+     const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Δεν διαβάστηκε το αρχείο.'));reader.readAsDataURL(file)});
+     if(!active())return;
+     attempt={files:selectedFiles,pages:[{filename:file.name,mimeType:file.type,documentType:'INVOICE',dataUrl}]};prepared.current=attempt;
+    }
+    pages=attempt.pages;
+   }
+   if(!active())return;
+   const result=await api('/api/commerce/ai-reader/fast-handoff',{method:'POST',body:JSON.stringify({
     storeId,supplierId:row.supplierId,documentNumber:row.documentNumber,documentDate,
-    totalGross:row.amount,documentType:"INVOICE",settlementMode:"PAID",
-    paymentTransactionId:row.id,useStoredPaymentAttachment:!file,pages,
+    totalGross:row.amount,documentType:'INVOICE',settlementMode:'PAID',
+    paymentTransactionId:row.id,useStoredPaymentAttachment:!pages,pages,
    })});
-   if(result?.draftReady!==true)throw new Error("Δεν επιβεβαιώθηκε η σύνδεση του πρόχειρου. Έλεγξε ξανά τις εκκρεμότητες.");
+   if(!active())return;
+   if(result?.draftReady!==true)throw new Error('Δεν επιβεβαιώθηκε η σύνδεση του πρόχειρου. Έλεγξε ξανά τις εκκρεμότητες.');
+   confirmed=true;prepared.current=null;setFiles([]);setMessage('Το πρόχειρο συνδέθηκε με την αρχική πληρωμή, χωρίς νέα χρέωση.');
    await onChanged();
-  }catch(err){setError(err.message)}finally{setWorking(false)}
+  }catch(err){if(active())setError(confirmed?`Η σύνδεση επιβεβαιώθηκε. Ανανέωσε τις εκκρεμότητες: ${err.message}`:`${err.message} Μην πληρώσεις ξανά.`)}finally{if(active()){submitting.current=false;setWorking(false)}}
  };
  return <div>
   <p>{row.documentNumber} · {row.supplierName} · {Number(row.amount).toFixed(2)} €</p>
-  <label>Ημερομηνία τιμολογίου <input type="date" value={documentDate} onChange={event=>setDocumentDate(event.target.value)}/></label>
-  <button type="button" disabled={working||!documentDate||!row.supplierId} onClick={()=>link()}>Χρήση αποθηκευμένου αρχείου</button>
-  <label>Ανέβασμα φωτογραφίας ή PDF <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
-   disabled={working||!documentDate||!row.supplierId} onChange={event=>{
-    const file=event.target.files?.[0];
-    event.target.value="";
-    if(file)void link(file);
-   }}/></label>
-  {error&&<p role="alert">{error}</p>}
+  <label>Ημερομηνία τιμολογίου <input type='date' disabled={working} value={documentDate} onChange={event=>{if(active()&&!submitting.current)setDocumentDate(event.target.value)}}/></label>
+  <button type='button' disabled={working||!documentDate||!row.supplierId} onClick={()=>link()}>Χρήση αποθηκευμένου αρχείου</button>
+  <PendingInvoiceCapture key={context.captureKey} api={api} storeId={storeId} selected={{...row,captureKey:context.captureKey}} files={files} busy={working} canAct={()=>active()&&!submitting.current} canSubmit={Boolean(documentDate&&row.supplierId)} plainCapture={false}
+   onFiles={next=>{if(active()&&!submitting.current){prepared.current=null;setFiles(next)}}}
+   onMessage={text=>{if(active())setMessage(text)}} onError={text=>{if(active())setError(text)}}
+   onUpload={()=>link(files)} onCancel={()=>{if(active()&&!submitting.current){prepared.current=null;setFiles([]);setDocumentDate('');setError('');setMessage('')}}}/>
+  {message&&<p role='status'>{message}</p>}{error&&<p role='alert'>{error}</p>}
  </div>;
 }

@@ -21,13 +21,40 @@ PROTOCOL = 'MWS_STORE_RECOVERY_PROOF_V1'
 def selected_manifest_file(env=None):
     configuration = os.environ if env is None else env
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
-    if profile == 'BASE':
+    if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1'):
         filename = 'manifest.json'
-    elif profile == 'MONTHLY_INVENTORY_CAPTURE_V1':
+    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'):
         filename = 'monthly-inventory-capture-manifest.proposed.json'
     else:
         raise ValueError('Invalid store lifecycle profile')
     return pathlib.Path(__file__).resolve().parent / filename
+
+
+def selected_manifest_document(env=None):
+    configuration = os.environ if env is None else env
+    document = json.loads(selected_manifest_file(configuration).read_text())
+    profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'):
+        return document
+    extension_file = pathlib.Path(__file__).resolve().parent / 'automatic-report-consent-extension.proposed.json'
+    extension = json.loads(extension_file.read_text())
+    if extension.get('format') != 'MWS_AUTOMATIC_REPORT_CONSENT_EXTENSION_V1':
+        raise ValueError('Invalid report consent lifecycle definition')
+    layouts = (
+        ('AutomaticReportSupplierComparisonConsent', document['knownColumns']['AutomaticReportRecipientConsent']),
+        ('AutomaticReportEventConsent', extension['columns']),
+    )
+    for name, columns in layouts:
+        if name in document['knownTables'] or name in document['knownColumns'] or any(table['name'] == name for table in document['tables']):
+            raise ValueError('Report consent lifecycle table is already declared')
+        document['knownTables'].append(name)
+        document['knownColumns'][name] = columns
+        document['tables'].append({'name': name, 'owner': {'kind': 'DIRECT'}, 'reset': 'REMOVE'})
+        document['reviewedColumns'].extend(name + '.' + column for column in ('recipientId', 'consentedBy', 'revokedBy', 'updatedBy'))
+    document['id'] += '__AUTOMATIC_EVENT_REPORTS_V1'
+    document['valueGuards'].append({'table': 'AutomaticReportEventConsent', 'column': 'reportType', 'allowed': ['PROMOTION_RESULT', 'INVENTORY_RESULT']})
+    return document
+
 
 def run(args, **kwargs):
     result = subprocess.run(args, timeout=300, stderr=subprocess.PIPE, **kwargs)
@@ -133,7 +160,11 @@ def process_one(manifest_file, audit_module):
 if __name__ == '__main__':
     try:
         here = pathlib.Path(__file__).resolve().parent
-        print(compact(process_one(selected_manifest_file(), here / 'store-lifecycle-verify-copy.py')))
+        document = selected_manifest_document()
+        with tempfile.TemporaryDirectory(prefix='mws-selected-profile-') as directory:
+            manifest_file = pathlib.Path(directory) / 'manifest.json'
+            manifest_file.write_text(compact(document))
+            print(compact(process_one(manifest_file, here / 'store-lifecycle-verify-copy.py')))
     except Exception as error:
         # No exception text, SQL, business rows, filenames, endpoints or secrets.
         print(compact({'state': 'FAILED', 'error': type(error).__name__}), file=sys.stderr)
