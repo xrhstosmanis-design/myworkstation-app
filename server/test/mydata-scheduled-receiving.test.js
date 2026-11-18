@@ -64,9 +64,9 @@ test('historical original recovery is explicitly store-scoped, production-only, 
       assert.match(strings.join("?"), /i\."attachmentId" IS NULL AND i\."status"='RECEIVED'/);
       assert.match(strings.join("?"), /"rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM/);
       assert.match(strings.join("?"), /m\."issueDate">=DATE '2026-11-01' AND m\."issueDate"<DATE '2026-12-01'/);
-      assert.equal(values[4],'supported-link-pattern');
-      assert.match(strings.join("?"), /originalPending' IS DISTINCT FROM 'true'/);
-      assert.match(strings.join("?"), /originalAttempts'\)::int,0\)>=3/);
+      assert.equal(values[5],'supported-link-pattern');
+      assert.match(strings.join("?"), /jsonb_array_elements_text/);
+      assert.equal(values[3],'["ordinary-pending","newly-received"]');
       assert.match(strings.join("?"), /ORDER BY m\."fetchedAt",m\."id" LIMIT 2/);
       assert.deepEqual(values.slice(0,3), ['company','store','AADE_MYDATA_PRODUCTION']);
       calls.push('query');
@@ -87,7 +87,7 @@ test('historical original recovery is explicitly store-scoped, production-only, 
     if(args[3]==='unavailable')throw new Error('Provider did not return PDF');
     return {downloaded:true};
   };
-  const options={db,companyId:'company',storeId:'store',userId:'actor',source:'AADE_MYDATA_PRODUCTION',acquire};
+  const options={db,companyId:'company',storeId:'store',userId:'actor',source:'AADE_MYDATA_PRODUCTION',excludeInboxIds:['ordinary-pending','newly-received'],acquire};
   assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:''}),{downloaded:0,failed:0});
   assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'other'}),{downloaded:0,failed:0});
   assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'store',source:'AADE_MYDATA_SANDBOX'}),{downloaded:0,failed:0});
