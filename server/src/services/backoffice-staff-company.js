@@ -1,3 +1,4 @@
+import {finalPassiveCompanyFilters,readFinalPassiveCompany} from './backoffice-staff-final-passive-company.js';
 import {companyProductCenterFilters,readCompanyProductCenter} from './backoffice-staff-company-product-center.js';
 import {observerLogisticsFilters,readObserverLogistics} from './backoffice-staff-company-observer-logistics.js';
 import {companyWholesaleFilters,readCompanyWholesale} from './backoffice-staff-company-wholesale.js';
@@ -6,7 +7,7 @@ import {companyOwnerReportFilters,readCompanyOwnerReport} from './backoffice-sta
 import {companyConfigurationFilters,readCompanyConfiguration} from './backoffice-staff-company-configuration.js';
 import {companyReportFilters,readCompanyReports} from './backoffice-staff-company-reports.js';
 import {PERSONNEL_BASIC,resolvePersonnelPackageStates} from '../personnel-packages.js';
-import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies,companyConfigurationRequest,companyOwnerReportRequest,companyPartyControlRequest,companyWholesaleRequest,observerLogisticsRequest,companyProductCenterRequest} from '../../../shared/backoffice-staff-company.mjs';
+import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies,companyConfigurationRequest,companyOwnerReportRequest,companyPartyControlRequest,companyWholesaleRequest,observerLogisticsRequest,companyProductCenterRequest,finalPassiveCompanyRequest} from '../../../shared/backoffice-staff-company.mjs';
 import {readCompanyCommerceData} from './backoffice-staff-company-commerce.js';
 import {managementVatExemptions} from '../lib/management-vat-exemptions.js';
 import {liveStaff,staffError} from './backoffice-staff-access.js';
@@ -18,6 +19,7 @@ export async function readStaffCompanyPolicy(db,userId,companyId){
  if(rows.length!==1||!validStaffCompanyCapabilities(rows[0].companyCapabilities))throw staffError();
  return [...rows[0].companyCapabilities];
 }
+const nativeFree=['staff-policy.read','audit-event-context.read','product-set.read','product-stock-package.read','reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','license-status.read','audit-events.read'];
 export async function requireStaffCompanyGrant(db,user,capability){
  const account=await liveStaff(db,user);
  if(account.mustChangePassword||!staffCompanyCapabilities.includes(capability)||user.storeId||user.platformRole==='SUPER_ADMIN')throw staffError();
@@ -33,7 +35,7 @@ export async function requireStaffCompanyGrant(db,user,capability){
   const now=new Date();if(![...grouped.values()].some(rows=>resolvePersonnelPackageStates(rows,now).states[PERSONNEL_BASIC].effectiveActive))throw staffError(403,'MODULE_DISABLED');
  }else {
   const module=staffCompanyModules[capability];
-  const nativeFree=['product-set.read','product-stock-package.read','reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','license-status.read','audit-events.read'];
+
   if(module===null){if(!nativeFree.includes(capability))throw staffError(403,'MODULE_DISABLED')}
   else if(typeof module!=='string'||!license.activeModules?.includes(module))throw staffError(403,'MODULE_DISABLED');
  }
@@ -41,11 +43,13 @@ export async function requireStaffCompanyGrant(db,user,capability){
  // module boundary; persisting its key does not bypass a disabled module.
  for(const parent of staffCompanyCapabilityDependencies(capability)){
   const module=staffCompanyModules[parent];
+  if(module===null&&nativeFree.includes(parent))continue;
   if(typeof module!=='string'||!license.activeModules?.includes(module))throw staffError(403,'MODULE_DISABLED');
  }
  return {capability,companyId:account.companyId,revision:account.revision};
 }
 function validCompanyQuery(query,capability,path){
+ const passive=finalPassiveCompanyRequest('GET',path);if(passive){try{finalPassiveCompanyFilters(query||{},passive);return true}catch{return false}}
  const productCenter=companyProductCenterRequest('GET',path);if(productCenter){try{companyProductCenterFilters(query||{},productCenter);return true}catch{return false}}
  const operations=observerLogisticsRequest('GET',path);if(operations){try{observerLogisticsFilters(query||{},operations);return true}catch{return false}}
  const wholesale=companyWholesaleRequest('GET',path);if(wholesale){try{companyWholesaleFilters(query||{},wholesale);return true}catch{return false}}
@@ -73,6 +77,8 @@ export async function readStaffCompanyDirectory(db,req){
  if(!capability||req.user?.staffAccess!==true||req.staffCompanyGrant?.capability!==capability||req.staffCompanyGrant.companyId!==req.user.companyId)throw staffError();
  await enforceStaffCompanyRequest(db,req);
  const companyId=req.user.companyId;
+ const passive=finalPassiveCompanyRequest(req.method,String(req.originalUrl||req.path||'').split('?')[0]);
+ if(passive){const data=await readFinalPassiveCompany(db,companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{});const after=await requireStaffCompanyGrant(db,req.user,capability);if(after.revision!==req.staffCompanyGrant.revision)throw staffError();return data}
  const productCenter=companyProductCenterRequest(req.method,String(req.originalUrl||req.path||'').split('?')[0]);
  if(productCenter){const data=await readCompanyProductCenter(db,companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{});const after=await requireStaffCompanyGrant(db,req.user,capability);if(after.revision!==req.staffCompanyGrant.revision)throw staffError();return data}
  const operations=observerLogisticsRequest(req.method,String(req.originalUrl||req.path||'').split('?')[0]);

@@ -1,3 +1,4 @@
+import {finalPassiveStoreActions,finalPassiveStoreRequest} from '../../../shared/backoffice-staff-final-passive.mjs';
 import {storeReportCapabilities,freeStoreReportCapabilities} from '../../../shared/backoffice-staff-reports.mjs';
 import {staffCapabilities,staffProfiles,staffRequestCapability,validStaffCapabilities} from '../../../shared/backoffice-staff.mjs';
 import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-access.js';
@@ -31,6 +32,8 @@ export async function requireStaffGrant(db,user,storeId,capability,{additionalMo
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
   if(storeReportCapabilities.includes(capability)&&!freeStoreReportCapabilities.includes(capability)&&!license.activeModules?.includes('INVENTORY'))throw staffError(403,'MODULE_DISABLED','Η εταιρική λειτουργία αναφορών αποθήκης δεν είναι ενεργή.');
+  if(['workforce-evaluations.read','workforce-performance.read','schedule-validation.read'].includes(capability)){const paid=await db.$queryRaw`SELECT "companyId","storeId","moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 257`;if(paid.length>256||paid.some(row=>row.companyId!==user.companyId||row.storeId!==storeId)||!resolvePersonnelPackageStates(paid).states[PERSONNEL_BASIC].effectiveActive)throw staffError(403,'MODULE_DISABLED')}
+  if(capability==='pending-sources.read'&&!license.activeModules?.includes('PENDING_CENTER'))throw staffError(403,'MODULE_DISABLED');
   if(['employees.read','schedule.read','attendance.read','leaves.read','payroll.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(capability)){
     const rows=await db.$queryRaw`SELECT "moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId}`;
     const states=resolvePersonnelPackageStates(rows).states;
@@ -44,7 +47,7 @@ export async function requireStaffGrant(db,user,storeId,capability,{additionalMo
   }
   const modules=[...new Set([...modulesForCapability(capability),...additionalModules])];
   for(const moduleKey of modules){
-    const override=(await (storeReportCapabilities.includes(capability)?db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "companyId"=${user.companyId} AND "moduleKey"=${moduleKey} LIMIT 1`:db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"=${moduleKey} LIMIT 1`))[0];
+    const override=(await ((storeReportCapabilities.includes(capability)||finalPassiveStoreActions.some(action=>action.key===capability))?db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "companyId"=${user.companyId} AND "moduleKey"=${moduleKey} LIMIT 1`:db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"=${moduleKey} LIMIT 1`))[0];
     if(!effectiveModuleEnabled(license.activeModules.includes(moduleKey),override?{...override,configured:true}:{configured:false}))throw staffError(403,'MODULE_DISABLED','Η λειτουργία δεν είναι ενεργή στο κατάστημα.');
   }
   if(!capability.endsWith('.read'))await assertLifecycleMutation(db,{companyId:user.companyId,storeId},lifecycleContext()[storeId]??'0');
@@ -68,7 +71,7 @@ export async function enforceBackofficeStaff(db,req,res){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
     const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read','unsold-products.read','sales-journal.read'].includes(c)):[];
-    reads.push(...(Array.isArray(row?.capabilities)?row.capabilities.filter(c=>storeReportCapabilities.includes(c)):[]));
+    reads.push(...(Array.isArray(row?.capabilities)?row.capabilities.filter(c=>storeReportCapabilities.includes(c)||finalPassiveStoreActions.some(action=>action.key===c)):[]));
     let disabled;
     for(const read of reads){
       try{await requireStaffGrant(db,user,storeId,read);req.user={...req.user,storeId};return true}
@@ -77,6 +80,7 @@ export async function enforceBackofficeStaff(db,req,res){
     throw disabled||staffError();
   }
   const storeId=req.get('x-backoffice-store-id');
+  const passive=finalPassiveStoreRequest(req.method,path);if(passive&&passive.storeId!==storeId)throw staffError();
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
   if(storeReportCapabilities.includes(capability)&&req.query?.storeId!==storeId)throw staffError();
   if(['analytics.read','handover.read','stock.read','pending.read','promotions.read','monthly-invoice-audit.read','invoice-ai.read','wholesale.read','approvals.read','monthly-inventory.read'].includes(capability)&&req.query?.storeId!==storeId)throw staffError();
@@ -134,6 +138,7 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
+ const passive=finalPassiveStoreActions.find(action=>action.key===capability);if(passive)return [...passive.modules];
  if(storeReportCapabilities.includes(capability))return freeStoreReportCapabilities.includes(capability)?[]:['INVENTORY'];
  if(capability==='unsold-products.read')return ['SALES_ANALYTICS'];
  if(capability==='sales-journal.read')return ['STORE_MODE'];

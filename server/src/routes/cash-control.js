@@ -147,7 +147,7 @@ async function requireCashAccess(req,res,next){
   return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
 }
 function assertStoreAccess(req,storeId){if((req.user?.tokenType==="STORE_OPERATOR"||req.user?.staffAccess===true)&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
-async function ownedStore(storeId,companyId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return store}
+async function ownedStore(storeId,companyId,db=prisma){const store=await db.store.findFirst({where:{id:storeId,companyId,active:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return store}
 async function requestTerminal(req){
   const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
   if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
@@ -199,11 +199,11 @@ async function existingAuditTables(db){
   const rows=await db.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety"`;
   return rows[0]||{};
 }
-async function cashControlRule(store,companyId){
-  const rows=await prisma.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled" FROM "CashControlStoreRule" WHERE "storeId"=${store.id} AND "companyId"=${companyId} LIMIT 1`;
+async function cashControlRule(store,companyId,db=prisma){
+  const rows=await db.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled" FROM "CashControlStoreRule" WHERE "storeId"=${store.id} AND "companyId"=${companyId} LIMIT 1`;
   return rows[0]?{...rows[0],source:"CONFIGURED"}:legacyStoreRule(store);
 }
-async function reviewSnapshot(companyId,storeId,sessionId){return readCashReviewSnapshot(prisma,companyId,storeId,sessionId)}
+async function reviewSnapshot(companyId,storeId,sessionId,db=prisma){return readCashReviewSnapshot(db,companyId,storeId,sessionId)}
 function sameSnapshot(left,right){return sameCashReviewSnapshot(left,right)}
 function suspiciousOperatorEvent(eventType){return /CANCEL|RETURN|VOID|REVERSE|DUPLICATE|DELAY|OVERRIDE|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(eventType||""))}
 function auditAmount(details){for(const key of ["reversalTotal","originalTotal","total","amount"]){const value=Number(details?.[key]);if(Number.isFinite(value)&&value!==0)return value}return null}
@@ -389,15 +389,16 @@ router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
   res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent,openSessions:recent.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
 }));
 
-router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
+export async function readCashDailySummary(req,{db=prisma,prepareSource=null}={}){
+  const prisma=db;
   assertStoreAccess(req,req.params.storeId);
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId,db);
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const date=reportDateSchema.parse(String(req.query.date||today));
   const period=resolveCashReportPeriod(req.query,date);
-  if(period.sessionId)return res.status(400).json({error:"Για συγκεκριμένη βάρδια άνοιξε την Ανάλυση της βάρδιας."});
-  await ensurePosSaleSafetySchema();
-  const rule=await cashControlRule(store,req.user.companyId),[sessionRows,expenseRows,auditRows,attemptRows,fiscalRows,actionRows]=await Promise.all([
+  if(period.sessionId)throw Object.assign(new Error("Για συγκεκριμένη βάρδια άνοιξε την Ανάλυση της βάρδιας."),{status:400});
+  if(prepareSource)await prepareSource();
+  const rule=await cashControlRule(store,req.user.companyId,db),[sessionRows,expenseRows,auditRows,attemptRows,fiscalRows,actionRows]=await Promise.all([
     prisma.$queryRaw`
       SELECT * FROM "CashShiftSession"
       WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='CLOSED'
@@ -426,12 +427,15 @@ router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
   for(const row of sessions){if(rule.carryOverEnabled&&Math.abs(money(row.openingVariance))>0.009)alerts.push({type:"OPENING_CONTINUITY",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.openingVariance),scope:row.delivery?"DELIVERY_TO_DELIVERY":"SAME_POS_ONLY"});if(row.varianceConsidered&&Math.abs(money(row.variance))>0.009)alerts.push({type:money(row.variance)<0?"SHORTAGE":"SURPLUS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.variance)});if(rule.posEftposEnabled&&Math.abs(money(row.cardVariance))>0.009)alerts.push({type:"POS_EFTPOS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.cardVariance)});if((row.duplicateReview||[]).length)alerts.push({type:"DUPLICATE_REVIEW",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,count:row.duplicateReview.length})}
   for(const expense of expenseChecks){if(!["MATCHED","PARTIALLY_PAID","REVERSED"].includes(expense.status))alerts.push({type:expense.status,transactionId:expense.id,sessionId:expense.sessionId,amount:expense.amount,difference:expense.difference})}
   const reconciliation=buildKatShiftReconciliation({sessions,auditEvents:auditRows,paymentAttempts:attemptRows,fiscalDocuments:fiscalRows,actionEvents:actionRows});
-  res.json({date,...period,coverageStatus:"PROVISIONAL",timeZone:"Europe/Athens",store:{id:store.id,name:store.name},rule,status:alerts.length||reconciliation.status!=="AGREEMENT"?"NEEDS_REVIEW":"AGREEMENT",sessions,expenseChecks,totals,alerts,reconciliation,recalculatedAt:new Date()});
-}));
+  return ({date,...period,coverageStatus:"PROVISIONAL",timeZone:"Europe/Athens",store:{id:store.id,name:store.name},rule,status:alerts.length||reconciliation.status!=="AGREEMENT"?"NEEDS_REVIEW":"AGREEMENT",sessions,expenseChecks,totals,alerts,reconciliation,recalculatedAt:new Date()});
+}
 
-router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
+router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{res.json(await readCashDailySummary(req,{prepareSource:ensurePosSaleSafetySchema}))}));
+
+export async function readCashSessionInvestigation(req,{db=prisma}={}){
+  const prisma=db;
   const found=await prisma.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
-  const session=normalize(found[0]);if(!session)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια."});assertStoreAccess(req,session.storeId);const store=await ownedStore(session.storeId,req.user.companyId),controlRule=await cashControlRule(store,req.user.companyId),varianceConsidered=controlRule.mode!=="DIFFERENCE_ONLY";
+  const session=normalize(found[0]);if(!session)throw Object.assign(new Error("Δεν βρέθηκε η βάρδια."),{status:404});assertStoreAccess(req,session.storeId);const store=await ownedStore(session.storeId,req.user.companyId,db),controlRule=await cashControlRule(store,req.user.companyId,db),varianceConsidered=controlRule.mode!=="DIFFERENCE_ONLY";
   const transactions=await prisma.$queryRaw`SELECT "id","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",("attachmentData" IS NOT NULL) AS "hasAttachment",CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN "attachmentFilename" ELSE NULL END AS "purchaseDocumentId" FROM "StoreTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "occurredAt"`;
   const tables=await existingAuditTables(prisma),auditEvents=[],auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
   if(tables.operator){const rows=await prisma.$queryRaw`SELECT "id","eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`;for(const row of rows)if(suspiciousOperatorEvent(row.eventType))auditEvents.push({source:"STORE_OPERATOR_AUDIT",type:row.eventType,actorId:row.actorId,operatorId:row.operatorId,at:row.createdAt,details:row.details||{},amount:auditAmount(row.details)})}
@@ -452,7 +456,7 @@ router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
   const amounts=new Map();for(const event of auditEvents){if(event.amount==null)continue;const key=Math.abs(Number(event.amount)).toFixed(2),same=amounts.get(key)||[];same.push(event);amounts.set(key,same)}for(const [amount,events] of amounts)if(events.length>1)findings.push({code:"REPEATED_AUDIT_AMOUNT",severity:"MEDIUM",amount:Number(amount),count:events.length,events});
   if(Math.abs(money(session.cardVariance))>0.009)findings.unshift({code:"POS_EFTPOS_DIFFERENCE",severity:"HIGH",amount:money(session.cardVariance)});
   if(varianceConsidered&&Math.abs(money(session.variance))>0.009)findings.unshift({code:money(session.variance)<0?"CASH_SHORTAGE":"CASH_SURPLUS",severity:"HIGH",amount:money(session.variance)});
-  const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt","id"`;
+  const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id,db),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt","id"`;
   const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,snapshotRecheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
   const explanationBalance=confirmedExplanationBalance(session.variance,confirmedExplanations,{enabled:varianceConsidered});
   const reviewBalance=snapshotRecheckRequired?{...explanationBalance,status:"RECHECK_REQUIRED",reason:"STALE_REVIEW",unexplainedVariance:null}:explanationBalance;
@@ -470,8 +474,10 @@ router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
   }
   const reviewEvidence=req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"
     ?await readCashReviewEvidence(prisma,{...session,sessionId:session.id,auditRule:controlRule},{includeChat:chatAllowed}):null;
-  res.json({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
-}));
+  return ({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
+}
+
+router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{res.json(await readCashSessionInvestigation(req))}));
 
 router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Μόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να οριστικοποιήσει τον έλεγχο."});

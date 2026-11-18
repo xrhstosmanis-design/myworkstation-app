@@ -1,3 +1,4 @@
+import {storePerformanceReadDb} from '../services/backoffice-staff-performance-scope.js';
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {monthlyCashierPerformance} from "../workforce-cashier-monthly.js";
@@ -82,11 +83,15 @@ router.get("/bootstrap",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+export async function readWorkforceEvaluations(context,employee,{db=prisma,strictStore=false,prepareSource=null}={}){const prisma=db;
+ if(prepareSource)await prepareSource();
+ const rows=strictStore?await prisma.$queryRaw`SELECT e."id",e."category",e."rating",e."comment",e."evaluationDate",e."createdAt",u."fullName" AS "createdByName" FROM "WorkforceEmployeeEvaluation" e LEFT JOIN "User" u ON u."id"=e."createdByUserId" AND u."companyId"=e."companyId" WHERE e."companyId"=${context.company.id} AND e."storeId"=${context.store.id} AND e."employeeId"=${employee.id} ORDER BY e."evaluationDate" DESC,e."createdAt" DESC LIMIT 200`:await prisma.$queryRaw`SELECT e.*,u."fullName" AS "createdByName" FROM "WorkforceEmployeeEvaluation" e LEFT JOIN "User" u ON u."id"=e."createdByUserId" WHERE e."companyId"=${context.company.id} AND e."employeeId"=${employee.id} ORDER BY e."evaluationDate" DESC,e."createdAt" DESC LIMIT 200`;return {items:rows};
+}
 router.get("/employees/:employeeId/evaluations",async(req,res,next)=>{try{
  const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
- await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "WorkforceEmployeeEvaluation" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,"category" TEXT NOT NULL,"rating" INTEGER,"comment" TEXT NOT NULL,"evaluationDate" DATE NOT NULL,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())');
- const rows=await prisma.$queryRaw`SELECT e.*,u."fullName" AS "createdByName" FROM "WorkforceEmployeeEvaluation" e LEFT JOIN "User" u ON u."id"=e."createdByUserId" WHERE e."companyId"=${context.company.id} AND e."employeeId"=${employee.id} ORDER BY e."evaluationDate" DESC,e."createdAt" DESC LIMIT 200`;res.json({items:rows});
+ res.json(await readWorkforceEvaluations(context,employee,{prepareSource:()=>prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "WorkforceEmployeeEvaluation" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,"category" TEXT NOT NULL,"rating" INTEGER,"comment" TEXT NOT NULL,"evaluationDate" DATE NOT NULL,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())')}));
 }catch(error){next(error)}});
+
 router.post("/employees/:employeeId/evaluations",async(req,res,next)=>{try{
  const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
  const body=req.body||{},category=String(body.category||"").trim(),comment=String(body.comment||"").trim(),rating=body.rating==null||body.rating===""?null:Number(body.rating),evaluationDate=new Date(String(body.evaluationDate||"")+"T00:00:00Z");if(!category||!comment||Number.isNaN(evaluationDate.getTime())||(rating!==null&&(!Number.isInteger(rating)||rating<1||rating>5)))return res.status(400).json({error:"Συμπλήρωσε κατηγορία, ημερομηνία, σχόλιο και προαιρετική αξιολόγηση 1–5."});
@@ -95,17 +100,15 @@ router.post("/employees/:employeeId/evaluations",async(req,res,next)=>{try{
  await prisma.workforceAuditLog.create({data:{companyId:context.company.id,storeId:context.store.id,actorUserId:req.user?.id||null,action:"WORKFORCE_EMPLOYEE_EVALUATED",entityType:"WORKFORCE_EMPLOYEE",entityId:employee.id,afterJson:{employeeId:employee.id,evaluationId:id,category,rating,evaluationDate:String(body.evaluationDate)},reason:comment}});res.status(201).json({id});
 }catch(error){next(error)}});
 
-router.get("/employees/:employeeId/performance",async(req,res,next)=>{
-  try{
-    const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});
-    if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
-    if(req.query.month!==undefined){
+export async function readWorkforcePerformance(context,employee,rawQuery={}, {db=prisma,strictStore=false,onMonthlyReady=null}={}){
+ const prisma=strictStore?storePerformanceReadDb(db,context):db;
+    if(rawQuery.month!==undefined){
       const scopedEmployee=await prisma.workforceEmployee.findFirst({where:{id:employee.id,companyId:context.company.id,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]}});
-      if(!scopedEmployee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος στο κατάστημα."});
-      res.setHeader("Cache-Control","no-store, private");
-      return res.json(await monthlyCashierPerformance(prisma,{companyId:context.company.id,storeId:context.store.id,employee:scopedEmployee,month:req.query.month}));
+      if(!scopedEmployee)throw Object.assign(new Error("Δεν βρέθηκε εργαζόμενος στο κατάστημα."),{status:404});
+      if(onMonthlyReady)onMonthlyReady();
+      return await monthlyCashierPerformance(prisma,{companyId:context.company.id,storeId:context.store.id,employee:scopedEmployee,month:rawQuery.month});
     }
-    const days=Math.min(366,Math.max(1,Number(req.query.days)||30)),from=new Date(Date.now()-days*86400000);
+    const days=Math.min(366,Math.max(1,Number(rawQuery.days)||30)),from=new Date(Date.now()-days*86400000);
     const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,employeeId:employee.id,startedAt:{gte:from}},orderBy:{startedAt:"desc"},take:500});
     const completed=sessions.filter(x=>x.status!=="OPEN"),workedMinutes=completed.reduce((s,x)=>s+Number(x.workedMinutes||0),0),overtimeMinutes=completed.reduce((s,x)=>s+Number(x.overtimeMinutes||0),0),lateMinutes=completed.reduce((s,x)=>s+Number(x.lateMinutes||0),0),earlyLeaveMinutes=completed.reduce((s,x)=>s+Number(x.earlyLeaveMinutes||0),0);
     const operators=await prisma.$queryRaw`SELECT "id","storeId","displayName","active" FROM "StoreOperatorCredential" WHERE "companyId"=${context.company.id} AND "employeeId"=${employee.id}`;
@@ -114,9 +117,13 @@ router.get("/employees/:employeeId/performance",async(req,res,next)=>{
     const posActions=operatorIds.length?await prisma.$queryRaw`SELECT a."id",a."createdAt",a."actionType",a."reason",a."saleId",a."relatedSaleId",a."actorName",a."details",COALESCE(s."total",o."total",0) AS "amount" FROM "PosSaleActionAudit" a LEFT JOIN "Sale" s ON s."id"=a."saleId" AND s."companyId"=a."companyId" LEFT JOIN "Sale" o ON o."id"=COALESCE(a."relatedSaleId",s."originalSaleId") AND o."companyId"=a."companyId" WHERE a."companyId"=${context.company.id} AND a."actorId"=ANY(${operatorIds}::text[]) AND a."createdAt">=${from} ORDER BY a."createdAt" DESC LIMIT 250` : [];
     const actionSummary=posActions.reduce((a,x)=>{a.total++;if(x.actionType==="CANCEL")a.cancellations++;if(x.actionType==="RETURN")a.returns++;if(x.actionType==="DELAYED")a.delayed++;if(String(x.actionType).includes("DISCOUNT"))a.discounts++;return a},{total:0,cancellations:0,returns:0,delayed:0,discounts:0});
     const audits=await prisma.workforceAuditLog.findMany({where:{companyId:context.company.id,createdAt:{gte:from},OR:[{beforeJson:{path:["employeeId"],equals:employee.id}},{afterJson:{path:["employeeId"],equals:employee.id}}]},orderBy:{createdAt:"desc"},take:100});
-    res.json({employee:{id:employee.id,fullName:employee.fullName},period:{days,from,to:new Date()},attendance:{sessions:sessions.length,completed:completed.length,workedMinutes,overtimeMinutes,lateMinutes,earlyLeaveMinutes,needsReview:sessions.filter(x=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(x.status)).length},cashier:{...cashier,totalSales:Number((cashier.cashSales+cashier.cardSales).toFixed(2)),recentShifts:shiftRows.map(x=>({...x,cashSales:n(x.cashSales),cardSales:n(x.cardSales),eftposTotal:n(x.eftposTotal),variance:n(x.variance),openingVariance:n(x.openingVariance),cardVariance:n(x.cardVariance),transactionCount:n(x.transactionCount),reversedCount:n(x.reversedCount)}))},posActions:{...actionSummary,items:posActions.map(x=>({...x,amount:Number(x.amount||0)}))},evaluations:{status:"EVIDENCE_FIRST",message:"Μετρήσιμα στοιχεία και ανθρώπινη αξιολόγηση εμφανίζονται χωριστά. Δεν παράγεται αυθαίρετο αυτόματο score."},recentAudit:audits.map(x=>({id:x.id,action:x.action,createdAt:x.createdAt,reason:x.reason}))});
-  }catch(error){next(error)}
-});
+    return ({employee:{id:employee.id,fullName:employee.fullName},period:{days,from,to:new Date()},attendance:{sessions:sessions.length,completed:completed.length,workedMinutes,overtimeMinutes,lateMinutes,earlyLeaveMinutes,needsReview:sessions.filter(x=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(x.status)).length},cashier:{...cashier,totalSales:Number((cashier.cashSales+cashier.cardSales).toFixed(2)),recentShifts:shiftRows.map(x=>({...x,cashSales:n(x.cashSales),cardSales:n(x.cardSales),eftposTotal:n(x.eftposTotal),variance:n(x.variance),openingVariance:n(x.openingVariance),cardVariance:n(x.cardVariance),transactionCount:n(x.transactionCount),reversedCount:n(x.reversedCount)}))},posActions:{...actionSummary,items:posActions.map(x=>({...x,amount:Number(x.amount||0)}))},evaluations:{status:"EVIDENCE_FIRST",message:"Μετρήσιμα στοιχεία και ανθρώπινη αξιολόγηση εμφανίζονται χωριστά. Δεν παράγεται αυθαίρετο αυτόματο score."},recentAudit:audits.map(x=>({id:x.id,action:x.action,createdAt:x.createdAt,reason:x.reason}))});
+}
+router.get("/employees/:employeeId/performance",async(req,res,next)=>{try{
+ const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});
+ if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+ res.json(await readWorkforcePerformance(context,employee,req.query,{onMonthlyReady:()=>res.setHeader("Cache-Control","no-store, private")}));
+}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 router.use("/roles",roleRoutes);
 router.use("/employees",employeeRoutes);

@@ -1,3 +1,6 @@
+import {nativeCashBarcodeSeedPlan} from './fixtures/backoffice-cash-barcode-native.mjs';
+import {nativeFinalPassiveCompanySeedPlan} from './fixtures/backoffice-final-passive-company-native.mjs';
+import {nativeFinalPassiveLegacySeedPlan} from './fixtures/backoffice-final-passive-legacy-native.mjs';
 import {nativeCompanyProductCenterSeedPlan} from './fixtures/backoffice-company-product-center-native.mjs';
 import {nativeCompanyOperationsSeedPlan} from './fixtures/backoffice-company-operations-native.mjs';
 import {nativeCompanyWholesaleSeedPlan} from './fixtures/backoffice-company-wholesale-native.mjs';
@@ -24,6 +27,7 @@ function validateSeedPlan(plan){
    else if(type==='integer'||type==='bigint')assert.ok(Number.isSafeInteger(value),`${table}.${name} integer`);
    else if(type.startsWith('numeric')||type==='double precision')assert.ok(typeof value==='number'&&Number.isFinite(value),`${table}.${name} finite numeric`);
    else if(type==='jsonb'||type==='json'){assert.ok(typeof value==='object'&&!(value instanceof Date),`${table}.${name} JSON`);assert.equal(typeof JSON.stringify(value),'string')}
+   else if(type==='date')assert.ok(value instanceof Date&&Number.isFinite(value.getTime())&&value.toISOString().endsWith('T00:00:00.000Z'),`${table}.${name} native calendar date`);
    else if(type.startsWith('timestamp'))assert.ok(value instanceof Date&&Number.isFinite(value.getTime()),`${table}.${name} timestamp`);
    else if(/^"[^"]+"$/.test(type)){const definition=metadata.enums.find(e=>e.name===type.slice(1,-1));assert.ok(definition,`Unknown enum ${type}`);assert.ok(definition.labels.includes(value),`${table}.${name} valid enum label`)}
    else assert.fail(`Unreviewed seed type ${table}.${name}: ${type}`);
@@ -94,3 +98,9 @@ test('product native seeds satisfy actual scoped uniqueness without confusing re
  }
  assert.equal(plan.filter(e=>e.table==='PurchaseDocumentLine'&&e.row.purchaseDocumentId==='product100-doc-own').length,252,'many distinct lines legitimately share one document');
 });
+
+test('STORE81 legacy-only passive seeds match real schema including PostgreSQL date and no COMPANY field',()=>{const plan=nativeFinalPassiveLegacySeedPlan();validateSeedPlan(plan);assert.ok(plan.length>70);assert.ok(plan.every(e=>!Object.hasOwn(e.row,'companyCapabilities')));const evaluation=plan.find(e=>e.table==='WorkforceEmployeeEvaluation');assert.throws(()=>validateSeedPlan([{...evaluation,row:{...evaluation.row,evaluationDate:new Date('2026-11-03T12:00Z')}}]),/native calendar date/);});
+
+test('COMPANY106 passive seeds validate real columns, nullable cost and online history without schema inventions',()=>{const plan=nativeFinalPassiveCompanySeedPlan();validateSeedPlan(plan.filter(e=>!['BackofficeStaffAccount','BackofficeStaffGrant'].includes(e.table)));for(const e of plan.filter(e=>['BackofficeStaffAccount','BackofficeStaffGrant'].includes(e.table))){const allowed=e.table==='BackofficeStaffAccount'?['userId','companyId','username','pinHash','companyCapabilities']:['userId','companyId','storeId','profile','capabilities'];assert.deepEqual(Object.keys(e.row).sort(),allowed.sort());assert.equal(e.row.companyId,'foreign');assert.equal(e.row.userId,'final106-user-foreign');}assert.ok(plan.length>1500);assert.ok(plan.some(e=>e.table==='StockMovement'&&e.row.unitCost===null));assert.equal(plan.filter(e=>e.table==='OnlineOrder').length,301);});
+
+test('STORE85 extra cash/barcode native rows use actual metadata and retain signed/zero values',()=>{const plan=nativeCashBarcodeSeedPlan();validateSeedPlan(plan);assert.equal(plan.length,16);assert.ok(plan.some(e=>e.table==='SaleLine'&&e.row.lineTotal<0));assert.ok(plan.some(e=>e.table==='ProductBarcodePriceRequest'&&e.row.oldPrice===null&&e.row.requestedPrice===0));});

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {finalPassiveStoreActions} from '../../shared/backoffice-staff-final-passive.mjs';
 import {scanSource} from '../../tools/backoffice-permissions/inventory.mjs';
 import {backofficeFunctionCatalogue,backofficePermissionKey} from '../../shared/backoffice-functions.mjs';
 import {staffCapabilities,staffProfiles,validStaffCapabilities,staffRequestCapability} from '../../shared/backoffice-staff.mjs';
@@ -8,7 +9,8 @@ test('function review catalogue distinguishes company authority and cannot autom
  const ids=backofficeFunctionCatalogue.map(f=>f.key),all=backofficeFunctionCatalogue.flatMap(f=>f.actions.map(a=>backofficePermissionKey(f.key,a)));
  assert.equal(new Set(ids).size,ids.length);assert.equal(new Set(all).size,all.length);
  assert.ok(backofficeFunctionCatalogue.every(f=>['STORE','COMPANY'].includes(f.scope)&&f.actions.length&&Object.isFrozen(f.actions)));
- for(const existing of staffCapabilities)assert.ok(all.includes(existing),`Existing action ${existing} must not disappear`);
+ const reviewedStoreActions=new Map(finalPassiveStoreActions.map(action=>[action.key,'store-passive-'+action.key]));
+ for(const existing of staffCapabilities){const catalogueKey=reviewedStoreActions.get(existing)||existing;assert.ok(all.includes(catalogueKey),`Existing action ${existing} must retain its explicit review entry`);if(reviewedStoreActions.has(existing))assert.equal(backofficeFunctionCatalogue.find(f=>f.key===catalogueKey.slice(0,-5))?.scope,'STORE');}
  for(const f of backofficeFunctionCatalogue.filter(f=>f.scope==='COMPANY'))for(const action of f.actions)assert.equal(validStaffCapabilities([`${f.key}.${action}`]),false,'a store grant cannot become company authority from catalogue discovery');
  assert.deepEqual(staffProfiles.STOCKTAKER.capabilities,['inventory.read','inventory.count']);
  assert.equal(staffRequestCapability('POST','/api/management/parameters'),null);

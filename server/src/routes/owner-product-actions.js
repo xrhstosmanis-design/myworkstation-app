@@ -48,6 +48,20 @@ export async function readOwnerAudienceDiscountAudit(scopeCompanyId,rawQuery={},
 
 }
 
+export async function readOwnerProductMovements(scopeCompanyId,rawQuery={},selectedId=null,{db=prisma,preserveUnknownCost=false}={}){const prisma=db;
+
+    const company=scopeCompanyId;if(!company)throw Object.assign(new Error("Δεν υπάρχει ενεργή εταιρεία."),{status:403});
+    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(rawQuery||{});
+    const productRows=await prisma.$queryRaw`SELECT p."id",p."name",p."salePrice",p."costPrice",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${selectedId} AND sp."storeId"=${q.storeId} LIMIT 1`;
+    const product=productRows[0];if(!product)throw Object.assign(new Error("Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."),{status:404});
+    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-30*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();
+    if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)throw Object.assign(new Error("Μη έγκυρο διάστημα ημερομηνιών."),{status:400});
+    const rows=await prisma.$queryRaw`SELECT m."id",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdAt",u."fullName" AS "actorName" FROM "StockMovement" m JOIN "Store" s ON s."id"=m."storeId" LEFT JOIN "User" u ON u."id"=m."createdByUserId" WHERE s."companyId"=${company} AND m."storeId"=${q.storeId} AND m."productId"=${selectedId} AND m."createdAt">=${from} AND m."createdAt"<=${to} ORDER BY m."createdAt" DESC LIMIT 1000`;
+    let running=Number(product.currentStock||0);const movements=rows.map(row=>{const quantity=Number(row.quantity||0),stockAfter=running;running-=quantity;return {...row,quantity,unitCost:preserveUnknownCost&&row.unitCost==null?null:Number(row.unitCost||0),inQty:quantity>0?quantity:0,outQty:quantity<0?Math.abs(quantity):0,stockAfter}});
+    return ({product:{id:product.id,name:product.name,currentStock:Number(product.currentStock||0),salePrice:Number(product.salePrice||0),costPrice:Number(product.costPrice||0)},from,to,movements});
+
+}
+
 export function createOwnerProductActionsRouter({db=prisma,scope=null}={}){
 const prisma=db;
 const scopedStoreId=scope?.storeId||null;
@@ -174,18 +188,7 @@ router.post("/:productId/supplier-return",requireCompanyModule("INVENTORY"),asyn
 });
 
 router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(req.query||{});
-    const productRows=await prisma.$queryRaw`SELECT p."id",p."name",p."salePrice",p."costPrice",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND sp."storeId"=${q.storeId} LIMIT 1`;
-    const product=productRows[0];if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-30*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();
-    if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
-    const rows=await prisma.$queryRaw`SELECT m."id",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdAt",u."fullName" AS "actorName" FROM "StockMovement" m JOIN "Store" s ON s."id"=m."storeId" LEFT JOIN "User" u ON u."id"=m."createdByUserId" WHERE s."companyId"=${company} AND m."storeId"=${q.storeId} AND m."productId"=${req.params.productId} AND m."createdAt">=${from} AND m."createdAt"<=${to} ORDER BY m."createdAt" DESC LIMIT 1000`;
-    let running=Number(product.currentStock||0);const movements=rows.map(row=>{const quantity=Number(row.quantity||0),stockAfter=running;running-=quantity;return {...row,quantity,unitCost:Number(row.unitCost||0),inQty:quantity>0?quantity:0,outQty:quantity<0?Math.abs(quantity):0,stockAfter}});
-    res.json({product:{id:product.id,name:product.name,currentStock:Number(product.currentStock||0),salePrice:Number(product.salePrice||0),costPrice:Number(product.costPrice||0)},from,to,movements});
-  }catch(error){next(error)}
-});
+  try{res.json(await readOwnerProductMovements(req.user.companyId,req.query,req.params.productId,{}))}catch(error){if([400,403,404].includes(error.status))return res.status(error.status).json({error:error.message});next(error)}});
 
 router.get("/:productId/purchases",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{res.json(await readOwnerProductPurchases(req.user.companyId,req.query,req.params.productId))}catch(error){if(error.status===400)return res.status(400).json({error:error.message});if(error.status===404)return res.status(404).json({error:error.message});next(error)}});

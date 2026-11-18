@@ -1,3 +1,5 @@
+import CompanyFinalPassiveReadView from './CompanyFinalPassiveReadView.jsx';
+import {finalPassiveCompanyActions} from '../../../../shared/backoffice-staff-final-passive.mjs';
 import CompanyProductCenterReadView from './CompanyProductCenterReadView.jsx';
 import {companyProductCenterActions} from '../../../../shared/backoffice-staff-company-product-center.mjs';
 import CompanyObserverLogisticsReadView from './CompanyObserverLogisticsReadView.jsx';
@@ -50,6 +52,7 @@ export default function CompanyDirectoryView(props){
  const [supplier,setSupplier]=useState(null);const own=JSON.stringify([props.companyId,props.capability,props.authorityKey]);
  const detailsAllowed=Array.isArray(props.companyCapabilities)&&props.companyCapabilities.includes('supplier-details.read');
  const selected=detailsAllowed&&supplier?.own===own&&supplier.api===props.api?supplier.id:'';
+ if(finalPassiveCompanyActions.some(action=>action.key===props.capability))return <CompanyFinalPassiveReadView {...props}/>;
  if(companyProductCenterActions.some(action=>action.key===props.capability))return <CompanyProductCenterReadView {...props}/>;
  if(observerLogisticsActions.some(action=>action.key===props.capability))return <CompanyObserverLogisticsReadView {...props}/>;
  if(companyWholesaleActions.some(action=>action.key===props.capability))return <CompanyWholesaleReadView {...props}/>;

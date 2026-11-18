@@ -56,11 +56,11 @@ test('shared evidence keeps actual source amounts and chat failure isolated from
 });
 test('actual registered cloud reader authorizes Owner before chat reads, keeps original cash/card and refuses cross-store first',async()=>{
  const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
- const route=source.slice(source.indexOf('router.get("/sessions/:sessionId/investigation"'),source.indexOf('router.post("/sessions/:sessionId/reviews"'));
+ const route=source.slice(source.indexOf('export async function readCashSessionInvestigation('),source.indexOf('router.post("/sessions/:sessionId/reviews"'));
  let handler,denied=false,chatReads=0,override=null;
  const db={$queryRaw:async strings=>{const sql=strings.join('');if(sql.includes('SELECT s.*'))return [{...current,id:'current',variance:-3,cardVariance:8}];if(sql.includes('StorePaidModule'))return override?[override]:[];if(sql.includes('StoreChatMessage')){chatReads++;return [attachment('sheet')];}return [];}};
  const deps={router:{get:(_path,fn)=>handler=fn},route:fn=>fn,prisma:db,normalize:x=>x,assertStoreAccess:()=>{if(denied)throw Error('store denied')},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),existingAuditTables:async()=>({}),partitionCashAuditEvents,readCashExpenseEvidence,cashExpenseFindings,readCashReviewEvidence,effectiveModuleEnabled,suspiciousOperatorEvent:()=>false,auditAmount:()=>null,money:v=>Number(v||0),reviewSnapshot:async()=>({}),sameSnapshot:()=>true,confirmedExplanationBalance};
- new Function(...Object.keys(deps),route)(...Object.values(deps));
+ new Function(...Object.keys(deps),route.replace(/^export /gm,''))(...Object.values(deps));
  const invoke=async(user,license={licenseAllowed:true,activeModules:['STORE_CHAT']})=>{let result;await handler({params:{sessionId:'current'},user:{companyId:'company',...user},license},{json:x=>result=x});return result;};
  const out=await invoke({role:'OWNER'});assert.equal(chatReads,1);assert.equal(out.reviewEvidence.chatEvidence.sources[0].references[0].messageId,'sheet');assert.equal(out.initialVariance,-3);assert.equal(out.cardVariance,8);assert.equal(out.unexplainedVariance,-3);
  assert.equal((await invoke({role:'OWNER',tokenType:'STORE_OPERATOR'})).reviewEvidence,null);assert.equal(chatReads,1);

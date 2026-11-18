@@ -1,3 +1,6 @@
+import {nativeCashBarcodeSeedPlan,verifyNativeCashBarcode} from './fixtures/backoffice-cash-barcode-native.mjs';
+import {verifyNativeFinalPassiveCompany} from './fixtures/backoffice-final-passive-company-native.mjs';
+import {verifyNativeFinalPassiveLegacy} from './fixtures/backoffice-final-passive-legacy-native.mjs';
 import {verifyNativeCompanyProductCenter} from './fixtures/backoffice-company-product-center-native.mjs';
 import {verifyNativeCompanyOperations} from './fixtures/backoffice-company-operations-native.mjs';
 import {verifyNativeCompanyWholesale} from './fixtures/backoffice-company-wholesale-native.mjs';
@@ -109,6 +112,7 @@ for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installa
  assert.ok(isolated(),'Actual isolated PostgreSQL is mandatory in CI');const f=await fixture(profile);
  try{
   await verifyNativeLegacyStoreReports({db:f.db});
+  await verifyNativeFinalPassiveLegacy({db:f.db,additionalSeedPlan:nativeCashBarcodeSeedPlan(),additionalVerifier:verifyNativeCashBarcode});
   for(const changes of [{supportContext:{companyId:'company'}},{storeId:'selected'},{staffAccess:true},{ownerCompanyId:'company'},{mustChangePassword:true},{sessionVersion:-1},{isSuperAdmin:false},{platformRole:'OWNER'},{role:'EMPLOYEE'},{role:'SUPER_ADMIN'}])await assert.rejects(async()=>f.service.inspect({...actor,...changes}),{code:'COMPANY_INSTALL_ACTOR_REQUIRED'});
   assert.equal((await f.db.$queryRawUnsafe(`SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='BackofficeStaffAccount' AND column_name='companyCapabilities'`)).length,0,'scoped/masked identities cannot create schema');
   const inspect=await f.service.inspect(actor);assert.equal(inspect.eligible,true);assert.equal(inspect.productionActivated,false);
@@ -147,5 +151,6 @@ for(const profile of ['BASE','CAPTURE'])test(`native ${profile} company installa
   await verifyNativeCompanyWholesale({db:f.db,profile,revision,secret});
   await verifyNativeCompanyOperations({db:f.db,profile,revision,secret});
   await verifyNativeCompanyProductCenter({db:f.db,profile,revision,secret});
+  await verifyNativeFinalPassiveCompany({db:f.db,profile,revision,secret});
  }finally{await f.close()}
 });

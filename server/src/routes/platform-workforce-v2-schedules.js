@@ -39,7 +39,9 @@ async function publishScheduleToStoreChat(tx,req,context,schedule){
 const serialize=schedule=>({...schedule,periodStart:iso(schedule.periodStart),periodEnd:iso(schedule.periodEnd),assignments:schedule.assignments.map(item=>({...item,date:iso(item.date),employee:item.employee?{id:item.employee.id,fullName:item.employee.fullName}:null,shiftTemplate:{id:item.shiftTemplate.id,name:item.shiftTemplate.name,category:item.shiftTemplate.category,startTime:item.shiftTemplate.startTime,endTime:item.shiftTemplate.endTime,minimumPeople:item.shiftTemplate.minimumPeople,maximumPeople:item.shiftTemplate.maximumPeople,requiredRole:roleSummary(item.shiftTemplate.requiredRole)}}))});
 
 const assertMutable=schedule=>{if(!mutableStates.includes(schedule.status))throw Object.assign(new Error("Το πρόγραμμα δεν είναι πρόχειρο ή σε προεπισκόπηση. Για αλλαγή δημοσιευμένου προγράμματος δημιουργείται νέα έκδοση."),{status:409})};
-async function loadSchedule(context,id){const item=await prisma.workforceSchedule.findFirst({where:{id:String(id),companyId:context.company.id,storeId:context.store.id},include:scheduleInclude});if(!item)throw Object.assign(new Error("Δεν βρέθηκε πρόγραμμα Workforce v2."),{status:404});return item}
+export async function readWorkforceScheduleForValidation(context,id,{db=prisma}={}){const prisma=db;const item=await prisma.workforceSchedule.findFirst({where:{id:String(id),companyId:context.company.id,storeId:context.store.id},include:scheduleInclude});if(!item)throw Object.assign(new Error("Δεν βρέθηκε πρόγραμμα Workforce v2."),{status:404});return item}
+const loadSchedule=(context,id)=>readWorkforceScheduleForValidation(context,id);
+
 function assertVersion(schedule,version){if(Number(version)!==Number(schedule.version))throw Object.assign(new Error("Το πρόγραμμα άλλαξε από άλλο χρήστη. Κάνε ανανέωση πριν συνεχίσεις."),{status:409})}
 function addFinding(list,{ruleCode,message,severity="APPROVAL_REQUIRED",assignmentId=null,employeeId=null,date=null}){list.push({ruleCode,message,severity,assignmentId,employeeId,date:date?iso(date):null})}
 function activeRules(employee,date){return (employee.rules||[]).filter(rule=>rule.active&&(!rule.validFrom||rule.validFrom<=date)&&(!rule.validTo||rule.validTo>=date))}
@@ -91,7 +93,8 @@ async function assignmentChecks(context,{schedule,employeeId,template,date,exclu
   if(employee.maxDaysPerWeek&&weeklyDays>employee.maxDaysPerWeek)addFinding(warnings,{ruleCode:"MAX_DAYS_EXCEEDED",message:`Ο εργαζόμενος προγραμματίζεται ${weeklyDays} ημέρες, πάνω από το όριο ${employee.maxDaysPerWeek}.`,employeeId,date});
   return {warnings};
 }
-async function scheduleValidation(context,schedule){
+export async function readWorkforceScheduleValidation(context,schedule,{db=prisma,employeeLoader=loadEmployeeForAssignment}={}){
+ const prisma=db;
   const findings=[],assignments=schedule.assignments||[],byShift=new Map();
   for(const assignment of assignments){
     const key=`${iso(assignment.date)}:${assignment.shiftTemplateId}`,rows=byShift.get(key)||[];rows.push(assignment);byShift.set(key,rows);
@@ -104,7 +107,7 @@ async function scheduleValidation(context,schedule){
     if(covered<template.minimumPeople)addFinding(findings,{ruleCode:"SHIFT_COVERAGE",message:`Η βάρδια «${template.name}» χρειάζεται ${template.minimumPeople} άτομα και έχει ${covered}.`,severity:"ERROR",date});
     if(template.maximumPeople&&covered>template.maximumPeople)addFinding(findings,{ruleCode:"SHIFT_CAPACITY",message:`Η βάρδια «${template.name}» υπερβαίνει το όριο ${template.maximumPeople} ατόμων.`,severity:"APPROVAL_REQUIRED",date:rows[0].date});
     for(const row of rows.filter(item=>item.employeeId)){
-      const employee=await loadEmployeeForAssignment(context,row.employeeId);
+      const employee=await employeeLoader(context,row.employeeId);
       if(activeRules(employee,row.date).some(rule=>rule.ruleType==="NEVER_ALONE")&&covered<2)addFinding(findings,{ruleCode:"NEVER_ALONE",message:`Ο κανόνας του/της ${employee.fullName} δεν επιτρέπει να μείνει μόνος/μόνη στη βάρδια.`,severity:"ERROR",assignmentId:row.id,employeeId:row.employeeId,date:row.date});
       const minDaysOff=activeRules(employee,row.date).find(rule=>rule.ruleType==="MIN_DAYS_OFF");
       if(minDaysOff){const start=weekStart(iso(row.date)),end=new Date(start.getTime()+7*86400000),weekRows=assignments.filter(item=>item.employeeId===employee.id&&item.date>=start&&item.date<end),days=new Set(weekRows.map(item=>iso(item.date))).size,required=Number(minDaysOff.valueJson?.days||0);if(required&&7-days<required)addFinding(findings,{ruleCode:"MIN_DAYS_OFF",message:`Ο/Η ${employee.fullName} έχει ${7-days} ρεπό αντί για ${required}.`,severity:"APPROVAL_REQUIRED",assignmentId:row.id,employeeId:employee.id,date:row.date})}
@@ -112,6 +115,8 @@ async function scheduleValidation(context,schedule){
   }
   return {findings,errors:findings.filter(item=>item.severity==="ERROR"),approvals:findings.filter(item=>item.severity==="APPROVAL_REQUIRED")};
 }
+
+const scheduleValidation=(context,schedule)=>readWorkforceScheduleValidation(context,schedule);
 
 function aiNorm(value){return String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR")}
 function aiMention(text,name){const parts=aiNorm(name).split(/\s+/).filter(x=>x.length>2);return parts.some(x=>aiNorm(text).includes(x))}

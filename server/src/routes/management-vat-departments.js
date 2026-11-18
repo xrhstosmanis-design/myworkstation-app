@@ -71,6 +71,27 @@ const departmentSchema=z.object({
   exemptionDescription:z.string().trim().max(220).nullable().optional()
 });
 
+export async function readVatDepartmentProducts(scopeCompanyId,rawQuery={},selectedId=null,{db=prisma,prepareSource=null}={}){const prisma=db;
+
+    const companyId=scopeCompanyId;if(prepareSource)await prepareSource();const storeId=String(rawQuery.storeId||"")||null,q=String(rawQuery.q||"").trim(),text=q?`%${q}%`:null;
+    const page=Math.max(1,Number.parseInt(String(rawQuery.page||"1"),10)||1),pageSize=Math.min(200,Math.max(25,Number.parseInt(String(rawQuery.pageSize||"100"),10)||100)),offset=(page-1)*pageSize;
+    const dep=await prisma.$queryRaw`SELECT "id","description","vatRate" FROM "ManagementVatDepartment" WHERE "id"=${selectedId} AND "companyId"=${companyId} LIMIT 1`;if(!dep[0])throw Object.assign(new Error("Δεν βρέθηκε το τμήμα ΦΠΑ."),{status:404});
+    if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});if(!store)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404})}
+    const countRows=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" p WHERE p."companyId"=${companyId} AND p."vatDepartmentId"=${selectedId} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})`;
+    const rows=await prisma.$queryRaw`
+      SELECT p."id",p."name",p."sku",p."vatRate",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",c."name" AS "categoryName",sc."name" AS "subcategoryName",lp."supplierName"
+      FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NOT NULL AND sp."storeId"=${storeId})
+      LEFT JOIN LATERAL (
+        SELECT sup."name" AS "supplierName" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
+        WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId"=p."id" AND (${storeId}::text IS NULL OR d."storeId"=${storeId}) ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
+      ) lp ON true
+      WHERE p."companyId"=${companyId} AND p."vatDepartmentId"=${selectedId} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
+      ORDER BY p."name" LIMIT ${pageSize} OFFSET ${offset}`;
+    const total=Number(countRows[0]?.count||0);return ({department:{...dep[0],vatRate:Number(dep[0].vatRate||0)},items:rows.map(r=>({...r,salePrice:Number(r.salePrice||0),vatRate:Number(r.vatRate||0)})),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
+
+}
+
 router.get("/",async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;await ensureCompanyDepartments(companyId);
@@ -111,25 +132,7 @@ router.delete("/:id",async(req,res,next)=>{
   try{const companyId=req.user.companyId;await ensureSchema();const count=await prisma.$executeRaw`UPDATE "ManagementVatDepartment" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.id} AND "companyId"=${companyId}`;if(!count)return res.status(404).json({error:"Δεν βρέθηκε το τμήμα ΦΠΑ."});res.json({ok:true,softDeleted:true})}catch(error){next(error)}});
 
 router.get("/:id/products",async(req,res,next)=>{
-  try{
-    const companyId=req.user.companyId;await ensureCompanyDepartments(companyId);const storeId=String(req.query.storeId||"")||null,q=String(req.query.q||"").trim(),text=q?`%${q}%`:null;
-    const page=Math.max(1,Number.parseInt(String(req.query.page||"1"),10)||1),pageSize=Math.min(200,Math.max(25,Number.parseInt(String(req.query.pageSize||"100"),10)||100)),offset=(page-1)*pageSize;
-    const dep=await prisma.$queryRaw`SELECT "id","description","vatRate" FROM "ManagementVatDepartment" WHERE "id"=${req.params.id} AND "companyId"=${companyId} LIMIT 1`;if(!dep[0])return res.status(404).json({error:"Δεν βρέθηκε το τμήμα ΦΠΑ."});
-    if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."})}
-    const countRows=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" p WHERE p."companyId"=${companyId} AND p."vatDepartmentId"=${req.params.id} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})`;
-    const rows=await prisma.$queryRaw`
-      SELECT p."id",p."name",p."sku",p."vatRate",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",c."name" AS "categoryName",sc."name" AS "subcategoryName",lp."supplierName"
-      FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
-      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NOT NULL AND sp."storeId"=${storeId})
-      LEFT JOIN LATERAL (
-        SELECT sup."name" AS "supplierName" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
-        WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId"=p."id" AND (${storeId}::text IS NULL OR d."storeId"=${storeId}) ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
-      ) lp ON true
-      WHERE p."companyId"=${companyId} AND p."vatDepartmentId"=${req.params.id} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
-      ORDER BY p."name" LIMIT ${pageSize} OFFSET ${offset}`;
-    const total=Number(countRows[0]?.count||0);res.json({department:{...dep[0],vatRate:Number(dep[0].vatRate||0)},items:rows.map(r=>({...r,salePrice:Number(r.salePrice||0),vatRate:Number(r.vatRate||0)})),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
-  }catch(error){next(error)}
-});
+  try{res.json(await readVatDepartmentProducts(req.user.companyId,req.query,req.params.id,{db:prisma,prepareSource:()=>ensureCompanyDepartments(req.user.companyId)}))}catch(error){if([400,403,404].includes(error.status))return res.status(error.status).json({error:error.message});next(error)}});
 
 router.patch("/products/bulk-assign",async(req,res,next)=>{
   try{

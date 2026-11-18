@@ -27,13 +27,12 @@ function details(value){
 }
 const sourceOfSql=sql=>sql.includes('FROM "StoreTransaction" t')?'StoreTransaction':sql.includes('FROM "PosSaleActionAudit" a')?'PosSaleActionAudit':sql.includes('FROM "StoreOperatorAudit" a')?'StoreOperatorAudit':sql.includes('FROM "StockMovement" m')?'StockMovement':sql.includes('FROM "InventoryCountEvent" e')?'InventoryCountEvent':null;
 
-export async function readCompanyOwnerAudit(db,companyId,f){
+export async function readCompanyOwnerAuditInSnapshot(db,companyId,f){
  if(typeof companyId!=='string'||!companyId||!(f.from instanceof Date)||!(f.toExclusive instanceof Date))invalid();
  const {readOwnerAuditReport}=await import('../routes/kiosk-reports-audit.js');
  const metadata=new Map();
- const payload=await db.$transaction(async tx=>{
-  await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
-  await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '5000ms'");
+ const tx=db;
+ const payload=await (async()=>{
   const readDb=new Proxy(tx,{get(target,key){
    if(['$executeRaw','$executeRawUnsafe','$transaction'].includes(key))return()=>invalid();
    const value=target[key];
@@ -58,7 +57,7 @@ export async function readCompanyOwnerAudit(db,companyId,f){
   // Search only the final declared metadata below. Native JSON/identifier search
   // must not create a match-count oracle for redacted details or credentials.
   return readOwnerAuditReport({companyId,superAdmin:false,from:f.from,to:f.toExclusive,storeId:f.storeId??null,q:null,timeFrom:f.timeFrom??null,timeTo:f.timeTo??null,operatorId:null,terminalPos:f.terminalPos??null,eventType:f.eventType??null,amountMin:f.amountMin??null,amountMax:f.amountMax??null},{db:readDb,videoAccessAllowed:false,enrichSaleItems:false});
- },{isolationLevel:'RepeatableRead',timeout:15000});
+ })();
  if(!Array.isArray(payload.items)||payload.items.length>LIMIT)invalid();
  let items=payload.items.map(row=>{
   const source=text(row.sourceType),raw=metadata.get(source+':'+row.id);if(!raw)invalid();
@@ -72,4 +71,13 @@ export async function readCompanyOwnerAudit(db,companyId,f){
  const q=(f.q??'').toLocaleLowerCase('el-GR'),operator=(f.operatorId??'').toLocaleLowerCase('el-GR');
  items=items.filter(row=>(!q||[row.eventLabel,row.sourceType,row.storeName,row.actorName,row.terminalPos,row.readableDescription,row.readableReason,row.readableFinancials].join(' ').toLocaleLowerCase('el-GR').includes(q))&&(!operator||row.actorName.toLocaleLowerCase('el-GR').includes(operator)));
  return {from:f.fromDay,to:f.toDay,storeId:f.storeId??null,q:f.q??'',timeFrom:f.timeFrom??null,timeTo:f.timeTo??null,operatorId:f.operatorId??null,terminalPos:f.terminalPos??null,eventType:f.eventType??null,amountMin:f.amountMin??null,amountMax:f.amountMax??null,items,count:items.length,sourceOfTruth:text(payload.sourceOfTruth),window:{limit:LIMIT,kind:'NATIVE_SOURCE_WINDOWS_THEN_METADATA_SEARCH'},onlineEventsIncluded:false,videoAccessAllowed:false,note:'Περιγραφικά στοιχεία από έως 10.000 εγγραφές ανά πηγή και τελικό παράθυρο 10.000. Η αναζήτηση αφορά μόνο τις εμφανιζόμενες περιγραφές του παραθύρου. Δεν περιλαμβάνονται αναλυτικές γραμμές πώλησης, συγχώνευση online παραγγελιών ή video.'};
+}
+
+export async function readCompanyOwnerAudit(db,companyId,f){
+ if(typeof companyId!=='string'||!companyId||!(f.from instanceof Date)||!(f.toExclusive instanceof Date))invalid();
+ return db.$transaction(async tx=>{
+  await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+  await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '5000ms'");
+  return readCompanyOwnerAuditInSnapshot(tx,companyId,f);
+ },{isolationLevel:'RepeatableRead',timeout:15000});
 }

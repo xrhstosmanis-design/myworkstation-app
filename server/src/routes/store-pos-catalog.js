@@ -167,13 +167,21 @@ function requireStoreManagement(req,res){
   return true;
 }
 
+export async function readBarcodePriceRequests(companyId,store,status="PENDING",{db=prisma}={}){
+    const rows=await db.$queryRaw`SELECT r.*,p."name" AS "productName",p."sku" FROM "ProductBarcodePriceRequest" r JOIN "Product" p ON p."id"=r."productId" AND p."companyId"=r."companyId" WHERE r."companyId"=${companyId} AND r."storeId"=${store.id} AND (${status}='ALL' OR r."status"=${status}) ORDER BY r."createdAt" DESC LIMIT 500`;
+    return({rows:rows.map(row=>({...row,oldPrice:row.oldPrice==null?null:money(row.oldPrice),requestedPrice:money(row.requestedPrice)}))});
+}
+export async function readBarcodeSalesReport(companyId,store,from,to,{db=prisma}={}){
+    const rows=await db.$queryRaw`SELECT p."id" AS "productId",p."name" AS "productName",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') AS barcode,SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS revenue FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId" JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=s."companyId" WHERE s."companyId"=${companyId} AND s."storeId"=${store.id} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to} AND s."source" NOT IN ('WASTE','PRODUCT_DESTRUCTION') GROUP BY p."id",p."name",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') ORDER BY p."name",barcode`;
+    const products=[];for(const row of rows){let product=products.find(item=>item.productId===row.productId);if(!product){product={productId:row.productId,productName:row.productName,sku:row.sku,quantity:0,revenue:0,barcodes:[]};products.push(product)}const detail={barcode:row.barcode,quantity:money(row.quantity),revenue:money(row.revenue)};product.quantity+=detail.quantity;product.revenue+=detail.revenue;product.barcodes.push(detail)}
+    return({store,from,to,products,totals:{quantity:products.reduce((sum,row)=>sum+row.quantity,0),revenue:products.reduce((sum,row)=>sum+row.revenue,0)}});
+}
 router.get("/stores/:storeId/barcode-price-requests",async(req,res,next)=>{
   try{
     if(!requireStoreManagement(req,res))return;
     const store=req.storeOperatorStore;
     const status=z.enum(["PENDING","APPROVED","REJECTED","ALL"]).default("PENDING").parse(String(req.query.status||"PENDING").toUpperCase());
-    const rows=await prisma.$queryRaw`SELECT r.*,p."name" AS "productName",p."sku" FROM "ProductBarcodePriceRequest" r JOIN "Product" p ON p."id"=r."productId" AND p."companyId"=r."companyId" WHERE r."companyId"=${req.user.companyId} AND r."storeId"=${store.id} AND (${status}='ALL' OR r."status"=${status}) ORDER BY r."createdAt" DESC LIMIT 500`;
-    res.json({rows:rows.map(row=>({...row,oldPrice:row.oldPrice==null?null:money(row.oldPrice),requestedPrice:money(row.requestedPrice)}))});
+    res.json(await readBarcodePriceRequests(req.user.companyId,store,status));
   }catch(error){next(error)}
 });
 
@@ -199,9 +207,7 @@ router.get("/stores/:storeId/barcode-sales-report",async(req,res,next)=>{
     if(!requireStoreManagement(req,res))return;
     const store=req.storeOperatorStore,query=z.object({from:z.string().datetime().optional(),to:z.string().datetime().optional()}).parse(req.query),from=query.from?new Date(query.from):new Date(Date.now()-30*86400000),to=query.to?new Date(query.to):new Date();
     if(from>to)return res.status(400).json({error:"Η ημερομηνία έναρξης δεν μπορεί να είναι μετά τη λήξη."});
-    const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name" AS "productName",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') AS barcode,SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS revenue FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId" JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=s."companyId" WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to} AND s."source" NOT IN ('WASTE','PRODUCT_DESTRUCTION') GROUP BY p."id",p."name",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') ORDER BY p."name",barcode`;
-    const products=[];for(const row of rows){let product=products.find(item=>item.productId===row.productId);if(!product){product={productId:row.productId,productName:row.productName,sku:row.sku,quantity:0,revenue:0,barcodes:[]};products.push(product)}const detail={barcode:row.barcode,quantity:money(row.quantity),revenue:money(row.revenue)};product.quantity+=detail.quantity;product.revenue+=detail.revenue;product.barcodes.push(detail)}
-    res.json({store,from,to,products,totals:{quantity:products.reduce((sum,row)=>sum+row.quantity,0),revenue:products.reduce((sum,row)=>sum+row.revenue,0)}});
+    res.json(await readBarcodeSalesReport(req.user.companyId,store,from,to));
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});next(error)}
 });
 

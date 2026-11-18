@@ -13,7 +13,7 @@ const subcategoryKeys=['id','categoryId','legacyCode','name','property','points'
 const vatKeys=['id','legacyVatCode','cashRegisterDepartment','description','vatRate','commerce','exemptionCode','exemptionDescription','active','productCount'];
 const productCompanyKeys=['id','name','active','systemKey','productCount','percent'];
 const proportional=(row,total)=>Math.abs(row.percent-(total?row.productCount*100/total:0))<0.00001;
-function validPayload(data,companyId,capability,categoryId){
+export function validPayload(data,companyId,capability,categoryId){
  if(data?.scope!=='COMPANY'||data.companyId!==companyId)return false;
  if(capability==='categories.read'){
   if(!exact(data,['scope','companyId','categories','subcategories','totalProducts','selectedCategoryId'])||!count(data.totalProducts)||!unique(data.categories)||!unique(data.subcategories))return false;

@@ -64,8 +64,9 @@ test("barcode sales report returns product totals and barcode breakdown",async()
   assert.match(source,/barcode-sales-report/);
   assert.match(source,/COALESCE\(sl\."scannedBarcode",'ΧΩΡΙΣ BARCODE'\)/);
   assert.match(source,/product\.barcodes\.push\(detail\)/);
-  assert.match(source,/s\."companyId"=\$\{req\.user\.companyId\}/);
+  assert.match(source,/s\."companyId"=\$\{companyId\}/);
   assert.match(source,/s\."storeId"=\$\{store\.id\}/);
+  assert.match(source,/readBarcodeSalesReport\(req\.user\.companyId,store,from,to\)/);
 });
 
 test("BackOffice exposes barcode approvals, report and paid radio configuration",async()=>{
