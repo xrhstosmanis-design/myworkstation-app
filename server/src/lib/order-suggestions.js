@@ -7,11 +7,12 @@ export function buildOrderSuggestions(rows,{historyDays=30,coverageDays=7,leadDa
   if(!Number.isInteger(historyDays)||historyDays<7||historyDays>90||!Number.isInteger(coverageDays)||coverageDays<1||coverageDays>60||!Number.isInteger(leadDays)||leadDays<0||leadDays>30)throw new Error("Μη έγκυρες ημέρες υπολογισμού.");
   return rows.map(row=>{
     const unit=suggestionUnit(row.unit),stock=number(row.currentStock),minimum=row.minStock==null?0:number(row.minStock),sold=number(row.soldQuantity),returned=number(row.returnedQuantity);
-    const base={productId:row.productId,name:row.name,sku:row.sku,unitLabel:unit?.label||String(row.unit||"—"),currentStock:stock,minStock:minimum,soldQuantity:sold,returnedQuantity:returned,netQuantity:null,dailyDemand:null,targetStock:null,suggestedQuantity:null,daysRemaining:null,reason:"",warnings:[],pendingPurchaseReview:row.pendingPurchaseReview||[]};
+    const base={productId:row.productId,name:row.name,sku:row.sku,unitLabel:unit?.label||String(row.unit||"—"),currentStock:stock,minStock:minimum,soldQuantity:sold,returnedQuantity:returned,netQuantity:null,dailyDemand:null,targetStock:null,suggestedQuantity:null,daysRemaining:null,reason:"",warnings:[],expectedReceiptsAvailable:row.expectedReceiptsAvailable,expectedReceiptsAvailabilityReason:row.expectedReceiptsAvailabilityReason,confirmedPendingStockQuantity:row.expectedReceiptsAvailable===false?null:row.confirmedPendingStockQuantity??0,expectedReceiptReviewReasons:row.expectedReceiptReviewReasons||[],pendingPurchaseReview:row.pendingPurchaseReview||[]};
+    if(base.expectedReceiptReviewReasons.length){base.reason="Έλεγξε τις αναμενόμενες παραλαβές πριν από νέα παραγγελία.";return base;}
     if(!unit){base.reason="Χρειάζεται επιβεβαίωση μονάδας αποθήκης.";return base;}
     if(row.hasRecipe){base.reason="Προϊόν συνταγής — χρειάζεται ξεχωριστή πρόταση υλικών.";return base;}
     if(stock===null||minimum===null||minimum<0||sold===null||returned===null||sold<0||returned<0){base.reason="Ελλιπή ή μη έγκυρα στοιχεία αποθέματος/κίνησης.";return base;}
-    const net=Math.max(0,sold-returned),daily=net/historyDays,target=Math.max(minimum,daily*(coverageDays+leadDays)),needed=Math.max(0,target-stock);
+    const net=Math.max(0,sold-returned),daily=net/historyDays,target=Math.max(minimum,daily*(coverageDays+leadDays)),needed=Math.max(0,target-stock-(base.confirmedPendingStockQuantity??0));
     const rounded=unit.step===1?Math.ceil(needed-1e-9):Math.ceil(needed*1000-1e-7)/1000;
     Object.assign(base,{netQuantity:net,dailyDemand:daily,targetStock:target,suggestedQuantity:Math.max(0,rounded),daysRemaining:daily>0?Math.max(0,stock)/daily:null,
       reason:daily>0&&daily*(coverageDays+leadDays)>minimum?"Κάλυψη πωλήσεων για τις ημέρες κάλυψης και παράδοσης.":minimum>0?"Κάλυψη του αποθηκευμένου ελάχιστου αποθέματος.":"Δεν υπάρχει θετικό ελάχιστο ή πρόσφατη καθαρή ζήτηση."});
