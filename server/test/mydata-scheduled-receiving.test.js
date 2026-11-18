@@ -9,9 +9,9 @@ async function fixture({allowed=true,held=false,targetBarrier,targets,lockBarrie
   let tick,interval,locks=0,owners=0,cleared=0;
   const backgroundDrain=createBackgroundDrain();
   const prisma={store:{findFirst:async()=>null},$executeRawUnsafe:async()=>{},$queryRaw:async strings=>{if(strings.join("?").includes('FROM "User"')){owners++;return [{id:'linked-owner'}]}if(targetBarrier)await targetBarrier;return targets||[{companyId:'company',storeId:'store'}]},$transaction:async fn=>{locks++;if(lockBarrier)await lockBarrier;return fn({$queryRaw:async()=>[{held}],$queryRawUnsafe:async sql=>{assert.match(sql,/current_schema/);return [{schema:'public',fence:null}]}})},user:{findFirst:async()=>{owners++;return {id:'owner'}}}};
-  globalThis.__scheduled={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval:()=>cleared++,prisma,Router:()=>({get(){},post(){}}),requireCompanyModule:()=>()=>{},companyModuleState:async()=>({licenseAllowed:allowed,activeModules:['DOCUMENTS']}),ensureStoreIntegrationSchema:async()=>{},setInterval:(fn,ms)=>{tick=fn;interval=ms;return {unref(){}}}};
+  globalThis.__scheduled={epsilonOriginalRecoveryLinkPattern:()=> 'supported-link-pattern',assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval:()=>cleared++,prisma,Router:()=>({get(){},post(){}}),requireCompanyModule:()=>()=>{},companyModuleState:async()=>({licenseAllowed:allowed,activeModules:['DOCUMENTS']}),ensureStoreIntegrationSchema:async()=>{},setInterval:(fn,ms)=>{tick=fn;interval=ms;return {unref(){}}}};
   const source=await readFile(new URL('../src/routes/commerce-mydata-inbox.js',import.meta.url),'utf8');
-  const injected='const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval,prisma,Router,requireCompanyModule,companyModuleState,ensureStoreIntegrationSchema,setInterval}=globalThis.__scheduled;';
+  const injected='const {epsilonOriginalRecoveryLinkPattern,assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval,prisma,Router,requireCompanyModule,companyModuleState,ensureStoreIntegrationSchema,setInterval}=globalThis.__scheduled;';
   const mod=await import('data:text/javascript;base64,'+Buffer.from(injected+source.replace(/^import .*;\r?\n/gm,'')+`\n//${Math.random()}`).toString('base64'));
   delete globalThis.__scheduled;
   return {mod,backgroundDrain,get cleared(){return cleared},get tick(){return tick},get interval(){return interval},get locks(){return locks},get owners(){return owners}};
@@ -63,6 +63,8 @@ test('historical original recovery is explicitly store-scoped, production-only, 
     $queryRaw:async(strings,...values)=>{
       assert.match(strings.join("?"), /i\."attachmentId" IS NULL AND i\."status"='RECEIVED'/);
       assert.match(strings.join("?"), /"rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM/);
+      assert.match(strings.join("?"), /m\."issueDate">=DATE '2026-11-01' AND m\."issueDate"<DATE '2026-12-01'/);
+      assert.equal(values[4],'supported-link-pattern');
       assert.match(strings.join("?"), /ORDER BY m\."fetchedAt",m\."id" LIMIT 2/);
       assert.deepEqual(values.slice(0,3), ['company','store','AADE_MYDATA_PRODUCTION']);
       calls.push('query');
