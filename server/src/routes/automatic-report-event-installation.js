@@ -18,7 +18,7 @@ export function createAutomaticReportEventInstallationRouter(db,{env=process.env
   try{
    const actor=req.user;
    if(!actor?.id||!actor.sessionId)return res.status(401).json({code:'REPORT_EVENT_INSTALL_SESSION_REQUIRED',error:'Απαιτείται ενεργή σύνδεση Super Admin.'});
-   if(actor.supportContext||actor.tokenType||!(actor.isSuperAdmin===true||actor.platformRole==='SUPER_ADMIN'))return res.status(403).json({code:'REPORT_EVENT_INSTALL_ADMIN_REQUIRED',error:'Απαιτείται πρόσβαση Platform Super Admin.'});
+   if(actor.supportContext||(actor.tokenType!==undefined&&actor.tokenType!=='BACKOFFICE_USER')||!(actor.isSuperAdmin===true||actor.platformRole==='SUPER_ADMIN'))return res.status(403).json({code:'REPORT_EVENT_INSTALL_ADMIN_REQUIRED',error:'Απαιτείται πρόσβαση Platform Super Admin.'});
    const session=await db.userSession.findUnique({where:{id:actor.sessionId},include:{user:{select:{id:true,role:true,sessionVersion:true,mustChangePassword:true}}}});
    const expires=Number(new Date(session?.expiresAt));
    if(!session||session.userId!==actor.id||session.revokedAt||!Number.isFinite(expires)||expires<=clock().getTime()||session.user?.id!==actor.id||session.user.role!=='SUPER_ADMIN'||session.user.sessionVersion!==actor.sessionVersion||session.user.mustChangePassword)return res.status(401).json({code:'REPORT_EVENT_INSTALL_SESSION_REVOKED',error:'Η σύνδεση Super Admin χρειάζεται ανανέωση.'});
