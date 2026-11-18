@@ -41,7 +41,7 @@ export function originalDownloadUrl(xml,issuerVat){
   const decoded=raw.trim().replace(/&amp;/g,"&").replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(n[0].toLowerCase()==="x"?parseInt(n.slice(1),16):Number(n)));
   let url;try{url=new URL(decoded)}catch{throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.")}
   const validIssuer = /^\d{9}$/.test(issuerVat);
-  const canonical = ["einvoice.impact.gr", "einvoice.s1ecos.gr"].includes(url.hostname)
+  const canonical = validIssuer && ["einvoice.impact.gr", "einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
   const epsilonFormat = url.pathname.match(/^\/fd\/[a-f0-9]{32}:(\d{1,3})\/?$/i)?.[1];
   const epsilon = epsilonFormat !== undefined && epsilonOriginalFormats.get(url.hostname) === epsilonFormat;
