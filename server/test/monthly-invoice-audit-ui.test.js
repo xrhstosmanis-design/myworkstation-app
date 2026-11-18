@@ -275,3 +275,22 @@ test('saved preview lines preserve actual decimal fields and escape descriptions
  setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item,{documentLines:lines,documentLinesCoverage:{available:true,truncated:true,limit:500}}):response('s','2026-10',{items:[item]}));await submit();await click('SAVED LINES');let saved=document.querySelector('[aria-label="Αποθηκευμένες γραμμές παραστατικού"]');assert.ok(saved);assert.match(saved.textContent,/πρώτες 500/);assert.match(saved.textContent,/<img src=x> saved item2.0000PACKAGE4.12348.246824.00001.97923210.226032/);assert.equal(saved.querySelector('img'),null);
  setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item,{documentLines:[],documentLinesCoverage:{available:false,truncated:false,limit:500}}):response('s','2026-10',{items:[item]}));await click('SAVED LINES');assert.match(document.querySelector('[role=dialog]').textContent,/Οι αποθηκευμένες γραμμές δεν είναι διαθέσιμες/);assert.equal(document.querySelector('[role=dialog] table'),null);
 }));
+
+test('opening a saved preview scrolls and focuses its current section for loading data and error without cross-scope focus',async()=>mounted(async({render,setResponder,submit,click,act})=>{
+ const scrolled=[],prototype=window.HTMLElement.prototype,previousScroll=prototype.scrollIntoView;
+ prototype.scrollIntoView=function(options){scrolled.push({element:this,options})};
+ try{
+  await render({onOpenInvoiceOrder:()=>{}});
+  const candidate={...row,documentNumber:'CANDIDATE NOTICE',openTarget:{kind:'ORDER',orderId:'candidate',storeId:'s',basis:'HEADER_CANDIDATE'}};
+  setResponder(async()=>response('s','2026-10',{items:[candidate]}));await submit();await click('CANDIDATE NOTICE');assert.equal(scrolled.length,0);assert.equal(document.querySelector('.ima-record-preview'),null);
+  const item={...row,documentNumber:'PREVIEW BELOW LIST',openTarget:{kind:'PREVIEW',rowId:row.id,storeId:'s'}};let release;
+  setResponder(url=>url.pathname.endsWith('/record')?new Promise(resolve=>{release=resolve}):Promise.resolve(response('s','2026-10',{items:[item]})));await submit();await click('PREVIEW BELOW LIST');
+  let preview=document.querySelector('.ima-record-preview');assert.ok(preview);assert.equal(scrolled.length,1);assert.equal(scrolled.at(-1).element,preview);assert.deepEqual(scrolled.at(-1).options,{block:'start'});assert.equal(document.activeElement,preview);assert.match(preview.textContent,/Φόρτωση παραστατικού/);
+  await act(async()=>release(recordResponse('s','2026-10',item)));preview=document.querySelector('.ima-record-preview');assert.equal(scrolled.length,2);assert.equal(document.activeElement,preview);assert.match(preview.textContent,/SAVED 2026/);
+  // A second request is another opening even while an existing preview is
+  // already in the DOM. Its loading phase must bring the user back again.
+  await click('PREVIEW BELOW LIST');assert.equal(scrolled.length,3);assert.equal(document.activeElement,document.querySelector('.ima-record-preview'));
+  const before=scrolled.length;await render({storeId:'other'});const monthInput=document.querySelector('input[type=month]');monthInput.focus();await act(async()=>release(recordResponse('s','2026-10',item)));assert.equal(scrolled.length,before);assert.equal(document.activeElement,monthInput);assert.equal(document.querySelector('.ima-record-preview'),null);
+  await render({storeId:'s'});setResponder(async url=>{if(url.pathname.endsWith('/record'))throw Error('Saved preview unavailable');return response('s','2026-10',{items:[item]})});await submit();await click('PREVIEW BELOW LIST');preview=document.querySelector('.ima-record-preview');assert.equal(document.activeElement,preview);assert.match(preview.textContent,/Saved preview unavailable/);assert.equal(scrolled.at(-1).element,preview);
+ }finally{if(previousScroll)prototype.scrollIntoView=previousScroll;else delete prototype.scrollIntoView}
+}));

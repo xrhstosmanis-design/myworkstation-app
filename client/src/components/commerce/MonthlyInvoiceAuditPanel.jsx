@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
 
 const labels={UNPOSTED_DOCUMENT:'Πρόχειρη αγορά',UPLOADED_AWAITING_REVIEW:'Ανεβασμένο - προς έλεγχο',POSSIBLE_DUPLICATE:'Πιθανό διπλό',IDENTITY_OR_LINK_REVIEW:'Χρειάζεται ταυτοποίηση',AWAITING_INVOICE:'Λείπει πρωτότυπο',REVIEW_REQUIRED:'Χρειάζεται έλεγχο',PURCHASE_LINK_REVIEW:'Προς αντιστοίχιση / έλεγχο'};
 const sourceLabels={documents:'Παραστατικά',orders:'Αγορές',inbound:'Παραλαβές myDATA',inbox:'Θυρίδα',jobs:'Συνδέσεις ανάγνωσης',attachments:'Πρωτότυπα',aliases:'Ενοποιήσεις',postings:'Καταχωρίσεις αγορών',stockPostings:'Συνδέσεις αποθήκης'};
@@ -50,6 +50,11 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
  const request=useRef(0),abort=useRef(null),current=useRef({storeId,month,api});current.current={storeId,month,api};
  const [recordObservation,setRecordObservation]=useState(null),recordRequest=useRef(0),recordAbort=useRef(null);
  const recordScope=recordObservation?.api===api&&recordObservation.storeId===storeId&&recordObservation.month===month?recordObservation:null;
+ const recordPreview=useRef(null);
+ useLayoutEffect(()=>{
+  const section=recordPreview.current;if(!section||!recordScope||!(recordScope.loading||recordScope.data||recordScope.error))return;
+  section.scrollIntoView?.({block:'start'});section.focus({preventScroll:true});
+ },[recordScope]);
  const closeRecord=()=>{recordRequest.current++;recordAbort.current?.abort();setRecordObservation(null)};
  useEffect(()=>{recordRequest.current++;recordAbort.current?.abort();setRecordObservation(null);return()=>{recordRequest.current++;recordAbort.current?.abort()}},[storeId,api,month]);
  const orderPayload=target=>target?.kind==='ORDER'&&target.storeId===storeId&&safeRecordId(target.orderId)&&['EXPLICIT','HEADER_CANDIDATE'].includes(target.basis)?{orderId:target.orderId,storeId,navigationOnly:true,readOnly:true,monthlyAudit:true,basis:target.basis}:null;
@@ -120,7 +125,7 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
    <p><b>Κατάστημα:</b> {storeName||storeId}</p>
    <form onSubmit={event=>{event.preventDefault();load()}}><label>Μήνας έκδοσης<input type="month" value={month} min="2000-01" max="2099-12" required onChange={event=>changeMonth(event.target.value)}/></label><button type="submit" disabled={loading||!month}>{loading?'Έλεγχος...':'Έλεγχος μήνα'}</button><button type="button" disabled={Boolean(previewScope?.loading)||!month} onClick={loadPreview}>{previewScope?.loading?'Προετοιμασία email...':'Προεπισκόπηση μηνιαίου email'}</button></form>
    {recordScope?.notice&&<p role="status" className="ima-warning">{recordScope.notice}</p>}
-   {(recordScope?.loading||recordScope?.error||recordScope?.data)&&<section className="ima-record-preview" role="dialog" aria-modal="false" aria-labelledby="invoice-record-preview-title"><header><h4 id="invoice-record-preview-title">Αποθηκευμένο παραστατικό</h4><button type="button" onClick={closeRecord}>Κλείσιμο παραστατικού</button></header>{recordScope.loading?<p role="status">Φόρτωση παραστατικού…</p>:recordScope.error?<p role="alert" className="ima-warning">{recordScope.error}</p>:<>
+   {(recordScope?.loading||recordScope?.error||recordScope?.data)&&<section ref={recordPreview} tabIndex={-1} className="ima-record-preview" role="dialog" aria-modal="false" aria-labelledby="invoice-record-preview-title"><header><h4 id="invoice-record-preview-title">Αποθηκευμένο παραστατικό</h4><button type="button" onClick={closeRecord}>Κλείσιμο παραστατικού</button></header>{recordScope.loading?<p role="status">Φόρτωση παραστατικού…</p>:recordScope.error?<p role="alert" className="ima-warning">{recordScope.error}</p>:<>
     <b>{recordScope.data.item.documentNumber||'Χωρίς επιβεβαιωμένο αριθμό'}</b><p>Μόνο ανάγνωση των υπαρχόντων στοιχείων. Η εγγραφή δεν αποδεικνύει από μόνη της ότι λείπει αγορά ή πληρωμή. Δεν δημιουργείται νέο πρόχειρο.</p>
     {recordScope.data.item.purchaseReview?.reason&&<p className="ima-warning">{recordScope.data.item.purchaseReview.reason}</p>}
     <SavedInvoiceSources sources={recordScope.data.sources}/><SavedInvoiceLines lines={recordScope.data.documentLines} coverage={recordScope.data.documentLinesCoverage}/>

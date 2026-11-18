@@ -16,7 +16,7 @@ async function mounted(run){
 }
 
 test('monthly number opens actual saved order lines with one inspection GET, no report/bootstrap/reconcile or editing controls',()=>mounted(async({calls,open,flush})=>{
- open();await flush();assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/purchase-orders/o/detail?inspection=true&storeId=s');assert.equal(calls[0].options.method,undefined);const dialog=document.querySelector('[data-monthly-order-inspection]');assert.ok(dialog);assert.match(dialog.textContent,/A 12/);assert.match(dialog.textContent,/EXISTING <script> line/);assert.equal(dialog.querySelectorAll('script,input,select,textarea,button[type=submit]').length,0);assert.equal(dialog.querySelectorAll('button').length,1);assert.equal(document.querySelector('.purchase-orders-suite'),null);
+ open();await flush();assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/purchase-orders/o/detail?inspection=true&storeId=s');assert.equal(calls[0].options.method,undefined);const dialog=document.querySelector('[data-monthly-order-inspection]');assert.ok(dialog);assert.equal(document.activeElement,dialog.querySelector('[data-po-close]'));assert.match(dialog.textContent,/A 12/);assert.match(dialog.textContent,/EXISTING <script> line/);assert.equal(dialog.querySelectorAll('script,input,select,textarea,button[type=submit]').length,0);assert.equal(dialog.querySelectorAll('button').length,1);assert.equal(document.querySelector('.purchase-orders-suite'),null);
 }));
 
 test('candidate inspection is explicit, rapid repeated opens keep only the latest modal, and wrong-store results are not shown',()=>mounted(async({open,flush,setHandler})=>{
