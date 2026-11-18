@@ -613,3 +613,9 @@ Single next action: owner's separate approval for production source merge/deploy
 - 18/11/2026 · Νο2 #4019 · claim #4020 merged `61989ed5` μετά green docs checks. Source `fix/no2-paid-monthly-observation`: χωριστή οικονομική κατάσταση με κοινό settlement predicate, ακριβείς δόσεις και read-only scoped πηγές. Node20 build/στοχευμένοι έλεγχοι PASS· local Chromium launch ECONNRESET και native PG SKIP διατηρούνται, πλήρες CI/εγκατάσταση/LAB OPEN. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md). Καμία νέα πληρωμή ή αλλαγή αποθέματος.
 
 - 18/11/2026 · Νο2 #4019 · source #4022 merged/installed `199916bc`, Render `dep-dbuva7mk1f9s73aq3gu0` LIVE και exact health επιβεβαιωμένα. PR/main CI SUCCESS, main 6.233 application PASS/0FAIL/2optionalWASM-SKIP +8backupPASS· actual PostgreSQL financial/allocation και Chromium μηνιαίας οθόνης PASS. Περιορισμένο LIVE Super Admin: υπάρχον πληρωμένο myDATA/POS παραστατικό εμφανίζεται Εξοφλημένο, με χωριστές workflow λεπτομέρειες. Όχι νέα πληρωμή ή αλλαγή αποθέματος. Υπόλοιπη ομαδική LAB αποδοχή/άλλοι ρόλοι και email παραμένουν εκτός αυτού του PASS. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md), [Manual](../docs/manual/monthly-invoice-audit/PASS.md).
+
+## 19/11/2026 — Νο 16 · Chat καταστημάτων / #4028
+
+Συνέχεια της ίδιας ανάθεσης στο `codex/store-chat-photo-read-swipe`. Στο `a12325ae` πέρασε το Chat browser probe 44406483121. Το πλήρες CI 44406483116 χρειάζεται την παρούσα ενεργή λίστα. Η νέα παρτίδα συγκεντρώνει γρήγορη απάντηση από ειδοποίηση, σίγαση ανά ενότητα, αναφορές προσωπικού και ομάδες, μαζί με την ανάγνωση ορατής φωτογραφίας και το σύρσιμο για απάντηση. Η αποδοχή χρήστη παραμένει μία συγκεντρωτική συνεδρία στο υπάρχον LAB.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-store-chat-photo-read-swipe.md`.

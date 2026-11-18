@@ -21,15 +21,22 @@ class ChatApi {
         byte[] result = request(path, method, body == null ? null : body.toString().getBytes(StandardCharsets.UTF_8), token, 12 * 1024 * 1024);
         return new JSONObject(new String(result, StandardCharsets.UTF_8));
     }
+    JSONObject notificationReply(String path, JSONObject body, String token) throws Exception {
+        byte[] result = request(path, "POST", body.toString().getBytes(StandardCharsets.UTF_8), token, 2048, 2500, 2500);
+        return new JSONObject(new String(result, StandardCharsets.UTF_8));
+    }
     byte[] image(String path, String token) throws Exception { return request(path, "GET", null, token, 7 * 1024 * 1024); }
     byte[] voice(String path, String token) throws Exception { return request(path, "GET", null, token, VoiceData.MAX_BYTES); }
     byte[] video(String path, String token) throws Exception { return request(path, "GET", null, token, VideoData.MAX_BYTES); }
     private byte[] request(String path, String method, byte[] body, String token, int max) throws Exception {
+        return request(path, method, body, token, max, 15000, 75000);
+    }
+    private byte[] request(String path, String method, byte[] body, String token, int max, int connectTimeout, int readTimeout) throws Exception {
         if (!path.startsWith("/api/") || path.contains("\\") || path.contains("\r") || path.contains("\n")) throw new Failure(0, "Μη έγκυρο αίτημα.");
         HttpsURLConnection connection = (HttpsURLConnection) new URL(ORIGIN + path).openConnection();
         active.add(connection);
         try {
-            connection.setConnectTimeout(15000); connection.setReadTimeout(75000);
+            connection.setConnectTimeout(connectTimeout); connection.setReadTimeout(readTimeout);
             connection.setInstanceFollowRedirects(false); connection.setUseCaches(false); connection.setRequestMethod(method);
             connection.setRequestProperty("Cache-Control", "no-store"); connection.setRequestProperty("Pragma", "no-cache");
             connection.setRequestProperty("Accept", "application/json");
