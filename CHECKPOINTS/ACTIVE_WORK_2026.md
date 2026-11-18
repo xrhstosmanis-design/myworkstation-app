@@ -1,3 +1,7 @@
+## 18/11/2026 — Νο 15 — Μερική πληρωμή φόρμας POS / AWAITING CI AND LAB
+
+Η κανονική φόρμα CASH έστελνε payments:null και απορριπτόταν από το υπάρχον checkout schema πριν από συναλλαγή. Μονογραμμική διόρθωση του caller και regression πραγματικού callback/serializer/schema. [Checkpoint](CHANGES/2026-11-18-table-service-partial-cash-form.md). Ίδια ανάθεση TABLE_SERVICE, πλήρες CI και επαναδοκιμή υπάρχοντος LAB εκκρεμούν.
+
 ## 18/11/2026 21:31 Αθήνας — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — ASSIGNED /root / BEFORE SOURCE
 
 Νέο αίτημα ιδιοκτήτη της 18/11/2026 με δύο εικόνες: ίδια επάνω φίλτρα στην αποθήκη της Κεντρικής Διαχείρισης όπως στην αποθήκη από POS. Branch `feat/central-warehouse-filter-parity-20261118`, base `0a45f48d6`. Ανεξάρτητο στενό scope εμφάνισης/αναζήτησης, χωρίς ανάληψη δικαιωμάτων, επεξεργασίας προϊόντων, imports, merges ή αποθέματος άλλων σελίδων.
