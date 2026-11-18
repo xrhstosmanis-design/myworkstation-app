@@ -4,17 +4,41 @@ import crypto from "node:crypto";
 import {invoiceDetailLines} from "./mydata-xml.js";
 
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
+// Host and format-code pairs confirmed against provider PDFs. Each host is exact.
+const epsilonOriginalFormats = new Map([
+  ["epsilondigital.epsilonnet.gr", "8"],
+  ["epsilondigital3.epsilonnet.gr", "84"],
+  ["epsilondigital14.epsilonnet.gr", "160"],
+  ["epsilondigital22.epsilonnet.gr", "190"],
+  ["epsilondigital-3rdpartd.epsilonnet.gr", "159"],
+  ["epsilondigital-enetgroup.epsilonnet.gr", "107"],
+  ["epsilondigital-nbg.epsilonnet.gr", "109"],
+  ["epsilondigitalsmart10.epsilonnet.gr", "227"],
+]);
+
+export function epsilonOriginalRecoveryLinkPattern() {
+  const formats = Array.from(epsilonOriginalFormats, ([host, code]) =>
+    host.replaceAll(".", "[.]") + "/fd/[a-f0-9]{32}:" + code).join("|");
+  return "<(?:[[:alnum:]_]+:)?downloadingInvoiceUrl[^>]*>[[:space:]]*https://(?:"
+    + formats + ")/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>";
+}
+
 export function originalDownloadUrl(xml,issuerVat){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
   const decoded=raw.trim().replace(/&amp;/g,"&").replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(n[0].toLowerCase()==="x"?parseInt(n.slice(1),16):Number(n)));
   let url;try{url=new URL(decoded)}catch{throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.")}
   const validIssuer = /^\d{9}$/.test(issuerVat);
-  const impact = validIssuer && url.hostname === "einvoice.impact.gr"
+  const canonical = ["einvoice.impact.gr", "einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
-  const epsilon = validIssuer && url.hostname === "epsilondigital.epsilonnet.gr"
-    && /^\/fd\/[a-f0-9]{32}:8\/?$/i.test(url.pathname);
-  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon)) {
+  const epsilonFormat = url.pathname.match(/^\/fd\/[a-f0-9]{32}:(\d{1,3})\/?$/i)?.[1];
+  const epsilon = epsilonFormat !== undefined && epsilonOriginalFormats.get(url.hostname) === epsilonFormat;
+  const eInvoicing = url.hostname === "e-invoicing.gr"
+    && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}\/?$/i.test(url.pathname);
+  const vitality = url.hostname === "vs.gr"
+    && /^\/iv\/invoice\/download\/([a-z0-9]{4}_\d)\/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}\/?$/i.test(url.pathname);
+  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash
+      || !validIssuer || !(canonical || epsilon || eInvoicing || vitality)) {
     throw error("Ο σύνδεσμος απαιτεί διαφορετικό υποστηριζόμενο πάροχο ή δεν συμφωνεί με το ΑΦΜ εκδότη.");
   }
   url.pathname=url.pathname.replace(/\/$/,"")+"/pdf";
