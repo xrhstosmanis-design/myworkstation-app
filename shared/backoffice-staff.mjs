@@ -5,8 +5,14 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read']);
 export const staffPermissionSections=Object.freeze([
+  {key:'pending',label:'Εκκρεμότητες Chat',actions:[
+    {key:'pending.read',label:'Προβολή εκκρεμοτήτων Chat',description:'Βλέπει τις εκκρεμότητες Chat και την κατάστασή τους στο επιλεγμένο κατάστημα.'}
+  ]},
+  {key:'promotions',label:'Προσφορές',actions:[
+    {key:'promotions.read',label:'Προβολή προσφορών και απόδοσης',description:'Βλέπει τις προσφορές και τις πωλήσεις προσφορών του επιλεγμένου καταστήματος.'}
+  ]},
   {key:'employees',label:'Προσωπικό',actions:[
     {key:'payroll.read',label:'Προβολή μισθοδοσίας',description:'Βλέπει προεπισκόπηση μισθοδοσίας, περιόδους, ποσά πληρωμών και υπόλοιπα του επιλεγμένου καταστήματος.'},
     {key:'schedule.read',label:'Προβολή προγράμματος',description:'Βλέπει το πρόγραμμα και τις αναθέσεις του επιλεγμένου καταστήματος.'},
@@ -87,6 +93,8 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  if(method==='GET'&&path==='/api/pending-center/chat-tasks')return 'pending.read';
+  if(method==='GET'&&['/api/price-catalog/promotions/scoped','/api/price-catalog/promotions/analysis'].includes(path))return 'promotions.read';
   if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/payroll\/(?:preview|periods(?:\/[^/]+)?)$/.test(path))return 'payroll.read';
   if(method==='GET'&&/^\/api\/inventory-ledger\/[^/]+\/movements$/.test(path))return 'stock.read';
   const workforceRead=method==='GET'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/(schedules|attendance|leaves)$/);
