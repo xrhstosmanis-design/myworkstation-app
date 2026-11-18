@@ -107,6 +107,43 @@ test('native original acquisition prefills the empty paid POS draft once without
  }finally{await f.close()}
 });
 
+test('native November recovery links the original PDF and keeps POS photos on the same purchase', {skip:!isolatedInvoiceDb()},async()=>{
+ const f=await invoiceDbFixture();try{
+  await f.seed({mydata:false,posLines:1});
+  await f.db.$executeRaw`ALTER TABLE "DocumentAttachment" ADD COLUMN "documentType" text, ADD COLUMN "storageKey" text`;
+  await f.db.$executeRaw`DELETE FROM "AiReaderJob" WHERE "id"='j-pdf'`;
+  await f.db.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=NULL,"status"='RECEIVED' WHERE "id"='inbox'`;
+  await f.db.$executeRaw`DELETE FROM "DocumentAttachment" WHERE "id"='pdf'`;
+  const novemberDate=new Date('2026-11-12');
+  await f.db.$executeRaw`UPDATE "MyDataInboundDocument" SET "issueDate"=${novemberDate} WHERE "id"='m'`;
+  await f.db.$executeRaw`UPDATE "PurchaseDocument" SET "documentDate"=${novemberDate} WHERE "id"='d-pos'`;
+  const before=await f.snapshot();
+  const lines=()=>f.db.$queryRaw`SELECT "id","orderId","description" FROM "PurchaseOrderLine" ORDER BY "id"`;
+  const linesBefore=await lines();
+  const bytes=Buffer.from('%PDF-1.4');
+  let downloads=0;
+  const acquire=()=>acquireOriginal(f.db,'c','s','inbox','owner',false,async()=>{
+   downloads++;
+   return {bytes,text:'verified sample',pageCount:1,checksum:'replacement-pdf-hash',filename:'recovered-original.pdf'};
+  },{reconcileExisting:true});
+  const result=await acquire();
+  assert.equal(result.downloaded,true);
+  assert.equal(result.purchaseOrderId,'pos');
+  assert.equal(result.jobId,null);
+  await acquire();
+  assert.equal(downloads,1);
+  assert.deepEqual(await f.db.$queryRaw`SELECT "id","status" FROM "PurchaseOrder"`,[{id:'pos',status:'NEW'}]);
+  assert.deepEqual(await f.db.$queryRaw`SELECT "id","purchaseDocumentId" FROM "AiReaderJob"`,[{id:'j-pos',purchaseDocumentId:'d-pos'}]);
+  assert.deepEqual(await lines(),linesBefore);
+  const photo=await loadInvoiceAssistantSource(f.db,'c','pos');
+  const pdf=await loadInvoiceAssistantSource(f.db,'c','pos',{inboxId:'inbox',storeId:'s'});
+  assert.equal(photo.pages[0].filename,'POS.jpg');
+  assert.equal(pdf.pages[0].filename,'recovered-original.pdf');
+  assert.equal(pdf.pages[0].mimeType,'application/pdf');
+  assert.equal(await f.snapshot(),before);
+ }finally{await f.close()}
+});
+
 test('native wrong scope/MARK/stale values/populated conflicts and already double-posted invoices cannot mutate the pair', {skip:!isolatedInvoiceDb()},async()=>{
  const f=await invoiceDbFixture();try{
   await f.seed({posLines:1,mydataLines:1});const preview=await common.previewInvoiceReconciliation(f.db,scope),before=await f.snapshot();
