@@ -1,0 +1,161 @@
+{
+  "format": "MWS_REPORT_COLUMN_COMPATIBILITY_V1",
+  "policy": "EXACT_SIX_EXISTING_APPLICATION_COLUMNS",
+  "ddl": [
+    "ALTER TABLE \"PurchaseOrder\" ADD COLUMN IF NOT EXISTS \"awaitingInvoice\" BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE \"StoreProduct\"\n  ADD COLUMN IF NOT EXISTS \"costPriceOverride\" DECIMAL(12,4) CHECK (\"costPriceOverride\" >= 0),\n  ADD COLUMN IF NOT EXISTS \"vatDepartmentIdOverride\" TEXT,\n  ADD COLUMN IF NOT EXISTS \"categoryIdOverride\" TEXT,\n  ADD COLUMN IF NOT EXISTS \"subcategoryIdOverride\" TEXT",
+    "ALTER TABLE \"TableOrder\" ADD COLUMN IF NOT EXISTS \"cashParts\" JSONB NOT NULL DEFAULT '[]'::jsonb"
+  ],
+  "tables": [
+    {
+      "name": "PurchaseOrder",
+      "columns": [
+        [
+          "awaitingInvoice",
+          "boolean",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "StoreProduct",
+      "columns": [
+        [
+          "costPriceOverride",
+          "numeric(12,4)",
+          false
+        ],
+        [
+          "vatDepartmentIdOverride",
+          "text",
+          false
+        ],
+        [
+          "categoryIdOverride",
+          "text",
+          false
+        ],
+        [
+          "subcategoryIdOverride",
+          "text",
+          false
+        ]
+      ]
+    },
+    {
+      "name": "TableOrder",
+      "columns": [
+        [
+          "cashParts",
+          "jsonb",
+          true
+        ]
+      ]
+    }
+  ],
+  "reviewedColumns": [
+    "StoreProduct.vatDepartmentIdOverride",
+    "StoreProduct.categoryIdOverride",
+    "StoreProduct.subcategoryIdOverride",
+    "TableOrder.cashParts"
+  ],
+  "catalogue": {
+    "columns": [
+      {
+        "table": "PurchaseOrder",
+        "name": "awaitingInvoice",
+        "position": 18,
+        "type": "boolean",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "false",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "StoreProduct",
+        "name": "costPriceOverride",
+        "position": 10,
+        "type": "numeric(12,4)",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "StoreProduct",
+        "name": "vatDepartmentIdOverride",
+        "position": 11,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreProduct",
+        "name": "categoryIdOverride",
+        "position": 12,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreProduct",
+        "name": "subcategoryIdOverride",
+        "position": 13,
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "TableOrder",
+        "name": "cashParts",
+        "position": 14,
+        "type": "jsonb",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "'[]'::jsonb",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      }
+    ],
+    "constraints": [
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreProduct",
+        "name": "StoreProduct_costPriceOverride_check",
+        "kind": "c",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "CHECK (\"costPriceOverride\" >= 0::numeric)"
+      }
+    ],
+    "indexes": []
+  }
+}

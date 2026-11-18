@@ -1,3 +1,4 @@
+import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../src/lib/invoice-line-taxonomy.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -33,12 +34,26 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const calc=source.slice(source.indexOf('function calc('),source.indexOf('async function learnConfirmedLineCorrection('));
   const lineSchema=source.slice(source.indexOf('const lineSchema='),source.indexOf('router.get("/report",'));
   const auditState=source.slice(source.indexOf('const auditLineState='),source.indexOf('async function writePurchaseAudit('));
-  const lineStart=source.indexOf('router.patch("/:orderId/lines/:lineId",'),lineEnd=source.indexOf('\nrouter.delete("/:orderId/lines/:lineId",',lineStart);let editLine;
-  const lineBindings={...deps,router:{patch:(_path,h)=>editLine=h},n:value=>Number(value||0),purchasePrintedRounding,lockEditablePurchaseOrder,
+  const lineStart=source.indexOf('router.patch("/:orderId/lines/:lineId",'),lineEnd=source.indexOf('\nrouter.delete("/:orderId/lines/:lineId",',lineStart);let editLine,transferLines;
+  const lineBindings={...deps,invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,router:{patch:(_path,h)=>editLine=h,post:(_path,h)=>transferLines=h},product:async()=>null,n:value=>Number(value||0),purchasePrintedRounding,lockEditablePurchaseOrder,
    line:async(_company,id)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"=${id}`)[0],
    learnConfirmedLineCorrection:()=>assert.fail('store-only staff edit must not change company supplier learning'),learnCentralInvoiceCorrection:()=>assert.fail('store-only staff edit must not change cross-company learning')};
-  new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(lineStart,lineEnd))(...Object.values(lineBindings));
+  new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(source.indexOf('function purchaseBatchError('),source.indexOf('router.post("/:orderId/lines",'))+source.slice(lineStart,lineEnd)+source.slice(source.indexOf('const assistantTransferSchema='),source.indexOf('router.patch("/:orderId/lines/:lineId/product-card"')))(...Object.values(lineBindings));
   const changedLine=await invoke(editLine,'invoices.edit',{description:'Reviewed store-only line',quantity:3});assert.ifError(changedLine.failure);assert.equal(changedLine.result.ok,true);assert.equal(changedLine.result.mappingLearned,false);assert.equal(changedLine.result.centralLearning.learned,false);assert.equal(await f.snapshot(),before);
+  const [draft]=await db.$queryRaw`SELECT "storeId","sourceDocumentId","reopenVersion" FROM "PurchaseOrder" WHERE "id"='pos'`;
+  const rowSnapshot=()=>db.$queryRaw`SELECT "id","description","updatedAt" FROM "PurchaseOrderLine" WHERE "orderId"='pos'`;
+  const linesBefore=await rowSnapshot();
+  const auditCount=async()=>Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreOperatorAudit" WHERE "eventType"='INVOICE_LINE_CORRECTED'`)[0].count);
+  const auditBefore=await auditCount();
+  const payload={...draft,reopenVersion:Number(draft.reopenVersion),snapshot:linesBefore.map(row=>({id:row.id,updatedAt:row.updatedAt.toISOString()})),
+    updates:[{id:'line-pos',patch:{description:'Must roll back'}}],additions:[{productId:'missing-product',description:'Invalid second operation'}],deletions:[]};
+  const failedTransfer=await invoke(transferLines,'invoices.edit',payload);
+  assert.equal(failedTransfer.failure?.status,404);
+  assert.deepEqual(await rowSnapshot(),linesBefore);
+  assert.equal(await auditCount(),auditBefore);
+  const savedTransfer=await invoke(transferLines,'invoices.edit',{...payload,additions:[],updates:[{id:'line-pos',patch:{description:'Reviewed store-only line'}}]});
+  assert.ifError(savedTransfer.failure);
+  assert.equal(savedTransfer.result.count,1);
   const handlers={},router={use:()=>{},post:()=>{},delete:()=>{},patch:(path,h)=>handlers[path]=h};
   const posting=(await readFile(new URL('../src/routes/purchase-order-posting-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
   const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(db,requireStaffAction);

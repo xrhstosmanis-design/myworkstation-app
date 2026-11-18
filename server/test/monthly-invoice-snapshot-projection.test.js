@@ -67,6 +67,15 @@ test('unknown and outside-month primary dates stay visible but refuse freezing w
  assert.deepEqual(Object.keys(original).sort(),['counts','items']);
 });
 
+test('ordinary posting reconciliation cannot alter raw classifier or persisted D1 projection dates amounts and categories',async()=>{
+ const facts=empty();facts.documents=[doc('source',{documentNumber:'A 1',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'order',totalGross:'12.34'}),doc('order',{documentNumber:'A 1',sourceType:'PURCHASE_ORDER',status:'APPROVED',issueDay:'2026-09-05',totalGross:'12.3432'})];
+ facts.orders=[{id:'order',sourceDocumentId:'source',supplierId:'sup',invoiceNumber:'A 1',status:'INVOICED',createdAt:'2026-09-05'}];facts.postings=[{orderId:'order',purchaseDocumentId:'order'}];facts.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'order',path:'PURCHASE_ORDER'}];
+ const before=JSON.stringify(facts),raw=classifyInvoiceMonth(facts,invoiceAuditMonth(input.month)),f=fixture({facts}),first=await project(f.tx,actor,input),ordinary=await readMonthlyInvoiceAudit(f.db,actor,input),second=await project(fixture({facts}).tx,actor,input);
+ assert.equal(raw.counts.logicalRecords,2);assert.equal(raw.counts.unposted,1);assert.equal(ordinary.summary.logicalRecords,1);assert.equal(ordinary.summary.unposted,0);assert.equal(ordinary.items[0].postingProjections.length,1);
+ assert.deepEqual(first.invoices,second.invoices);assert.deepEqual(first.invoices.items.map(row=>({id:row.id,issueDay:row.issueDay,categories:row.categories})),raw.items.map(row=>({id:row.id,issueDay:row.issueDay,categories:row.categories})));
+ assert.equal(first.invoices.items.find(row=>row.id==='doc:order').totalAmount,'12.3432');assert.equal(first.invoices.items.find(row=>row.id==='doc:order').issueDay,'2026-09-05');assert.equal(first.invoices.items.some(row=>Object.hasOwn(row,'postingProjections')),false);assert.equal(JSON.stringify(facts),before);assert.deepEqual(classifyInvoiceMonth(facts,invoiceAuditMonth(input.month)),raw);
+});
+
 test('transaction admission refuses writable/default/stale/future/malformed and caller clocks before source reads',async()=>{
  for(const state of [{readOnly:'off'},{isolation:'read committed'},{ageMs:'30000.001'},{ageMs:'-1'},{transactionStartedAt:'2026-10-29T10:00:02.000Z'},{readAt:'bad'}]){
   const f=fixture({state});await assert.rejects(project(f.tx,actor,input));assert.equal(f.calls.includes('USER'),false);

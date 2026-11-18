@@ -21,7 +21,15 @@ test('manual draft transfer retains page warnings and requires fresh human confi
    if(path.endsWith('/source'))return {document:{totalGross:2.48,supplierTaxId:'123456789'},pages:[]};
    if(path.endsWith('/preview'))return preview;
    if(path.endsWith('/detail'))return {order:{...order,status:closed?'CLOSED':'NEW'},lines:lines.map(x=>({...x})),totals:{net:lines.length*2,vat:lines.length*.48,gross:lines.length*2.48}};
-   if(options.method){writes.push({path,...options});const line={...JSON.parse(options.body),id:`line-${writes.length}`,netAmount:2,grossAmount:2.48};lines.push(line);return {id:line.id}}
+   if(path.endsWith('/assistant-line-transfer')){
+    assert.equal(options.method,'POST');
+    writes.push({path,...options});
+    const {snapshot,updates,additions,deletions}=JSON.parse(options.body);
+    assert.deepEqual(snapshot,lines.map(({id,updatedAt})=>({id,updatedAt})));
+    const added=additions.map((line,index)=>({...line,id:`line-${lines.length+index+1}`,updatedAt:new Date().toISOString(),netAmount:2,grossAmount:2.48}));
+    lines=lines.filter(line=>!deletions.includes(line.id)).map(line=>({...line,...updates.find(update=>update.id===line.id)?.patch})).concat(added);
+    return {count:updates.length+added.length+deletions.length,addedIds:added.map(line=>line.id)};
+   }
    throw new Error(`Unexpected fixture path ${path}`);
   };
   dom.window.confirm=()=>{confirms++;return confirmation};
@@ -38,23 +46,23 @@ test('manual draft transfer retains page warnings and requires fresh human confi
   assert.equal(s.q('[data-apply]').hidden,false);assert.match(s.q('[role="alert"]').textContent,/PAGE WARNING/);assert.doesNotMatch(s.q('[role="alert"]').textContent,/Οι προτάσεις δεν εφαρμόζονται/);
   s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,0);assert.equal(s.confirms(),1);
   s.q('[data-minimize]').click();s.q('[data-invoice-assistant-restore]').click();assert.equal(s.q('[data-apply]').hidden,false);
-  s.confirm();s.q('[data-apply]').click();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.match(s.writes[0].path,/same-draft\/lines$/);assert.equal(s.writes[0].method,'POST');assert.match(s.q('[role="alert"]').textContent,/PAGE WARNING/);
+  s.confirm();s.q('[data-apply]').click();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.match(s.writes[0].path,/same-draft\/assistant-line-transfer$/);assert.equal(s.writes[0].method,'POST');assert.match(s.q('[role="alert"]').textContent,/PAGE WARNING/);
   s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);
-  s.preview({pagesComplete:false,pageWarning:'SECOND WARNING',printedTotal:2.48,printedLines:[{...row,matchingLineId:'line-1',description:'Corrected'}],corrections:[]});s.q('[data-ask]').click();await s.tick();s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.confirms(),3);assert.equal(s.writes.length,2);assert.equal(s.writes[1].method,'PATCH');
+  s.preview({pagesComplete:false,pageWarning:'SECOND WARNING',printedTotal:2.48,printedLines:[{...row,matchingLineId:'line-1',description:'Corrected'}],corrections:[]});s.q('[data-ask]').click();await s.tick();s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.confirms(),3);assert.equal(s.writes.length,2);assert.equal(JSON.parse(s.writes[1].body).updates[0].patch.description,'Corrected');
  });
  await scenario({pagesComplete:true},async s=>{s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(s.confirms(),0)});
- await scenario({printedLines:[{...row,unitCost:2,netAmount:4,grossAmount:4.96}]},async s=>{assert.equal(s.q('[data-apply]').hidden,false);s.confirm();s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,0);assert.equal(s.confirms(),0);s.edit('discount1',50);s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(JSON.parse(s.writes[0].body).discount1,50)});
+ await scenario({printedLines:[{...row,unitCost:2,netAmount:4,grossAmount:4.96}]},async s=>{assert.equal(s.q('[data-apply]').hidden,false);s.confirm();s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,0);assert.equal(s.confirms(),0);s.edit('discount1',50);s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(JSON.parse(s.writes[0].body).additions[0].discount1,50)});
  await scenario({printedLines:[{...row,invoiceUnit:''}]},async s=>{s.confirm();s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,0);assert.equal(s.confirms(),0);s.edit('invoiceUnit','PIECE');s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1)});
  await scenario({printedQuantityTotal:3},async s=>{s.confirm();s.select();assert.equal(s.q('[data-apply]').disabled,true);s.q('[data-confirm-quantity]').checked=true;s.q('[data-confirm-quantity]').dispatchEvent(new s.dom.window.Event('change',{bubbles:true}));assert.equal(s.q('[data-apply]').disabled,false);s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(s.confirms(),1)});
  await scenario({},async s=>{s.confirm();s.select();s.closeDraft();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,0);assert.match(s.q('[data-status]').textContent,/δεν είναι πλέον/)});
- await scenario({pagesComplete:true,printedLines:[{...row,stockUnitsPerInvoiceUnit:''}]},async s=>{assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'1');s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(JSON.parse(s.writes[0].body).stockUnitsPerInvoiceUnit,1)});
- await scenario({pagesComplete:true,printedLines:[{...row,invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:''}]},async s=>{s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,0);assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'');s.edit('invoiceUnit','PIECE');assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'1');s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(JSON.parse(s.writes[0].body).invoiceUnit,'PIECE')});
- await scenario({pagesComplete:true,printedLines:[{...row,invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:'6'}]},async s=>{s.edit('invoiceUnit','PIECE');assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'6');s.select();s.q('[data-apply]').click();await s.tick();assert.equal(JSON.parse(s.writes[0].body).stockUnitsPerInvoiceUnit,6)});
+ await scenario({pagesComplete:true,printedLines:[{...row,stockUnitsPerInvoiceUnit:''}]},async s=>{assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'1');s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(JSON.parse(s.writes[0].body).additions[0].stockUnitsPerInvoiceUnit,1)});
+ await scenario({pagesComplete:true,printedLines:[{...row,invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:''}]},async s=>{s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,0);assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'');s.edit('invoiceUnit','PIECE');assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'1');s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);assert.equal(JSON.parse(s.writes[0].body).additions[0].invoiceUnit,'PIECE')});
+ await scenario({pagesComplete:true,printedLines:[{...row,invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:'6'}]},async s=>{s.edit('invoiceUnit','PIECE');assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'6');s.select();s.q('[data-apply]').click();await s.tick();assert.equal(JSON.parse(s.writes[0].body).additions[0].stockUnitsPerInvoiceUnit,6)});
  await scenario({pagesComplete:true,printedTotal:29.76,printedQuantityTotal:24,printedLines:Array.from({length:12},(_,i)=>({...row,sequence:i+1,supplierCode:'FIXTURE'+i,invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:''}))},async s=>{
   s.q('[data-confirm-one-unit]').click();assert.equal(s.confirms(),0);assert.equal(s.writes.length,0);
   s.select();s.q('[data-confirm-one-unit]').click();assert.equal(s.confirms(),1);assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'');assert.equal(s.writes.length,0);
   s.confirm();s.q('[data-confirm-one-unit]').click();assert.equal(s.confirms(),2);assert.ok([...document.querySelectorAll('[data-field="stockUnitsPerInvoiceUnit"]')].every(el=>el.value==='1'));assert.ok([...document.querySelectorAll('[data-field="invoiceUnit"]')].every(el=>el.value==='PACKAGE'));assert.equal(s.writes.length,0);
-  s.q('[data-apply]').click();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,12);assert.ok(s.writes.every(w=>w.method==='POST'&&w.path.endsWith('same-draft/lines')&&JSON.parse(w.body).stockUnitsPerInvoiceUnit===1));s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,12);
+  s.q('[data-apply]').click();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);const {additions}=JSON.parse(s.writes[0].body);assert.equal(additions.length,12);assert.ok(additions.every(line=>line.stockUnitsPerInvoiceUnit===1));s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,1);
  });
  await scenario({printedLines:[]},async s=>{assert.equal(s.q('[data-apply]').hidden,true);assert.equal(s.writes.length,0)});
 });

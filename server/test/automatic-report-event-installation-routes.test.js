@@ -4,11 +4,12 @@ import express from 'express';
 import {createAutomaticReportEventInstallationRouter} from '../src/routes/automatic-report-event-installation.js';
 
 test('event installation HTTP requires current platform session and binds packet, scope and server controls',async()=>{
- const calls=[];let revoked=false,role='SUPER_ADMIN',sessionVersion=3,mustChangePassword=false;
+ const calls=[];let revoked=false,role='SUPER_ADMIN',sessionVersion=3,mustChangePassword=false,catalogDrift=false;
  const actor={id:'admin',sessionId:'session',sessionVersion:3,tokenType:'BACKOFFICE_USER',role:'OWNER',platformRole:'SUPER_ADMIN',isSuperAdmin:true};
  const db={userSession:{findUnique:async()=>({userId:'admin',expiresAt:'2030-01-01',revokedAt:revoked?new Date():null,user:{id:'admin',role,sessionVersion,mustChangePassword}})}};
  const env={RENDER_GIT_COMMIT:'a'.repeat(40)};
  const createInstallation=async(_db,options)=>{
+  if(catalogDrift)throw Object.assign(new Error("private catalogue details"),{status:409,code:"REPORT_COLUMN_CATALOGUE_CHANGED"});
   calls.push({options});
   return {describe:()=>({profile:options.profile}),inspect:async(user,input)=>{calls.push({user,input,action:'inspect'});return {eligible:true}},install:async(user,input)=>{calls.push({user,input,action:'install'});return {installed:true}}};
  };
@@ -49,6 +50,11 @@ test('event installation HTTP requires current platform session and binds packet
   env.AUTOMATIC_REPORT_EVENT_INSTALL_ENABLED='1';
   assert.equal((await send('/install',{profile:'CAPTURE',packet,explicitAuthorization:true})).status,200);
   assert.equal(calls.at(-2).options.enabled,true);
+  catalogDrift=true;
+  const drift=await send('/inspect',{profile:'CAPTURE_REPORTS_ONLY_V2'});
+  assert.equal(drift.status,409);
+  const rejected=await drift.json();assert.equal(rejected.code,'REPORT_COLUMN_CATALOGUE_CHANGED');
+  assert.doesNotMatch(rejected.error,/private catalogue/);
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
 });
 
