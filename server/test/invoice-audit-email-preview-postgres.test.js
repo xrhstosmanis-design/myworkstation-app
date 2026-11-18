@@ -49,7 +49,10 @@ test('native registered invoice email preview reads actual known findings and fr
   await db.$executeRawUnsafe(`INSERT INTO "Store" VALUES('s','c','Synthetic LAB',true),('control','c','Control',true),('foreign','x','Foreign',true)`);
   await db.$executeRawUnsafe(`INSERT INTO "CompanyModule" VALUES('module','c','INVENTORY',true,NULL,NULL)`);
   await db.$executeRawUnsafe(`INSERT INTO "Supplier" VALUES('sup','c','Synthetic supplier','099999999')`);
-  await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES('doc','c','s','sup','INVOICE','A 1','2026-10-03',12.34,'DRAFT','MANUAL',NULL,NULL,'2026-10-03')`);
+  // The known purchase draft has a real bidirectional source/order link. An
+  // unlinked document now correctly belongs to ordinary matching review.
+  await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES('doc','c','s','sup','INVOICE','A 1','2026-10-03',12.34,'DRAFT','MANUAL','draft-order',NULL,'2026-10-03')`);
+  await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrder" VALUES('draft-order','c','s','sup','NEW','A 1','doc','2026-10-03')`);
   await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","supplierName","amount","actorId","actorName","occurredAt","invoiceDocumentNumber","paymentMethod","subtractFromShift","sessionId","type") VALUES('pending','c','s','sup','Synthetic supplier',1,'owner','Owner','2026-10-01','OLD 1','CASH',false,NULL,'SUPPLIER_PAYMENT')`);
   await db.$executeRawUnsafe(`INSERT INTO "StoreOperatorAudit" VALUES('audit','c','s','POS_INVOICE_PENDING_CREATED','owner',jsonb_build_object('version','POS_DEFERRED_INVOICE_V1','transactionId','pending','paymentMethod','CASH','paymentSource','EXTERNAL','supplierId','sup','documentNumber','OLD 1','documentDate','2025-01-01','amountCents',100,'contextSessionId','synthetic','terminalPos','SYNTHETIC','fingerprint',repeat('b',64)))`);
   await db.$executeRawUnsafe(`INSERT INTO "AutomaticReportRecipient" VALUES('r','c','s','alice@example.test',2,'2026-01-01',NULL),('foreign-r','x','foreign','PRIVATE-FOREIGN@example.test',1,'2026-01-01',NULL)`);
@@ -86,8 +89,9 @@ test('native registered invoice email preview reads actual known findings and fr
 
   await t.test('missing recipient schema is unavailable, never bootstrapped; missing report source remains unknown',async()=>{
    await db.$executeRawUnsafe('ALTER TABLE "AutomaticReportRecipient" RENAME TO "SavedRecipient"');
-   const r=await read();assert.equal(r.recipients.available,false);assert.equal(r.recipients.verifiedCount,null);assert.equal(r.payload.summary.unposted,1);const [exists]=await db.$queryRawUnsafe(`SELECT to_regclass('"AutomaticReportRecipient"') IS NOT NULL AS exists`);assert.equal(exists.exists,false);await db.$executeRawUnsafe('ALTER TABLE "SavedRecipient" RENAME TO "AutomaticReportRecipient"');
-   await db.$executeRawUnsafe('ALTER TABLE "InvoiceDraftAlias" RENAME TO "SavedAlias"');const unknown=await read();assert.equal(unknown.payload.coverage.complete,false);assert.equal(unknown.payload.summary,null);assert.match(unknown.payload.body,/ΑΓΝΩΣΤΗ/);await db.$executeRawUnsafe('ALTER TABLE "SavedAlias" RENAME TO "InvoiceDraftAlias"');
+   try{const r=await read();assert.equal(r.recipients.available,false);assert.equal(r.recipients.verifiedCount,null);assert.equal(r.payload.summary.unposted,1);const [exists]=await db.$queryRawUnsafe(`SELECT to_regclass('"AutomaticReportRecipient"') IS NOT NULL AS exists`);assert.equal(exists.exists,false)}finally{await db.$executeRawUnsafe('ALTER TABLE "SavedRecipient" RENAME TO "AutomaticReportRecipient"')}
+   await db.$executeRawUnsafe('ALTER TABLE "InvoiceDraftAlias" RENAME TO "SavedAlias"');
+   try{const unknown=await read();assert.equal(unknown.payload.coverage.complete,false);assert.equal(unknown.payload.summary,null);assert.match(unknown.payload.body,/ΑΓΝΩΣΤΗ/)}finally{await db.$executeRawUnsafe('ALTER TABLE "SavedAlias" RENAME TO "InvoiceDraftAlias"')}
   });
 
   await t.test('both source observations are read-only snapshots and an over-limit recipient source is never partial exact',async()=>{
