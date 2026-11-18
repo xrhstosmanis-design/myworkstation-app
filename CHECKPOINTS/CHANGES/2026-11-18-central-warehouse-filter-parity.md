@@ -1,3 +1,7 @@
+## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — PUBLICATION APPROVED / RECONCILED MAIN
+
+Ο ιδιοκτήτης ενέκρινε τη συγχώνευση και δημοσίευση του #4029 και επανέλαβε «συνεχισε»/«ξεκινα». Η έγκριση ισχύει. Τοπική συμφιλίωση με main c88b7aad (διατηρούνται οι αλλαγές εστίασης #4023/#4024) επιλύει μόνο σύγκρουση προθέματος στην κοινή ενεργή καταγραφή. Οι δύο εγκεκριμένοι warehouse UI/CSS blobs παραμένουν ακριβώς ίδιοι με eee2f0e997140fc207f8d9d9575c295e2b401306. Καμία αλλαγή της ζητούμενης λειτουργίας, δικαιωμάτων ή δεδομένων. Το προηγούμενο PR CI 44383411469 παραμένει ιστορικό PASS της αρχικής έκδοσης· η νέα συνδυασμένη έκδοση απαιτεί δικό της πλήρες CI πριν από merge και κανονικό guarded deploy. Καμία νέα έγκριση ή επανάληψη δοκιμής χρήστη δεν ζητείται.
+
 ## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — SOURCE CANDIDATE / AWAITING CI AND LAB
 
 Before-source claim #4027 merged `44ccf51976ba7baa03e37f582e260fd914bf9796`. Same /root owner, independent source scope retained. The Central/Owner archive now renders the existing VAT department and margin range controls already used by POS, with the same responsive filter panel and visible Filters focus/scroll action. Category/subcategory/status selections apply immediately like POS and reset pagination. Search, VAT, margin, selected-store read binding, capabilities, readOnly and staff edit boundaries retain their existing semantics. No backend/API, product/stock/price, permission, module, schema or financial/fiscal change.

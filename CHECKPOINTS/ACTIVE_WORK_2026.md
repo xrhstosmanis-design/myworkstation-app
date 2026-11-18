@@ -1,3 +1,7 @@
+## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — PUBLICATION APPROVED / RECONCILED MAIN
+
+Ο ιδιοκτήτης ενέκρινε τη συγχώνευση και δημοσίευση του #4029 και επανέλαβε «συνεχισε»/«ξεκινα». Η έγκριση ισχύει. Τοπική συμφιλίωση με main c88b7aad (διατηρούνται οι αλλαγές εστίασης #4023/#4024) επιλύει μόνο σύγκρουση προθέματος στην κοινή ενεργή καταγραφή. Οι δύο εγκεκριμένοι warehouse UI/CSS blobs παραμένουν ακριβώς ίδιοι με eee2f0e997140fc207f8d9d9575c295e2b401306. Καμία αλλαγή της ζητούμενης λειτουργίας, δικαιωμάτων ή δεδομένων. Το προηγούμενο PR CI 44383411469 παραμένει ιστορικό PASS της αρχικής έκδοσης· η νέα συνδυασμένη έκδοση απαιτεί δικό της πλήρες CI πριν από merge και κανονικό guarded deploy. Καμία νέα έγκριση ή επανάληψη δοκιμής χρήστη δεν ζητείται.
+
 ## 18/11/2026 — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — SOURCE CANDIDATE / AWAITING CI AND LAB
 
 Before-source claim #4027 merged `44ccf51976ba7baa03e37f582e260fd914bf9796`. Same /root owner, independent source scope retained. The Central/Owner archive now renders the existing VAT department and margin range controls already used by POS, with the same responsive filter panel and visible Filters focus/scroll action. Category/subcategory/status selections apply immediately like POS and reset pagination. Search, VAT, margin, selected-store read binding, capabilities, readOnly and staff edit boundaries retain their existing semantics. No backend/API, product/stock/price, permission, module, schema or financial/fiscal change.
@@ -7,6 +11,10 @@ Local validation on Node24.22.1: retained inventory-bulk-merge-mounted, inventor
 Final frontend build PASS (Vite30.18s), TABLE_SERVICE bundle verification PASS, diff --check PASS. Local Chromium visual execution was unavailable because the execution environment denied its process-singleton socket; no screenshot or visual/device PASS is claimed. The CSS reuses the existing POS filter layout and adds single-column narrow forms. Full exact-head Node20 CI and installed Central/physical-device acceptance remain outstanding.
 
 Next: source PR/full CI; owner approval for source merge/publication; existing LAB/common final acceptance without changing stock, prices, permissions or stores. Do not repeat prior POS Filters USER PASS, and do not confuse the earlier PDF/shift-close acceptance with this independent warehouse request. Manual PASS is unchanged until genuine acceptance.
+
+## 18/11/2026 — Νο 15 — Μερική πληρωμή φόρμας POS / AWAITING CI AND LAB
+
+Η κανονική φόρμα CASH έστελνε payments:null και απορριπτόταν από το υπάρχον checkout schema πριν από συναλλαγή. Μονογραμμική διόρθωση του caller και regression πραγματικού callback/serializer/schema. [Checkpoint](CHANGES/2026-11-18-table-service-partial-cash-form.md). Ίδια ανάθεση TABLE_SERVICE, πλήρες CI και επαναδοκιμή υπάρχοντος LAB εκκρεμούν.
 
 ## 18/11/2026 21:31 Αθήνας — CENTRAL-WAREHOUSE-FILTER-PARITY-01 — ASSIGNED /root / BEFORE SOURCE
 
@@ -623,3 +631,7 @@ Single next action: owner's separate approval for production source merge/deploy
 - 18/11/2026 · Νο2 #4019 · claim #4020 merged `61989ed5` μετά green docs checks. Source `fix/no2-paid-monthly-observation`: χωριστή οικονομική κατάσταση με κοινό settlement predicate, ακριβείς δόσεις και read-only scoped πηγές. Node20 build/στοχευμένοι έλεγχοι PASS· local Chromium launch ECONNRESET και native PG SKIP διατηρούνται, πλήρες CI/εγκατάσταση/LAB OPEN. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md). Καμία νέα πληρωμή ή αλλαγή αποθέματος.
 
 - 18/11/2026 · Νο2 #4019 · source #4022 merged/installed `199916bc`, Render `dep-dbuva7mk1f9s73aq3gu0` LIVE και exact health επιβεβαιωμένα. PR/main CI SUCCESS, main 6.233 application PASS/0FAIL/2optionalWASM-SKIP +8backupPASS· actual PostgreSQL financial/allocation και Chromium μηνιαίας οθόνης PASS. Περιορισμένο LIVE Super Admin: υπάρχον πληρωμένο myDATA/POS παραστατικό εμφανίζεται Εξοφλημένο, με χωριστές workflow λεπτομέρειες. Όχι νέα πληρωμή ή αλλαγή αποθέματος. Υπόλοιπη ομαδική LAB αποδοχή/άλλοι ρόλοι και email παραμένουν εκτός αυτού του PASS. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md), [Manual](../docs/manual/monthly-invoice-audit/PASS.md).
+
+## 18/11/2026 — Νο 15 · Χρεώσιμες επιλογές από κινητό
+
+Συνέχεια TABLE_SERVICE /root, υποβοηθός /root/mobile, branch `feat/table-service-mobile-priced-options-20261118`. Η κινητή παραγγελιοληψία επιλέγει πραγματικές χρεώσιμες επιλογές και εμφανίζει γραμμή/σύνολο/επιβεβαίωση με την επιβάρυνση. Ο server επαληθεύει τιμές και προϊόντα. Εισφορά/SET διατηρούνται στο POS. Τοπικά Node20: 5/5 πραγματικές mounted React δοκιμές και production build PASS. CI, εγκατάσταση και κοινή δοκιμή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-18-table-service-mobile-priced-options.md).
