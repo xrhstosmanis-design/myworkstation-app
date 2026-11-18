@@ -1,3 +1,9 @@
+## 18/11/2026 — Νο 15 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ c88b7aad / ΜΕΡΙΚΗ LIVE ΑΠΟΔΟΧΗ / OPEN
+
+Ίδιος υπεύθυνος /root, ίδια ανάθεση TABLE_SERVICE. #4023/#4024 εγκαταστάθηκαν μέσω πλήρους main CI44385977787 (5SUCCESS, 6241PASS/0FAIL/2προαιρετικάSKIP +8backupPASS) και κανονικού guarded release44390636363· Render dep-dbv0j1brjlhs73aguvl0 LIVE 18/11 22:29:52 Ελλάδας, ακριβές c88b7aad, ανεξάρτητο health200/oktrue από τον συντονιστή. Νέο scoped LIVE PASS: μεταφορά/διαίρεση/ένωση, αλλαγή σερβιτόρου, μπλοκάρισμα επαναποστολής φορτωμένων γραμμών, 3 ανεξάρτητα KDS READY (3→2→1→0), πραγματική κινητή ροή responsive browser με χρέωση0,50€ σε καφέ1€ και μία αποστολή1,50€ / μία γραμμή / ένα δελτίο / ένα request / ένα Audit. Δεν επαναλαμβάνονται αυτά ή το ιστορικό τραπέζι3€.
+
+Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό έλεγχο δύο ενεργών συνθετικών ταμειακών στο κοινό LAB· cashParts[]/saleIdnull/μηδέν ledger μερικής/stock-2 αμετάβλητα. Καμία αλλαγή συσκευής ή παράκαμψη. Νέο χρεώσιμο δελτίο: KDS persistence PASS, δικό του οπτικό READY εκκρεμεί μετά την αλλαγή κοινής OWNER συνεδρίας. Φυσικό Android offline/αμφίβολη απόκριση και εκτυπωτής NOT TESTED. Τα CI/native αποτελέσματα είναι χωριστά. [Ακριβές checkpoint](CHANGES/2026-11-18-table-service-live-acceptance.md) · [Επιβεβαιωμένες οδηγίες](../docs/manual/table-service/PASS.md). Το παρόν υπερισχύει μόνο των παλιών AWAITING CI/εγκατάστασης για τα ίδια #4023/#4024· το συνολικό scope παραμένει OPEN.
+
 ## 18/11/2026 — Νο2 — verified ordinary posting projection / ASSIGNED BEFORE SOURCE
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
