@@ -1,3 +1,4 @@
+import {validateInvoiceTaxonomy} from "../src/lib/invoice-line-taxonomy.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -40,16 +41,16 @@ function createHandler(db,central=async()=>{}){
  const ownedLine=new Function('prisma',ownedText+';return ownedLine;')(db);
  let handler;const router={post(path,fn){assert.equal(path,'/:orderId/ocr-lines/:lineId/create-product');handler=fn}};
  const text=source.slice(source.indexOf('router.post("/:orderId/ocr-lines/:lineId/create-product"'),source.indexOf('\nexport default router;'));
- new Function('router','prisma','z','id','ownedLine','learnSupplierMapping','learnCentralInvoiceCorrection','ean13','generateInternalBarcode','lockEditablePurchaseOrder',text)(router,db,z,randomUUID,ownedLine,learn,central,()=>{throw Error('unexpected generated barcode')},()=>{throw Error('unexpected generated barcode')},lockEditablePurchaseOrder);
+ new Function('router','prisma','z','id','ownedLine','learnSupplierMapping','learnCentralInvoiceCorrection','ean13','generateInternalBarcode','lockEditablePurchaseOrder','validateInvoiceTaxonomy',text)(router,db,z,randomUUID,ownedLine,learn,central,()=>{throw Error('unexpected generated barcode')},()=>{throw Error('unexpected generated barcode')},lockEditablePurchaseOrder,validateInvoiceTaxonomy);
  return async(actor,body)=>{let status=200,data,error;const res={status(n){status=n;return this},json(v){data=v;return this}};await handler({user:{companyId:'company',...actor},params:{orderId:'order',lineId:'line'},body},res,e=>{error=e});if(error)throw error;return {status,data}};
 }
-const form={name:'Synthetic new item',supplierCode:'SUP1',barcodeMode:'PROVIDED',barcode:'5200000000018',quantity:3,unitCost:2,vatRate:13,salePrice:3};
+const form={categoryId:'cat',subcategoryId:'sub',vatDepartmentId:'vat13',name:'Synthetic new item',supplierCode:'SUP1',barcodeMode:'PROVIDED',barcode:'5200000000018',quantity:3,unitCost:2,vatRate:13,salePrice:3};
 test('native actual create-product route: legacy FK failure; POS collision, Owner, platform and invalid-user attribution preserve product/barcode/line atomicity',{skip:!isolated()},async()=>{
  for(const [actor,expected] of [[{id:'operator',tokenType:'STORE_OPERATOR'},null],[{id:'collision',tokenType:'STORE_OPERATOR',role:'SUPER_ADMIN'},null],[{id:'owner',role:'OWNER'},'owner'],[{id:'platform',role:'SUPER_ADMIN'},'platform'],[{id:'foreign-user',role:'OWNER'},null],[{id:'deleted',role:'OWNER'},null]]){
   const f=await routeFixture();try{
    await assert.rejects(()=>f.db.$executeRaw`INSERT INTO "SupplierProductMapping"("id","confirmedByUserId") VALUES('legacy','operator')`,/foreign key/);
    const before=await snapshot(f.db),result=await createHandler(f.db)(actor,form);assert.equal(result.status,201);
-   const after=await snapshot(f.db);assert.equal(after.Product.length,1);assert.equal(after.ProductBarcode.length,1);assert.equal(after.ProductBarcode[0].row.productId,result.data.productId);assert.equal(after.PurchaseOrderLine[0].row.productId,result.data.productId);assert.equal(after.SupplierProductMapping[0].row.confirmedByUserId,expected);assert.equal(after.SupplierProductLink[0].row.updatedBy,actor.id);
+   const after=await snapshot(f.db);assert.equal(after.Product.length,1);assert.equal(after.Product[0].row.vatDepartmentId,'vat13');assert.equal(after.Product[0].row.categoryId,'cat');assert.equal(after.Product[0].row.subcategoryId,'sub');assert.equal(after.ProductBarcode.length,1);assert.equal(after.ProductBarcode[0].row.productId,result.data.productId);assert.equal(after.PurchaseOrderLine[0].row.productId,result.data.productId);assert.equal(after.SupplierProductMapping[0].row.confirmedByUserId,expected);assert.equal(after.SupplierProductLink[0].row.updatedBy,actor.id);
    assert.equal(after.SupplierProductMapping[0].row.lastUnitCost,2);assert.equal(after.PurchaseOrderLine[0].row.netAmount,6);assert.equal(after.StoreProduct.find(x=>x.row.storeId==='store').row.currentStock,0);assert.deepEqual(after.StoreProduct.filter(x=>x.row.storeId==='control'),before.StoreProduct);assert.deepEqual(after.StockMovement,before.StockMovement);assert.deepEqual(after.PurchaseOrder,before.PurchaseOrder);
    // Actual ON CONFLICT mapping update keeps text identity and uses the same validated FK.
    await learn(f.db,{...input,productId:result.data.productId,userId:actor.id,actor});assert.equal((await f.db.$queryRaw`SELECT "confirmedByUserId","usageCount" FROM "SupplierProductMapping"`)[0].usageCount,2);
