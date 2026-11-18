@@ -12,8 +12,8 @@ const external=['react','react-dom','react-dom/client','react/jsx-runtime'];
 const panelBuild=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/commerce/MonthlyInvoiceAuditPanel.jsx',import.meta.url))],bundle:true,write:false,platform:'node',format:'cjs',external});
 const hubBuild=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/commerce/CommerceHub.jsx',import.meta.url))],bundle:true,write:false,platform:'node',format:'cjs',external,loader:{'.css':'empty'},plugins:[{name:'isolate-other-commerce-views',setup(builder){builder.onResolve({filter:/\.jsx$/},args=>args.importer.endsWith('/CommerceHub.jsx')&&!args.path.includes('MonthlyInvoiceAuditPanel')?{path:args.path,namespace:'other-view'}:null);builder.onLoad({filter:/.*/,namespace:'other-view'},()=>({contents:'export default function OtherView(){return null}',loader:'js'}))}}]});
 const row={id:'doc:1',documentNumber:'<img src=x onerror=SECRET>',documentType:'INVOICE',issueDay:'2026-10-02',registeredAt:'2026-10-03T00:00:00Z',supplierName:'<script>bad</script>',supplierTaxId:'099999999',totalCents:1234,status:'UNPOSTED',sources:[],categories:['UNPOSTED_DOCUMENT'],reasons:[]};
-const response=(storeId='s',month='2026-10',patch={})=>({store:{id:storeId,name:'Synthetic'},period:{month},asOf:'2026-10-28T12:00:00Z',coverage:{complete:true,unavailable:[],limited:[]},summary:{logicalRecords:120,unposted:120,uploadedAwaitingReview:0,possibleDuplicates:0,identityReview:0,credits:0,inactive:0},items:[row],nextPage:'next-page',pendingOriginals:{available:true,period:'ALL_MONTHS',counts:{total:75,missingOriginal:60,uploadedAwaitingReview:10,reviewRequired:5},items:[{id:'p',documentNumber:'OLD 1',documentDate:'2025-01-01',supplierName:'Old supplier',amount:1,status:'AWAITING_INVOICE'}],truncated:true},allClear:false,readOnly:true,immutableSnapshot:false,...patch});
-const previewResponse=(storeId='s',month='2026-10',patch={})=>({store:{id:storeId},period:{month,nominalLocalTime:month+'-31 23:59'},reportObservedAt:'2026-10-28T12:00:00Z',recipientObservedAt:'2026-10-28T12:00:01Z',separateSnapshots:true,previewOnly:true,readOnly:true,sendingEnabled:false,purposeConsent:'NOT_ASSUMED',reportType:'INVOICE_AUDIT',payload:{subject:'<img src=x onerror=PRIVATE> '+storeId+' '+month,body:'Πιθανό διπλό — Δεν έχει καταχωριστεί\nΌλοι οι μήνες: 75\n<script>PRIVATE</script>\nPREVIEW-'+storeId+'-'+month,coverage:{complete:true}},recipients:{available:true,verifiedCount:1,monthlyConsentEligibleCount:0,identities:[{maskedEmail:'a***@e***.test'}]},...patch});
+const response=(storeId='s',month='2026-10',patch={})=>({store:{id:storeId,name:'Synthetic'},period:{month},asOf:'2026-10-28T12:00:00Z',coverage:{complete:true,unavailable:[],limited:[]},summary:{logicalRecords:120,unposted:120,purchaseLinkReview:0,uploadedAwaitingReview:0,possibleDuplicates:0,identityReview:0,credits:0,inactive:0},items:[row],nextPage:'next-page',pendingOriginals:{available:true,period:'ALL_MONTHS',counts:{total:75,missingOriginal:60,uploadedAwaitingReview:10,reviewRequired:5},items:[{id:'p',documentNumber:'OLD 1',documentDate:'2025-01-01',supplierName:'Old supplier',amount:1,status:'AWAITING_INVOICE'}],truncated:true},allClear:false,readOnly:true,immutableSnapshot:false,...patch});
+const previewResponse=(storeId='s',month='2026-10',patch={})=>({store:{id:storeId},period:{month,nominalLocalTime:month+'-31 23:59'},reportObservedAt:'2026-10-28T12:00:00Z',recipientObservedAt:'2026-10-28T12:00:01Z',separateSnapshots:true,previewOnly:true,readOnly:true,sendingEnabled:false,purposeConsent:'NOT_ASSUMED',reportType:'INVOICE_AUDIT',payload:{subject:'<img src=x onerror=PRIVATE> '+storeId+' '+month,body:'Πιθανό διπλό — Πρόχειρη αγορά\nΌλοι οι μήνες: 75\n<script>PRIVATE</script>\nPREVIEW-'+storeId+'-'+month,coverage:{complete:true}},recipients:{available:true,verifiedCount:1,monthlyConsentEligibleCount:0,identities:[{maskedEmail:'a***@e***.test'}]},...patch});
 
 async function mounted(run,{hub=false}={}){
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),names=['window','document','navigator','HTMLElement','Node','Event','KeyboardEvent','localStorage','IS_REACT_ACT_ENVIRONMENT'],previous=new Map(names.map(name=>[name,Object.getOwnPropertyDescriptor(globalThis,name)]));
@@ -113,9 +113,9 @@ test('paid draft is visibly settled while its independent purchase review stays 
  setResponder(async()=>response('s','2026-10',paymentPatch(payment,{financialSummary:financialSummary({paid:1}),items:[{...row,categories:['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW'],payment}]})));await submit();
  const invoice=document.querySelector('.ima-rows>li'),observation=invoice.querySelector('.ima-payment');
  assert.equal(observation.querySelector('b').textContent,'Εξοφλημένο');assert.match(observation.textContent,/12,34/);assert.equal(invoice.querySelectorAll('.ima-payment-paid').length,1);
- const details=invoice.querySelector('details.ima-workflow-review');assert.ok(details);assert.equal(details.open,false);assert.equal(details.querySelector('summary').textContent,'Έλεγχος καταχώρισης αγοράς');assert.match(details.textContent,/Δεν έχει καταχωριστεί/);assert.match(details.textContent,/Ανεβασμένο - προς έλεγχο/);await act(async()=>details.querySelector('summary').click());assert.equal(details.open,true);assert.equal(calls.length,1);assert.equal(calls[0].options.method,undefined);
+ const details=invoice.querySelector('details.ima-workflow-review');assert.ok(details);assert.equal(details.open,false);assert.equal(details.querySelector('summary').textContent,'Έλεγχος καταχώρισης αγοράς');assert.match(details.textContent,/Πρόχειρη αγορά/);assert.match(details.textContent,/Ανεβασμένο - προς έλεγχο/);await act(async()=>details.querySelector('summary').click());assert.equal(details.open,true);assert.equal(calls.length,1);assert.equal(calls[0].options.method,undefined);
  const visibleTags=[...invoice.children].filter(element=>element.classList.contains('ima-tag')).map(element=>element.textContent);assert.deepEqual(visibleTags,['Πιθανό διπλό','Χρειάζεται ταυτοποίηση']);
- assert.match(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]').textContent,/Εξοφλημένα1.*Οικονομικές εκκρεμότητες0/);assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Δεν έχουν καταχωριστεί120/);
+ assert.match(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]').textContent,/Εξοφλημένα1.*Οικονομικές εκκρεμότητες0/);assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Πρόχειρες αγορές120/);
 }));
 
 test('partial payment retains the real amount remaining and does not claim full settlement',async()=>mounted(async({setResponder,submit})=>{
@@ -138,7 +138,7 @@ test('unavailable payment coverage suppresses numeric financial totals and all-c
 
 test('credit notes have no payment badge and legacy responses preserve their existing display',async()=>mounted(async({setResponder,submit})=>{
  setResponder(async()=>response('s','2026-10',paymentPatch({status:'NOT_APPLICABLE',paidCents:null,remainingCents:null},{items:[{...row,documentType:'CREDIT_NOTE',payment:{status:'NOT_APPLICABLE'}}],financialSummary:financialSummary({notApplicable:1})})));await submit();assert.equal(document.querySelector('.ima-payment'),null);assert.match(document.querySelector('.ima-rows').textContent,/Πιστωτικό/);
- setResponder(async()=>response());await submit();assert.equal(document.querySelector('.ima-financial'),null);assert.equal(document.querySelector('.ima-payment'),null);assert.match(document.querySelector('.ima-rows').textContent,/Δεν έχει καταχωριστεί/);
+ setResponder(async()=>response());await submit();assert.equal(document.querySelector('.ima-financial'),null);assert.equal(document.querySelector('.ima-payment'),null);assert.match(document.querySelector('.ima-rows').textContent,/Πρόχειρη αγορά/);
 }));
 
 async function clickCounter(act,label,count){
@@ -149,13 +149,13 @@ async function clickCounter(act,label,count){
 const filterResponse=(url,patch={})=>response(url.searchParams.get('storeId'),url.searchParams.get('month'),{filter:url.searchParams.get('filter')||'ALL',matchedRecords:87,...patch});
 
 test('all monthly summary counters request their whole-month server filter and keep global totals',async()=>mounted(async({setResponder,submit,act,calls})=>{
- const counts={logicalRecords:195,unposted:87,uploadedAwaitingReview:63,possibleDuplicates:2,identityReview:147,credits:11,inactive:0};
+ const counts={logicalRecords:195,unposted:87,purchaseLinkReview:0,uploadedAwaitingReview:63,possibleDuplicates:2,identityReview:147,credits:11,inactive:0};
  const financial=financialSummary({paid:13,financialPending:1,reviewRequired:62,notLinked:108,notApplicable:11});
  setResponder(async url=>filterResponse(url,{summary:counts,financialSummary:financial,paymentCoverage:{available:true},items:[{...row,documentNumber:'ONLY-'+(url.searchParams.get('filter')||'ALL')}]}));
  await submit();assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
- for(const[label,count,filter]of [['Δεν έχουν καταχωριστεί',87,'UNPOSTED_DOCUMENT'],['Ανεβασμένα προς έλεγχο',63,'UPLOADED_AWAITING_REVIEW'],['Πιθανά διπλά',2,'POSSIBLE_DUPLICATE'],['Ταυτοποίηση / συνδέσεις',147,'IDENTITY_OR_LINK_REVIEW'],['Πιστωτικά (χωριστή ένδειξη)',11,'CREDIT_NOTE'],['Εξοφλημένα',13,'PAID'],['Οικονομικές εκκρεμότητες',1,'FINANCIAL_PENDING'],['Συνδέσεις πληρωμής προς έλεγχο',62,'PAYMENT_REVIEW'],['Χωρίς σύνδεση πληρωμής',108,'PAYMENT_UNLINKED']]){
+ for(const[label,count,filter]of [['Πρόχειρες αγορές',87,'UNPOSTED_DOCUMENT'],['Ανεβασμένα προς έλεγχο',63,'UPLOADED_AWAITING_REVIEW'],['Πιθανά διπλά',2,'POSSIBLE_DUPLICATE'],['Ταυτοποίηση / συνδέσεις',147,'IDENTITY_OR_LINK_REVIEW'],['Πιστωτικά (χωριστή ένδειξη)',11,'CREDIT_NOTE'],['Εξοφλημένα',13,'PAID'],['Οικονομικές εκκρεμότητες',1,'FINANCIAL_PENDING'],['Συνδέσεις πληρωμής προς έλεγχο',62,'PAYMENT_REVIEW'],['Χωρίς σύνδεση πληρωμής',108,'PAYMENT_UNLINKED']]){
   await clickCounter(act,label,count);const request=calls.at(-1);assert.equal(request.url.searchParams.get('filter'),filter);assert.equal(request.url.searchParams.has('page'),false);assert.equal(request.options.method,undefined);assert.match(document.querySelector('.ima-rows').textContent,new RegExp('ONLY-'+filter));
-  assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Δεν έχουν καταχωριστεί87/);
+  assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Πρόχειρες αγορές87/);
   assert.match(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]').textContent,/Συνδέσεις πληρωμής προς έλεγχο62.*Χωρίς σύνδεση πληρωμής108/);
  }
  await clickCounter(act,'Εγγραφές ελέγχου',195);assert.equal(calls.at(-1).url.searchParams.has('filter'),false);assert.match(document.querySelector('.ima-rows').textContent,/ONLY-ALL/);
@@ -165,9 +165,9 @@ test('unposted drilldown reaches the filtered second page and preserves its filt
  setResponder(async url=>{
   const filter=url.searchParams.get('filter'),page=url.searchParams.get('page');
   const items=filter?Array.from({length:page?37:50},(_,index)=>({...row,id:'doc:filtered-'+(page?index+50:index),documentNumber:'UNPOSTED-'+(page?index+51:index+1)})):[{...row,documentNumber:'UNFILTERED-POSTED'}];
-  return filterResponse(url,{summary:{logicalRecords:195,unposted:87,uploadedAwaitingReview:63,possibleDuplicates:0,identityReview:147,credits:11,inactive:0},matchedRecords:filter?87:195,items,nextPage:filter&&!page?'filtered-page-2':null});
+  return filterResponse(url,{summary:{logicalRecords:195,unposted:87,purchaseLinkReview:0,uploadedAwaitingReview:63,possibleDuplicates:0,identityReview:147,credits:11,inactive:0},matchedRecords:filter?87:195,items,nextPage:filter&&!page?'filtered-page-2':null});
  });
- await submit();await clickCounter(act,'Δεν έχουν καταχωριστεί',87);assert.match(document.querySelector('.ima-filter-status').textContent,/Προβολή: Δεν έχουν καταχωριστεί.*87 εγγραφές/);assert.equal(document.querySelectorAll('.ima-rows')[0].children.length,50);assert.doesNotMatch(document.querySelector('.ima-rows').textContent,/UNFILTERED-POSTED/);
+ await submit();await clickCounter(act,'Πρόχειρες αγορές',87);assert.match(document.querySelector('.ima-filter-status').textContent,/Προβολή: Πρόχειρες αγορές.*87 εγγραφές/);assert.equal(document.querySelectorAll('.ima-rows')[0].children.length,50);assert.doesNotMatch(document.querySelector('.ima-rows').textContent,/UNFILTERED-POSTED/);
  await click('Επόμενη σελίδα');assert.equal(calls.at(-1).url.searchParams.get('filter'),'UNPOSTED_DOCUMENT');assert.equal(calls.at(-1).url.searchParams.get('page'),'filtered-page-2');assert.equal(document.querySelectorAll('.ima-rows')[0].children.length,37);assert.match(document.querySelector('.ima-rows').textContent,/UNPOSTED-87/);
  await click('Πρώτη σελίδα / Ανανέωση');assert.equal(calls.at(-1).url.searchParams.get('filter'),'UNPOSTED_DOCUMENT');assert.equal(calls.at(-1).url.searchParams.has('page'),false);assert.match(document.querySelector('.ima-rows').textContent,/UNPOSTED-1/);
  await click('Όλες οι εγγραφές');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);assert.match(document.querySelector('.ima-rows').textContent,/UNFILTERED-POSTED/);
@@ -181,18 +181,97 @@ test('zero-match filter shows an explicit empty result without treating global c
 test('filtered requests reject missing or mismatched server filter instead of displaying legacy all-row results',async()=>mounted(async({setResponder,submit,act})=>{
  for(const resultPatch of [{filter:undefined,matchedRecords:undefined},{filter:'PAID',matchedRecords:1}]){
   setResponder(async url=>url.searchParams.has('filter')?response('s','2026-10',{...resultPatch,items:[{...row,documentNumber:'WRONG-FILTER-DISCLOSURE'}]}):response());
-  await submit();await clickCounter(act,'Δεν έχουν καταχωριστεί',120);assert.match(document.querySelector('[role=alert]').textContent,/δεν αντιστοιχεί/);assert.doesNotMatch(document.querySelector('.invoice-month-audit').textContent,/WRONG-FILTER-DISCLOSURE/);
+  await submit();await clickCounter(act,'Πρόχειρες αγορές',120);assert.match(document.querySelector('[role=alert]').textContent,/δεν αντιστοιχεί/);assert.doesNotMatch(document.querySelector('.invoice-month-audit').textContent,/WRONG-FILTER-DISCLOSURE/);
  }
 }));
 
 test('new filter aborts and rejects older filter responses; month and store changes reset to all',async()=>mounted(async({setResponder,submit,click,changeMonth,render,act,calls})=>{
  setResponder(async url=>filterResponse(url));await submit();let release;
  setResponder(url=>url.searchParams.get('filter')==='UNPOSTED_DOCUMENT'?new Promise(resolve=>{release=resolve}):Promise.resolve(filterResponse(url,{items:[{...row,documentNumber:'CURRENT-ALL'}]})));
- await clickCounter(act,'Δεν έχουν καταχωριστεί',120);const oldSignal=calls.at(-1).options.signal;
+ await clickCounter(act,'Πρόχειρες αγορές',120);const oldSignal=calls.at(-1).options.signal;
  // Submit is a fresh explicit monthly audit. Its new ALL selection must not be
  // overwritten by an earlier filtered response even if that API ignores abort.
  await submit();assert.equal(calls.at(-1).url.searchParams.has('filter'),false);assert.equal(oldSignal.aborted,true);await act(async()=>release(response('s','2026-10',{filter:'UNPOSTED_DOCUMENT',matchedRecords:1,items:[{...row,documentNumber:'LATE-FILTER'}]})));assert.doesNotMatch(document.querySelector('.invoice-month-audit').textContent,/LATE-FILTER/);
- setResponder(async url=>filterResponse(url));await clickCounter(act,'Δεν έχουν καταχωριστεί',120);await changeMonth('2026-09');await submit();assert.equal(calls.at(-1).url.searchParams.get('month'),'2026-09');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
- await clickCounter(act,'Δεν έχουν καταχωριστεί',120);await render({storeId:'other',storeName:'Other'});await submit();assert.equal(calls.at(-1).url.searchParams.get('storeId'),'other');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
- await clickCounter(act,'Δεν έχουν καταχωριστεί',120);const replacementCalls=[];await render({api:async path=>{const url=new URL(path,'https://isolated.invalid');replacementCalls.push(url);return filterResponse(url)}});await submit();assert.equal(replacementCalls.at(-1).searchParams.get('storeId'),'other');assert.equal(replacementCalls.at(-1).searchParams.has('filter'),false);
+ setResponder(async url=>filterResponse(url));await clickCounter(act,'Πρόχειρες αγορές',120);await changeMonth('2026-09');await submit();assert.equal(calls.at(-1).url.searchParams.get('month'),'2026-09');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
+ await clickCounter(act,'Πρόχειρες αγορές',120);await render({storeId:'other',storeName:'Other'});await submit();assert.equal(calls.at(-1).url.searchParams.get('storeId'),'other');assert.equal(calls.at(-1).url.searchParams.has('filter'),false);
+ await clickCounter(act,'Πρόχειρες αγορές',120);const replacementCalls=[];await render({api:async path=>{const url=new URL(path,'https://isolated.invalid');replacementCalls.push(url);return filterResponse(url)}});await submit();assert.equal(replacementCalls.at(-1).searchParams.get('storeId'),'other');assert.equal(replacementCalls.at(-1).searchParams.has('filter'),false);
+}));
+
+const recordResponse=(storeId='s',month='2026-10',item=row,patch={})=>({store:{id:storeId},period:{month},readOnly:true,item,sources:{documents:[{id:'saved-document',documentNumber:'SAVED 2026',issueDay:'2026-10-02',totalGross:'12.3400',status:'APPROVED',supplierName:'Saved supplier'}],orders:[],inbound:[],inbox:[]},relatedOrders:[],...patch});
+
+test('invoice number opens only the existing scoped draft or registered order using inspection navigation',async()=>mounted(async({render,setResponder,submit,click,calls})=>{
+ const opened=[];await render({onOpenInvoiceOrder:detail=>opened.push(detail)});
+ for(const status of ['UNPOSTED','POSTED']){
+  setResponder(async()=>response('s','2026-10',{items:[{...row,status,documentNumber:'EXISTING '+status,openTarget:{kind:'ORDER',orderId:'same-existing-order',storeId:'s',basis:'EXPLICIT'}}]}));
+  await submit();const before=calls.length;await click('EXISTING '+status);assert.equal(calls.length,before);assert.deepEqual(opened.at(-1),{orderId:'same-existing-order',storeId:'s',navigationOnly:true,readOnly:true,monthlyAudit:true,basis:'EXPLICIT'});
+ }
+ assert.equal(opened.length,2);assert.ok(calls.every(call=>call.options.method===undefined));
+}));
+
+test('header candidate navigation is explicitly uncertain and a foreign or legacy target cannot open',async()=>mounted(async({render,setResponder,submit,click,calls})=>{
+ const opened=[];await render({onOpenInvoiceOrder:detail=>opened.push(detail)});
+ setResponder(async()=>response('s','2026-10',{items:[{...row,documentNumber:'CANDIDATE 1',openTarget:{kind:'ORDER',orderId:'existing-candidate',storeId:'s',basis:'HEADER_CANDIDATE'}}]}));await submit();assert.match(document.querySelector('.ima-rows').textContent,/Πιθανή αντιστοίχιση.*χρειάζεται σύγκριση/);const button=document.querySelector('.ima-record-open');assert.match(button.title,/Πιθανή αντιστοίχιση/);await click('CANDIDATE 1');assert.equal(opened.length,1);assert.equal(opened[0].orderId,'existing-candidate');assert.match(document.querySelector('[role=status]').textContent,/Η σύνδεση με αυτή την εγγραφή δεν έχει επιβεβαιωθεί/);
+ for(const openTarget of [undefined,{kind:'ORDER',orderId:'foreign',storeId:'other',basis:'EXPLICIT'},{kind:'ORDER',orderId:'unknown-proof',storeId:'s',basis:'AMOUNT_ONLY'}]){
+  setResponder(async()=>response('s','2026-10',{items:[{...row,openTarget}]}));await submit();assert.equal(document.querySelector('.ima-record-open').disabled,true);
+ }
+ assert.equal(opened.length,1);assert.ok(calls.every(call=>call.options.method===undefined));
+}));
+
+test('unlinked myDATA number loads only its existing saved source preview and can compare an explicitly offered candidate',async()=>mounted(async({render,setResponder,submit,click,calls})=>{
+ const item={...row,documentNumber:'MYDATA 1',categories:['PURCHASE_LINK_REVIEW'],purchaseReview:{state:'LINK_REVIEW',reason:'Δεν υπάρχει επιβεβαιωμένη σύνδεση αγοράς.'},openTarget:{kind:'PREVIEW',rowId:row.id,storeId:'s'}};const opened=[];await render({onOpenInvoiceOrder:detail=>opened.push(detail)});
+ setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item,{sources:{documents:[],orders:[],inbound:[{id:'existing-mydata',series:'MYDATA',documentNumber:'1',issueDay:'2026-10-02',totalGross:'12.3400',status:'RECEIVED'}],inbox:[{id:'existing-inbox',status:'IN_REVIEW'}]},relatedOrders:[{orderId:'candidate',storeId:'s',basis:'HEADER_CANDIDATE'},{orderId:'foreign',storeId:'other',basis:'EXPLICIT'}]}):response('s','2026-10',{items:[item]}));
+ await submit();await click('MYDATA 1');const request=calls.at(-1);assert.equal(request.url.pathname,'/api/reports/invoice-month-audit/record');assert.deepEqual([...request.url.searchParams.entries()].sort(),[['id',row.id],['month','2026-10'],['storeId','s']]);assert.equal(request.options.method,undefined);
+ const dialog=document.querySelector('[role=dialog]');assert.ok(dialog);assert.match(dialog.textContent,/Δεν δημιουργείται νέο πρόχειρο/);assert.match(dialog.textContent,/Παραλαβές myDATA.*MYDATA 1/);assert.match(dialog.textContent,/Θυρίδα.*Σε έλεγχο/);assert.equal(dialog.querySelectorAll('button').length,2);assert.equal(opened.length,0);
+ await click('Σύγκριση με πιθανή υπάρχουσα αγορά');assert.equal(opened.length,1);assert.deepEqual(opened[0],{orderId:'candidate',storeId:'s',navigationOnly:true,readOnly:true,monthlyAudit:true,basis:'HEADER_CANDIDATE'});assert.equal(calls.length,2);
+}));
+
+test('record preview binds the loaded fingerprint and preserves a stale-source error without a replacement draft',async()=>mounted(async({setResponder,submit,click,calls})=>{
+ const item={...row,documentNumber:'STALE SOURCE',openTarget:{kind:'PREVIEW',rowId:row.id,storeId:'s'}},fingerprint='a'.repeat(64);
+ setResponder(async url=>{if(url.pathname.endsWith('/record'))throw Error('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο.');return response('s','2026-10',{fingerprint,items:[item]})});await submit();await click('STALE SOURCE');assert.equal(calls.at(-1).url.searchParams.get('fingerprint'),fingerprint);assert.match(document.querySelector('[role=dialog] [role=alert]').textContent,/στοιχεία άλλαξαν/);assert.equal(calls.length,2);assert.ok(calls.every(call=>call.options.method===undefined));
+}));
+
+test('registered standalone document preview shows actual saved headers without inventing an editable purchase',async()=>mounted(async({setResponder,submit,click,calls})=>{
+ const item={...row,status:'POSTED',documentNumber:'STANDALONE 1',categories:[],openTarget:{kind:'PREVIEW',rowId:row.id,storeId:'s'}};
+ setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item):response('s','2026-10',{items:[item]}));await submit();await click('STANDALONE 1');const dialog=document.querySelector('[role=dialog]');assert.match(dialog.textContent,/SAVED 2026.*2026-10-02.*12,3400 €.*Εγκεκριμένο/);assert.equal(dialog.querySelectorAll('button').length,1);assert.equal(calls.length,2);await click('Κλείσιμο παραστατικού');assert.equal(document.querySelector('[role=dialog]'),null);
+}));
+
+test('record preview rejects store month id and read-only mismatches rather than exposing another saved record',async()=>mounted(async({setResponder,submit,click})=>{
+ const item={...row,documentNumber:'PREVIEW 1',openTarget:{kind:'PREVIEW',rowId:row.id,storeId:'s'}};
+ for(const patch of [{store:{id:'other'}},{period:{month:'2026-09'}},{item:{id:'different',documentNumber:'WRONG-RECORD'}},{readOnly:false},{sources:{documents:[],orders:[],inbound:[]}}]){
+  setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item,patch):response('s','2026-10',{items:[item]}));await submit();await click('PREVIEW 1');assert.match(document.querySelector('[role=dialog] [role=alert]').textContent,/δεν αντιστοιχεί/);assert.doesNotMatch(document.querySelector('[role=dialog]').textContent,/WRONG-RECORD|SAVED 2026/);
+ }
+}));
+
+test('record preview masks the first changed scope render and discards responses after month store API changes and close',async()=>mounted(async({setResponder,render,submit,click,changeMonth,act,calls,commitSnapshots})=>{
+ const item={...row,documentNumber:'PREVIEW 2',openTarget:{kind:'PREVIEW',rowId:row.id,storeId:'s'}};let release;
+ setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item):response('s','2026-10',{items:[item]}));await submit();await click('PREVIEW 2');assert.match(document.querySelector('[role=dialog]').textContent,/SAVED 2026/);
+ let before=commitSnapshots.length;await render({storeId:'other'});assert.doesNotMatch(commitSnapshots[before],/SAVED 2026/);await render({storeId:'s'});await submit();
+ for(const change of ['month','close','store','api']){
+  setResponder(url=>url.pathname.endsWith('/record')?new Promise(resolve=>{release=resolve}):Promise.resolve(response('s','2026-10',{items:[item]})));await click('PREVIEW 2');const signal=calls.at(-1).options.signal;
+  if(change==='month')await changeMonth('2026-09');else if(change==='close')await click('Κλείσιμο παραστατικού');else if(change==='store')await render({storeId:'other'});else await render({api:async()=>response('s','2026-10',{items:[item]})});
+  assert.equal(signal.aborted,true);await act(async()=>release(recordResponse('s','2026-10',item,{item:{...item,documentNumber:'LATE-SAVED-RECORD'}})));assert.doesNotMatch(document.querySelector('.invoice-month-audit').textContent,/LATE-SAVED-RECORD/);
+  if(change==='month')await changeMonth('2026-10');else if(change==='store')await render({storeId:'s'});else if(change==='api')break;
+  await submit();
+ }
+}));
+
+test('credit merged and unlinked records have a separate purchase-link counter without claiming missing purchases',async()=>mounted(async({setResponder,submit,act,calls})=>{
+ const reviewRows=[{...row,id:'credit',documentType:'CREDIT_NOTE',documentNumber:'MERGED CREDIT',categories:['PURCHASE_LINK_REVIEW'],purchaseReview:{state:'MERGED_REVIEW',reason:'Συγχωνευμένη εγγραφή προς έλεγχο.'},payment:{status:'NOT_APPLICABLE'}},{...row,id:'mydata',documentNumber:'UNLINKED MYDATA',categories:['PURCHASE_LINK_REVIEW'],purchaseReview:{state:'LINK_REVIEW',reason:'Η σύνδεση δεν έχει επιβεβαιωθεί.'}}];
+ setResponder(async url=>filterResponse(url,{summary:{logicalRecords:35,unposted:10,purchaseLinkReview:25,uploadedAwaitingReview:10,possibleDuplicates:2,identityReview:25,credits:7,inactive:0},matchedRecords:25,items:reviewRows,nextPage:null}));await submit();assert.match(document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]').textContent,/Πρόχειρες αγορές10.*Προς αντιστοίχιση \/ έλεγχο25/);assert.doesNotMatch(document.querySelector('.ima-rows').textContent,/Δεν έχει καταχωριστεί|Δεν έχουν καταχωριστεί|Πρόχειρη αγορά/);await clickCounter(act,'Προς αντιστοίχιση / έλεγχο',25);assert.equal(calls.at(-1).url.searchParams.get('filter'),'PURCHASE_LINK_REVIEW');
+}));
+
+test('CommerceHub sends invoice navigation from its own selected hub with existing ids and inspection flags',async()=>mounted(async({setResponder,submit,click,calls,act})=>{
+ setResponder(async url=>response(url.searchParams.get('storeId'),url.searchParams.get('month'),{items:[{...row,documentNumber:'HUB INVOICE',openTarget:{kind:'ORDER',orderId:'existing-hub-order',storeId:'s',basis:'EXPLICIT'}}]}));const events=[],handler=event=>events.push({detail:event.detail,hub:event.target.closest('.commerce-hub')});document.addEventListener('purchase-orders:open',handler);
+ try{await click('Έλεγχος τιμολογίων μήνα');await submit();await click('HUB INVOICE');assert.equal(events.length,1);assert.ok(events[0].hub);assert.deepEqual(events[0].detail,{orderId:'existing-hub-order',storeId:'s',navigationOnly:true,readOnly:true,monthlyAudit:true,basis:'EXPLICIT'});assert.ok(calls.every(call=>call.options?.method===undefined));}finally{document.removeEventListener('purchase-orders:open',handler)}
+},{hub:true}));
+
+test('legacy purchase count remains neutral when the new review split is absent',async()=>mounted(async({setResponder,submit})=>{
+ const legacy=response();delete legacy.summary.purchaseLinkReview;setResponder(async()=>legacy);await submit();const summary=document.querySelector('[aria-label="Σύνολα επιλεγμένου μήνα"]');assert.match(summary.textContent,/Καταχώριση προς έλεγχο120/);assert.doesNotMatch(summary.textContent,/Πρόχειρες αγορές|Προς αντιστοίχιση \/ έλεγχο/);assert.match(document.querySelector('.ima-rows').textContent,/Καταχώριση προς έλεγχο/);assert.equal(document.querySelector('.ima-record-open').disabled,true);
+}));
+
+test('saved preview lines preserve actual decimal fields and escape descriptions without implying source completeness',async()=>mounted(async({setResponder,submit,click})=>{
+ const item={...row,documentNumber:'SAVED LINES',openTarget:{kind:'PREVIEW',rowId:row.id,storeId:'s'}};
+ const lines=[{id:'saved-line',purchaseDocumentId:'saved-document',description:'<img src=x> saved item',quantity:'2.0000',unit:'PACKAGE',unitCost:'4.1234',netAmount:'8.2468',vatRate:'24.0000',vatAmount:'1.979232',grossAmount:'10.226032'}];
+ setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item,{documentLines:lines,documentLinesCoverage:{available:true,truncated:true,limit:500}}):response('s','2026-10',{items:[item]}));await submit();await click('SAVED LINES');let saved=document.querySelector('[aria-label="Αποθηκευμένες γραμμές παραστατικού"]');assert.ok(saved);assert.match(saved.textContent,/πρώτες 500/);assert.match(saved.textContent,/<img src=x> saved item2.0000PACKAGE4.12348.246824.00001.97923210.226032/);assert.equal(saved.querySelector('img'),null);
+ setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',item,{documentLines:[],documentLinesCoverage:{available:false,truncated:false,limit:500}}):response('s','2026-10',{items:[item]}));await click('SAVED LINES');assert.match(document.querySelector('[role=dialog]').textContent,/Οι αποθηκευμένες γραμμές δεν είναι διαθέσιμες/);assert.equal(document.querySelector('[role=dialog] table'),null);
 }));

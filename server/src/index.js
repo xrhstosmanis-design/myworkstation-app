@@ -64,7 +64,7 @@ import {posPurchaseOrderAccess} from "./middleware/pos-purchase-order-access.js"
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderUnresolvedGuardRoutes from "./routes/purchase-order-unresolved-guard.js";
 import purchaseOrderPostingGuardRoutes from "./routes/purchase-order-posting-guard.js";
-import purchaseOrderRoutes,{ensurePurchaseOrderSchema} from "./routes/purchase-orders.js";
+import purchaseOrderRoutes,{ensurePurchaseOrderSchema,purchaseOrderInspectionAdmission,createPurchaseOrderInspectionHandler} from "./routes/purchase-orders.js";
 import purchaseOrderOcrResolutionRoutes from "./routes/purchase-order-ocr-resolution.js";
 import purchaseOrderTotalReconciliationGuardRoutes from "./routes/purchase-order-total-reconciliation-guard.js";
 import purchaseDocumentAdjustmentRoutes from "./routes/purchase-document-adjustments.js";
@@ -266,6 +266,7 @@ app.use("/api/owner-shifts",auth,requireCompanyModule("CASH_CONTROL"),ownerShift
 app.use("/api/owner-assistant",ownerAssistantRoutes);
 app.use('/api/ai-wallet',aiOwnerWalletRoutes);
 startAiOwnerWalletNotices();
+app.get("/api/purchase-orders/:orderId/detail",auth,purchaseOrderInspectionAdmission,requireStoreModule("INVENTORY"),createPurchaseOrderInspectionHandler(prisma));
 app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce",auth,invoiceCommonDraftRoutes);

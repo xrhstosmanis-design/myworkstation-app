@@ -12,9 +12,11 @@ Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
 
-### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / BEFORE SOURCE
+### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / IMPLEMENTED / AWAITING FULL CI AND DEPLOY
 
 Ο ιδιοκτήτης επιβεβαίωσε νέο FAIL: η παλιά κατηγορία μη καταχωρισμένων αναμειγνύει ασύνδετες myDATA/πιστωτικές/merged εγγραφές και ο αριθμός δεν ανοίγει την υπάρχουσα αγορά. Ίδιος owner `/root`, branch `fix/no2-invoice-open-review`, μόνο ordinary eligibility/navigation και αυστηρή ανάγνωση υφιστάμενου detail χωρίς implicit repair/bootstrap. Raw C/D1/writers και άλλων σελίδων markup/εμφάνιση διατηρούνται. Το περιορισμένο LIVE counter PASS παρακάτω παραμένει, όχι PASS της σημασιολογίας ή νέας πλοήγησης. [Claim](CHANGES/2026-11-18-no2-invoice-opening-review.md). Source μετά green merged claim, καμία νέα πληρωμή/καταχώριση.
+
+Νέα υλοποίηση μετά claim#4042: ordinary-only διαχωρισμός ενεργών προχείρων/ελέγχου αντιστοίχισης, ξεχωριστή οικονομική κατάσταση και κλικ προς υπάρχουσα scoped αγορά με αποθηκευμένες γραμμές. Η νέα inspection διαδρομή είναι READ ONLY/RepeatableRead, παρακάμπτει bootstrap/implicit repair· ο default writer παραμένει. Πρώτοι HTTP+mounted inspection6PASS. Owner semantics FAIL παραμένει μέχρι εγκατάσταση και πραγματική αποδοχή. Καμία νέα αγορά/πληρωμή/stock. Οι άλλοι owners και markup αλλαγές διατηρούνται.
 
 ### Νεότερη κατάσταση 18/11/2026 — Νο2 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ / LIMITED LIVE UI PASS
 
