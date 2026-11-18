@@ -53,7 +53,7 @@ async function readRecentBankTransfers(db,companyId,storeId){
     throw error;
   }
 }
-export function createBackofficeStaffRouter({db,authenticate,issueSession,repository=createCashReconciliationRepository(db)}){
+export function createBackofficeStaffRouter({db,authenticate,issueSession,repository=createCashReconciliationRepository(db),readCompanyDirectory=readStaffCompanyDirectory}){
   const router=Router();
   router.use((_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next()});
   router.post('/login',async(req,res)=>{try{
@@ -66,6 +66,8 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     res.json(result.session);
   }catch(error){failure(res,error)}});
   router.use(authenticate);
+  // These exact company reads terminate here after the router's one authentication.
+  router.get(['/company/configuration/pos-terminals','/company/configuration/modifiers/groups','/company/configuration/modifiers/groups/:groupId/items','/company/configuration/modifiers/groups/:groupId/inventory-prices','/company/configuration/preparation/catalog','/company/configuration/preparation/products/:productId','/company/configuration/preparation/modifiers/:modifierId/consumption','/company/configuration/license','/company/configuration/parameters/business','/company/configuration/parameters/banks','/company/configuration/parameters/edelivery','/company/configuration/parameters/pos','/company/configuration/parameters/backoffice','/company/configuration/parameters/shifts','/company/configuration/parameters/customers','/company/configuration/parameters/email','/company/configuration/parameters/other','/company/configuration/parameters/purchases'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
  router.get('/company/workforce-roles',async(req,res)=>{try{res.json(await readStaffCompanyDirectory(db,req))}catch(error){failure(res,error)}});
   router.get('/me',async(req,res)=>{try{
     const account=await liveStaff(db,req.user);

@@ -3,6 +3,8 @@ import BackofficeStores from './BackofficeStores.jsx';
 import CompanyAuditReportsReadView from './CompanyAuditReportsReadView.jsx';
 import CompanyInventoryReportsReadView from './CompanyInventoryReportsReadView.jsx';
 import CompanyPartyReportsReadView from './CompanyPartyReportsReadView.jsx';
+import CompanyConfigurationReadView from './CompanyConfigurationReadView.jsx';
+import {companyConfigurationActions} from '../../../../shared/backoffice-staff-company-configuration.mjs';
 import CompanyReportsReadView from './CompanyReportsReadView.jsx';
 import CompanyRoleRegistryReadView from './CompanyRoleRegistryReadView.jsx';
 import CompanyBusinessReadView from './CompanyBusinessReadView.jsx';
@@ -37,6 +39,7 @@ export default function CompanyDirectoryView(props){
  const [supplier,setSupplier]=useState(null);const own=JSON.stringify([props.companyId,props.capability,props.authorityKey]);
  const detailsAllowed=Array.isArray(props.companyCapabilities)&&props.companyCapabilities.includes('supplier-details.read');
  const selected=detailsAllowed&&supplier?.own===own&&supplier.api===props.api?supplier.id:'';
+ if(companyConfigurationActions.some(action=>action.key===props.capability))return <CompanyConfigurationReadView {...props}/>;
  if(['reports-supplier-invoices.read','reports-supplier-payments.read','reports-supplier-purchases.read','reports-customer-turnover.read'].includes(props.capability))return <CompanyPartyReportsReadView {...props}/>;
  if(['reports-stocktakes.read','reports-stock-snapshot.read','reports-item-snapshot.read','reports-stock-analysis.read','reports-sales-analysis.read','reports-payroll-expenses.read'].includes(props.capability))return <CompanyInventoryReportsReadView {...props}/>;
  if(['reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read'].includes(props.capability))return <CompanyAuditReportsReadView {...props}/>;

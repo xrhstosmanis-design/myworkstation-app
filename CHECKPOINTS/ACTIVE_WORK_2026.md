@@ -596,3 +596,8 @@ CENTRAL-BACKOFFICE-ACCESS-01, baseline f04444d1/local2f934daa/tree72f7d3f6. Sour
 ## 18/11/2026 — No5 τέσσερις εταιρικές αναφορές συναλλασσομένων / AWAITING CI
 
 CENTRAL-BACKOFFICE-ACCESS-01, baseline815b50b8/local0b0a4847/treed7821bd4. Source74STORE+36COMPANY, ρητοί κατάλογοι γονέων/modules, nativeοικονομικάπαράθυρα και signed/reversal semantics. Τελική72fileσουίτα374PASS/18nativeSKIP/0FAIL+buildPASS. Προηγούμενο74actualBASE/CAPTURE legacy8STORE15καιCOMPANY32 PASS, Wallet9/9PASS/ChatPASS· κύριοrunπαρακολουθείται. Νέο23rowseed/native4helperκαιmetadata preflight, actualCOMPANY36CIεκκρεμεί. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-party-reports.md).
+
+
+## 18/11/2026 — No5 δεκαεπτά εταιρικές προβολές ρυθμίσεων / AWAITING CI
+
+CENTRAL-BACKOFFICE-ACCESS-01, baselinebc98004e/locala9d6f2b4/treec41b7483. Source74STORE+53COMPANY,176typedπαράμετροι/10χωριστέςενότητες, POS/modifiers/παρασκευές/statusάδειας, ονομαστικοίγονείς καιfreshgrant/module/revision. ΔεκαοκτώexactGETμέσαστονυπάρχονταrouterμεμίαauth, nativeCompany5fallbackκαισελιδοποίηση100rows/10groups. Τελική74fileσουίτα393PASS/18nativeSKIP/0FAIL+clientbuildPASS. Προηγούμενο36main6396PASS/0FAIL/1SKIP+8/8E2E καιactualBASE/CAPTURE36PASS, Wallet9/9/ChatSUCCESS. Νέο30rowseedupdates/native17helperκαιmetadata5PASS, actual53CIεκκρεμεί.20boundsourcehashesαμετάβλητα. WholeOwnercoverageOPEN, κοινέςανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-configuration-reads.md).

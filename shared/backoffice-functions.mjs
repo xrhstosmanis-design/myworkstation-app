@@ -1,9 +1,11 @@
+import {companyConfigurationActions} from './backoffice-staff-company-configuration.mjs';
 import {storeReportNames,storeReportLabels} from './backoffice-staff-reports.mjs';
 // Function families under review for the requested complete coverage, not an authorization allowlist.
 // Native audit/adapter coverage must exist before an action becomes grantable.
 // STORE rights cannot authorize COMPANY operations. Existing persisted rights
 // stay unchanged; adding a catalogue entry never grants access automatically.
 export const backofficeFunctionCatalogue=Object.freeze([
+ ...companyConfigurationActions.map(action=>({key:'company-config-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
  ...storeReportNames.map((name,i)=>({key:`store-reports-${name}`,label:storeReportLabels[i]+' καταστήματος',scope:'STORE',actions:['read']})),
  {key:"reports-price-changes",label:"Εταιρική αναφορά μεταβολών τιμών",scope:"COMPANY",actions:["read"]},
  {key:"reports-departments",label:"Εταιρική διοικητική αναφορά τμημάτων",scope:"COMPANY",actions:["read"]},

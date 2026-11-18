@@ -1,6 +1,7 @@
+import {companyConfigurationFilters,readCompanyConfiguration} from './backoffice-staff-company-configuration.js';
 import {companyReportFilters,readCompanyReports} from './backoffice-staff-company-reports.js';
 import {PERSONNEL_BASIC,resolvePersonnelPackageStates} from '../personnel-packages.js';
-import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies} from '../../../shared/backoffice-staff-company.mjs';
+import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies,companyConfigurationRequest} from '../../../shared/backoffice-staff-company.mjs';
 import {readCompanyCommerceData} from './backoffice-staff-company-commerce.js';
 import {managementVatExemptions} from '../lib/management-vat-exemptions.js';
 import {liveStaff,staffError} from './backoffice-staff-access.js';
@@ -19,7 +20,7 @@ export async function requireStaffCompanyGrant(db,user,capability){
  const capabilities=await readStaffCompanyPolicy(db,user.id,user.companyId);
  if(!capabilities.includes(capability))throw staffError();
  const license=await companyModuleState(user.companyId,{db});
- if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE');
+ if(!license||license.active!==true||!license.licenseAllowed&&capability!=='license-status.read')throw staffError(403,'LICENSE_INACTIVE');
  if(capability==='workforce-role-registry.read'){
   const rows=await db.$queryRaw`SELECT p."storeId",p."moduleKey",p."active",p."startsAt",p."endsAt" FROM "StorePaidModule" p JOIN "Store" s ON s."id"=p."storeId" AND s."companyId"=p."companyId" WHERE s."companyId"=${user.companyId} AND s."active"=true AND p."moduleKey" IN ('PERSONNEL_BASIC','PERSONNEL_PRO','PERSONNEL_AI','AI_STAFF_SCHEDULER') LIMIT 50001`;
   if(rows.length>50000)throw staffError(503,'STAFF_COMPANY_LIMIT');
@@ -27,7 +28,7 @@ export async function requireStaffCompanyGrant(db,user,capability){
   const now=new Date();if(![...grouped.values()].some(rows=>resolvePersonnelPackageStates(rows,now).states[PERSONNEL_BASIC].effectiveActive))throw staffError(403,'MODULE_DISABLED');
  }else {
   const module=staffCompanyModules[capability];
-  const nativeFree=['reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read'];
+  const nativeFree=['reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','license-status.read'];
   if(module===null){if(!nativeFree.includes(capability))throw staffError(403,'MODULE_DISABLED')}
   else if(typeof module!=='string'||!license.activeModules?.includes(module))throw staffError(403,'MODULE_DISABLED');
  }
@@ -40,6 +41,7 @@ export async function requireStaffCompanyGrant(db,user,capability){
  return {capability,companyId:account.companyId,revision:account.revision};
 }
 function validCompanyQuery(query,capability,path){
+ const config=companyConfigurationRequest('GET',path);if(config){try{companyConfigurationFilters(query||{},config);return true}catch{return false}}
  if(capability?.startsWith('reports-')){try{companyReportFilters(query,capability,path);return true}catch{return false}}
  if(query!==undefined&&(!query||typeof query!=='object'||Array.isArray(query)))return false;
  const names=Reflect.ownKeys(query||{});
@@ -61,6 +63,11 @@ export async function readStaffCompanyDirectory(db,req){
  if(!capability||req.user?.staffAccess!==true||req.staffCompanyGrant?.capability!==capability||req.staffCompanyGrant.companyId!==req.user.companyId)throw staffError();
  await enforceStaffCompanyRequest(db,req);
  const companyId=req.user.companyId;
+ const configuration=companyConfigurationRequest(req.method,String(req.originalUrl||req.path||'').split('?')[0]);
+ if(configuration){
+  const data=await readCompanyConfiguration(db,companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{});
+  const after=await requireStaffCompanyGrant(db,req.user,capability);if(after.revision!==req.staffCompanyGrant.revision)throw staffError();return data;
+ }
  if(capability.startsWith('reports-')){
   const payload=await readCompanyReports(db,req.user.companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{},req.user);
   const after=await requireStaffCompanyGrant(db,req.user,capability);if(after.revision!==req.staffCompanyGrant.revision)throw staffError();

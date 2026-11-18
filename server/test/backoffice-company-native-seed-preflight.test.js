@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {nativeCompanyConfigurationSeedPlan} from './fixtures/backoffice-company-configuration-native.mjs';
 import {nativeCompanyPartyReportSeedPlan} from './fixtures/backoffice-company-party-reports-native.mjs';
 import {nativeLegacyStoreReportSeedPlan} from './fixtures/backoffice-store-reports-legacy-native.mjs';
 import {nativeCompanyInventorySeedPlan} from './fixtures/backoffice-company-inventory-reports-native.mjs';
 const metadata=JSON.parse(readFileSync(new URL('./fixtures/ftext-full-schema-metadata-20261024.json',import.meta.url),'utf8'));
 function validateSeedPlan(plan){
- for(const {table,row}of plan){
+ for(const {table,row,mode='INSERT'}of plan){
+  assert.ok(['INSERT','UPDATE'].includes(mode));
   const columns=metadata.columns.filter(c=>c.table===table);assert.ok(columns.length,`Unknown table ${table}`);
   for(const [name,value]of Object.entries(row)){
    const column=columns.find(c=>c.name===name);assert.ok(column,`Unknown column ${table}.${name}`);assert.notEqual(value,undefined,`Undefined ${table}.${name}`);
@@ -20,7 +22,7 @@ function validateSeedPlan(plan){
    else if(type.startsWith('timestamp'))assert.ok(value instanceof Date&&Number.isFinite(value.getTime()),`${table}.${name} timestamp`);
    else assert.fail(`Unreviewed seed type ${table}.${name}: ${type}`);
   }
-  for(const column of columns.filter(c=>c.required&&c.default===null))assert.ok(Object.hasOwn(row,column.name),`Missing required ${table}.${column.name}`);
+  for(const column of columns.filter(c=>mode==='INSERT'&&c.required&&c.default===null))assert.ok(Object.hasOwn(row,column.name),`Missing required ${table}.${column.name}`);
  }
 }
 test('COMPANY32 native financial seed plan matches actual immutable column metadata including explicit NULL/default semantics',()=>{
@@ -41,3 +43,5 @@ test('preflight rejects explicit NULL even when NOT NULL has a default, unknown 
 test('STORE74 legacy eight-column financial seed plan passes metadata preflight without COMPANY authority fields',()=>{const plan=nativeLegacyStoreReportSeedPlan();assert.ok(plan.length>40);validateSeedPlan(plan);assert.ok(plan.every(({row})=>!Object.hasOwn(row,'companyCapabilities')));});
 
 test('COMPANY36 party-report financial seeds obey actual schema nullable/default rules',()=>{const plan=nativeCompanyPartyReportSeedPlan();assert.equal(plan.length,23);validateSeedPlan(plan);assert.ok(plan.some(({row})=>row.totalGross===-30));assert.ok(plan.some(({row})=>row.amount===0));});
+
+test('COMPANY53 configuration seed plan validates every JSON, terminal type and explicit nullable/default column',()=>{const plan=nativeCompanyConfigurationSeedPlan();validateSeedPlan(plan);assert.ok(plan.length>20);assert.ok(plan.some(e=>e.mode==='UPDATE'&&e.table==='Company'));assert.ok(plan.some(e=>e.table==='ManagementParameters'));});
