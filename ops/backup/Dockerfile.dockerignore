@@ -35,3 +35,6 @@
 !server/src/services/monthly-inventory-capture-status.js
 !server/scripts/
 !server/scripts/store-lifecycle-verify-copy.py
+!ops/backup/lifecycle/report-operational-compatibility.proposed.json
+!server/src/services/automatic-report-operational-profile.js
+!server/src/services/automatic-report-source-compatibility.js

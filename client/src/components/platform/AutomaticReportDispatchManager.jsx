@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import ReportEventInstallationManager from './ReportEventInstallationManager.jsx';
 
 const frequencies=[['DAILY','Ημερήσια'],['WEEKLY','Εβδομαδιαία'],['MONTHLY','Μηνιαία']];
 const stamp=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false}):'—';
@@ -52,6 +53,7 @@ function ReportDispatchManager(props){
    <button type="button" aria-pressed={type==='PROMOTION_RESULT'} onClick={()=>setType('PROMOTION_RESULT')}>Αποτελέσματα προσφορών</button>
    <button type="button" aria-pressed={type==='INVENTORY_RESULT'} onClick={()=>setType('INVENTORY_RESULT')}>Αποτελέσματα απογραφής</button>
   </div>
+  <ReportEventInstallationManager {...props}/>
   <ReportDispatchSettings key={type} supplier={supplier} event={['PROMOTION_RESULT','INVENTORY_RESULT'].includes(type)} inventory={type==='INVENTORY_RESULT'} {...props}/>
  </>;
 }

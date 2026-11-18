@@ -23,7 +23,7 @@ def selected_manifest_file(env=None):
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
     if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_BASE_V1'):
         filename = 'manifest.json'
-    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1'):
+    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1'):
         filename = 'monthly-inventory-capture-manifest.proposed.json'
     else:
         raise ValueError('Invalid store lifecycle profile')
@@ -37,7 +37,7 @@ def selected_manifest_document(env=None):
     if profile in ('BACKOFFICE_COMPANY_BASE_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1'):
         from backoffice_company_profile import company_manifest
         return company_manifest(document, 'BASE' if profile == 'BACKOFFICE_COMPANY_BASE_V1' else 'CAPTURE')
-    if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'):
+    if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1'):
         return document
     extension_file = pathlib.Path(__file__).resolve().parent / 'automatic-report-consent-extension.proposed.json'
     extension = json.loads(extension_file.read_text())
@@ -56,6 +56,19 @@ def selected_manifest_document(env=None):
         document['reviewedColumns'].extend(name + '.' + column for column in ('recipientId', 'consentedBy', 'revokedBy', 'updatedBy'))
     document['id'] += '__AUTOMATIC_EVENT_REPORTS_V1'
     document['valueGuards'].append({'table': 'AutomaticReportEventConsent', 'column': 'reportType', 'allowed': ['PROMOTION_RESULT', 'INVENTORY_RESULT']})
+    if profile == 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1':
+        operational = json.loads((pathlib.Path(__file__).resolve().parent / 'report-operational-compatibility.proposed.json').read_text())
+        document['id'] += '__REPORTS_ONLY_OPERATIONAL_V1'
+        document['executionDisabled'] = True
+        document['preservedOperationalTables'] = [table['name'] for table in operational['tables']]
+        document['reviewedColumns'].extend(operational['reviewedColumns'])
+        for table in operational['tables']:
+            if table['name'] in document['knownTables']:
+                raise ValueError('Operational report table already declared')
+            document['knownTables'].append(table['name'])
+            document['knownColumns'][table['name']] = table['columns']
+        stock = next(table for table in document['tables'] if table['name'] == 'StoreProduct')
+        stock['existingTriggers'] = stock.get('existingTriggers', []) + [operational['packageTrigger']]
     return document
 
 
@@ -94,13 +107,15 @@ def publish_capability(schema, manifest_hash):
     query('INSERT INTO ' + ident(schema) + '."StoreLifecycleRuntime" ("id","heartbeatJson","mac") VALUES(' + literal('backup-worker') + ',' + literal(heartbeat) + ',' + literal(mac) + ') ON CONFLICT("id") DO UPDATE SET "heartbeatJson"=EXCLUDED."heartbeatJson","mac"=EXCLUDED."mac";')
 
 def process_one(manifest_file, audit_module):
+    manifest = json.loads(pathlib.Path(manifest_file).read_text())
+    if manifest.get('executionDisabled') is True:
+        return {'state': 'DISABLED', 'reason': 'REPORTS_ONLY_PROFILE'}
     os.umask(0o077)
     for key in ('DATABASE_URL', 'AWS_REGION', 'S3_BUCKET_NAME', 'S3_ENDPOINT_URL', 'BACKUP_MONITOR_SECRET'):
         if not os.environ.get(key):
             raise ValueError('Required worker configuration missing')
     if len(os.environ['BACKUP_MONITOR_SECRET']) < 24:
         raise ValueError('Invalid worker signing configuration')
-    manifest = json.loads(pathlib.Path(manifest_file).read_text())
     manifest_hash = hashlib.sha256(compact(manifest).encode()).hexdigest()
     schema = query('SELECT current_schema();')
     publish_capability(schema, manifest_hash)

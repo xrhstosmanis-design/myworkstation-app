@@ -19,7 +19,7 @@ expected=json.load(sys.stdin)
 root=company_source_root.source_root()
 packet=json.loads(company_source_root.source_file('${packetPath}').read_text())
 assert packet['sourceHashes']==expected['sourceHashes']
-assert len(packet['sourceHashes'])==20
+assert len(packet['sourceHashes'])==23
 for name,digest in packet['sourceHashes'].items(): assert hashlib.sha256(company_source_root.source_file(name).read_bytes()).hexdigest()==digest,name
 actual={p:hashlib.sha256(compact(worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':p})).encode()).hexdigest() for p in expected['profiles']}
 assert actual==expected['profiles']
@@ -59,7 +59,7 @@ print('RELOCATED_COMPANY_PACKAGE_PASS')
 async function expected(){const packet=JSON.parse(await readFile(new URL(packetPath,root),'utf8'));return {sourceHashes:packet.sourceHashes,profiles:Object.fromEntries(profiles.map(profile=>[profile,hash(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile}))]))}}
 function verify(result){assert.equal(result.status,0,(result.stderr||result.stdout||String(result.error)).slice(-8000));return result.stdout}
 
-test('relocated company worker source package resolves all twenty bound files and rejects escaping or altered runtime copies',async()=>{
+test('relocated company worker source package resolves all twenty-three bound files and rejects escaping or altered runtime copies',async()=>{
  const directory=await mkdtemp(join(tmpdir(),'company-worker-package-')),source=join(directory,'company-source'),runtime=join(directory,'runtime');
  try{
   const values=await expected();

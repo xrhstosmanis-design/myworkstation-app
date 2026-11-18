@@ -26,5 +26,5 @@ export function withAutomaticReportEventConsent(manifest){
 }
 
 export function automaticReportEventLifecycleReady(env=process.env){
-  return ['AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1'].includes(env.MWS_STORE_LIFECYCLE_PROFILE);
+  return ['AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1'].includes(env.MWS_STORE_LIFECYCLE_PROFILE);
 }

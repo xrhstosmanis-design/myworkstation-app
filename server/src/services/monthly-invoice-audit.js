@@ -1,6 +1,9 @@
 import {requireStaffGrant,staffError} from './backoffice-staff-access.js';
 import {invoiceAuditMonth} from './invoice-audit-month.js';
 import crypto from 'node:crypto';
+import {Prisma} from '@prisma/client';
+import {postedSupplierPayment} from '../lib/supplier-payment-reporting.js';
+import {observeInvoicePayments} from '../lib/invoice-payment-observation.js';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
 import {readPendingInvoices,readPendingInvoiceSnapshotRows,readPendingInvoiceSnapshotRowsForAutomationInTransaction} from './pos-pending-invoices.js';
 import {requireMonthlyCaptureContext} from './monthly-inventory-capture-authorization.js';
@@ -88,7 +91,7 @@ const domains={
 const pendingRequired={StoreTransaction:['id','companyId','storeId','supplierId','supplierName','amount','actorId','actorName','occurredAt','invoiceDocumentNumber','attachmentMimeType','attachmentFilename','attachmentChecksum','attachmentData','paymentMethod','subtractFromShift','sessionId','type','reversedAt'],StoreOperatorAudit:['id','companyId','storeId','eventType','actorId','details'],Supplier:['id','companyId','name','taxId']};
 
 async function capabilities(tx){
- const required={...pendingRequired};for(const definition of Object.values(domains))required[definition.table]=definition.columns;
+ const required={...pendingRequired,SupplierPaymentSettlement:['id','companyId','storeId','transactionId','supplierId','status'],SupplierPaymentAllocation:['id','companyId','settlementId','purchaseDocumentId','amount']};for(const definition of Object.values(domains))required[definition.table]=definition.columns;
  const rows=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS "column" FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname=current_schema() AND c.relname=ANY($1::text[]) AND a.attnum>0 AND NOT a.attisdropped`,Object.keys(required));
  const result={};for(const [table,columns] of Object.entries(required))result[table]=columns.every(column=>rows.some(row=>row.table===table&&row.column===column));result.posJobMetadata=['stage','resultJson'].every(column=>rows.some(row=>row.table==='AiReaderJob'&&row.column===column));return result;
 }
@@ -266,7 +269,36 @@ async function readInvoiceSourcesCore(tx,companyId,store,input,readPending){
  }
  const pendingAvailable=Object.keys(pendingRequired).every(table=>cap[table]);
  const pending=pendingAvailable?await readPending():null;
- return {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending};
+ return {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending,paymentMetadataAvailable:cap.StoreTransaction&&cap.SupplierPaymentSettlement,allocationMetadataAvailable:cap.SupplierPaymentAllocation};
+}
+
+
+// Additional ordinary-report observation only. Persisted stock/inventory snapshot
+// projections retain their existing source and category contract. No bootstrap.
+async function readInvoicePaymentMetadata(tx,companyId,storeId,facts,available,allocationsAvailable){
+ const unavailable=reason=>({available:false,allocationsAvailable:false,reason,rows:[],allocations:[]});
+ if(!available)return unavailable('PAYMENT_SOURCE_UNAVAILABLE');
+ const documents=facts.documents.filter(d=>['DRAFT','APPROVED'].includes(d.status));
+ const ids=[...new Set(documents.map(d=>d.paymentTransactionId).filter(Boolean))],documentIds=documents.map(d=>d.id);
+ if(!documentIds.length)return {available:true,allocationsAvailable,reason:null,rows:[],allocations:[]};
+ const allocatedLink=allocationsAvailable?Prisma.sql`OR EXISTS (SELECT 1 FROM "SupplierPaymentAllocation" a JOIN "SupplierPaymentSettlement" ss ON ss."id"=a."settlementId" AND ss."companyId"=a."companyId" AND ss."storeId"=t."storeId" WHERE a."companyId"=t."companyId" AND ss."transactionId"=t."id" AND a."purchaseDocumentId"=ANY(${documentIds}::text[]))`:Prisma.empty;
+ const rows=await tx.$queryRaw(Prisma.sql`SELECT t."id",t."companyId",t."storeId",t."type",t."supplierId",t."invoiceDocumentNumber",t."amount"::text AS "amount",t."reversedAt",t."attachmentMimeType",t."attachmentFilename",(${postedSupplierPayment}) AS "settlementConfirmed",
+ EXISTS(SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=t."companyId" AND ss."transactionId"=t."id") AS "hasSettlement",
+ (SELECT COUNT(*)::int FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=t."companyId" AND ss."transactionId"=t."id") AS "settlementCount",
+ NOT EXISTS(SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=t."companyId" AND ss."transactionId"=t."id" AND (ss."storeId" IS DISTINCT FROM t."storeId" OR ss."supplierId" IS DISTINCT FROM t."supplierId")) AS "settlementScopeValid"
+ FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."storeId"=${storeId} AND t."type"='SUPPLIER_PAYMENT'
+ AND (t."id"=ANY(${ids}::text[]) OR (t."attachmentMimeType"='application/vnd.myworkstation.purchase-document' AND t."attachmentFilename"=ANY(${documentIds}::text[])) ${allocatedLink})
+ ORDER BY t."id" LIMIT ${MAX_SOURCE_ROWS+1}`);
+ if(rows.length>MAX_SOURCE_ROWS)return unavailable('PAYMENT_SOURCE_LIMIT');
+ let allocations=[];
+ if(allocationsAvailable&&rows.length)allocations=await tx.$queryRaw(Prisma.sql`SELECT a."id",ss."transactionId",a."purchaseDocumentId" AS "documentId",a."amount"::text AS "amount",a."companyId" AS "allocationCompanyId",d."companyId",d."storeId",d."supplierId",ss."status" AS "settlementStatus"
+ FROM "SupplierPaymentAllocation" a JOIN "SupplierPaymentSettlement" ss ON ss."id"=a."settlementId" AND ss."companyId"=a."companyId"
+ JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND t."storeId"=ss."storeId"
+ LEFT JOIN "PurchaseDocument" d ON d."id"=a."purchaseDocumentId" AND d."companyId"=a."companyId" AND d."storeId"=ss."storeId"
+ WHERE a."companyId"=${companyId} AND t."companyId"=${companyId} AND t."storeId"=${storeId} AND t."type"='SUPPLIER_PAYMENT' AND t."id"=ANY(${rows.map(row=>row.id)}::text[])
+ ORDER BY a."id" LIMIT ${MAX_SOURCE_ROWS+1}`);
+ if(allocations.length>MAX_SOURCE_ROWS)return unavailable('PAYMENT_ALLOCATION_SOURCE_LIMIT');
+ return {available:true,allocationsAvailable,reason:null,rows,allocations};
 }
 
 
@@ -294,14 +326,16 @@ async function readMonthlyInvoiceAuditCore(db,actor,input,{now,delegatedRead=fal
  return db.$transaction(async tx=>{
   await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
   await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8000ms'");
-  const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending}=await readInvoiceSources(tx,actor,input,now,false,delegatedRead);
+  const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending,paymentMetadataAvailable,allocationMetadataAvailable}=await readInvoiceSources(tx,actor,input,now,false,delegatedRead);
   const complete=unavailable.length===0&&limited.length===0,analysis=complete?classifyInvoiceMonth(facts,period):{counts:null,items:[]};
-  const fingerprint=hash({period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited});
+  const paymentMetadata=complete?await readInvoicePaymentMetadata(tx,actor.companyId,store.id,facts,paymentMetadataAvailable,allocationMetadataAvailable):{available:false,allocationsAvailable:false,reason:'INVOICE_SOURCE_INCOMPLETE',rows:[],allocations:[]};
+  const financial=observeInvoicePayments(analysis.items,{...facts,paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const fingerprint=hash({period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   const after=cursor?analysis.items.findIndex(item=>item.id===cursor.after):-1;
   if(cursor&&after<0)fail('Η σελίδα δεν ανήκει στο τρέχον αποτέλεσμα.',409);
-  const items=analysis.items.slice(after+1,after+1+PAGE_SIZE),hasMore=after+1+items.length<analysis.items.length;
-  return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,coverage:{complete,sourceCounts,sourceCountBasis:'ALL_STORED_METADATA_FOR_LINK_CONTEXT',unavailable,limited,sourceLimit:MAX_SOURCE_ROWS,detailsPageSize:PAGE_SIZE,scope:'STORED_SELECTED_STORE_SOURCES'},summary:analysis.counts,items,nextPage:hasMore?Buffer.from(JSON.stringify({after:items.at(-1).id,fingerprint,scope:hash([actor.companyId,store.id,input.month])})).toString('base64url'):null,pendingOriginals:{period:'ALL_MONTHS',label:'Όλοι οι μήνες',available:pendingAvailable,counts:pending?{total:pending.count,missingOriginal:pending.missingCount,uploadedAwaitingReview:pending.uploadedCount,reviewRequired:pending.reviewCount}:null,items:(pending?.rows||[]).map(row=>({id:row.id,supplierName:row.supplierName,amount:row.amount,documentNumber:row.documentNumber,documentDate:row.documentDate,status:row.status,occurredAt:row.occurredAt})),truncated:pending?.truncated||false,detailLimit:50},allClear:complete&&pendingAvailable&&analysis.counts.unposted===0&&analysis.counts.possibleDuplicates===0&&analysis.counts.identityReview===0&&pending.count===0,immutableSnapshot:false,readOnly:true};
+  const items=financial.items.slice(after+1,after+1+PAGE_SIZE),hasMore=after+1+items.length<analysis.items.length;
+  return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,coverage:{complete,sourceCounts,sourceCountBasis:'ALL_STORED_METADATA_FOR_LINK_CONTEXT',unavailable,limited,sourceLimit:MAX_SOURCE_ROWS,detailsPageSize:PAGE_SIZE,scope:'STORED_SELECTED_STORE_SOURCES'},summary:analysis.counts,financialSummary:complete?financial.summary:null,paymentCoverage:{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,reason:paymentMetadata.reason},items,nextPage:hasMore?Buffer.from(JSON.stringify({after:items.at(-1).id,fingerprint,scope:hash([actor.companyId,store.id,input.month])})).toString('base64url'):null,pendingOriginals:{period:'ALL_MONTHS',label:'Όλοι οι μήνες',available:pendingAvailable,counts:pending?{total:pending.count,missingOriginal:pending.missingCount,uploadedAwaitingReview:pending.uploadedCount,reviewRequired:pending.reviewCount}:null,items:(pending?.rows||[]).map(row=>({id:row.id,supplierName:row.supplierName,amount:row.amount,documentNumber:row.documentNumber,documentDate:row.documentDate,status:row.status,occurredAt:row.occurredAt})),truncated:pending?.truncated||false,detailLimit:50},allClear:complete&&paymentMetadata.available&&financial.summary.financialPending===0&&financial.summary.reviewRequired===0&&financial.summary.notLinked===0&&pendingAvailable&&analysis.counts.unposted===0&&analysis.counts.possibleDuplicates===0&&analysis.counts.identityReview===0&&pending.count===0,immutableSnapshot:false,readOnly:true};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});
 }
 

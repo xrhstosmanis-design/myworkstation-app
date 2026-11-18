@@ -13,6 +13,8 @@ COPY ops/backup/lifecycle /backup/lifecycle
 # These are data/source files only; the backup image does not execute Node.
 COPY ops/backup/lifecycle /backup/company-source/ops/backup/lifecycle
 COPY server/src/services/store-lifecycle-executor.js \
+     server/src/services/automatic-report-operational-profile.js \
+     server/src/services/automatic-report-source-compatibility.js \
      server/src/services/store-lifecycle-worker-ready.js \
      server/src/services/store-lifecycle-manifest.js \
      server/src/services/backoffice-company-profile.js \

@@ -34,11 +34,11 @@
     "ops/backup/lifecycle/column-review.json": "6a298105bb95bd4260fd1e38640c0c15518b6a198579a34527410c7bd7056300",
     "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json": "363d168d3cdaad93eb350da616a764f73ac3556b92d37d09bd47ecd453fece03",
     "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json": "186a879072dec4796d878477233b887fdab8f9952ea8c5a35bb44ecd46a8e931",
-    "server/src/services/store-lifecycle-executor.js": "f0c107a620a103991ff82519509d2eb3655e7e69cd6e82c0a96d71e82a4ab18e",
+    "server/src/services/store-lifecycle-executor.js": "9e4eea526f7c96fe72c2ad597e4b228d57202f47fdfbe78e1efbd93e2ca15f07",
     "server/src/services/store-lifecycle-worker-ready.js": "35730d0f89545a1d5bbfcd5feec74390cc4465363e102d34bb748f6c5ace12b8",
-    "server/src/services/store-lifecycle-manifest.js": "0f9607127041a9a2ca2dec6b7f9f604a2f88c4eb959545f4bf514ce990e3221f",
-    "ops/backup/lifecycle/worker.py": "de532763eb1bb5849beb24f9331b824b9040ae72a332b277e8ea6961905fbadf",
-    "ops/backup/lifecycle/verify_restore.py": "26c43b02608c5aa6ce2b6e5e40d3ff4ee4d5a1343b05735f85a067e4a14020c2",
+    "server/src/services/store-lifecycle-manifest.js": "1a1f0fc720cbe3fbca61793495fab4e6f6af6157a5c3341debef089c126fe2b6",
+    "ops/backup/lifecycle/worker.py": "757e4f6271c808b2e8378a678a921d6394a6103c446f8830eab099194ee53cad",
+    "ops/backup/lifecycle/verify_restore.py": "bd8976fa774b09e4fa864bdb334da2081ba8d0c8bb12c38a9c0608f028e16d9b",
     "server/src/services/backoffice-company-profile.js": "1efdcfde10f9fb079a4a7efbfb7f8c2384b016b8299dc1445b36f18b0a76c67a",
     "ops/backup/lifecycle/backoffice_company_profile.py": "48ad34c21cf3df299c41f012acd4377f25cab6449db456f6557308d4aae08e34",
     "server/src/services/backoffice-company-installation-proof.js": "95c595abda03bf913caa3291d2c2c6d587ef497b2d9b361a75eadd8024915eaa",
@@ -49,7 +49,10 @@
     "server/src/services/monthly-inventory-capture-authorization.js": "bdce7571c588445882ca8e5568e12e23748f0e0893c816e4b621f5befd053a92",
     "server/src/services/monthly-inventory-capture-status.js": "6f3c79ceb28c079a7e37093f9d90b39995c89eb48982201752f3fd5e12393547",
     "ops/backup/lifecycle/company_source_root.py": "2c9985e29890a5ec1d46892f0100b6bc7b0bf4d4d7aa01bef6d923a01dac8d2a",
-    "server/scripts/store-lifecycle-verify-copy.py": "e3f6436c830a5cdeaefe1f0ef9637234ea0e5bab9d44cda27cafeaf05c70c765"
+    "server/scripts/store-lifecycle-verify-copy.py": "e3f6436c830a5cdeaefe1f0ef9637234ea0e5bab9d44cda27cafeaf05c70c765",
+    "server/src/services/automatic-report-operational-profile.js": "63f456a20ee56c95f4a2fad3f0f7c81482072396841f0ccbda947f5ba9512f40",
+    "server/src/services/automatic-report-source-compatibility.js": "3e4deeb6a2dee3a5d78590574494a6f5adcefa72b0ab634ab4891d33ec353563",
+    "ops/backup/lifecycle/report-operational-compatibility.proposed.json": "620d42d21d7f7eee43c9a4c45de787ef53f77e85cd47e5e772f0934d0cbf218a"
   },
   "runtimeProfilesUnchanged": [
     "BASE",

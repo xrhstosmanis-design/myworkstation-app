@@ -20,7 +20,7 @@ export function companyProductCenterRequest(method,path){if(method!=='GET'||type
 const texts=keys=>Object.fromEntries(keys.split(' ').map(k=>[k,'text?'])),nums=keys=>Object.fromEntries(keys.split(' ').map(k=>[k,'number'])),flags=keys=>Object.fromEntries(keys.split(' ').map(k=>[k,'boolean']));
 export const productCenterCatalogFields={id:'text',name:'text',sku:'text?',unit:'text',salePrice:'number',categoryName:'text?',active:'boolean'};
 export const productCenterCardFields={id:'text',name:'text',...texts('sku description categoryName subcategoryName productCompanyName vatDepartmentName'),unit:'text',...nums('salePrice costPrice vatRate discountA discountB discountC'),staffPrice:'number?',deliveryPrice:'number?',minOrderQuantity:'number?',capacity:'number?',...flags('vatVerified trackStock active allowDiscount allowPosPriceChange freeSalePrice negativeStockWarning isSet isRecipe')};
-export const productCenterStoreFields={storeId:'text',storeName:'text',salePrice:'number',active:'boolean',currentStock:'number',minStock:'number'};
+export const productCenterStoreFields={storeId:'text',storeName:'text',salePrice:'number?',active:'boolean',currentStock:'number',minStock:'number?'};
 export const productCenterBarcodeFields={id:'text',barcode:'text',unitMultiplier:'number',salePrice:'number?',name:'text?',updatedAt:'date'};
 export const productCenterSupplierCodeFields={id:'text',supplierId:'text',supplierName:'text',supplierCode:'text?',updatedAt:'date',lastCost:'number',lastPurchaseAt:'date?'};
 export const productCenterPurchaseFields={id:'text',documentNumber:'text?',documentDate:'date',supplierId:'text?',supplierName:'text?',...nums('quantity unitCost netAmount vatRate vatAmount grossAmount'),unit:'text',unitsPerPackage:'number?',createdAt:'date'};
