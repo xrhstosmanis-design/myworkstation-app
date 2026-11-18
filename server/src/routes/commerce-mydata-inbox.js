@@ -12,7 +12,7 @@ import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "
 import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
-import {acquireOriginal} from "../mydata-original.js";
+import {acquireOriginal,epsilonOriginalRecoveryLinkPattern} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
@@ -112,8 +112,7 @@ export function syncMyDataStore(req,{db=prisma}={}){
   syncInFlight.set(key,run);return run;
 }
 // Opt-in historical recovery for URLs already proven by the Epsilon adapter.
-const originalRecoveryVersion = "epsilon-fd-8-v1";
-const originalRecoveryLink = String.raw`<(?:[[:alnum:]_]+:)?downloadingInvoiceUrl[^>]*>[[:space:]]*https://epsilondigital[.]epsilonnet[.]gr/fd/[a-f0-9]{32}:8/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>`;
+const originalRecoveryVersion = "epsilon-verified-pairs-202611-v1";
 
 export async function recoverExhaustedOriginals({
   db, companyId, storeId, userId, source,
@@ -127,11 +126,12 @@ export async function recoverExhaustedOriginals({
     SELECT m."inboxId" FROM "MyDataInboundDocument" m
     JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
     WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
+      AND m."issueDate">=DATE '2026-11-01' AND m."issueDate"<DATE '2026-12-01'
       AND m."rawPayload"->>'source'=${source} AND m."rawPayload"->>'originalPending'='true'
       AND i."attachmentId" IS NULL AND i."status"='RECEIVED'
       AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)>=3
       AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
-      AND m."rawPayload"->>'xml' ~* ${originalRecoveryLink}
+      AND m."rawPayload"->>'xml' ~* ${epsilonOriginalRecoveryLinkPattern()}
     ORDER BY m."fetchedAt",m."id" LIMIT 2`;
   let downloaded = 0, failed = 0;
   for (const {inboxId} of candidates) {
