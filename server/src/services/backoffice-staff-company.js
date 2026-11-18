@@ -56,7 +56,7 @@ export async function readStaffCompanyDirectory(db,req){
  await enforceStaffCompanyRequest(db,req);
  const companyId=req.user.companyId;
  if(capability.startsWith('reports-')){
-  const payload=await readCompanyReports(db,req.user.companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{});
+  const payload=await readCompanyReports(db,req.user.companyId,capability,String(req.originalUrl||req.path||'').split('?')[0],req.query||{},req.user);
   const after=await requireStaffCompanyGrant(db,req.user,capability);if(after.revision!==req.staffCompanyGrant.revision)throw staffError();
   return {scope:'COMPANY',companyId,...payload};
  }

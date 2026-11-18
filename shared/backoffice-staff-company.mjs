@@ -1,8 +1,8 @@
 // Company authority is independent of STORE membership and profile presets.
 // These keys become selectable only after the installed protocol is verified.
 export const staffCompanyProtocol='MWS_BACKOFFICE_COMPANY_V1';
-export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read','reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read']);
-export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY','reports-deactivations.read':null,'reports-logins.read':'INVENTORY','reports-sale-deletions.read':null,'reports-pos-sale-actions.read':null,'reports-destructions.read':null,'reports-movements.read':'INVENTORY'});
+export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read','reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read','reports-stocktakes.read','reports-stock-snapshot.read','reports-item-snapshot.read','reports-stock-analysis.read','reports-sales-analysis.read','reports-payroll-expenses.read']);
+export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY','reports-deactivations.read':null,'reports-logins.read':'INVENTORY','reports-sale-deletions.read':null,'reports-pos-sale-actions.read':null,'reports-destructions.read':null,'reports-movements.read':'INVENTORY','reports-stocktakes.read':'INVENTORY','reports-stock-snapshot.read':'INVENTORY','reports-item-snapshot.read':'INVENTORY','reports-stock-analysis.read':'INVENTORY','reports-sales-analysis.read':'INVENTORY','reports-payroll-expenses.read':'INVENTORY'});
 export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:'Εταιρικές προβολές',actions:Object.freeze([
   {key:'stores.read',label:'Προβολή καταστημάτων εταιρείας',description:'Βλέπει τον κατάλογο καταστημάτων της εταιρείας, χωρίς ρυθμίσεις ή είσοδο στη διαχείρισή τους.'},
   {key:'suppliers.read',label:'Προβολή προμηθευτών εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας και ΑΦΜ προμηθευτών της εταιρείας, χωρίς πληρωμές ή αλλαγές.'},
@@ -29,6 +29,12 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   {key:'reports-pos-sale-actions.read',label:'Εταιρική αναφορά ενεργειών πωλήσεων POS',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
   {key:'reports-destructions.read',label:'Εταιρική αναφορά καταστροφών POS και κόστους',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
   {key:'reports-movements.read',label:'Εταιρική αναφορά κινήσεων αποθέματος και κόστους',description:'Προβολή εταιρικού ιστορικού στο επιλεγμένο χρονικό παράθυρο, χωρίς αλλαγές ή ενέργειες.'},
+  {key:'reports-stocktakes.read',requires:['stores.read'],label:'Εταιρική αναφορά απογραφών και διαφορών',description:'Βλέπει αναφορά και διαθέσιμες αξίες της εταιρείας, με ρητή πρόσβαση στον κατάλογο καταστημάτων, χωρίς αλλαγές.'},
+  {key:'reports-stock-snapshot.read',requires:['stores.read'],label:'Εταιρική αναφορά στιγμιοτύπου αποθήκης και κόστους',description:'Βλέπει αναφορά και διαθέσιμες αξίες της εταιρείας, με ρητή πρόσβαση στον κατάλογο καταστημάτων, χωρίς αλλαγές.'},
+  {key:'reports-item-snapshot.read',requires:['stores.read'],label:'Εταιρική αναφορά στιγμιοτύπου είδους και κόστους',description:'Βλέπει αναφορά και διαθέσιμες αξίες της εταιρείας, με ρητή πρόσβαση στον κατάλογο καταστημάτων, χωρίς αλλαγές.'},
+  {key:'reports-stock-analysis.read',requires:['stores.read'],label:'Εταιρική αναφορά ανάλυσης αποθήκης και κόστους',description:'Βλέπει αναφορά και διαθέσιμες αξίες της εταιρείας, με ρητή πρόσβαση στον κατάλογο καταστημάτων, χωρίς αλλαγές.'},
+  {key:'reports-sales-analysis.read',requires:['stores.read'],label:'Εταιρική αναφορά ανάλυσης πωλήσεων και κέρδους',description:'Βλέπει αναφορά και διαθέσιμες αξίες της εταιρείας, με ρητή πρόσβαση στον κατάλογο καταστημάτων, χωρίς αλλαγές.'},
+  {key:'reports-payroll-expenses.read',requires:['stores.read', 'reports-sales-analysis.read'],label:'Εταιρική αναφορά καταγεγραμμένων πληρωμών προσωπικού',description:'Βλέπει ονόματα υπαλλήλων, συνδεδεμένες πληρωμές και ποσά καταγεγραμμένων εξόδων. Δεν αποδεικνύει εξόφληση ή δεδουλευμένα.'},
   {key:'customers.read',label:'Προβολή πελατών, υπολοίπων και πιστωτικών ορίων εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας, έκπτωση, οικονομικό υπόλοιπο και πιστωτικό όριο πελατών όλης της εταιρείας, χωρίς κινήσεις ή αλλαγές.'}
 ])}]);
 export function validStaffCompanyCapabilities(value){
@@ -55,6 +61,12 @@ export function staffCompanySupplierId(path){
 export function staffCompanyDeliveryNoteId(path){
  const match=/^\/api\/reports\/delivery\/([^/]+)\/lines$/.exec(path);if(!match)return null;
  let value;try{value=decodeURIComponent(match[1])}catch{return null}
+ return value&&value.length<=160&&value.trim()===value&&!/[\/\\\u0000-\u001f\u007f]/.test(value)?value:null;
+}
+export function staffCompanyReportProductId(path,family){
+ if(typeof path!=='string'||/[?#]/.test(path))return null;
+ const pattern=family==='stock-analysis'?/^\/api\/reports\/stock-analysis\/([^/]+)\/movements$/:family==='sales-analysis'?/^\/api\/reports\/sales-analysis\/([^/]+)$/:null;
+ const match=pattern?.exec(path);if(!match)return null;let value;try{value=decodeURIComponent(match[1])}catch{return null}
  return value&&value.length<=160&&value.trim()===value&&!/[\/\\\u0000-\u001f\u007f]/.test(value)?value:null;
 }
 export function staffCompanyRequestCapability(method,path){
@@ -85,5 +97,13 @@ export function staffCompanyRequestCapability(method,path){
   if(path==='/api/reports/pos-sale-actions')return 'reports-pos-sale-actions.read';
   if(path==='/api/reports/destructions')return 'reports-destructions.read';
   if(path==='/api/reports/movements')return 'reports-movements.read';
+  if(path==='/api/reports/stocktakes')return 'reports-stocktakes.read';
+  if(path==='/api/reports/stock-snapshot')return 'reports-stock-snapshot.read';
+  if(path==='/api/reports/item-snapshot')return 'reports-item-snapshot.read';
+  if(path==='/api/reports/stock-analysis')return 'reports-stock-analysis.read';
+  if(path==='/api/reports/sales-analysis')return 'reports-sales-analysis.read';
+  if(path==='/api/reports/recorded-payroll-expenses')return 'reports-payroll-expenses.read';
+  if(staffCompanyReportProductId(path,'stock-analysis')!==null)return 'reports-stock-analysis.read';
+  if(staffCompanyReportProductId(path,'sales-analysis')!==null)return 'reports-sales-analysis.read';
   return null;
 }

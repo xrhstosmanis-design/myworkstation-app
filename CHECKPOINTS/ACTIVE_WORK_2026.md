@@ -581,3 +581,8 @@ CENTRAL-BACKOFFICE-ACCESS-01 retained. Baseline81e6a680/localb2ca36b treebbd7675
 ## 18/11/2026 — No5 έξι εταιρικές αναφορές audit / AWAITING CI
 
 CENTRAL-BACKOFFICE-ACCESS-01, συνέχεια83b02754/local0d0475c, tree397e0293. Source59STORE+26COMPANY, έξι scoped αναφορές με ακριβή native free/INVENTORY gates, PII disclosure και typed cart projections. Τελική50fileσουίτα244PASS/12PG-DockerSKIP/0FAIL καιbuildPASS. Προηγούμενοmain44297500073/ChatSUCCESS καιactual4reportsBASE/CAPTUREPASS. Νέοnative6helper απαιτεί πραγματικόCI. Wallet απέδειξεsource16.16/private16.15 καιCREATE_TABLEparametererror· νέοmatching16container καιυποχρεωτικήPG18δεύτερηεπαναφορά, μεαμετάβληταassertions/mainHOSTpath. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςμίαφοράστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-audit-report-reads.md).
+
+
+## 18/11/2026 — No5 αναφορές inventory/sales/linked payroll / AWAITING CI
+
+CENTRAL-BACKOFFICE-ACCESS-01, baseline24abf7b2/local1a2d8d4 tree57685e53. Source59STORE+32COMPANY με ρητές εξαρτήσεις store directory και χωριστά named linked payments. Canonical stock/sales/payroll διατηρούνται, fresh auth εκτός readonly snapshots. Τελική66fileσουίτα347PASS/16PG-DockerSKIP/0FAIL+buildPASS. Νέο native helper και32-row actual-schema preflight, όχι fake native PASS. Παλιόmain26FAILμόνο2seedNOTNULL, διορθώθηκαν χωρίςschema/runtimeχαλάρωση. Wallet44301623598καιChatSUCCESS, actualmatching16.16καιPG18fullrestorePASS. WholeOwnercoverageOPEN, ανθρώπινεςδοκιμέςστοτέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-inventory-sales-payroll-reports.md).

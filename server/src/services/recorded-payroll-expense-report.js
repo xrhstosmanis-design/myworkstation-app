@@ -1,3 +1,4 @@
+import {requireStaffCompanyGrant} from './backoffice-staff-company.js';
 import {salesReportCalendar} from "./sales-report-calendar.js";
 import {PERSONNEL_BASIC,PERSONNEL_PAYROLL,resolvePersonnelPackageStates} from "../personnel-packages.js";
 
@@ -30,12 +31,15 @@ function isoDate(value){
 }
 function scopeInput({user,storeId,from,to,timeZone},now){
   if(!user||user.tokenType==="STORE_OPERATOR"||!["OWNER","SUPER_ADMIN"].includes(user.role))throw failure(403,"RECORDED_EXPENSE_ROLE_DENIED","Η αναφορά απαιτεί Ιδιοκτήτη ή Super Admin.");
-  if(!text(user.companyId))throw failure(400,"RECORDED_EXPENSE_SCOPE_REQUIRED","Επίλεξε εταιρεία για την αναφορά.");
+  return scopeValues({companyId:user.companyId,storeId,from,to,timeZone,superAdmin:user.role==="SUPER_ADMIN"},now);
+}
+function scopeValues({companyId,storeId,from,to,timeZone,superAdmin=false},now){
+  if(!text(companyId))throw failure(400,"RECORDED_EXPENSE_SCOPE_REQUIRED","Επίλεξε εταιρεία για την αναφορά.");
   if(!text(storeId))throw failure(400,"RECORDED_EXPENSE_SCOPE_REQUIRED","Επίλεξε συγκεκριμένο κατάστημα για την αναφορά.");
   if(timeZone!=="Europe/Athens"||typeof from!=="string"||typeof to!=="string"||! /^\d{4}-\d{2}-\d{2}$/.test(from)||! /^\d{4}-\d{2}-\d{2}$/.test(to))throw failure(400,"RECORDED_EXPENSE_PERIOD_INVALID","Επίλεξε έγκυρες ημερομηνίες και ώρα Ελλάδας.");
   const calendar=salesReportCalendar(from,to);
   if(calendar.to.getTime()>now.getTime())throw failure(400,"RECORDED_EXPENSE_PERIOD_NOT_ENDED","Η αναφορά απαιτεί ολοκληρωμένες ημέρες στην ώρα Ελλάδας.");
-  return {companyId:user.companyId,storeId,calendar,superAdmin:user.role==="SUPER_ADMIN"};
+  return {companyId,storeId,calendar,superAdmin};
 }
 function validModuleDate(value){return value===null||value instanceof Date&&Number.isFinite(value.getTime());}
 async function scopeAndPackages(tx,{companyId,storeId,superAdmin},now){
@@ -140,6 +144,9 @@ function report(rows,scope,now){
 export async function readRecordedPayrollExpenseReport(input,{db,now=new Date()}={}){
   if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw failure(500,"RECORDED_EXPENSE_CLOCK_INVALID","Δεν επιβεβαιώθηκε ο χρόνος αναφοράς.");
   const asOf=new Date(now.getTime()),scope=scopeInput(input||{},asOf);
+  return readSnapshot(scope,asOf,db);
+}
+async function readSnapshot(scope,asOf,db){
   if(!db||typeof db.$transaction!=="function")throw unavailable();
   try{
     return await db.$transaction(async tx=>{
@@ -153,4 +160,20 @@ export async function readRecordedPayrollExpenseReport(input,{db,now=new Date()}
     if(["42P01","42703","57014","P2024","P2028"].includes(sqlCode))throw unavailable();
     throw error;
   }
+}
+
+// This is a separate internally verified staff entrypoint, never a caller-supplied
+// authorization flag or a changed Owner role. Rechecks use the fresh outer DB.
+export async function readDelegatedRecordedPayrollExpenseReport(input,{db,now=new Date()}={}){
+ const user=input?.user;
+ if(!user||user.staffAccess!==true||user.tokenType!=='BACKOFFICE_USER'||user.storeId||user.role!=='EMPLOYEE'||user.platformRole==='SUPER_ADMIN')throw failure(403,'RECORDED_EXPENSE_ROLE_DENIED','Απαιτείται ρητή προσωπική εταιρική παραχώρηση.');
+ if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw failure(500,'RECORDED_EXPENSE_CLOCK_INVALID','Δεν επιβεβαιώθηκε ο χρόνος αναφοράς.');
+ const before=await requireStaffCompanyGrant(db,user,'reports-payroll-expenses.read');
+ const asOf=new Date(now.getTime()),scope=scopeValues({...input,companyId:user.companyId,superAdmin:false},asOf);
+ await scopeAndPackages(db,scope,asOf);
+ const result=await readSnapshot(scope,asOf,db);
+ await scopeAndPackages(db,scope,new Date());
+ const after=await requireStaffCompanyGrant(db,user,'reports-payroll-expenses.read');
+ if(after.revision!==before.revision)throw failure(403,'RECORDED_EXPENSE_AUTHORITY_CHANGED','Τα δικαιώματα άλλαξαν κατά την ανάγνωση.');
+ return result;
 }
