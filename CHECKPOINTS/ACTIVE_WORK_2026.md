@@ -670,3 +670,8 @@ Next: source PR/full CI; owner approval for source merge/publication; existing L
 Explicit owner request/start in same warehouse/invoice conversation. Bounded independent extension: compact archive filters/footer; draft line editor VAT department/category/dependent subcategory for existing/new items; display markup for previously matched lines without saving or changing retail. Owner /root, branch feat/warehouse-invoice-review-ui-20261118. Existing invoice/No2/OCR/report owners retained; no OCR, matching algorithm, financial posting, finalization, stock or production data tests. Current new requirements NOT TESTED; prior warehouse release #4029 and invoice/POS acceptance preserved. Checkpoint CHECKPOINTS/CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
 
 - 2026-11-18 · 13–14 · Κατάσταση τιμολογίων και αντιλογισμών στο CSV προμηθευτών · [Checkpoint](CHANGES/2026-11-18-no13-no14-supplier-csv-status.md) · 2 τοπικές δοκιμές PASS, CI και LAB εκκρεμούν.
+
+
+## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — SOURCE RECONCILED / AWAITING CI AND COMMON LAB
+
+Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compact warehouse chrome, draft VAT/category/subcategory and read-only linked markup implemented. Real isolated PostgreSQL taxonomy/control/rollback and staff regression passed in CI44400676745;6274PASS/1 old test-harness dependencyFAIL/3optionalSKIP. Dependency corrected without runtime change. Main a9639f31 reconciled: preserve No4 atomic assistant transfer and shared transaction helpers, No13–14 CSV status and No2 claim. Taxonomy hooks now use current shared patchPurchaseLine transaction; no hosted financial/stock action. Full exact combined CI and common LAB pending. See own checkpoint.

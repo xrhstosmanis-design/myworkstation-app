@@ -1,3 +1,4 @@
+import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../src/lib/invoice-line-taxonomy.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -34,7 +35,7 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const lineSchema=source.slice(source.indexOf('const lineSchema='),source.indexOf('router.get("/report",'));
   const auditState=source.slice(source.indexOf('const auditLineState='),source.indexOf('async function writePurchaseAudit('));
   const lineStart=source.indexOf('router.patch("/:orderId/lines/:lineId",'),lineEnd=source.indexOf('\nrouter.delete("/:orderId/lines/:lineId",',lineStart);let editLine,transferLines;
-  const lineBindings={...deps,router:{patch:(_path,h)=>editLine=h,post:(_path,h)=>transferLines=h},product:async()=>null,n:value=>Number(value||0),purchasePrintedRounding,lockEditablePurchaseOrder,
+  const lineBindings={...deps,invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,router:{patch:(_path,h)=>editLine=h,post:(_path,h)=>transferLines=h},product:async()=>null,n:value=>Number(value||0),purchasePrintedRounding,lockEditablePurchaseOrder,
    line:async(_company,id)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"=${id}`)[0],
    learnConfirmedLineCorrection:()=>assert.fail('store-only staff edit must not change company supplier learning'),learnCentralInvoiceCorrection:()=>assert.fail('store-only staff edit must not change cross-company learning')};
   new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(source.indexOf('function purchaseBatchError('),source.indexOf('router.post("/:orderId/lines",'))+source.slice(lineStart,lineEnd)+source.slice(source.indexOf('const assistantTransferSchema='),source.indexOf('router.patch("/:orderId/lines/:lineId/product-card"')))(...Object.values(lineBindings));
