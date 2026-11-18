@@ -12,7 +12,9 @@ Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
 
-### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / IMPLEMENTED / AWAITING FULL CI AND DEPLOY
+### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / TECHNICAL LIVE / AWAITING COMMON LAB
+
+19/11/2026,00:41Ελλάδας: #4045/final28f744a9 merged e79bdd0b, πλήρη sourceCI44409759165 και mainCI44411743364 SUCCESS5/5, έκαστο6312PASS/0FAIL/3optionalPG-WASM SKIP+8backupPASS. Actual nativePG/Chromium νέων flows PASS. Guardeddeploy44413540667 SUCCESS2/2, Renderdep-dbv2i66k1f9s73b7ugq0 LIVE exacte79, ανεξάρτητο health/HTML/newentrymarkers PASS. Η νέα τεχνική έκδοση ανοίγει την υπάρχουσα scoped αγορά ή αποθηκευμένες πηγές και διαχωρίζει draft από linkreview/οικονομική κατάσταση. Δεν έγινε επιχειρησιακή εγγραφή ή νέα είσοδος χρήστη. Η προηγούμενη owner FAIL μένει ιστορικό· νέα hosted αποδοχή AWAITING COMMON LAB, συνολικό Νο2 OPEN. [Ακριβές τεκμήριο](CHANGES/2026-11-19-no2-invoice-opening-release.md).
 
 Ο ιδιοκτήτης επιβεβαίωσε νέο FAIL: η παλιά κατηγορία μη καταχωρισμένων αναμειγνύει ασύνδετες myDATA/πιστωτικές/merged εγγραφές και ο αριθμός δεν ανοίγει την υπάρχουσα αγορά. Ίδιος owner `/root`, branch `fix/no2-invoice-open-review`, μόνο ordinary eligibility/navigation και αυστηρή ανάγνωση υφιστάμενου detail χωρίς implicit repair/bootstrap. Raw C/D1/writers και άλλων σελίδων markup/εμφάνιση διατηρούνται. Το περιορισμένο LIVE counter PASS παρακάτω παραμένει, όχι PASS της σημασιολογίας ή νέας πλοήγησης. [Claim](CHANGES/2026-11-18-no2-invoice-opening-review.md). Source μετά green merged claim, καμία νέα πληρωμή/καταχώριση.
 
