@@ -161,6 +161,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · Νο 9 · Αυτόματα email προσφορών και απογραφής · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Προσφορές CI 5/5, προστέθηκαν απογραφή και lifecycle, ενιαίο CI και τελικό LAB εκκρεμούν.
 - 2026-11-18 · 7–9 · Κεντρική οθόνη προετοιμασίας αναφορών · /root · fix/report-event-installation-ui-20261118 · [Checkpoint](CHANGES/2026-11-18-report-event-installation-ui.md) · Συνέχεια #4000/#4021: UI και reports-only συμβατότητα εννέα πραγματικών πινάκων, strict hosted preflight PASS, native εγκατάσταση/CI σε εξέλιξη· hosted SQL/profile και επιχειρησιακή αποδοχή OPEN.
 - 2026-11-18 · 7–9 · Canonical session installer · /root · fix/report-installer-backoffice-session-20261118 · [Checkpoint](CHANGES/2026-11-18-report-installer-backoffice-session.md) · Real central preflight403 λόγω BACKOFFICE_USER, περιορισμένη διόρθωση τύπου συνεδρίας με ίδιους role/session ελέγχους· hosted SQL ακόμη OPEN.
+- 2026-11-18 · 7–9 · Strict έξι στήλες εγκαταστάτη V2 · /root · fix/report-installer-column-compatibility-20261118 · [Checkpoint](CHANGES/2026-11-18-report-installer-column-compatibility-v2.md) · Νέο αμετάβλητο προφίλ,8 Node+14 Python+3 strict/WASM+4 native PASS χωρίς FAIL/SKIP· hosted κατάλογος συμφωνεί· CI/εγκατάσταση/αποστολή OPEN.
 
 **Κατάσταση:** ΕΝΕΡΓΟ ΜΙΚΡΟ ΜΗΤΡΩΟ CI από το merge #3719 — το OPEN_WORK_TRACKER.md παραμένει authoritative για ownership/PASS.
 

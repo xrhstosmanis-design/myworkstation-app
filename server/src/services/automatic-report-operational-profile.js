@@ -20,3 +20,22 @@ export function assertReportOperationalProfile(manifest){
  if(JSON.stringify(actualReviewed)!==JSON.stringify(definition.reviewedColumns))throw new Error('Operational report column review differs.');
  if(manifest.executionDisabled!==true||JSON.stringify(manifest.preservedOperationalTables)!==JSON.stringify(expected)||expected.some(name=>manifest.tables.some(table=>table.name===name)))throw new Error('Operational report profile differs from review.');
 }
+
+export const reportColumnDefinition=()=>JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/report-column-compatibility.proposed.json',import.meta.url),'utf8'));
+export function withReportColumnCompatibility(manifest){
+ const definition=reportColumnDefinition(),result=structuredClone(manifest);
+ result.id+='__REVIEWED_REPORT_COLUMNS_V1';
+ result.reviewedColumnExtensions=definition.tables.flatMap(table=>table.columns.map(column=>table.name+'.'+column[0]));
+ for(const table of definition.tables)result.knownColumns[table.name].push(...table.columns);
+ result.reviewedColumns.push(...definition.reviewedColumns);
+ return result;
+}
+export function assertReportColumnProfile(manifest){
+ const definition=reportColumnDefinition();
+ const expected=definition.tables.flatMap(table=>table.columns.map(column=>table.name+'.'+column[0]));
+ if(manifest.executionDisabled!==true||JSON.stringify(manifest.reviewedColumnExtensions)!==JSON.stringify(expected)||definition.reviewedColumns.some(column=>!manifest.reviewedColumns.includes(column)))throw new Error('Reviewed report column profile differs.');
+ for(const table of definition.tables){
+  const actual=manifest.knownColumns[table.name].filter(column=>table.columns.some(reviewed=>reviewed[0]===column[0]));
+  if(JSON.stringify(actual)!==JSON.stringify(table.columns))throw new Error('Reviewed report column layout differs.');
+ }
+}
