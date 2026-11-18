@@ -595,3 +595,8 @@ Single next action: owner's separate approval for production source merge/deploy
 ## 18/11/2026 — Νο2 / #4019 — συγκεκριμένη μεταφορά οικονομικής ένδειξης
 
 ΑΝΑΛΗΨΗ ΑΠΟ `feat/invoice-month-audit-20261028` / `/root/invoice_new` — ASSIGNED `/root`, branch `fix/no2-paid-monthly-status`, με ρητή έγκριση ιδιοκτήτη. Μόνο οικονομική κατάσταση συνδεδεμένης πληρωμής στη μηνιαία αναφορά, όχι υπόλοιπο C, snapshots/απογραφή ή email. Ο παλιός owner διατηρεί όλα τα άλλα scopes· καμία παράλληλη αλλαγή #4019. [Checkpoint](CHANGES/2026-11-18-no2-paid-monthly-status.md). CLAIM / source NOT STARTED / CI και LAB NOT TESTED. Υλοποίηση και τεχνικοί έλεγχοι πρώτα, μία τελική συνεδρία ανά ρόλο στο τέλος.
+
+
+## 18/11/2026 — Νο 15 · Χρεώσιμες επιλογές από κινητό
+
+Συνέχεια TABLE_SERVICE /root, υποβοηθός /root/mobile, branch `feat/table-service-mobile-priced-options-20261118`. Η κινητή παραγγελιοληψία επιλέγει πραγματικές χρεώσιμες επιλογές και εμφανίζει γραμμή/σύνολο/επιβεβαίωση με την επιβάρυνση. Ο server επαληθεύει τιμές και προϊόντα. Εισφορά/SET διατηρούνται στο POS. Τοπικά Node20: 5/5 πραγματικές mounted React δοκιμές και production build PASS. CI, εγκατάσταση και κοινή δοκιμή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-18-table-service-mobile-priced-options.md).
