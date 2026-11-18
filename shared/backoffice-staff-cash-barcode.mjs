@@ -6,4 +6,4 @@ export const cashBarcodeActions=Object.freeze([
 ]);
 export const barcodeRequestFields={id:'text',productId:'text',productName:'text',barcode:'text',oldPrice:'number?',requestedPrice:'number',requestedByName:'text?',status:'text',createdAt:'date'};
 export const barcodeProductFields={productId:'text',productName:'text',sku:'text?',quantity:'number',revenue:'number'};
-export const cashDailySessionFields={id:'text',terminalPos:'text?',shiftLabel:'text?',openedAt:'date',closedAt:'date?',openedByName:'text?',closedByName:'text?',cashSales:'number',cardSales:'number',eftposTotal:'number',variance:'number',effectiveVariance:'number',cardVariance:'number'};
+export const cashDailySessionFields={id:'text',terminalPos:'text?',shiftLabel:'text?',openedAt:'date',closedAt:'date?',openedByName:'text?',closedByName:'text?',cashSales:'number',cardSales:'number',eftposTotal:'number',variance:'number?',effectiveVariance:'number',cardVariance:'number'};
