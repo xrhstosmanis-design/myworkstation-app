@@ -547,3 +547,5 @@ Continues #3852 LAB acceptance. Expose the existing stock approval action for a 
 18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. Συνέχεια PR #4007 με `chat.read`, `radio.read`, `approvals.read`: scoped native προβολές χωρίς αποστολές, playback ή εγκρίσεις. Συνημμένα chat μόνο με native security audit. Προηγούμενο CI44251494175 PASS· πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-chat-radio-approvals-views.md).
 
 18/11/2026 — Νο 5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: αδρανής προετοιμασία COMPANY compatibility και UI/API συμβολαίου, χωρίς εγκατάσταση σχήματος ή ενεργά εταιρικά grants. Δύο CI fixture failures διορθώθηκαν με πραγματικές dependencies, runtime guard αμετάβλητο. Πλήρης κάλυψη OPEN, κοινό LAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-company-compatibility-preparation.md).
+
+18/11/2026 — Νο5 / CENTRAL-BACKOFFICE-ACCESS-01. PR #4007: monthly-inventory.read για SELECT-only κατάσταση μηνιαίας απογραφής,53 STORE capabilities, native Owner ενέργειες χωριστές. Τοπικά53PASS/3PGSKIP/buildPASS· νέοCI απαιτείται, πλήρης κάλυψη OPEN, κοινόLAB στο τέλος. [Checkpoint](CHANGES/2026-11-18-no5-monthly-status-view.md).

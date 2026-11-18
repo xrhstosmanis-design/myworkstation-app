@@ -5,7 +5,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read']);
 export const staffPermissionSections=Object.freeze([
   {key:'chat',label:'Chat καταστήματος',actions:[
     {key:'chat.read',label:'Προβολή μηνυμάτων Chat',description:'Βλέπει μηνύματα, θέματα, αναζήτηση και προεπισκόπηση συνημμένων του επιλεγμένου καταστήματος, χωρίς αποστολή, λήψη αρχείων ή αλλαγή κατάστασης.'}
@@ -39,6 +39,9 @@ export const staffPermissionSections=Object.freeze([
   ]},
   {key:'baking',label:'Ψησίματα',actions:[
     {key:'baking.read',label:'Προβολή ψησιμάτων',description:'Βλέπει διαθέσιμα ψημένα/άψητα είδη και το πρόσφατο ιστορικό ψησιμάτων του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'monthly-inventory',label:'Μηνιαία απογραφή',actions:[
+    {key:'monthly-inventory.read',label:'Προβολή κατάστασης μηνιαίας απογραφής',description:'Βλέπει την καταχωρισμένη κατάσταση εξουσιοδότησης του επιλεγμένου καταστήματος, χωρίς προσωπική ενεργοποίηση ή λήψη απογραφής.'}
   ]},
   {key:'monthly-invoice-audit',label:'Μηνιαίος έλεγχος',actions:[
     {key:'monthly-invoice-audit.read',label:'Προβολή μηνιαίου ελέγχου τιμολογίων',description:'Βλέπει τον έλεγχο τιμολογίων μήνα και τα εκκρεμή πρωτότυπα του επιλεγμένου καταστήματος.'}
@@ -140,6 +143,7 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&/^\/api\/public\/kat\/backoffice-managed\/stores\/[^/]+\/orders$/.test(path))return 'online-orders.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/table-service(?:\/(?:history|preparation-queue))?$/.test(path))return 'table-service.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/baking$/.test(path))return 'baking.read';
+  if(method==='GET'&&path==='/api/monthly-inventory-capture/status')return 'monthly-inventory.read';
   if(method==='GET'&&path==='/api/reports/invoice-month-audit')return 'monthly-invoice-audit.read';
   if(method==='GET'&&path==='/api/pending-center/chat-tasks')return 'pending.read';
   if(method==='GET'&&['/api/price-catalog/promotions/scoped','/api/price-catalog/promotions/analysis'].includes(path))return 'promotions.read';
