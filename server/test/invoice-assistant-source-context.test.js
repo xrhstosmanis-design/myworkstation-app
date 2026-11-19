@@ -8,7 +8,7 @@ const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process
 test("explicit myDATA source never falls through to POS receipt photos when PDF linkage fails",async()=>{
  const calls=[];const db={$queryRaw:async(strings,...values)=>{const sql=strings.join("?");calls.push({sql,values});if(sql.includes('FROM "PurchaseOrder"'))return [{id:"doc",storeId:"s"}];if(sql.includes('FROM "MyDataInboundDocument"'))return [];throw Error("unexpected POS photo query")}};
  assert.deepEqual((await loadInvoiceAssistantSource(db,"c","o",{inboxId:"i",storeId:"s"})).pages,[]);
- assert.equal(calls.length,2);assert.deepEqual(calls[1].values,["i","c","s","doc"]);
+ assert.equal(calls.length,2);assert.deepEqual(calls[1].values,["i","c","s","doc","o","doc"]);
  assert.deepEqual((await loadInvoiceAssistantSource(db,"c","o",{inboxId:"i",storeId:"foreign"})).pages,[]);
  assert.equal(calls.length,3);
 });
@@ -25,13 +25,13 @@ test("native PostgreSQL binds exact myDATA original to the same draft/store whil
    'CREATE TABLE "AiReaderJob" ("id" text,"companyId" text,"storeId" text,"purchaseDocumentId" text,"attachmentId" text,"createdAt" timestamptz,"resultJson" jsonb)',
    'CREATE TABLE "DocumentAttachment" ("id" text,"companyId" text,"storeId" text,"filename" text,"mimeType" text,"contentData" text)',
    'CREATE TABLE "DocumentInbox" ("id" text,"companyId" text,"storeId" text,"attachmentId" text,"status" text)',
-   'CREATE TABLE "MyDataInboundDocument" ("inboxId" text,"companyId" text,"storeId" text)'
+   'CREATE TABLE "MyDataInboundDocument" ("inboxId" text,"companyId" text,"storeId" text,"mark" text,"rawPayload" jsonb)'
   ])await db.$executeRawUnsafe(sql);
   for(const sql of `INSERT INTO "PurchaseOrder" VALUES ('o','c','d','supplier','NEW','POS_OCR_DRAFT'),('other','c','other-doc','supplier','NEW','POS_OCR_DRAFT');INSERT INTO "PurchaseDocument" VALUES ('d','c','s','42',12.4,'supplier','DRAFT','POS_OCR_DRAFT'),('other-doc','c','s','43',13,'supplier','DRAFT','POS_OCR_DRAFT')`.split(';'))await db.$executeRawUnsafe(sql);
   await db.$executeRaw`INSERT INTO "DocumentAttachment" VALUES ('pdf','c','s','42.pdf','application/pdf',${pdf}),('photo','c','s','POS.jpg','image/jpeg',${photo}),('unlinked','c','s','wrong.pdf','application/pdf',${pdf}),('foreign','foreign','s','foreign.pdf','application/pdf',${pdf}),('store','c','other-store','store.pdf','application/pdf',${pdf})`;
   const resultJson=JSON.stringify({mydataPosReceipt:{attachmentIds:["photo"]}});
   await db.$executeRaw`INSERT INTO "AiReaderJob" VALUES ('j','c','s','d','pdf',NOW(),${resultJson}::jsonb)`;
-  for(const sql of `INSERT INTO "DocumentInbox" VALUES ('i','c','s','pdf','IN_REVIEW'),('wrong','c','s','unlinked','IN_REVIEW'),('foreign','foreign','s','foreign','IN_REVIEW'),('store','c','other-store','store','IN_REVIEW'),('deleted','c','s','missing','IN_REVIEW'),('image','c','s','photo','IN_REVIEW');INSERT INTO "MyDataInboundDocument" VALUES ('i','c','s'),('wrong','c','s'),('foreign','foreign','s'),('store','c','other-store'),('deleted','c','s'),('image','c','s')`.split(';'))await db.$executeRawUnsafe(sql);
+  for(const sql of `INSERT INTO "DocumentInbox" VALUES ('i','c','s','pdf','IN_REVIEW'),('wrong','c','s','unlinked','IN_REVIEW'),('foreign','foreign','s','foreign','IN_REVIEW'),('store','c','other-store','store','IN_REVIEW'),('deleted','c','s','missing','IN_REVIEW'),('image','c','s','photo','IN_REVIEW');INSERT INTO "MyDataInboundDocument" ("inboxId","companyId","storeId") VALUES ('i','c','s'),('wrong','c','s'),('foreign','foreign','s'),('store','c','other-store'),('deleted','c','s'),('image','c','s')`.split(';'))await db.$executeRawUnsafe(sql);
   const snapshot=async()=>JSON.stringify(await db.$queryRawUnsafe('SELECT row_to_json(j) FROM "AiReaderJob" j UNION ALL SELECT row_to_json(a) FROM "DocumentAttachment" a'));
   const before=await snapshot();
   const pos=await loadInvoiceAssistantSource(db,"c","o");assert.equal(pos.pages[0].contentData,photo);
