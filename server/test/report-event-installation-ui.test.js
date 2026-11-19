@@ -12,11 +12,16 @@ test('installation UI binds inspected scope and packet, requires approval, consu
  const React=await import('react'),{act}=React,{createRoot}=await import('react-dom/client');
  const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/platform/ReportEventInstallationManager.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime']});
  const module={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+ const nativeClaims={id:'admin',sessionId:'session',sessionVersion:1,tokenType:'BACKOFFICE_USER',role:'OWNER',platformRole:'SUPER_ADMIN',isSuperAdmin:true,exp:Date.now()/1000+3600};
+ const credential=patch=>'synthetic.'+Buffer.from(JSON.stringify({...nativeClaims,...patch})).toString('base64url')+'.synthetic';
+ const centralToken=credential({});
+ dom.window.localStorage.setItem('token',centralToken);
  const root=createRoot(document.getElementById('root')),calls=[];
  const description={profile:'CAPTURE_REPORTS_ONLY',sourceRevision:'a'.repeat(40),oldPlanHash:'b'.repeat(64),targetPlanHash:'c'.repeat(64)};
  let holdDescribe=false,lateDescribe,lateInstall,failInstall=false,wrongScope=false;
  const packet=store=>({...description,companyId:'c',storeId:store,schema:'public',catalogueSignature:'d'.repeat(64),globalStateSignature:'e'.repeat(64)});
  const request=async(path,options={})=>{
+  assert.equal(options.headers?.Authorization,'Bearer '+centralToken);
   calls.push({path,...options});
   if(path.includes('/describe'))return holdDescribe?new Promise(resolve=>{lateDescribe=resolve}):description;
   if(path.endsWith('/inspect'))return {eligible:true,packet:packet(wrongScope?'foreign':path.includes('/stores/B/')?'B':'A')};
@@ -27,6 +32,7 @@ test('installation UI binds inspected scope and packet, requires approval, consu
  const render=store=>act(async()=>root.render(React.createElement(module.exports.default,{company:{id:'c',name:'Company'},store:{id:store,name:store},request})));
  try{
   await render('A');assert.equal(calls.length,0);
+  dom.window.localStorage.setItem('token',credential({supportContext:{storeId:'other-store'}}));
   await act(async()=>{const select=document.querySelector('select');select.value='CAPTURE_REPORTS_ONLY';select.dispatchEvent(new Event('change',{bubbles:true}));});
   assert.equal(calls.length,0);
   assert.match(document.body.textContent,/επαναφορά, εξαγωγή και διαγραφή/);
@@ -49,5 +55,15 @@ test('installation UI binds inspected scope and packet, requires approval, consu
   await act(async()=>document.querySelector('input[type=checkbox]').click());failInstall=true;
   await act(async()=>button('Εγκατάσταση προετοιμασίας αναφορών').click());
   assert.match(document.querySelector('[role=alert]').textContent,/flag OFF/);assert.equal(button('Εγκατάσταση προετοιμασίας αναφορών'),undefined);
+  failInstall=false;await act(async()=>button('Έλεγχος εγκατάστασης αναφορών').click());
+  await act(async()=>document.querySelector('input[type=checkbox]').click());
+  await act(async()=>{dom.window.localStorage.setItem('token',credential({id:'another-admin'}));dom.window.dispatchEvent(new Event('storage'));});
+  assert.equal(button('Εγκατάσταση προετοιμασίας αναφορών'),undefined,'observed identity change consumes packet and approval');
+  await act(async()=>{dom.window.localStorage.setItem('token',centralToken);dom.window.dispatchEvent(new Event('storage'));});
+  holdDescribe=true;await act(async()=>button('Έλεγχος εγκατάστασης αναφορών').click());
+  const beforeLogout=calls.length;
+  await act(async()=>{dom.window.localStorage.removeItem('token');dom.window.dispatchEvent(new Event('storage'));lateDescribe(description);});
+  assert.equal(calls.length,beforeLogout,'logout prevents further inspect from stale describe');
+  assert.equal(button('Εγκατάσταση προετοιμασίας αναφορών'),undefined);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [key,value]of previous)value?Object.defineProperty(globalThis,key,value):delete globalThis[key];}
 });
