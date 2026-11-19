@@ -35,3 +35,8 @@
 Πρώτα ανασκόπηση, πράσινο docs CI και δημοσίευση αυτής της ανάληψης στο main. Έπειτα μία περιορισμένη δέσμη μόνο στα έξι νέα αρχεία, στο ίδιο checkpoint και στην υπάρχουσα εγγραφή Νο 14 της ACTIVE. Η πηγή παραμένει ανέπαφη μέχρι τότε. Ακολουθούν απομονωμένοι έλεγχοι του validator, πλήρες ακριβές CI και τεχνική παράδοση στους owners ενσωμάτωσης.
 
 Κατάσταση NOT IMPLEMENTED / NOT TESTED για το νέο πρόσθετο πακέτο. Η τεχνική εγκατάσταση #4053 διατηρεί το δικό της εύρος. Η πραγματική εγκατάσταση πινάκων, λειτουργική ενεργοποίηση και κοινή τελική LAB αποδοχή Νο 14 παραμένουν OPEN. Δεν προστίθεται λειτουργικό PASS ή κλείσιμο roadmap.
+
+
+## Source candidate — Draft / NOT READY
+
+Claim #4056 merged868feb5d after docsCI44483364041 SUCCESS. The six locked new files are implemented. Pure14/14 PASS,0FAIL,0SKIP. The same native fixture helper executed against actual WASM PostgreSQL:10 catalog mutations detected and6 synthetic rows preserved. Native Prisma/PostgreSQL and full exact CI remain pending. Independent review continues. Schema/data/replay results are separate and mean supplied-evidence matching only; activationReady remains false. Existing lifecycle/installer/worker/profile sources remain unchanged. No hosted DDL, module activation, financial or stock write, manual dispatch, merge or deploy performed for this candidate. OverallNo14 remainsOPEN.
