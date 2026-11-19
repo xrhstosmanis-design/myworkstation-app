@@ -36,6 +36,40 @@ test('overpayment is distinct and never treated as paid or a negative payable',(
  const result=run(undefined,[transaction({amount:'61.00'})]);assert.equal(result.items[0].payment.status,'OVERPAID');assert.equal(result.items[0].payment.remainingCents,0);assert.equal(result.items[0].payment.overpaymentCents,52);assert.equal(result.summary.paid,0);
 });
 
+test('explicit five-cent observation tolerance preserves exact paid and variance cents at both sides of every boundary',()=>{
+ for(const difference of [-6,-5,-3,-1,1,3,5,6]){
+  const payments=[transaction({amount:((6048+difference)/100).toFixed(2)})],docs=[document()],items=[invoice()],before=JSON.stringify({payments,docs,items});
+  const strict=run(docs,payments,items),explicitZero=run(docs,payments,items,{available:true,toleranceCents:0}),observed=run(docs,payments,items,{available:true,toleranceCents:5}),payment=observed.items[0].payment,accepted=Math.abs(difference)<=5;
+  assert.deepEqual(explicitZero,strict);assert.equal(strict.items[0].payment.status,difference<0?'PARTIALLY_PAID':'OVERPAID');assert.equal(payment.status,accepted?'PAID':difference<0?'PARTIALLY_PAID':'OVERPAID');
+  assert.equal(payment.paidCents,6048+difference);assert.equal(payment.remainingCents,Math.max(0,-difference));assert.equal(payment.overpaymentCents,Math.max(0,difference));assert.equal(payment.paymentCount,1);assert.deepEqual(payment.transactionIds,['p']);
+  if(accepted){assert.equal(payment.withinTolerance,true);assert.equal(payment.toleranceCents,5);assert.equal(payment.paymentDifferenceCents,difference);assert.equal(observed.summary.paid,1);assert.equal(observed.summary.financialPending,0)}
+  else{assert.equal(Object.hasOwn(payment,'withinTolerance'),false);assert.equal(observed.summary.paid,0);assert.equal(observed.summary.financialPending,1)}
+  assert.equal(JSON.stringify({payments,docs,items}),before);assert.deepEqual(observed.items[0].categories,items[0].categories);
+ }
+ const exact=run(),opted=run(undefined,undefined,undefined,{available:true,toleranceCents:5});assert.deepEqual(opted,exact);assert.equal(Object.hasOwn(opted.items[0].payment,'withinTolerance'),false);
+});
+
+test('observation tolerance is explicit and cannot exceed the accepted five-cent policy',()=>{
+ for(const toleranceCents of [-1,6,0.5,5.1,'5',null,true,NaN,Infinity])assert.throws(()=>run(undefined,undefined,undefined,{available:true,toleranceCents}),RangeError);
+ const oneCent=run(undefined,[transaction({amount:'60.47'})],undefined,{available:true,toleranceCents:1});assert.equal(oneCent.items[0].payment.status,'PAID');assert.equal(oneCent.items[0].payment.toleranceCents,1);
+ assert.equal(run(undefined,[transaction({amount:'60.45'})],undefined,{available:true,toleranceCents:1}).items[0].payment.status,'PARTIALLY_PAID');
+});
+
+test('small variance tolerance never bypasses missing linkage or invalid unconfirmed reversed foreign and ambiguous proofs',()=>{
+ const options={available:true,toleranceCents:5},small=()=>transaction({amount:'60.45'});
+ for(const patch of [{supplierId:'foreign'},{companyId:'foreign'},{storeId:'foreign'},{type:'OTHER_EXPENSE'},{invoiceDocumentNumber:'OTHER 1'},{amount:'0'},{amount:'60.451'},{settlementScopeValid:false},{settlementCount:2}]){
+  const actual=run(undefined,[{...small(),...patch}],undefined,options).items[0].payment;assert.equal(actual.status,'REVIEW_REQUIRED',JSON.stringify(patch));assert.equal(actual.withinTolerance,undefined);
+ }
+ assert.equal(run(undefined,[small()],undefined,{available:false,toleranceCents:5}).items[0].payment.status,'UNAVAILABLE');
+ assert.equal(run([document({paymentTransactionId:null})],[small()],undefined,options).items[0].payment.status,'NOT_LINKED');
+ assert.equal(run(undefined,[],undefined,options).items[0].payment.status,'REVIEW_REQUIRED');
+ assert.equal(run(undefined,[{...small(),settlementConfirmed:false}],undefined,options).items[0].payment.status,'UNCONFIRMED');
+ assert.equal(run(undefined,[{...small(),reversedAt:'2026-11-18T14:00:00Z'}],undefined,options).items[0].payment.status,'REVERSED');
+ assert.equal(run([document({totalGross:'0'})],[small()],[invoice({totalCents:0})],options).items[0].payment.status,'REVIEW_REQUIRED');
+ const docs=[document(),document({id:'other',issueDay:'2026-10-12'})];assert.equal(run(docs,[small()],undefined,options).items[0].payment.status,'REVIEW_REQUIRED');
+ const rows=[invoice(),invoice({id:'other',sources:[{kind:'DOCUMENT',id:'other',status:'DRAFT'}]})];assert.ok(run(docs,[small()],rows,options).items.every(row=>row.payment.status==='REVIEW_REQUIRED'));
+});
+
 test('reversed only payment leaves full amount pending, with independent reversal state',()=>{
  const result=run(undefined,[transaction({reversedAt:'2026-11-18T14:00:00Z'})]).items[0].payment;assert.equal(result.status,'REVERSED');assert.equal(result.paidCents,0);assert.equal(result.remainingCents,6048);
 });
@@ -163,6 +197,14 @@ const splitFixture=()=>({
  allocations:[allocation('d40','40.00'),allocation('d60','60.00')]
 });
 const allocatedRun=(f,options={available:true,allocationsAvailable:true})=>observeInvoicePayments(f.items,{documents:f.documents,paymentAllocations:f.allocations},f.transactions,options);
+
+test('explicit allocation tolerance uses assigned cents and cannot forgive an allocation exceeding its payment',()=>{
+ const f=splitFixture(),options={available:true,allocationsAvailable:true,toleranceCents:5};f.allocations[0].amount='39.97';let before=JSON.stringify(f),observed=allocatedRun(f,options);
+ assert.deepEqual(observed.items.map(row=>row.payment.status),['PAID','PAID']);assert.equal(observed.items[0].payment.paidCents,3997);assert.equal(observed.items[0].payment.remainingCents,3);assert.equal(observed.items[0].payment.paymentDifferenceCents,-3);assert.equal(observed.items[1].payment.withinTolerance,undefined);assert.equal(JSON.stringify(f),before);
+ f.allocations[0].amount='40.03';f.allocations[1].amount='60.03';observed=allocatedRun(f,options);assert.ok(observed.items.every(row=>row.payment.status==='REVIEW_REQUIRED'));
+ f.transactions[0].amount='100.06';before=JSON.stringify(f);observed=allocatedRun(f,options);assert.ok(observed.items.every(row=>row.payment.status==='PAID'&&row.payment.withinTolerance===true&&row.payment.overpaymentCents===3));assert.deepEqual(observed.items.map(row=>row.payment.paidCents),[4003,6003]);assert.equal(observed.items.reduce((sum,row)=>sum+row.payment.paidCents,0),10006);assert.equal(JSON.stringify(f),before);
+ f.allocations[1].settlementStatus='PENDING';assert.ok(allocatedRun(f,options).items.every(row=>row.payment.status==='UNCONFIRMED'));
+});
 
 const postingOnlyReason='Η καταχώριση αγοράς δεν διαθέτει επιβεβαιωμένο εγκεκριμένο παραστατικό και σύνδεση αποθήκης.';
 const postingReview=(patch={})=>invoice({categories:['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','IDENTITY_OR_LINK_REVIEW'],reasons:[postingOnlyReason],...patch});

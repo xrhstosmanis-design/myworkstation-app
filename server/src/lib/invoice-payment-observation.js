@@ -31,7 +31,8 @@ const financialIdentityReview=item=>(item.categories||[]).includes('IDENTITY_OR_
  * transaction/settlement facts in the same authorized read-only snapshot.
  * Payment observation never changes purchase approval, source grouping or stock.
  */
-export function observeInvoicePayments(items,facts,transactions,{available=false,allocationsAvailable=false}={}){
+export function observeInvoicePayments(items,facts,transactions,{available=false,allocationsAvailable=false,toleranceCents=0}={}){
+ if(!Number.isSafeInteger(toleranceCents)||toleranceCents<0||toleranceCents>5)throw new RangeError('Payment observation tolerance must be an integer from zero to five cents.');
  const documents=new Map(),duplicateDocuments=new Set(),transactionRows=new Map(),transactionsByDocument=new Map(),documentClaimsByPayment=new Map(),allocationsByPayment=new Map(),allocatedTransactionsByDocument=new Map(),allocationIdCounts=new Map();
  for(const document of facts.documents||[]){
   if(documents.has(document.id))duplicateDocuments.add(document.id);
@@ -153,9 +154,12 @@ export function observeInvoicePayments(items,facts,transactions,{available=false
    else if(unconfirmed)payment=result('UNCONFIRMED');
    else if(paid===0&&reversed)payment=result('REVERSED',{paidCents:0,remainingCents:gross,overpaymentCents:0,paymentCount:0,transactionIds:ids.sort()});
    else if(paid>0){
-    const difference=paid-gross;
-    payment=result(difference===0?'PAID':difference<0?'PARTIALLY_PAID':'OVERPAID',{
-     paidCents:paid,remainingCents:Math.max(0,-difference),overpaymentCents:Math.max(0,difference),paymentCount:ids.length-reversed,transactionIds:ids.sort()
+    const difference=paid-gross,withinTolerance=difference!==0&&Math.abs(difference)<=toleranceCents;
+    // Explicit presentation policy only, after every proof gate. Preserve the
+    // recorded cents even when the ordinary caller accepts a small variance.
+    payment=result(difference===0||withinTolerance?'PAID':difference<0?'PARTIALLY_PAID':'OVERPAID',{
+     paidCents:paid,remainingCents:Math.max(0,-difference),overpaymentCents:Math.max(0,difference),paymentCount:ids.length-reversed,transactionIds:ids.sort(),
+     ...(withinTolerance?{withinTolerance:true,toleranceCents,paymentDifferenceCents:difference}:{})
     });
    }else payment=result('REVIEW_REQUIRED');
   }
