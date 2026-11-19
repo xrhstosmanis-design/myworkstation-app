@@ -1,4 +1,5 @@
 import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {expectedReceiptRows,expectedReceiptReadiness} from '../services/supplier-expected-receipts.js';
 import {Router} from "express";
 import {z} from "zod";
 import {requireStoreModule} from "../middleware/module-access.js";
@@ -8,6 +9,7 @@ import {buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT} from "../lib/supplier-
 
 const optionsSchema=z.object({historyDays:z.coerce.number().int().min(7).max(90).default(30),coverageDays:z.coerce.number().int().min(1).max(60).default(7),leadDays:z.coerce.number().int().min(0).max(30).default(3)});
 export async function readOrderSuggestions(db,{storeId,companyId,options,now=new Date()}){
+  if(db.$transaction)return db.$transaction(tx=>readOrderSuggestions(tx,{storeId,companyId,options,now}),{isolationLevel:"RepeatableRead",timeout:30000});
   const from=new Date(now.getTime()-options.historyDays*86400000);
   const rows=await db.$queryRaw`
     SELECT p."id" AS "productId",p."name",p."sku",p."unit",sp."currentStock",sp."minStock",
@@ -42,7 +44,18 @@ export async function readOrderSuggestions(db,{storeId,companyId,options,now=new
     ) pending ON TRUE
     WHERE sp."storeId"=${storeId} AND sp."active"=TRUE AND p."active"=TRUE AND p."trackStock"=TRUE
     ORDER BY p."name",p."id"`;
-  return {storeId,generatedAt:now.toISOString(),from:from.toISOString(),to:now.toISOString(),options,rows:buildOrderSuggestions(rows,options)};
+  const expectedReceipts=await expectedReceiptReadiness(db);
+  const expected=expectedReceipts.available?await expectedReceiptRows(db,{storeId,companyId}):[];
+  for(const row of rows){
+    const pending=expected.filter(item=>item.productId===row.productId);
+    row.expectedReceiptsAvailable=expectedReceipts.available;
+    row.expectedReceiptsAvailabilityReason=expectedReceipts.reason;
+    row.expectedReceiptReviewReasons=[...new Set(pending.filter(item=>Number(item.remainingQuantity)!==0).flatMap(item=>[item.reviewReason,item.postedPurchaseReviewReason]).filter(Boolean))];
+    const total=pending.filter(item=>!item.reviewReason).reduce((sum,item)=>sum+Number(item.remainingQuantity),0);
+    row.confirmedPendingStockQuantity=Number.isFinite(total)&&total<=Number.MAX_SAFE_INTEGER?total:null;
+    if(row.confirmedPendingStockQuantity===null)row.expectedReceiptReviewReasons.push("Η αναμενόμενη ποσότητα χρειάζεται αριθμητικό έλεγχο.");
+  }
+  return {storeId,generatedAt:now.toISOString(),from:from.toISOString(),to:now.toISOString(),options,expectedReceipts,rows:buildOrderSuggestions(rows,options)};
 }
 
 export async function readSupplierOrderSuggestions(db,scope){

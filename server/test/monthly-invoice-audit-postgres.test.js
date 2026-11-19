@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {once} from 'node:events';
 import express from 'express';
-import {readMonthlyInvoiceAudit,readMonthlyInvoiceSnapshotProjectionInTransaction} from '../src/services/monthly-invoice-audit.js';
+import {readMonthlyInvoiceAudit,readMonthlyInvoiceAuditRecord,readMonthlyInvoiceSnapshotProjectionInTransaction} from '../src/services/monthly-invoice-audit.js';
+import {readPurchaseOrderInspection} from '../src/routes/purchase-orders.js';
 import {createMonthlyInvoiceAuditRouter} from '../src/routes/monthly-invoice-audit.js';
 
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
@@ -17,7 +18,13 @@ const definitions={
  OwnerCompanyAccess:'"ownerId" text,"companyId" text',
  Supplier:'"id" text PRIMARY KEY,"companyId" text,"name" text,"taxId" text',
  PurchaseDocument:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"documentType" text,"documentNumber" text,"documentDate" timestamp,"totalGross" numeric,"status" text,"sourceType" text,"purchaseOrderId" text,"paymentTransactionId" text,"createdAt" timestamp DEFAULT NOW()',
+ PurchaseDocumentLine:'"id" text PRIMARY KEY,"purchaseDocumentId" text,"description" text,"quantity" numeric,"unit" text,"unitCost" numeric,"netAmount" numeric,"vatRate" numeric,"vatAmount" numeric,"grossAmount" numeric,"createdAt" timestamp DEFAULT NOW()',
  PurchaseOrder:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"status" text,"invoiceNumber" text,"sourceDocumentId" text,"createdAt" timestamp DEFAULT NOW()',
+ PurchaseOrderLine:'"id" text PRIMARY KEY,"orderId" text,"productId" text,"ocrSequence" integer,"ocrLineIndex" integer,"createdAt" timestamp DEFAULT NOW(),"quantity" numeric,"unitCost" numeric,"netAmount" numeric,"vatAmount" numeric,"grossAmount" numeric',
+ Product:'"id" text PRIMARY KEY,"companyId" text,"name" text,"sku" text,"salePrice" numeric,"vatRate" numeric,"categoryId" text,"subcategoryId" text,"vatDepartmentId" text',
+ ProductCategory:'"id" text PRIMARY KEY,"name" text',
+ StoreProduct:'"productId" text,"storeId" text,"currentStock" numeric,"salePrice" numeric,"categoryIdOverride" text,"subcategoryIdOverride" text,"vatDepartmentIdOverride" text',
+ ProductBarcode:'"productId" text,"barcode" text,"createdAt" timestamp DEFAULT NOW()',
  MyDataInboundDocument:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"inboxId" text,"mark" text,"issuerVat" text,"series" text,"documentNumber" text,"issueDate" date,"invoiceType" text,"totalGross" numeric,"rawPayload" jsonb,"fetchedAt" timestamptz DEFAULT NOW()',
  DocumentInbox:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"attachmentId" text,"status" text,"receivedAt" timestamp DEFAULT NOW()',
  AiReaderJob:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"attachmentId" text,"purchaseDocumentId" text,"status" text,"resultJson" jsonb DEFAULT \'{}\',"createdAt" timestamp DEFAULT NOW()',
@@ -67,7 +74,7 @@ test('native monthly invoice audit executes the registered reader with complete 
   await db.$executeRawUnsafe(`INSERT INTO "StoreOperatorAudit" SELECT 'audit-'||n,'c','s','POS_INVOICE_PENDING_CREATED','owner',jsonb_build_object('version','POS_DEFERRED_INVOICE_V1','transactionId','pending-'||n,'paymentMethod','CASH','paymentSource','EXTERNAL','supplierId','sup','documentNumber','P'||n,'documentDate','2025-01-01','amountCents',100,'contextSessionId','synthetic-session','terminalPos','SYNTHETIC','fingerprint',repeat('b',64)) FROM generate_series(1,75)n`);
 
   await t.test('actual SQL collapses confirmed source/projection/myDATA/alias once and preserves original bytes',async()=>{
-   const before=await digest(),r=await read();assert.equal(r.coverage.complete,true);assert.equal(r.summary.logicalRecords,2);assert.equal(r.summary.possibleDuplicates,2);assert.equal(r.summary.unposted,1);assert.equal(r.summary.identityReview,0);
+   const before=await digest(),r=await read();assert.equal(r.coverage.complete,true);assert.equal(r.summary.logicalRecords,2);assert.equal(r.summary.possibleDuplicates,2);assert.equal(r.summary.unposted,0);assert.equal(r.summary.purchaseLinkReview,1);assert.equal(r.summary.identityReview,0);
    assert.equal(r.pendingOriginals.period,'ALL_MONTHS');assert.equal(r.pendingOriginals.counts.total,75);assert.equal(r.pendingOriginals.items.length,50);assert.equal(r.pendingOriginals.truncated,true);assert.ok(r.pendingOriginals.items.every(p=>p.documentDate==='2025-01-01'));assert.equal(r.allClear,false);
    assert.equal(JSON.stringify(r).includes('SECRET-ORIGINAL'),false);assert.equal(JSON.stringify(r).includes('foreign-doc'),false);assert.equal(await digest(),before);
   });
@@ -99,6 +106,16 @@ test('native monthly invoice audit executes the registered reader with complete 
    await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" SELECT 'paged-'||n,'c','s','sup','INVOICE','PAGE '||n,'2026-10-10'::timestamp,1,'DRAFT','MANUAL',NULL,NULL,'2026-10-10'::timestamp FROM generate_series(1,60)n`);
    const before=await digest(),first=await read();assert.equal(first.summary.logicalRecords,64);assert.equal(first.summary.credits,1);assert.equal(first.summary.identityReview,1);assert.equal(first.summary.possibleDuplicates,2);assert.equal(first.items.length,50);assert.ok(first.nextPage);
    const second=await read({...request,page:first.nextPage});assert.equal(second.items.length,14);assert.equal(second.summary.logicalRecords,64);assert.equal(new Set([...first.items,...second.items].map(x=>x.id)).size,64);assert.equal(JSON.stringify([...first.items,...second.items]).includes('old-received-now'),false);assert.equal(await digest(),before);
+  });
+
+  await t.test('native existing monthly record beyond page50 and existing order inspection read actual saved lines without repairs',async()=>{
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocumentLine"("id","purchaseDocumentId","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES('saved-document-line','paged-60','Saved isolated original line',1,'PIECE',1,1,0,0,1),('foreign-saved-line','foreign-doc','Foreign line must remain hidden',1,'PIECE',999,999,0,0,999)`);
+   await db.$executeRawUnsafe(`INSERT INTO "Product"("id","companyId","name","sku","salePrice","vatRate") VALUES('inspection-product','c','Saved isolated product','READONLY',2,24)`);
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrderLine"("id","orderId","productId","ocrSequence","quantity","unitCost","netAmount","vatAmount","grossAmount") VALUES('saved-order-line','order','inspection-product',1,1,10,10,2.34,12.34)`);
+   const before=await digest(),monthly=await read(),record=await readMonthlyInvoiceAuditRecord(db,owner,{...request,id:'doc:paged-60',fingerprint:monthly.fingerprint},{now});
+   assert.equal(monthly.items.some(row=>row.id==='doc:paged-60'),false);assert.equal(record.readOnly,true);assert.equal(record.item.id,'doc:paged-60');assert.equal(record.item.openTarget.kind,'PREVIEW');assert.equal(record.item.purchaseReview.status,'LINK_REVIEW');assert.equal(record.sources.documents.length,1);assert.equal(record.documentLinesCoverage.available,true);assert.equal(record.documentLines.length,1);assert.equal(record.documentLines[0].description,'Saved isolated original line');assert.equal(record.documentLines[0].purchaseDocumentId,'paged-60');assert.equal(JSON.stringify(record).includes('Foreign line'),false);
+   const inspected=await readPurchaseOrderInspection(db,owner,'s','order',{now});assert.equal(inspected.readOnly,true);assert.equal(inspected.navigationOnly,true);assert.equal(inspected.order.id,'order');assert.equal(inspected.lines.length,1);assert.equal(inspected.lines[0].id,'saved-order-line');assert.equal(inspected.lines[0].productName,'Saved isolated product');assert.equal(inspected.lines[0].grossAmount,12.34);
+   await assert.rejects(readPurchaseOrderInspection(db,owner,'control','order',{now}),error=>error.status===404);await assert.rejects(readPurchaseOrderInspection(db,owner,'foreign','order',{now}));await assert.rejects(readMonthlyInvoiceAuditRecord(db,owner,{...request,id:'doc:foreign-doc'},{now}),error=>error.status===404);assert.equal(await digest(),before);
   });
 
   await t.test('one read-only RepeatableRead source snapshot excludes an independently committed document until next refresh',async()=>{
@@ -185,6 +202,8 @@ test('native monthly invoice audit executes the registered reader with complete 
 
   await t.test('native counter drill-down selects all 87 matches before paging and preserves tenant boundaries and global counts',async()=>{
    await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" SELECT 'drill-'||lpad(n::text,3,'0'),'c','control','sup','INVOICE','DRILL '||n,'2026-08-10'::timestamp,1,CASE WHEN n<=174 AND n%2=1 THEN 'DRAFT' ELSE 'APPROVED' END,'MANUAL',NULL,CASE WHEN n<=174 AND n%2=1 THEN 'drill-payment-'||n ELSE NULL END,'2026-08-10'::timestamp FROM generate_series(1,195)n`);
+   await db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "purchaseOrderId"='draft-order-'||"id" WHERE "id" LIKE 'drill-%' AND "status"='DRAFT' AND "storeId"='control'`);
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrder"("id","companyId","storeId","supplierId","status","invoiceNumber","sourceDocumentId","createdAt") SELECT "purchaseOrderId",'c','control','sup','NEW',"documentNumber","id",'2026-08-10'::timestamp FROM "PurchaseDocument" WHERE "id" LIKE 'drill-%' AND "status"='DRAFT' AND "storeId"='control'`);
    await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","amount","invoiceDocumentNumber","type","subtractFromShift") SELECT 'drill-payment-'||n,'c','control','sup',1,'DRILL '||n,'SUPPLIER_PAYMENT',false FROM generate_series(1,173,2)n`);
    await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES('drill-foreign','x','foreign',NULL,'INVOICE','DRILL FOREIGN','2026-08-10',999,'DRAFT','MANUAL',NULL,NULL,'2026-08-10'),('drill-other-store','c','s','sup','INVOICE','DRILL OTHER','2026-08-10',999,'DRAFT','MANUAL',NULL,NULL,'2026-08-10')`);
    const before=await digest(),input={storeId:'control',month:'2026-08',filter:'UNPOSTED_DOCUMENT'},all=await read({storeId:'control',month:'2026-08'}),first=await read(input),second=await read({...input,page:first.nextPage});

@@ -5,6 +5,7 @@ import {Prisma} from '@prisma/client';
 import {postedSupplierPayment} from '../lib/supplier-payment-reporting.js';
 import {observeInvoicePayments} from '../lib/invoice-payment-observation.js';
 import {normalizePostingProjections,withPostingProjectionProvenance} from '../lib/invoice-posting-projection-view.js';
+import {composeOrdinaryPurchaseReview} from '../lib/invoice-purchase-review-view.js';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
 import {readPendingInvoices,readPendingInvoiceSnapshotRows,readPendingInvoiceSnapshotRowsForAutomationInTransaction} from './pos-pending-invoices.js';
 import {requireMonthlyCaptureContext} from './monthly-inventory-capture-authorization.js';
@@ -14,7 +15,7 @@ const roles=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const PAGE_SIZE=50,MAX_SOURCE_ROWS=20000;
 const detailFilters=new Map([
  ['ALL',()=>true],
- ...['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW'].map(category=>[category,item=>item.categories.includes(category)]),
+ ...['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW','PURCHASE_LINK_REVIEW'].map(category=>[category,item=>item.categories.includes(category)]),
  ['CREDIT_NOTE',item=>item.documentType==='CREDIT_NOTE'],
  ['PAID',item=>item.payment.status==='PAID'],
  ['FINANCIAL_PENDING',item=>['PARTIALLY_PAID','OVERPAID','REVERSED'].includes(item.payment.status)],
@@ -344,15 +345,51 @@ async function readMonthlyInvoiceAuditCore(db,actor,input,{now,delegatedRead=fal
   const analysis=complete?classifyInvoiceMonth(ordinary.facts,period):{counts:null,items:[]};
   const paymentMetadata=complete?await readInvoicePaymentMetadata(tx,actor.companyId,store.id,facts,paymentMetadataAvailable,allocationMetadataAvailable):{available:false,allocationsAvailable:false,reason:'INVOICE_SOURCE_INCOMPLETE',rows:[],allocations:[]};
   const financial=observeInvoicePayments(withPostingProjectionProvenance(analysis.items,ordinary.projections),{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const fingerprint=hash({ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V1',period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const purchase=composeOrdinaryPurchaseReview(financial.items,ordinary.facts,{companyId:actor.companyId,storeId:store.id});
+  const summary=complete?{...analysis.counts,...purchase.summary}:null;
+  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V1',period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   // Select from the complete month, then paginate. Global counts, financial
   // observations and all-month pending originals keep their original scope.
-  const matching=financial.items.filter(detailFilters.get(filter));
+  const matching=purchase.items.filter(detailFilters.get(filter));
   const after=cursor?matching.findIndex(item=>item.id===cursor.after):-1;
   if(cursor&&after<0)fail('Η σελίδα δεν ανήκει στο τρέχον αποτέλεσμα.',409);
   const items=matching.slice(after+1,after+1+PAGE_SIZE),hasMore=after+1+items.length<matching.length;
-  return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,coverage:{complete,sourceCounts,sourceCountBasis:'ALL_STORED_METADATA_FOR_LINK_CONTEXT',unavailable,limited,sourceLimit:MAX_SOURCE_ROWS,detailsPageSize:PAGE_SIZE,scope:'STORED_SELECTED_STORE_SOURCES'},summary:analysis.counts,financialSummary:complete?financial.summary:null,paymentCoverage:{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,reason:paymentMetadata.reason},filter,matchedRecords:complete?matching.length:null,items,nextPage:hasMore?Buffer.from(JSON.stringify({after:items.at(-1).id,fingerprint,scope})).toString('base64url'):null,pendingOriginals:{period:'ALL_MONTHS',label:'Όλοι οι μήνες',available:pendingAvailable,counts:pending?{total:pending.count,missingOriginal:pending.missingCount,uploadedAwaitingReview:pending.uploadedCount,reviewRequired:pending.reviewCount}:null,items:(pending?.rows||[]).map(row=>({id:row.id,supplierName:row.supplierName,amount:row.amount,documentNumber:row.documentNumber,documentDate:row.documentDate,status:row.status,occurredAt:row.occurredAt})),truncated:pending?.truncated||false,detailLimit:50},allClear:complete&&paymentMetadata.available&&financial.summary.financialPending===0&&financial.summary.reviewRequired===0&&financial.summary.notLinked===0&&pendingAvailable&&analysis.counts.unposted===0&&analysis.counts.possibleDuplicates===0&&analysis.counts.identityReview===0&&pending.count===0,immutableSnapshot:false,readOnly:true};
+  return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,coverage:{complete,sourceCounts,sourceCountBasis:'ALL_STORED_METADATA_FOR_LINK_CONTEXT',unavailable,limited,sourceLimit:MAX_SOURCE_ROWS,detailsPageSize:PAGE_SIZE,scope:'STORED_SELECTED_STORE_SOURCES'},summary,financialSummary:complete?financial.summary:null,paymentCoverage:{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,reason:paymentMetadata.reason},filter,matchedRecords:complete?matching.length:null,items,nextPage:hasMore?Buffer.from(JSON.stringify({after:items.at(-1).id,fingerprint,scope})).toString('base64url'):null,pendingOriginals:{period:'ALL_MONTHS',label:'Όλοι οι μήνες',available:pendingAvailable,counts:pending?{total:pending.count,missingOriginal:pending.missingCount,uploadedAwaitingReview:pending.uploadedCount,reviewRequired:pending.reviewCount}:null,items:(pending?.rows||[]).map(row=>({id:row.id,supplierName:row.supplierName,amount:row.amount,documentNumber:row.documentNumber,documentDate:row.documentDate,status:row.status,occurredAt:row.occurredAt})),truncated:pending?.truncated||false,detailLimit:50},allClear:complete&&paymentMetadata.available&&financial.summary.financialPending===0&&financial.summary.reviewRequired===0&&financial.summary.notLinked===0&&pendingAvailable&&summary.unposted===0&&summary.purchaseLinkReview===0&&summary.possibleDuplicates===0&&summary.identityReview===0&&pending.count===0,immutableSnapshot:false,readOnly:true};
+ },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});
+}
+
+async function readStoredDocumentLines(tx,companyId,storeId,documentIds){
+ const limit=500;
+ if(!documentIds.length)return {items:[],coverage:{available:false,truncated:false,limit,reason:'NO_DOCUMENT_SOURCE'}};
+ const columns=['id','purchaseDocumentId','description','quantity','unit','unitCost','netAmount','vatRate','vatAmount','grossAmount','createdAt'];
+ const schema=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS "column" FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname=current_schema() AND c.relname=ANY($1::text[]) AND a.attnum>0 AND NOT a.attisdropped`,['PurchaseDocumentLine']);
+ if(!columns.every(column=>schema.some(row=>row.table==='PurchaseDocumentLine'&&row.column===column)))return {items:[],coverage:{available:false,truncated:false,limit,reason:'SOURCE_UNAVAILABLE'}};
+ const rows=await tx.$queryRawUnsafe(`SELECT l."id",l."purchaseDocumentId",left(l."description",4000) AS "description",length(l."description")>4000 AS "descriptionTruncated",l."quantity"::text,l."unit",l."unitCost"::text,l."netAmount"::text,l."vatRate"::text,l."vatAmount"::text,l."grossAmount"::text FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=$1 AND d."storeId"=$2 WHERE l."purchaseDocumentId"=ANY($3::text[]) ORDER BY l."purchaseDocumentId",l."createdAt",l."id" LIMIT 501`,companyId,storeId,documentIds);
+ return {items:rows.slice(0,limit),coverage:{available:true,truncated:rows.length>limit,limit,reason:null}};
+}
+
+// Existing stored metadata only. Opening an unmatched or standalone source
+// cannot create an order, fetch/reprocess an original or repair a document.
+export async function readMonthlyInvoiceAuditRecord(db,actor,input,{now=new Date()}={}){
+ if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input?.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
+ if(!input||Object.keys(input).some(key=>!['storeId','month','id','fingerprint'].includes(key))||!safeText(input.storeId)||!safeText(input.id,200)||input.fingerprint!==undefined&&(typeof input.fingerprint!=='string'||!/^[0-9a-f]{64}$/.test(input.fingerprint)))fail('Μη έγκυρο αποθηκευμένο παραστατικό.');
+ const period=invoiceAuditMonth(input.month);
+ return db.$transaction(async tx=>{
+  await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8000ms'");
+  const {store,facts,sourceCounts,unavailable,limited,pending,paymentMetadataAvailable,allocationMetadataAvailable}=await readInvoiceSources(tx,actor,input,now);
+  if(unavailable.length||limited.length)fail('Η κάλυψη των πηγών δεν είναι πλήρης. Εκτέλεσε νέο έλεγχο.',409,'INVOICE_MONTH_AUDIT_SOURCE_INCOMPLETE');
+  const ordinary=normalizePostingProjections(facts,{companyId:actor.companyId,storeId:store.id}),analysis=classifyInvoiceMonth(ordinary.facts,period);
+  const paymentMetadata=await readInvoicePaymentMetadata(tx,actor.companyId,store.id,facts,paymentMetadataAvailable,allocationMetadataAvailable);
+  const financial=observeInvoicePayments(withPostingProjectionProvenance(analysis.items,ordinary.projections),{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const purchase=composeOrdinaryPurchaseReview(financial.items,ordinary.facts,{companyId:actor.companyId,storeId:store.id});
+  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V1',period,sourceCounts,facts,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  if(input.fingerprint!==undefined&&input.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν ανοίξεις το παραστατικό.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
+  const item=purchase.items.find(row=>row.id===input.id);if(!item)fail('Δεν βρέθηκε παραστατικό στον επιλεγμένο μήνα και κατάστημα.',404,'INVOICE_MONTH_AUDIT_RECORD_NOT_FOUND');
+  const sourceIds=kind=>new Set(item.sources.filter(source=>source.kind===kind).map(source=>source.id)),documentIds=sourceIds('DOCUMENT'),orderIds=sourceIds('ORDER'),inboundIds=sourceIds('MYDATA'),inboxIds=sourceIds('INBOX');
+  const incoming=facts.inbound.filter(row=>inboundIds.has(row.id));for(const row of incoming)if(row.inboxId)inboxIds.add(row.inboxId);
+  const lines=await readStoredDocumentLines(tx,actor.companyId,store.id,[...documentIds]);
+  return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,readOnly:true,item,sources:{documents:facts.documents.filter(row=>documentIds.has(row.id)),orders:facts.orders.filter(row=>orderIds.has(row.id)),inbound:incoming,inbox:facts.inbox.filter(row=>inboxIds.has(row.id))},relatedOrders:item.relatedOrders||[],documentLines:lines.items,documentLinesCoverage:lines.coverage};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});
 }
 

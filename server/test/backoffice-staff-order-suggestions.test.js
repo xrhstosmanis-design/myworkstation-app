@@ -26,12 +26,12 @@ test('both native order suggestion views admit only current scoped grants and wi
       if(withdrawDuringRead)capabilities=[];
       return [];
     },
-    $transaction:async work=>work(db),
+    $transaction:async work=>{const {$transaction,...tx}=db;return work(tx)},
   };
   const guardSource=await readFile(new URL('../src/middleware/module-access.js',import.meta.url),'utf8');
   const requireStoreModule=new Function('prisma','ownerRestrictedModuleKeys',guardSource.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+'\nreturn requireStoreModule;')(db,ownerRestrictedModuleKeys);
   const routeSource=await readFile(new URL('../src/routes/order-suggestions.js',import.meta.url),'utf8');
-  const router=new Function('Router','z','prisma','requireStoreModule','buildOrderSuggestions','buildSupplierOrderGroups','SUPPLIER_EVIDENCE_LIMIT','requireStaffGrant','staffError',routeSource.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'').replace('default router;','return router;'))(express.Router,z,db,requireStoreModule,buildOrderSuggestions,buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT,requireStaffGrant,staffError);
+  const router=new Function('Router','z','prisma','requireStoreModule','buildOrderSuggestions','buildSupplierOrderGroups','SUPPLIER_EVIDENCE_LIMIT','requireStaffGrant','staffError','expectedReceiptReadiness','expectedReceiptRows',routeSource.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'').replace('default router;','return router;'))(express.Router,z,db,requireStoreModule,buildOrderSuggestions,buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT,requireStaffGrant,staffError,async()=>({available:false}),async()=>[]);
   const app=express();
   app.use(async(req,res,next)=>{
     req.user=req.get('x-owner')?{role:'OWNER',companyId:'company'}:{...staff};

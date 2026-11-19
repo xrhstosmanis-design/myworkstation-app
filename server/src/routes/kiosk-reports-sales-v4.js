@@ -75,11 +75,18 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
         CASE WHEN ${promotionsOnly} THEN sl."promotionType" END AS "promotionType",
         CASE WHEN ${promotionsOnly} THEN to_jsonb(promo)->>'name' END AS "promotionName",
         COALESCE(sp."currentStock",0) AS "currentStock",
-        COALESCE(pc."unitCost",p."costPrice",0) AS "unitCost",(COALESCE(pc."unitCost",p."costPrice") IS NULL) AS "_unitCostUnavailable",
+        CASE WHEN sa."source"='POS_REVERSAL' AND original."id" IS NULL THEN NULL
+          ELSE COALESCE(pc."unitCost",p."costPrice",0) END AS "unitCost",
+        COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) AS "missingOriginalCost",
+        (COALESCE(pc."unitCost",p."costPrice") IS NULL OR COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false)) AS "_unitCostUnavailable",
         pc."supplierName"
       FROM "SaleLine" sl
       JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND COALESCE(sa."transactionMode",'NORMAL')<>'CREDIT'
       JOIN "Store" s ON s."id"=sa."storeId" AND s."companyId"=${companyId}
+      LEFT JOIN "Sale" original ON sa."source"='POS_REVERSAL' AND original."id"=sa."originalSaleId"
+        AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId"
+        AND original."status"='COMPLETED' AND original."source"<>'POS_REVERSAL'
+        AND original."occurredAt"<=sa."occurredAt"
       LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=p."companyId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
@@ -112,7 +119,7 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
         FROM "PurchaseDocumentLine" pl
         JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId"
         LEFT JOIN "Supplier" sup ON sup."id"=pd."supplierId" AND sup."companyId"=pd."companyId"
-        WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=p."id" AND pd."documentDate"<=sa."occurredAt"
+        WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=p."id" AND pd."documentDate"<=CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END
         ORDER BY pd."documentDate" DESC,pd."createdAt" DESC,pd."id" DESC,pl."createdAt" DESC,pl."id" DESC LIMIT 1
       ) pc ON true
       WHERE sa."occurredAt">=${from} AND sa."occurredAt"<${to}
@@ -158,7 +165,8 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
       SUM("quantity") AS "salesQuantity",SUM("lineTotal") AS "grossSales",
       SUM(CASE WHEN "vatRate"=0 THEN "lineTotal" ELSE "lineTotal"/(1+"vatRate"/100) END) AS "netSales",
       SUM("lineTotal"-CASE WHEN "vatRate"=0 THEN "lineTotal" ELSE "lineTotal"/(1+"vatRate"/100) END) AS "vatValue",
-      SUM("quantity"*"unitCost") AS "costValue",BOOL_OR("_unitCostUnavailable") AS "_costIncomplete",
+      CASE WHEN BOOL_OR("missingOriginalCost") THEN NULL ELSE SUM("quantity"*"unitCost") END AS "costValue",
+      COUNT(*) FILTER (WHERE "missingOriginalCost")::int AS "missingOriginalCostLines",BOOL_OR("_unitCostUnavailable") AS "_costIncomplete",
       MAX("occurredAt") FILTER (WHERE COALESCE("source",'')<>'POS_REVERSAL') AS "lastSaleAt",
       SUM("discount") AS "discountValue",
       COUNT(DISTINCT "saleId") FILTER (WHERE COALESCE("source",'')<>'POS_REVERSAL')::int AS "normalSaleCount",
@@ -188,10 +196,19 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
   const sourceCoverage={complete,returnedGroupCount:groups.length,totalGroupCount,limit,totalsScope:complete?"COMPLETE_SOURCE":"RETURNED_GROUPS"};
   const hourlyActivity=includeHourly?validatedHourlyActivity(rows,{from,to,normalSaleCount:metadata._overallNormalSaleCount,reversalCount:metadata._overallReversalCount}):null;
   const items=groups.map(({_costIncomplete,_hourlyMetadata,_hasGroup,_totalGroupCount,_overallNormalSaleCount,_overallReversalCount,...r})=>{
-    const grossSales=n(r.grossSales),netSales=n(r.netSales),vatValue=n(r.vatValue),costValue=n(r.costValue),profit=netSales-costValue,salesQuantity=n(r.salesQuantity);
-    return {...r,...(strictRead?{_costIncomplete}:{}),currentStock:n(r.currentStock),salesQuantity,grossSales,netSales,vatValue,costValue,profit,margin:netSales?profit/netSales*100:0,averageGrossPrice:salesQuantity?grossSales/salesQuantity:0,discountValue:n(r.discountValue),normalSaleCount:n(r.normalSaleCount),reversalCount:n(r.reversalCount),returnGrossValue:n(r.returnGrossValue)};
+    const grossSales=n(r.grossSales),netSales=n(r.netSales),vatValue=n(r.vatValue);
+    const costValue=r.costValue===null?null:n(r.costValue);
+    const profit=costValue==null?null:netSales-costValue;
+    const salesQuantity=n(r.salesQuantity);
+    return {
+      ...r,...(strictRead?{_costIncomplete}:{}),currentStock:n(r.currentStock),salesQuantity,grossSales,netSales,vatValue,costValue,profit,
+      margin:profit==null?null:netSales?profit/netSales*100:0,
+      averageGrossPrice:salesQuantity?grossSales/salesQuantity:0,
+      discountValue:n(r.discountValue),normalSaleCount:n(r.normalSaleCount),
+      reversalCount:n(r.reversalCount),returnGrossValue:n(r.returnGrossValue)
+    };
   });
-  return {...(includeHourly?{hourlyActivity}:{}),unattributedPromotionReversal,sourceCoverage,...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:metadata._overallNormalSaleCount,reversalCount:metadata._overallReversalCount,returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
+  return {...(includeHourly?{hourlyActivity}:{}),unattributedPromotionReversal,sourceCoverage,...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.some(r=>r.costValue==null)?null:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.some(r=>r.profit==null)?null:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:metadata._overallNormalSaleCount,reversalCount:metadata._overallReversalCount,returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
 }
 // The existing inventory mount still applies. Payroll adds a narrower role and
 // personnel-package boundary inside its read-only snapshot; no writer is used.
@@ -212,10 +229,17 @@ export async function readSalesAnalysisProductReport({companyId,productId,from,t
   const rows=await db.$queryRaw`
     SELECT sa."id" AS "saleId",sa."occurredAt",sa."createdAt",sa."receiptNumber",sa."source",sa."transactionMode",sa."reversalKind",original."id" AS "originalSaleId",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
       s."name" AS "storeName",e."fullName" AS "operatorName",cu."name" AS "customerName",
-      COALESCE(pc."unitCost",p."costPrice",0) AS "unitCost",(COALESCE(pc."unitCost",p."costPrice") IS NULL) AS "_costIncomplete",pc."supplierName",
+      CASE WHEN sa."source"='POS_REVERSAL' AND original."id" IS NULL THEN NULL
+        ELSE COALESCE(pc."unitCost",p."costPrice",0) END AS "unitCost",
+      COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) AS "missingOriginalCost",
+        (COALESCE(pc."unitCost",p."costPrice") IS NULL OR COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false)) AS "_costIncomplete",pc."supplierName",
       COALESCE(pay."methods",'') AS "paymentMethods"
     FROM "SaleLine" sl
     JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND COALESCE(sa."transactionMode",'NORMAL')<>'CREDIT'
+    LEFT JOIN "Sale" original ON sa."source"='POS_REVERSAL' AND original."id"=sa."originalSaleId"
+      AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId"
+      AND original."status"='COMPLETED' AND original."source"<>'POS_REVERSAL'
+        AND original."occurredAt"<=sa."occurredAt"
     JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
     JOIN "Store" s ON s."id"=sa."storeId" AND s."companyId"=${companyId}
     LEFT JOIN "Sale" original ON original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId"
@@ -246,7 +270,7 @@ export async function readSalesAnalysisProductReport({companyId,productId,from,t
         CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END
       ) AS "unitCost",sup."name" AS "supplierName"
       FROM "PurchaseDocumentLine" pl JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=pd."supplierId" AND sup."companyId"=pd."companyId"
-      WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=p."id" AND pd."documentDate"<=sa."occurredAt"
+      WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=p."id" AND pd."documentDate"<=CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END
       ORDER BY pd."documentDate" DESC,pd."createdAt" DESC,pd."id" DESC,pl."createdAt" DESC,pl."id" DESC LIMIT 1
     ) pc ON true
     LEFT JOIN LATERAL (
@@ -254,7 +278,18 @@ export async function readSalesAnalysisProductReport({companyId,productId,from,t
     ) pay ON true
     WHERE sl."productId"=${productId} AND sa."occurredAt">=${from} AND sa."occurredAt"<${to} AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
     ORDER BY sa."occurredAt" DESC LIMIT 5000`;
-  const items=rows.map(({_costIncomplete,...r})=>{const quantity=n(r.quantity),lineTotal=n(r.lineTotal),vatRate=n(r.vatRate),netValue=vatRate?lineTotal/(1+vatRate/100):lineTotal,vatValue=lineTotal-netValue,unitCost=n(r.unitCost),costValue=quantity*unitCost,profit=netValue-costValue;return {...r,...(strictRead?{_costIncomplete}:{}),quantity,unitPrice:n(r.unitPrice),discount:n(r.discount),vatRate,lineTotal,netValue,vatValue,unitCost,costValue,profit,margin:netValue?profit/netValue*100:0,isReversal:r.source==="POS_REVERSAL"}});
+  const items=rows.map(({_costIncomplete,...r})=>{
+    const quantity=n(r.quantity),lineTotal=n(r.lineTotal),vatRate=n(r.vatRate);
+    const netValue=vatRate?lineTotal/(1+vatRate/100):lineTotal,vatValue=lineTotal-netValue;
+    const unitCost=r.unitCost===null?null:n(r.unitCost);
+    const costValue=unitCost==null?null:quantity*unitCost;
+    const profit=costValue==null?null:netValue-costValue;
+    return {
+      ...r,...(strictRead?{_costIncomplete}:{}),quantity,unitPrice:n(r.unitPrice),discount:n(r.discount),vatRate,lineTotal,netValue,vatValue,
+      unitCost,costValue,profit,margin:profit==null?null:netValue?profit/netValue*100:0,
+      isReversal:r.source==="POS_REVERSAL"
+    };
+  });
   return {product:owned[0],items,count:items.length,reversalAware:true};
 }
 router.get("/sales-analysis/:productId",async(req,res,next)=>{try{

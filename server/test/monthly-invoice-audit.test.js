@@ -2,15 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import express from 'express';
-import {classifyInvoiceMonth,invoiceAuditMonth,readMonthlyInvoiceAudit} from '../src/services/monthly-invoice-audit.js';
+import {classifyInvoiceMonth,invoiceAuditMonth,readMonthlyInvoiceAudit,readMonthlyInvoiceAuditRecord} from '../src/services/monthly-invoice-audit.js';
 import {createMonthlyInvoiceAuditRouter} from '../src/routes/monthly-invoice-audit.js';
 
 const period=invoiceAuditMonth('2026-10'),actor={id:'owner',companyId:'c',role:'OWNER'},now=new Date('2026-10-28T12:00:00Z');
 const empty=()=>({documents:[],orders:[],inbound:[],inbox:[],jobs:[],attachments:[],aliases:[],postings:[],stockPostings:[]});
 const doc=(id,patch={})=>({id,supplierId:'sup',supplierName:'Συνθετικός προμηθευτής',supplierTaxId:'099999999',documentType:'INVOICE',documentNumber:'A '+id,issueDay:'2026-10-02',totalGross:'12.34',status:'DRAFT',sourceType:'MANUAL',purchaseOrderId:null,createdAt:'2026-10-03T10:00:00Z',...patch});
+const attachDraftOrders=(facts,selected=facts.documents.filter(document=>document.status==='DRAFT'))=>{
+ for(const document of selected){document.purchaseOrderId='order-'+document.id;facts.orders.push({id:document.purchaseOrderId,sourceDocumentId:document.id,supplierId:document.supplierId,invoiceNumber:document.documentNumber,status:'NEW',createdAt:document.createdAt})}
+};
 const schema={
  Supplier:['id','companyId','name','taxId'],
  PurchaseDocument:['id','companyId','storeId','supplierId','documentType','documentNumber','documentDate','totalGross','status','sourceType','purchaseOrderId','paymentTransactionId','createdAt'],
+ PurchaseDocumentLine:['id','purchaseDocumentId','description','quantity','unit','unitCost','netAmount','vatRate','vatAmount','grossAmount','createdAt'],
  PurchaseOrder:['id','companyId','storeId','supplierId','status','invoiceNumber','sourceDocumentId','createdAt'],
  MyDataInboundDocument:['id','companyId','storeId','inboxId','mark','issuerVat','series','documentNumber','issueDate','invoiceType','totalGross','rawPayload','fetchedAt'],
  DocumentInbox:['id','companyId','storeId','attachmentId','status','receivedAt'],AiReaderJob:['id','companyId','storeId','attachmentId','purchaseDocumentId','status','stage','resultJson'],
@@ -31,6 +35,7 @@ function fixture({facts=empty(),missing=[],role='OWNER',currentCompany='c',store
    if(sql.includes('FROM pg_class'))return Object.entries(schema).flatMap(([table,columns])=>missing.includes(table)?[]:columns.map(column=>({table,column})));
    if(sql.includes('FROM "StorePaidModule"'))return override?[override]:[];
    if(sql.includes('FROM "OwnerCompanyAccess"'))return [];
+   if(sql.startsWith('SELECT l."id",l."purchaseDocumentId"'))return (facts.documentLines||[]).filter(row=>values[2].includes(row.purchaseDocumentId));
    for(const[name,table]of Object.entries(tables))if(sql.startsWith('SELECT source.')&&sql.includes('FROM "'+table+'"'))return facts[name].map(row=>({...row,_sourceCount:String(totals[name]??facts[name].length)}));
    throw Error('Unexpected metadata query: '+sql);
   },
@@ -53,7 +58,7 @@ test('document issue month is strict and keeps leap/calendar boundaries',()=>{
 });
 
 test('real reader uses one read-only snapshot, full source counters and distinct all-month pending counts',async()=>{
- const facts=empty();facts.documents=[doc('1')];
+ const facts=empty();facts.documents=[doc('1')];attachDraftOrders(facts);
  const pending={count:75,missingCount:60,uploadedCount:10,reviewCount:5,rows:Array.from({length:50},(_,i)=>({id:'pending'+i,supplierName:'Pending',amount:1,documentNumber:'OLD '+i,documentDate:'2025-01-01',status:'AWAITING_INVOICE',fingerprint:'PRIVATE-HASH'}))};
  const f=fixture({facts,pending}),r=await read(f);
  assert.deepEqual(f.trace[0].transaction,{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});assert.equal(f.trace[1].sql,'SET TRANSACTION READ ONLY');
@@ -143,6 +148,7 @@ test('complete findings counts survive paging and changed source invalidates the
 
 test('counter drill-down pages the entire matching month while keeping global totals and paid workflow distinct',async()=>{
  const facts=empty();facts.documents=Array.from({length:195},(_,index)=>doc(String(index).padStart(3,'0'),{status:index<174&&index%2===0?'DRAFT':'APPROVED',paymentTransactionId:index<174&&index%2===0?'p'+index:null}));
+ attachDraftOrders(facts);
  facts.payments=facts.documents.filter(d=>d.paymentTransactionId).map(d=>({id:d.paymentTransactionId,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:d.documentNumber,amount:'12.34',settlementConfirmed:true}));
  const pending={count:3,missingCount:3,uploadedCount:0,reviewCount:0,rows:[]},f=fixture({facts,pending}),all=await read(f),input={storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'};
  const first=await read(f,input),second=await read(f,{...input,page:first.nextPage});
@@ -157,10 +163,10 @@ test('counter drill-down pages the entire matching month while keeping global to
 
 test('all supported counter filters select exact full-result predicates with independent payment review and missing links',async()=>{
  const facts=empty();facts.documents=Array.from({length:12},(_,i)=>doc(String(i),{status:'APPROVED',paymentTransactionId:i<5?'p'+i:null}));
- facts.documents[5].documentType='CREDIT_NOTE';facts.documents[6].supplierTaxId=null;facts.documents[7].status='DRAFT';facts.documents[8].status='DRAFT';facts.documents[9].documentNumber=facts.documents[10].documentNumber;
+ facts.documents[5].documentType='CREDIT_NOTE';facts.documents[6].supplierTaxId=null;facts.documents[7].status='DRAFT';facts.documents[8].status='DRAFT';facts.documents[11].status='DRAFT';facts.documents[9].documentNumber=facts.documents[10].documentNumber;attachDraftOrders(facts,[facts.documents[7],facts.documents[8]]);
  facts.attachments=[{id:'attachment',hasContent:true,checksum:'a'.repeat(64),mimeType:'image/jpeg'}];facts.jobs=[{id:'job',purchaseDocumentId:'8',attachmentId:'attachment',status:'AWAITING_APPROVAL'}];
  facts.payments=Array.from({length:5},(_,i)=>({id:'p'+i,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A '+i,amount:i===1?'5.00':i===2?'13.00':'12.34',settlementConfirmed:i!==3,reversedAt:i===4?'2026-10-03':null}));
- const f=fixture({facts}),all=await read(f),predicates={ALL:()=>true,UNPOSTED_DOCUMENT:x=>x.categories.includes('UNPOSTED_DOCUMENT'),UPLOADED_AWAITING_REVIEW:x=>x.categories.includes('UPLOADED_AWAITING_REVIEW'),POSSIBLE_DUPLICATE:x=>x.categories.includes('POSSIBLE_DUPLICATE'),IDENTITY_OR_LINK_REVIEW:x=>x.categories.includes('IDENTITY_OR_LINK_REVIEW'),CREDIT_NOTE:x=>x.documentType==='CREDIT_NOTE',PAID:x=>x.payment.status==='PAID',FINANCIAL_PENDING:x=>['PARTIALLY_PAID','OVERPAID','REVERSED'].includes(x.payment.status),PAYMENT_REVIEW:x=>['REVIEW_REQUIRED','UNCONFIRMED','UNAVAILABLE'].includes(x.payment.status),PAYMENT_UNLINKED:x=>x.payment.status==='NOT_LINKED'};
+ const f=fixture({facts}),all=await read(f),predicates={ALL:()=>true,UNPOSTED_DOCUMENT:x=>x.categories.includes('UNPOSTED_DOCUMENT'),UPLOADED_AWAITING_REVIEW:x=>x.categories.includes('UPLOADED_AWAITING_REVIEW'),PURCHASE_LINK_REVIEW:x=>x.categories.includes('PURCHASE_LINK_REVIEW'),POSSIBLE_DUPLICATE:x=>x.categories.includes('POSSIBLE_DUPLICATE'),IDENTITY_OR_LINK_REVIEW:x=>x.categories.includes('IDENTITY_OR_LINK_REVIEW'),CREDIT_NOTE:x=>x.documentType==='CREDIT_NOTE',PAID:x=>x.payment.status==='PAID',FINANCIAL_PENDING:x=>['PARTIALLY_PAID','OVERPAID','REVERSED'].includes(x.payment.status),PAYMENT_REVIEW:x=>['REVIEW_REQUIRED','UNCONFIRMED','UNAVAILABLE'].includes(x.payment.status),PAYMENT_UNLINKED:x=>x.payment.status==='NOT_LINKED'};
  for(const[filter,predicate]of Object.entries(predicates)){
   const r=await read(f,{storeId:'s',month:'2026-10',filter}),expected=all.items.filter(predicate);
   assert.equal(r.filter,filter);assert.equal(r.matchedRecords,expected.length,filter);assert.ok(expected.length>0,filter);assert.deepEqual(r.items,expected,filter);assert.deepEqual(r.summary,all.summary);assert.deepEqual(r.financialSummary,all.financialSummary);
@@ -177,7 +183,7 @@ test('invalid counter filters fail before database access and incomplete coverag
 });
 
 test('counter cursors bind filter, company, store and month and cannot skip using a row outside the subset',async()=>{
- const facts=empty();facts.documents=Array.from({length:80},(_,i)=>doc(String(i).padStart(3,'0'),{status:i<60?'DRAFT':'APPROVED'}));const f=fixture({facts}),input={storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'},first=await read(f,input);
+ const facts=empty();facts.documents=Array.from({length:80},(_,i)=>doc(String(i).padStart(3,'0'),{status:i<60?'DRAFT':'APPROVED'}));attachDraftOrders(facts);const f=fixture({facts}),input={storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'},first=await read(f,input);
  for(const [patch,user]of [[{filter:'ALL'},actor],[{filter:'PAID'},actor],[{storeId:'other'},actor],[{month:'2026-11'},actor],[{}, {...actor,companyId:'foreign'}]]){
   const blocked=fixture({facts});await assert.rejects(read(blocked,{...input,...patch,page:first.nextPage},user),e=>e.status===400);assert.equal(blocked.trace.length,0);
  }
@@ -287,6 +293,38 @@ test('ordinary report proves posted projection using original header while retai
  assert.deepEqual(r.items[0].postingProjections,[{sourceDocumentId:'source',projectionDocumentId:'order',sourceIssueDay:'2026-10-02',sourceTotalGross:'12.34',recordedIssueDay:'2026-10-05',recordedTotalGross:'12.3432'}]);assert.equal(JSON.stringify(facts),before);assert.deepEqual(classifyInvoiceMonth(facts,period),raw);
  const unposted=await read(f,{storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'});assert.equal(unposted.matchedRecords,0);assert.equal(unposted.financialSummary.paid,1);
  facts.documents[1].totalGross='12.344';const changed=await read(f);assert.notEqual(changed.fingerprint,r.fingerprint);assert.equal(changed.items[0].totalCents,1234);assert.equal(changed.items[0].postingProjections[0].recordedTotalGross,'12.344');assert.equal(changed.summary.unposted,0);
+});
+
+test('record reader resolves an actual row beyond page50 with saved document lines in one authorized read-only snapshot',async()=>{
+ const facts=empty();facts.documents=Array.from({length:60},(_,i)=>doc(String(i).padStart(3,'0')));facts.documentLines=[{id:'line',purchaseDocumentId:'059',description:'Stored original line',quantity:'2.0000',unit:'PIECE',unitCost:'5.0000',netAmount:'10.0000',vatRate:'24.000',vatAmount:'2.4000',grossAmount:'12.4000'}];
+ const f=fixture({facts}),report=await read(f);assert.equal(report.items.some(row=>row.id==='doc:059'),false);const before=JSON.stringify(facts);
+ const result=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:059',fingerprint:report.fingerprint},{now});
+ assert.equal(result.readOnly,true);assert.equal(result.item.id,'doc:059');assert.equal(result.fingerprint,report.fingerprint);assert.equal(result.item.openTarget.kind,'PREVIEW');assert.equal(result.sources.documents.length,1);assert.equal(result.sources.documents[0].id,'059');assert.deepEqual(result.relatedOrders,[]);assert.deepEqual(result.documentLines,facts.documentLines);assert.deepEqual(result.documentLinesCoverage,{available:true,truncated:false,limit:500,reason:null});assert.equal(JSON.stringify(facts),before);
+ const lines=f.trace.find(row=>row.sql?.startsWith('SELECT l."id",l."purchaseDocumentId"'));assert.deepEqual(lines.values,['c','s',['059']]);assert.match(lines.sql,/d\."companyId"=\$1 AND d\."storeId"=\$2/);assert.ok(f.trace.filter(row=>row.sql).every(row=>!/^(INSERT|UPDATE|DELETE|CREATE|ALTER)/.test(row.sql.trim())));
+});
+
+test('record previews keep unmatched myDATA and merged credit facts honest without creating or selecting a new draft',async()=>{
+ const facts=empty();facts.inbound=[{id:'incoming',inboxId:'inbox',series:'A',documentNumber:'1',issuerVat:'099999999',invoiceType:'1.1',issueDay:'2026-10-02',totalGross:'12.34',createdAt:'2026-10-02'}];facts.inbox=[{id:'inbox',status:'RECEIVED',createdAt:'2026-10-02'}];
+ const f=fixture({facts}),result=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'inbound:incoming'},{now});assert.equal(result.item.purchaseReview.status,'LINK_REVIEW');assert.equal(result.item.openTarget.kind,'PREVIEW');assert.deepEqual(result.sources.documents,[]);assert.deepEqual(result.sources.orders,[]);assert.equal(result.sources.inbound[0].id,'incoming');assert.equal(result.sources.inbox[0].id,'inbox');assert.deepEqual(result.documentLines,[]);assert.equal(result.documentLinesCoverage.reason,'NO_DOCUMENT_SOURCE');
+});
+
+test('record reader strictly rejects malformed scope stale reports missing rows and incomplete sources',async()=>{
+ for(const patch of [{id:''},{id:['doc:1']},{id:'doc:1\n'},{storeId:['s']},{month:'2026-13'},{fingerprint:['a'.repeat(64)]},{filter:'ALL'},{create:true}]){const f=fixture();await assert.rejects(readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:1',...patch},{now}),error=>error.status===400);assert.equal(f.trace.length,0)}
+ const facts=empty();facts.documents=[doc('1')];const f=fixture({facts}),report=await read(f);facts.documents[0].totalGross='13.00';await assert.rejects(readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:1',fingerprint:report.fingerprint},{now}),error=>error.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+ for(const patch of [{id:'doc:foreign'},{month:'2026-11'},{storeId:'other'}])await assert.rejects(readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:1',...patch},{now}),error=>error.status===404);
+ await assert.rejects(readMonthlyInvoiceAuditRecord(fixture({missing:['PurchaseDocument']}).db,actor,{storeId:'s',month:'2026-10',id:'doc:1'},{now}),error=>error.code==='INVOICE_MONTH_AUDIT_SOURCE_INCOMPLETE');
+ await assert.rejects(readMonthlyInvoiceAuditRecord(fixture({facts}).db,{...actor,tokenType:'STORE_OPERATOR'},{storeId:'s',month:'2026-10',id:'doc:1'},{now}),error=>error.status===403);
+});
+
+test('record saved-line coverage distinguishes absent schema and actual bounded line output',async()=>{
+ const facts=empty();facts.documents=[doc('1')];facts.documentLines=Array.from({length:501},(_,i)=>({id:'line'+i,purchaseDocumentId:'1',description:'Stored line'}));
+ const input={storeId:'s',month:'2026-10',id:'doc:1'},limited=await readMonthlyInvoiceAuditRecord(fixture({facts}).db,actor,input,{now});assert.equal(limited.documentLines.length,500);assert.equal(limited.documentLinesCoverage.truncated,true);
+ const missing=await readMonthlyInvoiceAuditRecord(fixture({facts,missing:['PurchaseDocumentLine']}).db,actor,input,{now});assert.deepEqual(missing.documentLines,[]);assert.equal(missing.documentLinesCoverage.available,false);assert.equal(missing.documentLinesCoverage.reason,'SOURCE_UNAVAILABLE');
+});
+
+test('record HTTP route is GET-only no-store and accepts only existing selected-store monthly IDs',async()=>{
+ const facts=empty();facts.documents=[doc('1')];const f=fixture({facts}),app=express();app.use((req,res,next)=>{req.user=actor;next()});app.use('/api/reports/invoice-month-audit',createMonthlyInvoiceAuditRouter(f.db));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const base='http://127.0.0.1:'+server.address().port+'/api/reports/invoice-month-audit/record?storeId=s&month=2026-10&id=doc%3A1';
+ try{const response=await fetch(base);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).item.id,'doc:1');assert.equal((await fetch(base+'&create=true')).status,400);assert.equal((await fetch(base,{method:'POST'})).status,404)}finally{await new Promise(resolve=>server.close(resolve))}
 });
 
 test('payment availability cannot turn a missing schema into zero unpaid balance',async()=>{

@@ -1,5 +1,6 @@
 import {finalPassiveStoreActions,finalPassiveStoreRequest} from './backoffice-staff-final-passive.mjs';
 import {storeReportCapabilities,storeReportNames,storeReportLabels,storeReportRequestCapability} from './backoffice-staff-reports.mjs';
+import {expectedReceiptAction} from './supplier-expected-receipts.mjs';
 // Profiles are starting suggestions, never authorization ceilings or an
 // implicit grant. Only the explicit persisted store capabilities authorize.
 export const staffProfiles=Object.freeze({
@@ -177,6 +178,8 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&['/api/commerce/order-suggestions','/api/commerce/order-suggestions/by-supplier'].includes(path))return 'order-suggestions.read';
   if(method==='GET'&&['/api/commerce/low-value-products/access','/api/commerce/low-value-products'].includes(path))return 'low-value-products.read';
   if(method==='GET'&&path==='/api/commerce/supplier-price-comparison')return 'supplier-price-comparison.read';
+  const receiptAction=expectedReceiptAction(method,path);
+  if(receiptAction)return receiptAction==='read'?'invoices.read':'invoices.approve';
   if((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/cancel-preview$/.test(path))||
      (method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/cancel$/.test(path)))return 'invoices.cancel';
   if ((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/reopen-preview$/.test(path))||

@@ -24,6 +24,7 @@ const MonthlyInvoiceAuditPanel=React.lazy(()=>import('./commerce/MonthlyInvoiceA
 const PendingCenterPanel=React.lazy(()=>import('./commerce/PendingCenterPanel.jsx'));
 const StaffPromotionsPanel=React.lazy(()=>import('./commerce/StaffPromotionsPanel.jsx'));
 import React,{useCallback,useEffect,useRef,useState} from 'react';
+const OrderSuggestionsPanel=React.lazy(()=>import('./commerce/OrderSuggestionsPanel.jsx'));
 const InvoiceInboxPanel=React.lazy(()=>import('./commerce/InvoiceInboxPanel.jsx'));
 const StaffInvoicePurchases=React.lazy(()=>import('./commerce/StaffInvoicePurchases.jsx'));
 const PosSaleActionsPanel=React.lazy(()=>import('./commerce/PosSaleActionsPanel.jsx'));
@@ -31,7 +32,6 @@ const StoreShiftClosePanel=React.lazy(()=>import('./store/StoreShiftClosePanel.j
 const StaffShiftReport=React.lazy(()=>import('./cloud/StaffShiftReport.jsx'));
 const SupplierPriceComparisonPanel=React.lazy(()=>import('./commerce/SupplierPriceComparisonPanel.jsx'));
 const LowValueProductsPanel=React.lazy(()=>import('./commerce/LowValueProductsPanel.jsx'));
-const OrderSuggestionsPanel=React.lazy(()=>import('./commerce/OrderSuggestionsPanel.jsx'));
 const AdvancedSalesAnalytics=React.lazy(()=>import('./commerce/AdvancedSalesAnalytics.jsx'));
 const StoreHandoverPanel=React.lazy(()=>import('./store/StoreHandoverPanel.jsx'));
 const WorkforceV2EmployeesPanel=React.lazy(()=>import('./platform/WorkforceV2EmployeesPanel.jsx'));

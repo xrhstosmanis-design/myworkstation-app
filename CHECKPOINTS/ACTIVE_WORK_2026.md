@@ -8,13 +8,21 @@ PR #4036. Read-only provider check for Diadochou Pavlou invoice 34795 returned H
 
 Hosted μερική/τελική πληρωμή BLOCKED από τον σωστό έλεγχο δύο ενεργών συνθετικών ταμειακών στο κοινό LAB· cashParts[]/saleIdnull/μηδέν ledger μερικής/stock-2 αμετάβλητα. Καμία αλλαγή συσκευής ή παράκαμψη. Νέο χρεώσιμο δελτίο: KDS persistence PASS, δικό του οπτικό READY εκκρεμεί μετά την αλλαγή κοινής OWNER συνεδρίας. Φυσικό Android offline/αμφίβολη απόκριση και εκτυπωτής NOT TESTED. Τα CI/native αποτελέσματα είναι χωριστά. [Ακριβές checkpoint](CHANGES/2026-11-18-table-service-live-acceptance.md) · [Επιβεβαιωμένες οδηγίες](../docs/manual/table-service/PASS.md). Το παρόν υπερισχύει μόνο των παλιών AWAITING CI/εγκατάστασης για τα ίδια #4023/#4024· το συνολικό scope παραμένει OPEN.
 
+## 19/11/2026 — Νο2 — αυτόματη συμφωνία αποθηκευμένων canonical εγγραφών / ASSIGNED BEFORE SOURCE
+
+Owner ίδια σελίδα Νο2 `/root`, branch `fix/no2-automatic-canonical-review`. Νεότερο owner feedback19/11: η εμφάνιση/πλοήγηση#4045 δεν ολοκληρώνει από μόνη της την απαιτούμενη αυτόματη συμφωνία. Αποδεδειγμένη παλιά FINAL οικογένεια έχει ήδη commonDraft receipt/μία υπάρχουσα πληρωμή/μοναδικά order→source→posting→stock links, αλλά απορρίπτεται μόνο από status gate και η προβολή παίρνει μήνα posting αντί αρχικού τιμολογίου. ASSIGNED μόνο ordinary μηνιαία αυτόματη canonical ανάλυση με αυστηρή υπάρχουσα απόδειξη και υπάρχοντα οικονομικά IDs· όχι raw C/D1 ή business writers/οικονομική μεταβολή. Πιθανές απλές header ενδείξεις δεν αποτελούν οικονομική απόδειξη. [Πριν-source scope/όρια](CHANGES/2026-11-19-no2-automatic-canonical-review.md). NOT TESTED νέα υλοποίηση· τα προηγούμενα περιορισμένα PASS και οι υπόλοιποι owners διατηρούνται. Δεν ζητείται έλεγχος όλων των γραμμών ή νέα συναλλαγή από τον ιδιοκτήτη.
+
 ## 18/11/2026 — Νο2 — verified ordinary posting projection / ASSIGNED BEFORE SOURCE
 
 Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγματικών εκκρεμοτήτων. Στενό ordinary derived view για ρητά αποδεδειγμένα source/projection pairs, μοναδική πλήρη posting/stock απόδειξη και raw provenance. Ο C classifier code, D1, writers και email διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-ordinary-posting-projection.md). NOT STARTED/NOT TESTED πριν merged claim, καμία οικονομική/stock πράξη.
 
-### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / BEFORE SOURCE
+### Νεότερο αίτημα 18/11/2026 — Νο2 — άνοιγμα παραστατικού και ουσιαστική ταξινόμηση / TECHNICAL LIVE / AWAITING COMMON LAB
+
+19/11/2026,00:41Ελλάδας: #4045/final28f744a9 merged e79bdd0b, πλήρη sourceCI44409759165 και mainCI44411743364 SUCCESS5/5, έκαστο6312PASS/0FAIL/3optionalPG-WASM SKIP+8backupPASS. Actual nativePG/Chromium νέων flows PASS. Guardeddeploy44413540667 SUCCESS2/2, Renderdep-dbv2i66k1f9s73b7ugq0 LIVE exacte79, ανεξάρτητο health/HTML/newentrymarkers PASS. Η νέα τεχνική έκδοση ανοίγει την υπάρχουσα scoped αγορά ή αποθηκευμένες πηγές και διαχωρίζει draft από linkreview/οικονομική κατάσταση. Δεν έγινε επιχειρησιακή εγγραφή ή νέα είσοδος χρήστη. Η προηγούμενη owner FAIL μένει ιστορικό· νέα hosted αποδοχή AWAITING COMMON LAB, συνολικό Νο2 OPEN. [Ακριβές τεκμήριο](CHANGES/2026-11-19-no2-invoice-opening-release.md).
 
 Ο ιδιοκτήτης επιβεβαίωσε νέο FAIL: η παλιά κατηγορία μη καταχωρισμένων αναμειγνύει ασύνδετες myDATA/πιστωτικές/merged εγγραφές και ο αριθμός δεν ανοίγει την υπάρχουσα αγορά. Ίδιος owner `/root`, branch `fix/no2-invoice-open-review`, μόνο ordinary eligibility/navigation και αυστηρή ανάγνωση υφιστάμενου detail χωρίς implicit repair/bootstrap. Raw C/D1/writers και άλλων σελίδων markup/εμφάνιση διατηρούνται. Το περιορισμένο LIVE counter PASS παρακάτω παραμένει, όχι PASS της σημασιολογίας ή νέας πλοήγησης. [Claim](CHANGES/2026-11-18-no2-invoice-opening-review.md). Source μετά green merged claim, καμία νέα πληρωμή/καταχώριση.
+
+Νέα υλοποίηση μετά claim#4042: ordinary-only διαχωρισμός ενεργών προχείρων/ελέγχου αντιστοίχισης, ξεχωριστή οικονομική κατάσταση και κλικ προς υπάρχουσα scoped αγορά με αποθηκευμένες γραμμές. Η νέα inspection διαδρομή είναι READ ONLY/RepeatableRead, παρακάμπτει bootstrap/implicit repair· ο default writer παραμένει. Πρώτοι HTTP+mounted inspection6PASS. PR#4045: το αρχικό CI6305PASS/5FAIL/3SKIP εντόπισε δύο παλιά test harness/fixture ασυμβατότητες· διορθώθηκαν χωρίς αλλαγή οικονομικών ή εξασθένηση assertions, αναμονή νέου πλήρους CI. Νέα προεπισκόπηση με ορατή εστίαση και πραγματικά αποθηκευμένα στοιχεία, 34mountedPASS, αναμονή exact-head πλήρους CI. Owner semantics FAIL παραμένει μέχρι εγκατάσταση και πραγματική αποδοχή. Καμία νέα αγορά/πληρωμή/stock. Οι άλλοι owners και markup αλλαγές διατηρούνται.
 
 ### Νεότερη κατάσταση 18/11/2026 — Νο2 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ / LIMITED LIVE UI PASS
 
@@ -128,6 +136,8 @@ Main42601f0No2counters/postingενσωματώθηκε·κοινόreadonlycoreκ
 PR4007 CI44402256147 tested the synthetic merge and exposed a stale COMPANY source binding after No4 changed the purchase-order route. Reviewed the scoped invoice transfer and refreshed only its SHA-256 in the inactive COMPANY compatibility packet. Local rights and verifier checks passed; native backup/restore and final shared LAB acceptance remain open.
 
 Main 885f00f0 changed the bound purchase-order route again. The refreshed inactive COMPANY packet retains its existing guards and passed targeted local checks. Native acceptance and the shared LAB session remain open.
+
+Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps with invoice inspection, expected receipts and reversal costing. Full candidate CI and guarded common LAB installation remain pending.
 
 <!-- NO5-STATUS:END -->
 
@@ -716,3 +726,32 @@ Explicit owner request/start in same warehouse/invoice conversation. Bounded ind
 ## 18/11/2026 — WAREHOUSE-INVOICE-REVIEW-UI-01 — SOURCE RECONCILED / AWAITING CI AND COMMON LAB
 
 Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compact warehouse chrome, draft VAT/category/subcategory and read-only linked markup implemented. Real isolated PostgreSQL taxonomy/control/rollback and staff regression passed in CI44400676745;6274PASS/1 old test-harness dependencyFAIL/3optionalSKIP. Dependency corrected without runtime change. Main a9639f31 reconciled: preserve No4 atomic assistant transfer and shared transaction helpers, No13–14 CSV status and No2 claim. Taxonomy hooks now use current shared patchPurchaseLine transaction; no hosted financial/stock action. Full exact combined CI and common LAB pending. See own checkpoint.
+
+
+- 2026-11-18 · 13–14 · Μερικό LAB PASS κατάστασης CSV τιμολογίων και ενεργών πληρωμών ως Super Admin στο υπάρχον LAB. 16/8 και 3/7 γραμμές/στήλες, εγκεκριμένα 7,44 €, πληρωμές 3,00 €. [Τεκμήριο](CHANGES/2026-11-18-no13-no14-supplier-csv-lab-pass.md). Συνολικό 13–14 OPEN, PDF/εκτύπωση και πλήρης οικονομική συμφωνία εκκρεμούν. Ετήσιο CSV στην ίδια συνεδρία: 18 γραμμές / 7 στήλες, 17 ΕΝΕΡΓΗ 4.917,72 € και 1 ΑΝΤΙΛΟΓΙΣΜΟΣ 46,92 €, σε συμφωνία με την οθόνη· μερικό LAB PASS ένδειξης αντιλογισμού.
+
+
+- 2026-11-19 · 13-SALES-STATS-REVERSAL-COST · /root σελίδας 13–14, βοηθός /root/cost · #4046 πριν από κώδικα, υλοποίηση #4050 εγκατεστημένη τεχνικά ως 03964fe3. PR CI44470735150 και main CI44472405243 SUCCESS5/5, κανονική εγκατάσταση44473751002 SUCCESS, Render dep-dbv9jdbl550s7394u910 LIVE 19/11 08:41:26 Ελλάδας. Αρχική αστοχία fixture χωρίς originalSaleId διορθώθηκε με σύνδεση basket και 18 γραμμές assertions αμετάβλητες. [Checkpoint](CHANGES/2026-11-19-no13-sales-reversal-cost.md). Κοινή πραγματική LAB αποδοχή/PDF/χαρτί και συνολικό 13 OPEN.
+
+
+- 2026-11-19 · Νο 14 · ASSIGNED /root, βοηθοί /root/suppliers και /root/cost, συνέχεια #4004/#4047. Το #4053 είναι τεχνικά LIVE ως bee86c6 από 09:42 Ελλάδας. Το πρόσθετο compatibility πακέτο #4057 συγχωνεύτηκε ως 361193e60f39ab62005d3ace5124d8e4e5cd1d0c μετά full PR CI 44486238567 SUCCESS 5/5 στο head 72365dde. Main CI 44488040952 σε εξέλιξη. Ανεξάρτητη ανασκόπηση ακριβούς παρτίδας, 14 pure PASS και ίδια PGlite fixture με 10 πραγματικές αποκλίσεις metadata / 6 αμετάβλητες γραμμές. [Τεχνική παραλαβή και ορισμός](CHANGES/2026-11-19-no14-expected-receipts-compatibility-claim.md), [handoff](../docs/testing/no14-expected-receipts-compatibility-handoff.md). Οι owners lifecycle/installer Νο 7–9 και 5 διατηρούν ενσωμάτωση, scoped backup/restore, εγκατάσταση πινάκων και ενεργοποίηση OPEN. Η διάγνωση δηλώνει SUPPLIED_EVIDENCE_MATCH_ONLY και activationReady=false. [Πηγαίο πακέτο](CHANGES/2026-11-19-no14-expected-receipts-source.md). Συνολικό Νο 14 και κοινή LAB αποδοχή OPEN.
+
+
+## 19/11/2026 00:15 Athens — WAREHOUSE-INVOICE-REVIEW-UI-01 — TECHNICALLY LIVE / COMMON LAB PENDING
+
+Owner /root retained. #4040 merged885f00f047cfe0a734cc0d526c68f01b4d7e279d. Exact candidateCI44403379025 and mainCI44405403976 all five jobs SUCCESS; main6279PASS/0FAIL/3optionalSKIP plus8backupPASS, native taxonomy/control/rollback and staff regression executed. Guarded release44408590060 SUCCESS; Render dep-dbv23qgu01pc73cj5cmg LIVE19/11 00:13:53 Athens exact885f00f0. Public health200/exactrevision, HTML200, delivered JS taxonomy marker and CSS compact filter markers independently verified00:15:32. No hosted business action; no new manual PASS. Compact archive, draft taxonomy and linked markup await grouped common LAB acceptance. Peer source/claims and prior PASS retained. Checkpoint CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
+
+
+## 19/11/2026 — INVOICE-REVIEW-LINKED-LINE-01 — ASSIGNED /root BEFORE SOURCE
+
+Same warehouse/invoice conversation, owner-reported FINAL A71942 discrepancy113.11 versus106.91/6 rows. Read-only scoped database confirms7 linked lines/113.11/FINAL; omitted tissue line6.20 contains ΤΗΛ in ΜΑΝΤΗΛΙΑ, rejected by both UI description heuristics. Owner /root, fix/invoice-review-linked-lines-20261119. Only retain economically valid linked rows in existing display/reconciliation filters; no header tolerance, OCR extraction, writers, approval, posting, prices, stock or No2/No5 scope change. New UI correction NOT TESTED. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
+
+
+## 19/11/2026 — INVOICE-REVIEW-LINKED-LINE-01 — SOURCE CANDIDATE / AWAITING CI
+
+Owner /root retained. #4059 claim merged8396da191. Two UI filter-only changes retain linked tissue/product rows despite metadata substrings; server INFO/economic validation and unmatched metadata exclusion retained. Original actual DOM6/106.91/false6.20 reproduced; candidate7/113.11/0.00, true1.00 difference still warns.3 originalFAIL→3candidatePASS,19focusedPASS, buildPASS. Read-only FINAL A71942 untouched; no writer/status/stock/amount/permission change. Full CI, exact live revision and read-only final check pending; see own checkpoint.
+
+
+## 19/11/2026 11:00 Athens — INVOICE-REVIEW-LINKED-LINE-01 — TECHNICALLY LIVE / READ-ONLY VERIFIED
+
+Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI44490139724 all5SUCCESS, each6353PASS/0FAIL/3optionalSKIP+8backupPASS. Guardedrelease44492043448SUCCESS; Renderdep-dbvbk7jrjlhs73bfs0agLIVE10:59:38Athens exact05b5b350. Publichealth200/exactrevision/HTML200 and delivered main-Dt7Lq7S0.js linked-row guard verified11:00:38. Scoped realDB stillFINAL/7/113.11; actual server+client read-only replay old6/106.91→new7/113.11, raw unchanged. No approval/invoicing/payment/stock action. Legacy OCR panel remains disabled. Actual user-tab visual readback pending; no new manual USER PASS or broader Gate closure. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.

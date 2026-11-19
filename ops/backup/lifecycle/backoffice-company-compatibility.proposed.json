@@ -78,7 +78,7 @@
     "server/src/services/automatic-report-event-schema.js": "8f571ed9a5d9739ad1aa58ee485ebf1b9186445416c77a269495f72fdce3405c",
     "ops/backup/lifecycle/automatic-report-consent-extension.proposed.json": "118d1ee7145c7e8672390da804a88fe6234eae3a701f745cd742505017ce7d23",
     "ops/backup/lifecycle/backoffice-company-current-columns.proposed.json": "76f09a5d414c0e793137c3c4c5a1c043dab57c29c2e4dcb310452fe3568234ee",
-    "server/src/routes/purchase-orders.js": "e7d75e6094902e0ef0b68731c9b48cb81fa671f0a85a7b896a74870b0973b4e8",
+    "server/src/routes/purchase-orders.js": "9ba31f1de7b32aa92a0eef1cf8f9ce612377d2a6fda1e2d94fdd44ddcdf1266a",
     "server/src/commercial-bootstrap.js": "91069d5664d0ec0f1c04c665a3340dfa1546e01dd3c4db677db51f03ca121749",
     "server/src/routes/store-table-orders.js": "b1300a7668938f914e10e66703c0a921bed0f21881d794c911f5e1598e7b20cd",
     "ops/backup/lifecycle/backoffice-company-current-defaults.proposed.json": "aa2b9527cd6738e3d2c3a36b3c071838bf7c408c36e140d7b610adf0fd726be2",

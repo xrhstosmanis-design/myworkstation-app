@@ -1,5 +1,6 @@
 import {finalPassiveStoreActions,finalPassiveStoreRequest} from '../../../shared/backoffice-staff-final-passive.mjs';
 import {storeReportCapabilities,freeStoreReportCapabilities} from '../../../shared/backoffice-staff-reports.mjs';
+import {expectedReceiptAction,expectedReceiptFields} from '../../../shared/supplier-expected-receipts.mjs';
 import {staffCapabilities,staffProfiles,staffRequestCapability,validStaffCapabilities} from '../../../shared/backoffice-staff.mjs';
 import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-access.js';
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
@@ -109,7 +110,11 @@ export async function enforceBackofficeStaff(db,req,res){
   if(paymentContext&&paymentContext[1]!==storeId)throw staffError();
   const terminals=path.match(/^\/api\/backoffice-staff\/(?:sales|shifts)\/stores\/([^/]+)\/terminals$/);
   if(terminals&&terminals[1]!==storeId)throw staffError();
-  if(capability==='invoices.approve'){
+  const receiptAction=expectedReceiptAction(req.method,path);
+  if(capability==='invoices.approve'&&receiptAction){
+    if(Object.keys(req.body||{}).some(key=>!expectedReceiptFields[receiptAction]?.includes(key)))throw staffError();
+  }
+  if(capability==='invoices.approve'&&!receiptAction){
     const body=req.body||{};
     const fields=['status','expectedReopenVersion'];
     if(body.status==='INVOICED')fields.push('excludeStockLineIds');
@@ -134,7 +139,7 @@ export async function enforceBackofficeStaff(db,req,res){
     if(!rows[0]&&capability!=='inventory.delete')throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
   req.staffGrant={...grant,capability};
-  req.user={...req.user,storeId,permissions:modulesForCapability(capability)};
+  req.user={...req.user,storeId,permissions:[...modulesForCapability(capability),...(receiptAction?['ORDER_SUGGESTIONS']:[])]};
   return true;
 }
 function modulesForCapability(capability){
