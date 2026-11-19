@@ -1,7 +1,7 @@
 import {Router} from 'express';
 import {prisma} from '../prisma.js';
 import {requireStoreModule} from '../middleware/module-access.js';
-import {assertExpectedReceiptAuthority,expectedReceiptReadiness,expectedReceiptRows,mutateExpectedReceipt,postedReceiptSource} from '../services/supplier-expected-receipts.js';
+import {assertExpectedReceiptAuthority,expectedReceiptReadiness,expectedReceiptRows,mutateExpectedReceipt,hasExpectedReceiptIntent,rejectExpectedReceiptIntent,postedReceiptSource} from '../services/supplier-expected-receipts.js';
 
 export function createExpectedReceiptRouter(db=prisma,{moduleGuard=requireStoreModule}={}){
   const router=Router();
@@ -17,7 +17,7 @@ export function createExpectedReceiptRouter(db=prisma,{moduleGuard=requireStoreM
       const rows=await expectedReceiptRows(tx,target);
       const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${target.companyId} AND "active"=TRUE ORDER BY "name","id" LIMIT 2001`;
       if(suppliers.length>2000)throw Object.assign(new Error('Πάρα πολλοί προμηθευτές για πλήρη επιλογή.'),{status:409});
-      return {storeId:target.storeId,rows,suppliers,canWrite:req.user.staffAccess===true?req.staffGrant?.capabilities?.includes('invoices.approve')===true:['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(req.user.role),sourceSupport:'PURCHASE_ORDER_ONLY',sourceSupportNote:'Συνδέονται υπάρχουσες καταχωρισμένες αγορές παραγγελίας. Τα αυτόνομα παραστατικά χρειάζονται χωριστό έλεγχο παραλαβής.'};
+      return {actorId:req.user.id,companyId:target.companyId,storeId:target.storeId,rows,suppliers,canWrite:req.user.staffAccess===true?req.staffGrant?.capabilities?.includes('invoices.approve')===true:['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(req.user.role),sourceSupport:'PURCHASE_ORDER_ONLY',sourceSupportNote:'Συνδέονται υπάρχουσες καταχωρισμένες αγορές παραγγελίας. Τα αυτόνομα παραστατικά χρειάζονται χωριστό έλεγχο παραλαβής.'};
     },{isolationLevel:'RepeatableRead',timeout:30000});
     res.set('Cache-Control','no-store');res.json(result);
   }catch(error){next(error)}});
@@ -42,7 +42,16 @@ export function createExpectedReceiptRouter(db=prisma,{moduleGuard=requireStoreM
   }catch(error){next(error)}});
   for(const [path,action] of [['/expected-receipts','confirm'],['/expected-receipts/:expectedId/link','link'],['/expected-receipts/:expectedId/cancel-remaining','cancel']])router.post(path,async(req,res,next)=>{try{
     res.set('Cache-Control','no-store');res.json(await mutateExpectedReceipt(db,req,scope(req),action,req.params.expectedId||null));
-  }catch(error){next(error)}});
+  }catch(error){
+    // No business transaction remains open here. Only a separate, locked outcome
+    // transaction may make a failed journal intent terminal for future retries.
+    const target=scope(req);
+    if(hasExpectedReceiptIntent(req,target)&&(error.status===409||error.name==='ZodError')){
+      try{return res.json(await rejectExpectedReceiptIntent(db,req,target,action,req.params.expectedId||null,error));}
+      catch(outcomeError){return next(outcomeError)}
+    }
+    next(error);
+  }});
   return router;
 }
 export default createExpectedReceiptRouter();

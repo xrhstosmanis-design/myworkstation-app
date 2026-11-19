@@ -7,7 +7,7 @@ import {readFile} from 'node:fs/promises';
 import {createExpectedReceiptRouter} from '../src/routes/supplier-expected-receipts.js';
 import {ownerRestrictedModuleKeys} from '../src/services/module-catalog.js';
 import {PrismaClient} from '@prisma/client';
-import {ensureExpectedReceiptSchema,mutateExpectedReceipt,expectedReceiptRows,expectedReceiptReadiness,postedReceiptSource,assertExpectedReceiptAuthority} from '../src/services/supplier-expected-receipts.js';
+import {ensureExpectedReceiptSchema,mutateExpectedReceipt,expectedReceiptRows,expectedReceiptReadiness,postedReceiptSource,rejectExpectedReceiptIntent,assertExpectedReceiptAuthority} from '../src/services/supplier-expected-receipts.js';
 
 // Actual production service/SQL on a separate schema in the isolated CI database.
 test('expected receipts: exact quantities, atomic allocation, authority and unchanged stock',{skip:!process.env.DATABASE_URL,timeout:90000},async t=>{
@@ -111,15 +111,61 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
       await assert.rejects(operation('confirm',confirm,null,{...staff,user:{...staff.user,storeId:'other'}}));
     });
 
+    await t.test('durable rejection follows rollback and prevents an otherwise valid late original',async()=>{
+      const body={...confirm,storeId:'s',supplierId:'later',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()},request={...owner,body};
+      let failure;try{await mutateExpectedReceipt(db,request,scope,'confirm')}catch(error){failure=error}
+      assert.equal(failure.status,409);
+      const rejected=await rejectExpectedReceiptIntent(db,request,scope,'confirm',null,failure);assert.equal(rejected.rejected,true);
+      await db.$executeRawUnsafe(`INSERT INTO "Supplier" VALUES('later','c','Later supplier',true)`);
+      assert.deepEqual(await mutateExpectedReceipt(db,request,scope,'confirm'),rejected);
+      assert.equal((await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "SupplierExpectedReceiptLine" WHERE "supplierId"='later'`))[0].count,0);
+    });
+    await t.test('committed result wins rejection and concurrent late original/outcome share one receipt',async()=>{
+      const makeRequest=()=>({...owner,body:{...confirm,storeId:'s',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()}});
+      const committedRequest=makeRequest(),committed=await mutateExpectedReceipt(db,committedRequest,scope,'confirm');
+      const conflict=Object.assign(new Error('Απομονωμένη διένεξη'),{status:409});
+      assert.deepEqual(await rejectExpectedReceiptIntent(db,committedRequest,scope,'confirm',null,conflict),committed);
+      const racing=makeRequest(),before=(await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "SupplierExpectedReceiptLine"`))[0].count;
+      const outcomes=await Promise.all([mutateExpectedReceipt(db,racing,scope,'confirm'),rejectExpectedReceiptIntent(db,racing,scope,'confirm',null,conflict)]);
+      assert.deepEqual(outcomes[0],outcomes[1]);
+      const after=(await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "SupplierExpectedReceiptLine"`))[0].count;
+      assert.equal(after-before,outcomes[0].rejected?0:1);
+      const count=await db.$queryRaw`SELECT COUNT(*)::int AS "count" FROM "SupplierExpectedReceiptOperation" WHERE "companyId"='c' AND "storeId"='s' AND "key"=${racing.body.idempotencyKey}`;
+      assert.equal(count[0].count,1);
+      await assert.rejects(rejectExpectedReceiptIntent(db,{...committedRequest,body:{...committedRequest.body,invoiceQuantity:'3'}},scope,'confirm',null,conflict),/άλλα στοιχεία/);
+      assert.deepEqual(await mutateExpectedReceipt(db,committedRequest,scope,'confirm'),committed);
+    });
+    await t.test('failed rejection audit rolls back the outcome receipt and changed journal actor is denied',async()=>{
+      const request={...owner,body:{...confirm,storeId:'s',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()}};
+      const broken={...db,$transaction:(work,options)=>db.$transaction(tx=>work({...tx,$executeRaw:(parts,...values)=>{if(parts.join('').includes('INSERT INTO "StoreOperatorAudit"'))throw Error('rejection audit failed');return tx.$executeRaw(parts,...values)}}),options)};
+      await assert.rejects(rejectExpectedReceiptIntent(broken,request,scope,'confirm',null,Object.assign(new Error('Conflict'),{status:409})),/rejection audit failed/);
+      const count=await db.$queryRaw`SELECT COUNT(*)::int AS "count" FROM "SupplierExpectedReceiptOperation" WHERE "companyId"='c' AND "storeId"='s' AND "key"=${request.body.idempotencyKey}`;
+      assert.equal(count[0].count,0);
+      await assert.rejects(mutateExpectedReceipt(db,{...request,body:{...request.body,intentActorId:'other'}},scope,'confirm'),error=>error.status===403);
+    });
     await t.test('real HTTP route validates scope and exposes standalone unsupported reason',async()=>{
       const guardSource=await readFile(new URL('../src/middleware/module-access.js',import.meta.url),'utf8');
       const moduleGuard=new Function('prisma','ownerRestrictedModuleKeys',guardSource.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+';return requireStoreModule;')(db,ownerRestrictedModuleKeys);
       const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=owner.user;next()});app.use('/api/commerce',createExpectedReceiptRouter(db,{moduleGuard}));app.use((error,req,res,next)=>res.status(error.status||400).json({error:error.message}));
       const server=app.listen(0,'127.0.0.1');await once(server,'listening');const base=`http://127.0.0.1:${server.address().port}/api/commerce`;
       try{
-        const list=await fetch(base+'/expected-receipts?storeId=s');assert.equal(list.status,200);const data=await list.json();assert.equal(data.storeId,'s');assert.equal(data.sourceSupport,'PURCHASE_ORDER_ONLY');assert.match(data.sourceSupportNote,/αυτόνομα/);
+        const list=await fetch(base+'/expected-receipts?storeId=s');assert.equal(list.status,200);const data=await list.json();assert.equal(data.storeId,'s');assert.equal(data.actorId,'owner');assert.equal(data.companyId,'c');assert.equal(data.sourceSupport,'PURCHASE_ORDER_ONLY');assert.match(data.sourceSupportNote,/αυτόνομα/);
         assert.equal((await fetch(base+'/expected-receipts?storeId=foreign')).status,404);
         const response=await fetch(base+'/expected-receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({storeId:'s',...confirm,idempotencyKey:crypto.randomUUID(),unexpected:'field'})});assert.equal(response.status,400);
+        const journalBody={storeId:'s',...confirm,intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID(),unexpected:'field'};
+        const journalPost=()=>fetch(base+'/expected-receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(journalBody)});
+        const rejected=await journalPost();assert.equal(rejected.status,200);const rejection=await rejected.json();assert.equal(rejection.rejected,true);
+        assert.deepEqual(await (await journalPost()).json(),rejection);
+        const numericBody={storeId:'s',...confirm,invoiceQuantity:'1.0000001',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()};
+        const beforeNumeric=(await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "SupplierExpectedReceiptLine"`))[0].count;
+        const numericPost=()=>fetch(base+'/expected-receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(numericBody)});
+        const numericResponse=await numericPost();assert.equal(numericResponse.status,200);
+        const numericRejection=await numericResponse.json();assert.equal(numericRejection.rejected,true);
+        assert.deepEqual(await (await numericPost()).json(),numericRejection);
+        assert.equal((await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "SupplierExpectedReceiptLine"`))[0].count,beforeNumeric);
+        const numericOutcome=await db.$queryRaw`SELECT "result" FROM "SupplierExpectedReceiptOperation" WHERE "companyId"='c' AND "storeId"='s' AND "key"=${numericBody.idempotencyKey}`;
+        assert.equal(numericOutcome.length,1);assert.deepEqual(numericOutcome[0].result,numericRejection);
+
       }finally{await new Promise(resolve=>server.close(resolve))}
     });
     assert.deepEqual(await db.$queryRawUnsafe(`SELECT row_to_json(s) AS row FROM "StoreProduct" s ORDER BY "storeId","productId"`),stockBefore);
