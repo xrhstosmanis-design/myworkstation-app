@@ -697,3 +697,8 @@ Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compa
 ## 19/11/2026 00:15 Athens — WAREHOUSE-INVOICE-REVIEW-UI-01 — TECHNICALLY LIVE / COMMON LAB PENDING
 
 Owner /root retained. #4040 merged885f00f047cfe0a734cc0d526c68f01b4d7e279d. Exact candidateCI44403379025 and mainCI44405403976 all five jobs SUCCESS; main6279PASS/0FAIL/3optionalSKIP plus8backupPASS, native taxonomy/control/rollback and staff regression executed. Guarded release44408590060 SUCCESS; Render dep-dbv23qgu01pc73cj5cmg LIVE19/11 00:13:53 Athens exact885f00f0. Public health200/exactrevision, HTML200, delivered JS taxonomy marker and CSS compact filter markers independently verified00:15:32. No hosted business action; no new manual PASS. Compact archive, draft taxonomy and linked markup await grouped common LAB acceptance. Peer source/claims and prior PASS retained. Checkpoint CHANGES/2026-11-18-warehouse-invoice-review-ui.md.
+
+
+## 19/11/2026 — INVOICE-REVIEW-LINKED-LINE-01 — ASSIGNED /root BEFORE SOURCE
+
+Same warehouse/invoice conversation, owner-reported FINAL A71942 discrepancy113.11 versus106.91/6 rows. Read-only scoped database confirms7 linked lines/113.11/FINAL; omitted tissue line6.20 contains ΤΗΛ in ΜΑΝΤΗΛΙΑ, rejected by both UI description heuristics. Owner /root, fix/invoice-review-linked-lines-20261119. Only retain economically valid linked rows in existing display/reconciliation filters; no header tolerance, OCR extraction, writers, approval, posting, prices, stock or No2/No5 scope change. New UI correction NOT TESTED. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
