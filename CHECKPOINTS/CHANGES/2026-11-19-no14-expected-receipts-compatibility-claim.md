@@ -37,6 +37,16 @@
 Κατάσταση NOT IMPLEMENTED / NOT TESTED για το νέο πρόσθετο πακέτο. Η τεχνική εγκατάσταση #4053 διατηρεί το δικό της εύρος. Η πραγματική εγκατάσταση πινάκων, λειτουργική ενεργοποίηση και κοινή τελική LAB αποδοχή Νο 14 παραμένουν OPEN. Δεν προστίθεται λειτουργικό PASS ή κλείσιμο roadmap.
 
 
-## Source candidate — Draft / NOT READY
+## 19/11/2026 — Source merged / τεχνικό πακέτο παράδοσης
 
-Claim #4056 merged868feb5d after docsCI44483364041 SUCCESS. The six locked new files are implemented. Pure14/14 PASS,0FAIL,0SKIP. The same native fixture helper executed against actual WASM PostgreSQL:10 catalog mutations detected and6 synthetic rows preserved. Native Prisma/PostgreSQL and full exact CI remain pending. Independent review continues. Schema/data/replay results are separate and mean supplied-evidence matching only; activationReady remains false. Existing lifecycle/installer/worker/profile sources remain unchanged. No hosted DDL, module activation, financial or stock write, manual dispatch, merge or deploy performed for this candidate. OverallNo14 remainsOPEN.
+Η ανάληψη #4056 συγχωνεύτηκε ως 868feb5d μετά SUCCESS docs CI 44483364041 πριν από κώδικα. Το πρόσθετο source PR #4057 συγχωνεύτηκε ως 361193e60f39ab62005d3ace5124d8e4e5cd1d0c. Το ακριβές τελικό head 72365ddea5b50843ee50aa25271ccad680fbb1d1 πέρασε το πλήρες PR CI 44486238567 με 5/5 επιτυχή jobs. Η ανεξάρτητη ανασκόπηση εξέτασε τα ακριβή έξι νέα αρχεία και τα δύο έγγραφα της παρτίδας. Το main CI 44488040952 εκτελείται κατά την παρούσα καταγραφή.
+
+Το build-and-test job 135430554491 και το βήμα Run security and licensing tests ολοκληρώθηκαν SUCCESS σε CI με διαμορφωμένο PostgreSQL 16. Η πλήρης έξοδος των επιμέρους named TAP δοκιμών δεν ήταν άμεσα παρατηρήσιμη λόγω του περιορισμού του επιστρεφόμενου prefix. Δεν συνάγεται επιμέρους πλήθος native tests ή νέα λειτουργική αποδοχή από αυτό το τεχνικό αποτέλεσμα.
+
+Τοπικά οι 14 pure δοκιμές πέρασαν με 0 FAIL και 0 SKIP. Η ίδια εξαγόμενη fixture function εκτελέστηκε επιπλέον με πραγματικό schema/catalog σε απομονωμένο PGlite. Δέκα πραγματικές αποκλίσεις metadata, μαζί με UNLOGGED operation journal, ανιχνεύτηκαν και ανακλήθηκαν με rollback. Οι έξι συνθετικές γραμμές και το schema παρέμειναν αμετάβλητα μετά τις read-only επικυρώσεις. Η ξεχωριστή τοπική native Prisma εκτέλεση είχε infrastructure SKIP λόγω απουσίας DATABASE_URL και καταγράφεται χωριστά από το PGlite.
+
+Ο τελικός αμετάβλητος ορισμός MWS_EXPECTED_RECEIPTS_COMPATIBILITY_V1 / version 1 έχει SHA-256 19f6f2ab25445c8f9d84e95333623ea8b6d572a66374ab16604cbbcf4395e15a. Το handoff είναι docs/testing/no14-expected-receipts-compatibility-handoff.md. Τα schema/data/replay status παραμένουν χωριστά, με evidenceBoundary SUPPLIED_EVIDENCE_MATCH_ONLY και activationReady=false.
+
+Η ενσωμάτωση σε profile/installer, η πραγματική scoped επαναφορά, η εγκατάσταση πινάκων και η ενεργοποίηση παραμένουν OPEN στους υπάρχοντες owners Νο 7–9/5. Ο μελλοντικός adapter πρέπει να διαβάζει catalog, scoped rows, authority και canonical postedReceiptSource σε ένα συνεπές έμπιστο read-only snapshot. Οι υπάρχουσες lifecycle/executor/worker/profile πηγές διατηρήθηκαν αυτούσιες. Δεν εκτελέστηκε hosted DDL, ενεργοποίηση, χρηματική ή stock πράξη από την πρόσθετη δέσμη.
+
+Το συνολικό Νο 14 και η κοινή τελική LAB αποδοχή παραμένουν OPEN. Η παρούσα καταγραφή ενημερώνει μόνο την υπάρχουσα εγγραφή Νο 14 της ACTIVE και το ίδιο checkpoint. Δεν προστίθεται νέα πηγή, λειτουργικό manual PASS ή κλείσιμο roadmap.
