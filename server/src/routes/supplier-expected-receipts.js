@@ -1,3 +1,4 @@
+import {lifecycleContext} from '../services/store-lifecycle-context.js';
 import {Router} from 'express';
 import {prisma} from '../prisma.js';
 import {requireStoreModule} from '../middleware/module-access.js';
@@ -17,7 +18,7 @@ export function createExpectedReceiptRouter(db=prisma,{moduleGuard=requireStoreM
       const rows=await expectedReceiptRows(tx,target);
       const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${target.companyId} AND "active"=TRUE ORDER BY "name","id" LIMIT 2001`;
       if(suppliers.length>2000)throw Object.assign(new Error('Πάρα πολλοί προμηθευτές για πλήρη επιλογή.'),{status:409});
-      return {actorId:req.user.id,companyId:target.companyId,storeId:target.storeId,rows,suppliers,canWrite:req.user.staffAccess===true?req.staffGrant?.capabilities?.includes('invoices.approve')===true:['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(req.user.role),sourceSupport:'PURCHASE_ORDER_ONLY',sourceSupportNote:'Συνδέονται υπάρχουσες καταχωρισμένες αγορές παραγγελίας. Τα αυτόνομα παραστατικά χρειάζονται χωριστό έλεγχο παραλαβής.'};
+      return {actorId:req.user.id,companyId:target.companyId,lifecycleGeneration:lifecycleContext()[target.storeId]??'0',storeId:target.storeId,rows,suppliers,canWrite:req.user.staffAccess===true?req.staffGrant?.capabilities?.includes('invoices.approve')===true:['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(req.user.role),sourceSupport:'PURCHASE_ORDER_ONLY',sourceSupportNote:'Συνδέονται υπάρχουσες καταχωρισμένες αγορές παραγγελίας. Τα αυτόνομα παραστατικά χρειάζονται χωριστό έλεγχο παραλαβής.'};
     },{isolationLevel:'RepeatableRead',timeout:30000});
     res.set('Cache-Control','no-store');res.json(result);
   }catch(error){next(error)}});

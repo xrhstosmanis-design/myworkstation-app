@@ -33,7 +33,7 @@ export default function ExpectedReceiptsPanel({api,storeId,products,onChanged,on
     setBusy(true);setError('');
     try{
       if(!sameExpectedReceiptContext(expectedReceiptIntentContext(data,storeId),intent))throw Error('Η σύνδεση ή το κατάστημα άλλαξε.');
-      const result=await api(intent.path,{method:'POST',body:intent.serializedBody});
+      const result=await api(intent.path,{method:'POST',headers:intent.headers,body:intent.serializedBody});
       if(!result||(!result.id&&result.rejected!==true))throw Error('Δεν επιβεβαιώθηκε το αποτέλεσμα. Επανέλεγξε το εκκρεμές αίτημα.');
       if(token!==generation.current)return;
       const refreshed=await load(token);
@@ -69,7 +69,7 @@ export default function ExpectedReceiptsPanel({api,storeId,products,onChanged,on
   const candidate=candidates?.rows.find(row=>row.orderId===link.orderId);
   return <section aria-label="Αναμενόμενες παραλαβές" aria-busy={busy}>
     <header><h3>Αναμενόμενες παραλαβές</h3><button type="button" onClick={onClose}>Κλείσιμο</button></header>
-    <p>Επιβεβαίωσε ποσότητες που αναμένεις από προμηθευτή. Σύνδεσε την παραλαβή με αγορά που έχει ήδη ενημερώσει το απόθεμα.</p>
+    <p>Δήλωσε πρόσθετες μελλοντικές ποσότητες προμηθευτή πέρα από το ήδη καταγεγραμμένο απόθεμα. Η δήλωση είναι χειροκίνητη και δεν συνδέεται αυτόματα με γραμμή εξερχόμενης παραγγελίας. Όταν η παραλαβή περαστεί στην αποθήκη, σύνδεσέ την εδώ πριν χρησιμοποιήσεις νέα πρόταση παραγγελίας.</p>
     <p>{data?.sourceSupportNote||'Οι αυτόνομες αγορές εκτός παραγγελίας χρειάζονται χωριστό έλεγχο και δεν προσφέρονται για σύνδεση εδώ.'}</p>
     {error&&<p role="alert">{error}</p>}
     {pendingIntent&&<section aria-label="Εκκρεμές αίτημα παραλαβής"><p role="status">Υπάρχει αποθηκευμένο αίτημα με αποτέλεσμα προς επιβεβαίωση. Οι άλλες ενέργειες περιμένουν τον επανέλεγχο. Μπορείς να κλείσεις την οθόνη και να επιστρέψεις.</p><p>{pendingLabel}{pendingProduct?` · ${pendingProduct}`:""}{pendingBody?.invoiceQuantity?` · ${pendingBody.invoiceQuantity} ${pendingBody.invoiceUnit}`:pendingBody?.quantity?` · ${pendingBody.quantity}`:""}</p><button type="button" disabled={busy} onClick={()=>sendIntent(pendingIntent)}>Επανέλεγχος εκκρεμούς αιτήματος</button></section>}

@@ -20,7 +20,7 @@ test('expected receipt journal survives ambiguous A/B/A, close/reload and actor/
   const React=await import('react'),{act}=React,{createRoot}=await import('react-dom/client');
   let root=createRoot(dom.window.document.getElementById('root')),closed=0;
   const products=[{productId:'p',name:'Pack',unitLabel:'τεμ.'}];
-  const data=(storeId,actorId='owner',companyId='company')=>({actorId,companyId,storeId,rows:[],suppliers:[{id:'sup',name:'Supplier '+storeId}],canWrite:true,sourceSupportNote:'Τα αυτόνομα παραστατικά χρειάζονται χωριστό έλεγχο.'});
+  const data=(storeId,actorId='owner',companyId='company')=>({actorId,companyId,lifecycleGeneration:'1',storeId,rows:[],suppliers:[{id:'sup',name:'Supplier '+storeId}],canWrite:true,sourceSupportNote:'Τα αυτόνομα παραστατικά χρειάζονται χωριστό έλεγχο.'});
   const render=(api,storeId)=>act(async()=>root.render(React.createElement(Panel,{api,storeId,products,onChanged:()=>{},onClose:()=>{closed++}})));
   const set=async(element,value)=>act(async()=>{
     const prototype=element.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:dom.window.HTMLInputElement.prototype;
@@ -78,6 +78,18 @@ test('expected receipt journal survives ambiguous A/B/A, close/reload and actor/
     const rejectedApi=async(path,options)=>options?{rejected:true,message:'Η ποσότητα χρειάζεται διόρθωση.'}:data('A');
     await render(rejectedApi,'A');await fill('7');await submit();assert.equal(pending(),null);
     assert.equal(dom.window.document.querySelector('fieldset').disabled,false);assert.match(dom.window.document.body.textContent,/ποσότητα χρειάζεται διόρθωση/);
+
+    let currentGeneration='1';const epochRequests=[];
+    const epochApi=async(path,options)=>{
+      if(options){epochRequests.push({body:JSON.parse(options.body),headers:options.headers});throw Error('Το παλιό αίτημα παραμένει για έλεγχο.');}
+      return {...data('A'),lifecycleGeneration:currentGeneration};
+    };
+    await render(epochApi,'A');await fill('9');await submit();const originalEpoch=epochRequests[0];
+    await act(async()=>root.render(null));currentGeneration='2';await render(epochApi,'A');
+    assert.ok(pending());assert.equal(epochRequests.length,1);
+    await retry();assert.deepEqual(epochRequests[1],originalEpoch);assert.equal(epochRequests[1].body.intentGeneration,'1');
+    assert.deepEqual(JSON.parse(epochRequests[1].headers['x-mws-store-generations']),{A:'1'});
+    assert.ok(pending());assert.equal(dom.window.document.querySelector('fieldset').disabled,true);
 
     let resolve;await render(()=>new Promise(done=>{resolve=done}),'OLD');
     await render(async()=>data('NEW'),'NEW');await act(async()=>resolve(data('OLD')));

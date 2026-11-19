@@ -6,9 +6,9 @@ export function expectedReceiptAction(method,path){
   return null;
 }
 export const expectedReceiptFields=Object.freeze({
-  confirm:['intentActorId','intentCompanyId','storeId','productId','supplierId','invoiceQuantity','invoiceUnit','stockUnitsPerInvoiceUnit','idempotencyKey'],
-  link:['intentActorId','intentCompanyId','storeId','version','orderId','sourceDigest','quantity','idempotencyKey'],
-  cancel:['intentActorId','intentCompanyId','storeId','version','reason','idempotencyKey']
+  confirm:['intentActorId','intentCompanyId','intentGeneration','storeId','productId','supplierId','invoiceQuantity','invoiceUnit','stockUnitsPerInvoiceUnit','idempotencyKey'],
+  link:['intentActorId','intentCompanyId','intentGeneration','storeId','version','orderId','sourceDigest','quantity','idempotencyKey'],
+  cancel:['intentActorId','intentCompanyId','intentGeneration','storeId','version','reason','idempotencyKey']
 });
 
 // Both inputs have at most six fractional places. BigInt preserves all twelve.

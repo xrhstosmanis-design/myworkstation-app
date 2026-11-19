@@ -15,7 +15,7 @@ const quantity=z.union([z.string(),z.number()]).transform(String).refine(value=>
 const stockQuantity=z.union([z.string(),z.number()]).transform(String).refine(value=>/^\d{1,18}(?:\.\d{1,12})?$/.test(value)&&new Decimal(value).gt(0),'Μη έγκυρη ποσότητα αποθήκης.');
 const key=z.string().uuid();
 const storeId=z.string().min(1).max(200);
-const intentContextFields={intentActorId:storeId.optional(),intentCompanyId:storeId.optional()};
+const intentContextFields={intentActorId:storeId.optional(),intentCompanyId:storeId.optional(),intentGeneration:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).refine(value=>BigInt(value)<=9223372036854775807n).optional()};
 export const expectedReceiptSchemas={
   confirm:z.object({...intentContextFields,storeId,productId:storeId,supplierId:storeId,invoiceQuantity:quantity,invoiceUnit:z.string().trim().min(1).max(30),stockUnitsPerInvoiceUnit:quantity,idempotencyKey:key}).strict(),
   link:z.object({...intentContextFields,storeId,version:z.number().int().nonnegative(),orderId:storeId,sourceDigest:z.string().regex(/^[a-f0-9]{64}$/),quantity:stockQuantity,idempotencyKey:key}).strict(),
@@ -132,7 +132,7 @@ export async function expectedReceiptRows(db,scope){
 }
 
 export function hasExpectedReceiptIntent(req,scope){
-  return req.body?.intentActorId===req.user?.id&&req.body?.intentCompanyId===scope.companyId&&req.body?.storeId===scope.storeId;
+  return req.body?.intentActorId===req.user?.id&&req.body?.intentCompanyId===scope.companyId&&req.body?.storeId===scope.storeId&&req.body?.intentGeneration===(lifecycleContext()[scope.storeId]??'0');
 }
 function canonicalPayload(value){
   if(Array.isArray(value))return value.map(canonicalPayload);
@@ -142,7 +142,7 @@ function canonicalPayload(value){
 function operationDigest(req,action,expectedId){return digest({actorId:req.user.id,action,expectedId,body:canonicalPayload(req.body)});}
 export async function mutateExpectedReceipt(db,req,scope,action,expectedId=null){
   const body=expectedReceiptSchemas[action].parse(req.body);
-  if((body.intentActorId!==undefined||body.intentCompanyId!==undefined)&&!hasExpectedReceiptIntent(req,scope))throw failure('Η ταυτότητα σύνδεσης του αποθηκευμένου αιτήματος άλλαξε.',403);
+  if((body.intentActorId!==undefined||body.intentCompanyId!==undefined||body.intentGeneration!==undefined)&&!hasExpectedReceiptIntent(req,scope))throw failure('Η ταυτότητα σύνδεσης του αποθηκευμένου αιτήματος άλλαξε.',403);
   if(body.storeId!==scope.storeId)throw failure('Ανανέωσε το επιλεγμένο κατάστημα.',403);
   await assertExpectedReceiptAuthority(db,req,scope,true);
   await requireExpectedReceiptSchema(db);
@@ -195,7 +195,7 @@ export async function mutateExpectedReceipt(db,req,scope,action,expectedId=null)
 // The same store lock serializes a delayed original request and this rejection.
 export async function rejectExpectedReceiptIntent(db,req,scope,action,expectedId,error){
   if(!hasExpectedReceiptIntent(req,scope)||(error?.status!==409&&error?.name!=='ZodError'))throw error;
-  const body=z.object({storeId,idempotencyKey:key,intentActorId:storeId,intentCompanyId:storeId}).passthrough().parse(req.body);
+  const body=z.object({storeId,idempotencyKey:key,intentActorId:storeId,intentCompanyId:storeId,intentGeneration:intentContextFields.intentGeneration.unwrap()}).passthrough().parse(req.body);
   await requireExpectedReceiptSchema(db);
   return db.$transaction(async tx=>{
     await lockInvoiceStore(tx,scope.companyId,scope.storeId);

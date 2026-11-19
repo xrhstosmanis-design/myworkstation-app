@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import express from 'express';
 import {once} from 'node:events';
+import {createLifecycleFetch,lifecycleHeader} from '../../client/src/utils/store-lifecycle-fetch.js';
+import {expectedReceiptIntentContext,createExpectedReceiptIntent,saveExpectedReceiptIntent,readExpectedReceiptIntent} from '../../client/src/components/commerce/expected-receipt-intents.js';
+import {storeLifecycleRequestContext} from '../src/middleware/store-lifecycle-context.js';
 import {readFile} from 'node:fs/promises';
 import {createExpectedReceiptRouter} from '../src/routes/supplier-expected-receipts.js';
 import {ownerRestrictedModuleKeys} from '../src/services/module-catalog.js';
@@ -112,7 +115,7 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
     });
 
     await t.test('durable rejection follows rollback and prevents an otherwise valid late original',async()=>{
-      const body={...confirm,storeId:'s',supplierId:'later',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()},request={...owner,body};
+      const body={...confirm,storeId:'s',supplierId:'later',intentActorId:'owner',intentCompanyId:'c',intentGeneration:'0',idempotencyKey:crypto.randomUUID()},request={...owner,body};
       let failure;try{await mutateExpectedReceipt(db,request,scope,'confirm')}catch(error){failure=error}
       assert.equal(failure.status,409);
       const rejected=await rejectExpectedReceiptIntent(db,request,scope,'confirm',null,failure);assert.equal(rejected.rejected,true);
@@ -121,7 +124,7 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
       assert.equal((await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "SupplierExpectedReceiptLine" WHERE "supplierId"='later'`))[0].count,0);
     });
     await t.test('committed result wins rejection and concurrent late original/outcome share one receipt',async()=>{
-      const makeRequest=()=>({...owner,body:{...confirm,storeId:'s',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()}});
+      const makeRequest=()=>({...owner,body:{...confirm,storeId:'s',intentActorId:'owner',intentCompanyId:'c',intentGeneration:'0',idempotencyKey:crypto.randomUUID()}});
       const committedRequest=makeRequest(),committed=await mutateExpectedReceipt(db,committedRequest,scope,'confirm');
       const conflict=Object.assign(new Error('Απομονωμένη διένεξη'),{status:409});
       assert.deepEqual(await rejectExpectedReceiptIntent(db,committedRequest,scope,'confirm',null,conflict),committed);
@@ -136,7 +139,7 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
       assert.deepEqual(await mutateExpectedReceipt(db,committedRequest,scope,'confirm'),committed);
     });
     await t.test('failed rejection audit rolls back the outcome receipt and changed journal actor is denied',async()=>{
-      const request={...owner,body:{...confirm,storeId:'s',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()}};
+      const request={...owner,body:{...confirm,storeId:'s',intentActorId:'owner',intentCompanyId:'c',intentGeneration:'0',idempotencyKey:crypto.randomUUID()}};
       const broken={...db,$transaction:(work,options)=>db.$transaction(tx=>work({...tx,$executeRaw:(parts,...values)=>{if(parts.join('').includes('INSERT INTO "StoreOperatorAudit"'))throw Error('rejection audit failed');return tx.$executeRaw(parts,...values)}}),options)};
       await assert.rejects(rejectExpectedReceiptIntent(broken,request,scope,'confirm',null,Object.assign(new Error('Conflict'),{status:409})),/rejection audit failed/);
       const count=await db.$queryRaw`SELECT COUNT(*)::int AS "count" FROM "SupplierExpectedReceiptOperation" WHERE "companyId"='c' AND "storeId"='s' AND "key"=${request.body.idempotencyKey}`;
@@ -152,11 +155,11 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
         const list=await fetch(base+'/expected-receipts?storeId=s');assert.equal(list.status,200);const data=await list.json();assert.equal(data.storeId,'s');assert.equal(data.actorId,'owner');assert.equal(data.companyId,'c');assert.equal(data.sourceSupport,'PURCHASE_ORDER_ONLY');assert.match(data.sourceSupportNote,/αυτόνομα/);
         assert.equal((await fetch(base+'/expected-receipts?storeId=foreign')).status,404);
         const response=await fetch(base+'/expected-receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({storeId:'s',...confirm,idempotencyKey:crypto.randomUUID(),unexpected:'field'})});assert.equal(response.status,400);
-        const journalBody={storeId:'s',...confirm,intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID(),unexpected:'field'};
+        const journalBody={storeId:'s',...confirm,intentActorId:'owner',intentCompanyId:'c',intentGeneration:'0',idempotencyKey:crypto.randomUUID(),unexpected:'field'};
         const journalPost=()=>fetch(base+'/expected-receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(journalBody)});
         const rejected=await journalPost();assert.equal(rejected.status,200);const rejection=await rejected.json();assert.equal(rejection.rejected,true);
         assert.deepEqual(await (await journalPost()).json(),rejection);
-        const numericBody={storeId:'s',...confirm,invoiceQuantity:'1.0000001',intentActorId:'owner',intentCompanyId:'c',idempotencyKey:crypto.randomUUID()};
+        const numericBody={storeId:'s',...confirm,invoiceQuantity:'1.0000001',intentActorId:'owner',intentCompanyId:'c',intentGeneration:'0',idempotencyKey:crypto.randomUUID()};
         const beforeNumeric=(await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "SupplierExpectedReceiptLine"`))[0].count;
         const numericPost=()=>fetch(base+'/expected-receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(numericBody)});
         const numericResponse=await numericPost();assert.equal(numericResponse.status,200);
@@ -166,6 +169,35 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
         const numericOutcome=await db.$queryRaw`SELECT "result" FROM "SupplierExpectedReceiptOperation" WHERE "companyId"='c' AND "storeId"='s' AND "key"=${numericBody.idempotencyKey}`;
         assert.equal(numericOutcome.length,1);assert.deepEqual(numericOutcome[0].result,numericRejection);
 
+      }finally{await new Promise(resolve=>server.close(resolve))}
+    });
+    await t.test('actual wrapper, request middleware and native fence deny old generation retry without any operation outcome',async()=>{
+      await db.$executeRawUnsafe(`CREATE TABLE "StoreLifecycleFence"("storeId" TEXT PRIMARY KEY,"companyId" TEXT,"generation" BIGINT,"maintenance" BOOLEAN,"retired" BOOLEAN); INSERT INTO "StoreLifecycleFence" VALUES('s','c',1,false,false)`);
+      const guardSource=await readFile(new URL('../src/middleware/module-access.js',import.meta.url),'utf8');
+      const moduleGuard=new Function('prisma','ownerRestrictedModuleKeys',guardSource.replace(/^import .*;\s*$/gm,'').replace(/^export /gm,'')+';return requireStoreModule;')(db,ownerRestrictedModuleKeys);
+      const app=express();app.use(storeLifecycleRequestContext);app.use(express.json());app.use((req,res,next)=>{req.user=owner.user;next()});
+      app.get('/api/lifecycle/stores/:storeId',async(req,res)=>{const rows=await db.$queryRaw`SELECT "generation"::text AS generation FROM "StoreLifecycleFence" WHERE "storeId"=${req.params.storeId}`;res.json({storeId:req.params.storeId,generation:rows[0].generation})});
+      app.use('/api/commerce',createExpectedReceiptRouter(db,{moduleGuard}));app.use((error,req,res,next)=>res.status(error.status||400).json({error:error.message,code:error.code}));
+      const server=app.listen(0,'127.0.0.1');await once(server,'listening');const origin=`http://127.0.0.1:${server.address().port}`,received=[];
+      const transport=async(input,options)=>{if(options?.method==='POST')received.push(new Headers(options.headers).get(lifecycleHeader));return fetch(input,options)};
+      try{
+        const first=createLifecycleFetch({fetch:transport,origin});
+        const data=await (await first.request(origin+'/api/commerce/expected-receipts?storeId=s',{headers:{Authorization:'fixture'}})).json();assert.equal(data.lifecycleGeneration,'1');
+        const context=expectedReceiptIntentContext(data,'s');
+        const fresh=createExpectedReceiptIntent(context,'/api/commerce/expected-receipts',confirm);
+        const success=await first.request(origin+fresh.path,{method:'POST',headers:{Authorization:'fixture','Content-Type':'application/json',...fresh.headers},body:fresh.serializedBody});assert.equal(success.status,200);assert.ok((await success.json()).id);
+        const pending=createExpectedReceiptIntent(context,fresh.path,confirm),saved=new Map(),storage={getItem:key=>saved.get(key)??null,setItem:(key,value)=>saved.set(key,value)};
+        saveExpectedReceiptIntent(pending,storage);
+        const snapshot=async()=>Promise.all(['SupplierExpectedReceiptLine','SupplierExpectedReceiptAllocation','SupplierExpectedReceiptOperation','StoreOperatorAudit','StockMovement'].map(async name=>(await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "${name}"`))[0].count));
+        const before=await snapshot();await db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "generation"=2 WHERE "storeId"='s'`);
+        const second=createLifecycleFetch({fetch:transport,origin});
+        const current=await (await second.request(origin+'/api/commerce/expected-receipts?storeId=s',{headers:{Authorization:'fixture'}})).json();assert.equal(current.lifecycleGeneration,'2');
+        const restored=readExpectedReceiptIntent(expectedReceiptIntentContext(current,'s'),storage);assert.deepEqual(restored,pending);
+        const stale=await second.request(origin+restored.path,{method:'POST',headers:{Authorization:'fixture','Content-Type':'application/json',...restored.headers},body:restored.serializedBody});
+        assert.equal(stale.status,409);assert.equal((await stale.json()).code,'STORE_LIFECYCLE_STALE_GENERATION');assert.deepEqual(JSON.parse(received.at(-1)),{s:'1'});
+        assert.deepEqual(await snapshot(),before);assert.deepEqual(readExpectedReceiptIntent(expectedReceiptIntentContext(current,'s'),storage),pending);
+        const relabelled=await second.request(origin+restored.path,{method:'POST',headers:{Authorization:'fixture','Content-Type':'application/json',[lifecycleHeader]:JSON.stringify({s:'2'})},body:restored.serializedBody});
+        assert.equal(relabelled.status,403);assert.deepEqual(await snapshot(),before);
       }finally{await new Promise(resolve=>server.close(resolve))}
     });
     assert.deepEqual(await db.$queryRawUnsafe(`SELECT row_to_json(s) AS row FROM "StoreProduct" s ORDER BY "storeId","productId"`),stockBefore);
