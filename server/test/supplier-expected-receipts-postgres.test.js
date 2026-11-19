@@ -10,6 +10,7 @@ import {readFile} from 'node:fs/promises';
 import {createExpectedReceiptRouter} from '../src/routes/supplier-expected-receipts.js';
 import {ownerRestrictedModuleKeys} from '../src/services/module-catalog.js';
 import {PrismaClient} from '@prisma/client';
+import {buildOrderSuggestions} from '../src/lib/order-suggestions.js';
 import {ensureExpectedReceiptSchema,mutateExpectedReceipt,expectedReceiptRows,expectedReceiptReadiness,postedReceiptSource,rejectExpectedReceiptIntent,assertExpectedReceiptAuthority} from '../src/services/supplier-expected-receipts.js';
 
 // Actual production service/SQL on a separate schema in the isolated CI database.
@@ -41,7 +42,7 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
       PurchaseOrderPosting:'"orderId" TEXT PRIMARY KEY,"companyId" TEXT,"purchaseDocumentId" TEXT,"supplierId" TEXT',
       PurchaseDocument:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"status" TEXT,"documentType" TEXT,"updatedAt" TIMESTAMPTZ',
       InvoiceStockPosting:'"companyId" TEXT,"orderId" TEXT,"storeId" TEXT,"postedDocumentId" TEXT,"path" TEXT',
-      StockMovement:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"sourceType" TEXT,"sourceId" TEXT,"movementType" TEXT,"quantity" NUMERIC,"unitCost" NUMERIC',
+      StockMovement:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"sourceType" TEXT,"sourceId" TEXT,"movementType" TEXT,"quantity" NUMERIC,"unitCost" NUMERIC,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()',
       StoreOperatorAudit:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"actorId" TEXT,"eventType" TEXT,"details" JSONB',
       BackofficeStaffAccount:'"userId" TEXT PRIMARY KEY,"companyId" TEXT,"username" TEXT,"active" BOOLEAN,"revision" INTEGER',
       User:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"fullName" TEXT,"email" TEXT,"mustChangePassword" BOOLEAN,"role" TEXT,"sessionVersion" INTEGER',
@@ -49,7 +50,7 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
       BackofficeStaffGrant:'"userId" TEXT,"companyId" TEXT,"storeId" TEXT,"active" BOOLEAN,"profile" TEXT,"capabilities" JSONB,"revision" INTEGER'
     };
     for(const [name,columns] of Object.entries(tables))await db.$executeRawUnsafe(`CREATE TABLE "${name}"(${columns})`);
-    await db.$executeRawUnsafe(`INSERT INTO "Company" VALUES('c',true,'ACTIVE',NULL),('foreign',true,'ACTIVE',NULL); INSERT INTO "Store" VALUES('s','c',true),('other','c',true),('foreign','foreign',true); INSERT INTO "CompanyModule" VALUES('d','c','DOCUMENTS',true,NULL,NULL),('i','c','INVENTORY',true,NULL,NULL),('o','c','ORDER_SUGGESTIONS',true,NULL,NULL); INSERT INTO "Product" VALUES('p','c','Pack','PIECE',true); INSERT INTO "StoreProduct" VALUES('s','p',true,9); INSERT INTO "Supplier" VALUES('supplier','c','Supplier',true); INSERT INTO "PurchaseOrder" VALUES('order','c','s','supplier','INVOICED','DOC',NOW(),0); INSERT INTO "PurchaseOrderPosting" VALUES('order','c','doc','supplier'); INSERT INTO "PurchaseDocument" VALUES('doc','c','s','supplier','APPROVED','INVOICE',NOW()); INSERT INTO "InvoiceStockPosting" VALUES('c','order','s','doc','PURCHASE_ORDER'); INSERT INTO "StockMovement" VALUES('base','s','p','PURCHASE_ORDER','order','PURCHASE',1,6),('pack','s','p','PURCHASE_ORDER','order','PURCHASE_PACK_CORRECTION',5,1)`);
+    await db.$executeRawUnsafe(`INSERT INTO "Company" VALUES('c',true,'ACTIVE',NULL),('foreign',true,'ACTIVE',NULL); INSERT INTO "Store" VALUES('s','c',true),('other','c',true),('foreign','foreign',true); INSERT INTO "CompanyModule" VALUES('d','c','DOCUMENTS',true,NULL,NULL),('i','c','INVENTORY',true,NULL,NULL),('o','c','ORDER_SUGGESTIONS',true,NULL,NULL); INSERT INTO "Product" VALUES('p','c','Pack','PIECE',true); INSERT INTO "StoreProduct" VALUES('s','p',true,9); INSERT INTO "Supplier" VALUES('supplier','c','Supplier',true); INSERT INTO "PurchaseOrder" VALUES('order','c','s','supplier','INVOICED','DOC',NOW(),0); INSERT INTO "PurchaseOrderPosting" VALUES('order','c','doc','supplier'); INSERT INTO "PurchaseDocument" VALUES('doc','c','s','supplier','APPROVED','INVOICE',NOW()); INSERT INTO "InvoiceStockPosting" VALUES('c','order','s','doc','PURCHASE_ORDER'); INSERT INTO "StockMovement"("id","storeId","productId","sourceType","sourceId","movementType","quantity","unitCost") VALUES('base','s','p','PURCHASE_ORDER','order','PURCHASE',1,6),('pack','s','p','PURCHASE_ORDER','order','PURCHASE_PACK_CORRECTION',5,1)`);
     await t.test('uninstalled receipt subsystem performs no schema writes and preserves explicit readiness',async()=>{
       const state=await expectedReceiptReadiness(db);assert.equal(state.available,false);assert.match(state.reason,/εγκατάστασης/);
       await assert.rejects(operation('confirm',{productId:'p',supplierId:'supplier',invoiceQuantity:'1',invoiceUnit:'PIECE',stockUnitsPerInvoiceUnit:'1'}),error=>error.status===503);
@@ -170,6 +171,36 @@ test('expected receipts: exact quantities, atomic allocation, authority and unch
         assert.equal(numericOutcome.length,1);assert.deepEqual(numericOutcome[0].result,numericRejection);
 
       }finally{await new Promise(resolve=>server.close(resolve))}
+    });
+    await t.test('new unallocated posted stock requires review until explicit allocation without inferred order association',async()=>{
+      await db.$executeRawUnsafe(`INSERT INTO "Product" VALUES('guard-p','c','Guard product','PIECE',true),('guard-other-p','c','Other product','PIECE',true); INSERT INTO "StoreProduct" VALUES('s','guard-p',true,3); INSERT INTO "Supplier" VALUES('guard-other-supplier','c','Other supplier',true)`);
+      const addSource=async(name,store,product,supplier,amount)=>{
+        await db.$executeRaw`INSERT INTO "PurchaseOrder" VALUES(${name},'c',${store},${supplier},'INVOICED',${name},NOW(),0)`;
+        await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES(${name},'c',${store},${supplier},'APPROVED','INVOICE',NOW())`;
+        await db.$executeRaw`INSERT INTO "PurchaseOrderPosting" VALUES(${name},'c',${name},${supplier})`;
+        await db.$executeRaw`INSERT INTO "StockMovement"("id","storeId","productId","sourceType","sourceId","movementType","quantity","unitCost") VALUES(${name},${store},${product},'PURCHASE_ORDER',${name},'PURCHASE',${amount}::numeric,1)`;
+      };
+      await addSource('guard-before','s','guard-p','supplier','6');
+      await db.$executeRawUnsafe(`UPDATE "StockMovement" SET "createdAt"=NOW()-INTERVAL '1 day' WHERE "id"='guard-before'`);
+      const expected=await operation('confirm',{...confirm,productId:'guard-p',invoiceQuantity:'12',stockUnitsPerInvoiceUnit:'1'});
+      const read=async()=>(await expectedReceiptRows(db,scope)).find(row=>row.id===expected.id);
+      assert.equal((await read()).postedPurchaseReviewReason,null);
+      await addSource('guard-other-supplier-order','s','guard-p','guard-other-supplier','4');
+      await addSource('guard-other-store','other','guard-p','supplier','4');
+      await addSource('guard-other-product','s','guard-other-p','supplier','4');
+      assert.equal((await read()).postedPurchaseReviewReason,null);
+      await addSource('guard-recent','s','guard-p','supplier','4');
+      await db.$executeRawUnsafe(`UPDATE "StoreProduct" SET "currentStock"=7 WHERE "storeId"='s' AND "productId"='guard-p'`);
+      const unlinked=await read();assert.match(unlinked.postedPurchaseReviewReason,/νεότερη καταχωρισμένη/);assert.equal(unlinked.remainingQuantity,'12');assert.equal(unlinked.reviewReason,null);
+      const proposal=review=>buildOrderSuggestions([{productId:'guard-p',name:'Guard',unit:'PIECE',currentStock:7,minStock:30,soldQuantity:0,returnedQuantity:0,confirmedPendingStockQuantity:Number(review.remainingQuantity),expectedReceiptReviewReasons:[review.postedPurchaseReviewReason].filter(Boolean)}])[0];
+      assert.equal(proposal(unlinked).suggestedQuantity,null);
+      const posted=await postedReceiptSource(db,scope,'guard-recent','guard-p');
+      const stock=await db.$queryRawUnsafe(`SELECT "currentStock"::text AS stock FROM "StoreProduct" WHERE "storeId"='s' AND "productId"='guard-p'`);
+      await operation('link',{version:0,orderId:'guard-recent',sourceDigest:posted.sourceDigest,quantity:'4'},expected.id);
+      const linked=await read();assert.equal(linked.remainingQuantity,'8');assert.equal(linked.postedPurchaseReviewReason,null);assert.equal(proposal(linked).suggestedQuantity,15);
+      assert.deepEqual(await db.$queryRawUnsafe(`SELECT "currentStock"::text AS stock FROM "StoreProduct" WHERE "storeId"='s' AND "productId"='guard-p'`),stock);
+      // Remove only this case's synthetic stock fixture before the original controls.
+      await db.$executeRawUnsafe(`DELETE FROM "StockMovement" WHERE "id" LIKE 'guard-%'; DELETE FROM "StoreProduct" WHERE "productId"='guard-p'; DELETE FROM "Product" WHERE "id" IN ('guard-p','guard-other-p')`);
     });
     await t.test('actual wrapper, request middleware and native fence deny old generation retry without any operation outcome',async()=>{
       await db.$executeRawUnsafe(`CREATE TABLE "StoreLifecycleFence"("storeId" TEXT PRIMARY KEY,"companyId" TEXT,"generation" BIGINT,"maintenance" BOOLEAN,"retired" BOOLEAN); INSERT INTO "StoreLifecycleFence" VALUES('s','c',1,false,false)`);

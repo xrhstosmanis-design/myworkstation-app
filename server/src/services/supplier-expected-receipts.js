@@ -105,6 +105,24 @@ export async function postedReceiptSource(db,scope,orderId,productId,{lock=false
 export async function expectedReceiptRows(db,scope){
   if(!(await expectedReceiptReadiness(db)).available)return [];
   const rows=await db.$queryRaw`SELECT e.*,p."name" AS "productName",p."unit" AS "currentUnit",p."active" AS "productActive",sp."active" AS "storeActive",s."name" AS "supplierName",
+    EXISTS (
+      SELECT 1 FROM "PurchaseOrder" o
+      JOIN "PurchaseOrderPosting" pp ON pp."orderId"=o."id" AND pp."companyId"=o."companyId"
+      JOIN "PurchaseDocument" d ON d."id"=pp."purchaseDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
+      JOIN LATERAL (
+        SELECT SUM(sm."quantity") AS "quantity",
+          BOOL_OR(sm."quantity">0 AND sm."createdAt">=e."confirmedAt") AS "newerPositive"
+        FROM "StockMovement" sm WHERE sm."storeId"=e."storeId" AND sm."productId"=e."productId"
+          AND sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=o."id"
+          AND sm."movementType" IN ('PURCHASE','PURCHASE_PACK_CORRECTION')
+      ) posted ON TRUE
+      WHERE o."companyId"=e."companyId" AND o."storeId"=e."storeId" AND o."supplierId"=e."supplierId"
+        AND o."status" IN ('FINAL','INVOICED') AND d."status"='APPROVED' AND d."documentType"='INVOICE' AND d."supplierId"=e."supplierId"
+        AND posted."newerPositive" AND posted."quantity">COALESCE((
+          SELECT SUM(a."quantity") FROM "SupplierExpectedReceiptAllocation" a WHERE a."companyId"=e."companyId"
+            AND a."storeId"=e."storeId" AND a."orderId"=o."id" AND a."productId"=e."productId"
+        ),0)
+    ) AS "postedQuantityNeedsReview",
     COALESCE((SELECT SUM(a."quantity") FROM "SupplierExpectedReceiptAllocation" a WHERE a."expectedLineId"=e."id" AND a."companyId"=e."companyId" AND a."storeId"=e."storeId"),0) AS "allocatedQuantity"
     FROM "SupplierExpectedReceiptLine" e JOIN "Product" p ON p."id"=e."productId" AND p."companyId"=e."companyId"
     JOIN "StoreProduct" sp ON sp."storeId"=e."storeId" AND sp."productId"=e."productId"
@@ -125,6 +143,7 @@ export async function expectedReceiptRows(db,scope){
       if(sources.get(cacheKey)?.sourceDigest!==allocation.sourceDigest)row.reviewReason='Η συνδεδεμένη αγορά άλλαξε. Χρειάζεται έλεγχος.';
     }
     row.remainingQuantity=new Decimal(row.expectedStockQuantity).minus(row.allocatedQuantity).minus(row.cancelledQuantity).toString();
+    row.postedPurchaseReviewReason=row.postedQuantityNeedsReview&&new Decimal(row.remainingQuantity).gt(0)?'Υπάρχει νεότερη καταχωρισμένη ποσότητα για έλεγχο. Σύνδεσε την παραλαβή ή επανέλεγξε το υπόλοιπο πριν από νέα πρόταση.':null;
     if(new Decimal(row.remainingQuantity).lt(0))row.reviewReason='Ασυμφωνία κατανομών.';
     for(const field of ['invoiceQuantity','stockUnitsPerInvoiceUnit','expectedStockQuantity','cancelledQuantity','allocatedQuantity'])row[field]=new Decimal(row[field]).toString();
   }

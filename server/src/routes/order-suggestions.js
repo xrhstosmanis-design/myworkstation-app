@@ -49,7 +49,7 @@ export async function readOrderSuggestions(db,{storeId,companyId,options,now=new
     const pending=expected.filter(item=>item.productId===row.productId);
     row.expectedReceiptsAvailable=expectedReceipts.available;
     row.expectedReceiptsAvailabilityReason=expectedReceipts.reason;
-    row.expectedReceiptReviewReasons=[...new Set(pending.filter(item=>Number(item.remainingQuantity)!==0).map(item=>item.reviewReason).filter(Boolean))];
+    row.expectedReceiptReviewReasons=[...new Set(pending.filter(item=>Number(item.remainingQuantity)!==0).flatMap(item=>[item.reviewReason,item.postedPurchaseReviewReason]).filter(Boolean))];
     const total=pending.filter(item=>!item.reviewReason).reduce((sum,item)=>sum+Number(item.remainingQuantity),0);
     row.confirmedPendingStockQuantity=Number.isFinite(total)&&total<=Number.MAX_SAFE_INTEGER?total:null;
     if(row.confirmedPendingStockQuantity===null)row.expectedReceiptReviewReasons.push("Η αναμενόμενη ποσότητα χρειάζεται αριθμητικό έλεγχο.");

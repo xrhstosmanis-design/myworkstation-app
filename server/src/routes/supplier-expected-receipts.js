@@ -37,7 +37,7 @@ export function createExpectedReceiptRouter(db=prisma,{moduleGuard=requireStoreM
         try{const source=await postedReceiptSource(tx,target,order.id,expected.productId);if(Number(source.available)>0)rows.push(source)}
         catch(error){if(error.status!==409)throw error;rows.push({orderId:order.id,reviewReason:error.message})}
       }
-      return {storeId:target.storeId,expectedId,rows,hasMore:orders.length>100,sourceSupport:'PURCHASE_ORDER_ONLY',reviewReason:expected.reviewReason};
+      return {storeId:target.storeId,expectedId,rows,hasMore:orders.length>100,sourceSupport:'PURCHASE_ORDER_ONLY',reviewReason:expected.reviewReason,postedPurchaseReviewReason:expected.postedPurchaseReviewReason};
     },{isolationLevel:'RepeatableRead',timeout:30000});
     res.set('Cache-Control','no-store');res.json(result);
   }catch(error){next(error)}});
