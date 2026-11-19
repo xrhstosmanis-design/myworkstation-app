@@ -1,3 +1,7 @@
+## 19/11/2026 — Νο02 — αυτόματη ordinary συμφωνία / TECHNICAL LIVE / COMMON LAB OPEN
+
+Source #4063/head684e7524 merged964f05bd. Exact PR CI44494855233 και mainCI44497167143 SUCCESS5/5, έκαστο6389PASS/0FAIL/3optionalWASM-PGliteSKIP+8backupPASS. Νέες actual nativePG και Chromium desktop/mobile evidence disclosures PASS χωρίς skip. Normal guardeddeploy44498829800 SUCCESS2/2, Renderdep-dbvc94e7bikc738726bg LIVE11:44:24Ελλάδας, ανεξάρτητο exacthealth/servedassets PASS. Πλήρης FINAL posting απόδειξη στον αρχικό μήνα, μοναδική myDATA ταυτότητα και αμετάβλητα modern/legacy payment receipts, με συγκεκριμένες εξαιρέσεις. Raw C/D1/writers/stock/ποσά και άλλοι owners ανέπαφοι· η ordinary συσχέτιση δεν βαφτίζεται persisted merge. Δεν ζητείται επανάληψη συναλλαγής ή έλεγχος όλων των γραμμών. Νέα signed-in hosted αποδοχή NOT TESTED, συνολικό Νο02/#4019 OPEN. [Ακριβές τεκμήριο](CHANGES/2026-11-19-no2-canonical-reconciliation-release.md).
+
 ## 18/11/2026 — myDATA Epsilon Digital PDF / AWAITING CI AND LAB
 
 PR #4036. Read-only provider check for Diadochou Pavlou invoice 34795 returned HTTP 200 and PDF from /pdf. [Checkpoint](CHANGES/2026-11-18-mydata-epsilon-original-pdf.md). Attachment verification pending.
