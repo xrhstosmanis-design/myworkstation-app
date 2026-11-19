@@ -32,6 +32,9 @@ function fixture({facts=empty(),missing=[],role='OWNER',currentCompany='c',store
  const tx={user:{findUnique:async()=>({id:'owner',role,companyId:currentCompany})},store:{findFirst:async({where})=>store&&where.id==='s'&&where.companyId==='c'?{id:'s',companyId:'c',name:'Συνθετικό κατάστημα'}:null},company:{findUnique:async()=>({id:'c',name:'C',active:true,licenseStatus:'ACTIVE',subscriptionEndsAt:null,modules:companyModule?[{moduleKey:'INVENTORY',active:true}]:[]})},
   async $executeRawUnsafe(sql){trace.push({sql});assert.match(sql,/^(SET TRANSACTION READ ONLY|SET LOCAL statement_timeout)/)},
   async $queryRawUnsafe(sql,...values){trace.push({sql,values});
+   if(sql.includes('AS "currencyMetadataAvailable"'))return [{currencyMetadataAvailable:!missing.includes('currency')}];
+   if(sql.includes('AS "identityLinksPresent"'))return facts.identityMetadata||facts.inbound.map(row=>({id:row.id,identityLinksPresent:Boolean(row.draftOrderId),draftDocumentId:null,commonDraftDocumentId:null,commonDraftOrderId:null,metadataValid:true,currencyAllowed:true}));
+   if(sql.includes('AS "paymentBefore"'))return facts.canonicalPaymentReceipts||[];
    if(sql.includes('FROM pg_class'))return Object.entries(schema).flatMap(([table,columns])=>missing.includes(table)?[]:columns.map(column=>({table,column})));
    if(sql.includes('FROM "StorePaidModule"'))return override?[override]:[];
    if(sql.includes('FROM "OwnerCompanyAccess"'))return [];
@@ -65,7 +68,7 @@ test('real reader uses one read-only snapshot, full source counters and distinct
  assert.equal(r.coverage.complete,true);assert.equal(r.summary.logicalRecords,1);assert.equal(r.summary.unposted,1);
  assert.equal(r.pendingOriginals.period,'ALL_MONTHS');assert.equal(r.pendingOriginals.counts.total,75);assert.equal(r.pendingOriginals.items.length,50);assert.equal(r.pendingOriginals.truncated,true);assert.equal(r.allClear,false);
  assert.equal(JSON.stringify(r).includes('PRIVATE-HASH'),false);assert.equal(r.immutableSnapshot,false);
- for(const call of f.trace.filter(t=>t.sql?.startsWith('SELECT source.')))assert.deepEqual(call.values,['c','s',20001]);
+ for(const call of f.trace.filter(t=>t.sql?.startsWith('SELECT source.')&&!t.sql.includes('AS "identityLinksPresent"')&&!t.sql.includes('AS "paymentBefore"')))assert.deepEqual(call.values,['c','s',20001]);
 });
 
 test('missing source and above-cap sources never expose partial findings as exact or an all-clear',async()=>{
@@ -359,4 +362,27 @@ test('missing allocation schema never verifies an existing settlement from its w
  f.payments=[{id:'split',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 1',amount:'12.34',hasSettlement:true,settlementCount:1,settlementScopeValid:true,settlementConfirmed:true}];
  const r=await read(fixture({facts:f,missing:['SupplierPaymentAllocation']}));
  assert.equal(r.paymentCoverage.allocationsAvailable,false);assert.equal(r.items[0].payment.status,'REVIEW_REQUIRED');assert.equal(r.items[0].payment.remainingCents,null);
+});
+
+test('ordinary automatic matching is global before pagination, preserves paid transactions and invalidates changed metadata',async()=>{
+ const facts=empty();
+ for(let i=0;i<65;i++){
+  const id=String(i).padStart(3,'0'),number=String(i+1);
+  facts.documents.push(doc(id,{status:'APPROVED',documentNumber:'S '+number,paymentTransactionId:'pay'+id}));
+  facts.inbound.push({id:'in'+id,inboxId:'box'+id,mark:String(400000000000000+i),issuerVat:'099999999',series:'S',documentNumber:number,invoiceType:'1.1',issueDay:'2026-10-02',totalGross:'12.34',draftOrderId:null});
+  facts.inbox.push({id:'box'+id,status:'RECEIVED',attachmentId:null});
+ }
+ facts.payments=facts.documents.map(d=>({id:d.paymentTransactionId,companyId:'c',storeId:'s',supplierId:'sup',type:'SUPPLIER_PAYMENT',amount:'12.34',invoiceDocumentNumber:d.documentNumber,settlementConfirmed:true}));
+ const f=fixture({facts}),first=await read(f);
+ assert.equal(first.summary.logicalRecords,65);assert.equal(first.items.length,50);assert.equal(first.financialSummary.paid,65);
+ assert.equal(first.items[0].automaticMatches.length,1);
+ const second=await read(f,{storeId:'s',month:'2026-10',page:first.nextPage});assert.equal(second.items.length,15);
+ assert.equal(new Set([...first.items,...second.items].map(row=>row.id)).size,65);
+ facts.identityMetadata=facts.inbound.map(row=>({id:row.id,identityLinksPresent:false,currencyAllowed:true,metadataValid:true}));
+ facts.identityMetadata[0].identityLinksPresent=true;
+ await assert.rejects(read(f,{storeId:'s',month:'2026-10',page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+ const changed=await read(f);assert.equal(changed.summary.logicalRecords,66);
+ facts.identityMetadata[0].identityLinksPresent=false;facts.identityMetadata[0].currencyAllowed=false;
+ const foreign=await read(f);assert.equal(foreign.summary.logicalRecords,66);const exceptions=await read(f,{storeId:'s',month:'2026-10',filter:'PURCHASE_LINK_REVIEW'});assert.ok(exceptions.items.some(row=>row.automaticReview?.some(reason=>reason.code==='UNSUPPORTED_CURRENCY')));
+ assert.equal((await read(fixture({facts,missing:['currency']}))).summary.logicalRecords,130);
 });
