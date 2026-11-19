@@ -29,7 +29,7 @@ test('native sales summary and drilldown preserve original-date reversal cost an
     PurchaseOrder:'"id" text,"companyId" text,"storeId" text,"supplierId" text,"invoiceNumber" text,"status" text',
     PurchaseOrderLine:'"orderId" text,"productId" text,"quantity" numeric,"netAmount" numeric,"resolutionStatus" text,"invoiceUnit" text,"stockUnitsPerInvoiceUnit" numeric',
     StockMovement:'"id" text,"sourceType" text,"sourceId" text,"storeId" text,"productId" text,"movementType" text,"unitCost" numeric,"createdAt" timestamp',
-    Supplier:'"id" text,"name" text',
+    Supplier:'"id" text,"companyId" text,"name" text',
     Employee:'"id" text,"fullName" text',
     Customer:'"id" text,"name" text',
     Payment:'"saleId" text,"method" text'

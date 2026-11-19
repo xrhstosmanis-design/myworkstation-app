@@ -242,7 +242,6 @@ export async function readSalesAnalysisProductReport({companyId,productId,from,t
         AND original."occurredAt"<=sa."occurredAt"
     JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
     JOIN "Store" s ON s."id"=sa."storeId" AND s."companyId"=${companyId}
-    LEFT JOIN "Sale" original ON original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId"
     LEFT JOIN "Employee" e ON e."id"=sa."operatorEmployeeId" AND e."storeId"=sa."storeId"
     LEFT JOIN "Customer" cu ON cu."id"=sa."customerId" AND cu."companyId"=sa."companyId"
     LEFT JOIN LATERAL (
