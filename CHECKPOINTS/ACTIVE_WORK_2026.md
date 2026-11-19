@@ -687,7 +687,7 @@ Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compa
 - 2026-11-19 · 13-SALES-STATS-REVERSAL-COST · /root σελίδας 13–14, βοηθός /root/cost · #4046 πριν από κώδικα, υλοποίηση #4050 εγκατεστημένη τεχνικά ως 03964fe3. PR CI44470735150 και main CI44472405243 SUCCESS5/5, κανονική εγκατάσταση44473751002 SUCCESS, Render dep-dbv9jdbl550s7394u910 LIVE 19/11 08:41:26 Ελλάδας. Αρχική αστοχία fixture χωρίς originalSaleId διορθώθηκε με σύνδεση basket και 18 γραμμές assertions αμετάβλητες. [Checkpoint](CHANGES/2026-11-19-no13-sales-reversal-cost.md). Κοινή πραγματική LAB αποδοχή/PDF/χαρτί και συνολικό 13 OPEN.
 
 
-- 2026-11-19 · Νο 14 · ASSIGNED /root, συνέχεια #4004: επιβεβαιωμένη αναμενόμενη ποσότητα και σύνδεση υπάρχουσας καταχωρισμένης παραλαβής για τις προτάσεις. BEFORE SOURCE / NOT TESTED, σχέδιο και έλεγχος ανάθεσης για ανασκόπηση. [Checkpoint](CHANGES/2026-11-19-no14-expected-receipts-claim-design.md). Οι παλαιές αναθέσεις προτάσεων και Full Audit διατηρούνται εκτός του συγκεκριμένου νέου υποσυστήματος.
+- 2026-11-19 · Νο 14 · ASSIGNED /root, συνέχεια #4004: επιβεβαιωμένη αναμενόμενη ποσότητα και σύνδεση υπάρχουσας καταχωρισμένης παραλαβής για τις προτάσεις. SOURCE PREPARED / AWAITING NATIVE CI AND INSTALLATION. [Πηγαίο πακέτο και ουσιαστική εξάρτηση scoped backup/profile](CHANGES/2026-11-19-no14-expected-receipts-source.md). Το runtime παραμένει μη εγκατεστημένο με readonly readiness/503, χωρίς εφαρμογή DDL από κανονική χρήση. [Checkpoint](CHANGES/2026-11-19-no14-expected-receipts-claim-design.md). Οι παλαιές αναθέσεις προτάσεων και Full Audit διατηρούνται εκτός του συγκεκριμένου νέου υποσυστήματος.
 
 
 ## 19/11/2026 00:15 Athens — WAREHOUSE-INVOICE-REVIEW-UI-01 — TECHNICALLY LIVE / COMMON LAB PENDING

@@ -123,6 +123,7 @@ import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
 import invoiceAssistantPosRoutes from "./routes/invoice-assistant-pos.js";
 import supplierItemLearningRoutes from "./routes/supplier-item-learning.js";
+import expectedReceiptRoutes from "./routes/supplier-expected-receipts.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import expenseDocumentRoutes from "./routes/expense-documents.js";
 import mobileInvoiceUploadRoutes from "./routes/mobile-invoice-upload.js";
@@ -351,6 +352,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceDraftApprovalRou
 app.use("/api/commerce",auth,commerceTenantGuard,commerceMyDataInboxRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceVatLookupRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
+app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
