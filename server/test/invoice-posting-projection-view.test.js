@@ -34,6 +34,50 @@ test('explicitly backlinked approved projection is supported without making a se
  const result=normalize(facts),view=classifyInvoiceMonth(result.facts,invoiceAuditMonth('2026-10'));assert.equal(result.projections.length,1);assert.equal(view.counts.logicalRecords,1);assert.equal(view.counts.unposted,0);
 });
 
+test('a legitimately reposted INVOICED order retains its full-receipt proof after an earlier reopen',()=>{
+ const facts=fixture();facts.orders[0].reopenVersion=1;const before=JSON.stringify(facts),result=normalize(facts),view=classifyInvoiceMonth(result.facts,invoiceAuditMonth('2026-10'));
+ assert.equal(result.projections.length,1);assert.equal(view.counts.logicalRecords,1);assert.equal(view.counts.unposted,0);assert.equal(view.items[0].status,'POSTED');assert.equal(result.facts.orders[0].reopenVersion,1);assert.equal(JSON.stringify(facts),before);
+ facts.stockPostings=[];assert.equal(normalize(facts).projections.length,0);
+});
+
+test('legacy FINAL with both exact posting receipts belongs once to original month and retains raw backlink provenance',()=>{
+ const facts=fixture();facts.orders[0].status='FINAL';facts.orders[0].reopenVersion=0;facts.documents[0].issueDay='2026-10-12';facts.documents[1].issueDay='2026-11-01';
+ const before=JSON.stringify(facts),rawOctober=classifyInvoiceMonth(facts,invoiceAuditMonth('2026-10')),rawNovember=classifyInvoiceMonth(facts,invoiceAuditMonth('2026-11')),result=normalize(facts);
+ assert.equal(result.projections.length,1);assert.equal(result.facts.orders,facts.orders);assert.equal(result.facts.orders[0].status,'FINAL');assert.equal(result.facts.documents[1].purchaseOrderId,'order');assert.equal(facts.documents[1].purchaseOrderId,null);
+ assert.deepEqual(result.projections[0],{sourceDocumentId:'source',projectionDocumentId:'order',sourceIssueDay:'2026-10-12',sourceTotalGross:'12.34',recordedIssueDay:'2026-11-01',recordedTotalGross:'12.3432',recordedOrderStatus:'FINAL',recordedPurchaseOrderId:null,effectivePurchaseOrderId:'order'});
+ const october=classifyInvoiceMonth(result.facts,invoiceAuditMonth('2026-10')),november=classifyInvoiceMonth(result.facts,invoiceAuditMonth('2026-11'));
+ assert.equal(october.counts.logicalRecords,1);assert.equal(october.counts.unposted,0);assert.equal(october.items[0].status,'POSTED');assert.equal(november.counts.logicalRecords,0);assert.equal(november.counts.unposted,0);
+ assert.equal(JSON.stringify(facts),before);assert.deepEqual(classifyInvoiceMonth(facts,invoiceAuditMonth('2026-10')),rawOctober);assert.deepEqual(classifyInvoiceMonth(facts,invoiceAuditMonth('2026-11')),rawNovember);
+});
+
+test('legacy FINAL canonical family retains one original payment and genuine partial extra or reversed amounts',()=>{
+ const facts=fixture();facts.orders[0].status='FINAL';const result=normalize(facts),view=classifyInvoiceMonth(result.facts,invoiceAuditMonth('2026-10')),items=withPostingProjectionProvenance(view.items,result.projections);
+ for(const [amount,status,paid,remaining,extra]of [['12.34','PAID',1234,0,0],['10.00','PARTIALLY_PAID',1000,234,0],['14.34','OVERPAID',1434,0,200]]){
+  const transactions=[{id:'paid',...scope,supplierId:'supplier',type:'SUPPLIER_PAYMENT',invoiceDocumentNumber:'A 1',amount,settlementConfirmed:true}],before=JSON.stringify({facts,transactions}),observed=observeInvoicePayments(items,result.facts,transactions,{available:true});
+  assert.equal(observed.items.length,1);assert.equal(observed.items[0].payment.status,status);assert.equal(observed.items[0].payment.paidCents,paid);assert.equal(observed.items[0].payment.remainingCents,remaining);assert.equal(observed.items[0].payment.overpaymentCents,extra);assert.equal(observed.items[0].payment.paymentCount,1);assert.deepEqual(observed.items[0].payment.transactionIds,['paid']);assert.equal(JSON.stringify({facts,transactions}),before);
+ }
+ const reversed=observeInvoicePayments(items,result.facts,[{id:'paid',...scope,supplierId:'supplier',type:'SUPPLIER_PAYMENT',invoiceDocumentNumber:'A 1',amount:'12.34',settlementConfirmed:true,reversedAt:'2026-11-01T10:00:00Z'}],{available:true});assert.equal(reversed.items[0].payment.status,'REVERSED');assert.equal(reversed.items[0].payment.paidCents,0);
+});
+
+test('FINAL alone or reopened contradictory proof never certifies a canonical posting',()=>{
+ const variants={
+  'missing-posting':f=>f.postings=[],
+  'missing-stock':f=>f.stockPostings=[],
+  'duplicate-posting':f=>f.postings.push({...f.postings[0]}),
+  'duplicate-stock':f=>f.stockPostings.push({...f.stockPostings[0]}),
+  'foreign-receipt':f=>f.stockPostings[0].storeId='foreign',
+  'wrong-stock-source':f=>f.stockPostings[0].sourceDocumentId='foreign',
+  'reopened-positive':f=>f.orders[0].reopenVersion=1,
+  'reopened-malformed':f=>f.orders[0].reopenVersion=null,
+  'returned-to-NEW':f=>f.orders[0].status='NEW',
+  'no-longer-approved':f=>f.documents[1].status='DRAFT',
+  'merged-source':f=>f.documents[0].status='MERGED',
+  'foreign-target':f=>f.documents[1].companyId='foreign',
+ };
+ for(const [key,mutate]of Object.entries(variants)){const facts=fixture();facts.orders[0].status='FINAL';mutate(facts);const before=JSON.stringify(facts),result=normalize(facts);assert.equal(result.projections.length,0,key);assert.equal(result.facts,facts,key);assert.equal(JSON.stringify(facts),before,key)}
+ const linked=fixture();linked.orders[0].status='FINAL';linked.documents[1].id='target';linked.documents[1].purchaseOrderId='order';linked.postings[0].purchaseDocumentId='target';linked.stockPostings[0].postedDocumentId='target';assert.equal(normalize(linked).projections.length,1);
+});
+
 test('cross-month posting follows original invoice month and never moves raw projection or unrelated originals',()=>{
  for(const [sourceDay,postingDay]of [['2026-09-30','2026-10-05'],['2026-10-31','2026-11-05']]){
   const facts=fixture();facts.documents[0].issueDay=sourceDay;facts.documents[1].issueDay=postingDay;
@@ -76,7 +120,7 @@ test('missing, foreign, contradictory or competing proof cannot normalize invoic
   'source-is-projection':f=>f.documents[0].sourceType='PURCHASE_ORDER',
   'inactive-source':f=>f.documents[0].status='MERGED',
   'inactive-order':f=>f.orders[0].status='MERGED',
-  'unconfirmed-order':f=>f.orders[0].status='FINAL',
+  'unconfirmed-order':f=>f.orders[0].status='NEW',
   'unapproved-target':f=>f.documents[1].status='DRAFT',
   'target-source-type':f=>f.documents[1].sourceType='MANUAL',
   'unknown-source-type':f=>f.documents[0].documentType='UNKNOWN',

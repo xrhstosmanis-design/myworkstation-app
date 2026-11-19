@@ -5,6 +5,8 @@ import {postedSupplierPayment} from '../lib/supplier-payment-reporting.js';
 import {observeInvoicePayments} from '../lib/invoice-payment-observation.js';
 import {normalizePostingProjections,withPostingProjectionProvenance} from '../lib/invoice-posting-projection-view.js';
 import {composeOrdinaryPurchaseReview} from '../lib/invoice-purchase-review-view.js';
+import {composeAutomaticInvoiceIdentity} from '../lib/invoice-automatic-identity-view.js';
+import {normalizeCanonicalPaymentObservations} from '../lib/invoice-canonical-payment-view.js';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
 import {readPendingInvoices,readPendingInvoiceSnapshotRows,readPendingInvoiceSnapshotRowsForAutomationInTransaction} from './pos-pending-invoices.js';
 import {requireMonthlyCaptureContext} from './monthly-inventory-capture-authorization.js';
@@ -311,6 +313,69 @@ async function readInvoicePaymentMetadata(tx,companyId,storeId,facts,available,a
 }
 
 
+// Ordinary-only relationship metadata. Raw C and immutable D1 source facts
+// keep their existing shape; no original content or mutation is fetched here.
+async function readOrdinaryIdentityMetadata(tx,companyId,storeId,facts){
+ const ids=facts.inbound.map(row=>row.id),expected=new Set(ids);
+ if(!ids.length)return {available:true,rows:[]};
+ const capability=await tx.$queryRawUnsafe(`SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='MyDataInboundDocument' AND column_name='currency') AS "currencyMetadataAvailable"`);
+ if(capability[0]?.currencyMetadataAvailable!==true)return {available:false,rows:[]};
+ const rows=await tx.$queryRawUnsafe(`SELECT source."id",
+  (source."currency" IS NULL OR source."currency"='EUR') AS "currencyAllowed",
+  CASE WHEN source."rawPayload" IS NULL THEN false WHEN jsonb_typeof(source."rawPayload")='object' THEN source."rawPayload" ?| ARRAY['mydataDraftOrderId','mydataDraftDocumentId','mydataPosReceipt','commonDraft'] ELSE true END AS "identityLinksPresent",
+  CASE WHEN jsonb_typeof(source."rawPayload"->'mydataDraftDocumentId')='string' AND octet_length(source."rawPayload"->>'mydataDraftDocumentId')<=160 THEN source."rawPayload"->>'mydataDraftDocumentId' END AS "draftDocumentId",
+  CASE WHEN jsonb_typeof(source."rawPayload"#>'{commonDraft,documentId}')='string' AND octet_length(source."rawPayload"#>>'{commonDraft,documentId}')<=160 THEN source."rawPayload"#>>'{commonDraft,documentId}' END AS "commonDraftDocumentId",
+  CASE WHEN jsonb_typeof(source."rawPayload"#>'{commonDraft,orderId}')='string' AND octet_length(source."rawPayload"#>>'{commonDraft,orderId}')<=160 THEN source."rawPayload"#>>'{commonDraft,orderId}' END AS "commonDraftOrderId",
+  (source."rawPayload" IS NULL OR (jsonb_typeof(source."rawPayload")='object'
+   AND (NOT(source."rawPayload" ? 'mydataDraftDocumentId') OR jsonb_typeof(source."rawPayload"->'mydataDraftDocumentId')='null' OR (jsonb_typeof(source."rawPayload"->'mydataDraftDocumentId')='string' AND octet_length(source."rawPayload"->>'mydataDraftDocumentId')<=160))
+   AND (NOT(source."rawPayload" ? 'commonDraft') OR jsonb_typeof(source."rawPayload"->'commonDraft') IN ('object','null'))
+   AND (source."rawPayload"#>'{commonDraft,documentId}' IS NULL OR jsonb_typeof(source."rawPayload"#>'{commonDraft,documentId}')='null' OR (jsonb_typeof(source."rawPayload"#>'{commonDraft,documentId}')='string' AND octet_length(source."rawPayload"#>>'{commonDraft,documentId}')<=160))
+   AND (source."rawPayload"#>'{commonDraft,orderId}' IS NULL OR jsonb_typeof(source."rawPayload"#>'{commonDraft,orderId}')='null' OR (jsonb_typeof(source."rawPayload"#>'{commonDraft,orderId}')='string' AND octet_length(source."rawPayload"#>>'{commonDraft,orderId}')<=160)))) AS "metadataValid"
+  FROM "MyDataInboundDocument" source WHERE source."companyId"=$1 AND source."storeId"=$2 AND source."id"=ANY($3::text[]) ORDER BY source."id" LIMIT 20001`,companyId,storeId,ids);
+ const unique=new Set(rows.map(row=>row.id));
+ if(rows.length!==ids.length||unique.size!==ids.length||expected.size!==ids.length||rows.some(row=>!expected.has(row.id)||typeof row.identityLinksPresent!=='boolean'||typeof row.currencyAllowed!=='boolean'||row.metadataValid!==true))return {available:false,rows:[]};
+ return {available:true,rows};
+}
+function withOrdinaryCurrencyMetadata(facts,metadata){
+ const rows=new Map(metadata.available?metadata.rows.map(row=>[row.id,row]):[]);
+ return {...facts,inbound:facts.inbound.map(row=>({...row,currencyAllowed:rows.get(row.id)?.currencyAllowed===true}))};
+}
+async function readCanonicalPaymentMetadata(tx,companyId,storeId,facts){
+ if(!facts.aliases.length)return {available:true,rows:[]};
+ const value=(object,key,max=160)=>`CASE WHEN jsonb_typeof(${object}->'${key}') IN ('string','number') AND octet_length(${object}->>'${key}')<=${max} THEN ${object}->>'${key}' END`;
+ const details='source."details"',before=`${details}->'paymentBefore'`;
+ const legacy=`${details}->'before'`;
+ const legacyFields=['orderId','documentId','companyId','storeId','supplierId','documentSupplierId','taxId','paymentTaxId','paymentTransactionId','paymentStoreId','paymentSupplierId','paymentType','invoiceNumber','documentNumber','paymentInvoiceNumber'];
+ const legacyInvalid=legacyFields.map(key=>`(row ? '${key}' AND (jsonb_typeof(row->'${key}') NOT IN ('string','null') OR octet_length(row->>'${key}')>${['invoiceNumber','documentNumber','paymentInvoiceNumber'].includes(key)?256:160}))`).join(' OR ');
+ const legacyShape=`CASE WHEN jsonb_typeof(${legacy})='array' THEN jsonb_array_length(${legacy}) BETWEEN 1 AND 20 AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(${legacy}) row WHERE jsonb_typeof(row)<>'object' OR NOT(row ?& ARRAY['orderId','documentId','paymentTransactionId','paymentAmount','paymentStoreId','paymentSupplierId','paymentType','paymentTaxId','reversedAt']) OR jsonb_typeof(row->'orderId') IS DISTINCT FROM 'string' OR jsonb_typeof(row->'documentId') IS DISTINCT FROM 'string' OR jsonb_typeof(row->'paymentAmount') NOT IN ('string','number','null') OR octet_length(row->>'paymentAmount')>48 OR ${legacyInvalid}) ELSE false END`;
+
+ const legacyProjection=legacyFields.map(key=>`'${key}',${value('member',key,['invoiceNumber','documentNumber','paymentInvoiceNumber'].includes(key)?256:160)}`).join(',');
+ const rows=await tx.$queryRawUnsafe(`SELECT source."companyId",source."storeId",source."aliasOrderId",source."aliasDocumentId",source."canonicalOrderId",source."canonicalDocumentId",source."inboxId",source."mark",
+ CASE WHEN jsonb_typeof(${details}->'completed')='boolean' THEN ${details}->'completed' END AS "completed",${value(details,'orderId')} AS "auditOrderId",${value(details,'documentId')} AS "auditDocumentId",${value(details,'inboxId')} AS "auditInboxId",${value(details,'mark')} AS "auditMark",CASE WHEN jsonb_typeof(${details}->'aliasOrderIds')='array' THEN CASE WHEN jsonb_array_length(${details}->'aliasOrderIds')<=20 THEN CASE WHEN NOT EXISTS(SELECT 1 FROM jsonb_array_elements(${details}->'aliasOrderIds') member WHERE jsonb_typeof(member)<>'string' OR octet_length(member#>>'{}')>160) THEN ${details}->'aliasOrderIds' END END END AS "auditAliasOrderIds",
+ ${value(details,'paymentTransactionId')} AS "paymentTransactionId",${value(details,'paymentDifference',48)} AS "paymentDifference",CASE WHEN jsonb_typeof(${details}->'requiresPaymentReview')='boolean' THEN ${details}->'requiresPaymentReview' END AS "requiresPaymentReview",COALESCE((${before}) ? 'reversedAt',false) AS "beforeReversedAtPresent",
+ COALESCE(${details} ? 'paymentBefore',false) AS "paymentBeforeFieldPresent",(${legacyShape}) AS "legacyBeforeValid",
+ CASE WHEN ${legacyShape} THEN (SELECT jsonb_agg(jsonb_build_object(${legacyProjection},'paymentAmount',${value('member','paymentAmount',48)},'paymentTransactionIdPresent',member ? 'paymentTransactionId','paymentInvoiceNumberPresent',member ? 'paymentInvoiceNumber','reversedAt',CASE WHEN jsonb_typeof(member->'reversedAt')='null' THEN member->'reversedAt' ELSE to_jsonb('INVALID'::text) END,'reversedAtPresent',member ? 'reversedAt')) FROM jsonb_array_elements(${legacy}) member) END AS "legacyBefore",
+ CASE WHEN jsonb_typeof(${before})='object' AND jsonb_typeof(${before}->'reversedAt')='null' THEN jsonb_build_object('id',${value(before,'id')},'companyId',${value(before,'companyId')},'storeId',${value(before,'storeId')},'supplierId',${value(before,'supplierId')},'type',${value(before,'type')},'amount',${value(before,'amount',48)},'invoiceDocumentNumber',${value(before,'invoiceDocumentNumber',256)},'reversedAt',${before}->'reversedAt') END AS "paymentBefore"
+ FROM "InvoiceDraftAlias" source WHERE source."companyId"=$1 AND source."storeId"=$2 ORDER BY source."aliasOrderId" LIMIT 20001`,companyId,storeId);
+ return rows.length>MAX_SOURCE_ROWS?{available:false,rows:[]}:{available:true,rows};
+}
+function withAutomaticReview(items,exceptions){
+ const indexed=new Map();for(const exception of exceptions){const list=indexed.get(exception.itemId)||[];list.push(exception);indexed.set(exception.itemId,list)}
+ return items.map(item=>indexed.has(item.id)?{...item,automaticReview:indexed.get(item.id)}:item);
+}
+function withCanonicalPaymentProofs(items,proofs){
+ const indexed=new Map();for(const proof of proofs){const list=indexed.get(proof.itemId)||[];list.push(proof);indexed.set(proof.itemId,list)}
+ return items.map(item=>indexed.has(item.id)?{...item,canonicalPaymentProofs:indexed.get(item.id)}:item);
+}
+
+function ordinaryCounts(counts,items){
+ return {...counts,logicalRecords:items.length,
+  unposted:items.filter(row=>row.categories.includes('UNPOSTED_DOCUMENT')).length,
+  uploadedAwaitingReview:items.filter(row=>row.categories.includes('UPLOADED_AWAITING_REVIEW')).length,
+  possibleDuplicates:items.filter(row=>row.categories.includes('POSSIBLE_DUPLICATE')).length,
+  identityReview:items.filter(row=>row.categories.includes('IDENTITY_OR_LINK_REVIEW')).length};
+}
+
 export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}){
  if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input?.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
  if(!input||Object.keys(input).some(k=>!['storeId','month','page','filter'].includes(k))||!safeText(input.storeId))fail('Επίλεξε συγκεκριμένο κατάστημα.');
@@ -325,11 +390,16 @@ export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}
   const complete=unavailable.length===0&&limited.length===0;
   const ordinary=complete?normalizePostingProjections(facts,{companyId:actor.companyId,storeId:store.id}):{facts,projections:[]};
   const analysis=complete?classifyInvoiceMonth(ordinary.facts,period):{counts:null,items:[]};
+  const identityMetadata=complete?await readOrdinaryIdentityMetadata(tx,actor.companyId,store.id,facts):{available:false,rows:[]};
+  const automatic=composeAutomaticInvoiceIdentity(analysis.items,ordinary.facts,{companyId:actor.companyId,storeId:store.id,projections:ordinary.projections,linkMetadataAvailable:identityMetadata.available,linkMetadata:identityMetadata.rows});
   const paymentMetadata=complete?await readInvoicePaymentMetadata(tx,actor.companyId,store.id,facts,paymentMetadataAvailable,allocationMetadataAvailable):{available:false,allocationsAvailable:false,reason:'INVOICE_SOURCE_INCOMPLETE',rows:[],allocations:[]};
-  const financial=observeInvoicePayments(withPostingProjectionProvenance(analysis.items,ordinary.projections),{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const purchase=composeOrdinaryPurchaseReview(financial.items,ordinary.facts,{companyId:actor.companyId,storeId:store.id});
-  const summary=complete?{...analysis.counts,...purchase.summary}:null;
-  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V1',period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const canonicalPaymentMetadata=complete&&paymentMetadata.available?await readCanonicalPaymentMetadata(tx,actor.companyId,store.id,facts):{available:false,rows:[]};
+  const paymentItems=withPostingProjectionProvenance(withAutomaticReview(automatic.items,automatic.exceptions),ordinary.projections);
+  const recovered=normalizeCanonicalPaymentObservations(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,canonicalPaymentMetadata.rows,{companyId:actor.companyId,storeId:store.id,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),ordinary.facts,{companyId:actor.companyId,storeId:store.id});
+  const summary=complete?{...ordinaryCounts(analysis.counts,automatic.items),...purchase.summary}:null;
+  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   // Select from the complete month, then paginate. Global counts, financial
   // observations and all-month pending originals keep their original scope.
@@ -362,10 +432,15 @@ export async function readMonthlyInvoiceAuditRecord(db,actor,input,{now=new Date
   const {store,facts,sourceCounts,unavailable,limited,pending,paymentMetadataAvailable,allocationMetadataAvailable}=await readInvoiceSources(tx,actor,input,now);
   if(unavailable.length||limited.length)fail('Η κάλυψη των πηγών δεν είναι πλήρης. Εκτέλεσε νέο έλεγχο.',409,'INVOICE_MONTH_AUDIT_SOURCE_INCOMPLETE');
   const ordinary=normalizePostingProjections(facts,{companyId:actor.companyId,storeId:store.id}),analysis=classifyInvoiceMonth(ordinary.facts,period);
+  const identityMetadata=await readOrdinaryIdentityMetadata(tx,actor.companyId,store.id,facts);
+  const automatic=composeAutomaticInvoiceIdentity(analysis.items,ordinary.facts,{companyId:actor.companyId,storeId:store.id,projections:ordinary.projections,linkMetadataAvailable:identityMetadata.available,linkMetadata:identityMetadata.rows});
   const paymentMetadata=await readInvoicePaymentMetadata(tx,actor.companyId,store.id,facts,paymentMetadataAvailable,allocationMetadataAvailable);
-  const financial=observeInvoicePayments(withPostingProjectionProvenance(analysis.items,ordinary.projections),{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const purchase=composeOrdinaryPurchaseReview(financial.items,ordinary.facts,{companyId:actor.companyId,storeId:store.id});
-  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V1',period,sourceCounts,facts,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const canonicalPaymentMetadata=paymentMetadata.available?await readCanonicalPaymentMetadata(tx,actor.companyId,store.id,facts):{available:false,rows:[]};
+  const paymentItems=withPostingProjectionProvenance(withAutomaticReview(automatic.items,automatic.exceptions),ordinary.projections);
+  const recovered=normalizeCanonicalPaymentObservations(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,canonicalPaymentMetadata.rows,{companyId:actor.companyId,storeId:store.id,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),ordinary.facts,{companyId:actor.companyId,storeId:store.id});
+  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(input.fingerprint!==undefined&&input.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν ανοίξεις το παραστατικό.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   const item=purchase.items.find(row=>row.id===input.id);if(!item)fail('Δεν βρέθηκε παραστατικό στον επιλεγμένο μήνα και κατάστημα.',404,'INVOICE_MONTH_AUDIT_RECORD_NOT_FOUND');
   const sourceIds=kind=>new Set(item.sources.filter(source=>source.kind===kind).map(source=>source.id)),documentIds=sourceIds('DOCUMENT'),orderIds=sourceIds('ORDER'),inboundIds=sourceIds('MYDATA'),inboxIds=sourceIds('INBOX');

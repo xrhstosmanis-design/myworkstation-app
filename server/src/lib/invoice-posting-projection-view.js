@@ -26,7 +26,8 @@ export function normalizePostingProjections(facts,{companyId,storeId}={}){
  const replacements=new Map(),projections=[];
  for(const order of facts.orders||[]){
   const source=unique(documents,order.sourceDocumentId),posting=unique(postingsByOrder,order.id),target=unique(documents,posting?.purchaseDocumentId),stock=unique(stockByOrder,order.id);
-  if(![order,source,posting,target,stock].every(inScope)||!text(order.id)||unique(orders,order.id)!==order||order.status!=='INVOICED'||
+  if(![order,source,posting,target,stock].every(inScope)||!text(order.id)||unique(orders,order.id)!==order||!['INVOICED','FINAL'].includes(order.status)||
+   (order.status==='FINAL'&&Object.hasOwn(order,'reopenVersion')&&order.reopenVersion!==0&&order.reopenVersion!=='0')||
    !text(source.id)||!text(target.id)||source.id===target.id||source.sourceType==='PURCHASE_ORDER'||!['DRAFT','APPROVED'].includes(source.status)||
    !['INVOICE','CREDIT_NOTE'].includes(source.documentType)||target.documentType!==source.documentType||target.status!=='APPROVED'||target.sourceType!=='PURCHASE_ORDER'||
    source.purchaseOrderId!==order.id||unique(ordersBySource,source.id)!==order||ordersBySource.has(target.id)||
@@ -42,8 +43,13 @@ export function normalizePostingProjections(facts,{companyId,storeId}={}){
   const originalAmount=amount(source.totalGross),recordedAmount=amount(target.totalGross);
   if(originalAmount===null||recordedAmount===null||originalAmount<=0n||recordedAmount<=0n||
    (originalAmount>recordedAmount?originalAmount-recordedAmount:recordedAmount-originalAmount)>5000000n)continue;
-  replacements.set(target.id,{...target,issueDay:source.issueDay,totalGross:source.totalGross});
-  projections.push({sourceDocumentId:source.id,projectionDocumentId:target.id,sourceIssueDay:source.issueDay,sourceTotalGross:source.totalGross,recordedIssueDay:target.issueDay,recordedTotalGross:target.totalGross});
+  // Legacy FINAL orders can already have both posting receipts. A null target
+  // backlink in the recorded id===order.id shape needs an effective backlink
+  // for the unchanged classifier; the raw order status/document stay intact.
+  const legacyFinal=order.status==='FINAL',effectivePurchaseOrderId=legacyFinal&&target.purchaseOrderId==null?order.id:target.purchaseOrderId;
+  replacements.set(target.id,{...target,issueDay:source.issueDay,totalGross:source.totalGross,...(legacyFinal?{purchaseOrderId:effectivePurchaseOrderId}:{})});
+  projections.push({sourceDocumentId:source.id,projectionDocumentId:target.id,sourceIssueDay:source.issueDay,sourceTotalGross:source.totalGross,recordedIssueDay:target.issueDay,recordedTotalGross:target.totalGross,
+   ...(legacyFinal?{recordedOrderStatus:order.status,recordedPurchaseOrderId:target.purchaseOrderId??null,effectivePurchaseOrderId}:{})});
  }
  return {facts:replacements.size?{...facts,documents:facts.documents.map(document=>replacements.get(document.id)||document)}:facts,projections};
 }
