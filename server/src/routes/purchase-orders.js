@@ -1,4 +1,5 @@
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../lib/invoice-line-taxonomy.js";
+import {authorizeMonthlyInvoiceAuditInTransaction} from '../services/monthly-invoice-audit.js';
 import {invoiceIssuerName} from "../mydata-xml.js";
 import {requireStaffGrant,requireStaffOrderAction} from '../services/backoffice-staff-access.js';
 import {previewPurchaseSupplierCorrection,correctPurchaseSupplier,lockPurchaseSupplierMetadata} from "../services/purchase-supplier-correction.js";
@@ -93,7 +94,13 @@ function requireAccess(req,res,next){
   next();
 }
 router.use(requireAccess);
-router.use(async(req,res,next)=>{try{await ensurePurchaseOrderSchema();next()}catch(error){next(error)}});
+router.use(async(req,res,next)=>{try{
+  if(Object.hasOwn(req.query,'inspection')){
+    if(req.method!=="GET"||!/^\/[^/]+\/detail\/?$/.test(req.path)||req.query.inspection!=="true"||Object.keys(req.query).some(key=>!['inspection','storeId'].includes(key))||typeof req.query.storeId!=="string"||!req.query.storeId||req.query.storeId.length>160||req.query.storeId.trim()!==req.query.storeId||/[\u0000-\u001f\u007f]/.test(req.query.storeId))return res.status(400).json({error:"Μη έγκυρη προβολή αγοράς."});
+    req.invoiceInspectionStoreId=req.query.storeId;return next();
+  }
+  await ensurePurchaseOrderSchema();next();
+}catch(error){next(error)}});
 
 async function store(companyId,storeId){return prisma.store.findFirst({where:{id:String(storeId),companyId,active:true},select:{id:true,name:true}})}
 async function supplier(companyId,supplierId){if(!supplierId)return null;const rows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${String(supplierId)} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;return rows[0]||null}
@@ -241,19 +248,55 @@ function invoiceDisplayMarkup(line,isMyDataDraft){
   return grossUnit>0 ? (retail/grossUnit-1)*100 : savedMarkup;
 }
 
-router.get("/:orderId/detail",async(req,res,next)=>{try{
-  const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
-  if(req.user.staffAccess===true){if(found.storeId!==req.user.storeId)return res.status(404).json({error:'Δεν βρέθηκε στο επιλεγμένο κατάστημα.'});}else await repairPosOcrDisplayEconomics(found);
-  const rows=await prisma.$queryRaw`SELECT l.*,p."name" AS "productName",p."sku",COALESCE(sp."salePrice",p."salePrice") AS "currentSalePrice",p."vatRate" AS "productVatRate",COALESCE(sp."categoryIdOverride",p."categoryId") AS "categoryId",CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END AS "subcategoryId",COALESCE(sp."vatDepartmentIdOverride",p."vatDepartmentId") AS "vatDepartmentId",c."name" AS "categoryName",sp."currentStock",(SELECT b."barcode" FROM "ProductBarcode" b WHERE b."productId"=p."id" ORDER BY b."createdAt" LIMIT 1) AS "primaryBarcode" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId} LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${found.storeId} LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId") WHERE l."orderId"=${found.id} ORDER BY COALESCE(l."ocrSequence",l."ocrLineIndex",2147483647),l."createdAt",l."id"`;
+async function readOrderDetail(db,found,companyId,req){
+  const rows=await db.$queryRaw`SELECT l.*,p."name" AS "productName",p."sku",COALESCE(sp."salePrice",p."salePrice") AS "currentSalePrice",p."vatRate" AS "productVatRate",COALESCE(sp."categoryIdOverride",p."categoryId") AS "categoryId",CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END AS "subcategoryId",COALESCE(sp."vatDepartmentIdOverride",p."vatDepartmentId") AS "vatDepartmentId",c."name" AS "categoryName",sp."currentStock",(SELECT b."barcode" FROM "ProductBarcode" b WHERE b."productId"=p."id" ORDER BY b."createdAt" LIMIT 1) AS "primaryBarcode" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId} LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${found.storeId} LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId") WHERE l."orderId"=${found.id} ORDER BY COALESCE(l."ocrSequence",l."ocrLineIndex",2147483647),l."createdAt",l."id"`;
   const isMyDataDraft=found.status==="NEW" && /^myDATA\s*•\s*MARK\b/i.test(found.description||"");
-  const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),stockUnitsPerInvoiceUnit:r.invoiceUnit==="PACKAGE"&&r.stockUnitsPerInvoiceUnit!=null&&n(r.stockUnitsPerInvoiceUnit)===0?0:Math.max(1,n(r.stockUnitsPerInvoiceUnit)||1),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:invoiceDisplayMarkup(r,isMyDataDraft),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net=money2(a.net+money2(r.netAmount+r.exciseTotal));a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,found.storeId,'invoices.read',{additionalModules:['INVENTORY']});if(!found.supplierId&&/^myDATA\s*•\s*MARK\b/i.test(found.description||"")){
-    const [source]=await prisma.$queryRaw`SELECT m."rawPayload"->>'xml' AS xml,m."issuerVat" FROM "MyDataInboundDocument" m WHERE m."companyId"=${companyId} AND m."storeId"=${found.storeId} AND m."rawPayload"->>'mydataDraftOrderId'=${found.id} LIMIT 1`;
+  const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),stockUnitsPerInvoiceUnit:r.invoiceUnit==="PACKAGE"&&r.stockUnitsPerInvoiceUnit!=null&&n(r.stockUnitsPerInvoiceUnit)===0?0:Math.max(1,n(r.stockUnitsPerInvoiceUnit)||1),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:invoiceDisplayMarkup(r,isMyDataDraft),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net=money2(a.net+money2(r.netAmount+r.exciseTotal));a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});if(req.user.staffAccess===true)await requireStaffGrant(db,req.user,found.storeId,'invoices.read',{additionalModules:['INVENTORY']});if(!found.supplierId&&/^myDATA\s*•\s*MARK\b/i.test(found.description||"")){
+    const [source]=await db.$queryRaw`SELECT m."rawPayload"->>'xml' AS xml,m."issuerVat" FROM "MyDataInboundDocument" m WHERE m."companyId"=${companyId} AND m."storeId"=${found.storeId} AND m."rawPayload"->>'mydataDraftOrderId'=${found.id} LIMIT 1`;
     if(source){
       found.mydataIssuerName=source.xml?invoiceIssuerName(source.xml)?.slice(0,250)||null:null;
       found.mydataIssuerVat=/^\d{9}$/.test(source.issuerVat||"")?source.issuerVat:null;
     }
   }
-  res.json({order:found,lines,totals});
+  return {order:found,lines,totals};
+}
+
+export async function readPurchaseOrderInspection(db,actor,storeId,orderId,{now=new Date()}={}){
+  const companyId=actor?.companyId;
+  if(typeof orderId!=="string"||!orderId||orderId.trim()!==orderId||orderId.length>160||/[\u0000-\u001f\u007f]/.test(orderId))throw Object.assign(new Error("Μη έγκυρη αγορά."),{status:400});
+  return db.$transaction(async tx=>{
+    await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+    await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8000ms'");
+    await authorizeMonthlyInvoiceAuditInTransaction(tx,actor,storeId,now);
+    const records=await tx.$queryRaw`SELECT o.*,s."name" AS "supplierName",st."name" AS "storeName" FROM "PurchaseOrder" o JOIN "Store" st ON st."id"=o."storeId" AND st."companyId"=o."companyId" LEFT JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND o."storeId"=${storeId} LIMIT 2`;
+    if(records.length!==1)throw Object.assign(new Error("Δεν βρέθηκε αγορά στο επιλεγμένο κατάστημα."),{status:404});
+    return {...await readOrderDetail(tx,records[0],companyId,{user:actor}),readOnly:true,navigationOnly:true};
+  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});
+}
+
+// Mounted before the legacy alias/posting routers, whose middleware bootstraps
+// tables even for GET. The inspection must never enter that writer pipeline.
+export function purchaseOrderInspectionAdmission(req,res,next){
+  if(!Object.hasOwn(req.query,'inspection'))return next('route');
+  if(req.query.inspection!=="true"||Object.keys(req.query).some(key=>!['inspection','storeId'].includes(key))||typeof req.query.storeId!=="string"||!req.query.storeId||req.query.storeId.trim()!==req.query.storeId||req.query.storeId.length>160||/[\u0000-\u001f\u007f]/.test(req.query.storeId))return res.status(400).json({error:"Μη έγκυρη προβολή αγοράς."});
+  next();
+}
+export function createPurchaseOrderInspectionHandler(db){
+  return async(req,res,next)=>{try{
+    res.set('Cache-Control','no-store');
+    res.json(await readPurchaseOrderInspection(db,req.user,req.query.storeId,req.params.orderId));
+  }catch(error){next(error)}};
+}
+
+router.get("/:orderId/detail",async(req,res,next)=>{try{
+  const companyId=req.user.companyId;
+  if(req.invoiceInspectionStoreId){
+    const result=await readPurchaseOrderInspection(prisma,req.user,req.invoiceInspectionStoreId,req.params.orderId);
+    res.set('Cache-Control','no-store');return res.json(result);
+  }
+  const found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
+  if(req.user.staffAccess===true){if(found.storeId!==req.user.storeId)return res.status(404).json({error:'Δεν βρέθηκε στο επιλεγμένο κατάστημα.'});}else await repairPosOcrDisplayEconomics(found);
+  res.json(await readOrderDetail(prisma,found,companyId,req));
 }catch(error){next(error)}});
 
 router.post("/:orderId/reconcile-ocr-total",async(req,res,next)=>{try{

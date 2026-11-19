@@ -64,7 +64,7 @@ import {posPurchaseOrderAccess} from "./middleware/pos-purchase-order-access.js"
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderUnresolvedGuardRoutes from "./routes/purchase-order-unresolved-guard.js";
 import purchaseOrderPostingGuardRoutes from "./routes/purchase-order-posting-guard.js";
-import purchaseOrderRoutes,{ensurePurchaseOrderSchema} from "./routes/purchase-orders.js";
+import purchaseOrderRoutes,{ensurePurchaseOrderSchema,purchaseOrderInspectionAdmission,createPurchaseOrderInspectionHandler} from "./routes/purchase-orders.js";
 import purchaseOrderOcrResolutionRoutes from "./routes/purchase-order-ocr-resolution.js";
 import purchaseOrderTotalReconciliationGuardRoutes from "./routes/purchase-order-total-reconciliation-guard.js";
 import purchaseDocumentAdjustmentRoutes from "./routes/purchase-document-adjustments.js";
@@ -123,6 +123,7 @@ import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
 import invoiceAssistantPosRoutes from "./routes/invoice-assistant-pos.js";
 import supplierItemLearningRoutes from "./routes/supplier-item-learning.js";
+import expectedReceiptRoutes from "./routes/supplier-expected-receipts.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import expenseDocumentRoutes from "./routes/expense-documents.js";
 import mobileInvoiceUploadRoutes from "./routes/mobile-invoice-upload.js";
@@ -266,6 +267,7 @@ app.use("/api/owner-shifts",auth,requireCompanyModule("CASH_CONTROL"),ownerShift
 app.use("/api/owner-assistant",ownerAssistantRoutes);
 app.use('/api/ai-wallet',aiOwnerWalletRoutes);
 startAiOwnerWalletNotices();
+app.get("/api/purchase-orders/:orderId/detail",auth,purchaseOrderInspectionAdmission,requireStoreModule("INVENTORY"),createPurchaseOrderInspectionHandler(prisma));
 app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce",auth,invoiceCommonDraftRoutes);
@@ -350,6 +352,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceDraftApprovalRou
 app.use("/api/commerce",auth,commerceTenantGuard,commerceMyDataInboxRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceVatLookupRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
+app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);

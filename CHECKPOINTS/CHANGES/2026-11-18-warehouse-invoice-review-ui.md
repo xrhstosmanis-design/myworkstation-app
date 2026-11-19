@@ -17,3 +17,12 @@ Local build/TABLE_SERVICE PASS. Actual JSDOM editor, stale selection, dependent 
 ## Combined source reconciliation
 
 CI44400676745:6274PASS/1FAIL/3optionalSKIP. New native PostgreSQL and editor/markup tests passed; old supplier route harness lacked imported taxonomy schema. Dependency added, assertions retained. Main advanced to a9639f31 with No4 atomic line-transfer/shared helpers, CSV status and No2 claim. Preserve incoming helpers/atomic batch and integrate taxonomy inside shared patchPurchaseLine; preserve all peer tests/checkpoints. Reopened #4040 after no new run: merge conflict confirmed and resolved. New exact full CI required; prior partial result is not green or LIVE. No2 opening semantics remain with their owner.
+
+
+## Technical release — 19/11/2026 00:15 Europe/Athens / AWAITING COMMON LAB
+
+PR #4040 merged885f00f047cfe0a734cc0d526c68f01b4d7e279d after exact candidate8c359c7e full CI44403379025: all five jobs SUCCESS,6278 application PASS/0FAIL/3optionalSKIP plus8backup PASS. Exact main CI44405403976: all five SUCCESS,6279 application PASS/0FAIL/3optionalSKIP plus8backup PASS. Native PostgreSQL taxonomy/control/rollback, existing/new product persistence and staff/supplier regression tests executed successfully. Source and merged main seven warehouse/invoice runtime blobs independently identical; Epsilon PDF and No4/No13–14/No2 peer work retained.
+
+Normal guarded release44408590060 SUCCESS. Render dep-dbv23qgu01pc73cj5cmg LIVE18/11 22:13:53.886UTC =19/11 00:13:53 Athens, exact885f00f047cfe0a734cc0d526c68f01b4d7e279d. Independent public no-cache check22:15:32UTC: /api/health200/ok=true/exactrevision and HTML200; linked entry-BZAeJSRd.js200 contains po-line-taxonomy, linked entry-j8b_acYn.css200 contains compact search/margin selectors. Both entry assets were discovered from actual public main JS. Other split entry/CSS assets also200. No new financial/stock operation performed. Four post-live error-log entries were existing operator-required POS rejections; no DB timeout in that bounded error-log window. Health alone is not a database or functional acceptance.
+
+Current main documentation-only descendants through75d79fe75 retained. No manual deploy hook, workflow bypass or permission change. New user acceptance remains AWAITING COMMON LAB: compact visible product area and footer at the user's resolution, edit existing/new product taxonomy and reopen, already-matched markup displayed without opening/saving lines. Prior PASS behaviors retained; no new manual PASS or completion of broader invoice/warehouse work declared.

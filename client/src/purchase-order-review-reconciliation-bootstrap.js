@@ -21,7 +21,8 @@ function economicProduct(row){
   // παραμένει μόνο fallback, ώστε παλιό/θορυβώδες OCR να μην κρύβει προϊόν που
   // έχει ήδη διορθωθεί ή αντιστοιχιστεί από τον χρήστη.
   const text=String(row?.description||row?.ocrRawText||"").replace(/\s+/g," ").trim();
-  return Boolean(text)&&!nonProductPattern.test(text)&&Number(row?.quantity||0)>0&&(Number(row?.unitCost||0)>0||Number(row?.grossAmount||0)>0);
+  // Η σύνδεση με είδος καταλόγου υπερισχύει λέξεων όπως ΤΗΛ μέσα στο ΜΑΝΤΗΛΙΑ.
+  return row?.ocrLineType!=="INFO"&&Boolean(text)&&(Boolean(row?.productId)||!nonProductPattern.test(text))&&Number(row?.quantity||0)>0&&(Number(row?.unitCost||0)>0||Number(row?.grossAmount||0)>0);
 }
 
 function invoiceNumberFromModal(modal){

@@ -1,3 +1,4 @@
+import {expectedReceiptAction} from './supplier-expected-receipts.mjs';
 // Profiles are starting suggestions, never authorization ceilings or an
 // implicit grant. Only the explicit persisted store capabilities authorize.
 export const staffProfiles=Object.freeze({
@@ -66,6 +67,8 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+  const receiptAction=expectedReceiptAction(method,path);
+  if(receiptAction)return receiptAction==='read'?'invoices.read':'invoices.approve';
   if((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/cancel-preview$/.test(path))||
      (method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/cancel$/.test(path)))return 'invoices.cancel';
   if ((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/reopen-preview$/.test(path))||
