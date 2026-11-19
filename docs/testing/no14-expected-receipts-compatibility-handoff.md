@@ -62,8 +62,18 @@
 
 ## Έλεγχοι και παράδοση στους owners
 
-Η pure δοκιμή χρησιμοποιεί ανεξάρτητο καταγεγραμμένο catalog, πλήρη ακολουθία confirm/link/cancel/rejected, ακριβές writer digest και αλλοιωμένες παραλλαγές. Η native δοκιμή καλεί το υπάρχον setup μόνο σε νέο απομονωμένο schema loopback test βάσης, διαβάζει πραγματικά PostgreSQL μεταδεδομένα, εισάγει συνθετικά fixtures και επιβεβαιώνει ότι ο validator και ο collector διατηρούν τις πραγματικές πηγές. Εννέα προσωρινές αποκλίσεις τύπου/default/nullability/στήλης/index/FK/incoming relation/RLS/constraint ανιχνεύονται και ανακαλούνται με rollback.
+Η pure δοκιμή χρησιμοποιεί ανεξάρτητο καταγεγραμμένο catalog, πλήρη ακολουθία confirm/link/cancel/rejected, ακριβές writer digest και αλλοιωμένες παραλλαγές. Η native δοκιμή καλεί το υπάρχον setup μόνο σε νέο απομονωμένο schema loopback test βάσης, διαβάζει πραγματικά PostgreSQL μεταδεδομένα, εισάγει συνθετικά fixtures και επιβεβαιώνει ότι ο validator και ο collector διατηρούν τις πραγματικές πηγές. Δέκα προσωρινές αποκλίσεις τύπου/default/nullability/στήλης/index/FK/incoming relation/RLS/constraint/UNLOGGED operation journal ανιχνεύονται και ανακαλούνται με rollback.
 
 Το PGlite ελέγχει την ίδια fixture function με πραγματική SQL και μεταδεδομένα WASM PostgreSQL. Το native CI ελέγχει την πραγματική Prisma/PostgreSQL διαδρομή. Τα δύο τεκμήρια καταγράφονται χωριστά. Το αποτέλεσμα αυτών των ελέγχων συμπληρώνεται στο checkpoint της κοινής παρτίδας μετά την πραγματική εκτέλεση.
 
 Οι owners Νο 7–9/5 θα ενσωματώσουν το πρόσθετο contract σε δική τους ελεγχόμενη έκδοση profile/installer, διατηρώντας τους παλιούς ορισμούς και hashes. Πριν από hosted εφαρμογή χρειάζονται δοκιμές πραγματικού scoped backup/restore, λειτουργικών FK/identity, replay/generation και ελεγχόμενης εγκατάστασης. Η τρέχουσα δέσμη αφήνει τις υπάρχουσες lifecycle/profile/worker πηγές ανέπαφες και την πραγματική κατάσταση readiness ορατή. Δεν προστίθεται λειτουργικό LAB PASS ή κλείσιμο του συνολικού Νο 14.
+
+## Τοπικό τεκμήριο αυτής της παρτίδας
+
+19/11/2026, Node 24.22.3. Οι 14 pure δοκιμές πέρασαν με 0 FAIL και 0 SKIP. Η ίδια εξαγόμενη native fixture function εκτελέστηκε επιπλέον σε απομονωμένο PGlite, με το ακριβές DDL του υπάρχοντος setup και πραγματικά catalog queries. Η baseline αντιστοίχιση schema πέρασε, δέκα πραγματικές αποκλίσεις metadata ανιχνεύτηκαν και ανακλήθηκαν με rollback, και οι έξι συνθετικές γραμμές μαζί με το schema παρέμειναν αμετάβλητες μετά τις read-only επικυρώσεις.
+
+Η εκτέλεση αυτή εντόπισε πριν από CI την πραγματική μορφή του CHECK της lowercase quantity χωρίς περιττά εισαγωγικά και τα κανονικά PostgreSQL metadata των NOT NULL/PK/FK constraints. Ο νέος ορισμός και ο collector προσαρμόστηκαν στην παρατηρημένη metadata σημασία. Οι δέκα αποκλίσεις του native fixture διατηρήθηκαν. Το native Prisma/PostgreSQL CI, η ενσωμάτωση σε profile και η πραγματική scoped επαναφορά παραμένουν προς εκτέλεση και ανασκόπηση από τους αρμόδιους owners.
+
+## Συνεπές snapshot πριν από ενσωμάτωση
+
+Ο μελλοντικός adapter πρέπει να διαβάζει catalog, scoped rows, ιστορική authority και canonical postedReceiptSource μέσα στην ίδια έμπιστη συναλλαγή και συνεπές read-only snapshot. Ο αυτόνομος collector εκτελεί πολλαπλά SELECT για διάγνωση. Η ανεξάρτητη κλήση του δεν δεσμεύει την εγκατάσταση και δεν παγώνει μελλοντικές μεταβολές του schema. Η μελλοντική εγκατάσταση χρειάζεται δικό της έλεγχο φρεσκότητας, ταυτότητας και συναλλαγής από τους owners ενσωμάτωσης.

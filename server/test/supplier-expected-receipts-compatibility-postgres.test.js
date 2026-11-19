@@ -111,13 +111,16 @@ export async function runExpectedReceiptCompatibilityRegression(db,{schema,ensur
  await incompatibleChange('unreviewed incoming relation',[
   'CREATE TABLE "UnreviewedReceiptReference" ("id" TEXT PRIMARY KEY,"expectedLineId" TEXT REFERENCES "SupplierExpectedReceiptLine"("id"))'
  ]);
+ await incompatibleChange('unlogged operation journal',[
+  'ALTER TABLE "SupplierExpectedReceiptOperation" SET UNLOGGED'
+ ]);
  await incompatibleChange('row security',[
   'ALTER TABLE "SupplierExpectedReceiptLine" ENABLE ROW LEVEL SECURITY'
  ]);
  await incompatibleChange('unvalidated extra constraint',[
   'ALTER TABLE "SupplierExpectedReceiptLine" ADD CONSTRAINT "unreviewed_quantity_check" CHECK ("cancelledQuantity"<=999) NOT VALID'
  ]);
- return {catalogMutations:9,verifiedRows:tables.reduce((count,name)=>count+rows[name].length,0)};
+ return {catalogMutations:10,verifiedRows:tables.reduce((count,name)=>count+rows[name].length,0)};
 }
 
 test('native PostgreSQL metadata and immutable receipt graph validation leave actual isolated sources unchanged',{
@@ -136,7 +139,7 @@ test('native PostgreSQL metadata and immutable receipt graph validation leave ac
  const database=new PrismaClient({datasources:{db:{url:url.toString()}}});
  try{
   const result=await runExpectedReceiptCompatibilityRegression(database,{schema,ensureSchema:ensureExpectedReceiptSchema});
-  assert.equal(result.catalogMutations,9);
+  assert.equal(result.catalogMutations,10);
   assert.equal(result.verifiedRows,6);
  }finally{
   await database.$disconnect();
