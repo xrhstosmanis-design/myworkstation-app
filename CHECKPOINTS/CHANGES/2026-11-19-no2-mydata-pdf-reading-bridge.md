@@ -1,4 +1,4 @@
-# Νο02 — myDATA PDF reading on the existing draft / IMPLEMENTED — AWAITING CI AND LAB
+# Νο02 — myDATA PDF reading on the existing draft / TECHNICAL LIVE — GROUPED PDF ACCEPTANCE OPEN
 
 19/11/2026 Europe/Athens. Same No02 owner `/root`, branch `fix/no2-mydata-pdf-reading-bridge`. Explicit urgent owner request to solve invoices arriving as plain PDFs. No new source before this claim merges. This continues the No02 original/store/draft opening scope and reuses No04 reader/transfer interfaces; it does not take over or modify the No04 OCR model, prompts, wallet metering, assistant or atomic confirmed line transfer.
 
@@ -31,3 +31,21 @@ The explicit original response now includes read-only readiness for the existing
 Local source/helper/endpoint checks passed **23 tests, 0 failures, 0 skips**. Expanded mounted UI test passed **1/1** with the actual Chromium case excluded from this local invocation. Existing inbox UI regressions passed **4/4**, BackOffice regression **1/1**. The synthetic actual-browser fixture built successfully and the browser runner passed syntax checking. Production client and server build passed. An additional existing HTTP error route, scheduled receiving, archive and No04 manual draft-transfer/PDF route batch passed **17/17**, with 0 failures or skips. The native PostgreSQL readiness test is included for CI and was skipped locally because an eligible native database was unavailable. These results establish local technical behavior only.
 
 Exact source full CI, mandatory native PostgreSQL and actual Chromium execution, exact merged-main CI and ordinary guarded installation remain pending. Hosted PDF reading/confirmed line transfer acceptance remains in the single grouped final LAB session. The prior payment-tolerance correction #4066 / merged `b44532a5135c916dc9da9f369003990e363a53f1` is already installed and retains its prior evidence. Overall No02 remains OPEN. Public tests use synthetic identities and documents.
+
+
+## Exact source/main CI and normal installation — 19/11/2026
+
+Source PR #4069, exact head `c6f748e2519813625d356723beb0eb5975d4d97f`, passed full CI **44569426991**, all **5/5 jobs**. It merged as `9246dfcb70d514c10e7264e6c48a9e5a487fbed9`. Exact merged-main CI **44571614418** also passed **5/5 jobs**. Both runs report **6416 tests / 6413 PASS / 0 FAIL / 3 optional skips**, plus **8/8** recovery tests. Decoded build-and-test logs independently confirm named non-skipped PASS for `native PDF readiness reads actual same-draft counts and rejects duplicate dangling and foreign sources without writes` and `real Chromium PDF readiness preserves explicit same-record desktop/mobile reading`.
+
+The existing normal guarded deployment **44573707801** completed **2/2 jobs**. Render deployment `dep-dbvipsk0916s73b97ia0` reached terminal LIVE at **19:09:44 Europe/Athens**, exact merged revision `9246dfcb70d514c10e7264e6c48a9e5a487fbed9`. Independent unauthenticated health returned `ok=true` and that revision. Served `entry-BID7c1Vg.js`, SHA256 `3600169a79c80950a68eefe414e3a57f27ec5e425db897bf057c61f8683a3313`, contains the readiness protocol and new explicit metadata-PDF label alongside the ordinary matching and tolerance markers.
+
+### Limited hosted payment-tolerance recheck
+
+At **18:44–18:45 Europe/Athens**, the owner-authorized coordinator reused the existing signed-in selected-store session and reloaded the installed report. An existing verified payment difference within the accepted tolerance displayed as paid within tolerance, preserved its actual difference and showed no owed amount. The financial-difference filter retained only the same two larger existing overpayments. This is limited hosted PASS for the observed tolerance label and filter behavior. Business invoice identities, amounts and private fixture details are retained outside this public receipt. No invoice upload, payment or stock action was repeated.
+
+### Remaining grouped PDF acceptance
+
+Actual native PostgreSQL and desktop/mobile Chromium establish the adapter contract with synthetic data. A hosted read of a real supplier PDF, product-line quality, operator confirmation and resulting same-draft lines remain NOT TESTED for this bridge. They remain in the single grouped final session using existing authorized records. Overall No02 remains OPEN. The earlier local pending statements above are historical and are superseded only for the exact CI/installation evidence in this section.
+
+
+The bounded post-installation browser check found that the existing signed-in BackOffice session had become inactive. One visible BackOffice reopening attempt confirmed the inactive-session response. A new sign-in was not requested under the user's grouped-session instruction. Therefore the newly installed hosted PDF label and real PDF reading remain NOT TESTED; independent served-bundle proof above remains valid. The earlier observed tolerance PASS remains valid for its recorded session and time.
