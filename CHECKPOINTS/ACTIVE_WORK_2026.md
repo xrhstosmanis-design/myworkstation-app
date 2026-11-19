@@ -702,3 +702,8 @@ Owner /root retained. #4040 merged885f00f047cfe0a734cc0d526c68f01b4d7e279d. Exac
 ## 19/11/2026 — INVOICE-REVIEW-LINKED-LINE-01 — ASSIGNED /root BEFORE SOURCE
 
 Same warehouse/invoice conversation, owner-reported FINAL A71942 discrepancy113.11 versus106.91/6 rows. Read-only scoped database confirms7 linked lines/113.11/FINAL; omitted tissue line6.20 contains ΤΗΛ in ΜΑΝΤΗΛΙΑ, rejected by both UI description heuristics. Owner /root, fix/invoice-review-linked-lines-20261119. Only retain economically valid linked rows in existing display/reconciliation filters; no header tolerance, OCR extraction, writers, approval, posting, prices, stock or No2/No5 scope change. New UI correction NOT TESTED. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
+
+
+## 19/11/2026 — INVOICE-REVIEW-LINKED-LINE-01 — SOURCE CANDIDATE / AWAITING CI
+
+Owner /root retained. #4059 claim merged8396da191. Two UI filter-only changes retain linked tissue/product rows despite metadata substrings; server INFO/economic validation and unmatched metadata exclusion retained. Original actual DOM6/106.91/false6.20 reproduced; candidate7/113.11/0.00, true1.00 difference still warns.3 originalFAIL→3candidatePASS,19focusedPASS, buildPASS. Read-only FINAL A71942 untouched; no writer/status/stock/amount/permission change. Full CI, exact live revision and read-only final check pending; see own checkpoint.
