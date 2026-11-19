@@ -386,3 +386,15 @@ test('ordinary automatic matching is global before pagination, preserves paid tr
  const foreign=await read(f);assert.equal(foreign.summary.logicalRecords,66);const exceptions=await read(f,{storeId:'s',month:'2026-10',filter:'PURCHASE_LINK_REVIEW'});assert.ok(exceptions.items.some(row=>row.automaticReview?.some(reason=>reason.code==='UNSUPPORTED_CURRENCY')));
  assert.equal((await read(fixture({facts,missing:['currency']}))).summary.logicalRecords,130);
 });
+
+test('ordinary five-cent payment policy keeps exact amounts and full paid paging while record and pending filters agree',async()=>{
+ const facts=empty();facts.documents=Array.from({length:67},(_,i)=>doc('tol'+String(i).padStart(3,'0'),{status:'APPROVED',documentNumber:'TOL '+String(i+1).padStart(3,'0'),paymentTransactionId:'tolpay'+i}));
+ facts.payments=facts.documents.map((d,i)=>({id:d.paymentTransactionId,companyId:'c',storeId:'s',supplierId:'sup',type:'SUPPLIER_PAYMENT',invoiceDocumentNumber:d.documentNumber,amount:i<65?'12.31':i===65?'12.28':'12.40',settlementConfirmed:true}));
+ const before=JSON.stringify(facts),f=fixture({facts}),first=await read(f,{storeId:'s',month:'2026-10',filter:'PAID'});
+ assert.equal(first.financialSummary.paid,65);assert.equal(first.financialSummary.financialPending,2);assert.equal(first.matchedRecords,65);assert.equal(first.items.length,50);assert.ok(first.nextPage);
+ const second=await read(f,{storeId:'s',month:'2026-10',filter:'PAID',page:first.nextPage});assert.equal(second.items.length,15);assert.equal(second.nextPage,null);assert.equal(new Set([...first.items,...second.items].map(row=>row.id)).size,65);
+ for(const row of [...first.items,...second.items]){assert.equal(row.payment.status,'PAID');assert.equal(row.payment.paidCents,1231);assert.equal(row.payment.remainingCents,3);assert.equal(row.payment.overpaymentCents,0);assert.equal(row.payment.withinTolerance,true);assert.equal(row.payment.toleranceCents,5);assert.equal(row.payment.paymentDifferenceCents,-3)}
+ const record=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:tol064',fingerprint:first.fingerprint},{now});assert.deepEqual(record.item.payment,second.items.find(row=>row.id==='doc:tol064').payment);assert.equal(record.fingerprint,first.fingerprint);
+ const pending=await read(f,{storeId:'s',month:'2026-10',filter:'FINANCIAL_PENDING'});assert.equal(pending.matchedRecords,2);assert.deepEqual(pending.items.map(row=>row.payment.status),['PARTIALLY_PAID','OVERPAID']);assert.equal(pending.items[0].payment.remainingCents,6);assert.equal(pending.items[1].payment.overpaymentCents,6);assert.ok(pending.items.every(row=>row.payment.withinTolerance===undefined));assert.equal(JSON.stringify(facts),before);
+ facts.payments[64].amount='12.28';await assert.rejects(read(f,{storeId:'s',month:'2026-10',filter:'PAID',page:first.nextPage}),error=>error.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});

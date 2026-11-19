@@ -7,11 +7,13 @@ const paymentLabels={PAID:'Εξοφλημένο',PARTIALLY_PAID:'Μερική π
 const paymentMoney=value=>money(Number.isSafeInteger(value)&&value>=0?value:null);
 const filterLabels={ALL:'Όλες οι εγγραφές',UNPOSTED_DOCUMENT:'Πρόχειρες αγορές',PURCHASE_LINK_REVIEW:'Προς αντιστοίχιση / έλεγχο',UPLOADED_AWAITING_REVIEW:'Ανεβασμένα προς έλεγχο',POSSIBLE_DUPLICATE:'Πιθανά διπλά',IDENTITY_OR_LINK_REVIEW:'Ταυτοποίηση / συνδέσεις',CREDIT_NOTE:'Πιστωτικά (χωριστή ένδειξη)',PAID:'Εξοφλημένα',FINANCIAL_PENDING:'Οικονομικές εκκρεμότητες',PAYMENT_REVIEW:'Συνδέσεις πληρωμής προς έλεγχο',PAYMENT_UNLINKED:'Χωρίς σύνδεση πληρωμής'};
 const workflowCategories=new Set(['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW']);
+const acceptedPaymentTolerance=payment=>payment?.status==='PAID'&&payment.withinTolerance===true&&payment.toleranceCents===5&&Number.isSafeInteger(payment.paymentDifferenceCents)&&Math.abs(payment.paymentDifferenceCents)>=1&&Math.abs(payment.paymentDifferenceCents)<=5;
 function PaymentObservation({payment}){
  if(!payment||payment.status==='NOT_APPLICABLE')return null;
- const label=paymentLabels[payment.status]||'Η κατάσταση πληρωμής χρειάζεται έλεγχο';
+ const withinTolerance=acceptedPaymentTolerance(payment),label=withinTolerance?'Εξοφλημένο — εντός ανοχής':paymentLabels[payment.status]||'Η κατάσταση πληρωμής χρειάζεται έλεγχο';
  return <div className={'ima-payment '+(payment.status==='PAID'?'ima-payment-paid':'ima-payment-review')} aria-label="Οικονομική κατάσταση παραστατικού"><b>{label}</b>
   {['PAID','PARTIALLY_PAID','OVERPAID'].includes(payment.status)&&<span>Καταγεγραμμένες πληρωμές: {paymentMoney(payment.paidCents)}</span>}
+  {withinTolerance&&<span className="ima-payment-tolerance">Διαφορά: {paymentMoney(Math.abs(payment.paymentDifferenceCents))} {payment.paymentDifferenceCents<0?'λιγότερα':'περισσότερα'} · εντός ανοχής {paymentMoney(payment.toleranceCents)} · χωρίς εκκρεμή πληρωμή.</span>}
   {['PARTIALLY_PAID','REVERSED'].includes(payment.status)&&<span>Υπόλοιπο προς πληρωμή: {paymentMoney(payment.remainingCents)}</span>}
   {payment.status==='OVERPAID'&&<span>Ποσό υπερπληρωμής: {paymentMoney(payment.overpaymentCents)}</span>}
   {['UNCONFIRMED','REVIEW_REQUIRED','NOT_LINKED','UNAVAILABLE'].includes(payment.status)&&<span>Το οικονομικό υπόλοιπο δεν έχει επιβεβαιωθεί.</span>}

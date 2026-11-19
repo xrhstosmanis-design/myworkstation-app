@@ -14,6 +14,8 @@ import {companyModuleState,isCurrentlyActive} from '../middleware/module-access.
 
 const roles=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const PAGE_SIZE=50,MAX_SOURCE_ROWS=20000;
+const ordinaryPaymentToleranceCents=5;
+const ordinaryPaymentTolerancePolicy={basis:'VERIFIED_POSITIVE_PAYMENT_FIVE_CENTS_V1',toleranceCents:ordinaryPaymentToleranceCents};
 const detailFilters=new Map([
  ['ALL',()=>true],
  ...['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW','PURCHASE_LINK_REVIEW'].map(category=>[category,item=>item.categories.includes(category)]),
@@ -396,10 +398,10 @@ export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}
   const canonicalPaymentMetadata=complete&&paymentMetadata.available?await readCanonicalPaymentMetadata(tx,actor.companyId,store.id,facts):{available:false,rows:[]};
   const paymentItems=withPostingProjectionProvenance(withAutomaticReview(automatic.items,automatic.exceptions),ordinary.projections);
   const recovered=normalizeCanonicalPaymentObservations(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,canonicalPaymentMetadata.rows,{companyId:actor.companyId,storeId:store.id,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,toleranceCents:ordinaryPaymentToleranceCents});
   const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),ordinary.facts,{companyId:actor.companyId,storeId:store.id});
   const summary=complete?{...ordinaryCounts(analysis.counts,automatic.items),...purchase.summary}:null;
-  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const fingerprint=hash({ordinaryPaymentTolerancePolicy,ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   // Select from the complete month, then paginate. Global counts, financial
   // observations and all-month pending originals keep their original scope.
@@ -438,9 +440,9 @@ export async function readMonthlyInvoiceAuditRecord(db,actor,input,{now=new Date
   const canonicalPaymentMetadata=paymentMetadata.available?await readCanonicalPaymentMetadata(tx,actor.companyId,store.id,facts):{available:false,rows:[]};
   const paymentItems=withPostingProjectionProvenance(withAutomaticReview(automatic.items,automatic.exceptions),ordinary.projections);
   const recovered=normalizeCanonicalPaymentObservations(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,canonicalPaymentMetadata.rows,{companyId:actor.companyId,storeId:store.id,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable});
+  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,toleranceCents:ordinaryPaymentToleranceCents});
   const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),ordinary.facts,{companyId:actor.companyId,storeId:store.id});
-  const fingerprint=hash({ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const fingerprint=hash({ordinaryPaymentTolerancePolicy,ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(input.fingerprint!==undefined&&input.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν ανοίξεις το παραστατικό.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   const item=purchase.items.find(row=>row.id===input.id);if(!item)fail('Δεν βρέθηκε παραστατικό στον επιλεγμένο μήνα και κατάστημα.',404,'INVOICE_MONTH_AUDIT_RECORD_NOT_FOUND');
   const sourceIds=kind=>new Set(item.sources.filter(source=>source.kind===kind).map(source=>source.id)),documentIds=sourceIds('DOCUMENT'),orderIds=sourceIds('ORDER'),inboundIds=sourceIds('MYDATA'),inboxIds=sourceIds('INBOX');
