@@ -1,3 +1,11 @@
+## 19/11/2026 — Νο02 — άνοιγμα/ανάγνωση PDF στο ίδιο πρόχειρο / ASSIGNED BEFORE SOURCE
+
+Ρητή επείγουσα οδηγία ιδιοκτήτη για απλά PDF myDATA. Ίδιος No02 owner /root, fix/no2-mydata-pdf-reading-bridge. Κενό: XML-only prefill και άνοιγμα υπάρχοντος προχείρου χωρίς explicit PDF source αφήνουν κενό πρόχειρο πριν τον ήδη υπάρχοντα reader. Claim μόνο No02 adapters: scoped read-only readiness + explicit original endpoint response + inbox single-flight/fenced navigation στον υπάρχοντα No04 reader για κενό editable PDF. Μία υπάρχουσα επιβεβαίωση μεταφέρει τις γραμμές· καμία background AI χρήση ή ανεπιτήρητη αποθήκευση. No04 core/prompts/wallet/atomictransfer, provider checks, raw C/D1, payments/stock και άλλοι owners ανέπαφοι. Νέα διόρθωση NOT STARTED/NOT TESTED. [Πριν-source claim](CHANGES/2026-11-19-no2-mydata-pdf-reading-bridge.md).
+
+### Νο02 ανοχή — προηγούμενη τεχνική διόρθωση εγκατεστημένη
+
+#4066/head885d5783 mergedb44532a5. SourceCI44560834092 και mainCI44563163386 SUCCESS5/5, έκαστο6397PASS/0FAIL/3optionalSKIP+8backupPASS· actual nativePG/Chromium ανοχή PASS. Normal deployment44565168381/dep-dbvi48g8v5cc73ancke0 RenderLIVE18:23:40Ελλάδας ωςb44532a5. Η bounded hosted επανεπαλήθευση ανοχής διατηρείται στην κοινή τελική δοκιμή μαζί με το PDF, χωρίς δεύτερη σύνδεση ή συναλλαγή. Τα προηγούμενα limited hosted PASS και το εύρημα ανοχής δεν επαναλαμβάνονται ως νέες επιχειρησιακές πράξεις.
+
 ## 19/11/2026 — Νο02 — ordinary payment ανοχή / ASSIGNED BEFORE SOURCE
 
 Ίδιος owner /root, fix/no2-payment-observation-tolerance. Claim#4065 merged1ed36bdb πριν κώδικα. Υλοποίηση και121pure/reader/D1 regressions+4mountedUI PASS, production build PASS. ExactfullCI/nativePG/Chromium, normal installation και bounded hosted tolerance recheck PENDING.  Νέα περιορισμένη hosted αποδοχή #4063: σωστό draft subset, υπάρχουσες γραμμές, paid pages, αρχικός μήνας/μία πληρωμή και actual αυτόματη συσχέτιση PASS. Χωριστό finding: η ordinary οικονομική ένδειξη απαιτεί μη μηδενική διαφορά εντός της ήδη αποδεκτής payment ανοχής 0,05€. Claim πριν κώδικα: explicit ordinary opt-in5c μετά όλα τα payment proof gates, ακριβή ποσά αμετάβλητα, φανερή ανοχή/UI και cursor policy. Default observer, raw C/D1/writers/stock/fiscal/άλλοι owners ανέπαφοι. Νέα διόρθωση NOT STARTED/NOT TESTED· συνολικό Νο02 OPEN. [Claim και τεκμήρια](CHANGES/2026-11-19-no2-payment-tolerance-claim.md).
