@@ -707,3 +707,8 @@ Same warehouse/invoice conversation, owner-reported FINAL A71942 discrepancy113.
 ## 19/11/2026 — INVOICE-REVIEW-LINKED-LINE-01 — SOURCE CANDIDATE / AWAITING CI
 
 Owner /root retained. #4059 claim merged8396da191. Two UI filter-only changes retain linked tissue/product rows despite metadata substrings; server INFO/economic validation and unmatched metadata exclusion retained. Original actual DOM6/106.91/false6.20 reproduced; candidate7/113.11/0.00, true1.00 difference still warns.3 originalFAIL→3candidatePASS,19focusedPASS, buildPASS. Read-only FINAL A71942 untouched; no writer/status/stock/amount/permission change. Full CI, exact live revision and read-only final check pending; see own checkpoint.
+
+
+## 19/11/2026 11:00 Athens — INVOICE-REVIEW-LINKED-LINE-01 — TECHNICALLY LIVE / READ-ONLY VERIFIED
+
+Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI44490139724 all5SUCCESS, each6353PASS/0FAIL/3optionalSKIP+8backupPASS. Guardedrelease44492043448SUCCESS; Renderdep-dbvbk7jrjlhs73bfs0agLIVE10:59:38Athens exact05b5b350. Publichealth200/exactrevision/HTML200 and delivered main-Dt7Lq7S0.js linked-row guard verified11:00:38. Scoped realDB stillFINAL/7/113.11; actual server+client read-only replay old6/106.91→new7/113.11, raw unchanged. No approval/invoicing/payment/stock action. Legacy OCR panel remains disabled. Actual user-tab visual readback pending; no new manual USER PASS or broader Gate closure. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
