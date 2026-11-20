@@ -13,7 +13,6 @@ const epsilonOriginalFormats = new Map([
   ["epsilondigital3.epsilonnet.gr", "84"],
   ["epsilondigital14.epsilonnet.gr", "160"],
   ["epsilondigital22.epsilonnet.gr", "190"],
-  ["epsilondigital-3rdpartd.epsilonnet.gr", "159"],
   ["epsilondigital-enetgroup.epsilonnet.gr", "107"],
   ["epsilondigital-nbg.epsilonnet.gr", "109"],
   ["epsilondigitalsmart10.epsilonnet.gr", "227"],
