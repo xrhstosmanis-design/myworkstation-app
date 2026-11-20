@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {ArrowLeft,BarChart3,CalendarDays,ChevronRight,FileDown,Filter,Printer,RefreshCw,Search,SlidersHorizontal,WalletCards,X} from "lucide-react";
 import CapitalMovementsModal from "./CapitalMovementsModal.jsx";
 import "./advanced-sales-analytics.css";
@@ -20,20 +20,38 @@ function Donut({rows=[]}){
 
 export default function AdvancedSalesAnalytics({api,stores=[],initialStoreId=""}){
   const [storeId,setStoreId]=useState(initialStoreId||stores[0]?.id||"");
-  const [cash,setCash]=useState(null),[ledger,setLedger]=useState(null),[selected,setSelected]=useState(null),[report,setReport]=useState(null);
+  const [cashState,setCash]=useState(null),[ledgerState,setLedger]=useState(null),[selectedState,setSelected]=useState(null),[reportState,setReport]=useState(null),[loadedStoreId,setLoadedStoreId]=useState("");
   const [drawerOpen,setDrawerOpen]=useState(false),[drawerTab,setDrawerTab]=useState("ledger"),[capitalOpen,setCapitalOpen]=useState(false),[error,setError]=useState(""),[busy,setBusy]=useState(false);
+  const request=useRef(0),currentStore=useRef(storeId);currentStore.current=storeId;
+  const cash=loadedStoreId===storeId?cashState:null,ledger=loadedStoreId===storeId?ledgerState:null;
+  const selected=loadedStoreId===storeId?selectedState:null,report=loadedStoreId===storeId?reportState:null;
   useEffect(()=>{if(!storeId&&stores[0])setStoreId(stores[0].id)},[stores,storeId]);
 
+  const clearData=()=>{setCash(null);setLedger(null);setSelected(null);setReport(null);setLoadedStoreId("");setDrawerOpen(false);setCapitalOpen(false)};
   const load=async(preferredId=null)=>{
-    if(!storeId)return;setBusy(true);setError("");
+    const current=++request.current,ownStore=storeId;
+    clearData();setError("");
+    if(!storeId||!stores.some(store=>store.id===storeId)){setBusy(false);return;}
+    setBusy(true);
     try{
       const [cashData,ledgerData]=await Promise.all([api(`/api/cash-control/stores/${encodeURIComponent(storeId)}/reporting-overview`),api(`/api/transactions/stores/${encodeURIComponent(storeId)}/overview`)]);
-      setCash(cashData);setLedger(ledgerData);
-      const shifts=cashData.recent||[];const next=shifts.find(row=>row.id===(preferredId||selected?.id))||cashData.openSessions?.[0]||shifts[0]||null;setSelected(next);
-      if(next){const from=new Date(next.openedAt).toISOString(),to=new Date(next.closedAt||Date.now()).toISOString();const q=new URLSearchParams({storeId,from,to});setReport(await api(`/api/commerce/sales/advanced-report?${q}`));}else setReport(null);
-    }catch(e){setError(e.message)}finally{setBusy(false)}
+      if(request.current!==current||currentStore.current!==ownStore)return;
+      if(cashData?.store?.id!==ownStore||ledgerData?.store?.id!==ownStore)throw Error("Δεν επιβεβαιώθηκε το κατάστημα της ανάλυσης.");
+      const shifts=cashData.recent||[];
+      const next=shifts.find(row=>row.id===(preferredId||selected?.id))||cashData.openSessions?.[0]||shifts[0]||null;
+      let nextReport=null;
+      if(next){
+        const from=new Date(next.openedAt).toISOString(),to=new Date(next.closedAt||Date.now()).toISOString();
+        const q=new URLSearchParams({storeId,from,to});
+        nextReport=await api(`/api/commerce/sales/advanced-report?${q}`);
+        if(nextReport?.storeId!==ownStore)throw Error("Δεν επιβεβαιώθηκε το κατάστημα της ανάλυσης.");
+      }
+      if(request.current!==current||currentStore.current!==ownStore)return;
+      setLoadedStoreId(ownStore);setCash(cashData);setLedger(ledgerData);setSelected(next);setReport(nextReport);
+    }catch(e){if(request.current===current&&currentStore.current===ownStore){clearData();setError(e.message)}}
+    finally{if(request.current===current&&currentStore.current===ownStore)setBusy(false)}
   };
-  useEffect(()=>{load()},[storeId]);
+  useEffect(()=>{load();return()=>{request.current++}},[storeId,api]);
 
   const shifts=useMemo(()=>cash?.recent||[],[cash]);
   const transactions=useMemo(()=>selected?(cash?.recentTransactions||[]).filter(row=>row.sessionId===selected.id):[],[cash,selected]);
@@ -48,13 +66,24 @@ export default function AdvancedSalesAnalytics({api,stores=[],initialStoreId=""}
   const employees=report?.employees||[];
   const categoryTotal=categories.reduce((sum,row)=>sum+num(row.revenue),0)||1;
 
-  const chooseShift=async row=>{setSelected(row);setDrawerOpen(false);setBusy(true);setError("");try{const q=new URLSearchParams({storeId,from:new Date(row.openedAt).toISOString(),to:new Date(row.closedAt||Date.now()).toISOString()});setReport(await api(`/api/commerce/sales/advanced-report?${q}`))}catch(e){setError(e.message)}finally{setBusy(false)}};
+  const chooseShift=async row=>{
+    const current=++request.current,ownStore=storeId;
+    setSelected(row);setReport(null);setDrawerOpen(false);setBusy(true);setError("");
+    try{
+      const q=new URLSearchParams({storeId,from:new Date(row.openedAt).toISOString(),to:new Date(row.closedAt||Date.now()).toISOString()});
+      const result=await api(`/api/commerce/sales/advanced-report?${q}`);
+      if(request.current!==current||currentStore.current!==ownStore)return;
+      if(result?.storeId!==ownStore)throw Error("Δεν επιβεβαιώθηκε το κατάστημα της ανάλυσης.");
+      setReport(result);
+    }catch(e){if(request.current===current&&currentStore.current===ownStore){clearData();setError(e.message)}}
+    finally{if(request.current===current&&currentStore.current===ownStore)setBusy(false)}
+  };
   const openDetails=row=>{chooseShift(row);setDrawerOpen(true)};
 
   return <div className={`kiosk-sales ${drawerOpen?"with-drawer":""}`}>
     <section className="kiosk-main">
       <div className="kiosk-titlebar"><div><h2>Πωλήσεις</h2><p>Οικεία ροή Kiosk Manager με τις πρόσθετες δυνατότητες MyWorkStation.</p></div><div className="kiosk-top-controls"><label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><button onClick={()=>load(selected?.id)} disabled={busy}><RefreshCw/>{busy?"Φόρτωση":"Ανανέωση"}</button></div></div>
-      {error&&<div className="commerce-error">{error}</div>}
+      {error&&<div className="commerce-error" role="alert">{error}</div>}
       <div className="commerce-notice"><b>ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΑΝΑΛΥΣΗ.</b> Οι Κατηγορίες και οι Εργαζόμενοι προέρχονται μόνο από πραγματικές καταγραφές MyWorkStation. Ακυρώσεις και επιστροφές εμφανίζονται μόνο όταν υπάρχει πραγματική σχετική εγγραφή στο σύστημα.</div>
       <div className="kiosk-subtabs"><button className="active"><CalendarDays/>Βάρδιες σε εξέλιξη</button><button><BarChart3/>Δείκτες απόδοσης</button><button><BarChart3/>Απόδοση ανά ημέρα</button><button><WalletCards/>Διελεύσεις πελατών</button></div>
 

@@ -142,5 +142,6 @@ test("product details expose the exact supplier id from the visible purchase row
   assert.match(route,/d\."supplierId",s\."name" AS "supplierName"/);
   assert.match(route,/o\."supplierId",s\."name"/);
   assert.match(route,/const latestPurchaseWithSupplier=purchases\.find\(row=>row\.supplierId\)/);
-  assert.match(route,/res\.json\(\{supplierCodes,purchases,latestSupplier,suppliers/);
+  assert.match(route,/return \(\{supplierCodes,purchases,latestSupplier,suppliers/);
+  assert.match(route,/res\.json\(await readOwnerProductArchive\(req\.user\.companyId,req\.query,req\.params\.productId/);
 });

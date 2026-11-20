@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import crypto from "node:crypto";
 import {z} from "zod";
@@ -9,11 +10,25 @@ import {videoConnectorStatus} from "../services/video-connector-commands.js";
 import {sendHikvisionPrecheck} from "../services/video-installation-package.js";
 
 const router=Router();
+const videoReadFields=(value,keys)=>Object.fromEntries(keys.filter(key=>value?.[key]!==undefined).map(key=>[key,value[key]]));
 let ready;
 const hash=code=>crypto.createHash("sha256").update(String(code).replace(/[^A-Z0-9]/gi,"").toUpperCase()).digest("hex");
 const makeCode=()=>{const v=crypto.randomInt(0,100000000).toString().padStart(8,"0");return `${v.slice(0,4)}-${v.slice(4)}`};
+async function requireVideoRead(req,storeId){
+ await requireStaffGrant(prisma,req.user,storeId,'video.read');
+ // Preserve the native technical activation as well as the personal store grant.
+ const state=await companyModuleState(req.user.companyId);
+ if(!state?.licenseAllowed||!state.activeModules.includes('VIDEO_EVENTS'))throw staffError(403,'MODULE_DISABLED','Το Video Events δεν είναι ενεργό.');
+}
 async function context(req,res,next){
  try{
+  if(req.user?.staffAccess===true){
+   if(req.method!=='GET'||req.staffGrant?.capability!=='video.read'||req.user.storeId!==req.params.storeId||!/^\/api\/video-admin\/stores\/[^/]+$/.test(String(req.originalUrl||'').split('?')[0]))throw staffError();
+   await requireVideoRead(req,req.params.storeId);
+   const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});
+   if(!store)throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε ενεργό κατάστημα.');
+   req.videoStore=store;return next();
+  }
   ready||=ensureVideoEventsSchema();await ready;
   if(!["OWNER","ADMIN"].includes(req.user?.role))return res.status(403).json({error:"Απαιτείται ιδιοκτήτης ή διαχειριστής."});
   const state=await companyModuleState(req.user.companyId);if(!state?.licenseAllowed||!state.activeModules.includes("VIDEO_EVENTS"))return res.status(403).json({error:"Το Video Events δεν είναι ενεργό."});
@@ -26,6 +41,17 @@ router.use("/stores/:storeId",context);
 router.get("/stores/:storeId/packages/hikvision-precheck",async(req,res,next)=>{try{await sendHikvisionPrecheck(res)}catch(e){next(e)}});
 
 router.get("/stores/:storeId",async(req,res,next)=>{try{
+ if(req.user?.staffAccess===true){
+  const companyId=req.user.companyId,storeId=req.videoStore.id;
+  const [connections,cameras,connectors]=await Promise.all([
+   prisma.$queryRaw`SELECT "provider","protocol","active","timeOffsetSeconds","retentionDays",("privacyNoticeAcknowledgedAt" IS NOT NULL) AS "privacyNoticeAcknowledged","connectionStatus","timeSyncStatus" FROM "StoreVideoConnection" WHERE "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`,
+   prisma.$queryRaw`SELECT "cameraKey","displayName","zone","active","sortOrder" FROM "StoreVideoCamera" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "active"=true ORDER BY "sortOrder"`,
+   prisma.$queryRaw`SELECT "deviceName","version","status","lastSeenAt" FROM "ConnectorDevice" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "connectorType"='VIDEO_DAHUA_READONLY' LIMIT 1`
+  ]);
+  const row=connectors[0],connector=row?{...videoReadFields(row,['deviceName','version','status','lastSeenAt']),online:Boolean(row.lastSeenAt&&Date.now()-new Date(row.lastSeenAt).getTime()<90000&&row.status==='ONLINE')}:null;
+  await requireVideoRead(req,storeId);
+  return res.json({companyId,storeId,store:{id:storeId,name:req.videoStore.name},connection:connections[0]?videoReadFields(connections[0],['provider','protocol','active','timeOffsetSeconds','retentionDays','privacyNoticeAcknowledged','connectionStatus','timeSyncStatus']):{active:false,connectionStatus:'NOT_TESTED',timeSyncStatus:'NOT_CHECKED'},cameras:cameras.map(camera=>videoReadFields(camera,['cameraKey','displayName','zone','active','sortOrder'])),connector});
+ }
  const rows=await prisma.$queryRaw`SELECT "provider","protocol","endpoint","username","active","timeOffsetSeconds","retentionDays",("privacyNoticeAcknowledgedAt" IS NOT NULL) AS "privacyNoticeAcknowledged","connectionStatus","timeSyncStatus",("passwordEnc" IS NOT NULL) AS "passwordConfigured" FROM "StoreVideoConnection" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.videoStore.id} LIMIT 1`;
  const cameras=await prisma.$queryRaw`SELECT "cameraKey","displayName","zone","streamReference","active","sortOrder" FROM "StoreVideoCamera" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.videoStore.id} AND "active"=true ORDER BY "sortOrder"`;
  res.json({store:{id:req.videoStore.id,name:req.videoStore.name},connection:rows[0]||{provider:"DAHUA",protocol:"ONVIF",endpoint:"",username:"",active:false,timeOffsetSeconds:0,retentionDays:30,privacyNoticeAcknowledged:false,connectionStatus:"NOT_TESTED",timeSyncStatus:"NOT_CHECKED",passwordConfigured:false},cameras,connector:await videoConnectorStatus(req.user.companyId,req.videoStore.id)});
@@ -47,5 +73,5 @@ router.put("/stores/:storeId/cameras",async(req,res,next)=>{try{
  res.json({ok:true,cameras:body.cameras});
 }catch(e){next(e)}});
 
-router.use((e,req,res,next)=>{if(res.headersSent)return next(e);if(e?.name==="ZodError")return res.status(400).json({error:"Μη έγκυρα στοιχεία Video Audit.",details:e.issues});console.error("Backoffice video admin:",e);res.status(500).json({error:"Αποτυχία διαχείρισης Video Audit."})});
+router.use((e,req,res,next)=>{if(res.headersSent)return next(e);if(req.user?.staffAccess===true&&[401,403,404].includes(e?.status))return res.status(e.status).json({error:e.message,code:e.code});if(e?.name==="ZodError")return res.status(400).json({error:"Μη έγκυρα στοιχεία Video Audit.",details:e.issues});console.error("Backoffice video admin:",e);res.status(500).json({error:"Αποτυχία διαχείρισης Video Audit."})});
 export default router;

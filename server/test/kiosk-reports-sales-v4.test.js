@@ -23,9 +23,9 @@ test("sales statistics are tenant store and management scoped",()=>{
 
 test("historical cost uses the last approved purchase available at sale time",()=>{
   assert.match(server,/pd\."status"='APPROVED'/);
-  assert.match(server,/pd\."documentDate"<=sa\."occurredAt"/);
+  assert.match(server,/pd\."documentDate"<=CASE WHEN sa\."source"='POS_REVERSAL' THEN original\."occurredAt" ELSE sa\."occurredAt" END/);
   assert.match(server,/ORDER BY pd\."documentDate" DESC,pd\."createdAt" DESC,pd\."id" DESC,pl\."createdAt" DESC,pl\."id" DESC LIMIT 1/);
-  assert.match(server,/profit=netSales-costValue/);
+  assert.match(server,/profit=costValue==null\?null:netSales-costValue/);
 });
 
 test("both sales views scope historical pack corrections to the purchase, store and product",()=>{

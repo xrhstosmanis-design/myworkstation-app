@@ -188,9 +188,7 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
       }}
       onPointerUp={()=>clearTimeout(press.current)}
       onPointerCancel={()=>{clearTimeout(press.current);replyGesture.current=null}} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openMenu(row)}}}>
-      <small>{row.pinned&&<b className="store-chat-pinned-label"><Pin/>ΚΑΡΦΙΤΣΩΜΕΝΗ · </b>}{unread&&<b className="store-chat-new">ΝΕΟ · </b>}<b className="store-chat-category">{labels[row.category]||row.category}</b> · {new Date(row.createdAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}</small><b className="store-chat-sender">Από: {row.senderName||row.senderId}</b>{row.body&&<p>{row.body}</p>}
-      {row.forwarded&&<small className="store-chat-read">Προωθημένο μήνυμα</small>}
-      {row.replyTo&&<blockquote className="store-chat-quote"><b>Απάντηση σε: {row.replyTo.senderName||"Χρήστης"}</b><p>{row.replyTo.body||row.replyTo.attachmentName||"Μήνυμα"}</p></blockquote>}
+      <ChatMessageSummary row={row} unread={unread}/>
       {row.ownMessage&&readerNames(row.deliveries).length>0&&<small className="store-chat-read">Παραδόθηκε σε εφαρμογή: {readerNames(row.deliveries).map(item=>item.name||"Χρήστης").join(", ")}</small>}
       {row.hasAttachment&&(row.attachmentMimeType==="video/mp4"?<div className="store-chat-attachment"><b>Βίντεο</b><small>{Math.ceil(Number(row.attachmentSize||0)/1024)} KB · προσωρινή προβολή</small><ChatVideoAttachment key={`${store.id}:${row.id}`} storeId={store.id} messageId={row.id} sessionKey={authToken()} getToken={authToken}/></div>:<div className="store-chat-attachment"><b>{row.attachmentMimeType?.startsWith("image/")?<Image/>:<FileText/>}{row.attachmentName}</b><small>{Math.ceil(Number(row.attachmentSize||0)/1024)} KB · προσωρινή προβολή</small><div><button type="button" onClick={e=>{e.stopPropagation();viewAttachment(row)}}><Eye/>{previews[row.id]?"Κλείσιμο":"Προβολή"}</button>{permissions.canDownload&&<button type="button" onClick={e=>{e.stopPropagation();downloadAttachment(row)}}><Download/>Κατέβασμα</button>}</div>{previews[row.id]&&<>{row.attachmentMimeType==="audio/wav"?<ChatVoicePreview url={previews[row.id].url} onClose={()=>{URL.revokeObjectURL(previews[row.id].url);setPreviews(values=>{const next={...values};delete next[row.id];return next})}}/>:<img src={previews[row.id].url} alt={row.attachmentName}/>}{previews[row.id].pageCount&&<small>Προεπισκόπηση πρώτης σελίδας · {previews[row.id].pageCount} σελίδες συνολικά</small>}</>}</div>)}
       {unread?<small className="store-chat-open-hint">{openingId===row.id?"Άνοιγμα…":"Νέο μήνυμα"}</small>:readers.length>0&&<small className="store-chat-read">Διαβάστηκε από: {readers.map(reader=>reader.name||reader.email||reader.id).filter(Boolean).join(", ")}</small>}
@@ -235,8 +233,56 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
 
 
 // A store/account change remounts all private drafts, previews and pending interaction state.
-export default function StoreChatPanel(props){
+function StoreChatEditable(props){
  const token=authToken(),binding=useRef({store:props.store.id,company:props.store.companyId,token,key:0});
  if(binding.current.store!==props.store.id||binding.current.company!==props.store.companyId||binding.current.token!==token)binding.current={store:props.store.id,company:props.store.companyId,token,key:binding.current.key+1};
  return <StoreChatContents key={binding.current.key} {...props}/>;
+}
+
+function ChatMessageSummary({row,unread}){return <>
+      <small>{row.pinned&&<b className="store-chat-pinned-label"><Pin/>ΚΑΡΦΙΤΣΩΜΕΝΗ · </b>}{unread&&<b className="store-chat-new">ΝΕΟ · </b>}<b className="store-chat-category">{labels[row.category]||row.category}</b> · {new Date(row.createdAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}</small><b className="store-chat-sender">Από: {row.senderName||row.senderId}</b>{row.body&&<p>{row.body}</p>}
+      {row.forwarded&&<small className="store-chat-read">Προωθημένο μήνυμα</small>}
+      {row.replyTo&&<blockquote className="store-chat-quote"><b>Απάντηση σε: {row.replyTo.senderName||"Χρήστης"}</b><p>{row.replyTo.body||row.replyTo.attachmentName||"Μήνυμα"}</p></blockquote>}
+
+</>}
+export default function StoreChatPanel(props){return props.readOnly?<StoreChatReadView {...props}/>:<StoreChatEditable {...props}/>}
+function StoreChatReadView({api,companyId,store,onClose}){
+ const [topic,setTopic]=useState('GENERAL'),[query,setQuery]=useState(''),[search,setSearch]=useState(null),[refresh,setRefresh]=useState(0),[result,setResult]=useState(null),[loadedScope,setLoadedScope]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const sequence=useRef(0),currentScope=useRef(''),scope=JSON.stringify([companyId,store.id,topic,search,refresh]);currentScope.current=scope;
+ const visible=loadedScope===scope?result:null;
+ const [preview,setPreview]=useState(null),[previewBusy,setPreviewBusy]=useState(''),previewSequence=useRef(0),previewController=useRef(null),previewLocked=useRef(false),previewUrl=useRef(null);
+ const clearPreview=()=>{previewSequence.current++;previewController.current?.abort();previewController.current=null;previewLocked.current=false;if(previewUrl.current){URL.revokeObjectURL(previewUrl.current);previewUrl.current=null}setPreview(null);setPreviewBusy('')};
+ useEffect(()=>{const hide=()=>{if(document.hidden)clearPreview()};document.addEventListener('visibilitychange',hide);window.addEventListener('pagehide',clearPreview);return()=>{document.removeEventListener('visibilitychange',hide);window.removeEventListener('pagehide',clearPreview);previewSequence.current++;previewController.current?.abort();if(previewUrl.current)URL.revokeObjectURL(previewUrl.current)}},[]);
+ const openAttachment=async row=>{
+  if(previewLocked.current)return;
+  const current=++previewSequence.current,own=scope,controller=new AbortController();previewController.current=controller;previewLocked.current=true;if(previewUrl.current){URL.revokeObjectURL(previewUrl.current);previewUrl.current=null}setPreview(null);setPreviewBusy(row.id);setError('');
+  try{
+   const value=await api(`/api/store-chat/stores/${encodeURIComponent(store.id)}/messages/${encodeURIComponent(row.id)}/attachment`,{cache:'no-store',signal:controller.signal});
+   if(controller.signal.aborted||current!==previewSequence.current||own!==currentScope.current)return;
+   const match=/^data:(application\/pdf|image\/(?:jpeg|png|webp)|audio\/wav|video\/mp4);base64,[A-Za-z0-9+/=\r\n]+$/.exec(value?.dataUrl||'');
+   if(value?.companyId!==companyId||value.storeId!==store.id||value.messageId!==row.id||!match||value.mimeType!==match[1]||value.mimeType!==row.attachmentMimeType||value.dataUrl.length>60000000)throw Error('Δεν επιβεβαιώθηκε το συνημμένο της συνομιλίας.');
+   if(value.mimeType==='application/pdf'){
+    const raw=atob(value.dataUrl.slice(value.dataUrl.indexOf(',')+1).replace(/[\r\n]/g,'')),bytes=Uint8Array.from(raw,char=>char.charCodeAt(0)),rendered=await pdfPreview(new Blob([bytes],{type:'application/pdf'}));
+    if(controller.signal.aborted||current!==previewSequence.current||own!==currentScope.current){URL.revokeObjectURL(rendered.url);return}
+    if(previewUrl.current)URL.revokeObjectURL(previewUrl.current);previewUrl.current=rendered.url;
+    setPreview({scope:own,mimeType:'image/jpeg',filename:value.filename,viewUrl:rendered.url,pageCount:rendered.pageCount});
+   }else setPreview({...value,scope:own});
+  }catch(e){if(!controller.signal.aborted&&current===previewSequence.current&&own===currentScope.current){setResult(null);setLoadedScope('');setPreview(null);setError(e.message)}}
+  finally{if(current===previewSequence.current){previewLocked.current=false;setPreviewBusy('')}}
+ };
+
+ useEffect(()=>{
+  const current=++sequence.current,own=scope;clearPreview();setResult(null);setLoadedScope('');setError('');setBusy(true);
+  const params=new URLSearchParams({topic,...(search?{q:search.q,...(search.before?{before:search.before}:{})}:{})});
+  api(`/api/store-chat/stores/${encodeURIComponent(store.id)}/messages${search?'/search':''}?${params}`,{cache:'no-store'}).then(value=>{
+   if(current!==sequence.current||own!==currentScope.current)return;
+   if(value?.companyId!==companyId||value.storeId!==store.id||value.store?.id!==store.id||value.store.companyId!==companyId||value.topic!==topic||!Array.isArray(value.rows)||value.rows.some(row=>chatTopic(row.category)!==topic||(row.companyId!==undefined&&row.companyId!==companyId)||(row.storeId!==undefined&&row.storeId!==store.id)))throw Error('Δεν επιβεβαιώθηκε η συνομιλία του καταστήματος.');
+   if(search&&(value.q!==search.q||(value.nextCursor!==null&&value.nextCursor!==value.rows.at(-1)?.id)))throw Error('Δεν επιβεβαιώθηκε η αναζήτηση συνομιλίας.');
+   setResult(value);setLoadedScope(own);
+  }).catch(e=>{if(current===sequence.current&&own===currentScope.current)setError(e.message)}).finally(()=>{if(current===sequence.current&&own===currentScope.current)setBusy(false)});
+  return()=>{sequence.current++};
+ },[api,scope]);
+ const selectTopic=value=>{clearPreview();sequence.current++;setTopic(value);setQuery('');setSearch(null);setResult(null)};
+ const submit=event=>{event.preventDefault();const q=query.trim().normalize('NFC');if([...q].length<2||[...q].length>120)return;setQuery(q);setSearch({q})};
+ return <div className="shift-overlay"><section className="store-chat-modal"><header><div><small>MYWORKSTATION · CHAT ΚΑΤΑΣΤΗΜΑΤΟΣ</small><h2><MessageCircle/>{store.name}</h2><p>Προβολή μηνυμάτων του επιλεγμένου καταστήματος.</p></div><button type="button" className="store-chat-close" aria-label="Επιστροφή στα καταστήματα" onClick={onClose}><X/></button></header><nav className="store-chat-topics" aria-label="Ενότητες Chat">{CHAT_TOPICS.map(item=><button type="button" key={item.id} aria-pressed={topic===item.id} onClick={()=>selectTopic(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav><div className="store-chat-search is-open"><form onSubmit={submit}><input aria-label="Κείμενο αναζήτησης ιστορικού" maxLength={120} value={query} onChange={event=>{clearPreview();setQuery(event.target.value);if(search){sequence.current++;setResult(null);setLoadedScope('');setBusy(false)}}}/><button disabled={busy||[...query.trim()].length<2}>Αναζήτηση ιστορικού</button></form><button type="button" disabled={busy} onClick={()=>setRefresh(value=>value+1)}>Ανανέωση μηνυμάτων</button>{search&&<button type="button" onClick={()=>{setSearch(null);setQuery('')}}>Τρέχοντα μηνύματα</button>}</div>{error&&<p role="alert" className="store-chat-error">{error}</p>}<div className="store-chat-messages">{busy&&<p role="status">Φόρτωση μηνυμάτων…</p>}{visible?.rows.map(row=><article key={row.id} className={`${row.ownMessage?'is-own ':''}${row.important?'is-important ':''}${row.pinned?'is-pinned ':''}${row.completed?'is-completed ':''}`}><ChatMessageSummary row={row} unread={false}/>{row.hasAttachment&&<div className="store-chat-attachment"><b>{row.attachmentName||'Συνημμένο'}</b><small>{row.attachmentMimeType||''} · {Math.ceil(Number(row.attachmentSize||0)/1024)} KB</small><button type="button" disabled={Boolean(previewBusy)} onClick={()=>openAttachment(row)}>Προβολή συνημμένου</button></div>}{row.completed&&<small className="store-chat-completed">Ολοκληρώθηκε από: {row.completedByName||'Χρήστης'}</small>}{row.taskId&&<small className="store-chat-task-badge">Εκκρεμότητα · {row.taskStatus==='OPEN'?'Ανοιχτή':'Ολοκληρωμένη'}</small>}</article>)}{visible&&!visible.rows.length&&<div className="store-chat-empty"><MessageCircle/><b>Δεν βρέθηκαν μηνύματα.</b><span>{topicLabel(topic)} · {store.name}</span></div>}</div>{preview?.scope===scope&&(preview.mimeType.startsWith('image/')?<><ChatPhotoViewer url={preview.viewUrl||preview.dataUrl} name={preview.filename} onClose={clearPreview}/>{preview.pageCount&&<small>Προεπισκόπηση πρώτης σελίδας · {preview.pageCount} σελίδες συνολικά</small>}</>:<ChatActionSheet label="Προβολή συνημμένου" onClose={clearPreview}>{preview.mimeType==='audio/wav'?<ChatVoicePreview url={preview.dataUrl} onClose={clearPreview}/>:<video src={preview.dataUrl} controls preload="none" controlsList="nodownload noplaybackrate" style={{maxWidth:'100%'}}/>}</ChatActionSheet>)}{visible&&search&&visible.nextCursor&&<button type="button" disabled={busy} onClick={()=>setSearch({q:search.q,before:visible.nextCursor})}>Επόμενα αποτελέσματα</button>}</section></div>;
 }

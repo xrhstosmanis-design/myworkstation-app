@@ -33,10 +33,10 @@ test('read-only shared source binds tenant/store/session, ignores non-explanatio
 });
 
 test('actual cloud route uses signed balance and stale/excessive recheck while preserving original variance and review rows',async()=>{
- const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('router.get("/sessions/:sessionId/investigation"'),end=source.indexOf('router.post("/sessions/:sessionId/reviews"',start),route=source.slice(start,end);
+ const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('export async function readCashSessionInvestigation('),end=source.indexOf('router.post("/sessions/:sessionId/reviews"',start),route=source.slice(start,end);
  let handler,reviews=[explanation(2)];const db={$queryRaw:async strings=>{const sql=strings.join('');return sql.includes('SELECT s.*')?[session]:sql.includes('FROM "CashControlReview"')?reviews:[];}};
  const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:db,normalize:x=>x,assertStoreAccess:()=>{},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),readCashExpenseEvidence,cashExpenseFindings,existingAuditTables:async()=>({}),partitionCashAuditEvents,suspiciousOperatorEvent:()=>true,auditAmount:()=>null,money:v=>Number(v||0),reviewSnapshot:async()=>snapshot,sameSnapshot:sameCashReviewSnapshot,confirmedExplanationBalance};
- new Function(...Object.keys(deps),route)(...Object.values(deps));const invoke=async()=>{let result;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{result=x}});return result;};
+ new Function(...Object.keys(deps),route.replace(/^export /gm,''))(...Object.values(deps));const invoke=async()=>{let result;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{result=x}});return result;};
  let out=await invoke();assert.equal(out.initialVariance,-5);assert.equal(out.unexplainedVariance,-3);assert.equal(out.recheckRequired,false);assert.equal(out.reviews[0].amount,2);
  reviews=[explanation(6)];out=await invoke();assert.equal(out.unexplainedVariance,null);assert.equal(out.status,'RECHECK_REQUIRED');assert.equal(out.reviewBalance.reason,'EXPLANATIONS_EXCEED_VARIANCE');
  reviews=[explanation(2,{snapshotJson:{...snapshot,activeTotal:11}})];out=await invoke();assert.equal(out.unexplainedVariance,null);assert.equal(out.recheckRequired,true);assert.equal(out.initialVariance,-5);

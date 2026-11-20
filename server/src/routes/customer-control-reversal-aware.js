@@ -22,8 +22,9 @@ async function owned(companyId,customerId){const rows=await prisma.$queryRaw`SEL
 router.use(access);
 router.use(async(req,res,next)=>{try{await ensureCompatibility();next()}catch(error){next(error)}});
 
-router.get("/report",async(req,res,next)=>{try{
-  const companyId=req.user.companyId,q=String(req.query.q||"").trim(),activeOnly=String(req.query.activeOnly||"true")!=="false",nonZeroOnly=String(req.query.nonZeroOnly||"false")==="true",text=q?`%${q}%`:null;
+export async function readCustomerControlReport(scopeCompanyId,rawQuery={},partyId=null,{db=prisma}={}){const prisma=db;
+
+  const companyId=scopeCompanyId,q=String(rawQuery.q||"").trim(),activeOnly=String(rawQuery.activeOnly||"true")!=="false",nonZeroOnly=String(rawQuery.nonZeroOnly||"false")==="true",text=q?`%${q}%`:null;
   const rows=await prisma.$queryRaw`
     SELECT c.*,
       COALESCE(v."visits",0)::int AS "visits",
@@ -51,8 +52,11 @@ router.get("/report",async(req,res,next)=>{try{
     ORDER BY c."name" LIMIT 2000`;
   const customers=rows.map(r=>({...r,balance:n(r.balance),discountPercent:n(r.discountPercent),creditLimit:n(r.creditLimit),points:n(r.points),visits:n(r.visits),currentYear:n(r.currentYear),previousYear:n(r.previousYear),returnsCurrentYear:n(r.returnsCurrentYear)}));
   const summary=customers.reduce((a,r)=>{a.count++;a.balance+=r.balance;a.visits+=r.visits;a.currentYear+=r.currentYear;a.returnsCurrentYear+=r.returnsCurrentYear;return a},{count:0,balance:0,visits:0,currentYear:0,returnsCurrentYear:0});
-  res.json({customers,summary,reversalAware:true});
-}catch(error){next(error)}});
+  return ({customers,summary,reversalAware:true});
+
+}
+
+router.get("/report",async(req,res,next)=>{try{res.json(await readCustomerControlReport(req.user.companyId,req.query,null))}catch(error){next(error)}});
 
 router.get("/turnover",async(req,res,next)=>{try{
   const companyId=req.user.companyId,{from,to}=range(req.query),customerId=String(req.query.customerId||"")||null;

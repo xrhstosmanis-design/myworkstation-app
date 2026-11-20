@@ -11,6 +11,7 @@ test('production expense SQL allocates payment dates, cents and tenant boundarie
  assert.ok(['localhost','127.0.0.1','[::1]'].includes(url.hostname));assert.match(url.pathname,/_test$/);assert.equal(process.env.NODE_ENV,'test');
  const {PrismaClient}=await import('@prisma/client');const db=new PrismaClient();
  try{await db.$transaction(async tx=>{
+  await tx.$executeRawUnsafe('CREATE TEMP TABLE "Store" ("id" TEXT PRIMARY KEY,"companyId" TEXT) ON COMMIT DROP');
   await tx.$executeRawUnsafe('CREATE TEMP TABLE "PurchaseDocument" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT,"totalNet" NUMERIC,"totalVat" NUMERIC,"totalGross" NUMERIC,"documentNumber" TEXT) ON COMMIT DROP');
   await tx.$executeRawUnsafe('CREATE TEMP TABLE "StoreTransaction" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"type" TEXT,"amount" NUMERIC,"occurredAt" TIMESTAMPTZ,"attachmentMimeType" TEXT,"attachmentFilename" TEXT,"reversedAt" TIMESTAMPTZ,"description" TEXT,"actorName" TEXT,"supplierName" TEXT,"subtractFromShift" BOOLEAN) ON COMMIT DROP');
   const doc=async(id,net=100,vat=24,gross=124,company='a',store='a1',status='APPROVED')=>tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","status","totalNet","totalVat","totalGross") VALUES (${id},${company},${store},${status},${net},${vat},${gross})`;
@@ -18,7 +19,7 @@ test('production expense SQL allocates payment dates, cents and tenant boundarie
   const source=await readFile(new URL('../src/routes/owner-payments.js',import.meta.url),'utf8');const handlers=new Map();
   const router=Object.fromEntries(['get','post','patch','put','delete','use'].map(method=>[method,(path,...args)=>{if(method==='get')handlers.set(path,args.at(-1));}]));
   const prisma={store:{findFirst:async({where})=>where.companyId==='a'&&where.id==='a1'?{id:'a1'}:null,findMany:async()=>[{id:'a1',name:'Isolated test'}]},$queryRaw:(parts,...values)=>parts.join('').includes('WITH "expenseLinks"')?tx.$queryRaw(parts,...values):Promise.resolve([])};
-  new Function('Router','z','prisma','businessPictureCalendarRange','finishBusinessPictureRow','applyBusinessPictureCostEstimates','collectBusinessPictureMissingCosts',source.replace(/^import .*;\s*$/gm,'').replace(/export default router;?/,''))(()=>router,z,prisma,businessPictureCalendarRange,finishBusinessPictureRow,applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts);
+  new Function('Router','z','prisma','businessPictureCalendarRange','finishBusinessPictureRow','applyBusinessPictureCostEstimates','collectBusinessPictureMissingCosts',source.replace(/^import .*;\s*$/gm,'').replace(/export default router;?/,'').replace(/^export /gm,''))(()=>router,z,prisma,businessPictureCalendarRange,finishBusinessPictureRow,applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts);
   const report=async(from,to=from,role='OWNER',storeId='a1')=>{
    let result;await handlers.get('/business-picture')({user:{companyId:'a',role},query:{storeId,calendarFrom:from,calendarTo:to}},{set(){},json(r){result=r;}},e=>{throw e;});return result;
   };

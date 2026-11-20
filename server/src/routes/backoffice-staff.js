@@ -1,3 +1,4 @@
+import {readFinalPassiveStore} from '../services/backoffice-staff-final-passive-store.js';
 import {inventoryDetailQuery,personalInventoryDetailPage} from '../services/backoffice-staff-inventory-detail.js';
 import {captureInventoryRead,verifyInventoryRead,personalInventoryLine} from '../services/backoffice-staff-inventory-read.js';
 import {inventoryListCursor,personalInventoryListPage} from '../services/backoffice-staff-inventory-list.js';
@@ -7,6 +8,8 @@ import {liveStaff,requireStaffGrant,staffError} from '../services/backoffice-sta
 import {authorizeStaffAdmin,createStaffAccount,updateStaffAccount,verifyStaffLogin} from '../services/backoffice-staff-accounts.js';
 import {periodSchema} from '../services/cash-reconciliation-contract.js';
 import {createCashReconciliationRepository} from '../services/cash-reconciliation-repository.js';
+import {isBackofficeCompanyInstalled} from '../services/backoffice-company-profile.js';
+import {companyAuthorityDescription,readStaffCompanyPolicy,readStaffCompanyDirectory} from '../services/backoffice-staff-company.js';
 
 const failure=(res,error)=>{
   if(error?.name==='ZodError')return res.status(400).json({error:'Έλεγξε username, κωδικό, PIN και δικαιώματα.',code:'STAFF_INVALID_INPUT'});
@@ -51,7 +54,7 @@ async function readRecentBankTransfers(db,companyId,storeId){
     throw error;
   }
 }
-export function createBackofficeStaffRouter({db,authenticate,issueSession,repository=createCashReconciliationRepository(db)}){
+export function createBackofficeStaffRouter({db,authenticate,issueSession,repository=createCashReconciliationRepository(db),readCompanyDirectory=readStaffCompanyDirectory}){
   const router=Router();
   router.use((_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next()});
   router.post('/login',async(req,res)=>{try{
@@ -64,22 +67,39 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     res.json(result.session);
   }catch(error){failure(res,error)}});
   router.use(authenticate);
+  router.get(['/company/passive/staff-policy', '/company/passive/category-products', '/company/passive/vat-departments/:id/products', '/company/passive/product-companies/:id/products', '/company/passive/product-movements/:id', '/company/passive/audit-context/:sourceType/:id', '/company/passive/audit-online'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
+  router.get(['/passive/stores/:storeId/employees', '/passive/stores/:storeId/schedules', '/passive/stores/:storeId/evaluations/:id', '/passive/stores/:storeId/performance/:id', '/passive/stores/:storeId/validation/:id', '/passive/stores/:storeId/operators', '/passive/stores/:storeId/cloud', '/passive/stores/:storeId/proofs', '/passive/stores/:storeId/proofs/:id', '/passive/stores/:storeId/pending-sources','/passive/stores/:storeId/cash-daily-summary','/passive/stores/:storeId/cash-investigation/:id','/passive/stores/:storeId/barcode-price-requests','/passive/stores/:storeId/barcode-sales'],async(req,res)=>{try{res.json(await readFinalPassiveStore(db,req))}catch(error){failure(res,error)}});
+  router.get(['/company/product-center/catalog', '/company/product-center/set-options', '/company/product-center/package-options', '/company/product-center/audience-discounts', '/company/product-center/price-catalog', '/company/product-center/customer-wholesale-prices', '/company/product-center/products/:productId/card', '/company/product-center/products/:productId/barcodes', '/company/product-center/products/:productId/details', '/company/product-center/products/:productId/set', '/company/product-center/products/:productId/stock-package', '/company/product-center/products/:productId/delivery', '/company/product-center/products/:productId/price-history', '/company/product-center/products/:productId/purchases'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
+  router.get(['/company/operations-status/stores','/company/operations-status/observer-status','/company/operations-status/observer-events','/company/operations-status/readiness','/company/operations-status/dispatch-notes','/company/operations-status/dispatch-notes/:id','/company/operations-status/outbox'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
+  router.get(['/company/wholesale-config/customers', '/company/wholesale-config/price-lists', '/company/wholesale-config/price-lists/:id/products', '/company/wholesale-config/site', '/company/wholesale-config/portal-accounts', '/company/wholesale-config/publications', '/company/wholesale-config/sellers', '/company/wholesale-config/sellers/:id/assignments', '/company/wholesale-config/stores'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
+  router.get(['/company/party-control/suppliers', '/company/party-control/supplier-balances', '/company/party-control/supplier-sales', '/company/party-control/suppliers/:partyId/card', '/company/party-control/suppliers/:partyId/ledger', '/company/party-control/suppliers/:partyId/sales', '/company/party-control/suppliers/:partyId/catalog', '/company/party-control/customers', '/company/party-control/customers/:partyId/card', '/company/party-control/customers/:partyId/ledger', '/company/party-control/customers/:partyId/loyalty', '/company/party-control/customers/:partyId/work-card-status', '/company/party-control/customer-receipts', '/company/party-control/customer-fiscal-status'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
+  router.get(['/company/owner-reports/dashboard','/company/owner-reports/master-catalog','/company/owner-reports/financial-stores','/company/owner-reports/financial-suppliers','/company/owner-reports/shifts','/company/owner-reports/shifts/:sessionId/detail','/company/owner-reports/payments','/company/owner-reports/business-picture','/company/owner-reports/audit'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
+  // These exact company reads terminate here after the router's one authentication.
+  router.get(['/company/configuration/pos-terminals','/company/configuration/modifiers/groups','/company/configuration/modifiers/groups/:groupId/items','/company/configuration/modifiers/groups/:groupId/inventory-prices','/company/configuration/preparation/catalog','/company/configuration/preparation/products/:productId','/company/configuration/preparation/modifiers/:modifierId/consumption','/company/configuration/license','/company/configuration/parameters/business','/company/configuration/parameters/banks','/company/configuration/parameters/edelivery','/company/configuration/parameters/pos','/company/configuration/parameters/backoffice','/company/configuration/parameters/shifts','/company/configuration/parameters/customers','/company/configuration/parameters/email','/company/configuration/parameters/other','/company/configuration/parameters/purchases'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
+ router.get('/company/workforce-roles',async(req,res)=>{try{res.json(await readStaffCompanyDirectory(db,req))}catch(error){failure(res,error)}});
   router.get('/me',async(req,res)=>{try{
     const account=await liveStaff(db,req.user);
+    const companyInstalled=await isBackofficeCompanyInstalled(db);
+    const companyCapabilities=companyInstalled?await readStaffCompanyPolicy(db,account.userId,account.companyId):undefined;
     const stores=await db.$queryRaw`SELECT s."id",s."name",g."profile",g."capabilities",g."revision" FROM "BackofficeStaffGrant" g JOIN "Store" s ON s."id"=g."storeId" AND s."companyId"=g."companyId" WHERE g."userId"=${req.user.id} AND g."companyId"=${req.user.companyId} AND g."active"=true AND s."active"=true ORDER BY s."name" LIMIT 101`;
     if(stores.length>100)throw staffError(503,'STAFF_LIMIT','Υπάρχουν περισσότερα καταστήματα από το επιτρεπόμενο όριο.');
-    await liveStaff(db,req.user);
-    res.json({userId:account.userId,companyId:account.companyId,username:account.username,fullName:account.fullName,stores});
+    const after=await liveStaff(db,req.user);
+    if(after.revision!==account.revision)throw staffError();
+    if(companyInstalled&&!await isBackofficeCompanyInstalled(db))throw staffError(503,'STAFF_COMPANY_UNAVAILABLE');
+    res.json({userId:account.userId,companyId:account.companyId,username:account.username,fullName:account.fullName,stores,...(companyInstalled?{revision:account.revision,companyAuthority:companyAuthorityDescription(),companyCapabilities}:{})});
   }catch(error){failure(res,error)}});
   router.get('/admin',async(req,res)=>{try{
-    await authorizeStaffAdmin(db,req.user);
+    const actor=await authorizeStaffAdmin(db,req.user);
+    const companyInstalled=actor.role==='OWNER'&&await isBackofficeCompanyInstalled(db);
     const accounts=await db.$queryRaw`SELECT a."userId" AS "id",a."username",a."active",a."revision",u."fullName" FROM "BackofficeStaffAccount" a JOIN "User" u ON u."id"=a."userId" AND u."companyId"=a."companyId" WHERE a."companyId"=${req.user.companyId} ORDER BY u."fullName" LIMIT 501`;
     const grants=await db.$queryRaw`SELECT "userId","storeId","profile","capabilities","active","revision" FROM "BackofficeStaffGrant" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "userId","storeId" LIMIT 50001`;
+    const companyPolicies=companyInstalled?await db.$queryRaw`SELECT "userId","companyCapabilities","revision" FROM "BackofficeStaffAccount" WHERE "companyId"=${req.user.companyId} ORDER BY "userId" LIMIT 501`:[];
     if(accounts.length>500||grants.length>50000)throw staffError(503,'STAFF_LIMIT');
     const stores=await db.store.findMany({where:{companyId:req.user.companyId,active:true},select:{id:true,name:true},orderBy:{name:'asc'},take:101});
     if(stores.length>100)throw staffError(503,'STAFF_LIMIT');
     await authorizeStaffAdmin(db,req.user);
-    res.json({companyId:req.user.companyId,accounts:accounts.map(a=>({...a,grants:grants.filter(g=>g.userId===a.id)})),stores,profiles:staffProfiles});
+    if(companyInstalled&&(!await isBackofficeCompanyInstalled(db)||companyPolicies.length!==accounts.length||accounts.some(a=>!companyPolicies.some(p=>p.userId===a.id&&p.revision===a.revision))))throw staffError(409,'STAFF_STALE');
+    res.json({companyId:req.user.companyId,accounts:accounts.map(a=>({...a,grants:grants.filter(g=>g.userId===a.id),...(companyInstalled?{companyCapabilities:companyPolicies.find(p=>p.userId===a.id).companyCapabilities}:{})})),stores,profiles:staffProfiles,...(companyInstalled?{companyAuthority:companyAuthorityDescription()}:{})});
   }catch(error){failure(res,error)}});
   router.post('/admin/accounts',async(req,res)=>{try{res.status(201).json(await createStaffAccount(db,req.user,req.body))}catch(error){failure(res,error)}});
   router.put('/admin/accounts/:userId',async(req,res)=>{try{res.json(await updateStaffAccount(db,req.user,req.params.userId,req.body))}catch(error){failure(res,error)}});

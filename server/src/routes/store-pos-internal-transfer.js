@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
@@ -57,6 +58,18 @@ function canAccessStore(user, storeId) {
     : ["OWNER", "ADMIN"].includes(user.role) && !user.staffAccess;
 }
 
+async function canReadTransferHistory(req,storeId){
+  if(req.user?.staffAccess!==true)return canAccessStore(req.user,storeId);
+  if(req.method!=='GET'||req.user.storeId!==storeId||req.staffGrant?.capability!=='stock-transfers.read'||!/^\/api\/store-pos\/stores\/[^/]+\/internal-transfers\/(?:credit|pending-cash-receipts|external-history)$/.test(String(req.originalUrl||'').split('?')[0]))throw staffError();
+  await requireStaffGrant(prisma,req.user,storeId,'stock-transfers.read');
+  return true;
+}
+async function sendTransferHistory(req,res,storeId,items){
+  if(req.user?.staffAccess!==true)return res.json(items);
+  await requireStaffGrant(prisma,req.user,storeId,'stock-transfers.read');
+  return res.json({companyId:req.user.companyId,storeId,items});
+}
+
 router.get(transferPath + "/destinations", async (req, res, next) => {
   const { storeId } = req.params;
   if (!canAccessStore(req.user, storeId)) return res.sendStatus(403);
@@ -75,16 +88,16 @@ router.get(transferPath + "/destinations", async (req, res, next) => {
 
 router.get(transferPath + "/credit", async (req, res, next) => {
   const { storeId } = req.params;
-  if (!canAccessStore(req.user, storeId)) return res.sendStatus(403);
   try {
+  if (!await canReadTransferHistory(req, storeId)) return res.sendStatus(403);
     const transfers = await prisma.$queryRaw`
       SELECT t."id", t."createdAt", origin."name" AS "sourceName",
              COALESCE(destination."name", t."externalDestinationName") AS "destinationName",
              COALESCE(t."destinationStoreId", t."sourceStoreId") = ${storeId} AS "canPayCash",
              amounts.payable::text AS payable
       FROM "PosInternalTransfer" t
-      JOIN "Store" origin ON origin."id" = t."sourceStoreId"
-      LEFT JOIN "Store" destination ON destination."id" = t."destinationStoreId"
+      JOIN "Store" origin ON origin."id" = t."sourceStoreId" AND origin."companyId"=t."companyId"
+      LEFT JOIN "Store" destination ON destination."id" = t."destinationStoreId" AND destination."companyId"=t."companyId"
       LEFT JOIN "PosInternalTransferSettlement" payment ON payment."transferId" = t."id"
       CROSS JOIN LATERAL (
         SELECT SUM(net + ROUND(net * "vatRate" / 100, 2)) AS payable
@@ -97,7 +110,7 @@ router.get(transferPath + "/credit", async (req, res, next) => {
         AND (t."sourceStoreId" = ${storeId} OR t."destinationStoreId" = ${storeId})
       ORDER BY t."createdAt" DESC, t."id"
     `;
-    res.json(transfers);
+    await sendTransferHistory(req,res,storeId,transfers);
   } catch (error) {
     next(error);
   }
@@ -312,19 +325,20 @@ router.post([
 
 router.get(transferPath + "/pending-cash-receipts", async (req, res, next) => {
   const { storeId } = req.params;
-  if (!canAccessStore(req.user, storeId)) return res.sendStatus(403);
-  if (req.user.tokenType === "STORE_OPERATOR") return res.json([]);
   try {
-    res.json(await prisma.$queryRaw`
+  if (!await canReadTransferHistory(req, storeId)) return res.sendStatus(403);
+  if (req.user.tokenType === "STORE_OPERATOR") return res.json([]);
+    const items=await prisma.$queryRaw`
       SELECT t."id", COALESCE(destination."name", t."externalDestinationName") AS "destinationName",
         s."amount"::text AS amount
       FROM "PosInternalTransfer" t
       JOIN "PosInternalTransferSettlement" s ON s."transferId" = t."id"
-      LEFT JOIN "Store" destination ON destination."id" = t."destinationStoreId"
+      LEFT JOIN "Store" destination ON destination."id" = t."destinationStoreId" AND destination."companyId"=t."companyId"
       WHERE t."companyId" = ${req.user.companyId} AND t."sourceStoreId" = ${storeId}
         AND s."method" = 'CASH' AND s."cashReceiptTransactionId" IS NULL
       ORDER BY s."recordedAt" DESC
-    `);
+    `;
+    await sendTransferHistory(req,res,storeId,items);
   } catch (error) {
     next(error);
   }
@@ -383,15 +397,16 @@ router.post(transferPath + "/:transferId/cash-receipt", async (req, res, next) =
 
 router.get(transferPath + "/external-history", async (req, res, next) => {
   const { storeId } = req.params;
-  if (!canAccessStore(req.user, storeId)) return res.sendStatus(403);
   try {
-    res.json(await prisma.$queryRaw`
+  if (!await canReadTransferHistory(req, storeId)) return res.sendStatus(403);
+    const items=await prisma.$queryRaw`
       SELECT "id", "externalDestinationName" AS "destinationName", "createdAt"
       FROM "PosInternalTransfer"
       WHERE "companyId" = ${req.user.companyId} AND "sourceStoreId" = ${storeId}
         AND "externalDestinationName" IS NOT NULL
       ORDER BY "createdAt" DESC, "id" LIMIT 100
-    `);
+    `;
+    await sendTransferHistory(req,res,storeId,items);
   } catch (error) {
     next(error);
   }

@@ -79,7 +79,7 @@ function captureView(value,preview){
 const initial=()=>({data:null,preview:null,receipt:null,captureAck:false,busy:false,ack:false,error:"",notice:"",unavailable:false});
 const date=value=>new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
 
-export default function MonthlyInventoryCapturePanel({api,storeId="",storeName=""}){
+function MonthlyInventoryPersonalPanel({api,storeId="",storeName=""}){
  const context=personalContext(),current=useRef(null),[,refresh]=useState(0),[state,setState]=useState({view:null,...initial()});
  const publish=(view,patch)=>{if(current.current!==view||!view.mounted)return;view.snapshot={...view.snapshot,...patch};setState({view,...view.snapshot})};
  const makeBoundary=view=>{
@@ -157,9 +157,7 @@ export default function MonthlyInventoryCapturePanel({api,storeId="",storeName="
    {shown.notice&&<p role="status">{shown.notice}</p>}
    {!data&&!shown.error&&!busy&&!view.invalid&&<p>Δεν έχει ελεγχθεί ακόμη η κατάσταση.</p>}
    {data&&<div aria-label="Τρέχουσα προσωπική εξουσιοδότηση">
-    <p><strong>{!data.grant?"Δεν υπάρχει προσωπική εξουσιοδότηση.":data.grant.active?"Ενεργή προσωπική εξουσιοδότηση":data.grant.revokedAt?"Ανακλημένη προσωπική εξουσιοδότηση":"Ανενεργή προσωπική εξουσιοδότηση"}</strong></p>
-    {data.grant?.firstScheduledFor&&<p>Αρχική επιλέξιμη προγραμματισμένη ώρα: <strong>{date(data.grant.firstScheduledFor)} (Ελλάδας)</strong>. Δεν είναι πρόβλεψη επόμενης εκτέλεσης.</p>}
-    <p>Ενεργή εξουσιοδότηση δεν επιβεβαιώνει ότι λειτουργεί ο προγραμματιστής ή ότι έγινε πραγματική απογραφή.</p>
+    <MonthlyInventoryGrantStatus data={data}/>
     <div className="mic-actions">
      {!data.grant&&<button type="button" disabled={busy} onClick={()=>perform("create-inactive")}>Δημιουργία ανενεργής εξουσιοδότησης</button>}
      {data.grant&&!data.grant.active&&<button type="button" disabled={busy||!shown.ack} onClick={()=>perform("enable")}>Ενεργοποίηση εξουσιοδότησης</button>}
@@ -187,4 +185,42 @@ export default function MonthlyInventoryCapturePanel({api,storeId="",storeName="
    </div>
   </>}
  </section>;
+}
+
+// Status presentation is shared; personal grant management keeps its own actor boundary.
+function MonthlyInventoryGrantStatus({data,personal=true}){return <>
+    <p><strong>{!data.grant?(personal?"Δεν υπάρχει προσωπική εξουσιοδότηση.":"Δεν υπάρχει αποθηκευμένη εξουσιοδότηση μηνιαίας παρατήρησης για αυτό το κατάστημα."):data.grant.active?(personal?"Ενεργή προσωπική εξουσιοδότηση":"Ενεργή καταχωρισμένη εξουσιοδότηση"):data.grant.revokedAt?(personal?"Ανακλημένη προσωπική εξουσιοδότηση":"Ανακλημένη καταχωρισμένη εξουσιοδότηση"):(personal?"Ανενεργή προσωπική εξουσιοδότηση":"Ανενεργή καταχωρισμένη εξουσιοδότηση")}</strong></p>
+    {data.grant?.firstScheduledFor&&<p>Αρχική επιλέξιμη προγραμματισμένη ώρα: <strong>{date(data.grant.firstScheduledFor)} (Ελλάδας)</strong>. Δεν είναι πρόβλεψη επόμενης εκτέλεσης.</p>}
+    <p>Ενεργή εξουσιοδότηση δεν επιβεβαιώνει ότι λειτουργεί ο προγραμματιστής ή ότι έγινε πραγματική απογραφή.</p>
+
+ {!personal&&data.grant?.firstIssueMonth&&<p>Αρχικός μήνας έκδοσης: <strong>{data.grant.firstIssueMonth}</strong>.</p>}
+ {!personal&&data.grant?.grantedAt&&<p>Καταχωρισμένη έγκριση: {date(data.grant.grantedAt)} (Ελλάδας).</p>}
+ {!personal&&data.grant?.revokedAt&&<p>Καταχωρισμένη ανάκληση: {date(data.grant.revokedAt)} (Ελλάδας).</p>}
+</>}
+export default function MonthlyInventoryCapturePanel(props){return props.readOnly?<MonthlyInventoryStatusReadView {...props}/>:<MonthlyInventoryPersonalPanel {...props}/>}
+function MonthlyInventoryStatusReadView({api,companyId,storeId='',storeName=''}){
+ const [result,setResult]=useState(null),[loadedScope,setLoadedScope]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const sequence=useRef(0),controller=useRef(null),currentScope=useRef(''),scope=JSON.stringify([companyId,storeId]);currentScope.current=scope;
+ const data=loadedScope===scope?result:null;
+ const load=async()=>{
+  const current=++sequence.current,own=scope;controller.current?.abort();const aborter=new AbortController();controller.current=aborter;setResult(null);setLoadedScope('');setError('');
+  if(!text(companyId)||!text(storeId)){setBusy(false);return}
+  setBusy(true);
+  try{
+   const value=await api('/api/monthly-inventory-capture/status?'+new URLSearchParams({storeId}),{cache:'no-store',signal:aborter.signal});
+   if(aborter.signal.aborted||current!==sequence.current||own!==currentScope.current)return;
+   if(!keys(value,['companyId','storeId','readOnly','status','grant'])||value.companyId!==companyId||value.storeId!==storeId||value.readOnly!==true||value.status!=='STATE')throw Error('Δεν επιβεβαιώθηκε η κατάσταση μηνιαίας παρατήρησης του καταστήματος.');
+   const grant=value.grant;
+   if(grant!==null){
+    if(!keys(grant,['active','firstIssueMonth','firstScheduledFor','grantedAt','revokedAt'])||typeof grant.active!=='boolean'||(grant.firstIssueMonth!==null&&!month(grant.firstIssueMonth))||['firstScheduledFor','grantedAt','revokedAt'].some(key=>grant[key]!==null&&!msStamp(grant[key]))||grant.active&&grant.revokedAt!==null)throw Error('Δεν επιβεβαιώθηκε η καταχωρισμένη εξουσιοδότηση του καταστήματος.');
+    const activation=[grant.firstIssueMonth,grant.firstScheduledFor,grant.grantedAt],activated=activation.every(value=>value!==null),emptyActivation=activation.every(value=>value===null);
+    if(!activated&&!emptyActivation||grant.active&&!activated||activated&&(!validPeriod(grant.firstIssueMonth,grant.firstScheduledFor)||Date.parse(grant.firstScheduledFor)<Date.parse(grant.grantedAt)||grant.revokedAt!==null&&Date.parse(grant.revokedAt)<Date.parse(grant.grantedAt)))throw Error('Δεν επιβεβαιώθηκε η καταχωρισμένη εξουσιοδότηση του καταστήματος.');
+
+   }
+   setResult(value);setLoadedScope(own);
+  }catch(e){if(!aborter.signal.aborted&&current===sequence.current&&own===currentScope.current)setError(e.message||'Η κατάσταση δεν επιβεβαιώθηκε.')}
+  finally{if(current===sequence.current&&own===currentScope.current)setBusy(false)}
+ };
+ useEffect(()=>{load();return()=>{sequence.current++;controller.current?.abort()}},[api,companyId,storeId]);
+ return <section className="monthly-inventory-capture" aria-label="Κατάσταση μηνιαίας παρατήρησης αποθήκης" style={{padding:18,minWidth:0,overflowWrap:'anywhere'}}><h3>Κατάσταση μηνιαίας παρατήρησης αποθήκης</h3><p>Κατάστημα: <strong>{storeName||storeId||'Καμία επιλογή'}</strong></p><p>Η πρόσβαση αυτή αφορά μόνο την προβολή της καταχωρισμένης κατάστασης.</p><button type="button" disabled={busy||!storeId||!companyId} onClick={load}>Έλεγχος κατάστασης</button>{busy&&<p role="status">Έλεγχος σε εξέλιξη…</p>}{error&&<p role="alert">{error}</p>}{data&&<div aria-label="Καταχωρισμένη εξουσιοδότηση καταστήματος"><MonthlyInventoryGrantStatus data={data} personal={false}/></div>}</section>;
 }

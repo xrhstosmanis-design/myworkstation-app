@@ -1,0 +1,1124 @@
+{
+  "format": "MWS_COMPANY_CURRENT_CAPTURE_DEFAULT_REVIEW_V1",
+  "policy": "SOURCE_DERIVED_DEFAULTS_ONLY_NO_LIVE_ROW_OR_SCHEMA_ADMISSION",
+  "sourceFiles": [
+    {
+      "path": "server/src/backoffice-staff-bootstrap.js",
+      "sha256": "2c9cb29576a050c0cc938cbc5931f5e184ea043869b1ff77edb6678ccd8a3b42"
+    },
+    {
+      "path": "server/src/services/ai-owner-wallet-schema.js",
+      "sha256": "3b06c5f0db1d13e548d426064d44c0e1f5db1c896ae81f0329f365d20e05aafa"
+    },
+    {
+      "path": "server/src/services/ftext-cash-schema.js",
+      "sha256": "37e1e19b339281b38ab6a52bb63db17121741ce19a5fed0a97b59dfd8199ff27"
+    },
+    {
+      "path": "server/src/chat-interactions.mjs",
+      "sha256": "d22b4099f37b71d4ef4472b390046c01ac1da9f1cd8fb153d97a169a90fa7577"
+    },
+    {
+      "path": "server/src/services/monthly-inventory-snapshot-schema.js",
+      "sha256": "878572e5678aa1e43650dfdd2d41204c1c8e783e9d8ae79ad8c9344f6839927c"
+    },
+    {
+      "path": "server/src/services/monthly-inventory-capture-schema.js",
+      "sha256": "933d7c73cad16f4851a8438e33947f3cfcb015ab701a72cb1dba7a0c79a918ea"
+    }
+  ],
+  "tables": {
+    "AiOwnerWallet": {
+      "source": "server/src/services/ai-owner-wallet-schema.js",
+      "createSqlSha256": "d6db3556fe0e12f31a4856ad59ae62621de105ed52938afaac255c649ecb0a71",
+      "columns": [
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "enabled",
+          "defaultExpression": "false",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "emailEnabled",
+          "defaultExpression": "false",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "notificationOwnerId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "balanceMicros",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reservedMicros",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lastCreditMicros",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cycleId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "version",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "AiOwnerWalletAudit": {
+      "source": "server/src/services/ai-owner-wallet-schema.js",
+      "createSqlSha256": "d6576b73257f5487de3ed568df7247312fae4fe41069bb57da1f3ba6ae1899de",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actorId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "event",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "detail",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "AiOwnerWalletEntry": {
+      "source": "server/src/services/ai-owner-wallet-schema.js",
+      "createSqlSha256": "849afcaf81b194dda6609429790a9059c5f78cd83f8ef398af8fae262d8d579c",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "kind",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reference",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "creditedMicros",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reservedMicros",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "chargedMicros",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "feature",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "tariff",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "usage",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actorId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "resolutionReference",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "settledAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "AiOwnerWalletNotice": {
+      "source": "server/src/services/ai-owner-wallet-schema.js",
+      "createSqlSha256": "559f7cfce9993244c6c15a5b88e5841654bb9437c8e2e596dfb20573ab77c243",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "kind",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cycleId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "balanceMicros",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "amountMicros",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ownerId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "email",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "emailStatus",
+          "defaultExpression": "'DISABLED'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "attemptedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "messageId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "BackofficeStaffAccount": {
+      "source": "server/src/backoffice-staff-bootstrap.js",
+      "createSqlSha256": "976d6668e4ab40b01afd6140be41239167f74aba186b7a2b5f4f605e55f23415",
+      "columns": [
+        {
+          "name": "userId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "username",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "pinHash",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "active",
+          "defaultExpression": "true",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "defaultExpression": "1",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "BackofficeStaffAudit": {
+      "source": "server/src/backoffice-staff-bootstrap.js",
+      "createSqlSha256": "84fb87cc6e5c6c7c523e317f6c225b7a5d7ae46469250ae9d1bef8aa91397a78",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actorId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "targetUserId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "event",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "detail",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "BackofficeStaffGrant": {
+      "source": "server/src/backoffice-staff-bootstrap.js",
+      "createSqlSha256": "2793337df86a40801d6527915a09c6419fa5bb4e8ecd25f283877dc50e6118e3",
+      "columns": [
+        {
+          "name": "userId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profile",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "capabilities",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "active",
+          "defaultExpression": "true",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "defaultExpression": "1",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "BackofficeStaffLoginGuard": {
+      "source": "server/src/backoffice-staff-bootstrap.js",
+      "createSqlSha256": "2c6d88aecff8a606ac76fa786be7a0009ad461ed57a8a3a5726289a86e161990",
+      "columns": [
+        {
+          "name": "key",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "attempts",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "windowStartedAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "blockedUntil",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "FtextCashRequest": {
+      "source": "server/src/services/ftext-cash-schema.js",
+      "createSqlSha256": "817690f883c89fd9b5dc77c3e03b759c8703457cc503d86690be3cf38bb5c956",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "terminalPos",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "fiscalDeviceCode",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "serialNumber",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "clientTransactionId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requestHash",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "settingsHash",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lifecycleGeneration",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "sessionId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "plan",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "checkoutJson",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "total",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "defaultExpression": "'PREPARED'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "claimedByDeviceId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "claimedTokenVersion",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "dispatchedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "result",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "resultHash",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "saleId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "MonthlyInventoryCaptureGrant": {
+      "source": "server/src/services/monthly-inventory-capture-schema.js",
+      "createSqlSha256": "92201e7fe9cb0e5ecc325a3af7873e686a8092d2c03fb336f55dd3bd60f4c4d4",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "purpose",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "purposeVersion",
+          "defaultExpression": "1",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lifecycleGeneration",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "defaultExpression": "1",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "active",
+          "defaultExpression": "false",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "delegatorUserId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "delegatorSessionVersion",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "activationId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "firstIssueMonth",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "firstScheduledFor",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdByUserId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "clock_timestamp()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "grantedByUserId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "grantedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revokedByUserId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revokedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedByUserId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedAt",
+          "defaultExpression": "clock_timestamp()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "MonthlyInventoryCaptureJob": {
+      "source": "server/src/services/monthly-inventory-capture-schema.js",
+      "createSqlSha256": "3d083d18687167d523e277b7a8f8f2f06b2676310e12cc09c56024062edb8f30",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "purpose",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "purposeVersion",
+          "defaultExpression": "1",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lifecycleGeneration",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "issueMonth",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "scheduledFor",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "grantId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "grantRevision",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "activationId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "defaultExpression": "'PENDING'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "attempt",
+          "defaultExpression": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "leaseTokenHash",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "leaseExpiresAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "claimedSourceRevision",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "holdReason",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "nextAttemptAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "createdAt",
+          "defaultExpression": "clock_timestamp()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedAt",
+          "defaultExpression": "clock_timestamp()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "MonthlyInventorySnapshot": {
+      "source": "server/src/services/monthly-inventory-snapshot-schema.js",
+      "createSqlSha256": "958ec4943ca56a0c40d6685ff11cfa231d92ae73a6d19d584c572e59674e4f34",
+      "columns": [
+        {
+          "name": "id",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lifecycleGeneration",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "issueMonth",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "scheduledFor",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "transactionStartedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "sourceReadStartedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "sourceReadFinishedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "sourceObservedAt",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storedAt",
+          "defaultExpression": "clock_timestamp()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "observationStatus",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "delayMs",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "sourceRevision",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "formatVersion",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "valuationBasis",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "sourceHash",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "payloadHash",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "candidateJsonText",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storedBytesSha256",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "sourceCoverage",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "capturePrincipal",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "StoreChatDelivery": {
+      "source": "server/src/chat-interactions.mjs",
+      "createSqlSha256": "b29f3bf5ff365c5b52c71fc858092c08af7666281e9685b5e3a41d35f1b2a24d",
+      "columns": [
+        {
+          "name": "messageId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "userId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "deliveredAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    },
+    "StoreChatReaction": {
+      "source": "server/src/chat-interactions.mjs",
+      "createSqlSha256": "0b46fd3ee12c93672f70e0921ee365d30c65831bd881cb6b633b5fd7e559b460",
+      "columns": [
+        {
+          "name": "messageId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "userId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "companyId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "storeId",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reaction",
+          "defaultExpression": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updatedAt",
+          "defaultExpression": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ]
+    }
+  }
+}
