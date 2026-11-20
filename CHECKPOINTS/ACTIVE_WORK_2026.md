@@ -1,6 +1,6 @@
 ## 20/11/2026 — SHIFT-CLOSE-SIGNED-LEDGER-01 — bounded pre-source claim
 
-Owner /root, fix/shift-close-return-totals-20261120. Real LAB normal close rejects negative cashSales from returns before transaction. Only bounded close-schema signed ledger fields plus regression and necessary pinned hash; preserve physical-count/PIN/tenant/authoritative-ledger/pending guards and other No5/shared owners. [Claim and exact evidence](CHANGES/2026-11-20-shift-close-signed-ledger.md). CLAIM_ONLY / source NOT STARTED / normal close LAB FAIL.
+Owner /root, fix/shift-close-return-totals-20261120. Real LAB normal close rejects negative cashSales from returns before transaction. Only bounded close-schema signed ledger fields plus regression and necessary pinned hash; preserve physical-count/PIN/tenant/authoritative-ledger/pending guards and other No5/shared owners. [Claim and exact evidence](CHANGES/2026-11-20-shift-close-signed-ledger.md). Claim4107 merged a2929e8 before source. Source candidate:26targeted+32nativePASS/0FAIL; signed schema only, physical counts/credentials/authoritative transaction unchanged. FullCI/deploy and normalLAB close OPEN.
 
 ## 20/11/2026 — Νο02 — ordinary verified original attachment / ROOT REVIEW APPROVED — AWAITING FULL SOURCE CI
 
