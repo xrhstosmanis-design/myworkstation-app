@@ -47,7 +47,7 @@ test('one ReadCommitted preparation transaction persists exact payload and slot,
  assert.equal(result.slots.length,1);assert.equal(result.slots[0].record.status,'PENDING');assert.equal(h.events.filter(v=>v==='begin').length,1);assert.equal(h.events.at(-1),'commit');assert.equal(sends,0);assert.equal(h.payloads.size,1);
 });
 test('actual dispatcher/repository/driver sends only after committed attempt and cannot resend terminal slot',async()=>{
- const h=fixture();let sends=0;const d=createAutomaticReportDispatcher({...h,clock:()=>NOW,sendMail:async m=>{sends++;assert.equal([...h.slots.values()][0].status,'ATTEMPTING');assert.equal(h.events.at(-1),'commit');assert.match(m.subject,/ΠΡΟΣΩΡΙΝΗ/);return{accepted:[m.to],rejected:[],messageId:'synthetic'}}});
+ const h=fixture();let sends=0;const d=createAutomaticReportDispatcher({...h,clock:()=>NOW,sendMail:async m=>{sends++;assert.equal([...h.slots.values()][0].status,'ATTEMPTING');assert.equal(h.events.at(-1),'commit');assert.match(m.subject,/Προσωρινή/);return{accepted:[m.to],rejected:[],messageId:'synthetic'}}});
  const result=await d.dispatch(scope);assert.equal(result.attempted,1);assert.equal(result.outcomes[0].outcome,'ACCEPTED');assert.equal([...h.slots.values()][0].status,'ACCEPTED');await d.dispatch(scope);assert.equal(sends,1);
 });
 test('default OFF and source HOLD cannot reach SMTP',async()=>{
