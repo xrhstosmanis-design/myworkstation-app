@@ -94,7 +94,6 @@ test("only verified provider host and path combinations are allowed for inbound 
     `https://epsilondigital3.epsilonnet.gr/fd/${short}:84`,
     `https://epsilondigital14.epsilonnet.gr/fd/${short}:160`,
     `https://epsilondigital22.epsilonnet.gr/fd/${short}:190`,
-    `https://epsilondigital-3rdpartd.epsilonnet.gr/fd/${short}:159`,
     `https://epsilondigital-enetgroup.epsilonnet.gr/fd/${short}:107`,
     `https://epsilondigital-nbg.epsilonnet.gr/fd/${short}:109`,
     `https://epsilondigitalsmart10.epsilonnet.gr/fd/${short}:227`,
