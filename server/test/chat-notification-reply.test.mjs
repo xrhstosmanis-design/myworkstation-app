@@ -1,3 +1,4 @@
+import {chatAccessRevoked} from "../src/chat-access.mjs";
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -15,6 +16,7 @@ test('notification replies inherit scoped parent category and deduplicate exact 
     $transaction:handler=>handler(db),
     $queryRaw:async(strings,...values)=>{
       const sql=strings.join('?');
+      if(sql.includes('StoreChatAccessRevocation')) return values[2]==='revoked'?[{blocked:1}]:[];
       if(sql.includes('FOR KEY SHARE'))return values.every((value,i)=>[parent.id,parent.companyId,parent.storeId][i]===value)?[parent]:[];
       if(sql.includes('INSERT INTO "StoreChatMessage"')){
         if(messages.some(row=>row[0]===values[0]))return [];
@@ -29,8 +31,8 @@ test('notification replies inherit scoped parent category and deduplicate exact 
   const router={get(){},post(path,callback){if(path.endsWith('/notification-reply'))handler=callback},put(){},patch(){}};
   const source=readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8')
     .replace(/^import .*;$/gm,'').replace('export async function','async function').replace('export default router;','return router;');
-  new Function('express','prisma','crypto','isPlatformSuperAdmin','chatMessageId','chatSendContext','categoryTopic','sendStoreChatPush','nativePushStatus','mountChatGroups',source)(
-    {Router:()=>router},db,crypto,()=>false,chatMessageId,chatSendContext,categoryTopic,async value=>pushed.push(value),()=>({configured:false}),()=>{}
+  new Function('express','prisma','crypto','isPlatformSuperAdmin','chatMessageId','chatSendContext','categoryTopic','sendStoreChatPush','nativePushStatus','mountChatGroups','chatAccessRevoked',source)(
+    {Router:()=>router},db,crypto,()=>false,chatMessageId,chatSendContext,categoryTopic,async value=>pushed.push(value),()=>({configured:false}),()=>{},chatAccessRevoked
   );
   const requestId=crypto.randomUUID();
   async function request({body='Απάντηση',messageId=parent.id,user=owner}={}){
@@ -40,6 +42,7 @@ test('notification replies inherit scoped parent category and deduplicate exact 
   }
   assert.equal((await request({user:{...owner,companyId:'other'}})).code,404);
   assert.equal((await request({messageId:'foreign-parent'})).code,404);
+  assert.equal((await request({user:{...owner,id:'revoked'}})).code,403);
   assert.equal((await request({body:'  '})).code,400);
   assert.equal(messages.length,0);
   const first=await request();
