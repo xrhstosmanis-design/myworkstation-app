@@ -805,3 +805,18 @@ Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI444
 ## 20/11/2026 07:19 EET — Warehouse/invoice review — compatibility checked / grouped LAB pending
 
 Same /root owner and three existing warehouse/invoice task IDs retained. Main a020ce84 targeted Node20 suite:32PASS/0FAIL/1nativePostgreSQLSKIP. Compact CSS/taxonomy helpers and A71942 filter repair retained; changed surrounding No5 archive/store authority tested with actual mounted fixtures. No source change or hosted business/login action. Prior #4040/#4061 native/LIVE proofs reused, no transaction repeated. No5 deployment remains its owner's scope. One combined geometry/taxonomy/markup role session is specified in CHANGES/2026-11-20-warehouse-invoice-common-readiness.md; no new manual PASS.
+
+
+## 2026-11-19 · Νο15 · Ενιαία τελική παρτίδα — AWAITING FULL CI / LAB
+
+Ίδια ανάθεση /root TABLE_SERVICE, τρεις βοηθοί σε ξεχωριστά worktrees: ανάκτηση αβέβαιης κινητής αποστολής μετά refresh, ατομική ένταξη νέου KDS δελτίου στην υπάρχουσα ουρά εκτύπωσης, αναστρέψιμη fiscal mapping επιλογή χωρίς αλλαγή hostedρύθμισης. Το χρεώσιμο KDS READY έκλεισε πραγματικά19/11,00:04Ελλάδας με UIκαιSQL· παλιότερα pendingτου ίδιου δελτίου υπερκαλύπτονται. Οι υπάρχουσες PASSπράξεις δεν επαναλαμβάνονται. [Checkpoint](CHANGES/2026-11-19-table-service-final-batch.md). Πλήρες CI/deploy/κοινή φυσική αποδοχή εκκρεμούν· συνολικόOPEN.
+
+
+### Νο15 · 20/11/2026 · επανεκκίνηση ακριβούς CI μετά διόρθωση fixture
+
+Ίδιος υπεύθυνος /root TABLE_SERVICE, Draft4051. CI44411163560:6292PASS/1FAIL/3SKIP· μοναδικό FAIL mounted SET fixture χωρίς εταιρεία/χειριστή. Προστέθηκαν μόνο συνθετικές ταυτότητες, με SET/POS και noPOST assertions αμετάβλητα. Node20:27στοχευμέναPASS/0FAIL/0SKIP. Main4c25a5a27/No5δικαιώματα και readStatus διατηρήθηκαν μαζί με νέα printqueue. Νέο πλήρες CI/merge/deploy εκκρεμούν, χωρίς hosted μεταβολές ή επανάληψη παλιών PASS. [Συνέχεια checkpoint](CHANGES/2026-11-19-table-service-final-batch.md).
+
+
+### Νο15 · 20/11/2026 · COMPANY binding και native print fixture
+
+Draft4051/root ίδιο scope. CI44725877823:6894PASS/12FAIL/4SKIP, τέσσερα άλλα jobsSUCCESS. ΈντεκαFAILαπό ένα παλιό sourcehash και ένα από null nativefixture request. Ενημερώθηκε μόνο το ανασκοπημένο table-route digest στο ανενεργόCOMPANY packet· guards/profiles/activation αμετάβλητα.23στοχευμέναPASS/0FAIL/2υποδομήςSKIP, συν actualPG17.12 native print PASS1/0FAIL/0SKIP και έλεγχος middleware predicate. Main8e3d91905και No14handoff διατηρήθηκαν. Νέο πλήρες CI πριν merge/deploy· καμία hosted πράξη και καμία επανάληψη παλιών LABPASS. [Checkpoint](CHANGES/2026-11-19-table-service-final-batch.md).

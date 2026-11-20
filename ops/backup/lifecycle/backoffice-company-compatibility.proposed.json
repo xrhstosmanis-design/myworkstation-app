@@ -80,7 +80,7 @@
     "ops/backup/lifecycle/backoffice-company-current-columns.proposed.json": "76f09a5d414c0e793137c3c4c5a1c043dab57c29c2e4dcb310452fe3568234ee",
     "server/src/routes/purchase-orders.js": "9ba31f1de7b32aa92a0eef1cf8f9ce612377d2a6fda1e2d94fdd44ddcdf1266a",
     "server/src/commercial-bootstrap.js": "91069d5664d0ec0f1c04c665a3340dfa1546e01dd3c4db677db51f03ca121749",
-    "server/src/routes/store-table-orders.js": "b1300a7668938f914e10e66703c0a921bed0f21881d794c911f5e1598e7b20cd",
+    "server/src/routes/store-table-orders.js": "a01f3bacac575dcd88935659a08e3b1a0177a6cb3da49058f804bbb81b0c4bea",
     "ops/backup/lifecycle/backoffice-company-current-defaults.proposed.json": "aa2b9527cd6738e3d2c3a36b3c071838bf7c408c36e140d7b610adf0fd726be2",
     "server/scripts/backoffice-company-current-default-review.mjs": "4e3cbad391b9f79a105950b7c51e8aa13a9482fd7d11d7e083786e3b1307ccc2",
     "server/src/services/ftext-cash-schema.js": "37e1e19b339281b38ab6a52bb63db17121741ce19a5fed0a97b59dfd8199ff27",
