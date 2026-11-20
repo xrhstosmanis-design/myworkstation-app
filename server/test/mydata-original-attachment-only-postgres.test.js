@@ -137,6 +137,7 @@ test('native ordinary standalone original attaches a real verified PDF only; rep
    `UPDATE "MyDataInboundDocument" SET "invoiceType"='1.1' WHERE "id"='delivery'`,
    `UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||'{"originalJobId":null}'::jsonb WHERE "id"='delivery'`,
    `UPDATE "MyDataInboundDocument" SET "rawPayload"=jsonb_set("rawPayload",'{xml}','"changed XML"') WHERE "id"='delivery'`,
+   `UPDATE "MyDataInboundDocument" SET "rawPayload"=jsonb_set("rawPayload",'{xml}',jsonb_build_array("rawPayload"->'xml')) WHERE "id"='delivery'`,
    `UPDATE "MyDataInboundDocument" SET "totalGross"=.004 WHERE "id"='delivery'`,
    `UPDATE "MyDataInboundDocument" SET "storeId"='control' WHERE "id"='delivery'`,
    `UPDATE "DocumentInbox" SET "status"='PROCESSED' WHERE "id"='delivery-inbox'`,
@@ -146,6 +147,16 @@ test('native ordinary standalone original attaches a real verified PDF only; rep
    await assert.rejects(acquire(f.db,async row=>{called++;const pdf=await download(row);await f.other.$executeRawUnsafe(sql);return pdf;}),e=>e.status===409,sql);
    const after=await state(f.db);assert.equal(called,1);assert.equal(after.attachments,0);assert.equal(after.jobs,0);assert.equal(after.orders,0);assert.equal(after.inbox.attachmentId,null);assert.equal(await f.digest(),before);
   }finally{await f.close();}}
+ });
+ await t.test('initial non-string XML refuses before the provider is called',async()=>{
+  for(const value of [[xml],{xml},null,93]){
+   const f=await fixture();try{
+    await f.db.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=jsonb_set("rawPayload",'{xml}',${JSON.stringify(value)}::jsonb) WHERE "id"='delivery'`;
+    const before=await f.digest(),sourceBefore=await state(f.db);let calls=0;
+    await assert.rejects(acquire(f.db,()=>{calls++;throw Error('Invalid XML shape must not reach provider');}),e=>e.status===409);
+    assert.equal(calls,0);assert.deepEqual(await state(f.db),sourceBefore);assert.equal(await f.digest(),before);
+   }finally{await f.close();}
+  }
  });
  await t.test('missing catalog, raw pointers, orphan and foreign links refuse attachment under the lock',async()=>{
   const cases=[

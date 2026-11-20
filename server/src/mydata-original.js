@@ -100,8 +100,9 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
 // Ordinary UI only. The existing false/bulk and invoice paths above retain
 // their draft/worker contract. No job, purchase or financial writer is called.
 async function acquireStandaloneOriginal(prisma,source,scope,download){
+  if(typeof source.rawPayload?.xml!=='string')throw error('Τα στοιχεία ταυτότητας του πρωτοτύπου χρειάζονται χειροκίνητο έλεγχο.');
   const pdf=source.attachmentId?null:await download(source);
-  const identity=row=>JSON.stringify(['id','companyId','storeId','inboxId','mark','issuerVat','counterpartVat','series','documentNumber','invoiceType','currency','totalNet','totalVat','totalGross'].map(key=>row[key]==null?null:String(row[key])).concat(row.issueDate?new Date(row.issueDate).toISOString():null,row.rawPayload?.xml??null));
+  const identity=row=>JSON.stringify([['id','companyId','storeId','inboxId','mark','issuerVat','counterpartVat','series','documentNumber','invoiceType','currency','totalNet','totalVat','totalGross'].map(key=>row[key]==null?null:String(row[key])),row.issueDate?new Date(row.issueDate).toISOString():null,row.rawPayload?.xml??null]);
   return prisma.$transaction(async tx=>{
     await lockInvoiceStore(tx,scope.companyId,scope.storeId);
     const rows=await tx.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${scope.companyId} AND m."storeId"=${scope.storeId} AND m."inboxId"=${scope.inboxId} FOR UPDATE OF m,i`;
