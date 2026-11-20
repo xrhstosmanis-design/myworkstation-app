@@ -1,4 +1,4 @@
-# Νο02 — Standalone zero-value delivery-note financial scope / IMPLEMENTED — AWAITING EXACT CI AND INSTALLATION
+# Νο02 — Standalone zero-value delivery-note financial scope / TECHNICAL LIVE — HOSTED STORE-ENTRY CHECK BLOCKED
 
 20/11/2026 Europe/Athens. Same retained No02 owner /root, branch fix/no2-delivery-note-financial-scope-20261120. This follows the owner's existing requirement that monthly pending indicators represent real obligations. Provider acquisition, No04 reader/core and #4048 bulk/scheduler retain their separate scope. Overall No02 remains OPEN.
 
@@ -35,3 +35,19 @@ Production client/server build passed. Its generated server index change was res
 The final UI review found that the backend correctly retains the raw automatic review code INBOUND_IDENTITY_UNCONFIRMED on the proven nonfinancial note. Its generic wording still implied an unconfirmed VAT/date/type. Only the display wording for that exact code now uses the neutral delivery-note/no-invoice-correlation explanation when the same strict DELIVERY_NOTE / zero / NOT_APPLICABLE row condition holds. Raw evidence, all other codes, cross-item filtering, financial rules and default behavior remain unchanged.
 
 The mounted fixture includes the actual raw automaticReview DTO and verifies the neutral wording, while other currency/conflicting cases retain review. Four focused mounted tests passed. Root's final reviewed selection again passed 135 tests with 0 failures and one explicitly excluded local Chromium child; actual Chromium remains mandatory in CI. Final production client/server build passed and its generated server index was restored. This final two-UI-file amendment requires a new exact-head full CI run; an earlier head's results do not establish the amended head.
+
+
+## Exact final CI and combined installation — 20/11/2026
+
+Final source #4082/head671f1649983ad16159446a108c458a2262f0b869 passed full CI44700330647, **5/5 jobs**, **6881 PASS / 0 FAIL / 3 optional WASM-catalogue skips**, plus **8/8** recovery tests. Decoded logs independently confirm non-skipped PASS for the new native standalone-zero-delivery-note/explicit-null-original-job SQL case, real desktop/mobile Chromium monthly audit, the actual-DTO neutral wording and conflicting-review preservation.
+
+The expected head merged as **beb5858f8b658ff40f3f89775e9ea712d691147c**, including #4081's already merged6615c15c report-installer source. Exact combined-main CI44702789986 passed **5/5 jobs**, **6892 PASS / 0 FAIL / 4 optional WASM-catalogue skips**, plus **8/8** recovery tests. The same mandatory No02 native/Chromium/DTO cases passed on that merged revision. The additional optional catalogue skip is from the integrated report compatibility suite; it does not replace native SQL execution.
+
+Normal guarded deployment44706019758 completed **2/2**. Render **dep-dc00ks3rjlhs73fvu6u0** reached terminal LIVE at **10:54:45 Europe/Athens**, exactbeb5858. Independent unauthenticated health returned200/oktrue/exactrevision. Served entry-pBfomhPU.js, SHA25659731ba62c4d61a9e29a3f6352ba2d906da14cc04e8b4feacb740c60ec2b8156, contains all three new neutral/context labels. These are exact technical installation and synthetic/native execution proofs; hosted monthly row acceptance is recorded separately below.
+
+
+### Bounded hosted entry observation
+
+After installation, a bounded browser attempt used a fresh tab and naturally retained support context without a new login or role entry. The selected store heading and the store used by existing context requests disagreed. Store entry showed an unavailable-store modal and an overview404 response. One normal selected-store correction/reopening attempt remained blocked. The check stopped before any monthly report GET was reached.
+
+This is **HOSTED ENTRY BLOCKED / MONTHLY ROW ACCEPTANCE NOT TESTED**, not a hosted monthly PASS. No auth/token/storage inspection, role change, PDF attachment, draft, payment or stock write was performed. The entry-context finding is handed to the retained No27 central/store-entry scope through ACTIVE/common coordination; no No27 source is changed by this receipt. Native SQL, actual synthetic Chromium, exact health and served UI bundle proofs above retain their stated technical scope. Overall No02/#4019 remains OPEN.

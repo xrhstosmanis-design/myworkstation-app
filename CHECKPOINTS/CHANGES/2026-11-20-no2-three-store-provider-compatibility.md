@@ -1,4 +1,4 @@
-# Νο02 — Three-store supplier PDF compatibility audit / VERIFIED FOUR-PROVIDER SOURCE — AWAITING EXACT CI AND INSTALLATION
+# Νο02 — Three-store supplier PDF compatibility audit / TECHNICAL LIVE — GROUPED APPLICATION ACCEPTANCE OPEN
 
 20/11/2026 Europe/Athens. Retained No02 owner `/root`, branch `fix/no2-verified-provider-compatibility-20261120`. The owner expanded the existing request to all suppliers with PDF acquisition problems in Αχαρνών 309, Ριζαρείου and Διαδόχου Παύλου. Overall No02 remains OPEN.
 
@@ -48,6 +48,23 @@ The final correction remains exactly two source/test files. It enables only the 
 
 The combined original-download, QR, PDF-route and HTTP-error regression batch passed **36/36 tests**, with **0 failures and 0 skips**. Production client/server build passed. Root reviewed the final two-file provider diff and the unchanged existing gates. A generated server index change from the build was restored before publication.
 
-Epsilon third-party remains blocked with no retry or bypass. Megasoft, Wedo and ESKAP returned HTML for the observed requests and are not enabled. Their signals differ: an unhandled provider error with a verification script, an HTML invoice response, and a print-only HTML response respectively. This is not a blanket conclusion that every provider is blocked by the same verifier. No HTML-rendering fallback is added. Other inventoried profiles remain unverified, and #4048 bulk/scheduler recovery remains outside this implementation.
+Epsilon third-party remains blocked with no retry or bypass. Megasoft, Wedo and ESKAP returned HTML for the observed requests and are not enabled. Their observed interfaces differ. Megasoft renders metadata; its view action produced no PDF/new tab and exposed a DevExpress browser error. The earlier unhandled-error text in its HTML was hidden boilerplate, not proof of an error page or bot denial. Wedo returned an HTML invoice response, and ESKAP's documented PDF-suffix request returned HTML. This is not a blanket conclusion that every provider is blocked by the same verifier. No HTML-rendering fallback is added. Other inventoried profiles remain unverified, and #4048 bulk/scheduler recovery remains outside this implementation.
 
 Update the same source PR #4076 with this combined correction. Exact final-head full CI, expected-head merge, exact merged-main full CI and ordinary guarded deployment are authorized after their gates pass. This authorization does not enable bulk production recovery or transfer No04/financial-writer ownership. Hosted application recovery/read/confirmed same-draft line acceptance remains in the grouped final session. Overall No02 remains OPEN.
+
+
+## Verified installation and final scope — 20/11/2026
+
+Four-provider source #4076/head724f0d92341327ccd980affd8650a8c6368f55df passed source CI44691724843 and exact main CI44693666397, each **5/5 jobs**, **6875 PASS / 0 FAIL / 3 optional skips**, plus **8/8** recovery tests. It merged as 6d7886940d8cb08588f2654d748cd434bfd87c61 and normal guarded deployment44695431224 completed **2/2**. Render dep-dbvve8rrjlhs73fsspng reached LIVE at **09:36:07 Europe/Athens**, exact6d788694. Independent healthy-revision verification passed.
+
+The corpus-driven six-character follow-up #4078 passed its separate exact source/main gates and installed as63233319, as recorded in the linked six-character checkpoint. The latest combined monthly release is **beb5858f8b658ff40f3f89775e9ea712d691147c**, Render **dep-dc00ks3rjlhs73fvu6u0**, LIVE at **10:54:45 Europe/Athens** after normal guarded deployment44706019758. It retains both provider fixes and the No7 report-installer source6615c15c through normal ancestry. This is source installation evidence, not hosted report-installer database acceptance.
+
+### Observed remaining profiles and recovery ownership
+
+The existing main Epsilon profile was independently downloaded and passed strict PDF identity verification. The blocked third-party profile159 retains its verifier/export blocker with no bypass. A separate approved third-party profile169 produced a PDF; its strict automatic identity check failed because the issuer VAT exists in a rendered image/header and is absent from extractable text. Internal visual review supports the expected rendered header. That profile remains unenabled with its strict text guard intact, and bounded OCR/header work belongs to the retained reader owner. The observed sample is a delivery note; source type and financial treatment remain separate.
+
+Megasoft's actual metadata/view action and DevExpress result supersede the earlier HTML-boilerplate interpretation above. Wedo and ESKAP still provide no verified PDF response for the observed contracts. They remain unenabled. No HTML-rendering fallback, new provider account/email operation or relaxed identity check was introduced.
+
+Adapter deployment alone does not retry old failed/unattempted rows. The old #4048 November-only recovery candidate defaults OFF and retains unresolved page ownership. A single sanitized coordination request was posted as comment7033927674 for explicit release/handoff before any all-history three-store recovery extension. A separate factual integration status comment7034654114 on #4081 coordinates the newer combined release without claiming hosted V3 installation or requesting repeated financial/role tests.
+
+The private audit retains exact source-row totals, URLs, supplier identifiers and original PDF proofs. Public coverage counts remain URL-pattern/store-row evidence, not recovered invoice totals or financial obligations. Overall No02/#4019 remains OPEN for external profiles, bounded recovery ownership, reader-owner OCR and grouped hosted application acceptance.

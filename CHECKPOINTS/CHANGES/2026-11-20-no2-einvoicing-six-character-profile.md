@@ -1,4 +1,4 @@
-# Νο02 — Verified e-invoicing six-character profile / VERIFIED SOURCE — AWAITING EXACT CI AND INSTALLATION
+# Νο02 — Verified e-invoicing six-character profile / TECHNICAL LIVE — GROUPED APPLICATION ACCEPTANCE OPEN
 
 20/11/2026 Europe/Athens. Same retained No02 owner /root. This continues #4075/#4076 provider compatibility, with one newly established stored URL-profile gap. Overall No02 remains OPEN.
 
@@ -22,3 +22,10 @@ The source change extends only the existing exact e-invoicing UUID-path suffix f
 The read-only corpus covered 782 raw rows on the new provider hosts: 763 previously matched and the remaining 19 were this exact six-character e-invoicing variant in Ριζαρείου without stored files. Other store/host groups matched their patterns. These remain stored-row coverage counts, separate from logical invoices, successful downloads and financial balances. Actual PDF identity proof concerns the observed sample, not every stored row.
 
 Require exact source full CI, expected-head merge, exact merged-main full CI and ordinary guarded installation for this correction. The previous four-provider source/main CI and any normal installation remain valid historical evidence for their exact revisions. No guard cancellation, bulk recovery activation, No04 core change or financial/stock/fiscal write is introduced. Hosted application recovery/read/confirmed lines remain in the grouped final acceptance, and overall No02 remains OPEN.
+
+
+## Exact CI and normal installation — 20/11/2026
+
+Source #4078/head099e654e1da51d11aec3b4990b4d72a62b4adeed passed full source CI44694932236 and merged63233319f07d4f20a7413da7d4fc715c5785e952. Exact merged-main CI44696708290 also passed. Each run completed **5/5 jobs**, **6875 PASS / 0 FAIL / 3 optional skips**, plus **8/8** recovery tests. The actual named verified-provider fetch test passed, including the six/seven/eight accepted and five/nine rejected cases.
+
+Normal guarded deployment44698418077 completed **2/2**. Render dep-dbvvplv40ujc73f1arm0 reached LIVE at **10:00:11 Europe/Athens**, exact63233319; independent health returned200/oktrue/exactrevision. The final combined monthly releasebeb5858 retains the exact same provider source and is now technically LIVE. Coverage of all782 stored new-host URL rows is parser-pattern coverage, not a claim that782 PDFs were downloaded or recovered. Hosted application recovery/reading and the separate old-row recovery handoff remain OPEN.
