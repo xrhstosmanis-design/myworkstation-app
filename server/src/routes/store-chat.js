@@ -1,3 +1,4 @@
+import {ensureChatAccess,chatAccessRevoked,chatAccessRoster} from "../chat-access.mjs";
 import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {chatGroupRoster} from "../chat-groups.mjs";
 import {ensureChatGroups,mountChatGroups} from "../chat-groups.mjs";
@@ -40,8 +41,15 @@ export async function ensureStoreChatSchema(){
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreChatAcknowledgement" ("messageId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"userId" TEXT NOT NULL,"acknowledgedAt" TIMESTAMP NOT NULL DEFAULT NOW(),PRIMARY KEY ("messageId","userId"))`);
   await ensureStoreChatInteractions(prisma);
   await ensureChatGroups(prisma);
+  await ensureChatAccess(prisma);
 }
-async function storeFor(req,res){const id=String(req.params.storeId||req.body?.storeId||"");if(req.user?.staffAccess===true){if(req.method!=='GET'||req.user.storeId!==id||req.staffGrant?.capability!=='chat.read'||!/^\/api\/store-chat\/stores\/[^/]+\/messages(?:\/search|\/[^/]+\/attachment)?$/.test(String(req.originalUrl||'').split('?')[0]))throw staffError();await requireStaffGrant(prisma,req.user,id,'chat.read');}if(!id){res.status(400).json({error:"Δεν προσδιορίστηκε κατάστημα."});return null;}const store=await prisma.store.findUnique({where:{id},select:{id:true,companyId:true,name:true}}),user=req.user||{};if(!store||(!isPlatformSuperAdmin(user)&&String(user.companyId)!==String(store.companyId))||(user.tokenType==="STORE_OPERATOR"&&String(user.storeId)!==String(id))){res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});return null;}return store}
+async function storeFor(req,res){const id=String(req.params.storeId||req.body?.storeId||"");if(req.user?.staffAccess===true){if(req.method!=='GET'||req.user.storeId!==id||req.staffGrant?.capability!=='chat.read'||!/^\/api\/store-chat\/stores\/[^/]+\/messages(?:\/search|\/[^/]+\/attachment)?$/.test(String(req.originalUrl||'').split('?')[0]))throw staffError();await requireStaffGrant(prisma,req.user,id,'chat.read');}if(!id){res.status(400).json({error:"Δεν προσδιορίστηκε κατάστημα."});return null;}const store=await prisma.store.findUnique({where:{id},select:{id:true,companyId:true,name:true}}),user=req.user||{};if(!store||(!isPlatformSuperAdmin(user)&&String(user.companyId)!==String(store.companyId))||(user.tokenType==="STORE_OPERATOR"&&String(user.storeId)!==String(id))){res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});return null;}
+ if(await chatAccessRevoked(prisma,store,user.id)){
+   res.status(403).json({error:"Η πρόσβαση στο Chat αυτού του καταστήματος έχει ανακληθεί.",code:"STORE_CHAT_ACCESS_REVOKED"});
+   return null;
+ }
+ return store;
+}
 function canPin(user){return isPlatformSuperAdmin(user)||(user?.tokenType!=="STORE_OPERATOR"&&user?.role==="OWNER")}
 function canDownload(user,settings){if(isPlatformSuperAdmin(user))return true;if(!settings.downloadsEnabled)return false;if(user?.tokenType==="STORE_OPERATOR")return settings.employeeDownloadsEnabled;return user?.role==="OWNER"}
 function canCreateTask(user,settings){return user?.tokenType!=="STORE_OPERATOR"||settings.employeeTaskCreationEnabled}
@@ -79,9 +87,48 @@ async function checkedChatModule(req,res,id){
  let allowed=false;await requireStoreModule("STORE_CHAT")(probe,res,error=>{if(error)throw error;allowed=true});
  return allowed?probe.targetStore:null;
 }
+function canModerate(user) {
+ return canPin(user)&&!user.supportContext&&!user.staffAccess;
+}
+async function accessModerationStore(req,res){
+ if(!canModerate(req.user)){
+   res.status(403).json({error:"Δεν έχεις δικαίωμα διαχείρισης πρόσβασης στο Chat."});
+   return null;
+ }
+ const store=await selectedChatStore(req,res);
+ return store&&await checkedChatModule(req,res,store.id)?store:null;
+}
+router.get("/stores/:storeId/access-moderation",async(req,res,next)=>{try{
+ res.setHeader("Cache-Control","no-store, private");
+ const store=await accessModerationStore(req,res);
+ if(!store)return;
+ const members=await chatAccessRoster(prisma,store,req.user.id,isPlatformSuperAdmin(req.user));
+ res.json({members});
+}catch(error){next(error)}});
+router.put("/stores/:storeId/access-moderation",async(req,res,next)=>{try{
+ const store=await accessModerationStore(req,res);
+ if(!store)return;
+ const {userId,revoked}=req.body||{};
+ if(typeof userId!=="string"||!userId||userId.length>120||typeof revoked!=="boolean"){
+   return res.status(400).json({error:"Μη έγκυρη αλλαγή πρόσβασης στο Chat."});
+ }
+ const found=await prisma.$transaction(async tx=>{
+   const members=await chatAccessRoster(tx,store,req.user.id,isPlatformSuperAdmin(req.user));
+   if(!members.some(member=>member.id===userId))return false;
+   const changed=revoked
+     ? await tx.$executeRaw`INSERT INTO "StoreChatAccessRevocation" ("companyId","storeId","userId")
+         VALUES (${store.companyId},${store.id},${userId}) ON CONFLICT DO NOTHING`
+     : await tx.$executeRaw`DELETE FROM "StoreChatAccessRevocation" WHERE "companyId"=${store.companyId}
+         AND "storeId"=${store.id} AND "userId"=${userId}`;
+   if(changed)await audit(req,store,revoked?"STORE_CHAT_ACCESS_REVOKED":"STORE_CHAT_ACCESS_RESTORED",{userId},tx);
+   return true;
+ });
+ if(!found)return res.status(404).json({error:"Ο χρήστης δεν είναι διαθέσιμος για διαχείριση πρόσβασης."});
+ res.json({ok:true});
+}catch(error){next(error)}});
 mountChatGroups(router, {
   db:prisma, selectStore:selectedChatStore, checkModule:checkedChatModule,
-  canModerate:user=>canPin(user)&&!user.supportContext&&!user.staffAccess,
+  canModerate,
   auditModeration:audit,
   canManage:user=>canPin(user)||(user?.tokenType!=="STORE_OPERATOR"&&user?.role==="MANAGER"),
 });
