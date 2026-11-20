@@ -1,3 +1,4 @@
+import {automaticCashMailPresentation} from '../src/services/automatic-report-cash-mail-presentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash,randomBytes} from 'node:crypto';
@@ -12,6 +13,9 @@ const copy=value=>structuredClone(value),recipient='driver-fixture@example.inval
 const sha=value=>createHash('sha256').update(value).digest('hex');
 function fixtureData(){
   const content={format:'MWS_AUTOMATIC_CASH_PAYLOAD_V1',scope:{companyId:'synthetic-driver-company',storeId:'selected-store'},period:{from:'2026-10-20T04:00:00.000Z',to:'2026-10-21T04:00:00.000Z'},frequency:'DAILY',sourceFingerprint:'a'.repeat(64),financialFinality:'PROVISIONAL',financialLimitations:['SYNTHETIC_UNRECONCILED_FIXTURE'],financialReconciliationComplete:false,employeeLiabilityAdjusted:false,settingsVersion:1};
+  // Synthetic visible CASH metadata required by the human renderer. Lifecycle
+  // identities, exact payload hash and all commit/evidence assertions stay bound.
+  Object.assign(content,{storeName:'Synthetic',sourceCount:1,groups:[{day:'2026-10-20',terminalPos:'MAIN',cashChain:'STORE',originalShortage:1,originalSurplus:0,offset:0,netVariance:-1,rows:[{sessionId:'synthetic-display-record',employeeName:'Synthetic',variance:-1}]}]});
   const body=JSON.stringify(content),payload={format:content.format,scope:content.scope,period:content.period,frequency:content.frequency,sourceFingerprint:content.sourceFingerprint,financialFinality:content.financialFinality,financialLimitations:content.financialLimitations,contentType:'application/json; charset=utf-8',body,byteLength:Buffer.byteLength(body),payloadFingerprint:sha(body)};
   const input={...content.scope,reportType:'CASH',frequency:'DAILY',periodFrom:content.period.from,periodTo:content.period.to,recipient,snapshot:{settingsVersion:1,recipientVersion:2,consentRevision:3,lifecycleGeneration:'4',sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint:'c'.repeat(64),principalId:'synthetic-principal',financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
   const pending=createDeliverySlot(input,{now:NOW,current:eligibility(input,NOW)}),claimed=claimDelivery(pending,{expectedVersion:1,token:'driver-one',now:NOW,leaseMs:1000});
@@ -53,7 +57,7 @@ function harness({send,gate,commitBarrier,failStartCommit,failCompletion,failCom
     }catch(error){if(!error.committed){state=before;events.push('rollback');}throw error;}finally{done.resolve();}
   }};
   const readEligibility=async({input,now:checkedAt})=>{events.push('eligibility');return gate?await gate(input,checkedAt):eligibility(input,checkedAt);};
-  const driver=createAutomaticReportDeliveryDriver({db,readEligibility,clock:()=>now,sendMail:async message=>{sends++;events.push('send');assert.equal(state.status,'ATTEMPTING');assert.ok(committedVersions.has(state.version),'send requires a committed ATTEMPTING version');assert.equal(message.to,recipient);assert.equal(message.text,data.args.payload.body);return send?await send(message):accepted();}});
+  const driver=createAutomaticReportDeliveryDriver({db,readEligibility,clock:()=>now,sendMail:async message=>{sends++;events.push('send');assert.equal(state.status,'ATTEMPTING');assert.ok(committedVersions.has(state.version),'send requires a committed ATTEMPTING version');assert.equal(message.to,recipient);assert.equal(message.text,automaticCashMailPresentation(JSON.parse(data.args.payload.body)).text);return send?await send(message):accepted();}});
   const repository=createAutomaticReportDeliveryRepository({db,readEligibility});
   return {...data,driver,repository,events,db,commitReached:commitReached.promise,record:()=>copy(state),sends:()=>sends,time:value=>{now=value;}};
 }
@@ -153,7 +157,7 @@ test('native PostgreSQL driver proves cross-client committed start, terminal per
       const driver=createAutomaticReportDeliveryDriver({db:a,readEligibility,clock:()=>NOW,sendMail:async message=>{
         sends++;const rows=await b.$queryRaw`SELECT "status","version","token" FROM "AutomaticReportDeliverySlot" WHERE "slotId"=${data.args.scope.slotId}`;
         assert.equal(rows.length,1);assert.equal(rows[0].status,'ATTEMPTING');assert.equal(rows[0].version,3n);assert.equal(rows[0].token,data.args.token);
-        assert.equal(message.text,data.args.payload.body);return {accepted:[message.to],rejected:[],messageId:'<native-driver@example.invalid>'};
+        assert.equal(message.text,automaticCashMailPresentation(JSON.parse(data.args.payload.body)).text);return {accepted:[message.to],rejected:[],messageId:'<native-driver@example.invalid>'};
       }});
       const result=await driver.attempt(data.args);assert.equal(result.outcome,'ACCEPTED');assert.equal(result.recorded,true);
       assert.equal((await repo.get(data.args.scope)).status,'ACCEPTED');await driver.attempt(data.args);assert.equal(sends,1);

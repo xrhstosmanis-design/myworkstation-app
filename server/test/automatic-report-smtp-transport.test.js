@@ -1,3 +1,4 @@
+import {automaticCashMailPresentation} from '../src/services/automatic-report-cash-mail-presentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -11,6 +12,9 @@ const copy=value=>structuredClone(value),recipient='driver-fixture@example.inval
 const sha=value=>createHash('sha256').update(value).digest('hex');
 function fixtureData(){
   const content={format:'MWS_AUTOMATIC_CASH_PAYLOAD_V1',scope:{companyId:'synthetic-driver-company',storeId:'selected-store'},period:{from:'2026-10-20T04:00:00.000Z',to:'2026-10-21T04:00:00.000Z'},frequency:'DAILY',sourceFingerprint:'a'.repeat(64),financialFinality:'PROVISIONAL',financialLimitations:['SYNTHETIC_UNRECONCILED_FIXTURE'],financialReconciliationComplete:false,employeeLiabilityAdjusted:false,settingsVersion:1};
+  // Synthetic visible CASH metadata required by the human renderer. Lifecycle
+  // identities, exact payload hash and all commit/evidence assertions stay bound.
+  Object.assign(content,{storeName:'Synthetic',sourceCount:1,groups:[{day:'2026-10-20',terminalPos:'MAIN',cashChain:'STORE',originalShortage:1,originalSurplus:0,offset:0,netVariance:-1,rows:[{sessionId:'synthetic-display-record',employeeName:'Synthetic',variance:-1}]}]});
   const body=JSON.stringify(content),payload={format:content.format,scope:content.scope,period:content.period,frequency:content.frequency,sourceFingerprint:content.sourceFingerprint,financialFinality:content.financialFinality,financialLimitations:content.financialLimitations,contentType:'application/json; charset=utf-8',body,byteLength:Buffer.byteLength(body),payloadFingerprint:sha(body)};
   const input={...content.scope,reportType:'CASH',frequency:'DAILY',periodFrom:content.period.from,periodTo:content.period.to,recipient,snapshot:{settingsVersion:1,recipientVersion:2,consentRevision:3,lifecycleGeneration:'4',sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint:'c'.repeat(64),principalId:'synthetic-principal',financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
   const pending=createDeliverySlot(input,{now:NOW,current:eligibility(input,NOW)}),claimed=claimDelivery(pending,{expectedVersion:1,token:'driver-one',now:NOW,leaseMs:1000});
@@ -82,7 +86,7 @@ test('accessor/nonplain/sparse/hidden/oversized actual evidence cannot manufactu
 // receipt classification are the production implementations, not substitutes.
 function integrated(result,{failCommit=false}={}){
  const f=fixtureData(),events=[];let state=copy(f.claimed),committed=false;
- const h=sender({send:m=>{events.push('smtp');assert.equal(committed,true);assert.equal(state.status,'ATTEMPTING');assert.equal(m.text,f.args.payload.body);return typeof result==='function'?result():result}});
+ const h=sender({send:m=>{events.push('smtp');assert.equal(committed,true);assert.equal(state.status,'ATTEMPTING');assert.equal(m.text,automaticCashMailPresentation(JSON.parse(f.args.payload.body)).text);return typeof result==='function'?result():result}});
  const db={$transaction:async fn=>{
   const before=copy(state);try{
    const project=()=>({slotId:state.slotId,companyId:state.input.companyId,storeId:state.input.storeId,version:String(state.version),status:state.status,token:state.token,record:copy(state)});
