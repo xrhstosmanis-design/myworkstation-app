@@ -430,6 +430,8 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 
 Checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-store-chat-photo-read-swipe.md`.
 
+**20/11/2026 · #4087 Android:** προεπισκόπηση φωτογραφίας στη συνομιλία, αυτόματη ανάγνωση μετά την εμφάνιση και σύρσιμο πάνω στην εικόνα. Εκκρεμεί CI και κοινή δοκιμή LAB. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-20-no16-android-inline-photo.md`.
+
 ## 2026-11-13 — Inventory audit purchase document links
 
 PRs #3852 and #3856 merged. Scoped hosted LAB PASS on fbc7167: standalone OCR approval linked the purchase document to the +2 movement in inventory reconciliation (8 → 10, zero net difference). Physical receipt time and verified original remain open. [Checkpoint](CHANGES/2026-11-13-inventory-receipt-lab-pass.md).
