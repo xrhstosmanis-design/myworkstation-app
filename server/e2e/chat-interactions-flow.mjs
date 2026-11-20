@@ -18,6 +18,22 @@ try{
  const employee=await db.employee.create({data:{storeId:store.id,fullName:'CI recipient'}}),operator={id:crypto.randomUUID(),employeeId:employee.id,companyId:company.id,storeId:store.id,role:'EMPLOYEE',displayName:'CI recipient',pinHash:null,cardCodeHash:null};
  await db.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","createdBy") VALUES (${operator.id},${company.id},${store.id},${employee.id},${operator.displayName},${operator.role},${a.u.id})`;
  const staff=await issueChatOperatorSession(operator,{});
+ const access=async(token,selected,method='GET',body)=>{const r=await fetch(`${base}/api/store-chat/stores/${selected.id}/access-moderation`,{method,headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()}};
+ const manager=await owner(company,'MANAGER');
+ const accessRoster=await access(a.token,store);
+ assert.equal(accessRoster.status,200,JSON.stringify(accessRoster.body));
+ assert.ok(accessRoster.body.members.some(member=>member.id===operator.id&&!member.revoked));
+ assert.equal((await access(manager.token,store,'PUT',{userId:operator.id,revoked:true})).status,403);
+ assert.equal((await access(b.token,store,'PUT',{userId:operator.id,revoked:true})).status,404);
+ assert.equal((await access(a.token,sibling,'PUT',{userId:operator.id,revoked:true})).status,404);
+ assert.equal((await access(a.token,store,'PUT',{userId:operator.id,revoked:true})).status,200);
+ const blocked=await call(staff,store);
+ assert.equal(blocked.status,403);
+ assert.equal(blocked.body.code,'STORE_CHAT_ACCESS_REVOKED');
+ assert.equal((await call(staff,store,'','POST',{body:'Revoked session must not send'})).status,403);
+ assert.equal((await access(a.token,store,'PUT',{userId:operator.id,revoked:false})).status,200);
+ assert.equal((await call(staff,store)).status,200);
+
  const parent=await call(a.token,store,'','POST',{body:'Parent <script>literal</script> '+'x'.repeat(300),category:'GENERAL'});assert.equal(parent.status,201,JSON.stringify(parent.body));const parentId=parent.body.id;
  const siblingMessage=await call(a.token,sibling,'','POST',{body:'Sibling'}),foreignMessage=await call(b.token,other,'','POST',{body:'Foreign'});
  // A long history must be bounded before names/reactions/delivery enrichment. Older read pins stay visible.
