@@ -12,6 +12,56 @@ import {destroyInventoryProduct} from "../lib/inventory-product-destruction.js";
 import {createInventoryCard} from "../lib/inventory-new-card.js";
 import {readInventoryNewCardOptions} from "../lib/inventory-new-card-options.js";
 
+export async function readOwnerProductDelivery(scopeCompanyId,rawQuery={},productId=null,{db=prisma}={}){const prisma=db;
+
+    const company=scopeCompanyId;if(!company)throw Object.assign(new Error("Δεν υπάρχει ενεργή εταιρεία."),{status:403});
+    const rows=await prisma.$queryRaw`SELECT "id","name","isModifier","modifierGroup","isService","eDeliveryEnabled","efoodEnabled","woltEnabled","publishStock","publishPrices","efoodPrice","woltPrice" FROM "Product" WHERE "companyId"=${company} AND "id"=${productId} LIMIT 1`;
+    if(!rows[0])throw Object.assign(new Error("Δεν βρέθηκε το προϊόν."),{status:404});
+    return (rows[0]);
+
+}
+
+export async function readOwnerProductPurchases(scopeCompanyId,rawQuery={},productId=null,{db=prisma}={}){const prisma=db;
+
+    const company=scopeCompanyId;if(!company)throw Object.assign(new Error("Δεν υπάρχει ενεργή εταιρεία."),{status:403});
+    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(rawQuery||{});
+    const exists=await prisma.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${productId} AND sp."storeId"=${q.storeId} LIMIT 1`;if(!exists[0])throw Object.assign(new Error("Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."),{status:404});
+    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-365*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)throw Object.assign(new Error("Μη έγκυρο διάστημα ημερομηνιών."),{status:400});
+    const rows=await prisma.$queryRaw`SELECT l."id",o."id" AS "orderId",o."status",o."invoiceNumber",o."createdAt",o."invoicedAt",COALESCE(sup."name",'Χωρίς προμηθευτή') AS "supplierName",l."quantity",l."unitCost",l."initialUnitCost",l."discount1",l."discount2",l."discount3",l."exciseTotal",l."vatRate",l."netAmount",l."vatAmount",l."grossAmount" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" LEFT JOIN "Supplier" sup ON sup."id"=o."supplierId" WHERE o."companyId"=${company} AND o."storeId"=${q.storeId} AND l."productId"=${productId} AND o."createdAt">=${from} AND o."createdAt"<=${to} ORDER BY o."createdAt" DESC LIMIT 1000`;
+    return ({product:exists[0],from,to,purchases:rows.map(r=>({...r,quantity:Number(r.quantity||0),unitCost:Number(r.unitCost||0),initialUnitCost:Number(r.initialUnitCost||0),discount1:Number(r.discount1||0),discount2:Number(r.discount2||0),discount3:Number(r.discount3||0),exciseTotal:Number(r.exciseTotal||0),vatRate:Number(r.vatRate||0),netAmount:Number(r.netAmount||0),vatAmount:Number(r.vatAmount||0),grossAmount:Number(r.grossAmount||0)}))});
+
+}
+
+export async function readOwnerAudienceDiscountAudit(scopeCompanyId,rawQuery={},productId=null,{db=prisma,prepareSource=null}={}){const prisma=db;
+
+    const company=scopeCompanyId;if(!company)throw Object.assign(new Error("Δεν υπάρχει ενεργή εταιρεία."),{status:403});
+    const query=z.object({storeId:z.string().min(1),audience:z.enum(["DOCTOR","NURSE","STAFF","CUSTOMER"])}).parse(rawQuery);
+    const store=await prisma.store.findFirst({where:{id:query.storeId,companyId:company},select:{id:true}});
+    if(!store)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404});
+    if(prepareSource)await prepareSource();
+
+    const [rows,currentRules]=await Promise.all([
+      prisma.$queryRaw`SELECT "id","storeId","audience","discountPercent","productIds","actorId","createdAt" FROM "StoreProductAudienceDiscountAudit" WHERE "companyId"=${company} AND "storeId"=${store.id} AND "audience"=${query.audience} ORDER BY "createdAt" DESC LIMIT 30`,
+      prisma.$queryRaw`SELECT d."productId",p."name" AS "productName",d."discountPercent",d."updatedAt" FROM "StoreProductAudienceDiscount" d LEFT JOIN "Product" p ON p."id"=d."productId" AND p."companyId"=${company} WHERE d."companyId"=${company} AND d."storeId"=${store.id} AND d."audience"=${query.audience} AND d."active"=true ORDER BY p."name",d."productId"`
+    ]);
+    return ({items:rows.map(row=>({...row,discountPercent:Number(row.discountPercent)})),currentRules:currentRules.map(row=>({...row,discountPercent:Number(row.discountPercent)}))});
+
+}
+
+export async function readOwnerProductMovements(scopeCompanyId,rawQuery={},selectedId=null,{db=prisma,preserveUnknownCost=false}={}){const prisma=db;
+
+    const company=scopeCompanyId;if(!company)throw Object.assign(new Error("Δεν υπάρχει ενεργή εταιρεία."),{status:403});
+    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(rawQuery||{});
+    const productRows=await prisma.$queryRaw`SELECT p."id",p."name",p."salePrice",p."costPrice",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${selectedId} AND sp."storeId"=${q.storeId} LIMIT 1`;
+    const product=productRows[0];if(!product)throw Object.assign(new Error("Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."),{status:404});
+    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-30*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();
+    if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)throw Object.assign(new Error("Μη έγκυρο διάστημα ημερομηνιών."),{status:400});
+    const rows=await prisma.$queryRaw`SELECT m."id",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdAt",u."fullName" AS "actorName" FROM "StockMovement" m JOIN "Store" s ON s."id"=m."storeId" LEFT JOIN "User" u ON u."id"=m."createdByUserId" WHERE s."companyId"=${company} AND m."storeId"=${q.storeId} AND m."productId"=${selectedId} AND m."createdAt">=${from} AND m."createdAt"<=${to} ORDER BY m."createdAt" DESC LIMIT 1000`;
+    let running=Number(product.currentStock||0);const movements=rows.map(row=>{const quantity=Number(row.quantity||0),stockAfter=running;running-=quantity;return {...row,quantity,unitCost:preserveUnknownCost&&row.unitCost==null?null:Number(row.unitCost||0),inQty:quantity>0?quantity:0,outQty:quantity<0?Math.abs(quantity):0,stockAfter}});
+    return ({product:{id:product.id,name:product.name,currentStock:Number(product.currentStock||0),salePrice:Number(product.salePrice||0),costPrice:Number(product.costPrice||0)},from,to,movements});
+
+}
+
 export function createOwnerProductActionsRouter({db=prisma,scope=null}={}){
 const prisma=db;
 const scopedStoreId=scope?.storeId||null;
@@ -60,19 +110,7 @@ router.patch("/bulk-card",requireCompanyModule("INVENTORY"),async(req,res,next)=
 });
 
 router.get("/audience-discount-audit",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const query=z.object({storeId:z.string().min(1),audience:z.enum(["DOCTOR","NURSE","STAFF","CUSTOMER"])}).parse(req.query);
-    const store=await prisma.store.findFirst({where:{id:query.storeId,companyId:company},select:{id:true}});
-    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
-    await ensureAudienceDiscountTables();
-    const [rows,currentRules]=await Promise.all([
-      prisma.$queryRaw`SELECT "id","storeId","audience","discountPercent","productIds","actorId","createdAt" FROM "StoreProductAudienceDiscountAudit" WHERE "companyId"=${company} AND "storeId"=${store.id} AND "audience"=${query.audience} ORDER BY "createdAt" DESC LIMIT 30`,
-      prisma.$queryRaw`SELECT d."productId",p."name" AS "productName",d."discountPercent",d."updatedAt" FROM "StoreProductAudienceDiscount" d LEFT JOIN "Product" p ON p."id"=d."productId" AND p."companyId"=${company} WHERE d."companyId"=${company} AND d."storeId"=${store.id} AND d."audience"=${query.audience} AND d."active"=true ORDER BY p."name",d."productId"`
-    ]);
-    res.json({items:rows.map(row=>({...row,discountPercent:Number(row.discountPercent)})),currentRules:currentRules.map(row=>({...row,discountPercent:Number(row.discountPercent)}))});
-  }catch(error){next(error)}
-});
+  try{res.json(await readOwnerAudienceDiscountAudit(req.user.companyId,req.query,req.params.productId,{db:prisma,prepareSource:ensureAudienceDiscountTables}))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 router.put("/bulk-audience-discount",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -88,13 +126,7 @@ router.put("/bulk-audience-discount",requireCompanyModule("INVENTORY"),async(req
 router.put("/audience-discount-card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});await ensureAudienceDiscountTables();await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AudienceDiscountCard" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"cardHash" TEXT NOT NULL,"cardLast4" TEXT NOT NULL,"label" TEXT NOT NULL,"audience" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT TRUE,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("companyId","storeId","cardHash"),CHECK ("audience" IN ('DOCTOR','NURSE','STAFF','CUSTOMER')))`);const body=z.object({storeId:z.string().min(1),cardCode:z.string().trim().min(3).max(120),label:z.string().trim().min(2).max(160),audience:z.enum(["DOCTOR","NURSE","STAFF","CUSTOMER"])}).parse(req.body||{}),store=await prisma.store.findFirst({where:{id:body.storeId,companyId:company},select:{id:true}});if(!store)return res.status(400).json({error:"Μη έγκυρο κατάστημα."});const normalized=normalizeAudienceCard(body.cardCode);if(normalized.length<3)return res.status(400).json({error:"Η κάρτα δεν είναι έγκυρη."});const hash=audienceCardHash(normalized),last4=normalized.slice(-4);await prisma.$executeRaw`INSERT INTO "AudienceDiscountCard" ("id","companyId","storeId","cardHash","cardLast4","label","audience","createdByUserId") VALUES (${uid()},${company},${body.storeId},${hash},${last4},${body.label},${body.audience},${req.user.id||null}) ON CONFLICT ("companyId","storeId","cardHash") DO UPDATE SET "label"=EXCLUDED."label","audience"=EXCLUDED."audience","active"=true,"createdByUserId"=EXCLUDED."createdByUserId","updatedAt"=NOW()`;res.json({ok:true,label:body.label,audience:body.audience,cardLast4:last4})}catch(error){next(error)}});
 
 router.get("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const rows=await prisma.$queryRaw`SELECT "id","name","isModifier","modifierGroup","isService","eDeliveryEnabled","efoodEnabled","woltEnabled","publishStock","publishPrices","efoodPrice","woltPrice" FROM "Product" WHERE "companyId"=${company} AND "id"=${req.params.productId} LIMIT 1`;
-    if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
-    res.json(rows[0]);
-  }catch(error){next(error)}
-});
+  try{res.json(await readOwnerProductDelivery(req.user.companyId,req.query,req.params.productId))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 router.patch("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -156,29 +188,10 @@ router.post("/:productId/supplier-return",requireCompanyModule("INVENTORY"),asyn
 });
 
 router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(req.query||{});
-    const productRows=await prisma.$queryRaw`SELECT p."id",p."name",p."salePrice",p."costPrice",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND sp."storeId"=${q.storeId} LIMIT 1`;
-    const product=productRows[0];if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-30*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();
-    if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
-    const rows=await prisma.$queryRaw`SELECT m."id",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdAt",u."fullName" AS "actorName" FROM "StockMovement" m JOIN "Store" s ON s."id"=m."storeId" LEFT JOIN "User" u ON u."id"=m."createdByUserId" WHERE s."companyId"=${company} AND m."storeId"=${q.storeId} AND m."productId"=${req.params.productId} AND m."createdAt">=${from} AND m."createdAt"<=${to} ORDER BY m."createdAt" DESC LIMIT 1000`;
-    let running=Number(product.currentStock||0);const movements=rows.map(row=>{const quantity=Number(row.quantity||0),stockAfter=running;running-=quantity;return {...row,quantity,unitCost:Number(row.unitCost||0),inQty:quantity>0?quantity:0,outQty:quantity<0?Math.abs(quantity):0,stockAfter}});
-    res.json({product:{id:product.id,name:product.name,currentStock:Number(product.currentStock||0),salePrice:Number(product.salePrice||0),costPrice:Number(product.costPrice||0)},from,to,movements});
-  }catch(error){next(error)}
-});
+  try{res.json(await readOwnerProductMovements(req.user.companyId,req.query,req.params.productId,{}))}catch(error){if([400,403,404].includes(error.status))return res.status(error.status).json({error:error.message});next(error)}});
 
 router.get("/:productId/purchases",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(req.query||{});
-    const exists=await prisma.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND sp."storeId"=${q.storeId} LIMIT 1`;if(!exists[0])return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-365*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
-    const rows=await prisma.$queryRaw`SELECT l."id",o."id" AS "orderId",o."status",o."invoiceNumber",o."createdAt",o."invoicedAt",COALESCE(sup."name",'Χωρίς προμηθευτή') AS "supplierName",l."quantity",l."unitCost",l."initialUnitCost",l."discount1",l."discount2",l."discount3",l."exciseTotal",l."vatRate",l."netAmount",l."vatAmount",l."grossAmount" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" LEFT JOIN "Supplier" sup ON sup."id"=o."supplierId" WHERE o."companyId"=${company} AND o."storeId"=${q.storeId} AND l."productId"=${req.params.productId} AND o."createdAt">=${from} AND o."createdAt"<=${to} ORDER BY o."createdAt" DESC LIMIT 1000`;
-    res.json({product:exists[0],from,to,purchases:rows.map(r=>({...r,quantity:Number(r.quantity||0),unitCost:Number(r.unitCost||0),initialUnitCost:Number(r.initialUnitCost||0),discount1:Number(r.discount1||0),discount2:Number(r.discount2||0),discount3:Number(r.discount3||0),exciseTotal:Number(r.exciseTotal||0),vatRate:Number(r.vatRate||0),netAmount:Number(r.netAmount||0),vatAmount:Number(r.vatAmount||0),grossAmount:Number(r.grossAmount||0)}))});
-  }catch(error){next(error)}
-});
+  try{res.json(await readOwnerProductPurchases(req.user.companyId,req.query,req.params.productId))}catch(error){if(error.status===400)return res.status(400).json({error:error.message});if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 return router;
 }

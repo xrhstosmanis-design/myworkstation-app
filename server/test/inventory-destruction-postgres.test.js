@@ -5,6 +5,12 @@ import crypto from 'node:crypto';
 import {z} from 'zod';
 import {destroyInventoryProduct} from '../src/lib/inventory-product-destruction.js';
 
+const actionFixtureSource=()=>fs.readFileSync(new URL('../src/routes/owner-product-actions.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export default router;\n/gm,'').replace(/^export (?=(?:async )?function )/gm,'');
+const compileActionFixture=source=>new Function('Router','prisma','crypto','z','defaultRequireCompanyModule','destroyInventoryProduct',source);
+test('actual destruction fixture preserves and compiles native async readers and writer handlers without PostgreSQL',()=>{
+ const source=actionFixtureSource();assert.match(source,/async function readOwnerProductDelivery/);assert.ok(source.includes('router.post("/:productId/destruction"'));assert.doesNotThrow(()=>compileActionFixture(source));
+});
+
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test('isolated PostgreSQL serializes real destruction requests and preserves live stocktake/control ledger',{skip:!isolated()},async()=>{
   const {PrismaClient}=await import('@prisma/client');
@@ -25,8 +31,8 @@ test('isolated PostgreSQL serializes real destruction requests and preserves liv
     const bootstrap=fs.readFileSync(new URL('../src/owner-product-bootstrap.js',import.meta.url),'utf8');
     for(const m of bootstrap.matchAll(/`(CREATE OR REPLACE FUNCTION "mws_adjust_live_stocktake_expected"[\s\S]*?\$\$ LANGUAGE plpgsql|CREATE TRIGGER "mws_live_stocktake_expected_after_movement"[^`]+)`/g))await db.$executeRawUnsafe(m[1]);
     const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete','use','patch','put'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs.at(-1))]));
-    const source=fs.readFileSync(new URL('../src/routes/owner-product-actions.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'').replace(/^export function /gm,'function ');
-    new Function('Router','prisma','crypto','z','defaultRequireCompanyModule','destroyInventoryProduct',source)(Router,db,crypto,z,()=>()=>{},destroyInventoryProduct);
+    const source=actionFixtureSource();
+    compileActionFixture(source)(Router,db,crypto,z,()=>()=>{},destroyInventoryProduct);
     const run=(quantity=1,companyId='company')=>new Promise((resolve,reject)=>handlers.get('post/:productId/destruction')({params:{productId:'product'},user:{companyId,id:'owner'},body:{storeId:'store',quantity,reason:'N39 isolated waste'}},{json:resolve,status(){return this}},reject));
     const reset=async()=>{
       await db.$executeRawUnsafe('TRUNCATE "StocktakeMovementAdjustment","StockMovement","StocktakeLine","Stocktake","StoreProduct","Product","Store"');

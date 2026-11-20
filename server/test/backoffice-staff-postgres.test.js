@@ -229,6 +229,55 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       assert.equal((await request('/api/transactions/stores/a1/overview',{token:salesToken,storeId:'a1'})).status,401);
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
     });
+    await t.test('owner saves and reads back exactly the four manager permissions for one store',async()=>{
+      const username='manager.four.fixture';
+      const capabilities=['invoices.read','invoices.reopen','invoices.cancel','shifts.read'];
+      const savedGrant={storeId:'a1',profile:'MANAGER',capabilities};
+      const originalGrants=[
+        {...savedGrant,capabilities:[...capabilities,'inventory.read','cash.read']},
+        {storeId:'a2',profile:'MANAGER',capabilities:['shifts.read']},
+      ];
+      const created=await createStaffAccount(db,owner,{...input,username,grants:originalGrants});
+      const login=async()=>{
+        const result=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
+        assert.equal(result.status,200,JSON.stringify(result.data));
+        return result.data.token;
+      };
+      const beforeToken=await login();
+      const adminToken=jwt.sign(owner,process.env.JWT_SECRET);
+      const updatePath='/api/backoffice-staff/admin/accounts/'+created.id;
+      const payload={expectedRevision:created.revision,active:true,grants:[savedGrant]};
+      const updated=await request(updatePath,{token:adminToken,method:'PUT',body:payload});
+      assert.equal(updated.status,200,JSON.stringify(updated.data));
+      assert.equal(updated.data.revision,created.revision+1);
+      const stale=await request(updatePath,{token:adminToken,method:'PUT',body:{...payload,grants:originalGrants}});
+      assert.equal(stale.status,409);
+      assert.equal(stale.data.code,'STAFF_STALE');
+      assert.equal((await request('/api/backoffice-staff/me',{token:beforeToken})).status,401);
+
+      const admin=await request('/api/backoffice-staff/admin',{token:adminToken});
+      assert.equal(admin.status,200,JSON.stringify(admin.data));
+      const account=admin.data.accounts.find(account=>account.id===created.id);
+      assert.deepEqual(account.grants.map(({storeId,profile,capabilities})=>({storeId,profile,capabilities})),[savedGrant]);
+      const token=await login();
+      const me=await request('/api/backoffice-staff/me',{token});
+      assert.equal(me.status,200,JSON.stringify(me.data));
+      assert.deepEqual(me.data.stores.map(({id,profile,capabilities})=>({storeId:id,profile,capabilities})),[savedGrant]);
+      const user=jwt.verify(token,process.env.JWT_SECRET);
+      await requireStaffGrant(db,user,'a1','shifts.read');
+      await assert.rejects(requireStaffGrant(db,user,'a1','cash.read'),{code:'STAFF_ACCESS_DENIED'});
+      await assert.rejects(requireStaffGrant(db,user,'a2','shifts.read'),{code:'STAFF_ACCESS_DENIED'});
+      await assert.rejects(requireStaffGrant(db,user,'b1','shifts.read'),{code:'STAFF_ACCESS_DENIED'});
+
+      const restrictedGrant={...savedGrant,capabilities:capabilities.filter(capability=>capability!=='shifts.read')};
+      const revoked=await request(updatePath,{token:adminToken,method:'PUT',body:{...payload,expectedRevision:updated.data.revision,grants:[restrictedGrant]}});
+      assert.equal(revoked.status,200,JSON.stringify(revoked.data));
+      assert.equal((await request('/api/backoffice-staff/me',{token})).status,401);
+      const afterToken=await login();
+      const afterUser=jwt.verify(afterToken,process.env.JWT_SECRET);
+      await assert.rejects(requireStaffGrant(db,afterUser,'a1','shifts.read'),{code:'STAFF_ACCESS_DENIED'});
+      await requireStaffGrant(db,afterUser,'a1','invoices.read');
+    });
     await t.test('native original invoice file stays inside both inbox and attachment store with live read grant',async()=>{
       await db.$executeRawUnsafe('CREATE TABLE "DocumentInbox" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"attachmentId" text)');
       await db.$executeRawUnsafe('CREATE TABLE "DocumentAttachment" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"contentData" text,"filename" text,"mimeType" text)');

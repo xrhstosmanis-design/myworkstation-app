@@ -166,8 +166,8 @@ router.patch("/promotions/:promotionId",async(req,res,next)=>{try{
 
 router.delete("/promotions/:promotionId",async(req,res,next)=>{try{const changed=await prisma.$executeRaw`UPDATE "PriceCatalogPromotion" SET "active"=false,"updatedAt"=NOW() WHERE "id"=${req.params.promotionId} AND "companyId"=${req.user.companyId}`;if(!changed)return res.status(404).json({error:"Δεν βρέθηκε η προσφορά."});res.json({ok:true})}catch(error){next(error)}});
 
-router.get("/wholesale",async(req,res,next)=>{try{
-  const companyId=req.user.companyId,q=String(req.query.q||"").trim(),customerId=String(req.query.customerId||"")||null,text=q?`%${q}%`:null;
+export async function readCustomerWholesalePrices(companyId,rawQuery={}, {db=prisma}={}){const prisma=db;
+  const q=String(rawQuery.q||"").trim(),customerId=String(rawQuery.customerId||"")||null,text=q?`%${q}%`:null;
   const rows=await prisma.$queryRaw`
     WITH latest_purchase AS (
       SELECT DISTINCT ON (l."productId") l."productId",d."documentDate",CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END AS "lastCost"
@@ -177,8 +177,9 @@ router.get("/wholesale",async(req,res,next)=>{try{
     SELECT w."id",w."customerId",w."productId",w."wholesalePrice",w."active",cu."name" AS "customerName",p."sku",p."name" AS "productName",p."salePrice",p."vatRate",COALESCE(lp."lastCost",p."costPrice",0) AS "lastCost",lp."documentDate" AS "lastPurchaseAt"
     FROM "CustomerWholesalePrice" w JOIN "Customer" cu ON cu."id"=w."customerId" AND cu."companyId"=w."companyId" JOIN "Product" p ON p."id"=w."productId" AND p."companyId"=w."companyId" LEFT JOIN latest_purchase lp ON lp."productId"=p."id"
     WHERE w."companyId"=${companyId} AND w."active"=true AND (${customerId}::text IS NULL OR w."customerId"=${customerId}) AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR cu."name" ILIKE ${text}) ORDER BY cu."name",p."name"`;
-  const items=rows.map(r=>{const wholesale=n(r.wholesalePrice),retail=n(r.salePrice),vat=n(r.vatRate),last=n(r.lastCost),wholesaleNet=wholesale/(1+vat/100),retailNet=retail/(1+vat/100);return {...r,wholesalePrice:wholesale,salePrice:retail,vatRate:vat,lastCost:last,wholesaleNet,retailNet,customerMargin:wholesaleNet>0?((wholesaleNet-last)/wholesaleNet)*100:0,productMargin:retailNet>0?((retailNet-last)/retailNet)*100:0}});res.json({items});
-}catch(error){next(error)}});
+  const items=rows.map(r=>{const wholesale=n(r.wholesalePrice),retail=n(r.salePrice),vat=n(r.vatRate),last=n(r.lastCost),wholesaleNet=wholesale/(1+vat/100),retailNet=retail/(1+vat/100);return {...r,wholesalePrice:wholesale,salePrice:retail,vatRate:vat,lastCost:last,wholesaleNet,retailNet,customerMargin:wholesaleNet>0?((wholesaleNet-last)/wholesaleNet)*100:0,productMargin:retailNet>0?((retailNet-last)/retailNet)*100:0}});return ({items});
+}
+router.get("/wholesale",async(req,res,next)=>{try{res.json(await readCustomerWholesalePrices(req.user.companyId,req.query))}catch(error){next(error)}});
 
 router.post("/wholesale",async(req,res,next)=>{try{
   const companyId=req.user.companyId,b=z.object({customerId:z.string().min(1),productId:z.string().min(1),wholesalePrice:z.coerce.number().min(0).max(999999999)}).parse(req.body||{});const [customer,product]=await Promise.all([ownedCustomer(companyId,b.customerId),ownedProduct(companyId,b.productId)]);if(!customer||!product)return res.status(404).json({error:"Δεν βρέθηκε πελάτης ή προϊόν."});const rowId=id();await prisma.$executeRaw`INSERT INTO "CustomerWholesalePrice" ("id","companyId","customerId","productId","wholesalePrice","createdByUserId","createdByName") VALUES (${rowId},${companyId},${customer.id},${product.id},${b.wholesalePrice},${req.user.id},${req.user.fullName||"Χρήστης"}) ON CONFLICT ("companyId","customerId","productId") DO UPDATE SET "wholesalePrice"=EXCLUDED."wholesalePrice","active"=true,"updatedAt"=NOW()`;res.status(201).json({id:rowId})

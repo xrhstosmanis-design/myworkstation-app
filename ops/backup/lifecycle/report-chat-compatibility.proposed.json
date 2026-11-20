@@ -1,0 +1,691 @@
+{
+  "format": "MWS_REPORT_CHAT_COMPATIBILITY_V1",
+  "policy": "PRESERVED_NONOWNING_REPORT_INSTALLATION_ONLY",
+  "ddl": [
+    "CREATE TABLE IF NOT EXISTS \"StoreChatGroup\" (\n    \"id\" TEXT PRIMARY KEY, \"companyId\" TEXT NOT NULL, \"storeId\" TEXT NOT NULL,\n    \"name\" TEXT NOT NULL, \"createdBy\" TEXT NOT NULL\n  )",
+    "CREATE INDEX IF NOT EXISTS \"StoreChatGroup_scope_idx\"\n    ON \"StoreChatGroup\" (\"companyId\", \"storeId\", \"name\")",
+    "CREATE TABLE IF NOT EXISTS \"StoreChatGroupMember\" (\n    \"groupId\" TEXT NOT NULL REFERENCES \"StoreChatGroup\" (\"id\") ON DELETE CASCADE,\n    \"userId\" TEXT NOT NULL, PRIMARY KEY (\"groupId\", \"userId\")\n  )",
+    "CREATE TABLE IF NOT EXISTS \"StoreChatGroupMessage\" (\n    \"id\" TEXT PRIMARY KEY, \"groupId\" TEXT NOT NULL REFERENCES \"StoreChatGroup\" (\"id\") ON DELETE CASCADE,\n    \"senderId\" TEXT NOT NULL, \"senderName\" TEXT NOT NULL, \"body\" TEXT NOT NULL,\n    \"createdAt\" TIMESTAMP NOT NULL DEFAULT NOW()\n  )",
+    "CREATE INDEX IF NOT EXISTS \"StoreChatGroupMessage_timeline_idx\"\n    ON \"StoreChatGroupMessage\" (\"groupId\", \"createdAt\", \"id\")",
+    "CREATE TABLE IF NOT EXISTS \"StoreChatMutedTopic\" (\n    \"companyId\" TEXT NOT NULL,\n    \"storeId\" TEXT NOT NULL,\n    \"userId\" TEXT NOT NULL,\n    \"topic\" TEXT NOT NULL,\n    PRIMARY KEY (\"companyId\", \"storeId\", \"topic\", \"userId\")\n  )"
+  ],
+  "knownTables": [
+    "StoreChatGroup",
+    "StoreChatGroupMember",
+    "StoreChatGroupMessage",
+    "StoreChatMutedTopic"
+  ],
+  "knownColumns": {
+    "StoreChatGroup": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "text",
+        true
+      ],
+      [
+        "createdBy",
+        "text",
+        true
+      ]
+    ],
+    "StoreChatGroupMember": [
+      [
+        "groupId",
+        "text",
+        true
+      ],
+      [
+        "userId",
+        "text",
+        true
+      ]
+    ],
+    "StoreChatGroupMessage": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "groupId",
+        "text",
+        true
+      ],
+      [
+        "senderId",
+        "text",
+        true
+      ],
+      [
+        "senderName",
+        "text",
+        true
+      ],
+      [
+        "body",
+        "text",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp without time zone",
+        true
+      ]
+    ],
+    "StoreChatMutedTopic": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "userId",
+        "text",
+        true
+      ],
+      [
+        "topic",
+        "text",
+        true
+      ]
+    ]
+  },
+  "tables": [
+    {
+      "name": "StoreChatGroup",
+      "columns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "name",
+          "text",
+          true
+        ],
+        [
+          "createdBy",
+          "text",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "StoreChatGroupMember",
+      "columns": [
+        [
+          "groupId",
+          "text",
+          true
+        ],
+        [
+          "userId",
+          "text",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "StoreChatGroupMessage",
+      "columns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "groupId",
+          "text",
+          true
+        ],
+        [
+          "senderId",
+          "text",
+          true
+        ],
+        [
+          "senderName",
+          "text",
+          true
+        ],
+        [
+          "body",
+          "text",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp without time zone",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "StoreChatMutedTopic",
+      "columns": [
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "userId",
+          "text",
+          true
+        ],
+        [
+          "topic",
+          "text",
+          true
+        ]
+      ]
+    }
+  ],
+  "reviewedColumns": [
+    "StoreChatGroup.createdBy",
+    "StoreChatGroupMember.groupId",
+    "StoreChatGroupMember.userId",
+    "StoreChatGroupMessage.groupId",
+    "StoreChatGroupMessage.senderId",
+    "StoreChatMutedTopic.userId"
+  ],
+  "reviewSemantics": {
+    "StoreChatGroup.createdBy": "Historical creator identity. Preserve without actor reassignment.",
+    "StoreChatGroupMember.groupId": "SQL CASCADE FK to StoreChatGroup. Preserve alongside the group.",
+    "StoreChatGroupMember.userId": "Historical group participant identity. Preserve without changing membership.",
+    "StoreChatGroupMessage.groupId": "SQL CASCADE FK to StoreChatGroup. Preserve message and group together.",
+    "StoreChatGroupMessage.senderId": "Historical sender identity. Preserve message attribution.",
+    "StoreChatMutedTopic.userId": "Company/store/topic-scoped mute preference identity. Preserve as stored."
+  },
+  "catalogue": {
+    "relations": [
+      {
+        "name": "StoreChatGroup",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "StoreChatGroupMember",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "StoreChatGroupMessage",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "StoreChatMutedTopic",
+        "kind": "r",
+        "persistence": "p",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "ownedByCurrentUser": true,
+        "acl": null,
+        "options": null,
+        "replicaIdentity": "d",
+        "defaultTablespace": true,
+        "inherited": false,
+        "rewritten": false
+      }
+    ],
+    "columns": [
+      {
+        "table": "StoreChatGroup",
+        "name": "id",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroup",
+        "name": "companyId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroup",
+        "name": "storeId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroup",
+        "name": "name",
+        "position": 4,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroup",
+        "name": "createdBy",
+        "position": 5,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMember",
+        "name": "groupId",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMember",
+        "name": "userId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "id",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "groupId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "senderId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "senderName",
+        "position": 4,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "body",
+        "position": 5,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "createdAt",
+        "position": 6,
+        "type": "timestamp without time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()",
+        "acl": null,
+        "collation": null,
+        "collationSchema": null
+      },
+      {
+        "table": "StoreChatMutedTopic",
+        "name": "companyId",
+        "position": 1,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatMutedTopic",
+        "name": "storeId",
+        "position": 2,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatMutedTopic",
+        "name": "userId",
+        "position": 3,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      },
+      {
+        "table": "StoreChatMutedTopic",
+        "name": "topic",
+        "position": 4,
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null,
+        "acl": null,
+        "collation": "default",
+        "collationSchema": "pg_catalog"
+      }
+    ],
+    "constraints": [
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreChatGroup",
+        "name": "StoreChatGroup_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreChatGroupMember",
+        "name": "StoreChatGroupMember_groupId_fkey",
+        "kind": "f",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": "__SCHEMA__",
+        "parentTable": "StoreChatGroup",
+        "onDelete": "c",
+        "onUpdate": "a",
+        "definition": "FOREIGN KEY (\"groupId\") REFERENCES \"StoreChatGroup\"(id) ON DELETE CASCADE"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreChatGroupMember",
+        "name": "StoreChatGroupMember_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (\"groupId\", \"userId\")"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreChatGroupMessage",
+        "name": "StoreChatGroupMessage_groupId_fkey",
+        "kind": "f",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": "__SCHEMA__",
+        "parentTable": "StoreChatGroup",
+        "onDelete": "c",
+        "onUpdate": "a",
+        "definition": "FOREIGN KEY (\"groupId\") REFERENCES \"StoreChatGroup\"(id) ON DELETE CASCADE"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreChatGroupMessage",
+        "name": "StoreChatGroupMessage_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "__SCHEMA__",
+        "table": "StoreChatMutedTopic",
+        "name": "StoreChatMutedTopic_pkey",
+        "kind": "p",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "parentSchema": null,
+        "parentTable": null,
+        "onDelete": " ",
+        "onUpdate": " ",
+        "definition": "PRIMARY KEY (\"companyId\", \"storeId\", topic, \"userId\")"
+      }
+    ],
+    "indexes": [
+      {
+        "table": "StoreChatGroup",
+        "name": "StoreChatGroup_pkey",
+        "definition": "CREATE UNIQUE INDEX \"StoreChatGroup_pkey\" ON __SCHEMA__.\"StoreChatGroup\" USING btree (id)",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "StoreChatGroup",
+        "name": "StoreChatGroup_scope_idx",
+        "definition": "CREATE INDEX \"StoreChatGroup_scope_idx\" ON __SCHEMA__.\"StoreChatGroup\" USING btree (\"companyId\", \"storeId\", name)",
+        "primary": false,
+        "unique": false,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "StoreChatGroupMember",
+        "name": "StoreChatGroupMember_pkey",
+        "definition": "CREATE UNIQUE INDEX \"StoreChatGroupMember_pkey\" ON __SCHEMA__.\"StoreChatGroupMember\" USING btree (\"groupId\", \"userId\")",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "StoreChatGroupMessage_pkey",
+        "definition": "CREATE UNIQUE INDEX \"StoreChatGroupMessage_pkey\" ON __SCHEMA__.\"StoreChatGroupMessage\" USING btree (id)",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "StoreChatGroupMessage",
+        "name": "StoreChatGroupMessage_timeline_idx",
+        "definition": "CREATE INDEX \"StoreChatGroupMessage_timeline_idx\" ON __SCHEMA__.\"StoreChatGroupMessage\" USING btree (\"groupId\", \"createdAt\", id)",
+        "primary": false,
+        "unique": false,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      },
+      {
+        "table": "StoreChatMutedTopic",
+        "name": "StoreChatMutedTopic_pkey",
+        "definition": "CREATE UNIQUE INDEX \"StoreChatMutedTopic_pkey\" ON __SCHEMA__.\"StoreChatMutedTopic\" USING btree (\"companyId\", \"storeId\", topic, \"userId\")",
+        "primary": true,
+        "unique": true,
+        "valid": true,
+        "ready": true,
+        "immediate": true,
+        "replicaIdentity": false,
+        "ownedByCurrentUser": true,
+        "options": null
+      }
+    ],
+    "triggers": []
+  },
+  "catalogueHash": "dee6809cc440f5707682e14486680f3d3566418887684958523883cc044c0c5e"
+}

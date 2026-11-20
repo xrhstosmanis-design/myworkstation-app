@@ -20,17 +20,18 @@ export async function runSalesCountsRegression(db){
    'CREATE TABLE "PurchaseOrder"("id" text,"companyId" text,"storeId" text,"supplierId" text,"invoiceNumber" text,"status" text)',
    'CREATE TABLE "PurchaseOrderLine"("orderId" text,"productId" text,"quantity" numeric,"netAmount" numeric,"resolutionStatus" text,"invoiceUnit" text,"stockUnitsPerInvoiceUnit" numeric)',
    'CREATE TABLE "StockMovement"("id" text,"sourceType" text,"sourceId" text,"storeId" text,"productId" text,"movementType" text,"unitCost" numeric,"createdAt" timestamp)',
-   'CREATE TABLE "Supplier"("id" text,"name" text)'
+   'CREATE TABLE "Supplier"("id" text,"companyId" text NOT NULL,"name" text)'
   ])await db.$executeRawUnsafe(sql);
+ await db.$executeRaw`INSERT INTO "Supplier"("id","companyId","name") VALUES('canonical-supplier-own','c','Canonical own supplier'),('canonical-supplier-foreign','x','Canonical foreign supplier')`;
  await db.$executeRaw`INSERT INTO "Store" VALUES('s','c','LAB'),('control','c','CONTROL'),('foreign','x','FOREIGN')`;
  await db.$executeRaw`INSERT INTO "Product" VALUES('p','c','Alpha','A','PIECE',NULL,NULL,.2),('q','c','Beta','B','PIECE',NULL,NULL,.3)`;
  await db.$executeRaw`INSERT INTO "PriceCatalogPromotion" VALUES('promo','c',false)`;
- const sale=async(id,{store='s',company='c',status='COMPLETED',mode='NORMAL',source='POS',date='2026-10-10T10:00:00Z'}={})=>db.$executeRaw`INSERT INTO "Sale" VALUES(${id},${company},${store},${status},${mode},${source},${new Date(date)},NULL)`;
+ const sale=async(id,{store='s',company='c',status='COMPLETED',mode='NORMAL',source='POS',date='2026-10-10T10:00:00Z',original=null}={})=>db.$executeRaw`INSERT INTO "Sale" VALUES(${id},${company},${store},${status},${mode},${source},${new Date(date)},${original})`;
  const line=async(id,saleId,productId,{quantity=1,total=2,promo=null}={})=>db.$executeRaw`INSERT INTO "SaleLine" VALUES(${id},${saleId},${productId},${productId},${quantity},2,0,0,${total},${promo},${promo?'LEAFLET':null})`;
  const filters={companyId:'c',storeId:'s',from:new Date('2026-10-01'),to:new Date('2026-11-01')};
  const read=extra=>readSalesAnalysisReport({...filters,...extra},{db});
  await sale('basket');await line('bp','basket','p',{promo:'promo'});await line('bq','basket','q');
- await sale('return',{source:'POS_REVERSAL',date:'2026-10-10T11:00:00Z'});await line('rp','return','p',{quantity:-1,total:-2,promo:'promo'});await line('rq','return','q',{quantity:-1,total:-2});
+ await sale('return',{source:'POS_REVERSAL',date:'2026-10-10T11:00:00Z',original:'basket'});await line('rp','return','p',{quantity:-1,total:-2,promo:'promo'});await line('rq','return','q',{quantity:-1,total:-2});
  let out=await read();assert.equal(out.normalSaleCount,1);assert.equal(out.reversalCount,1);assert.equal(out.items.length,2);assert.equal(out.totalGross,0);assert.equal(out.totalCost,0);assert.equal(out.items.reduce((a,r)=>a+r.normalSaleCount,0),2);assert.equal(out.items.reduce((a,r)=>a+r.reversalCount,0),2);
  assert.deepEqual(out.sourceCoverage,{complete:true,returnedGroupCount:2,totalGroupCount:2,limit:10000,totalsScope:'COMPLETE_SOURCE'});assert.ok(out.items.every(r=>!Object.keys(r).some(k=>k.startsWith('_'))));
  await sale('second');await line('sp','second','p');out=await read();assert.equal(out.normalSaleCount,2);assert.equal(out.reversalCount,1);assert.equal(out.totalGross,2);assert.equal(out.items.find(r=>r.productId==='p').normalSaleCount,2);

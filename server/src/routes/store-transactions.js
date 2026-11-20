@@ -3,7 +3,7 @@ import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-rev
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from "../lib/supplier-advance.js";
-import {requireStaffGrant} from '../services/backoffice-staff-access.js';
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {createPendingInvoicePayment,readPendingInvoices,capturePendingInvoice} from "../services/pos-pending-invoices.js";
 import {supplierCreditCashContext,applySupplierCreditCash,assertCreditCashUnlinked} from "../lib/supplier-credit-cash.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
@@ -172,10 +172,26 @@ async function ensureTables(){
   return tablesPromise;
 }
 
+const approvalsPaths=['/api/transactions/supplier-settlements/review','/api/transactions/other-expenses/review','/api/transactions/bank-ledger/review'];
+const delegatedApprovalsRead=req=>req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='approvals.read'&&approvalsPaths.includes(String(req.originalUrl||'').split('?')[0]);
+async function requireApprovalsRead(req){
+ if(!delegatedApprovalsRead(req)||typeof req.query.storeId!=='string'||req.query.storeId!==req.user.storeId||req.query.companyId&&req.query.companyId!==req.user.companyId)throw staffError();
+ await requireStaffGrant(prisma,req.user,req.user.storeId,'approvals.read');
+}
+async function sendApprovalsRead(req,res,items){
+ await requireApprovalsRead(req);
+ const keys=['id','transactionId','sourceTransactionId','type','status','paymentMethod','paidAt','note','createdAt','createdByName','amount','proofAmount','advanceDeclared','attachmentFilename','hasAttachment','occurredAt','supplierName','storeName','description','actorName','advanceAmount','automaticCheck','allocations'];
+ const pick=(value,allowed)=>Object.fromEntries(allowed.filter(key=>value?.[key]!==undefined).map(key=>[key,value[key]]));
+ const safeItems=items.map(item=>({...Object.fromEntries(keys.filter(key=>item[key]!==undefined).map(key=>[key,item[key]])),
+  ...(item.automaticCheck?{automaticCheck:{...pick(item.automaticCheck,['matched','allocationTotal','advanceAmount']),checks:(item.automaticCheck.checks||[]).filter(value=>typeof value==='string')}}:{}),
+  ...(Array.isArray(item.allocations)?{allocations:item.allocations.map(value=>pick(value,['purchaseDocumentId','documentNumber','amount']))}:{}),companyId:req.user.companyId,storeId:req.user.storeId}));
+ return res.json({companyId:req.user.companyId,storeId:req.user.storeId,items:safeItems});
+}
+
 function route(handler){
   return async(req,res)=>{
     try{
-      await ensureTables();
+      if(delegatedApprovalsRead(req))await requireApprovalsRead(req);else await ensureTables();
       await handler(req,res);
     }catch(error){
       console.error("Store Transactions:",error);
@@ -187,6 +203,7 @@ function route(handler){
 }
 
 function requireLedgerAccess(req,res,next){
+  if(delegatedApprovalsRead(req))return next();
   if(req.user?.staffAccess===true&&['sales.read','payments.supplier','payments.expense'].includes(req.staffGrant?.capability))return next();
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
@@ -648,9 +665,11 @@ function isSuperAdminReview(req){
   return req.user?.role==="SUPER_ADMIN"||req.user?.platformRole==="SUPER_ADMIN"||req.user?.isSuperAdmin===true;
 }
 function reviewScopeCompanyId(req){
+  if(req.user?.staffAccess===true)return req.user.companyId;
   return isSuperAdminReview(req)?null:req.user?.companyId||null;
 }
 function requireSuperAdminSettlementReview(req,res,next){
+  if(delegatedApprovalsRead(req))return next();
   const owner=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="OWNER";
   if(!isSuperAdminReview(req)&&!owner)return res.status(403).json({error:"Η επιβεβαίωση πληρωμών είναι διαθέσιμη μόνο στον ιδιοκτήτη της εταιρείας ή στον Super Admin."});
   next();
@@ -731,8 +750,10 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
 
 router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const {companyId,storeId}=bankReviewFilters(req);
-  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."sourceTransactionId",e."type",e."amount",e."proofAmount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${companyId}::text IS NULL OR e."companyId"=${companyId}) AND (${storeId}::text IS NULL OR e."storeId"=${storeId}) AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=e."companyId" AND ss."transactionId"=e."sourceTransactionId") AND NOT EXISTS (SELECT 1 FROM "OtherExpenseReview" er WHERE er."companyId"=e."companyId" AND er."transactionId"=e."sourceTransactionId") ORDER BY e."createdAt" ASC LIMIT 500`;
-  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
+  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."sourceTransactionId",e."type",e."amount",e."proofAmount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" AND (${!delegatedApprovalsRead(req)} OR a."companyId"=e."companyId" AND a."storeId"=e."storeId") JOIN "Store" s ON s."id"=e."storeId" AND (${!delegatedApprovalsRead(req)} OR s."companyId"=e."companyId") JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${companyId}::text IS NULL OR e."companyId"=${companyId}) AND (${storeId}::text IS NULL OR e."storeId"=${storeId}) AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=e."companyId" AND ss."transactionId"=e."sourceTransactionId") AND NOT EXISTS (SELECT 1 FROM "OtherExpenseReview" er WHERE er."companyId"=e."companyId" AND er."transactionId"=e."sourceTransactionId") ORDER BY e."createdAt" ASC LIMIT 500`;
+  const items=rows.map(row=>({...row,amount:Number(row.amount||0)}));
+  if(delegatedApprovalsRead(req))return sendApprovalsRead(req,res,items);
+  res.json({items});
 }));
 
 router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
@@ -767,13 +788,13 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
            t."id" AS "transactionId",t."amount",EXISTS (SELECT 1 FROM "StoreOperatorAudit" audit WHERE audit."companyId"=ss."companyId" AND audit."storeId"=ss."storeId" AND audit."details"->>'transactionId'=t."id" AND (audit."eventType"='OTHER_EXPENSE_SUPPLIER_ADVANCE' OR (audit."eventType" IN ('SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED','SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_ADVANCE_DECLARED') AND audit."details"->>'advanceAcknowledged'='true'))) AS "advanceDeclared",t."attachmentFilename",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
            COALESCE(json_agg(json_build_object('purchaseDocumentId',a."purchaseDocumentId",'amount',a."amount",'documentNumber',p."documentNumber") ORDER BY p."documentDate") FILTER (WHERE a."id" IS NOT NULL),'[]'::json) AS allocations
     FROM "SupplierPaymentSettlement" ss
-    JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
+    JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR t."storeId"=ss."storeId")
     JOIN "Supplier" s ON s."id"=ss."supplierId" AND s."companyId"=ss."companyId"
     JOIN "Store" st ON st."id"=ss."storeId" AND st."companyId"=ss."companyId"
     JOIN "Company" c ON c."id"=ss."companyId"
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
-    LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId"
-    LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId"
+    LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR EXISTS(SELECT 1 FROM "PurchaseDocument" scoped WHERE scoped."id"=a."purchaseDocumentId" AND scoped."companyId"=ss."companyId" AND scoped."storeId"=ss."storeId"))
+    LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR p."storeId"=ss."storeId")
     WHERE ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
       AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR ss."companyId"=${filters.companyId})
@@ -782,14 +803,14 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
       AND (${filters.to||null}::date IS NULL OR ss."paidAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
     GROUP BY ss."id",t."id",s."name",st."name",c."name",owner."fullName" ORDER BY ss."createdAt" ASC LIMIT 500
   `;
-  const companies=await prisma.$queryRaw`
+  const companies=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`
     SELECT c."id",c."name",owner."fullName" AS "ownerName"
     FROM "Company" c
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
     WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId})
     ORDER BY c."name"
   `;
-  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
+  const stores=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
   const items=rows.map(row=>{
     const amount=Number(row.amount||0),allocations=Array.isArray(row.allocations)?row.allocations:[];
     const allocationTotal=Number(allocations.reduce((sum,item)=>sum+Number(item.amount||0),0).toFixed(2));
@@ -800,6 +821,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     if(advanceAmount<0||(advanceAmount>0&&!row.advanceDeclared))checks.push(`Το άθροισμα τιμολογίων (${allocationTotal.toFixed(2)} €) διαφέρει από την πληρωμή (${amount.toFixed(2)} €).`);
     return {...row,amount,advanceAmount:row.advanceDeclared?Math.max(0,advanceAmount):0,automaticCheck:{matched:checks.length===0,allocationTotal,advanceAmount:row.advanceDeclared?Math.max(0,advanceAmount):0,checks}};
   });
+  if(delegatedApprovalsRead(req))return sendApprovalsRead(req,res,items);
   res.json({items,companies,stores});
 }));
 
@@ -883,7 +905,7 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
   const items=await prisma.$queryRaw`
     SELECT er."id",er."status",er."createdAt",t."id" AS "transactionId",t."amount",t."description",t."paymentMethod",t."attachmentFilename",t."attachmentData" IS NOT NULL AS "hasAttachment",t."occurredAt",t."actorName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName"
     FROM "OtherExpenseReview" er
-    JOIN "StoreTransaction" t ON t."id"=er."transactionId" AND t."companyId"=er."companyId" AND t."reversedAt" IS NULL
+    JOIN "StoreTransaction" t ON t."id"=er."transactionId" AND t."companyId"=er."companyId" AND (${!delegatedApprovalsRead(req)} OR t."storeId"=er."storeId") AND t."reversedAt" IS NULL
     JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId"
     JOIN "Company" c ON c."id"=er."companyId"
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
@@ -895,8 +917,8 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
       AND (${filters.to||null}::date IS NULL OR t."occurredAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
     ORDER BY er."createdAt" ASC LIMIT 500
   `;
-  const companies=await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId}) ORDER BY c."name"`;
-  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
+  const companies=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId}) ORDER BY c."name"`;
+  const stores=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
   const checkedItems=items.map(item=>{
     const amount=Number(item.amount||0),checks=[];
     if(!item.hasAttachment)checks.push("Δεν υπάρχει αποδεικτικό ή συνδεδεμένο παραστατικό.");
@@ -904,6 +926,7 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
     if(!item.paymentMethod)checks.push("Δεν έχει δηλωθεί τρόπος πληρωμής.");
     return {...item,amount,hasAttachment:Boolean(item.hasAttachment),automaticCheck:{matched:checks.length===0,checks}};
   });
+  if(delegatedApprovalsRead(req))return sendApprovalsRead(req,res,checkedItems);
   res.json({items:checkedItems,companies,stores});
 }));
 

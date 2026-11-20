@@ -7,13 +7,13 @@ import {previewPurchaseOrderCancel,cancelPurchaseOrder} from '../src/services/pu
 import {enforceBackofficeStaff,requireStaffGrant,requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
 
 const expense={type:'OTHER_EXPENSE',amount:2,evidenceMode:'NO_DOCUMENT',description:'Synthetic expense',responsibilityAcknowledged:true,paymentSource:'EXTERNAL',paymentMethod:'EMPLOYEE_REIMBURSEMENT',idempotencyKey:'synthetic-fixed-key'};
-function policy(){
+function policy({profile='AUDITOR',grantedStore=null}={}){
  let capabilities=[...staffCapabilities],revoked=false,status='NEW',inventoryEnabled=true;const calls=[];
  const user={id:'staff',companyId:'a',storeId:'a1',sessionId:'session',sessionVersion:0,role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true};
  const db={company:{findUnique:async()=>({id:'a',active:true,licenseStatus:'ACTIVE',modules:['DOCUMENTS','INVENTORY','CASH_CONTROL','STORE_MODE'].map(moduleKey=>({moduleKey,active:true}))})},
   $queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});
    if(sql.includes('FROM "BackofficeStaffAccount" a'))return revoked?[]:[{userId:'staff',companyId:'a',mustChangePassword:false}];
-   if(sql.includes('FROM "BackofficeStaffGrant" g'))return [{profile:'AUDITOR',capabilities}];
+   if(sql.includes('FROM "BackofficeStaffGrant" g'))return grantedStore&&values[2]!==grantedStore?[]:[{profile,capabilities}];
    if(sql.includes('FROM "StorePaidModule"')&&values.includes('INVENTORY'))return inventoryEnabled?[]:[{active:false}];
    if(sql.includes('FROM "PurchaseOrder"'))return values.includes('foreign')?[]:[{id:'order',storeId:'a1',status}];
    if(sql.includes('FROM "CashShiftSession"'))return [{id:'shift'}];
@@ -22,6 +22,38 @@ function policy(){
   },$queryRawUnsafe:async()=>[{schema:'isolated',fence:null}]};
  return {db,user,calls,grant(value){capabilities=value},revoke(){revoked=true},close(){status='FINAL'},disableInventory(){inventoryEnabled=false}};
 }
+test('manager and another staff profile get the same four exact permissions only in the assigned store',async()=>{
+ const rights=['invoices.read','invoices.reopen','invoices.cancel','shifts.read'];
+ const granted=[
+  ['GET','/api/commerce/documents/inbox/archive?storeId=a1','invoices.read'],
+  ['GET','/api/purchase-orders/order/reopen-preview?storeId=a1','invoices.reopen'],
+  ['GET','/api/purchase-orders/order/cancel-preview?storeId=a1','invoices.cancel'],
+  ['GET','/api/cash/stores/a1/reporting-overview','shifts.read'],
+ ];
+ for(const profile of ['MANAGER','AUDITOR']){
+  const p=policy({profile,grantedStore:'a1'});
+  p.grant(rights);
+  const request=async(method,originalUrl,storeId='a1',body={})=>{
+   const req={user:{...p.user},method,originalUrl,body,query:Object.fromEntries(new URL(originalUrl,'https://isolated.invalid').searchParams),get:key=>key==='x-backoffice-store-id'?storeId:undefined};
+   await enforceBackofficeStaff(p.db,req,{setHeader(){}});
+   return req.staffGrant.capability;
+  };
+  for(const [method,path,capability] of granted)assert.equal(await request(method,path),capability);
+  await assert.rejects(request('GET','/api/cash/stores/a2/reporting-overview','a2'),{code:'STAFF_ACCESS_DENIED'});
+  await assert.rejects(request('GET','/api/commerce/documents/inbox/archive?storeId=a2','a2'),{code:'STAFF_ACCESS_DENIED'});
+  await assert.rejects(request('GET','/api/backoffice-staff/cash/stores/a1'),{code:'STAFF_ACCESS_DENIED'});
+  await assert.rejects(request('PATCH','/api/purchase-orders/order','a1',{description:'Synthetic edit'}),{code:'STAFF_ACCESS_DENIED'});
+  await assert.rejects(request('POST','/api/cash/sessions/shift/close'),{code:'STAFF_ACCESS_DENIED'});
+  p.grant(['invoices.read','shifts.read']);
+  for(const [method,path,capability] of granted){
+   if(capability.endsWith('.read'))assert.equal(await request(method,path),capability);
+   else await assert.rejects(request(method,path),{code:'STAFF_ACCESS_DENIED'});
+  }
+  p.grant(['invoices.read']);
+  await assert.rejects(request('GET','/api/cash/stores/a1/reporting-overview'),{code:'STAFF_ACCESS_DENIED'});
+  assert.equal(await request('GET','/api/commerce/documents/inbox/archive?storeId=a1'),'invoices.read');
+ }
+});
 test('new actions remain explicit, dependency-closed and absent from every existing role preset',()=>{
  for(const key of ['invoices.edit','invoices.approve','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']){
   const rights=changeStaffCapability([],key,true);assert.ok(validStaffCapabilities(rights));if(key==='shifts.close')assert.deepEqual(rights,[key]);else assert.ok(rights.length>1);
@@ -144,8 +176,9 @@ test('delegated invoice cancellation rechecks the grant inside preview and submi
 test('canonical shift report redacts delegated data and revalidates immediately before response',async()=>{
  const source=await readFile(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
  const start=source.indexOf('function staffShiftReportRow(');
- const stop=source.indexOf('router.get("/stores/:storeId/daily-summary"',start);
+ const stop=source.indexOf('export async function readCashDailySummary(',start);
  assert.ok(start>=0&&stop>start);
+ assert.match(source.slice(start,stop),/router\.get\("\/stores\/:storeId\/reporting-overview"/);
  const p=policy();
  p.grant(['shifts.read']);
  const staffQuery=p.db.$queryRaw;

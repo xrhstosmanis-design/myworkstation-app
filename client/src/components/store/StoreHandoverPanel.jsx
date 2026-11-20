@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useRef,useState} from "react";
 import {Camera,CheckCircle2,ClipboardCheck,Eye,RefreshCw} from "lucide-react";
 import "./store-handover.css";
 
@@ -14,7 +14,7 @@ async function prepareImage(file){
   return {dataUrl:canvas.toDataURL("image/jpeg",.78),filename:(file.name||"paradosi-vardias.jpg").replace(/\.[^.]+$/,".jpg")};
 }
 
-export default function StoreHandoverPanel({api,store}){
+export default function StoreHandoverPanel({api,store,readOnly=false}){
   const [items,setItems]=useState([]);
   const [attachment,setAttachment]=useState(null);
   const [attachmentName,setAttachmentName]=useState("");
@@ -23,19 +23,87 @@ export default function StoreHandoverPanel({api,store}){
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
 
-  const load=async()=>{setLoading(true);setError("");try{setItems(await api(`/api/commerce/handover?storeId=${encodeURIComponent(store.id)}`))}catch(err){setError(err.message)}finally{setLoading(false)}};
-  useEffect(()=>{load()},[store.id]);
-  const create=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const f=new FormData(event.currentTarget);try{await api("/api/commerce/handover",{method:"POST",body:JSON.stringify({storeId:store.id,priority:f.get("priority"),message:f.get("message"),attachment})});event.currentTarget.reset();setAttachment(null);setAttachmentName("");setMessage("Η παράδοση στάλθηκε στην επόμενη βάρδια.");await load()}catch(err){setError(err.message)}finally{setBusy(false)}};
-  const acknowledge=async id=>{setError("");try{await api(`/api/commerce/handover/${id}/ack`,{method:"POST",body:"{}"});setMessage("Η παραλαβή επιβεβαιώθηκε ονομαστικά.");await load()}catch(err){setError(err.message)}};
-  const choose=async event=>{setError("");try{const ready=await prepareImage(event.target.files?.[0]);setAttachment(ready);setAttachmentName(ready?.filename||"")}catch(err){setAttachment(null);setAttachmentName("");setError(err.message)}};
-  const view=async item=>{try{const result=await api(`/api/commerce/handover/${item.id}/attachment`);const popup=window.open();if(popup)popup.document.write(`<title>Συνημμένο παράδοσης</title><img src="${result.dataUrl}" style="max-width:100%;height:auto;display:block;margin:auto">`)}catch(err){setError(err.message)}};
+  const listRequest=useRef(0),attachmentRequest=useRef(0),imageRequest=useRef(0),writing=useRef(false);
+  const currentScope=useRef("");
+  const scope=JSON.stringify([store?.id,readOnly]);
+  currentScope.current=scope;
+  const [loadedScope,setLoadedScope]=useState("");
+  const visibleItems=loadedScope===scope?items:[];
+  const load=async()=>{
+    const current=++listRequest.current,own=scope;
+    attachmentRequest.current++;
+    setItems([]);setLoadedScope("");setLoading(true);setError("");
+    if(!store?.id){setLoading(false);return;}
+    try{
+      const result=await api(`/api/commerce/handover?storeId=${encodeURIComponent(store.id)}`);
+      if(current!==listRequest.current||own!==currentScope.current)return;
+      if(!Array.isArray(result))throw Error("Μη έγκυρη απάντηση παραδόσεων βάρδιας.");
+      setItems(result);setLoadedScope(own);
+    }catch(err){if(current===listRequest.current&&own===currentScope.current)setError(err.message)}
+    finally{if(current===listRequest.current&&own===currentScope.current)setLoading(false)}
+  };
+  useEffect(()=>{
+    currentScope.current=scope;
+    setAttachment(null);setAttachmentName("");setMessage("");setBusy(false);load();
+    return()=>{currentScope.current="";listRequest.current++;attachmentRequest.current++;imageRequest.current++};
+  },[store?.id,readOnly,api]);
+  const create=async event=>{
+    event.preventDefault();
+    if(readOnly||writing.current||currentScope.current!==scope)return;
+    const form=event.currentTarget,f=new FormData(form),own=scope;
+    writing.current=true;setBusy(true);setError("");setMessage("");
+    try{
+      await api("/api/commerce/handover",{method:"POST",body:JSON.stringify({storeId:store.id,priority:f.get("priority"),message:f.get("message"),attachment})});
+      if(own!==currentScope.current)return;
+      form.reset();setAttachment(null);setAttachmentName("");setMessage("Η παράδοση στάλθηκε στην επόμενη βάρδια.");await load();
+    }catch(err){if(own===currentScope.current)setError(err.message)}
+    finally{writing.current=false;if(own===currentScope.current)setBusy(false)}
+  };
+  const acknowledge=async id=>{
+    if(readOnly||writing.current||currentScope.current!==scope)return;
+    const own=scope;
+    writing.current=true;setBusy(true);setError("");setMessage("");
+    try{
+      await api(`/api/commerce/handover/${encodeURIComponent(id)}/ack`,{method:"POST",body:"{}"});
+      if(own!==currentScope.current)return;
+      setMessage("Η παραλαβή επιβεβαιώθηκε ονομαστικά.");await load();
+    }catch(err){if(own===currentScope.current)setError(err.message)}
+    finally{writing.current=false;if(own===currentScope.current)setBusy(false)}
+  };
+  const choose=async event=>{
+    if(readOnly||currentScope.current!==scope)return;
+    const current=++imageRequest.current,own=scope;
+    setError("");
+    try{
+      const ready=await prepareImage(event.target.files?.[0]);
+      if(current!==imageRequest.current||own!==currentScope.current)return;
+      setAttachment(ready);setAttachmentName(ready?.filename||"");
+    }catch(err){if(current===imageRequest.current&&own===currentScope.current){setAttachment(null);setAttachmentName("");setError(err.message)}}
+  };
+  const view=async item=>{
+    const current=++attachmentRequest.current,own=scope;
+    setError("");
+    try{
+      const result=await api(`/api/commerce/handover/${encodeURIComponent(item.id)}/attachment?storeId=${encodeURIComponent(store.id)}`);
+      if(current!==attachmentRequest.current||own!==currentScope.current)return;
+      if(!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(result?.dataUrl||""))throw Error("Μη έγκυρο συνημμένο παράδοσης.");
+      const popup=window.open();
+      if(popup){
+        popup.document.title="Συνημμένο παράδοσης";
+        const image=popup.document.createElement("img");
+        image.src=result.dataUrl;image.alt=result.filename||"Συνημμένο παράδοσης";
+        image.style.cssText="max-width:100%;height:auto;display:block;margin:auto";
+        popup.document.body.replaceChildren(image);
+      }
+    }catch(err){if(current===attachmentRequest.current&&own===currentScope.current){setItems([]);setLoadedScope("");setError(err.message)}}
+  };
 
   return <article className="cloud-panel store-handover">
     <div className="cloud-panel-head"><div><h3><ClipboardCheck/>Παράδοση Βάρδιας</h3><p>Εκκρεμότητες, συνημμένα και ονομαστική επιβεβαίωση από την επόμενη βάρδια.</p></div><button onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button></div>
-    {error&&<div className="cloud-alert cloud-error">{error}</div>}{message&&<div className="cloud-alert cloud-success">{message}</div>}
-    <div className="handover-store-grid">
-      <section><h4>Ανοιχτές και πρόσφατες παραδόσεις</h4>{loading?<div className="cloud-loading">Φόρτωση…</div>:items.length===0?<div className="cloud-empty">Δεν υπάρχουν παραδόσεις βάρδιας.</div>:<div className="handover-store-list">{items.map(item=><article className={`handover-store-item ${item.priority}`} key={item.id}><div className="handover-store-status"><b>{item.priority}</b><em>{item.status==="OPEN"?"ΑΝΟΙΧΤΗ":"ΠΑΡΑΛΗΦΘΗΚΕ"}</em></div><p>{item.message}</p><small>{when(item.createdAt)} · Από: {item.fromName||"Χρήστης"}</small>{item.acknowledgedByName&&<small><CheckCircle2/>Παρέλαβε: {item.acknowledgedByName} · {when(item.acknowledgedAt)}</small>}<div className="handover-store-actions">{item.hasAttachment&&<button onClick={()=>view(item)}><Eye/>Συνημμένο</button>}{item.status==="OPEN"&&<button className="primary" onClick={()=>acknowledge(item.id)}><CheckCircle2/>Επιβεβαίωση παραλαβής</button>}</div></article>)}</div>}</section>
-      <form onSubmit={create}><h4>Νέα παράδοση</h4><label>Προτεραιότητα<select name="priority" defaultValue="NORMAL"><option value="LOW">Χαμηλή</option><option value="NORMAL">Κανονική</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select></label><label>Μήνυμα<textarea name="message" rows="5" maxLength="1000" required placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;"/></label><label className="handover-photo"><span><Camera/>Προαιρετικό συνημμένο</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={choose}/><small>{attachmentName||"Κάμερα ή επιλογή εικόνας"}</small></label><button className="handover-submit" disabled={busy}>{busy?"Αποστολή…":"Παράδοση στην επόμενη βάρδια"}</button></form>
+    {error&&<div role="alert" className="cloud-alert cloud-error">{error}</div>}{message&&<div className="cloud-alert cloud-success">{message}</div>}
+    <div className={`handover-store-grid${readOnly?" handover-read-only":""}`}>
+      <section><h4>Ανοιχτές και πρόσφατες παραδόσεις</h4>{loading?<div className="cloud-loading">Φόρτωση…</div>:visibleItems.length===0?<div className="cloud-empty">Δεν υπάρχουν παραδόσεις βάρδιας.</div>:<div className="handover-store-list">{visibleItems.map(item=><article className={`handover-store-item ${item.priority}`} key={item.id}><div className="handover-store-status"><b>{item.priority}</b><em>{item.status==="OPEN"?"ΑΝΟΙΧΤΗ":"ΠΑΡΑΛΗΦΘΗΚΕ"}</em></div><p>{item.message}</p><small>{when(item.createdAt)} · Από: {item.fromName||"Χρήστης"}</small>{item.acknowledgedByName&&<small><CheckCircle2/>Παρέλαβε: {item.acknowledgedByName} · {when(item.acknowledgedAt)}</small>}<div className="handover-store-actions">{item.hasAttachment&&<button onClick={()=>view(item)}><Eye/>Συνημμένο</button>}{!readOnly&&item.status==="OPEN"&&<button disabled={busy} className="primary" onClick={()=>acknowledge(item.id)}><CheckCircle2/>Επιβεβαίωση παραλαβής</button>}</div></article>)}</div>}</section>
+      {!readOnly&&<form onSubmit={create}><h4>Νέα παράδοση</h4><label>Προτεραιότητα<select name="priority" defaultValue="NORMAL"><option value="LOW">Χαμηλή</option><option value="NORMAL">Κανονική</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select></label><label>Μήνυμα<textarea name="message" rows="5" maxLength="1000" required placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;"/></label><label className="handover-photo"><span><Camera/>Προαιρετικό συνημμένο</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={choose}/><small>{attachmentName||"Κάμερα ή επιλογή εικόνας"}</small></label><button className="handover-submit" disabled={busy}>{busy?"Αποστολή…":"Παράδοση στην επόμενη βάρδια"}</button></form>}
     </div>
   </article>;
 }

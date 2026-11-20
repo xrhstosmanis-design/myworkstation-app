@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import crypto from "crypto";
 import { Router } from "express";
 import { z } from "zod";
@@ -30,6 +31,11 @@ async function ensurePromotionUsageColumns() {
 }
 
 function requireAccess(req, res, next) {
+  if(req.user?.staffAccess===true){
+    const path=String(req.originalUrl||'').split('?')[0];
+    if(req.method==='GET'&&req.staffGrant?.capability==='promotions.read'&&['/api/price-catalog/promotions/scoped','/api/price-catalog/promotions/analysis'].includes(path))return next();
+    return next(staffError());
+  }
   if (req.user?.tokenType === "STORE_OPERATOR" || !roles.has(req.user?.role))
     return res
       .status(403)
@@ -42,6 +48,7 @@ function requireAccess(req, res, next) {
 router.use(requireAccess);
 router.use(async (req, res, next) => {
   try {
+    if(req.user?.staffAccess===true)return next();
     if (!offerModeReady) {
       await prisma.$executeRawUnsafe(
         `ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "offerMode" TEXT NOT NULL DEFAULT 'FIXED_PRICE'`,
@@ -545,19 +552,28 @@ router.put("/promotions/:promotionId/stores", async (req, res, next) => {
   }
 });
 
+async function delegatedPromotionStore(req){
+  if(req.user?.staffAccess!==true)return '';
+  const storeId=req.query.storeId;
+  if(typeof storeId!=='string'||!storeId||storeId!==req.user.storeId||req.staffGrant?.capability!=='promotions.read')throw staffError();
+  await requireStaffGrant(prisma,req.user,storeId,'promotions.read');
+  return storeId;
+}
+
 router.get("/promotions/scoped", async (req, res, next) => {
   try {
-    const companyId = req.user.companyId;
+    const companyId = req.user.companyId,storeId=await delegatedPromotionStore(req);
     const rows =
       await prisma.$queryRaw`SELECT pr."id",pr."name",pr."productId",p."name" AS "productName",p."sku",pr."promotionType",pr."offerMode",pr."originalPrice",pr."offerPrice",pr."discountPercent",pr."discountAmount",pr."saleQuantity",pr."bonusQuantity",pr."validFrom",pr."validUntil",pr."active",pr."createdAt",pr."createdByName",COALESCE(json_agg(json_build_object('id',s."id",'name',s."name")) FILTER (WHERE s."id" IS NOT NULL),'[]'::json) AS "stores"
     FROM "PriceCatalogPromotion" pr
     JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
     LEFT JOIN "PriceCatalogPromotionStore" ps ON ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId"
     LEFT JOIN "Store" s ON s."id"=ps."storeId" AND s."companyId"=pr."companyId"
-    WHERE pr."companyId"=${companyId}
+    WHERE pr."companyId"=${companyId} AND (${storeId}='' OR ps."storeId"=${storeId})
     GROUP BY pr."id",p."name",p."sku"
     ORDER BY pr."validFrom" DESC,pr."createdAt" DESC LIMIT 1000`;
-    res.json({ items: rows, count: rows.length });
+    if(storeId)await requireStaffGrant(prisma,req.user,storeId,'promotions.read');
+    res.json({...(storeId?{companyId,storeId}:{}),items: rows, count: rows.length });
   } catch (error) {
     next(error);
   }
@@ -565,8 +581,8 @@ router.get("/promotions/scoped", async (req, res, next) => {
 
 router.get("/promotions/analysis", async (req, res, next) => {
   try {
-    await ensurePromotionUsageColumns();
-    const companyId = req.user.companyId;
+    const companyId = req.user.companyId,storeId=await delegatedPromotionStore(req);
+    if(!storeId)await ensurePromotionUsageColumns();
     const rows =
       await prisma.$queryRaw`SELECT pr."id",p."name" AS "productName",pr."promotionType",pr."active",pr."validFrom",pr."validUntil",
     COUNT(DISTINCT sl."saleId") FILTER (WHERE s."id" IS NOT NULL AND sl."quantity">0)::int AS "salesCount",
@@ -578,8 +594,8 @@ router.get("/promotions/analysis", async (req, res, next) => {
     FROM "PriceCatalogPromotion" pr
     JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
     LEFT JOIN "SaleLine" sl ON sl."promotionId"=pr."id"
-    LEFT JOIN "Sale" s ON s."id"=sl."saleId" AND s."companyId"=pr."companyId" AND s."status"='COMPLETED'
-    WHERE pr."companyId"=${companyId}
+    LEFT JOIN "Sale" s ON s."id"=sl."saleId" AND s."companyId"=pr."companyId" AND s."status"='COMPLETED' AND (${storeId}='' OR s."storeId"=${storeId})
+    WHERE pr."companyId"=${companyId} AND (${storeId}='' OR EXISTS(SELECT 1 FROM "PriceCatalogPromotionStore" ps WHERE ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId" AND ps."storeId"=${storeId}))
     GROUP BY pr."id",p."name"
     ORDER BY "salesAmount" DESC,pr."validFrom" DESC
     LIMIT 1000`;
@@ -602,7 +618,9 @@ router.get("/promotions/analysis", async (req, res, next) => {
         returnedAmount: 0,
       },
     );
+    if(storeId)await requireStaffGrant(prisma,req.user,storeId,'promotions.read');
     res.json({
+      ...(storeId?{companyId,storeId}:{}),
       items: rows,
       totals,
       captureStartsNow: true,

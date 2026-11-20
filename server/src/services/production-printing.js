@@ -21,6 +21,12 @@ export function createProductionPrinting({db,moduleState}){
  })().catch(e=>{ready=null;throw e}));
  async function store(companyId,storeId){const row=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row)throw fail(404,'Δεν βρέθηκε ενεργό κατάστημα.');return row}
  async function view(companyId,storeId){await ensure();await store(companyId,storeId);const rows=await db.$queryRaw`SELECT "settings",("tokenHash" IS NOT NULL) AS "paired" FROM "ProductionPrinter" WHERE "companyId"=${companyId} AND "storeId"=${storeId}`;const jobs=await db.$queryRaw`SELECT "id","batchId","status","createdAt","claimedAt" FROM "ProductionPrintJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt" DESC LIMIT 20`;const products=await db.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} AND sp."active"=true JOIN "PreparationProductSettings" ps ON ps."productId"=p."id" AND ps."companyId"=p."companyId" AND ps."preparationEnabled"=true WHERE p."companyId"=${companyId} AND p."active"=true ORDER BY p."name" LIMIT 1000`;const lifecycle=await readLifecycleGeneration(db,{companyId,storeId});return{settings:rows[0]?.settings||null,paired:Boolean(rows[0]?.paired),jobs,products,lifecycleGeneration:lifecycle.generation}}
+ // Status-only personal reads never initialize connector/lifecycle state.
+ async function readStatus(companyId,storeId){
+  await store(companyId,storeId);
+  const jobs=await db.$queryRaw`SELECT "id","batchId","status","createdAt","claimedAt" FROM "ProductionPrintJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt" DESC LIMIT 20`;
+  return {jobs};
+ }
  async function configure(companyId,storeId,input){await ensure();await store(companyId,storeId);const settings=printerSchema.parse(input);await db.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`production:${companyId}:${storeId}`},0))`;
   const lifecycle=await readLifecycleGeneration(tx,{companyId,storeId});await assertLifecycleMutation(tx,{companyId,storeId},lifecycle.generation);
@@ -64,5 +70,5 @@ export function createProductionPrinting({db,moduleState}){
    return response;
   });
  }
- return{ensure,view,configure,pairing,pair,claim,acknowledge,dispatch,resolve};
+ return{ensure,view,readStatus,configure,pairing,pair,claim,acknowledge,dispatch,resolve};
 }

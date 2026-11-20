@@ -1,3 +1,4 @@
+import {readMyDataPdfDraftReadiness} from '../lib/mydata-pdf-draft-readiness.js';
 import {greeceExportRows} from "../../../shared/greece-time.mjs";
 import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
@@ -41,7 +42,9 @@ router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS
   const store=await prisma.store.findFirst({where:{id:String(req.body?.storeId||""),companyId:req.user.companyId},select:{id:true}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   await ensureSchema();
-  res.json(await acquireOriginal(prisma,req.user.companyId,store.id,req.params.inboxId,req.user.id,true));
+  const result=await acquireOriginal(prisma,req.user.companyId,store.id,req.params.inboxId,req.user.id,true);
+  const pdfReadiness=await readMyDataPdfDraftReadiness(prisma,{companyId:req.user.companyId,storeId:store.id,inboxId:req.params.inboxId,orderId:result.reconciliationRequired?null:result.purchaseOrderId});
+  res.json({...result,pdfReadiness});
 }catch(error){next(error)}});
 
 router.post("/documents/mydata/orders/:orderId/prefill",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{

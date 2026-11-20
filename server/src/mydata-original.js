@@ -39,21 +39,23 @@ export function originalDownloadUrl(xml,issuerVat){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
   const decoded=raw.trim().replace(/&amp;/g,"&").replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(n[0].toLowerCase()==="x"?parseInt(n.slice(1),16):Number(n)));
+  if(/[\u0000-\u0020\u007f]/.test(decoded))throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.");
   let url;try{url=new URL(decoded)}catch{throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.")}
   const validIssuer = /^\d{9}$/.test(issuerVat);
-  const canonical = validIssuer && ["einvoice.impact.gr", "einvoice.s1ecos.gr"].includes(url.hostname)
+  const impact = validIssuer && ["einvoice.impact.gr","einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
   const epsilonFormat = url.pathname.match(/^\/fd\/[a-f0-9]{32}:(\d{1,3})\/?$/i)?.[1];
   const epsilon = epsilonFormat !== undefined && epsilonOriginalFormats.get(url.hostname) === epsilonFormat;
-  const eInvoicing = url.hostname === "e-invoicing.gr"
-    && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}\/?$/i.test(url.pathname);
-  const vitality = url.hostname === "vs.gr"
-    && /^\/iv\/invoice\/download\/([a-z0-9]{4}_\d)\/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}\/?$/i.test(url.pathname);
-  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash
-      || !validIssuer || !(canonical || epsilon || eInvoicing || vitality)) {
+  const einvoicing = validIssuer && url.hostname === "e-invoicing.gr"
+    && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_[A-Za-z0-9]{6,8}\/?$/i.test(url.pathname);
+  const vs = validIssuer && url.hostname === "vs.gr"
+    && /^\/iv\/invoice\/download\/([A-Za-z0-9]{4}_[0-9])\/\1~k1~[a-f0-9]{40}~[A-Za-z0-9_-]{43}\/?$/.test(url.pathname);
+  const onesign = validIssuer && url.hostname === "onesign-api.onesys.gr"
+    && /^\/invoice\/public\/download\/[0-9]{1,20}\/?$/.test(url.pathname);
+  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon || einvoicing || vs || onesign)) {
     throw error("Ο σύνδεσμος απαιτεί διαφορετικό υποστηριζόμενο πάροχο ή δεν συμφωνεί με το ΑΦΜ εκδότη.");
   }
-  url.pathname=url.pathname.replace(/\/$/,"")+"/pdf";
+  url.pathname=url.pathname.replace(/\/$/,"")+(onesign?"":"/pdf");
   return url.href;
 }
 export async function readOriginalPdf(bytes){

@@ -18,6 +18,21 @@ import {assertLifecycleMutation} from '../src/services/store-lifecycle-generatio
 const root=fileURLToPath(new URL('../../',import.meta.url)),q=s=>'"'+s.replaceAll('"','""')+'"',literal=s=>"'"+s.replaceAll("'","''")+"'";
 const metadata=JSON.parse(readFileSync(new URL('./fixtures/ftext-full-schema-metadata-20261024.json',import.meta.url)));
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}}
+function matchingPrivateVersion(sourceVersion,output){
+ assert.ok(Number.isSafeInteger(sourceVersion)&&sourceVersion>=100000,'known source PostgreSQL version required');
+ assert.ok(typeof output==='string'&&output.length<=4096,'bounded private version required');
+ const parts=output.match(/^postgres \(PostgreSQL\) (\d+)\.(\d+)(?:\D|$)/);assert.ok(parts,'known PostgreSQL release version required');
+ const major=Number(parts[1]),minor=Number(parts[2]);
+ assert.ok(Number.isSafeInteger(major)&&major>=10&&Number.isSafeInteger(minor)&&minor>=0&&minor<10000,'bounded PostgreSQL version components required');
+ assert.equal(major,Math.floor(sourceVersion/10000),'first private restore must use the actual source major');
+ assert.ok(major*10000+minor>=sourceVersion,'private restore minor cannot be older than the actual source');
+ return {major,minor};
+}
+test('matching private recovery rejects an older minor instead of ignoring restore errors',()=>{
+ assert.deepEqual(matchingPrivateVersion(160016,'postgres (PostgreSQL) 16.16\n'),{major:16,minor:16});
+ assert.deepEqual(matchingPrivateVersion(160016,'postgres (PostgreSQL) 16.17 (Debian)\n'),{major:16,minor:17});
+ for(const [source,output]of [[160016,'postgres (PostgreSQL) 16.15'],[160016,'postgres (PostgreSQL) 18.7'],[160016,'postgres (PostgreSQL) 16beta1'],[160016,'postgres (PostgreSQL) 16.10000'],[160016,'postgres (PostgreSQL) 16.'+'9'.repeat(320)],[160016,'unknown'],[160016,'x'.repeat(4097)],[NaN,'postgres (PostgreSQL) 16.16']])assert.throws(()=>matchingPrivateVersion(source,output));
+});
 test('wallet full-schema recovery uses immutable schema-only metadata and mandatory native CI',()=>{
  assert.equal(metadata.format,'FTEXT_FULL_SCHEMA_METADATA_NO_BUSINESS_ROWS_V1');assert.equal(metadata.serverVersion,'180004');
  assert.equal(new Set(metadata.columns.map(c=>c.table)).size,264);assert.equal(metadata.functions.length,9);assert.equal(metadata.triggers.length,11);
@@ -87,9 +102,20 @@ test('wallet full catalogue PG18 archive/COPY retains company money/history, blo
   const dump=spawnSync('pg_dump',['--format=custom','--no-owner','--no-privileges','--file='+archive,url.href],{timeout:60000,encoding:'utf8',maxBuffer:1048576});assert.equal(dump.status,0,'isolated full-schema pg_dump failed');await chmod(archive,0o600);
   const script="import json,sys;sys.path.insert(0,sys.argv[1]);from verify_restore import verify_archive;print(json.dumps(verify_archive(sys.argv[2],json.load(open(sys.argv[3])),json.load(open(sys.argv[4])),sys.argv[5])))";
   const verify=result=>{assert.equal(result.status,0,'full schema private recovery failed: '+result.stderr);const p=JSON.parse(result.stdout);assert.equal(p.restoredSnapshotHash,prep.snapshotHash);assert.equal(p.selectiveRestoreVerified,true);assert.equal(p.controlsUnchanged,true);assert.equal(p.fullRestoreAudit.dataMatches,true);assert.equal(p.selectiveRestoreAudit.dataMatches,true);return p;};
-  proof=verify(spawnSync('python3',['-c',script,path.join(root,'ops/backup/lifecycle'),archive,path.join(directory,'job.json'),path.join(directory,'manifest.json'),path.join(root,'server/scripts/store-lifecycle-verify-copy.py')],{timeout:120000,encoding:'utf8',maxBuffer:1048576,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}}));
+  const matchingImage=process.env.MWS_LIFECYCLE_MATCHING_RECOVERY_IMAGE;
+  const inRecoveryImage=image=>spawnSync('docker',['run','--rm','--network=none','--memory=256m','--pids-limit=80','--mount',`type=bind,source=${directory},target=/fixture,readonly`,'--entrypoint','python3',image,'-c',script,'/backup/lifecycle','/fixture/fixture.dump','/fixture/job.json','/fixture/manifest.json','/backup/lifecycle/store-lifecycle-verify-copy.py'],{timeout:120000,encoding:'utf8',maxBuffer:1048576});
+  if(matchingImage){
+    const version=spawnSync('docker',['run','--rm','--network=none','--entrypoint','postgres',matchingImage,'--version'],{timeout:30000,encoding:'utf8',maxBuffer:4096});
+    assert.equal(version.status,0,'matching private PostgreSQL image must report its version');
+    const sourceVersion=Number((await db.$queryRawUnsafe('SHOW server_version_num'))[0].server_version_num),{major,minor}=matchingPrivateVersion(sourceVersion,version.stdout);
+    console.log(`Source PostgreSQL ${sourceVersion}; matching private restore ${major}.${minor}`);
+    proof=verify(inRecoveryImage(matchingImage));
+  }else{
+    // The main pinned-source CI retains the independent host restore path.
+    proof=verify(spawnSync('python3',['-c',script,path.join(root,'ops/backup/lifecycle'),archive,path.join(directory,'job.json'),path.join(directory,'manifest.json'),path.join(root,'server/scripts/store-lifecycle-verify-copy.py')],{timeout:120000,encoding:'utf8',maxBuffer:1048576,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}}));
+  }
   if(process.env.CI)assert.ok(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE,'PG18 production recovery image required');
-  if(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE)proof=verify(spawnSync('docker',['run','--rm','--network=none','--memory=256m','--pids-limit=80','--mount',`type=bind,source=${directory},target=/fixture,readonly`,'--entrypoint','python3',process.env.MWS_LIFECYCLE_RECOVERY_IMAGE,'-c',script,'/backup/lifecycle','/fixture/fixture.dump','/fixture/job.json','/fixture/manifest.json','/backup/lifecycle/store-lifecycle-verify-copy.py'],{timeout:120000,encoding:'utf8',maxBuffer:1048576}));
+  if(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE)proof=verify(inRecoveryImage(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE));
   assert.deepEqual(await allRows(),before,'private archive verification cannot change the source');
   const result=await core.execute(db,actor,{...scope,...prep});assert.equal(result.deleted.some(r=>r.table==='AiOwnerWalletEntry'),false);assert.equal(result.kept.find(r=>r.name==='AiOwnerWalletEntry').rowCount,1);
   assert.equal((await core.execute(db,actor,{...scope,...prep})).idempotentReplay,true);

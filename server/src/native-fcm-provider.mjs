@@ -16,12 +16,13 @@ export function nativeStoreLabel(value){
  if(typeof value!=='string')return '';
  return Array.from(value.replace(/[\p{Cc}\p{Cf}]/gu,' ').replace(/\s+/gu,' ').trim()).slice(0,80).join('');
 }
-export function nativePayload({token,binding,storeId,companyId,storeName,platform,now=Date.now()}){
+export function nativePayload({token,binding,storeId,companyId,storeName,messageId,platform,now=Date.now()}){
  nativeToken(token);
  const target=nativePlatform(platform);
  if(!/^[a-f0-9]{64}$/.test(binding)||![storeId,companyId].every(v=>typeof v==='string'&&v.length>0&&v.length<=200))throw new Error('Invalid native scope');
  const label=nativeStoreLabel(storeName);
- const data={kind:'MWS_CHAT',binding,storeId,companyId,...(label?{storeName:label}:{})};
+ if(messageId!==undefined&&(target!=='android'||typeof messageId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(messageId)))throw new Error('Invalid native message');
+ const data={kind:'MWS_CHAT',binding,storeId,companyId,...(label?{storeName:label}:{}),...(messageId?{messageId}:{})};
  if(target==='ios'){
   if(!Number.isFinite(now)||now<0)throw new Error('Invalid native expiry');
   return {message:{token,data,apns:{headers:{'apns-push-type':'alert','apns-priority':'10','apns-expiration':String(Math.floor(now/1000)+300),'apns-collapse-id':'mws-chat'},payload:{aps:{alert:{title:label?`MyWorkStation Chat · ${label}`:'MyWorkStation Chat',body:'Υπάρχει νέο μήνυμα.'},sound:'default'}}}}};

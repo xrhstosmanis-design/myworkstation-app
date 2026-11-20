@@ -1,19 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "./pos-internal-transfer.css";
 
 const money = new Intl.NumberFormat("el-GR", { style: "currency", currency: "EUR" });
 
-export default function PosInternalTransfer({ api, storeId, scanCatalog, minimized, onMinimize, onRestore, onClose, onDone }) {
+export default function PosInternalTransfer({ api:sendRequest, storeId, scanCatalog, minimized, onMinimize, onRestore, onClose, onDone,companyId,readOnly=false }) {
+  const api=(path,options={})=>{
+    if(readOnly&&String(options.method||'GET').toUpperCase()!=='GET')return Promise.reject(Error('Η πρόσβαση επιτρέπει μόνο προβολή.'));
+    return sendRequest(path,options);
+  };
   const path = `/api/store-pos/stores/${encodeURIComponent(storeId)}/internal-transfers`;
   const [selectedCredit, setSelectedCredit] = useState(null);
   const [bankReference, setBankReference] = useState("");
-  const [cashReceipts, setCashReceipts] = useState([]);
-  const [externalHistory, setExternalHistory] = useState([]);
+  const [storedCashReceipts, setCashReceipts] = useState([]);
+  const [storedExternalHistory, setExternalHistory] = useState([]);
   const [mailTransferId, setMailTransferId] = useState("");
   const [recipient, setRecipient] = useState("");
   const [notice, setNotice] = useState("");
-  const [credit, setCredit] = useState([]);
+  const [storedCredit, setCredit] = useState([]);
   const [stores, setStores] = useState([]);
   const [destination, setDestination] = useState("");
   const [external, setExternal] = useState("");
@@ -25,8 +29,24 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
   const [error, setError] = useState("");
   const [idempotencyKey] = useState(() => crypto.randomUUID());
 
+  const sequence=useRef(0),currentScope=useRef(''),scope=JSON.stringify([companyId,storeId,readOnly]);currentScope.current=scope;
+  const [loadedScope,setLoadedScope]=useState('');
+  const visible=!readOnly||loadedScope===scope;
+  const credit=visible?storedCredit:[],cashReceipts=visible?storedCashReceipts:[],externalHistory=visible?storedExternalHistory:[];
+  const loadReadOnly=async()=>{
+    const current=++sequence.current,own=scope;setCredit([]);setCashReceipts([]);setExternalHistory([]);setLoadedScope('');setError('');setPending(true);
+    try{
+      const results=await Promise.all(['credit','pending-cash-receipts','external-history'].map(suffix=>api(path+'/'+suffix)));
+      if(current!==sequence.current||own!==currentScope.current)return;
+      for(const result of results)if(result?.companyId!==companyId||result.storeId!==storeId||!Array.isArray(result.items))throw Error('Δεν επιβεβαιώθηκε το κατάστημα των διακινήσεων.');
+      setCredit(results[0].items);setCashReceipts(results[1].items);setExternalHistory(results[2].items);setLoadedScope(own);
+    }catch(failure){if(current===sequence.current&&own===currentScope.current)setError(failure.message)}
+    finally{if(current===sequence.current&&own===currentScope.current)setPending(false)}
+  };
+
   useEffect(() => {
     let active = true;
+    if(readOnly){loadReadOnly();return()=>{sequence.current++}};
     api(path + "/destinations").then(rows => {
       if (active) setStores(rows);
     }).catch(error => {
@@ -48,10 +68,11 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
       if (active) setError(error.message);
     });
     return () => { active = false; };
-  }, [api, path]);
+  }, [sendRequest, path,companyId,readOnly]);
 
   function scan(event) {
     event.preventDefault();
+    if(readOnly)return;
     const product = scanCatalog.exact(barcode.trim(), { complete: true });
     if (!product) return setError("Δεν βρέθηκε προϊόν για αυτό το barcode.");
     const productId = product.productId || product.id;
@@ -64,6 +85,7 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
   }
 
   async function submit(finalize) {
+    if(readOnly)return;
     setPending(true);
     setError("");
     if (finalize) setSubmitAttempted(true);
@@ -94,6 +116,7 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
   }
 
   async function settle(row, method) {
+    if(readOnly)return;
     setPending(true);
     setError("");
     setNotice("");
@@ -114,6 +137,7 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
   }
 
   async function receiveCash(row) {
+    if(readOnly)return;
     setPending(true);
     setError("");
     setNotice("");
@@ -133,7 +157,7 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
 
   async function sendTransferEmail(event) {
     event.preventDefault();
-    if (pending || !mailTransferId) return;
+    if (readOnly||pending || !mailTransferId) return;
     setPending(true);
     setError("");
     setNotice("");
@@ -153,25 +177,25 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
   }
 
   const locked = pending || submitAttempted;
-  if (minimized) return createPortal(
+  if (minimized&&!readOnly) return createPortal(
     <button type="button" className="pos-transfer-resume" onClick={onRestore}>
       Επαναφορά διακίνησης · {items.length} είδη
     </button>, document.body
   );
 
   return createPortal(<div className="pos-transfer-overlay">
-    <section className="pos-transfer-card" role="dialog" aria-modal="true" aria-labelledby="pos-transfer-title">
+    <section className={`pos-transfer-card${readOnly?" read-only":""}`} role="dialog" aria-modal="true" aria-labelledby="pos-transfer-title">
       <header>
         <h2 id="pos-transfer-title">Εσωτερική διακίνηση</h2>
         <div className="pos-transfer-header-actions">
-          <button type="button" disabled={pending} onClick={onMinimize}>− Ελαχιστοποίηση</button>
+          {!readOnly&&<button type="button" disabled={pending} onClick={onMinimize}>− Ελαχιστοποίηση</button>}
           <button type="button" disabled={pending} onClick={() => {
             if (!items.length || window.confirm("Να κλείσει η διακίνηση και να χαθούν τα είδη που σκανάρισες;")) onClose();
           }}>Κλείσιμο</button>
         </div>
       </header>
       <div className="pos-transfer-content">
-      <main className="pos-transfer-entry">
+      {!readOnly&&<main className="pos-transfer-entry">
       <label>Προορισμός
         <select value={destination} disabled={locked} onChange={event => { setDestination(event.target.value); setQuote(null); }}>
           <option value="">Επίλεξε κατάστημα</option>
@@ -207,18 +231,19 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
       <button type="button" disabled={pending || !quote} onClick={() => submit(true)}>{submitAttempted ? "Επανάληψη καταχώρισης" : "Καταχώριση επί πιστώσει"}</button>
       </div>
       </div>
-      </main>
+      </main>}
       <aside className="pos-transfer-history" aria-label="Ιστορικό διακινήσεων">
+      {readOnly&&<><button type="button" disabled={pending} onClick={loadReadOnly}>Ανανέωση διακινήσεων</button>{pending&&<p role="status">Φόρτωση διακινήσεων…</p>}{error&&<p role="alert">{error}</p>}</>}
       <details>
         <summary>Ανεξόφλητες διακινήσεις ({credit.length})</summary>
         <ul>{credit.map(row => <li key={row.id}>
           {new Date(row.createdAt).toLocaleDateString("el-GR", { timeZone: "Europe/Athens" })}
           {" · "}{row.sourceName} → {row.destinationName} · {money.format(row.payable)}
-          <button type="button" disabled={locked} onClick={() => {
+          {!readOnly&&<button type="button" disabled={locked} onClick={() => {
             setSelectedCredit(row.id);
             setBankReference("");
-          }}>Εξόφληση</button>
-          {selectedCredit === row.id && <div>
+          }}>Εξόφληση</button>}
+          {!readOnly&&selectedCredit === row.id && <div>
             {row.canPayCash && <button type="button" disabled={locked} onClick={() => settle(row, "cash")}>Μετρητά</button>}
             <label>Αριθμός τραπεζικής συναλλαγής
               <input maxLength={200} value={bankReference} disabled={locked} onChange={event => setBankReference(event.target.value)}/>
@@ -231,18 +256,18 @@ export default function PosInternalTransfer({ api, storeId, scanCatalog, minimiz
         <summary>Εκκρεμείς εισπράξεις μετρητών ({cashReceipts.length})</summary>
         <ul>{cashReceipts.map(row => <li key={row.id}>
           {row.destinationName} · {money.format(row.amount)}
-          <button type="button" disabled={locked} onClick={() => receiveCash(row)}>Καταχώριση είσπραξης</button>
+          {!readOnly&&<button type="button" disabled={locked} onClick={() => receiveCash(row)}>Καταχώριση είσπραξης</button>}
         </li>)}</ul>
       </details>}
       <details>
         <summary>Διακινήσεις προς εξωτερικά καταστήματα</summary>
         <ul>{externalHistory.map(row => <li key={row.id}>
           {new Date(row.createdAt).toLocaleString("el-GR", { timeZone: "Europe/Athens", hourCycle: "h23" })} · {row.destinationName}
-          <button type="button" disabled={locked} onClick={() => {
+          {!readOnly&&<button type="button" disabled={locked} onClick={() => {
             setMailTransferId(row.id);
             setRecipient("");
-          }}>Αποστολή PDF</button>
-          {mailTransferId === row.id && <form onSubmit={sendTransferEmail}>
+          }}>Αποστολή PDF</button>}
+          {!readOnly&&mailTransferId === row.id && <form onSubmit={sendTransferEmail}>
             <label>Email παραλήπτη <input type="email" required maxLength={254} value={recipient}
               disabled={pending} onChange={event => setRecipient(event.target.value)}/></label>
             <button disabled={pending}>Αποστολή στο email</button>

@@ -66,6 +66,25 @@ async function ensureCompanyMappings(companyId){
   }
 }
 
+export async function readCategoryProducts(scopeCompanyId,rawQuery={},selectedId=null,{db=prisma,prepareSource=null}={}){const prisma=db;
+
+    const companyId=scopeCompanyId;if(prepareSource)await prepareSource();
+    const categoryId=String(rawQuery.categoryId||"")||null,subcategoryId=String(rawQuery.subcategoryId||"")||null,storeId=String(rawQuery.storeId||"")||null,q=String(rawQuery.q||"").trim(),text=q?`%${q}%`:null;
+    const page=Math.max(1,Number.parseInt(String(rawQuery.page||"1"),10)||1),pageSize=Math.min(200,Math.max(25,Number.parseInt(String(rawQuery.pageSize||"100"),10)||100)),offset=(page-1)*pageSize;
+    const countRows=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" p WHERE p."companyId"=${companyId} AND (${categoryId}::text IS NULL OR p."categoryId"=${categoryId}) AND (${subcategoryId}::text IS NULL OR p."subcategoryId"=${subcategoryId}) AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})`;
+    const rows=await prisma.$queryRaw`
+      SELECT p."id",p."sku",p."name",p."salePrice",p."vatRate",c."name" AS "categoryName",sc."name" AS "subcategoryName",pb."barcode",
+        COALESCE(sp."salePrice",p."salePrice") AS "storeSalePrice",lp."supplierName"
+      FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NOT NULL AND sp."storeId"=${storeId})
+      LEFT JOIN LATERAL (SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1) pb ON true
+      LEFT JOIN LATERAL (SELECT sup."name" AS "supplierName" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId" WHERE l."productId"=p."id" AND d."companyId"=${companyId} AND d."status"='APPROVED' AND (${storeId}::text IS NULL OR d."storeId"=${storeId}) ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) lp ON true
+      WHERE p."companyId"=${companyId} AND (${categoryId}::text IS NULL OR p."categoryId"=${categoryId}) AND (${subcategoryId}::text IS NULL OR p."subcategoryId"=${subcategoryId}) AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
+      ORDER BY p."name" LIMIT ${pageSize} OFFSET ${offset}`;
+    const total=Number(countRows[0]?.count||0);return ({items:rows.map(r=>({...r,salePrice:Number(r.storeSalePrice??r.salePrice??0),vatRate:Number(r.vatRate||0)})),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
+
+}
+
 router.get("/categories",async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;await ensureCompanyMappings(companyId);
@@ -112,23 +131,7 @@ router.delete("/subcategories/:id",async(req,res,next)=>{
   try{const companyId=req.user.companyId;await ensureSchema();const count=await prisma.$executeRaw`UPDATE "ProductSubcategory" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.id} AND "companyId"=${companyId}`;if(!count)return res.status(404).json({error:"Δεν βρέθηκε η υποκατηγορία."});res.json({ok:true,softDeleted:true})}catch(error){next(error)}});
 
 router.get("/products",async(req,res,next)=>{
-  try{
-    const companyId=req.user.companyId;await ensureCompanyMappings(companyId);
-    const categoryId=String(req.query.categoryId||"")||null,subcategoryId=String(req.query.subcategoryId||"")||null,storeId=String(req.query.storeId||"")||null,q=String(req.query.q||"").trim(),text=q?`%${q}%`:null;
-    const page=Math.max(1,Number.parseInt(String(req.query.page||"1"),10)||1),pageSize=Math.min(200,Math.max(25,Number.parseInt(String(req.query.pageSize||"100"),10)||100)),offset=(page-1)*pageSize;
-    const countRows=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" p WHERE p."companyId"=${companyId} AND (${categoryId}::text IS NULL OR p."categoryId"=${categoryId}) AND (${subcategoryId}::text IS NULL OR p."subcategoryId"=${subcategoryId}) AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})`;
-    const rows=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",p."salePrice",p."vatRate",c."name" AS "categoryName",sc."name" AS "subcategoryName",pb."barcode",
-        COALESCE(sp."salePrice",p."salePrice") AS "storeSalePrice",lp."supplierName"
-      FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
-      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NOT NULL AND sp."storeId"=${storeId})
-      LEFT JOIN LATERAL (SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1) pb ON true
-      LEFT JOIN LATERAL (SELECT sup."name" AS "supplierName" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId" WHERE l."productId"=p."id" AND d."companyId"=${companyId} AND d."status"='APPROVED' AND (${storeId}::text IS NULL OR d."storeId"=${storeId}) ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) lp ON true
-      WHERE p."companyId"=${companyId} AND (${categoryId}::text IS NULL OR p."categoryId"=${categoryId}) AND (${subcategoryId}::text IS NULL OR p."subcategoryId"=${subcategoryId}) AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
-      ORDER BY p."name" LIMIT ${pageSize} OFFSET ${offset}`;
-    const total=Number(countRows[0]?.count||0);res.json({items:rows.map(r=>({...r,salePrice:Number(r.storeSalePrice??r.salePrice??0),vatRate:Number(r.vatRate||0)})),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
-  }catch(error){next(error)}
-});
+  try{res.json(await readCategoryProducts(req.user.companyId,req.query,req.params.id,{db:prisma,prepareSource:()=>ensureCompanyMappings(req.user.companyId)}))}catch(error){if([400,403,404].includes(error.status))return res.status(error.status).json({error:error.message});next(error)}});
 
 router.patch("/products/bulk-move",async(req,res,next)=>{
   try{const companyId=req.user.companyId;await ensureSchema();const body=z.object({productIds:z.array(z.string().min(1)).min(1).max(500),categoryId:z.string().min(1),subcategoryId:z.string().min(1).nullable().optional()}).parse(req.body||{});const ids=[...new Set(body.productIds)];const products=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "id"=ANY(${ids}::text[])`;if(products.length!==ids.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο είδος."});if(body.subcategoryId){const sub=await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${body.subcategoryId} AND "companyId"=${companyId} AND "categoryId"=${body.categoryId} LIMIT 1`;if(!sub[0])return res.status(400).json({error:"Η υποκατηγορία δεν ανήκει στη νέα κατηγορία."})}await prisma.$executeRaw`UPDATE "Product" SET "categoryId"=${body.categoryId},"subcategoryId"=${body.subcategoryId||null},"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${companyId} AND "id"=ANY(${ids}::text[])`;res.json({ok:true,changed:ids.length})}catch(error){next(error)}});

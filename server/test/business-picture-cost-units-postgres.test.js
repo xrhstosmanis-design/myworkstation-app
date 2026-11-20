@@ -11,6 +11,7 @@ test('actual profit SQL reconciles package discounts and units, original return 
  const {PrismaClient}=await import('@prisma/client'),db=new PrismaClient();
  try{await db.$transaction(async tx=>{
   const tables={
+   Store:'"id" TEXT PRIMARY KEY,"companyId" TEXT',
    StockMovement:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"movementType" TEXT,"sourceType" TEXT,"sourceId" TEXT,"unitCost" NUMERIC,"createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
    Product:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"categoryId" TEXT,"unit" TEXT DEFAULT \'PIECE\',"name" TEXT,"sku" TEXT,"costPrice" NUMERIC',
    Sale:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT DEFAULT \'COMPLETED\',"source" TEXT DEFAULT \'POS\',"reversalKind" TEXT,"originalSaleId" TEXT,"occurredAt" TIMESTAMP',
@@ -32,7 +33,7 @@ test('actual profit SQL reconciles package discounts and units, original return 
   const line=async(id,s,p,qty,total)=>tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","quantity","lineTotal") VALUES (${id},${s},${p},${qty},${total})`;
   const source=await readFile(new URL('../src/routes/owner-payments.js',import.meta.url),'utf8'),handlers=new Map(),router=Object.fromEntries(['get','post','patch','put','delete','use'].map(method=>[method,(path,...args)=>{if(method==='get')handlers.set(path,args.at(-1));}]));
   const prisma={store:{findFirst:async({where})=>where.companyId==='a'&&where.id==='a1'?{id:'a1'}:null,findMany:async()=>[{id:'a1',name:'Isolated LAB'}]},$queryRaw:(parts,...values)=>parts.join('').includes('WITH "postedCostGroups"')?tx.$queryRaw(parts,...values):Promise.resolve([])};
-  new Function('Router','z','prisma','businessPictureCalendarRange','finishBusinessPictureRow','applyBusinessPictureCostEstimates','collectBusinessPictureMissingCosts',source.replace(/^import .*;\s*$/gm,'').replace(/export default router;?/,''))(()=>router,z,prisma,businessPictureCalendarRange,finishBusinessPictureRow,applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts);
+  new Function('Router','z','prisma','businessPictureCalendarRange','finishBusinessPictureRow','applyBusinessPictureCostEstimates','collectBusinessPictureMissingCosts',source.replace(/^import .*;\s*$/gm,'').replace(/export default router;?/,'').replace(/^export /gm,''))(()=>router,z,prisma,businessPictureCalendarRange,finishBusinessPictureRow,applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts);
   const report=async(from,to=from,role='OWNER',storeId='a1')=>{let r;await handlers.get('/business-picture')({user:{companyId:'a',role},query:{storeId,calendarFrom:from,calendarTo:to}},{set(){},json(value){r=value;}},e=>{throw e});return r};
   await product('small',3);await product('large',1.5);await product('bar',9.73,'candy');await product('missing',0);await product('already-piece',.125);await product('weighted',30,'other');await product('foreign',4,'other');await product('mismatch',5,'other');
   await purchase('p-small','small',10,3,30,24);await purchase('p-large','large',7,1.5,10.5,6);await purchase('p-bar','bar',1,13.25,9.73,20);

@@ -1,0 +1,597 @@
+{
+  "description": "Synthetic independent compatibility snapshot. Historical operation results are immutable and differ legitimately from current line state.",
+  "catalog": {
+    "schema": "no14_fixture",
+    "tables": [
+      {
+        "name": "SupplierExpectedReceiptLine",
+        "columns": [
+          {
+            "name": "id",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "companyId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "storeId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "supplierId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "productId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "invoiceQuantity",
+            "type": "numeric(24,6)",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "invoiceUnit",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "stockUnit",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "stockUnitsPerInvoiceUnit",
+            "type": "numeric(24,6)",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "expectedStockQuantity",
+            "type": "numeric(30,12)",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "cancelledQuantity",
+            "type": "numeric(30,12)",
+            "notNull": true,
+            "default": "0"
+          },
+          {
+            "name": "version",
+            "type": "integer",
+            "notNull": true,
+            "default": "0"
+          },
+          {
+            "name": "confirmedBy",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "confirmedAt",
+            "type": "timestamp with time zone",
+            "notNull": true,
+            "default": "now()"
+          },
+          {
+            "name": "cancelledBy",
+            "type": "text",
+            "notNull": false,
+            "default": null
+          },
+          {
+            "name": "cancelledAt",
+            "type": "timestamp with time zone",
+            "notNull": false,
+            "default": null
+          },
+          {
+            "name": "cancellationReason",
+            "type": "text",
+            "notNull": false,
+            "default": null
+          }
+        ],
+        "primaryKey": [
+          "id"
+        ],
+        "checks": [
+          "CHECK ((\"invoiceQuantity\" > (0)::numeric))",
+          "CHECK ((\"stockUnitsPerInvoiceUnit\" > (0)::numeric))",
+          "CHECK ((\"expectedStockQuantity\" > (0)::numeric))",
+          "CHECK ((\"cancelledQuantity\" >= (0)::numeric))"
+        ],
+        "foreignKeys": [],
+        "indexes": [
+          {
+            "name": "SupplierExpectedReceiptLine_pkey",
+            "columns": [
+              "id"
+            ],
+            "unique": true,
+            "primary": true,
+            "predicate": null,
+            "method": "btree"
+          },
+          {
+            "name": "SupplierExpectedReceiptLine_scope",
+            "columns": [
+              "companyId",
+              "storeId",
+              "productId"
+            ],
+            "unique": false,
+            "primary": false,
+            "predicate": null,
+            "method": "btree"
+          }
+        ],
+        "triggers": []
+      },
+      {
+        "name": "SupplierExpectedReceiptAllocation",
+        "columns": [
+          {
+            "name": "id",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "companyId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "storeId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "expectedLineId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "orderId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "productId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "quantity",
+            "type": "numeric(30,12)",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "sourceDigest",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "actorId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "createdAt",
+            "type": "timestamp with time zone",
+            "notNull": true,
+            "default": "now()"
+          }
+        ],
+        "primaryKey": [
+          "id"
+        ],
+        "checks": [
+          "CHECK ((quantity > (0)::numeric))"
+        ],
+        "foreignKeys": [
+          {
+            "columns": [
+              "expectedLineId"
+            ],
+            "referencedSchema": "no14_fixture",
+            "referencedTable": "SupplierExpectedReceiptLine",
+            "referencedColumns": [
+              "id"
+            ],
+            "onUpdate": "NO ACTION",
+            "onDelete": "NO ACTION",
+            "deferrable": false,
+            "initiallyDeferred": false
+          }
+        ],
+        "indexes": [
+          {
+            "name": "SupplierExpectedReceiptAllocation_pkey",
+            "columns": [
+              "id"
+            ],
+            "unique": true,
+            "primary": true,
+            "predicate": null,
+            "method": "btree"
+          },
+          {
+            "name": "SupplierExpectedReceiptAllocation_source",
+            "columns": [
+              "companyId",
+              "storeId",
+              "orderId",
+              "productId"
+            ],
+            "unique": false,
+            "primary": false,
+            "predicate": null,
+            "method": "btree"
+          }
+        ],
+        "triggers": []
+      },
+      {
+        "name": "SupplierExpectedReceiptOperation",
+        "columns": [
+          {
+            "name": "companyId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "storeId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "key",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "actorId",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "payloadDigest",
+            "type": "text",
+            "notNull": true,
+            "default": null
+          },
+          {
+            "name": "result",
+            "type": "jsonb",
+            "notNull": true,
+            "default": null
+          }
+        ],
+        "primaryKey": [
+          "companyId",
+          "storeId",
+          "key"
+        ],
+        "checks": [],
+        "foreignKeys": [],
+        "indexes": [
+          {
+            "name": "SupplierExpectedReceiptOperation_pkey",
+            "columns": [
+              "companyId",
+              "storeId",
+              "key"
+            ],
+            "unique": true,
+            "primary": true,
+            "predicate": null,
+            "method": "btree"
+          }
+        ],
+        "triggers": []
+      }
+    ],
+    "incomingReferences": [
+      {
+        "schema": "no14_fixture",
+        "table": "SupplierExpectedReceiptAllocation",
+        "columns": [
+          "expectedLineId"
+        ],
+        "referencedSchema": "no14_fixture",
+        "referencedTable": "SupplierExpectedReceiptLine",
+        "referencedColumns": [
+          "id"
+        ]
+      }
+    ]
+  },
+  "scope": {
+    "companyId": "company-a",
+    "storeId": "store-a"
+  },
+  "rows": {
+    "SupplierExpectedReceiptLine": [
+      {
+        "id": "line-a",
+        "companyId": "company-a",
+        "storeId": "store-a",
+        "supplierId": "supplier-a",
+        "productId": "product-a",
+        "invoiceQuantity": "2",
+        "invoiceUnit": "PACKAGE",
+        "stockUnit": "PIECE",
+        "stockUnitsPerInvoiceUnit": "6",
+        "expectedStockQuantity": "12",
+        "cancelledQuantity": "8",
+        "version": 2,
+        "confirmedBy": "owner-a",
+        "confirmedAt": "2026-11-19T07:00:00.000Z",
+        "cancelledBy": "owner-a",
+        "cancelledAt": "2026-11-19T07:30:00.000Z",
+        "cancellationReason": "Synthetic cancellation of remaining eight"
+      }
+    ],
+    "SupplierExpectedReceiptAllocation": [
+      {
+        "id": "allocation-a",
+        "companyId": "company-a",
+        "storeId": "store-a",
+        "expectedLineId": "line-a",
+        "orderId": "order-a",
+        "productId": "product-a",
+        "quantity": "4",
+        "sourceDigest": "00dd5dd1dbbc1555ff7ead4a77b7d2fdf5ccf3fd8797babed26e1975fe49ec3c",
+        "actorId": "owner-a",
+        "createdAt": "2026-11-19T07:15:00.000Z"
+      }
+    ],
+    "SupplierExpectedReceiptOperation": [
+      {
+        "companyId": "company-a",
+        "storeId": "store-a",
+        "key": "10000000-0000-4000-8000-000000000001",
+        "actorId": "owner-a",
+        "payloadDigest": "00595c4d9815c5ba2796d61a1060996f490a5f7cb6a9c7bf1af42242d3d998d1",
+        "result": {
+          "id": "line-a",
+          "version": 0,
+          "expectedStockQuantity": "12"
+        }
+      },
+      {
+        "companyId": "company-a",
+        "storeId": "store-a",
+        "key": "10000000-0000-4000-8000-000000000002",
+        "actorId": "owner-a",
+        "payloadDigest": "89fd04fe344b0f416d6da5f711f6b0ba71e249822ab2d0dcee3ab5a35c1c2b9b",
+        "result": {
+          "id": "line-a",
+          "allocationId": "allocation-a",
+          "version": 1,
+          "remainingQuantity": "8"
+        }
+      },
+      {
+        "companyId": "company-a",
+        "storeId": "store-a",
+        "key": "10000000-0000-4000-8000-000000000003",
+        "actorId": "owner-a",
+        "payloadDigest": "b2f2234bb7851115b177585e674776f166f78fa99d1d5b6182a4df649108e982",
+        "result": {
+          "id": "line-a",
+          "version": 2,
+          "remainingQuantity": "0"
+        }
+      },
+      {
+        "companyId": "company-a",
+        "storeId": "store-a",
+        "key": "10000000-0000-4000-8000-000000000004",
+        "actorId": "owner-a",
+        "payloadDigest": "373f4f356f932069a4d4743017bad2d4bf440fefcaaef831a4f4e7cb8a2bd686",
+        "result": {
+          "rejected": true,
+          "message": "Synthetic missing row rejection"
+        }
+      }
+    ]
+  },
+  "entities": {
+    "Company": [
+      {
+        "id": "company-a"
+      }
+    ],
+    "Store": [
+      {
+        "id": "store-a",
+        "companyId": "company-a"
+      }
+    ],
+    "Supplier": [
+      {
+        "id": "supplier-a",
+        "companyId": "company-a"
+      }
+    ],
+    "Product": [
+      {
+        "id": "product-a",
+        "companyId": "company-a",
+        "unit": "PIECE"
+      }
+    ],
+    "PurchaseOrder": [
+      {
+        "id": "order-a",
+        "companyId": "company-a",
+        "storeId": "store-a",
+        "supplierId": "supplier-a"
+      }
+    ],
+    "User": [
+      {
+        "id": "owner-a",
+        "companyId": "company-a",
+        "role": "OWNER"
+      }
+    ],
+    "sourceEvidence": [
+      {
+        "allocationId": "allocation-a",
+        "snapshot": {
+          "order": {
+            "id": "order-a",
+            "status": "INVOICED",
+            "supplierId": "supplier-a",
+            "updatedAt": "2026-11-19T06:30:00.000Z",
+            "reopenVersion": 0,
+            "invoiceNumber": "SYNTHETIC-A",
+            "postingSupplierId": "supplier-a",
+            "documentId": "document-a",
+            "documentStatus": "APPROVED",
+            "documentType": "INVOICE",
+            "documentSupplierId": "supplier-a",
+            "documentUpdatedAt": "2026-11-19T06:30:00.000Z",
+            "unit": "PIECE",
+            "active": true,
+            "storeActive": true
+          },
+          "moves": [
+            {
+              "id": "move-a",
+              "movementType": "PURCHASE",
+              "quantity": "12",
+              "unitCost": "1"
+            }
+          ]
+        }
+      }
+    ],
+    "actorScopes": [
+      {
+        "actorId": "owner-a",
+        "companyId": "company-a",
+        "storeId": "store-a"
+      }
+    ]
+  },
+  "operationEvidence": [
+    {
+      "companyId": "company-a",
+      "storeId": "store-a",
+      "key": "10000000-0000-4000-8000-000000000001",
+      "actorId": "owner-a",
+      "action": "confirm",
+      "expectedId": null,
+      "body": {
+        "storeId": "store-a",
+        "productId": "product-a",
+        "supplierId": "supplier-a",
+        "invoiceQuantity": "2",
+        "invoiceUnit": "PACKAGE",
+        "stockUnitsPerInvoiceUnit": "6",
+        "idempotencyKey": "10000000-0000-4000-8000-000000000001"
+      },
+      "result": {
+        "id": "line-a",
+        "version": 0,
+        "expectedStockQuantity": "12"
+      }
+    },
+    {
+      "companyId": "company-a",
+      "storeId": "store-a",
+      "key": "10000000-0000-4000-8000-000000000002",
+      "actorId": "owner-a",
+      "action": "link",
+      "expectedId": "line-a",
+      "body": {
+        "storeId": "store-a",
+        "version": 0,
+        "orderId": "order-a",
+        "sourceDigest": "00dd5dd1dbbc1555ff7ead4a77b7d2fdf5ccf3fd8797babed26e1975fe49ec3c",
+        "quantity": "4",
+        "idempotencyKey": "10000000-0000-4000-8000-000000000002"
+      },
+      "result": {
+        "id": "line-a",
+        "allocationId": "allocation-a",
+        "version": 1,
+        "remainingQuantity": "8"
+      }
+    },
+    {
+      "companyId": "company-a",
+      "storeId": "store-a",
+      "key": "10000000-0000-4000-8000-000000000003",
+      "actorId": "owner-a",
+      "action": "cancel",
+      "expectedId": "line-a",
+      "body": {
+        "storeId": "store-a",
+        "version": 1,
+        "reason": "Synthetic cancellation of remaining eight",
+        "idempotencyKey": "10000000-0000-4000-8000-000000000003"
+      },
+      "result": {
+        "id": "line-a",
+        "version": 2,
+        "remainingQuantity": "0"
+      }
+    },
+    {
+      "companyId": "company-a",
+      "storeId": "store-a",
+      "key": "10000000-0000-4000-8000-000000000004",
+      "actorId": "owner-a",
+      "action": "cancel",
+      "expectedId": "missing-line",
+      "body": {
+        "storeId": "store-a",
+        "version": 0,
+        "reason": "Synthetic missing row rejection",
+        "intentActorId": "owner-a",
+        "intentCompanyId": "company-a",
+        "intentGeneration": "0",
+        "idempotencyKey": "10000000-0000-4000-8000-000000000004"
+      },
+      "result": {
+        "rejected": true,
+        "message": "Synthetic missing row rejection"
+      }
+    }
+  ]
+}

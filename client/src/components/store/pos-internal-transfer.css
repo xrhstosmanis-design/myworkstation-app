@@ -131,3 +131,5 @@
 @media (max-width: 760px) {
   .pos-transfer-content { grid-template-columns: minmax(0, 1fr); align-content: start; }
 }
+
+.pos-transfer-card.read-only .pos-transfer-content{grid-template-columns:minmax(0,1fr)}

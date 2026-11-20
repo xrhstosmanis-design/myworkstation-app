@@ -1,0 +1,7 @@
+import React,{useMemo} from 'react';
+import QRCode from 'qrcode';
+export function membershipQrPath(value){const qr=QRCode.create(value,{errorCorrectionLevel:'H'}),size=qr.modules.size;let path='';for(let row=0;row<size;row++)for(let col=0;col<size;col++)if(qr.modules.get(row,col))path+=`M${col+4},${row+4}h1v1h-1z`;return{size:size+8,path}}
+export default function CustomerMembershipReadPresentation({name,points,memberCard}){
+ const qr=useMemo(()=>{if(!memberCard)return null;try{return membershipQrPath(memberCard)}catch{return null}},[memberCard]);
+ return <section aria-label="Πλήρης προσωπική κάρτα πελάτη μόνο ανάγνωση"><h4>{name}</h4><p>Τρέχοντες πόντοι: {points.toLocaleString('el-GR',{maximumFractionDigits:2})}</p><p>Πλήρες αναγνωριστικό προσωπικής κάρτας πελάτη για αναγνώριση και επιλογή εκπτώσεων στο POS. Δεν είναι κάρτα σύνδεσης χειριστή και δεν περιλαμβάνει κωδικό εργασίας.</p>{memberCard?<><p>Κάρτα μέλους: <code>{memberCard}</code></p>{qr?<svg role="img" aria-label="QR προσωπικής κάρτας πελάτη" viewBox={`0 0 ${qr.size} ${qr.size}`} width="250" height="250"><title>Προσωπική κάρτα πελάτη</title><rect width={qr.size} height={qr.size} fill="white"/><path d={qr.path} fill="black"/></svg>:<p>Το αναγνωριστικό εμφανίζεται ως κείμενο· η εικόνα QR δεν είναι διαθέσιμη.</p>}</>:<p>Δεν υπάρχει καταχωρισμένη κάρτα μέλους.</p>}<p>Το QR δημιουργείται μόνο τοπικά από το αναγνωριστικό πελάτη. Δεν ξεκινά σάρωση, εκτύπωση, αποστολή ή μεταβολή πόντων.</p></section>;
+}

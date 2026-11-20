@@ -1,3 +1,4 @@
+import NativePromotionList from "./NativePromotionList.jsx";
 import {greeceDateTimeInput,greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -2208,39 +2209,7 @@ export default function OwnerProductCenter({
               </label>
               <button disabled={busy || !efoodExportStore}>Excel ενεργών προσφορών efood</button>
             </form>
-            <div className="promo-list">
-              {promotions.map((p) => (
-                <article key={p.id}>
-                  <div>
-                    <b>{p.productName}</b>{p.name && <small>{p.name}</small>}
-                    <small>
-                      {p.promotionType === "GIFT"
-                        ? `Αγορά ${Number(p.saleQuantity)} + ${Number(p.bonusQuantity)} δωρεάν`
-                        : p.offerMode === "DISCOUNT_PERCENT"
-                          ? `-${Number(p.discountPercent)}%`
-                          : p.offerMode === "DISCOUNT_AMOUNT"
-                            ? `-${money(p.discountAmount)}`
-                            : `Τιμή ${money(p.offerPrice)}`}
-                    </small>
-                    <small>
-                      {new Date(p.validFrom).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})} →{" "}
-                      {p.validUntil
-                        ? new Date(p.validUntil).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})
-                        : "χωρίς λήξη"}
-                    </small>
-                    <small>
-                      {(p.stores || []).map((s) => s.name).join(", ")}
-                    </small>
-                  </div>
-                  <button
-                    className={p.active ? "danger" : "secondary"}
-                    onClick={() => togglePromotion(p)}
-                  >
-                    {p.active ? "Παύση" : "Ενεργοποίηση"}
-                  </button>
-                </article>
-              ))}
-            </div>
+            <NativePromotionList items={promotions} onToggle={togglePromotion}/>
           </section>
         </div>
       )}

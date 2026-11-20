@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {JSDOM} from 'jsdom';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+async function component(name){
+ const r=await build({entryPoints:[new URL(`../../client/src/components/${name}.jsx`,import.meta.url).pathname],bundle:true,write:false,platform:'node',format:'cjs',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'}});
+ const mod={exports:{}};new Function('require','module','exports',r.outputFiles[0].text)(require,mod,mod.exports);return mod.exports.default;
+}
+async function mount(Component,props){
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'}),keys=['window','document','navigator','HTMLElement','Event','CustomEvent','MutationObserver','localStorage','sessionStorage','FormData','alert','confirm','IS_REACT_ACT_ENVIRONMENT'];
+ const saved=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
+ if(typeof Component==='string')Component=await component(Component);
+ const React=await import('react'),{createRoot}=await import('react-dom/client'),root=createRoot(document.getElementById('root'));await React.act(async()=>root.render(React.createElement(Component,props)));
+ return {dom,act:React.act,async render(next){await React.act(async()=>root.render(React.createElement(Component,next)))},async close(){await React.act(async()=>root.unmount());dom.window.close();for(const k of keys){const d=saved.get(k);if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k]}}};
+}test('Owner, POS and explicitly granted read-only archive share scoped VAT/margin filters without granting writers',async()=>{
+ const C='commerce/InventoryArchivePanel';for(const props of [{},{operatorCapabilities:{}},{readOnly:true}]){const calls=[],api=async path=>{calls.push(path);const u=new URL(path,'https://isolated.invalid');assert.equal(u.pathname,'/api/inventory-archive');assert.equal(u.searchParams.get('storeId'),'selected');return {store:{id:'selected'},items:[],categories:[],subcategories:[],vatDepartments:[{id:"vat-a",description:"VAT A"}],page:1,pages:1,total:0,totals:{}}},m=await mount(C,{api,storeId:'selected',onClose(){},...props});try{const visible=true;assert.equal(!![...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Margin % από')),visible);assert.equal(!![...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Τμήμα ΦΠΑ')),visible);assert.ok(calls.length);if(props.readOnly){assert.equal([...document.querySelectorAll("button")].some(b=>/Νέο είδος|Ομαδική διόρθωση|Μεταφορά/.test(b.textContent)),false)}if(visible){const vat=[...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Τμήμα ΦΠΑ')).querySelector('select');await m.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value').set.call(vat,'vat-a');vat.dispatchEvent(new Event('change',{bubbles:true}))});assert.equal(new URL(calls.at(-1),'https://isolated.invalid').searchParams.get('vatDepartment'),'vat-a');const label=[...document.querySelectorAll('label')].find(e=>e.textContent.startsWith('Margin % από'));await m.act(async()=>{const input=label.querySelector('input');Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'10');input.dispatchEvent(new Event('input',{bubbles:true}))});await m.act(async()=>label.closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.equal(new URL(calls.at(-1),'https://isolated.invalid').searchParams.get('marginMin'),'10');assert.equal(new URL(calls.at(-1),'https://isolated.invalid').searchParams.get('vatDepartment'),'vat-a')}}finally{await m.close()}}
+});
