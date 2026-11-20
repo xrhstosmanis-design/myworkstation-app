@@ -49,6 +49,7 @@ test('request binding admits only declared installer routes and methods',async()
  for(const [path,method] of [[base+'/install','GET'],[base+'/inspect','PUT'],[base+'/describe?profile=UNKNOWN','GET'],[base+'/describe?profile=CAPTURE&other=1','GET'],['/api/platform/companies/other/stores/store/report-event-installation/install','POST']])await assert.rejects(request(path,{method}),{code:'REPORT_INSTALLER_REQUEST_REJECTED'});
  assert.equal(calls,0);
  await request(base+'/describe?profile=CAPTURE_REPORTS_ONLY_V2');assert.equal(calls,1);
+ await request(base+'/describe?profile=CAPTURE_REPORTS_ONLY_V3');assert.equal(calls,2);
 });
 
 test('another actor support context invalidates retained credentials until a native session is captured again',()=>{

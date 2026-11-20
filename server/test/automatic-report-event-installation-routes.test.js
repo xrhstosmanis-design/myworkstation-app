@@ -4,12 +4,12 @@ import express from 'express';
 import {createAutomaticReportEventInstallationRouter} from '../src/routes/automatic-report-event-installation.js';
 
 test('event installation HTTP requires current platform session and binds packet, scope and server controls',async()=>{
- const calls=[];let revoked=false,role='SUPER_ADMIN',sessionVersion=3,mustChangePassword=false,catalogDrift=false;
+ const calls=[];let revoked=false,role='SUPER_ADMIN',sessionVersion=3,mustChangePassword=false,catalogDrift=false,catalogCode='REPORT_COLUMN_CATALOGUE_CHANGED';
  const actor={id:'admin',sessionId:'session',sessionVersion:3,tokenType:'BACKOFFICE_USER',role:'OWNER',platformRole:'SUPER_ADMIN',isSuperAdmin:true};
  const db={userSession:{findUnique:async()=>({userId:'admin',expiresAt:'2030-01-01',revokedAt:revoked?new Date():null,user:{id:'admin',role,sessionVersion,mustChangePassword}})}};
  const env={RENDER_GIT_COMMIT:'a'.repeat(40)};
  const createInstallation=async(_db,options)=>{
-  if(catalogDrift)throw Object.assign(new Error("private catalogue details"),{status:409,code:"REPORT_COLUMN_CATALOGUE_CHANGED"});
+  if(catalogDrift)throw Object.assign(new Error("private catalogue details"),{status:409,code:catalogCode});
   calls.push({options});
   return {describe:()=>({profile:options.profile}),inspect:async(user,input)=>{calls.push({user,input,action:'inspect'});return {eligible:true}},install:async(user,input)=>{calls.push({user,input,action:'install'});return {installed:true}}};
  };
@@ -38,6 +38,8 @@ test('event installation HTTP requires current platform session and binds packet
   assert.equal((await send('/describe?profile=BASE')).status,200);
   delete actor.tokenType;assert.equal((await send('/describe?profile=BASE')).status,200);actor.tokenType='BACKOFFICE_USER';
   assert.deepEqual(calls.at(-1).options,{sourceRevision:'a'.repeat(40),enabled:false,profile:'BASE'});
+  assert.equal((await send('/inspect',{profile:'CAPTURE_REPORTS_ONLY_V3'})).status,200);
+  assert.equal(calls.at(-2).options.profile,'CAPTURE_REPORTS_ONLY_V3');
   assert.equal((await send('/inspect',{profile:'CAPTURE'})).status,200);
   assert.deepEqual(calls.at(-1).input,{companyId:'c',storeId:'s'});
   const packet={sourceRevision:'a'.repeat(40),evidence:'opaque'};
@@ -55,6 +57,9 @@ test('event installation HTTP requires current platform session and binds packet
   assert.equal(drift.status,409);
   const rejected=await drift.json();assert.equal(rejected.code,'REPORT_COLUMN_CATALOGUE_CHANGED');
   assert.doesNotMatch(rejected.error,/private catalogue/);
+  catalogCode='REPORT_OPERATIONAL_CHAT_CATALOGUE_CHANGED';
+  const chatDrift=await send('/inspect',{profile:'CAPTURE_REPORTS_ONLY_V3'});assert.equal(chatDrift.status,409);
+  const chatRejected=await chatDrift.json();assert.equal(chatRejected.code,catalogCode);assert.doesNotMatch(chatRejected.error,/private catalogue/);
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
 });
 

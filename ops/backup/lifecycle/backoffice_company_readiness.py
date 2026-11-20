@@ -16,6 +16,8 @@ SOURCE_PATHS += ('ops/backup/lifecycle/backoffice-company-current-defaults.propo
 
 SOURCE_PATHS += ('server/src/services/automatic-report-column-compatibility.js', 'ops/backup/lifecycle/report-column-compatibility.proposed.json')
 
+SOURCE_PATHS += ('server/src/services/automatic-report-chat-compatibility.js', 'ops/backup/lifecycle/report-chat-compatibility.proposed.json')
+
 def compact(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
 
