@@ -10,6 +10,7 @@ const profiles=[
  ['epsilondigital-enetgroup.epsilonnet.gr','107'],['epsilondigital-nbg.epsilonnet.gr','109'],
  ['epsilondigitalsmart10.epsilonnet.gr','227'],['epsilondigital19.epsilonnet.gr','177'],
  ['epsilondigital-3rdpartb.epsilonnet.gr','129'],['epsilondigital9.epsilonnet.gr','145'],
+ ['epsilondigital-3rdparte.epsilonnet.gr','169'],['epsilondigital-cosmote.epsilonnet.gr','22'],['epsilondigital-telekom.epsilonnet.gr','22'],
 ];
 for(const [host,format] of profiles)test(`verified Epsilon exact host/format ${host}:${format}`,()=>{
  assert.equal(matches(new URL(`https://${host}/fd/${id}:${format}`),vat),true);
@@ -19,8 +20,8 @@ for(const [host,format] of profiles)test(`verified Epsilon exact host/format ${h
  assert.equal(matches(new URL(`https://${host}.example/fd/${id}:${format}`),vat),false);
  assert.equal(matches(new URL(`https://${host}/fd/${id}:0${format}`),vat),false);
 });
-test('unverified, failed-identity and redirect-only Epsilon formats stay disabled',()=>{
- for(const [host,format] of [['epsilondigital-3rdpartd.epsilonnet.gr','159'],['epsilondigital-3rdparte.epsilonnet.gr','169'],['epsilondigital-cosmote.epsilonnet.gr','22'],['epsilondigital-telekom.epsilonnet.gr','22'],['epsilondigital23.epsilonnet.gr','201'],['epsilondigitalsmart2.epsilonnet.gr','128'],['other.epsilonnet.gr','8']]){
+test('unverified and redirect-only Epsilon formats stay disabled',()=>{
+ for(const [host,format] of [['epsilondigital-3rdpartd.epsilonnet.gr','159'],['epsilondigital23.epsilonnet.gr','201'],['epsilondigitalsmart2.epsilonnet.gr','128'],['other.epsilonnet.gr','8']]){
   assert.equal(matches(new URL(`https://${host}/fd/${id}:${format}`),vat),false);
   assert.throws(()=>originalDownloadUrl(`<downloadingInvoiceUrl>https://${host}/fd/${id}:${format}</downloadingInvoiceUrl>`,vat));
  }
