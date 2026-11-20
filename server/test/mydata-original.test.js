@@ -89,6 +89,8 @@ test("only verified provider host and path combinations are allowed for inbound 
   const short = "a".repeat(32);
   const uuid = "12345678-1234-1234-1234-123456789abc";
   const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
+  const eInvoicing = `https://e-invoicing.gr/edocuments/ViewInvoice/-1/${uuid}_abc1234`;
+  const vitality = `https://vs.gr/iv/invoice/download/test_1/test_1~k1~${"a".repeat(40)}~${"x".repeat(43)}`;
   const providers = [
     base.replace("einvoice.impact.gr", "einvoice.s1ecos.gr"),
     `https://epsilondigital3.epsilonnet.gr/fd/${short}:84`,
@@ -97,8 +99,8 @@ test("only verified provider host and path combinations are allowed for inbound 
     `https://epsilondigital-enetgroup.epsilonnet.gr/fd/${short}:107`,
     `https://epsilondigital-nbg.epsilonnet.gr/fd/${short}:109`,
     `https://epsilondigitalsmart10.epsilonnet.gr/fd/${short}:227`,
-    `https://e-invoicing.gr/edocuments/ViewInvoice/-1/${uuid}_abc1234`,
-    `https://vs.gr/iv/invoice/download/test_1/test_1~k1~${"a".repeat(40)}~${"x".repeat(43)}`,
+    eInvoicing,
+    vitality,
   ];
   for (const url of providers) {
     assert.equal(originalDownloadUrl(xml(url), row.issuerVat), url + "/pdf");
@@ -109,8 +111,8 @@ test("only verified provider host and path combinations are allowed for inbound 
     providers[1].replace(":84", ":160"),
     providers[1].replace("epsilondigital3", "epsilondigital23"),
     providers[4].replace("epsilonnet.gr", "epsilonnet.gr.example"),
-    providers[8].replace("/-1/", "/1/"),
-    providers[9].replace("/test_1~", "/test_2~"),
+    eInvoicing.replace("/-1/", "/1/"),
+    vitality.replace("/test_1~", "/test_2~"),
   ]) {
     assert.throws(() => originalDownloadUrl(xml(url), row.issuerVat));
   }
