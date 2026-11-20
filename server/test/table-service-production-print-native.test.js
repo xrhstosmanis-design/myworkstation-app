@@ -41,7 +41,7 @@ test('native table round atomically queues its existing KDS batch once with prin
    const call=async(body,user={id:'waiter',companyId:'company',storeId:'store',tokenType:'STORE_OPERATOR',fullName:'LAB Waiter'})=>{
     let status=200,output,error;await routes.get('/stores/:storeId/table-orders')({params:{storeId:'store'},body,user,headers:{}},{status(n){status=n;return this},json(value){output=value}},e=>error=e);return{status:error?.status||(error?500:status),output,error};
    };
-   return{call,service:productionPrinting,bootstrap:()=>new Promise((resolve,reject)=>bootstrap(null,null,e=>e?reject(e):resolve()))};
+   return{call,service:productionPrinting,bootstrap:()=>new Promise((resolve,reject)=>bootstrap({method:'POST',user:{id:'waiter',companyId:'company',storeId:'store',tokenType:'STORE_OPERATOR',fullName:'LAB Waiter'}},{},e=>e?reject(e):resolve()))};
   };
   const first=make(a),second=make(b);await first.bootstrap();await second.bootstrap();await first.service.ensure();await second.service.ensure();
   await exec(`INSERT INTO "StoreTableServiceConfig" ("companyId","storeId","enabled") VALUES ('company','store',true);INSERT INTO "DiningTable" ("id","companyId","storeId","name") VALUES ('table','company','store','LAB ΤΡΑΠΕΖΙ')`);

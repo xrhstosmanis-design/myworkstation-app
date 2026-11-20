@@ -43,3 +43,14 @@ Owner /root, ίδια υφιστάμενη ανάθεση TABLE_SERVICE. Βάσ�
 Ενσωματώθηκε το main4c25a5a27. Διατηρήθηκαν ολόκληρο το νεότερο ACTIVE και όλες οι αλλαγές No5 a020ce84e, ειδικά requireStaffGrant/staffError και η readStatus του εκτυπωτή, μαζί με το enqueueTableBatch της παρούσας ανάθεσης. Δεν έγιναν hosted πράξεις. Η Συνέχεια03 είναι πλέον το ενεργό κοινό Markdown. Συνολικό Νο15 OPEN· νέο ακριβές πλήρες CI και κανονική εγκατάσταση εκκρεμούν πριν από τη συγκεντρωμένη φυσική αποδοχή.
 
 Κοινό build Node20 μετά την ενσωμάτωση: PASS12,99s / TABLE_SERVICE verified. Ανεξάρτητη ανασκόπηση επιβεβαίωσε byte-for-byte διατήρηση requireStaffGrant/staffError/storeFor/router guards και readStatus από το main4c25a5a27.
+
+
+## Δεύτερο αποτέλεσμα CI και στοχευμένη ενσωμάτωση — 20/11/2026
+
+Το CI44725877823 ολοκληρώθηκε με τέσσερις επιτυχείς εργασίες και server 6.894PASS/12FAIL/4SKIP. Το παλιό coffee SET fixture πέρασε πλέον. Έντεκα αποτυχίες αφορούσαν το ίδιο παλιό source hash της store-table-orders.js στο ανενεργό COMPANY compatibility packet· μία τη native print fixture που έδινε null request στο νεότερο bootstrap middleware. Δεν αποδίδεται συνολικό PASS σε αυτή την εκτέλεση.
+
+- COMPANY packet: ανανεώθηκε μόνο το συγκεκριμένο αποτύπωμα b1300a…→a01f3b… για τα ήδη ανασκοπημένα bytes της διαδρομής. Και τα άλλα48source hashes ταυτίζονται. Verifier, manifests, profiles, schema, activation/execution flags και guards αμετάβλητα. Node20:23PASS/0FAIL/2υποδομήςSKIP, με πραγματικό packaged source-root fixture. Default review14tables/168columns source-match. Η αρχική τιμή αναπαράγει ακριβώς το CURRENT_CAPTURE worker ValueError· η νέα επαληθεύει και τα49inputs. Native πλήρης εγκατάσταση/Docker image παραμένουν στο πλήρες CI.
+- Native print fixture: το bootstrap λαμβάνει συνθετικό κανονικό STORE_OPERATOR request με methodPOST αντί null. Production middleware και όλες οι SQL/scoping assertions διατηρήθηκαν. Ο ακριβής predicate έλεγχος επιβεβαίωσε operator bootstrap, απόρριψη delegatedPOST και delegatedGETχωρίς schema writes.
+- Πραγματική τοπική PostgreSQL17.12, Node20.20.2: η ίδια native print δοκιμή PASS1/FAIL0/SKIP0, με actual route/service, δύο Prisma clients, replay/rollback και scope assertions. Αρχική τοπική εκκίνηση δεν επέτρεψε Unix socket· η κανονική loopback TCP εκκίνηση και ο τελικός έλεγχος πέρασαν. Καμία hosted βάση, restore, DDL ή επιχειρησιακή πράξη. Πρόκειται για το απομονωμένο συνθετικό schema του fixture, όχι φυσικό printer/full seeded application.
+
+Ενσωματώθηκε και η νεότερη αμιγώς τεκμηριωτική main8e3d91905, διατηρώντας όλο το No14 handoff. Κοινό source build12,99s και27mounted/formPASS της προηγούμενης εκτέλεσης διατηρούνται· δεν επαναλήφθηκαν επειδή άλλαξαν μόνο το compatibility digest και το test request. Επόμενο ένα νέο πλήρες exact-head CI. ΣυνολικόΝο15OPEN, χωρίς merge/deploy ή αίτημα νέας εισόδου από τον χρήστη.
