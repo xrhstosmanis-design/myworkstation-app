@@ -82,8 +82,9 @@ export async function readOwnerProductArchive(scopeCompanyId,rawQuery={},product
 export async function readOwnerProductPriceHistory(scopeCompanyId,rawQuery={},productId=null,{db=prisma,scopedStoreId=null}={}){const prisma=db;const ownedProduct=async(company,id)=>(await db.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${id} AND "companyId"=${company} LIMIT 1`)[0]||null;
 
     const company=scopeCompanyId;
+    const storeId=scopedStoreId || (typeof rawQuery.storeId === "string" ? rawQuery.storeId.trim() : "") || null;
     if(!await ownedProduct(company,productId))throw Object.assign(new Error("Δεν βρέθηκε το προϊόν."),{status:404});
-    const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId}) AND h."productId"=${productId} ORDER BY h."createdAt" DESC LIMIT 100`;
+    const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND (${storeId}::text IS NULL OR h."storeId"=${storeId}) AND h."productId"=${productId} ORDER BY h."createdAt" DESC LIMIT 100`;
     return (rows);
 
 }

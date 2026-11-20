@@ -1,3 +1,7 @@
+## 20/11/2026 — Μενού είδους Αποθήκης — Τοπική υλοποίηση, LAB NOT TESTED
+
+Διαδόχου KM3282. Δεδομένα προϊόντος και καταστήματος από την ανοιχτή Αποθήκη, σύνδεση υπομενού και έλεγχοι εκτυπώσεων, ιστορικών και εξαγωγών. 33 στοχευμένοι έλεγχοι και frontend build πέρασαν τοπικά. Εκκρεμούν δημοσίευση, CI και συγκεντρωτική δοκιμή LAB. [Checkpoint](CHANGES/2026-11-20-warehouse-product-menu.md).
+
 ## 20/11/2026 — Νο02 — independent read-only standalone original eligibility / ASSIGNED BEFORE SOURCE
 
 Same retainedNo02owner `/root`, claim branch `docs/no2-standalone-original-eligibility-claim-20261120`, time2026-11-20T16:13:38+02:00. Claims only NEW unused `server/src/lib/mydata-standalone-original-eligibility.js` and its NEW dedicated pure/native read-only tests. Exact9.3/strictzero/unique scoped source/full no-link proof; missing metadata, nonzero, conflicting identities and originalJobId evennull refuse. No imports/callers/writes/network/schema/financial/stock actions. Existing acquireOriginal/routes/provider/bulk/scheduler remain retained4048; no takeover or runtime integration before explicit coordination/handoff. No04/No27/monthly projection and peer owners preserved. SOURCE NOTSTARTED/NOTTESTED until green merged claim; this is a preparatory helper, NOT the UI fix, recovery or overallPASS. [Exact independent boundaries](CHANGES/2026-11-20-no2-standalone-original-eligibility-claim.md).
