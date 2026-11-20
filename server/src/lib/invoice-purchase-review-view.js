@@ -1,3 +1,4 @@
+import {standaloneZeroDelivery} from './invoice-payment-observation.js';
 import {invoiceNumberParts} from './invoice-common-draft.js';
 
 const text=value=>typeof value==='string'&&value.trim()===value&&value.length>0&&value.length<=160&&!/[\u0000-\u001f\u007f]/.test(value);
@@ -29,6 +30,9 @@ export function composeOrdinaryPurchaseReview(items,facts,{companyId,storeId}){
  }
  const pairsByOrder=new Map(pairs.map(pair=>[pair.order.id,pair]));
  const result=items.map(item=>{
+  if(item.nonFinancialBasis==='STANDALONE_ZERO_MYDATA_9_3_V1'&&item.documentType==='DELIVERY_NOTE'&&item.payment?.status==='NOT_APPLICABLE'&&standaloneZeroDelivery(item,facts)){
+   return {...item,categories:item.categories.filter(category=>!['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','PURCHASE_LINK_REVIEW'].includes(category)),purchaseReview:{status:'NON_FINANCIAL',reason:'Δελτίο αποστολής μηδενικής αξίας· δεν αποτελεί εκκρεμή αγορά ή οφειλή.'},openTarget:{kind:'PREVIEW',rowId:item.id,storeId}};
+  }
   const documentSources=(item.sources||[]).filter(source=>source.kind==='DOCUMENT'),activeDocumentSources=documentSources.filter(source=>source.status!=='MERGED'),orderSources=(item.sources||[]).filter(source=>source.kind==='ORDER'&&source.status!=='MERGED');
   const originals=documentSources.map(source=>unique(docs,source.id)).filter(Boolean),incoming=(item.sources||[]).filter(source=>source.kind==='MYDATA').map(source=>unique(inbound,source.id)).filter(Boolean);
   const original=originals.find(document=>document.sourceType!=='PURCHASE_ORDER'&&document.status!=='MERGED')||originals.find(document=>document.status!=='MERGED')||incoming[0]||originals[0];

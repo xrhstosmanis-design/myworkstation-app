@@ -353,3 +353,34 @@ test('tolerance display requires exact backend flags while legacy paid and genui
  }
  setResponder(async()=>response('s','2026-10',paymentPatch({status:'PAID',paidCents:1234,remainingCents:0,overpaymentCents:0,paymentCount:1})));await submit();assert.equal(document.querySelector('.ima-payment b').textContent,'Εξοφλημένο');assert.equal(document.querySelector('.ima-payment-tolerance'),null);
 }));
+
+test('recognized zero-value delivery note has neutral payment wording and no registered-purchase claim',async()=>mounted(async({render,setResponder,submit,click,calls})=>{
+ const delivery={...row,id:'delivery-synthetic',documentNumber:'DELIVERY-TEST-01',automaticReview:[{itemId:'delivery-synthetic',code:'INBOUND_IDENTITY_UNCONFIRMED'}],documentType:'DELIVERY_NOTE',nonFinancialBasis:'STANDALONE_ZERO_MYDATA_9_3_V1',totalCents:0,categories:[],reasons:[],purchaseReview:{status:'NON_FINANCIAL',reason:'Δελτίο αποστολής μηδενικής αξίας· δεν αποτελεί εκκρεμή αγορά ή οφειλή.'},openTarget:{kind:'PREVIEW',rowId:'delivery-synthetic',storeId:'s'},payment:{status:'NOT_APPLICABLE',paidCents:null,remainingCents:null,overpaymentCents:null}};
+ const opened=[];await render({onOpenInvoiceOrder:detail=>opened.push(detail)});
+ setResponder(async url=>url.pathname.endsWith('/record')?recordResponse('s','2026-10',delivery,{sources:{documents:[],orders:[],inbound:[{id:'delivery-source',series:'DELIVERY',documentNumber:'TEST-01',invoiceType:'9.3',issueDay:'2026-10-02',totalGross:'0.0000'}],inbox:[{id:'delivery-inbox',status:'RECEIVED'}]},relatedOrders:[]}):response('s','2026-10',paymentPatch(delivery.payment,{items:[delivery],financialSummary:financialSummary({notApplicable:1}),nextPage:null})));await submit();
+ const invoice=document.querySelector('.ima-rows>li'),badge=invoice.querySelector('.ima-payment');
+ assert.match(invoice.querySelector('.ima-meta').textContent,/Δελτίο αποστολής/);assert.equal(badge.querySelector('b').textContent,'Δεν εφαρμόζεται έλεγχος πληρωμής');assert.match(invoice.textContent,/δεν αποτελεί καταχώριση αγοράς/);
+ assert.doesNotMatch(invoice.textContent,/Τιμολόγιο|Πιστωτικό|Εξοφλημένο|Υπόλοιπο προς πληρωμή|Η καταχώριση αγοράς επιβεβαιώνεται|Καταγεγραμμένες πληρωμές/);assert.equal(invoice.querySelector('.ima-payment-paid'),null);assert.equal(invoice.querySelector('.ima-payment-review'),null);
+ assert.match(invoice.querySelector('.ima-purchase-review').textContent,/δεν αποτελεί εκκρεμή αγορά ή οφειλή/);assert.match(invoice.querySelector('.ima-automatic-review').textContent,/Για δελτίο αποστολής μηδενικής αξίας δεν εφαρμόζεται αυτόματη σύνδεση με τιμολόγιο/);assert.doesNotMatch(invoice.querySelector('.ima-automatic-review').textContent,/Δεν επιβεβαιώνονται πλήρως το ΑΦΜ|η ημερομηνία ή ο τύπος/);assert.equal(invoice.querySelector('.ima-record-open').disabled,false);
+ await click('DELIVERY-TEST-01');const request=calls.at(-1);assert.equal(request.url.pathname,'/api/reports/invoice-month-audit/record');assert.deepEqual([...request.url.searchParams.entries()].sort(),[['id','delivery-synthetic'],['month','2026-10'],['storeId','s']]);
+ const dialog=document.querySelector('[role=dialog]');assert.ok(dialog);assert.match(dialog.textContent,/Παραλαβές myDATA.*DELIVERY TEST-01/);assert.match(dialog.textContent,/Δεν δημιουργείται νέο πρόχειρο/);assert.equal(dialog.querySelectorAll('button').length,1);assert.deepEqual(opened,[]);
+ await click('Κλείσιμο παραστατικού');assert.equal(document.querySelector('[role=dialog]'),null);await click('Πρώτη σελίδα / Ανανέωση');assert.equal(calls.length,3);assert.ok(calls.every(call=>!call.options.method));assert.deepEqual(opened,[]);
+ assert.match(document.querySelector('[aria-label="Οικονομικά σύνολα επιλεγμένου μήνα"]').textContent,/Εξοφλημένα0.*Οικονομικές εκκρεμότητες0.*Συνδέσεις πληρωμής προς έλεγχο0/);
+}));
+
+test('delivery wording never suppresses unknown zero-invoice positive or conflicting-link financial review',async()=>mounted(async({setResponder,submit,calls})=>{
+ for(const fixture of [
+  {documentType:null,totalCents:0,reasons:['Ο τύπος του παραστατικού χρειάζεται έλεγχο.']},
+  {documentType:'INVOICE',totalCents:0},
+  {documentType:null,totalCents:2500},
+  {documentType:'DELIVERY_NOTE',totalCents:0,reasons:['Η σύνδεση myDATA με την αγορά δεν συμφωνεί πλήρως.']},
+  {documentType:'DELIVERY_NOTE',totalCents:2500}
+ ]){
+  const payment={status:'REVIEW_REQUIRED',paidCents:null,remainingCents:null},item={...row,...fixture,automaticReview:[{itemId:row.id,code:'INBOUND_IDENTITY_UNCONFIRMED'}],categories:['PURCHASE_LINK_REVIEW'],reasons:fixture.reasons||[],payment};
+  setResponder(async()=>response('s','2026-10',paymentPatch(payment,{items:[item],financialSummary:financialSummary({reviewRequired:1}),nextPage:null})));await submit();
+  const invoice=document.querySelector('.ima-rows>li');assert.equal(invoice.querySelector('.ima-payment b').textContent,'Η σύνδεση πληρωμής χρειάζεται έλεγχο');assert.match(invoice.textContent,/Το οικονομικό υπόλοιπο δεν έχει επιβεβαιωθεί/);assert.doesNotMatch(invoice.textContent,/Δεν εφαρμόζεται έλεγχος πληρωμής|δεν αποτελεί καταχώριση αγοράς|Εξοφλημένο|Υπόλοιπο προς πληρωμή/);assert.equal(invoice.querySelector('.ima-payment-neutral'),null);assert.match(invoice.querySelector('.ima-automatic-review').textContent,/Δεν επιβεβαιώνονται πλήρως το ΑΦΜ/);
+ }
+ const payment={status:'NOT_APPLICABLE'},item={...row,documentType:'DELIVERY_NOTE',totalCents:0,categories:[],reasons:[],payment,automaticReview:[{itemId:row.id,code:'UNSUPPORTED_CURRENCY'},{itemId:'foreign-delivery',code:'INBOUND_IDENTITY_UNCONFIRMED'}]};
+ setResponder(async()=>response('s','2026-10',paymentPatch(payment,{items:[item],nextPage:null})));await submit();const evidence=document.querySelector('.ima-automatic-review');assert.match(evidence.textContent,/Το νόμισμα δεν υποστηρίζεται/);assert.doesNotMatch(evidence.textContent,/Για δελτίο αποστολής|Δεν επιβεβαιώνονται πλήρως το ΑΦΜ/);
+ assert.equal(calls.length,6);assert.ok(calls.every(call=>!call.options.method));
+}));

@@ -326,6 +326,7 @@ async function readOrdinaryIdentityMetadata(tx,companyId,storeId,facts){
  if(capability[0]?.currencyMetadataAvailable!==true)return {available:false,rows:[]};
  const rows=await tx.$queryRawUnsafe(`SELECT source."id",
   (source."currency" IS NULL OR source."currency"='EUR') AS "currencyAllowed",
+  CASE WHEN source."rawPayload" IS NULL THEN false WHEN jsonb_typeof(source."rawPayload")='object' THEN source."rawPayload" ? 'originalJobId' ELSE true END AS "deliveryJobLinkPresent",
   CASE WHEN source."rawPayload" IS NULL THEN false WHEN jsonb_typeof(source."rawPayload")='object' THEN source."rawPayload" ?| ARRAY['mydataDraftOrderId','mydataDraftDocumentId','mydataPosReceipt','commonDraft'] ELSE true END AS "identityLinksPresent",
   CASE WHEN jsonb_typeof(source."rawPayload"->'mydataDraftDocumentId')='string' AND octet_length(source."rawPayload"->>'mydataDraftDocumentId')<=160 THEN source."rawPayload"->>'mydataDraftDocumentId' END AS "draftDocumentId",
   CASE WHEN jsonb_typeof(source."rawPayload"#>'{commonDraft,documentId}')='string' AND octet_length(source."rawPayload"#>>'{commonDraft,documentId}')<=160 THEN source."rawPayload"#>>'{commonDraft,documentId}' END AS "commonDraftDocumentId",
@@ -341,8 +342,9 @@ async function readOrdinaryIdentityMetadata(tx,companyId,storeId,facts){
  return {available:true,rows};
 }
 function withOrdinaryCurrencyMetadata(facts,metadata){
- const rows=new Map(metadata.available?metadata.rows.map(row=>[row.id,row]):[]);
- return {...facts,inbound:facts.inbound.map(row=>({...row,currencyAllowed:rows.get(row.id)?.currencyAllowed===true}))};
+ const rows=new Map(metadata.available?metadata.rows.map(row=>[row.id,row]):[]),counts=new Map();
+ for(const row of metadata.available?metadata.rows:[])counts.set(row.id,(counts.get(row.id)||0)+1);
+ return {...facts,inbound:facts.inbound.map(row=>({...row,currencyAllowed:rows.get(row.id)?.currencyAllowed===true,deliveryNoteMetadataVerified:metadata.available===true&&counts.get(row.id)===1&&rows.get(row.id)?.metadataValid===true&&rows.get(row.id)?.identityLinksPresent===false&&rows.get(row.id)?.deliveryJobLinkPresent===false}))};
 }
 async function readCanonicalPaymentMetadata(tx,companyId,storeId,facts){
  if(!facts.aliases.length)return {available:true,rows:[]};
@@ -416,10 +418,10 @@ async function readMonthlyInvoiceAuditCore(db,actor,input,{now,delegatedRead=fal
   const canonicalPaymentMetadata=complete&&paymentMetadata.available?await readCanonicalPaymentMetadata(tx,actor.companyId,store.id,facts):{available:false,rows:[]};
   const paymentItems=withPostingProjectionProvenance(withAutomaticReview(automatic.items,automatic.exceptions),ordinary.projections);
   const recovered=normalizeCanonicalPaymentObservations(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,canonicalPaymentMetadata.rows,{companyId:actor.companyId,storeId:store.id,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,toleranceCents:ordinaryPaymentToleranceCents});
-  const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),ordinary.facts,{companyId:actor.companyId,storeId:store.id});
-  const summary=complete?{...ordinaryCounts(analysis.counts,automatic.items),...purchase.summary}:null;
-  const fingerprint=hash({ordinaryPaymentTolerancePolicy,ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const financial=observeInvoicePayments(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,toleranceCents:ordinaryPaymentToleranceCents,standaloneDeliveryNotes:true});
+  const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),{companyId:actor.companyId,storeId:store.id});
+  const summary=complete?{...ordinaryCounts(analysis.counts,purchase.items),...purchase.summary}:null;
+  const fingerprint=hash({ordinaryDeliveryNotePolicy:'STANDALONE_ZERO_9_3_V1',ordinaryPaymentTolerancePolicy,ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   // Select from the complete month, then paginate. Global counts, financial
   // observations and all-month pending originals keep their original scope.
@@ -458,9 +460,9 @@ export async function readMonthlyInvoiceAuditRecord(db,actor,input,{now=new Date
   const canonicalPaymentMetadata=paymentMetadata.available?await readCanonicalPaymentMetadata(tx,actor.companyId,store.id,facts):{available:false,rows:[]};
   const paymentItems=withPostingProjectionProvenance(withAutomaticReview(automatic.items,automatic.exceptions),ordinary.projections);
   const recovered=normalizeCanonicalPaymentObservations(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},paymentMetadata.rows,canonicalPaymentMetadata.rows,{companyId:actor.companyId,storeId:store.id,allocationsAvailable:paymentMetadata.allocationsAvailable});
-  const financial=observeInvoicePayments(paymentItems,{...ordinary.facts,paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,toleranceCents:ordinaryPaymentToleranceCents});
-  const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),ordinary.facts,{companyId:actor.companyId,storeId:store.id});
-  const fingerprint=hash({ordinaryPaymentTolerancePolicy,ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
+  const financial=observeInvoicePayments(paymentItems,{...withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),paymentAllocations:paymentMetadata.allocations},recovered.transactions,{available:paymentMetadata.available,allocationsAvailable:paymentMetadata.allocationsAvailable,toleranceCents:ordinaryPaymentToleranceCents,standaloneDeliveryNotes:true});
+  const purchase=composeOrdinaryPurchaseReview(withCanonicalPaymentProofs(financial.items,recovered.proofs),withOrdinaryCurrencyMetadata(ordinary.facts,identityMetadata),{companyId:actor.companyId,storeId:store.id});
+  const fingerprint=hash({ordinaryDeliveryNotePolicy:'STANDALONE_ZERO_9_3_V1',ordinaryPaymentTolerancePolicy,ordinaryPurchaseReviewBasis:'EXPLICIT_DRAFT_OR_LINK_REVIEW_V1',ordinaryProjectionBasis:'EXPLICIT_POSTING_ORIGINAL_V2',automaticIdentityBasis:'UNIQUE_CANONICAL_HEADER_V1',identityMetadata,canonicalPaymentBasis:'UNCHANGED_CANONICAL_RECEIPT_V1',canonicalPaymentMetadata,period,sourceCounts,facts,pending:pending?.fingerprint||null,unavailable,limited,paymentMetadata});
   if(input.fingerprint!==undefined&&input.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν ανοίξεις το παραστατικό.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
   const item=purchase.items.find(row=>row.id===input.id);if(!item)fail('Δεν βρέθηκε παραστατικό στον επιλεγμένο μήνα και κατάστημα.',404,'INVOICE_MONTH_AUDIT_RECORD_NOT_FOUND');
   const sourceIds=kind=>new Set(item.sources.filter(source=>source.kind===kind).map(source=>source.id)),documentIds=sourceIds('DOCUMENT'),orderIds=sourceIds('ORDER'),inboundIds=sourceIds('MYDATA'),inboxIds=sourceIds('INBOX');

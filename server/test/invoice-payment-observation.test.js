@@ -331,3 +331,20 @@ test('one thousand explicitly allocated invoices share one payment with exact pe
  assert.equal(observed.summary.paid,count);assert.equal(observed.summary.reviewRequired,0);
  assert.ok(observed.items.every(item=>item.payment.paidCents===100&&item.payment.paymentCount===1&&item.payment.transactionIds[0]==='p'));
 });
+
+test('ordinary zero delivery notes require explicit complete standalone evidence; raw observation stays review',()=>{
+ const item=invoice({id:'inbound:m',documentType:null,totalCents:0,sources:[{kind:'MYDATA',id:'m'}]});
+ const facts={documents:[],orders:[],aliases:[],jobs:[],inbound:[{id:'m',inboxId:'i',invoiceType:'9.3',totalGross:'0.0000',deliveryNoteMetadataVerified:true}],inbox:[{id:'i',status:'RECEIVED'}]};
+ const before=JSON.stringify({item,facts});
+ const check=(f=facts,i=item,t=[])=>observeInvoicePayments([i],f,t,{available:true,allocationsAvailable:true,standaloneDeliveryNotes:true}).items[0];
+ assert.equal(observeInvoicePayments([item],facts,[]).items[0].payment.status,'REVIEW_REQUIRED');
+ for(const options of [{available:false,allocationsAvailable:true},{available:true,allocationsAvailable:false},{available:true}])assert.equal(observeInvoicePayments([item],facts,[],{standaloneDeliveryNotes:true,...options}).items[0].payment.status,'REVIEW_REQUIRED');
+ const unrelated=check(facts,{...item,categories:['IDENTITY_OR_LINK_REVIEW'],reasons:['Ο τύπος του παραστατικού χρειάζεται έλεγχο.','Άλλο πρόβλημα ταυτότητας.']});assert.deepEqual(unrelated.reasons,['Άλλο πρόβλημα ταυτότητας.']);assert.deepEqual(unrelated.categories,['IDENTITY_OR_LINK_REVIEW']);
+ assert.equal(check().payment.status,'NOT_APPLICABLE');assert.equal(check().documentType,'DELIVERY_NOTE');
+ for(const patch of [{invoiceType:'9.1'},{totalGross:'0.004'},{totalGross:'1'},{totalGross:null},{deliveryNoteMetadataVerified:false},{draftOrderId:'o'}])assert.equal(check({...facts,inbound:[{...facts.inbound[0],...patch}]}).payment.status,'REVIEW_REQUIRED');
+ for(const f of [{...facts,inbound:[...facts.inbound,...facts.inbound]},{...facts,aliases:[{inboxId:'i'}]},{...facts,inbox:[]},{...facts,inbox:[{id:'i',status:'CANCELLED'}]},{...facts,inbox:[{id:'i',status:'RECEIVED',attachmentId:'a'}],jobs:[{attachmentId:'a',purchaseDocumentId:'d'}]},{...facts,paymentAllocations:[{documentId:'m'}]}])assert.equal(check(f).payment.status,'REVIEW_REQUIRED');
+ assert.equal(check(facts,{...item,documentType:'INVOICE'}).payment.status,'NOT_LINKED');
+ assert.equal(check(facts,{...item,sources:[...item.sources,{kind:'DOCUMENT',id:'d'}]}).payment.status,'REVIEW_REQUIRED');
+ assert.equal(check(facts,item,[transaction({attachmentFilename:'i'})]).payment.status,'REVIEW_REQUIRED');
+ assert.equal(JSON.stringify({item,facts}),before);
+});

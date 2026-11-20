@@ -33,7 +33,7 @@ function fixture({facts=empty(),missing=[],role='OWNER',currentCompany='c',store
   async $executeRawUnsafe(sql){trace.push({sql});assert.match(sql,/^(SET TRANSACTION READ ONLY|SET LOCAL statement_timeout)/)},
   async $queryRawUnsafe(sql,...values){trace.push({sql,values});
    if(sql.includes('AS "currencyMetadataAvailable"'))return [{currencyMetadataAvailable:!missing.includes('currency')}];
-   if(sql.includes('AS "identityLinksPresent"'))return facts.identityMetadata||facts.inbound.map(row=>({id:row.id,identityLinksPresent:Boolean(row.draftOrderId),draftDocumentId:null,commonDraftDocumentId:null,commonDraftOrderId:null,metadataValid:true,currencyAllowed:true}));
+   if(sql.includes('AS "identityLinksPresent"'))return facts.identityMetadata||facts.inbound.map(row=>({id:row.id,identityLinksPresent:Boolean(row.draftOrderId),deliveryJobLinkPresent:false,draftDocumentId:null,commonDraftDocumentId:null,commonDraftOrderId:null,metadataValid:true,currencyAllowed:true}));
    if(sql.includes('AS "paymentBefore"'))return facts.canonicalPaymentReceipts||[];
    if(sql.includes('FROM pg_class'))return Object.entries(schema).flatMap(([table,columns])=>missing.includes(table)?[]:columns.map(column=>({table,column})));
    if(sql.includes('FROM "StorePaidModule"'))return override?[override]:[];
@@ -397,4 +397,18 @@ test('ordinary five-cent payment policy keeps exact amounts and full paid paging
  const record=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:tol064',fingerprint:first.fingerprint},{now});assert.deepEqual(record.item.payment,second.items.find(row=>row.id==='doc:tol064').payment);assert.equal(record.fingerprint,first.fingerprint);
  const pending=await read(f,{storeId:'s',month:'2026-10',filter:'FINANCIAL_PENDING'});assert.equal(pending.matchedRecords,2);assert.deepEqual(pending.items.map(row=>row.payment.status),['PARTIALLY_PAID','OVERPAID']);assert.equal(pending.items[0].payment.remainingCents,6);assert.equal(pending.items[1].payment.overpaymentCents,6);assert.ok(pending.items.every(row=>row.payment.withinTolerance===undefined));assert.equal(JSON.stringify(facts),before);
  facts.payments[64].amount='12.28';await assert.rejects(read(f,{storeId:'s',month:'2026-10',filter:'PAID',page:first.nextPage}),error=>error.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
+test('ordinary list and record recognize standalone zero 9.3 without changing raw classification',async()=>{
+ const facts=empty();facts.inbound.push({id:'delivery',inboxId:'delivery-inbox',mark:'12345',issuerVat:'099999999',series:'D',documentNumber:'42',issueDay:'2026-10-02',invoiceType:'9.3',totalGross:'0.000',createdAt:'2026-10-03T10:00:00Z'});facts.inbox.push({id:'delivery-inbox',status:'RECEIVED',createdAt:'2026-10-03T10:00:00Z'});
+ const before=JSON.stringify(facts),raw=classifyInvoiceMonth(facts,period),f=fixture({facts});
+ const list=await read(f);assert.equal(list.items[0].documentType,'DELIVERY_NOTE');assert.equal(list.items[0].payment.status,'NOT_APPLICABLE');assert.equal(list.financialSummary.reviewRequired,0);assert.deepEqual(list.items[0].reasons,[]);assert.deepEqual(list.items[0].categories,[]);assert.equal(list.items[0].purchaseReview.status,'NON_FINANCIAL');assert.equal(list.items[0].status,'UNPOSTED');for(const key of ['unposted','purchaseLinkReview','identityReview'])assert.equal(list.summary[key],0);
+ const record=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:list.items[0].id,fingerprint:list.fingerprint},{now});assert.deepEqual(record.item,list.items[0]);assert.equal(raw.items[0].documentType,null);assert.deepEqual(classifyInvoiceMonth(facts,period),raw);assert.equal(JSON.stringify(facts),before);
+ facts.inbound[0].totalGross='0.004';const changed=await read(f);assert.equal(changed.items[0].payment.status,'REVIEW_REQUIRED');assert.notEqual(changed.fingerprint,list.fingerprint);
+ facts.inbound[0].totalGross='0';
+ const metadata={id:'delivery',metadataValid:true,identityLinksPresent:false,currencyAllowed:true};
+ for(const value of [true,null,undefined]){facts.identityMetadata=[{...metadata,...(value===undefined?{}:{deliveryJobLinkPresent:value})}];assert.equal((await read(f)).items[0].payment.status,'REVIEW_REQUIRED');}
+ facts.identityMetadata=[{...metadata,deliveryJobLinkPresent:false}];assert.equal((await read(f)).items[0].payment.status,'NOT_APPLICABLE');
+ assert.ok(f.trace.some(entry=>entry.sql?.includes("source.\"rawPayload\" ? 'originalJobId'")&&entry.sql.includes('AS "deliveryJobLinkPresent"')));
+ facts.identityMetadata=[{id:'delivery',metadataValid:true,identityLinksPresent:true,currencyAllowed:true}];assert.equal((await read(f)).items[0].payment.status,'REVIEW_REQUIRED');
 });

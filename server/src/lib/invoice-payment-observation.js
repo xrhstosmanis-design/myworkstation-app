@@ -25,13 +25,33 @@ const postingOnlyReason='Η καταχώριση αγοράς δεν διαθέ�
 const financialIdentityReview=item=>(item.categories||[]).includes('IDENTITY_OR_LINK_REVIEW')&&
  !(Array.isArray(item.reasons)&&item.reasons.length===1&&item.reasons[0]===postingOnlyReason);
 
+// Ordinary-view eligibility only; raw/D1 callers leave the option disabled.
+export function standaloneZeroDelivery(item,facts,transactions=[]){
+ if(!Array.isArray(item.sources)||item.sources.length!==1||item.sources[0].kind!=='MYDATA'||item.totalCents!==0||![null,'DELIVERY_NOTE'].includes(item.documentType))return false;
+ const matches=(facts.inbound||[]).filter(row=>row.id===item.sources[0].id);
+ if(matches.length!==1)return false;
+ const row=matches[0],zero=value=>(typeof value==='string'||typeof value==='number')&&/^[+]?0+(?:[.,]0+)?$/.test(String(value));
+ if(row.invoiceType!=='9.3'||!zero(row.totalGross)||row.deliveryNoteMetadataVerified!==true||row.draftOrderId)return false;
+ if((facts.inbound||[]).some(other=>other!==row&&(other.inboxId===row.inboxId||row.mark&&other.mark===row.mark)))return false;
+ if((facts.aliases||[]).some(alias=>alias.inboxId===row.inboxId||row.mark&&alias.mark===row.mark))return false;
+ const inboxes=(facts.inbox||[]).filter(inbox=>inbox.id===row.inboxId);
+ if(inboxes.length!==1||!['RECEIVED','IN_REVIEW','PROCESSED'].includes(inboxes[0].status))return false;
+ const attachmentId=inboxes[0].attachmentId;
+ if((facts.jobs||[]).some(job=>attachmentId&&job.attachmentId===attachmentId)||
+    (facts.documents||[]).some(doc=>doc.inboxId===row.inboxId)||
+    (facts.orders||[]).some(order=>order.inboxId===row.inboxId)||
+    (facts.paymentAllocations||[]).some(a=>[row.id,row.inboxId].includes(a.documentId))||
+    (transactions||[]).some(t=>[row.id,row.inboxId,attachmentId].filter(Boolean).includes(t.attachmentFilename)))return false;
+ return true;
+}
+
 /**
  * Payment observation for already scoped, classified monthly invoice facts.
  * This is not an authorization or source reader. Its caller must load all
  * transaction/settlement facts in the same authorized read-only snapshot.
  * Payment observation never changes purchase approval, source grouping or stock.
  */
-export function observeInvoicePayments(items,facts,transactions,{available=false,allocationsAvailable=false,toleranceCents=0}={}){
+export function observeInvoicePayments(items,facts,transactions,{available=false,allocationsAvailable=false,toleranceCents=0,standaloneDeliveryNotes=false}={}){
  if(!Number.isSafeInteger(toleranceCents)||toleranceCents<0||toleranceCents>5)throw new RangeError('Payment observation tolerance must be an integer from zero to five cents.');
  const documents=new Map(),duplicateDocuments=new Set(),transactionRows=new Map(),transactionsByDocument=new Map(),documentClaimsByPayment=new Map(),allocationsByPayment=new Map(),allocatedTransactionsByDocument=new Map(),allocationIdCounts=new Map();
  for(const document of facts.documents||[]){
@@ -102,8 +122,10 @@ export function observeInvoicePayments(items,facts,transactions,{available=false
   allocationProofs.set(id,{valid,unconfirmed,amountsByDocument,unallocatedClaimantIds});
  }
  const enriched=groups.map(({item,allIds,docs,paymentIds,candidates})=>{
+  const delivery=item.documentType===null&&standaloneDeliveryNotes===true&&available===true&&allocationsAvailable===true&&standaloneZeroDelivery(item,facts,transactions);
   let payment;
-  if(item.documentType==='CREDIT_NOTE')payment=result('NOT_APPLICABLE');
+  if(delivery)payment=result('NOT_APPLICABLE');
+  else if(item.documentType==='CREDIT_NOTE')payment=result('NOT_APPLICABLE');
   else if(item.documentType!=='INVOICE')payment=result('REVIEW_REQUIRED');
   else if(!available)payment=result('UNAVAILABLE');
   else if(!docs.length)payment=result('NOT_LINKED');
@@ -163,7 +185,8 @@ export function observeInvoicePayments(items,facts,transactions,{available=false
     });
    }else payment=result('REVIEW_REQUIRED');
   }
-  return {...item,payment};
+  const reasons=delivery?(item.reasons||[]).filter(reason=>reason!=='Ο τύπος του παραστατικού χρειάζεται έλεγχο.'):item.reasons;
+  return {...item,...(delivery?{documentType:'DELIVERY_NOTE',nonFinancialBasis:'STANDALONE_ZERO_MYDATA_9_3_V1',reasons,categories:reasons.length===0?(item.categories||[]).filter(category=>category!=='IDENTITY_OR_LINK_REVIEW'):item.categories}:{}),payment};
  });
  const summary={paid:0,financialPending:0,reviewRequired:0,notLinked:0,notApplicable:0};
  for(const item of enriched){

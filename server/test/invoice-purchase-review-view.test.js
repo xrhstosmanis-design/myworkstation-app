@@ -69,3 +69,12 @@ test('large ambiguous candidate headers remain bounded and cannot choose an arbi
 test('confirmed posted and credit records retain prior categories while open targets never create a draft',()=>{
  const result=run([row({status:'POSTED',categories:[],sources:[{kind:'DOCUMENT',id:'source',status:'DRAFT'},{kind:'ORDER',id:'order',status:'NEW'}]})]);assert.equal(result.items[0].purchaseReview.status,'POSTED_PURCHASE');assert.deepEqual(result.items[0].categories,[]);assert.equal(result.summary.unposted,0);assert.equal(result.items[0].openTarget.kind,'ORDER');
 });
+
+test('proven standalone nonfinancial delivery note is neutral; forged or conflicting evidence cannot hide purchase review',()=>{
+ const f={documents:[],orders:[],inbound:[{id:'m',inboxId:'i',invoiceType:'9.3',totalGross:'0',deliveryNoteMetadataVerified:true}],inbox:[{id:'i',status:'RECEIVED'}]};
+ const r=row({id:'inbound:m',documentType:'DELIVERY_NOTE',totalCents:0,nonFinancialBasis:'STANDALONE_ZERO_MYDATA_9_3_V1',sources:[{kind:'MYDATA',id:'m'}],payment:{status:'NOT_APPLICABLE'}});
+ const before=JSON.stringify({r,f}),actual=run([r],f);assert.equal(actual.items[0].purchaseReview.status,'NON_FINANCIAL');assert.deepEqual(actual.items[0].categories,[]);assert.equal(actual.items[0].openTarget.kind,'PREVIEW');assert.equal(actual.summary.unposted,0);assert.equal(actual.summary.purchaseLinkReview,0);
+ for(const patch of [{nonFinancialBasis:undefined},{nonFinancialBasis:'FAKE'},{totalCents:1},{payment:{status:'PAID'}},{sources:[{kind:'MYDATA',id:'m'},{kind:'DOCUMENT',id:'d'}]}])assert.notEqual(run([{...r,...patch}],f).items[0].purchaseReview.status,'NON_FINANCIAL');
+ for(const changed of [{...f,inbound:[]},{...f,inbound:[{...f.inbound[0],deliveryNoteMetadataVerified:false}]},{...f,inbound:[{...f.inbound[0],totalGross:'0.004'}]},{...f,aliases:[{inboxId:'i'}]}])assert.notEqual(run([r],changed).items[0].purchaseReview.status,'NON_FINANCIAL');
+ const unrelated=run([{...r,reasons:['Άλλο πρόβλημα.'],categories:[...r.categories,'IDENTITY_OR_LINK_REVIEW']}],f).items[0];assert.deepEqual(unrelated.reasons,['Άλλο πρόβλημα.']);assert.deepEqual(unrelated.categories,['IDENTITY_OR_LINK_REVIEW']);assert.equal(JSON.stringify({r,f}),before);
+});
