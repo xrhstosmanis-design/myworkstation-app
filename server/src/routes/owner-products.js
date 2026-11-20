@@ -458,7 +458,10 @@ router.post("/prices/bulk",requireCompanyModule("INVENTORY"),async(req,res,next)
 });
 
 router.get("/:productId/price-history",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{res.json(await readOwnerProductPriceHistory(req.user.companyId,req.query,req.params.productId,{db:prisma,scopedStoreId}))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
+  try{
+    const storeId=scopedStoreId || (typeof req.query.storeId==="string" ? req.query.storeId.trim() : "") || null;
+    res.json(await readOwnerProductPriceHistory(req.user.companyId,req.query,req.params.productId,{db:prisma,scopedStoreId:storeId}));
+  }catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 router.get("/promotions/efood-xlsx", requireCompanyModule("INVENTORY"), async (req, res, next) => {
   try {
