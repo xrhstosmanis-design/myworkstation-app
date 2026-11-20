@@ -1,0 +1,15 @@
+# No02 — bounded server original identity OCR claim
+
+Retained owner /root, user explicit START20Nov2026, branch fix/no2-identity-ocr-20261120. Baseline cee702688b57e454d12f9875976839f017476ef9. ASSIGNED BEFORE SOURCE / NOT TESTED / NOT INSTALLED. This claim must pass applicable CI and merge before source.
+
+Independent No02 provider-original identity verification only. Existing No04 invoice line extraction, learned rules, model selection, metered wallet, jobs/recheck and fast-header/payment flows remain retained and untouched. Existing4048 bulk/false transaction/scheduler/candidate/opt-in remains retained and untouched. This is not a transfer of either scope.
+
+Exact source scope after merge: a new server/src/lib/mydata-original-identity-ocr.js isolated bounded local CPU OCR reader; server/src/mydata-original.js only verified PDF same-byte identity fallback and cancellation; server/src/lib/mydata-original-provider-profiles.js only three exact profiles thirdparte169/cosmote22/telekom22 after genuine verification; new focused actual-reader tests; necessary explicit server dependencies and immutable locally packaged English language/core assets or checksum-verified build preparation. Root/client source changes only if required to package server dependency/build inputs; no browser reader, route/auth, financial/stock/fiscal writer or environment/activation change.
+
+Actual private offline evidence: three same original PDFs fail embedded issuer VAT; unchanged production verifier passes actual embedded+header OCR and embedded+fullpage OCR3/3 without expected identifiers injected. This proves diagnosis only, not installed availability or blanket supplier success. Private originals/URLs/identifiers stay out of git.
+
+Implementation must use original downloaded bytes only, retain MIME/signature3.4MB/20pages/no redirects/provider identity guards and existing45second acquisition budget. Run local OCR only after embedded text fails for the three exact verified formats, never arbitrary hosts or arbitrary expected-string generation. No paid API, network language fetch at runtime, wallet/job/purchase or client OCR attestation. Keep expected identifiers outside OCR generation, bound page/region/pixels/output/concurrency/time, support cancellation and cleanup, fail closed on absent dependencies, malformed/conflicting evidence or timeout. Existing embedded-text valid documents must not invoke OCR.
+
+Use exact MARK/issuerVAT/recipientVAT/document number through the existing strict verifier. No new invoice line or stock interpretation. New provider enablement requires actual three cached-original replays through the integrated pipeline and negative identity/timeout/cancellation/foreign-provider controls, plus all protected provider/ordinary acquisition/native concurrency/rollback/monthly tests. Synthetic fixtures can be public; customer originals cannot.
+
+Full source/main CI and normal guarded release required before technical installation claim. User-dependent acceptance remains in one grouped final session, with existing paid/uploaded tests reused. Overall No02/4019 and4048 remain OPEN.
