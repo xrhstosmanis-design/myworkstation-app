@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dailyCashReportReadiness,reportDayOffset,reportWallTime,cashPreviewPeriod} from '../src/services/automatic-report-policy.js';
+import {buildAutomaticCashPayload} from '../src/services/automatic-report-cash-payload.js';
 import {readAutomaticDailyCashPreview,readAutomaticCashPreview} from '../src/services/automatic-report-source.js';
 
 const configuration={terminals:['MAIN',{terminalPos:'DELIVERY',requiredSlots:[1]}]};
@@ -13,7 +14,7 @@ function dayRows(day='2026-02-18'){
 const overlaps=result=>result.holds.filter(h=>h.overlappingSessionId);
 function snapshot(rows){
  const calls=[];
- const tx={user:{findUnique:async()=>({role:'SUPER_ADMIN'})},store:{findFirst:async()=>({id:'s',companyId:'c',name:'LAB fixture'})},$queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});return sql.includes('FROM "CashControlStoreRule"')?[{mode:'FULL',deliveryTerminalPattern:'DELIVERY',carryOverEnabled:true,posEftposEnabled:true}]:rows;}};
+ const tx={user:{findUnique:async()=>({role:'SUPER_ADMIN'})},store:{findFirst:async()=>({id:'s',companyId:'c',name:'LAB fixture'})},$queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});return sql.includes('FROM "AutomaticReportSettings"')?[{version:1}]:sql.includes('FROM "CashControlStoreRule"')?[{mode:'FULL',deliveryTerminalPattern:'DELIVERY',carryOverEnabled:true,posEftposEnabled:true}]:rows;}};
  return {calls,db:{$transaction:async(fn,options)=>{assert.equal(options.isolationLevel,'RepeatableRead');return fn(tx);}}};
 }
 
@@ -70,5 +71,61 @@ test('actual daily, weekly and monthly readers suppress all totals for one overl
   assert.equal(report.ready,false,frequency);assert.equal(report.sourceReadiness,'HOLD');assert.equal(report.groups,null);assert.equal(report.complete,true);assert.equal(report.sourceCount,rows.length);assert.ok(report.holds.some(h=>h.code==='SOURCE_SCOPE_OR_ID_INVALID'&&h.sessionId===later.id&&h.overlappingSessionId===original.id));
   if(frequency==='MONTHLY'){assert.equal(control.openingOperatorSummary.complete,true);assert.equal(report.openingOperatorSummary,null);}else assert.equal('openingOperatorSummary' in report,false);
   assert.equal(report.financialFinality,'PROVISIONAL');assert.equal(report.financialReconciliationComplete,false);assert.equal(report.deliveryStatus,'PREVIEW_ONLY');assert.equal(report.employeeLiabilityAdjusted,false);assert.equal(JSON.stringify(rows),changedBefore);assert.ok(f.calls.every(({sql})=>!(/\b(?:INSERT|UPDATE|DELETE)\b/i.test(sql))));
+ }
+});
+
+test('closed predecessor crossing the 05:00 boundary is context, never an owned slot or amount',async()=>{
+ const config={dayStartHour:5,secondShiftStartHour:13,thirdShiftStartHour:21,terminals:['MAIN']};
+ const rows=[
+  {id:'previous',openedAt:'2026-11-18T20:08:03.287Z',closedAt:'2026-11-19T03:48:14.816Z',variance:999},
+  {id:'morning',openedAt:'2026-11-19T03:48:36.915Z',closedAt:'2026-11-19T11:50:37.461Z',variance:-10},
+  {id:'afternoon',openedAt:'2026-11-19T11:50:56.506Z',closedAt:'2026-11-19T19:59:58.528Z',variance:8},
+  {id:'night',openedAt:'2026-11-19T20:00:16.474Z',closedAt:'2026-11-20T03:48:05.793Z',variance:0}
+ ].map(r=>({...r,companyId:'c',storeId:'s',terminalPos:'MAIN',status:'CLOSED'}));
+ const args={actorId:'sa',companyId:'c',storeId:'s',day:'2026-11-19',configuration:config,settingsVersion:1,now:new Date('2026-11-20T10:00:00Z')};
+ const before=JSON.stringify(rows),ready=await readAutomaticDailyCashPreview(snapshot(rows).db,args);
+ assert.equal(ready.ready,true);assert.equal(ready.sourceCount,3);
+ assert.deepEqual(ready.dayReadiness[0].sessionIds,['morning','afternoon','night']);
+ assert.doesNotThrow(()=>buildAutomaticCashPayload({preview:JSON.parse(JSON.stringify(ready)),companyId:'c',storeId:'s',settingsVersion:1}));
+ assert.equal(ready.groups.length,1);assert.equal(ready.groups[0].netVariance,-2);
+ assert.equal(JSON.stringify(rows),before);
+ const changed=structuredClone(rows);changed[0].variance=998;
+ assert.notEqual((await readAutomaticDailyCashPreview(snapshot(changed).db,args)).sourceFingerprint,ready.sourceFingerprint);
+ for(const change of [{openedAt:null},{openedAt:false},{openedAt:0},{openedAt:'invalid'},{status:'OPEN',closedAt:null},{closedAt:null},{closedAt:'invalid'},{closedAt:'2026-11-21T03:00:00Z'},{closedAt:'2026-11-18T19:00:00Z'},{companyId:'foreign'},{storeId:'foreign'},{terminalPos:'UNKNOWN'},{variance:null},{id:'morning'},{closedAt:'2026-11-19T03:49:00Z'}]){
+  const altered=structuredClone(rows);Object.assign(altered[0],change);
+  const result=await readAutomaticDailyCashPreview(snapshot(altered).db,args);
+  assert.equal(result.ready,false,JSON.stringify(change));assert.equal(result.groups,null);
+ }
+ // Exact adjacency is allowed, but the predecessor can never replace a slot.
+ const adjacent=structuredClone(rows);adjacent[0].closedAt=adjacent[1].openedAt;
+ assert.equal((await readAutomaticDailyCashPreview(snapshot(adjacent).db,args)).ready,true);
+ const missing=await readAutomaticDailyCashPreview(snapshot(rows.filter(r=>r.id!=='morning')).db,args);
+ assert.equal(missing.ready,false);assert.ok(missing.holds.some(h=>h.code==='SHIFT_SLOT_MISSING'&&h.slot===1));
+});
+
+test('weekly and monthly late closed boundaries preserve owned union and cross-day overlap holds',async()=>{
+ for(const frequency of ['DAILY','WEEKLY','MONTHLY']){
+  const period=cashPreviewPeriod(scope.day,frequency,configuration);
+  const days=Math.round((Date.parse(period.toDay)-Date.parse(period.fromDay))/86400000)+1;
+  const rows=Array.from({length:days},(_,i)=>dayRows(reportDayOffset(period.fromDay,i))).flat();
+  // Each night's close and next morning's opening are delayed equally.
+  for(let i=0;i<days;i++){
+   const day=reportDayOffset(period.fromDay,i),night=rows.find(r=>r.id===day+'-2'),morning=rows.find(r=>r.id===day+'-0');
+   morning.openedAt=new Date(+morning.openedAt+30*60000);
+   night.closedAt=new Date(+night.closedAt+30*60000);
+  }
+  const previous={...dayRows(reportDayOffset(period.fromDay,-1))[2],id:'prior-period',variance:999};previous.closedAt=new Date(+period.from+30*60000);rows.unshift(previous);
+  const args={actorId:'sa',companyId:'c',storeId:'s',day:scope.day,frequency,configuration,settingsVersion:1,now};
+  const before=JSON.stringify(rows),result=await readAutomaticCashPreview(snapshot(rows).db,args);
+  assert.equal(result.ready,true,frequency);assert.equal(result.groups.length,days*2);
+  assert.doesNotThrow(()=>buildAutomaticCashPayload({preview:JSON.parse(JSON.stringify(result)),companyId:'c',storeId:'s',settingsVersion:1}));
+  assert.equal(result.dayReadiness.flatMap(d=>d.sessionIds).length,days*4);
+  assert.ok(result.dayReadiness.every(d=>!d.sessionIds.includes('prior-period')));
+  assert.equal(result.groups.filter(g=>g.cashChain==='STORE').reduce((n,g)=>n+g.netVariance,0),-2*days);
+  assert.equal(JSON.stringify(rows),before);
+  previous.closedAt=new Date(+previous.closedAt+1);
+  const overlap=await readAutomaticCashPreview(snapshot(rows).db,args);
+  assert.equal(overlap.ready,false,frequency);assert.ok(overlap.holds.some(h=>h.overlappingSessionId==='prior-period'));
+  assert.equal(overlap.groups,null);
  }
 });
