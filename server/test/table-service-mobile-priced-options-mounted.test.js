@@ -36,7 +36,7 @@ async function mountWaiter({fee=0,isSet=false,send}={}){
   const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
   const module={exports:{}};
   new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
-  const root=createRoot(document.getElementById('root'));
+  let root=createRoot(document.getElementById('root'));
   const settle=async callback=>act(async()=>{await callback()});
   const button=text=>[...document.querySelectorAll('button')].find(element=>element.textContent.includes(text));
   const click=async text=>{const element=button(text);assert.ok(element,`Missing button ${text}`);await settle(()=>element.click())};
@@ -49,9 +49,11 @@ async function mountWaiter({fee=0,isSet=false,send}={}){
     });
     await click('LAB Coffee');
   };
-  try{await settle(()=>root.render(React.createElement(module.exports.default,{api,store:{id:'LAB',name:'LAB'},operator:{fullName:'Waiter'},onBack(){}})))}
+  const render=({storeId='LAB',operatorId='op',companyId='company'}={})=>root.render(React.createElement(module.exports.default,{api,store:{id:storeId,name:'LAB'},operator:{id:operatorId,fullName:'Waiter'},company:{id:companyId},onBack(){}}));
+  const remount=async props=>{await settle(()=>root.unmount());root=createRoot(document.getElementById('root'));await settle(()=>render(props))};
+  try{await settle(()=>render())}
   catch(error){dom.window.close();throw error}
-  return {button,click,settle,addProduct,requests,confirmations,async close(){
+  return {button,click,settle,addProduct,requests,confirmations,remount,renderScope:async props=>settle(()=>render(props)),dom,async close(){
     await act(async()=>root.unmount());dom.window.close();
     for(const[key,descriptor]of previous){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key]}
   }};
@@ -87,7 +89,7 @@ test('mobile keeps the same priced payload and request key after an ambiguous re
   try{
     await view.addProduct();await view.click('Almond');await view.click('Αποστολή γύρου');
     assert.match(document.querySelector('[role="alert"]').textContent,/Network response lost/);
-    await view.click('Αποστολή γύρου');
+    await view.click('Έλεγχος / επανάληψη ίδιου γύρου');
     assert.equal(view.requests.length,2);
     assert.deepEqual(view.requests[1],view.requests[0]);
     assert.match(view.requests[0].idempotencyKey,/^[0-9a-f-]{36}$/i);
@@ -112,5 +114,109 @@ for(const fixture of [{fee:.1},{isSet:true}])test(`mobile retains POS handling f
     assert.equal(view.button('Αποστολή γύρου').disabled,true);
     assert.match(document.body.textContent,/εισφορά ή συνοδευτικά SET/);
     await view.click('Αποστολή γύρου');assert.equal(view.requests.length,0);
+  }finally{await view.close()}
+});
+
+
+test('mobile recovers an unconfirmed priced round after a full remount and reconnect, without automatic send',async()=>{
+  const committed=new Map();let rounds=0;
+  const view=await mountWaiter({send:async(body,count)=>{
+    if(!committed.has(body.idempotencyKey)){rounds++;committed.set(body.idempotencyKey,{roundNumber:rounds,tableName:'LAB 1',addedTotal:2.5})}
+    if(count===1)throw new Error('Response lost after commit');
+    return committed.get(body.idempotencyKey);
+  }});
+  try{
+    await view.addProduct();await view.click('Almond');await view.click('Αποστολή γύρου');
+    const first=view.requests[0];assert.equal(rounds,1);
+    await view.remount();
+    assert.equal(view.requests.length,1,'mount must not resend');
+    assert.match(document.body.textContent,/Μη επιβεβαιωμένη αποστολή · LAB 1/);
+    assert.equal(view.button('Αποστολή γύρου'),undefined,'frozen attempt cannot be replaced by a new round');
+    Object.defineProperty(view.dom.window.navigator,'onLine',{configurable:true,value:false});
+    await view.settle(()=>view.dom.window.dispatchEvent(new view.dom.window.Event('offline')));
+    assert.equal(view.button('Έλεγχος / επανάληψη ίδιου γύρου').disabled,true);
+    Object.defineProperty(view.dom.window.navigator,'onLine',{configurable:true,value:true});
+    await view.settle(()=>view.dom.window.dispatchEvent(new view.dom.window.Event('online')));
+    assert.equal(view.requests.length,1,'reconnect must not resend');
+    await view.click('Έλεγχος / επανάληψη ίδιου γύρου');
+    assert.deepEqual(view.requests[1],first);assert.equal(rounds,1);
+    assert.match(document.body.textContent,/Στάλθηκε ο γύρος 1/);
+    await view.remount();
+    assert.doesNotMatch(document.body.textContent,/Μη επιβεβαιωμένη αποστολή/);
+    assert.equal(view.requests.length,2);
+  }finally{await view.close()}
+});
+
+test('mobile pending round is isolated by company, store and operator',async()=>{
+  const view=await mountWaiter({send:async()=>{throw new Error('Unknown result')}});
+  try{
+    await view.addProduct();await view.click('Almond');await view.click('Αποστολή γύρου');
+    for(const props of [{companyId:'other-company'},{storeId:'other-store'},{operatorId:'other-operator'}]){
+      await view.remount(props);assert.doesNotMatch(document.body.textContent,/Μη επιβεβαιωμένη αποστολή/);
+      assert.equal(view.requests.length,1);
+    }
+    await view.remount();assert.match(document.body.textContent,/Μη επιβεβαιωμένη αποστολή/);
+  }finally{await view.close()}
+});
+
+test('mobile refuses a new send when the recovery reference cannot be stored',async()=>{
+  const view=await mountWaiter();
+  try{
+    await view.addProduct();await view.click('Almond');
+    view.dom.window.Storage.prototype.setItem=()=>{throw new Error('Storage disabled')};
+    await view.click('Αποστολή γύρου');
+    assert.equal(view.requests.length,0);assert.match(document.querySelector('[role="alert"]').textContent,/Δεν στάλθηκε νέος γύρος/);
+  }finally{await view.close()}
+});
+
+
+test('a later price refusal cannot discard an already ambiguous mobile attempt',async()=>{
+  const view=await mountWaiter({send:async(body,count)=>{
+    if(count===1)throw new Error('Unconfirmed result');
+    throw Object.assign(new Error('Η τιμή επιλογής άλλαξε. Άνοιξε ξανά τις επιλογές παρασκευής.'),{status:409});
+  }});
+  try{
+    await view.addProduct();await view.click('Almond');await view.click('Αποστολή γύρου');
+    await view.remount();await view.click('Έλεγχος / επανάληψη ίδιου γύρου');
+    assert.match(document.body.textContent,/Μη επιβεβαιωμένη αποστολή/);
+    assert.deepEqual(view.requests[1],view.requests[0]);
+    await view.remount();assert.match(document.body.textContent,/Μη επιβεβαιωμένη αποστολή/);
+  }finally{await view.close()}
+});
+
+for(const invalid of ['not-json',JSON.stringify({scope:'wrong',request:{idempotencyKey:'bad'},lines:[]})])test('invalid mobile recovery data blocks a new round instead of inventing a UUID',async()=>{
+  const view=await mountWaiter();
+  try{
+    view.dom.window.sessionStorage.setItem('myworkstation:mobile-table-attempt:v1:'+JSON.stringify(['company','LAB','op']),invalid);
+    await view.remount();assert.match(document.body.textContent,/πρόβλημα ανάκτησης αποστολής/);
+    await view.click('LAB 1');assert.equal(view.button('Αποστολή γύρου'),undefined);
+    assert.equal(view.requests.length,0);
+  }finally{await view.close()}
+});
+
+
+test('late acknowledgement from a previous operator cannot replace the current recovery screen',async()=>{
+  let resolve;
+  const view=await mountWaiter({send:()=>new Promise(done=>{resolve=done})});
+  try{
+    await view.addProduct();await view.click('Almond');await view.click('Αποστολή γύρου');
+    assert.equal(view.requests.length,1);
+    await view.renderScope({operatorId:'other-operator'});
+    assert.doesNotMatch(document.body.textContent,/Μη επιβεβαιωμένη αποστολή/);
+    await view.settle(()=>resolve({roundNumber:99,tableName:'Previous operator table',addedTotal:2.5}));
+    assert.doesNotMatch(document.body.textContent,/Previous operator table|Στάλθηκε ο γύρος 99/);
+    assert.equal(view.requests.length,1);
+  }finally{await view.close()}
+});
+
+
+test('mobile timeout does not tell the operator that the server performed no transaction',async()=>{
+  const view=await mountWaiter({send:async()=>{throw new Error('Ο server καθυστέρησε πάνω από 30″. Δοκίμασε Ανανέωση — δεν εκτελέστηκε συναλλαγή.')}});
+  try{
+    await view.addProduct();await view.click('Almond');await view.click('Αποστολή γύρου');
+    const alert=document.querySelector('[role="alert"]').textContent;
+    assert.match(alert,/Η απάντηση της αποστολής δεν επιβεβαιώθηκε/);
+    assert.doesNotMatch(alert,/δεν εκτελέστηκε συναλλαγή/);
+    assert.match(document.body.textContent,/Μη επιβεβαιωμένη αποστολή/);
   }finally{await view.close()}
 });

@@ -60,6 +60,9 @@ function Lines($ticket){
  $result.Add('MYWORKSTATION - PRODUCTION')
  $result.Add([string]$ticket.batchId)
  $result.Add([string]$ticket.priority)
+ if($ticket.productionStation){$result.Add(('STATION: '+[string]$ticket.productionStation))}
+ if($ticket.tableName){$result.Add(('TABLE: '+[string]$ticket.tableName+' / ROUND: '+[string]$ticket.roundNumber))}
+ if($ticket.note){$result.Add(('NOTE: '+[string]$ticket.note))}
  foreach($item in $ticket.items){
   $result.Add('--------------------------------')
   $result.Add(('{0} x {1}' -f $item.quantity,$item.name))
