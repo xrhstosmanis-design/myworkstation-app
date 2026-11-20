@@ -99,8 +99,7 @@ function route(handler){return async(req,res)=>{
 }}
 const jsonRecord=z.record(z.string(),z.union([z.boolean(),z.string(),z.number(),z.null()])).default({});
 
-router.get("/stores/:storeId/operators",route(async(req,res)=>{
-  const store=await scopedStore(req,req.params.storeId);
+export async function readOperatorProfileRows(companyId,storeId,{db=prisma}={}){const prisma=db;const store={id:storeId};
   const rows=await prisma.$queryRaw`
     SELECT c."id" AS "credentialId",c."employeeId",c."displayName",c."role",c."active",
            c."lastLoginAt",c."createdAt",c."updatedAt",
@@ -118,6 +117,12 @@ router.get("/stores/:storeId/operators",route(async(req,res)=>{
     WHERE c."storeId"=${store.id}
     ORDER BY c."displayName" ASC
   `;
+  return rows;
+}
+
+router.get("/stores/:storeId/operators",route(async(req,res)=>{
+  const store=await scopedStore(req,req.params.storeId);
+  const rows=await readOperatorProfileRows(store.companyId,store.id);
   res.json({store:{id:store.id,name:store.name},operators:rows});
 }));
 

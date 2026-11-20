@@ -1,3 +1,4 @@
+import {assertCompanyCurrentCaptureManifest,inspectCompanyCurrentCaptureSource} from './backoffice-company-current-capture.js';
 import {prepareReportColumnInspection} from './automatic-report-column-compatibility.js';
 import {assertReportOperationalProfile,assertReportColumnProfile} from './automatic-report-operational-profile.js';
 import {prepareOperationalReportInspection} from './automatic-report-source-compatibility.js';
@@ -28,6 +29,7 @@ const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for
 const drainFingerprint=(plan,scope,mode,operationId)=>hash({phase:'DRAINING',operationId,companyId:scope.companyId,storeId:scope.storeId,mode,planHash:plan.planHash,sourceRevision:plan.sourceRevision});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
+ if(manifest.purpose!==undefined)assertCompanyCurrentCaptureManifest(manifest);
  if(manifest.reviewedColumnExtensions!==undefined)assertReportColumnProfile(manifest);
  if(manifest.preservedOperationalTables!==undefined)assertReportOperationalProfile(manifest);
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
@@ -63,7 +65,7 @@ function planFor(manifest){
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!validColumns(row.owner.columns))fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
  if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
- return {id:manifest.id,executionDisabled:manifest.executionDisabled===true,reviewedColumnExtensions:manifest.reviewedColumnExtensions||[],preservedOperationalTables:manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
+ return {id:manifest.id,executionDisabled:manifest.executionDisabled===true,purpose:manifest.purpose,reviewedColumnExtensions:manifest.reviewedColumnExtensions||[],preservedOperationalTables:manifest.companyCurrentCatalogue?.nonOwningTables||manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
 }
 function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='ROOT')return `${alias}."id"=$1`;
@@ -135,6 +137,14 @@ export function getReviewedMonthlyCaptureLifecycleGuardDefinitions(manifest,sche
  ]);
  return names.flatMap(table=>{const node=plan.nodes.get(table),name=guardName(node);return [{table,name,mask:31,body:guardBody(plan,schema,node)},{table,name:name+'_truncate',mask:34,body:truncateBody}]});
 }
+// Review-only deterministic compiler output. Does not inspect/install/enroll or execute.
+export function reviewLifecycleGuardDefinitions(manifest,{schema,foreignKeys}={}){
+ if(schema!=='public'||!Array.isArray(foreignKeys)||foreignKeys.length>10000)fail('Exact reviewed public FK catalogue required.');
+ const plan=planFor(manifest);bindDatabaseReferences(plan,schema,foreignKeys);
+ return plan.ordered.flatMap(node=>{const name=guardName(node);return[{table:node.name,name,enabled:'A',mask:31,condition:null,attributes:'',attributeNames:[],bodySha256:hashText(guardBody(plan,schema,node)),...reviewedGuardFunctionDefaults,functionSchema:schema,functionName:name,definer:false,language:'plpgsql'},{table:node.name,name:name+'_truncate',enabled:'A',mask:34,condition:null,attributes:'',attributeNames:[],bodySha256:hashText(truncateBody),...reviewedGuardFunctionDefaults,functionSchema:schema,functionName:name+'_truncate',definer:false,language:'plpgsql'}]});
+}
+const reviewedGuardFunctionDefaults={args:'',argumentCount:0,constraintTrigger:false,deferrable:false,deferred:false,oldTransitionTable:null,newTransitionTable:null,ownedByCurrentUser:true,functionKind:'f',returnsSet:false,returnType:'trigger',functionArgumentCount:0,functionArgumentTypes:'',settings:null,acl:null,binary:null,strict:false,leakproof:false,volatility:'v',parallel:'u',cost:'100',rows:'0',support:'-'};
+const hashText=value=>createHash('sha256').update(value).digest('hex');
 async function schemaFor(tx){const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS name'))[0]?.name;if(!schema)fail('Schema unavailable.');return schema}
 async function readForeignKeys(tx,schema){ return await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,pn.nspname AS "parentSchema",cn.nspname AS "childSchema",ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.n ORDER BY k.p) AS local,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=k.n ORDER BY k.p) AS remote FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_class parent ON parent.oid=c.confrelid JOIN pg_namespace cn ON cn.oid=child.relnamespace JOIN pg_namespace pn ON pn.oid=parent.relnamespace WHERE c.contype='f' AND (cn.nspname=$1 OR pn.nspname=$1) ORDER BY cn.nspname,child.relname,c.conname`,schema);
 }
@@ -149,7 +159,7 @@ function bindDatabaseReferences(plan,schema,fks){
 }
 async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
  const columnCompatibility=plan.reviewedColumnExtensions.length?await prepareReportColumnInspection(tx,schema):null;
- const operational=plan.preservedOperationalTables.length?await prepareOperationalReportInspection(tx,schema):null;
+ const operational=plan.purpose==='COMPANY_READ_ONLY'?await inspectCompanyCurrentCaptureSource(tx,schema,{phase:plan.id==='BACKOFFICE_COMPANY_CURRENT_CAPTURE_PROPOSED_V1'?'TARGET':'SOURCE'}):plan.preservedOperationalTables.length?await prepareOperationalReportInspection(tx,schema):null;
  const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name,c.relkind::text AS kind,c.relispartition AS partition,c.relrowsecurity AS rls,c.relforcerowsecurity AS forced,EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhparent=c.oid OR i.inhrelid=c.oid) AS inherited,EXISTS(SELECT 1 FROM pg_rewrite w WHERE w.ev_class=c.oid AND w.rulename<>'_RETURN') AS rewritten FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname`,schema);
  const columns=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS "notNull",a.attidentity::text AS identity,a.attgenerated::text AS generated,pg_get_expr(d.adbin,d.adrelid) AS "defaultExpression" FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') AND a.attnum>0 AND NOT a.attisdropped ORDER BY c.relname,a.attnum`,schema);
  if(plan.knownTables){for(const relation of relations)if(!INTERNAL.has(relation.name)&&!plan.knownTables.includes(relation.name))fail('Unreviewed database relation: '+relation.name);for(const name of plan.knownTables)if(!relations.some(r=>r.name===name))fail('Reviewed database relation missing: '+name)}
@@ -296,6 +306,7 @@ function inspectionFor(plan){return async(db,actor,scope)=>{
  },{isolationLevel:'RepeatableRead',timeout:120000,maxWait:5000});
 }}
 function assertScopedLifecycleEnabled(manifest){
+ if(manifest.purpose==='COMPANY_READ_ONLY')throw Object.assign(new Error('Company read catalogue cannot authorize scoped recovery.'),{status:409,code:'COMPANY_CURRENT_CAPTURE_SCOPED_RECOVERY_FORBIDDEN'});
  if(manifest.executionDisabled===true)throw Object.assign(new Error("Οι ενέργειες επαναφοράς και διαγραφής καταστήματος δεν είναι διαθέσιμες στο προφίλ αναφορών."),{status:409,code:"STORE_LIFECYCLE_REPORTS_ONLY"});
 }
 export function createLifecycleInspectionCore(manifest,{sourceRevision}={}){
@@ -303,6 +314,13 @@ export function createLifecycleInspectionCore(manifest,{sourceRevision}={}){
  const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
  if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
  return Object.freeze({inspect:inspectionFor(plan)});
+}
+// Internal catalogue readiness only. Does not accept an actor, impersonate an
+// administrator, inspect business rows, install guards or authorize execution.
+export function createLifecycleCatalogueReadiness(manifest){
+ const reviewed=structuredClone(manifest),plan=planFor(reviewed);
+ plan.reviewedColumns=reviewed.reviewedColumns||[];
+ return async db=>validateDatabase(db,plan,await schemaFor(db));
 }
 async function installLifecyclePlanInTransaction(tx,actor,scope,plan){requireLifecycleAdmin(actor);
    const schema=await schemaFor(tx);

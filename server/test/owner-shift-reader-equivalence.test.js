@@ -3,12 +3,20 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash,randomUUID} from 'node:crypto';
 import vm from 'node:vm';
+import {readOwnerShiftDetail} from '../src/routes/owner-shifts.js';
 
 // Frozen verbatim from owner-shifts.js at be1be1d57932606ff1c8a46dfd61a7b0b19f32c4.
 // This is the original correlated SQL, never derived from the new implementation.
 const ORIGINAL_SELECTION="    const selectedSales=await prisma.$queryRaw`\n      SELECT s.\"id\" FROM \"Sale\" s\n      WHERE s.\"companyId\"=${companyId} AND s.\"storeId\"=${shift.storeId} AND s.\"status\"='COMPLETED'\n        AND EXISTS (\n          SELECT 1 FROM (\n            SELECT t.\"sessionId\" FROM \"StoreTransaction\" t\n            JOIN \"CashShiftSession\" sh ON sh.\"id\"=t.\"sessionId\" AND sh.\"companyId\"=s.\"companyId\" AND sh.\"storeId\"=s.\"storeId\"\n            WHERE t.\"companyId\"=s.\"companyId\" AND t.\"storeId\"=s.\"storeId\"\n              AND s.\"id\"=ANY(regexp_split_to_array(COALESCE(t.\"description\",''),'[^[:alnum:]_-]+'))\n              AND COALESCE(t.\"description\",'') NOT LIKE ('%αρχική '||s.\"id\"||'%')\n              AND COALESCE(t.\"description\",'') NOT LIKE ('%αρχική πώληση '||s.\"id\"||'%')\n            UNION\n            SELECT a.\"details\"->>'sessionId' FROM \"StoreOperatorAudit\" a\n            JOIN \"CashShiftSession\" sh ON sh.\"id\"=a.\"details\"->>'sessionId' AND sh.\"companyId\"=s.\"companyId\" AND sh.\"storeId\"=s.\"storeId\"\n            WHERE a.\"companyId\"=s.\"companyId\" AND a.\"storeId\"=s.\"storeId\" AND a.\"eventType\"='POS_SALE_COMPLETED' AND a.\"details\"->>'saleId'=s.\"id\"\n          ) evidence\n          HAVING COUNT(DISTINCT evidence.\"sessionId\")=1 AND MIN(evidence.\"sessionId\")=${shift.id}\n        )\n    `;\n";
 const ORIGINAL_SELECTION_SHA256="e6b2e20d62a379231031b682362c9b9d41f94a8e712d32135385168546ffdac6";
 const OUTSIDE_SELECTION_SHA256="22478ad339dae46c97e5f76e1c0b35fe9f829e3cf01f81e4d77d7e8b60fc2a86";
+// The independent pre-extraction route is fixed by both historic hashes above.
+// Its approved optimized selection was replaced by ORIGINAL_SELECTION; no part
+// of this reference is read from the current candidate implementation.
+const ORIGINAL_ROUTE_SHA256='6438521b30634dbf224fa74e03c9ffdd57b05cabb86ed76a8f5bc53990edf30f';
+const APPROVED_SELECTION_SHA256='7f4b5557e313de6965ef77a476604cb3eb7b3f6030cc74fbb5a16e022ceedaa6';
+const originalRoute=await readFile(new URL('./fixtures/owner-shift-reader-original.txt',import.meta.url),'utf8');
+const originalA=originalRoute.indexOf('    const selectedSales=await prisma.$queryRaw`'),originalB=originalRoute.indexOf('    const saleIds=',originalA);
 const route=await readFile(new URL('../src/routes/owner-shifts.js',import.meta.url),'utf8');
 const a=route.indexOf('    const selectedSales=await prisma.$queryRaw`'),b=route.indexOf('    const saleIds=',a);
 const candidate=route.slice(a,b);
@@ -19,13 +27,20 @@ function selection(db,text,sessionId='online',companyId='C',storeId='A'){
  const fn=vm.runInNewContext('(async function(prisma,companyId,shift){'+text+'return selectedSales;})');
  return fn(db,companyId,{id:sessionId,storeId});
 }
-function detail(db,text,sessionId='online',companyId='C'){
- const modified=route.slice(0,a)+text+route.slice(b),start=modified.indexOf('router.get("/:sessionId/detail",');
- const source=modified.slice(start,modified.indexOf('\nrouter.post(',start));
- const normalizers=modified.slice(modified.indexOf('const n=value=>'),modified.indexOf('let schemaPromise;'));
+function originalDetail(db,sessionId='online',companyId='C'){
+ const start=originalRoute.indexOf('router.get("/:sessionId/detail",');
+ const source=originalRoute.slice(start,originalRoute.indexOf('\nrouter.post(',start));
+ const normalizers=originalRoute.slice(originalRoute.indexOf('const n=value=>'),originalRoute.indexOf('let schemaPromise;'));
  let fn;vm.runInNewContext(normalizers+source,{router:{get(_,f){fn=f}},prisma:db,ensureSchema:async()=>{}});
  return (async()=>{let body,status,error;await fn({params:{sessionId},user:{companyId}},{status(v){status=v;return this},json(v){body=v}},e=>error=e);if(error)throw error;return json({body,status});})();
 }
+async function candidateDetail(db,sessionId='online',companyId='C'){
+ // Invoke the actual exported production reader. Only its explicit 404 error is
+ // normalized to the original HTTP contract; all successful values are intact.
+ try{return json({body:await readOwnerShiftDetail(companyId,sessionId,{db})})}
+ catch(error){if(error.status!==404)throw error;return {body:{error:error.message},status:404}}
+}
+
 function boundQuery(text,sessionId='online'){
  let result;selection({$queryRaw(strings,...values){result={sql:strings.reduce((s,part,i)=>s+(i?'$'+i:'')+part,''),values};return[]}},text,sessionId);
  return result;
@@ -33,11 +48,22 @@ function boundQuery(text,sessionId='online'){
 const ids=rows=>Array.from(rows,r=>r.id).sort();
 const tables=['Store','CashShiftSession','Sale','StoreOperatorAudit','StoreTransaction','SaleLine','Product','ProductCategory','Payment'];
 async function digest(db){const out={};for(const name of tables){const rows=await db.$queryRawUnsafe(`SELECT md5(COALESCE(string_agg(j::text,',' ORDER BY j::text),'')) AS hash FROM (SELECT to_jsonb(t) j FROM "${name}" t) x`);out[name]=rows[0].hash;}return out;}
-test('owner shift optimization changes only the approved selected-sales read and freezes original SQL',()=>{
+test('owner shift extraction preserves independent original SQL, approved selection, outside SQL and all writer/auth behavior',()=>{
  assert.equal(sha(ORIGINAL_SELECTION),ORIGINAL_SELECTION_SHA256);
- assert.equal(sha(route.slice(0,a)+route.slice(b)),OUTSIDE_SELECTION_SHA256);
+ assert.equal(sha(originalRoute),ORIGINAL_ROUTE_SHA256);
+ assert.equal(originalRoute.slice(originalA,originalB),ORIGINAL_SELECTION);
+ assert.equal(sha(originalRoute.slice(0,originalA)+originalRoute.slice(originalB)),OUTSIDE_SELECTION_SHA256);
+ assert.equal(sha(candidate),APPROVED_SELECTION_SHA256,'the previously approved set-based SQL must remain verbatim');
  assert.notEqual(candidate,ORIGINAL_SELECTION);
+ const boundary='router.use(requireOwner);',prefix=route.slice(0,route.indexOf(boundary)+boundary.length);
+ const normalizedPrefix=prefix.replace('async function assertStore(companyId,storeId,{db=prisma}={})','async function assertStore(companyId,storeId)').replace('await db.store.findFirst','await prisma.store.findFirst');
+ assert.equal(normalizedPrefix,originalRoute.slice(0,originalRoute.indexOf(boundary)+boundary.length),'only explicit dependency injection may change the original auth/schema/normalizer prefix');
+ assert.equal(route.slice(route.indexOf('\nrouter.post(')),originalRoute.slice(originalRoute.indexOf('\nrouter.post(')),'all existing writers remain byte-identical');
+ const sqls=source=>Array.from(source.matchAll(/prisma\.\$(?:queryRaw|executeRaw)`[\s\S]*?`/g),m=>m[0]);
+ const outside=route.slice(0,a)+route.slice(b),oldOutside=originalRoute.slice(0,originalA)+originalRoute.slice(originalB);
+ assert.deepEqual(sqls(outside).map(sql=>sql.replaceAll('${sessionId}','${req.params.sessionId}')),sqls(oldOutside),'canonical SQL outside the approved optimization is unchanged by extraction');
 });
+
 test('native original/candidate selected identity, complete detail, immutable sources and set-based work',{skip:!isolated()},async t=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='owner_reader_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});
  try{
@@ -107,8 +133,8 @@ test('native original/candidate selected identity, complete detail, immutable so
    assert.deepEqual(ids(await selection(db,candidate,'foreign','D','D')),ids(await selection(db,ORIGINAL_SELECTION,'foreign','D','D')));
   });
   await t.test('complete actual handler output equals frozen original for each original/control/foreign session',async()=>{
-   for(const session of ['online','main','other-store','foreign','absent'])assert.deepEqual(await detail(db,candidate,session),await detail(db,ORIGINAL_SELECTION,session));
-   assert.deepEqual(await detail(db,candidate,'foreign','D'),await detail(db,ORIGINAL_SELECTION,'foreign','D'));
+   for(const session of ['online','main','other-store','foreign','absent'])assert.deepEqual(await candidateDetail(db,session),await originalDetail(db,session));
+   assert.deepEqual(await candidateDetail(db,'foreign','D'),await originalDetail(db,'foreign','D'));
   });
   assert.deepEqual(await digest(db),before,'read paths must not change any source row');
   await t.test('synthetic scale tokenization executes once per scoped ledger row, not once per sale',async()=>{
@@ -127,7 +153,7 @@ test('native original/candidate selected identity, complete detail, immutable so
    const oldNodes=[];function oldWalk(node){oldNodes.push(node);for(const child of node.Plans||[])oldWalk(child);}oldWalk(oldPlan[0]['QUERY PLAN'][0].Plan);
    assert.ok(oldNodes.some(node=>node['Parent Relationship']==='SubPlan'&&node['Actual Loops']>=120),'frozen query reproduces repeated per-sale evidence work');
    assert.deepEqual(ids(await selection(db,candidate)),ids(await selection(db,ORIGINAL_SELECTION)));
-   assert.deepEqual(await detail(db,candidate),await detail(db,ORIGINAL_SELECTION));
+   assert.deepEqual(await candidateDetail(db),await originalDetail(db));
    assert.deepEqual(await digest(db),baseline);
    t.diagnostic(JSON.stringify({syntheticOnly:true,ledgerMaterializationLoops:materialized['Actual Loops'],originalCorrelatedLoops:Math.max(...oldNodes.filter(n=>n['Parent Relationship']==='SubPlan').map(n=>n['Actual Loops'])),originalMs:oldPlan[0]['QUERY PLAN'][0]['Execution Time'],candidateMs:plan[0]['QUERY PLAN'][0]['Execution Time']}));
   });

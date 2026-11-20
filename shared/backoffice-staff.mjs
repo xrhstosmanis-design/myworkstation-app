@@ -1,3 +1,5 @@
+import {finalPassiveStoreActions,finalPassiveStoreRequest} from './backoffice-staff-final-passive.mjs';
+import {storeReportCapabilities,storeReportNames,storeReportLabels,storeReportRequestCapability} from './backoffice-staff-reports.mjs';
 import {expectedReceiptAction} from './supplier-expected-receipts.mjs';
 // Profiles are starting suggestions, never authorization ceilings or an
 // implicit grant. Only the explicit persisted store capabilities authorize.
@@ -6,8 +8,75 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read','unsold-products.read','sales-journal.read',...storeReportCapabilities,...finalPassiveStoreActions.map(action=>action.key)]);
 export const staffPermissionSections=Object.freeze([
+ {key:'final-passive',label:'Πρόσθετες παθητικές προβολές',actions:finalPassiveStoreActions.map(({modules,...action})=>action)},
+ {key:'store-reports',label:'Αναφορές επιλεγμένου καταστήματος',actions:storeReportCapabilities.map((key,i)=>({key,label:storeReportLabels[i]+' καταστήματος',description:storeReportNames[i]==='payroll-expenses'?'Βλέπει ονόματα υπαλλήλων και συνδεδεμένες καταγεγραμμένες πληρωμές μόνο του επιλεγμένου καταστήματος, χωρίς απόδειξη εξόφλησης ή δεδουλευμένων.':'Βλέπει την αναφορά και τις διαθέσιμες οικονομικές αξίες μόνο του επιλεγμένου καταστήματος, χωρίς αλλαγές ή εξαγωγή.'}))},
+ {key:'sales-extra',label:'Πρόσθετες προβολές πωλήσεων',actions:[
+  {key:'unsold-products.read',label:'Προβολή απούλητων ειδών καταστήματος',description:'Βλέπει τα ενεργά απούλητα είδη του καταστήματος στο επιλεγμένο διάστημα, χωρίς κόστη ή αλλαγές.'},
+  {key:'sales-journal.read',label:'Προβολή ημερολογίου πωλήσεων και οικονομικών στοιχείων',description:'Βλέπει έως 500 κινήσεις με ποσά, πελάτες, ιστορικό χειριστή, πληρωμές και γραμμές, χωρίς ακύρωση ή επιστροφές.'}
+ ]},
+  {key:'workforce-settings',label:'Προσωπικό καταστήματος',actions:[
+    {key:'workforce-roles.read',label:'Προβολή σχετικών ρόλων καταστήματος',description:'Βλέπει μόνο ρόλους εργαζομένων και προτύπων του επιλεγμένου καταστήματος, με τοπικά πλήθη.'},
+    {key:'workforce-rules.read',label:'Προβολή κανόνων προσωπικού καταστήματος',description:'Βλέπει κανόνες των ορατών εργαζομένων του καταστήματος, χωρίς αλλαγές.'},
+    {key:'shift-templates.read',label:'Προβολή προτύπων βαρδιών καταστήματος',description:'Βλέπει πρότυπα και πλήθη αναθέσεων μόνο του επιλεγμένου καταστήματος.'},
+    {key:'workforce-audit.read',label:'Προβολή ιστορικού προσωπικού καταστήματος',description:'Βλέπει έως 100 πρόσφατες περιγραφικές ενέργειες του καταστήματος, χωρίς εσωτερικά JSON ή στοιχεία πρόσβασης.'}
+  ]},
+  {key:'chat',label:'Chat καταστήματος',actions:[
+    {key:'chat.read',label:'Προβολή μηνυμάτων Chat',description:'Βλέπει μηνύματα, θέματα, αναζήτηση και προεπισκόπηση συνημμένων του επιλεγμένου καταστήματος, χωρίς αποστολή, λήψη αρχείων ή αλλαγή κατάστασης.'}
+  ]},
+  {key:'radio',label:'Online Ράδιο',actions:[
+    {key:'radio.read',label:'Προβολή κατάστασης ραδιοφώνου',description:'Βλέπει την κατάσταση και τα ονόματα επιτρεπόμενων σταθμών του επιλεγμένου καταστήματος, χωρίς αναπαραγωγή ή ρυθμίσεις.'}
+  ]},
+  {key:'approvals',label:'Εκκρεμείς επιβεβαιώσεις',actions:[
+    {key:'approvals.read',label:'Προβολή εκκρεμών επιβεβαιώσεων',description:'Βλέπει εκκρεμείς πληρωμές προμηθευτών, έξοδα και τραπεζικές κινήσεις μόνο του επιλεγμένου καταστήματος, χωρίς έγκριση ή αλλαγή.'}
+  ]},
+  {key:'wholesale',label:'Χονδρική',actions:[
+    {key:'wholesale.read',label:'Προβολή παραγγελιών χονδρικής',description:'Βλέπει τις καταχωρισμένες παραγγελίες χονδρικής και την ανάλυσή τους στο επιλεγμένο κατάστημα.'}
+  ]},
+  {key:'video',label:'Κάμερες',actions:[
+    {key:'video.read',label:'Προβολή κατάστασης καμερών',description:'Βλέπει την κατάσταση σύνδεσης και τα ονόματα/ζώνες καμερών του επιλεγμένου καταστήματος, χωρίς σύνδεση ή αναπαραγωγή βίντεο.'}
+  ]},
+  {key:'printers',label:'Εκτυπώσεις παραγωγής',actions:[
+    {key:'printers.read',label:'Προβολή κατάστασης εκτυπώσεων',description:'Βλέπει τις πρόσφατες εργασίες εκτύπωσης του επιλεγμένου καταστήματος, χωρίς ρυθμίσεις σύνδεσης ή νέα εκτύπωση.'}
+  ]},
+  {key:'stock-transfers',label:'Μεταφορές αποθήκης',actions:[
+    {key:'stock-transfers.read',label:'Προβολή μεταφορών και υπολοίπων',description:'Βλέπει τα υπόλοιπα μεταφορών, τις εκκρεμείς εισπράξεις και το ιστορικό εξωτερικών μεταφορών του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'invoice-ai',label:'Αναγνώσεις τιμολογίων',actions:[
+    {key:'invoice-ai.read',label:'Προβολή αποθηκευμένων αναγνώσεων',description:'Βλέπει τις αποθηκευμένες αναγνώσεις και τα εμφανιζόμενα διαγνωστικά του επιλεγμένου καταστήματος, χωρίς νέα ανάγνωση ή καταχώριση.'}
+  ]},
+  {key:'online-orders',label:'Online παραγγελίες',actions:[
+    {key:'online-orders.read',label:'Προβολή Online παραγγελιών',description:'Βλέπει τις Online παραγγελίες και τις συνδεδεμένες πωλήσεις, πληρωμές και κινήσεις του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'table-service',label:'Τραπέζια',actions:[
+    {key:'table-service.read',label:'Προβολή τραπεζιών και παρασκευής',description:'Βλέπει τραπέζια, παραγγελίες, ιστορικό και ουρές παρασκευής του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'baking',label:'Ψησίματα',actions:[
+    {key:'baking.read',label:'Προβολή ψησιμάτων',description:'Βλέπει διαθέσιμα ψημένα/άψητα είδη και το πρόσφατο ιστορικό ψησιμάτων του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'monthly-inventory',label:'Μηνιαία απογραφή',actions:[
+    {key:'monthly-inventory.read',label:'Προβολή κατάστασης μηνιαίας απογραφής',description:'Βλέπει την καταχωρισμένη κατάσταση εξουσιοδότησης του επιλεγμένου καταστήματος, χωρίς προσωπική ενεργοποίηση ή λήψη απογραφής.'}
+  ]},
+  {key:'monthly-invoice-audit',label:'Μηνιαίος έλεγχος',actions:[
+    {key:'monthly-invoice-audit.read',label:'Προβολή μηνιαίου ελέγχου τιμολογίων',description:'Βλέπει τον έλεγχο τιμολογίων μήνα και τα εκκρεμή πρωτότυπα του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'pending',label:'Εκκρεμότητες Chat',actions:[
+    {key:'pending.read',label:'Προβολή εκκρεμοτήτων Chat',description:'Βλέπει τις εκκρεμότητες Chat και την κατάστασή τους στο επιλεγμένο κατάστημα.'}
+  ]},
+  {key:'promotions',label:'Προσφορές',actions:[
+    {key:'promotions.read',label:'Προβολή προσφορών και απόδοσης',description:'Βλέπει τις προσφορές και τις πωλήσεις προσφορών του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'employees',label:'Προσωπικό',actions:[
+    {key:'payroll.read',label:'Προβολή μισθοδοσίας',description:'Βλέπει προεπισκόπηση μισθοδοσίας, περιόδους, ποσά πληρωμών και υπόλοιπα του επιλεγμένου καταστήματος.'},
+    {key:'schedule.read',label:'Προβολή προγράμματος',description:'Βλέπει το πρόγραμμα και τις αναθέσεις του επιλεγμένου καταστήματος.'},
+    {key:'attendance.read',label:'Προβολή παρουσιών',description:'Βλέπει τις ώρες παρουσίας του επιλεγμένου καταστήματος.'},
+    {key:'leaves.read',label:'Προβολή αδειών και ρεπό',description:'Βλέπει τις αιτήσεις αδειών και ρεπό του επιλεγμένου καταστήματος.'},
+    {key:'employees.read',label:'Προβολή εργαζομένων',description:'Βλέπει τα στοιχεία επικοινωνίας, τους ρόλους και τη διαθεσιμότητα εργαζομένων του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'handover',label:'Παράδοση βάρδιας',actions:[
+    {key:'handover.read',label:'Προβολή παραδόσεων βάρδιας',description:'Βλέπει τα μηνύματα παράδοσης και τα συνημμένα του επιλεγμένου καταστήματος.'}
+  ]},
   {key:'invoices',label:'Τιμολόγια',actions:[
     {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα, τα πρωτότυπα και τις αγορές του καταστήματος.'},
     {key:'invoices.edit',label:'Επεξεργασία πρόχειρου τιμολογίου',description:'Διορθώνει στοιχεία και γραμμές ανοικτού πρόχειρου, με υπάρχοντα είδη. Δεν αλλάζει καταχωρισμένη αγορά ή καρτέλα προϊόντος.',requires:['invoices.read']},
@@ -16,6 +85,7 @@ export const staffPermissionSections=Object.freeze([
     {key:'invoices.cancel',label:'Ακύρωση καταχωρισμένου τιμολογίου',description:'Ακυρώνει οριστικά το τιμολόγιο του επιλεγμένου καταστήματος, με αιτιολογία, προεπισκόπηση και αντιστροφή αποθέματος.',requires:['invoices.read']}
   ]},
   {key:'sales',label:'Πωλήσεις και βάρδιες',actions:[
+    {key:'analytics.read',label:'Ανάλυση πωλήσεων και βαρδιών',description:'Βλέπει πωλήσεις, κέρδος, προϊόντα και χειριστές ανά βάρδια του επιλεγμένου καταστήματος.',requires:['shifts.read','sales.read']},
     {key:'sales.read',label:'Προβολή πωλήσεων και ταμείων',description:'Βλέπει πωλήσεις, κινήσεις και υπόλοιπα βαρδιών του καταστήματος.'},
     {key:'sales.cancel',label:'Ακύρωση πώλησης τρέχουσας βάρδιας',description:'Ακυρώνει μη φορολογική πώληση στην ίδια ανοικτή βάρδια, με αιτιολογία και αντίστροφη εγγραφή. Δεν επιτρέπει επιστροφή ή ακύρωση φορολογικής απόδειξης.',requires:['sales.read']},
     {key:'shifts.read',label:'Συγκεντρωτική προβολή βαρδιών',description:'Βλέπει τις πρόσφατες βάρδιες όλων των ταμείων του καταστήματος, τα σύνολα και τις κινήσεις τους.'},
@@ -27,7 +97,17 @@ export const staffPermissionSections=Object.freeze([
     {key:'payments.expense',label:'Καταχώριση εξόδου',description:'Καταχωρίζει θετικό έξοδο με αιτιολογία και παραστατικό ή δήλωση. Παραμένει προς έλεγχο ιδιοκτήτη.',requires:['payments.read','sales.read']},
     {key:'payments.cash',label:'Πληρωμή από μετρητά βάρδιας',description:'Επιτρέπει αφαίρεση της πληρωμής από την ανοικτή βάρδια του επιλεγμένου ταμείου.',requires:['payments.read','sales.read']}
   ]},
+  {key:'orders',label:'Παραγγελίες',actions:[
+    {key:'order-suggestions.read',label:'Προτάσεις παραγγελίας',description:'Βλέπει τις προτάσεις ειδών και την ομαδοποίησή τους ανά προμηθευτή στο επιλεγμένο κατάστημα.'}
+  ]},
+  {key:'performance',label:'Απόδοση προϊόντων',actions:[
+    {key:'low-value-products.read',label:'Προϊόντα Χαμηλής Απόδοσης',description:'Βλέπει την αναφορά προϊόντων χαμηλής απόδοσης του επιλεγμένου καταστήματος.'}
+  ]},
+  {key:'suppliers',label:'Προμηθευτές',actions:[
+    {key:'supplier-price-comparison.read',label:'Σύγκριση τιμών προμηθευτών',description:'Βλέπει τις τιμές και τις αγορές του ίδιου είδους από διαφορετικούς προμηθευτές στο επιλεγμένο κατάστημα.'}
+  ]},
   {key:'products',label:'Είδη και αποθήκη',actions:[
+    {key:'stock.read',label:'Προβολή κινήσεων αποθήκης',description:'Βλέπει τις κινήσεις, τις ποσότητες και το απόθεμα είδους στο επιλεγμένο κατάστημα.',requires:['products.read']},
     {key:'products.read',label:'Προβολή ειδών',description:'Βλέπει είδη, τιμές, κόστος και απόθεμα του καταστήματος.'},
     {key:'products.edit',label:'Επεξεργασία καρτέλας είδους',description:'Επεξεργάζεται την πλήρη καρτέλα είδους. Τα κοινά στοιχεία προϊόντος ισχύουν σε όλα τα καταστήματα που το διαθέτουν.',requires:['products.read']},
     {key:'products.create',label:'Νέο είδος',description:'Δημιουργεί πλήρη καρτέλα στο επιλεγμένο κατάστημα.',requires:['products.read']},
@@ -67,6 +147,37 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path,body={}){
+ const passive=finalPassiveStoreRequest(method,path);if(passive)return passive.capability;
+ const report=storeReportRequestCapability(method,path);if(report)return report;
+ if(method==='GET'&&path==='/api/commerce/sales/unsold-products')return 'unsold-products.read';
+ if(method==='GET'&&path==='/api/store-pos/sales/journal')return 'sales-journal.read';
+  if(method==='GET'&&/^\/api\/store-chat\/stores\/[^/]+\/messages(?:\/search|\/[^/]+\/attachment)?$/.test(path))return 'chat.read';
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/online-radio$/.test(path))return 'radio.read';
+  if(method==='GET'&&['/api/transactions/supplier-settlements/review','/api/transactions/other-expenses/review','/api/transactions/bank-ledger/review'].includes(path))return 'approvals.read';
+  if(method==='GET'&&/^\/api\/wholesale\/orders(?:\/[^/]+)?$/.test(path))return 'wholesale.read';
+  if(method==='GET'&&/^\/api\/video-admin\/stores\/[^/]+$/.test(path))return 'video.read';
+  if(method==='GET'&&/^\/api\/production-printers\/stores\/[^/]+$/.test(path))return 'printers.read';
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/internal-transfers\/(?:credit|pending-cash-receipts|external-history)$/.test(path))return 'stock-transfers.read';
+  if(method==='GET'&&path==='/api/commerce/ai-reader/jobs')return 'invoice-ai.read';
+  if(method==='GET'&&/^\/api\/public\/kat\/backoffice-managed\/stores\/[^/]+\/orders$/.test(path))return 'online-orders.read';
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/table-service(?:\/(?:history|preparation-queue))?$/.test(path))return 'table-service.read';
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/baking$/.test(path))return 'baking.read';
+  if(method==='GET'&&path==='/api/monthly-inventory-capture/status')return 'monthly-inventory.read';
+  if(method==='GET'&&path==='/api/reports/invoice-month-audit')return 'monthly-invoice-audit.read';
+  if(method==='GET'&&path==='/api/pending-center/chat-tasks')return 'pending.read';
+  if(method==='GET'&&['/api/price-catalog/promotions/scoped','/api/price-catalog/promotions/analysis'].includes(path))return 'promotions.read';
+  if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/payroll\/(?:preview|periods(?:\/[^/]+)?)$/.test(path))return 'payroll.read';
+  if(method==='GET'&&/^\/api\/inventory-ledger\/[^/]+\/movements$/.test(path))return 'stock.read';
+  const workforceSettings=method==='GET'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/(roles|rules|shift-templates|audit)$/);
+  if(workforceSettings)return {roles:'workforce-roles.read',rules:'workforce-rules.read','shift-templates':'shift-templates.read',audit:'workforce-audit.read'}[workforceSettings[1]];
+  const workforceRead=method==='GET'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/(schedules|attendance|leaves)$/);
+  if(workforceRead)return {schedules:'schedule.read',attendance:'attendance.read',leaves:'leaves.read'}[workforceRead[1]];
+  if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/employees(?:\/[^/]+)?$/.test(path))return 'employees.read';
+  if(method==='GET'&&(path==='/api/commerce/handover'||/^\/api\/commerce\/handover\/[^/]+\/attachment$/.test(path)))return 'handover.read';
+  if(method==='GET'&&path==='/api/commerce/sales/advanced-report')return 'analytics.read';
+  if(method==='GET'&&['/api/commerce/order-suggestions','/api/commerce/order-suggestions/by-supplier'].includes(path))return 'order-suggestions.read';
+  if(method==='GET'&&['/api/commerce/low-value-products/access','/api/commerce/low-value-products'].includes(path))return 'low-value-products.read';
+  if(method==='GET'&&path==='/api/commerce/supplier-price-comparison')return 'supplier-price-comparison.read';
   const receiptAction=expectedReceiptAction(method,path);
   if(receiptAction)return receiptAction==='read'?'invoices.read':'invoices.approve';
   if((method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/cancel-preview$/.test(path))||

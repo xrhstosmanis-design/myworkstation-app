@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import crypto from "node:crypto";
 import express from "express";
 import {prisma} from "../prisma.js";
@@ -11,11 +12,13 @@ async function audit(req,row,action,status){
   await prisma.$executeRaw`INSERT INTO "WorkforceAuditLog" ("id","companyId","storeId","actorUserId","action","entityType","entityId","afterJson","createdAt") VALUES (${`pending-${crypto.randomUUID()}`},${row.companyId},${row.storeId},${req.user.id},${action},'STORE_CHAT',${row.messageId},${JSON.stringify({messageId:row.messageId,taskId:row.id,status,source:"PENDING_CENTER"})}::jsonb,NOW())`;
 }
 
-router.use((req,res,next)=>allowed(req.user)?next():res.status(403).json({error:"Το Κέντρο Εκκρεμοτήτων είναι διαθέσιμο μόνο σε Ιδιοκτήτη ή Super Admin."}));
+router.use((req,res,next)=>(req.user?.staffAccess===true?req.method==='GET'&&req.staffGrant?.capability==='pending.read'&&String(req.originalUrl||'').split('?')[0]==='/api/pending-center/chat-tasks':allowed(req.user))?next():res.status(403).json({error:"Το Κέντρο Εκκρεμοτήτων είναι διαθέσιμο μόνο σε Ιδιοκτήτη ή Super Admin."}));
 
 router.get("/chat-tasks",async(req,res,next)=>{try{
   const company=companyId(req);if(!company)return res.status(401).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
+  const delegated=req.user?.staffAccess===true;
   const storeId=String(req.query.storeId||""),status=String(req.query.status||"OPEN").toUpperCase();
+  if(delegated){if(req.query.storeId!==req.user.storeId||req.staffGrant?.capability!=='pending.read')throw staffError();await requireStaffGrant(prisma,req.user,storeId,'pending.read');}
   if(!["OPEN","COMPLETED","ALL"].includes(status))return res.status(400).json({error:"Μη έγκυρο φίλτρο κατάστασης."});
   if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId:company},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."})}
   const rows=await prisma.$queryRaw`
@@ -33,7 +36,8 @@ router.get("/chat-tasks",async(req,res,next)=>{try{
     WHERE t."companyId"=${company} AND (${storeId}='' OR t."storeId"=${storeId}) AND (${status}='ALL' OR t."status"=${status})
     ORDER BY CASE WHEN t."status"='OPEN' THEN 0 ELSE 1 END,t."createdAt" DESC`;
   res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
-  res.json({rows,summary:{open:rows.filter(row=>row.status==="OPEN").length,total:rows.length}});
+  if(delegated)await requireStaffGrant(prisma,req.user,storeId,'pending.read');
+  res.json({...(delegated?{companyId:company,storeId}:{}),rows,summary:{open:rows.filter(row=>row.status==="OPEN").length,total:rows.length}});
 }catch(error){next(error)}});
 
 router.patch("/chat-tasks/:taskId",async(req,res,next)=>{try{

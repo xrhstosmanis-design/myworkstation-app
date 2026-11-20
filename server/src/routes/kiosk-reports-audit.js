@@ -208,9 +208,9 @@ router.get("/deactivations",requireManagement,async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
-router.get("/audit-events",requireManagement,async(req,res,next)=>{
-  try{
-    const {companyId,superAdmin,from,to,storeId,q,timeFrom,timeTo,operatorId,terminalPos,eventType,amountMin,amountMax}=auditFilters(req),text=q?`%${q}%`:null;
+export async function readOwnerAuditReport(filters,{db=prisma,videoAccessAllowed=false,boundInventoryStore=null,enrichSaleItems=true}={}){
+ const prisma=db;
+    const {companyId,superAdmin,from,to,storeId,q,timeFrom,timeTo,operatorId,terminalPos,eventType,amountMin,amountMax}=filters,text=q?`%${q}%`:null;
     const transactionRows=await prisma.$queryRaw`
       SELECT t."companyId",t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
         t."sessionId" AS "shiftId",t."actorId",COALESCE(t."actorName",tu."fullName",transactionOperator."displayName") AS "actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
@@ -299,7 +299,6 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const diningAreaIds=[...new Set(operatorRows.map(row=>row.details?.areaId).filter(Boolean))];
     const diningAreaRows=diningAreaIds.length?await prisma.$queryRaw`SELECT "id","name" FROM "DiningArea" WHERE "id"=ANY(${diningAreaIds}::text[]) AND (${companyId}::text IS NULL OR "companyId"=${companyId})`:[];
     const diningAreaNames=new Map(diningAreaRows.map(row=>[row.id,row.name]));
-    const boundInventoryStore=req.user.storeId||null;
     const creationRows=await prisma.$queryRaw`
       SELECT e."id",e."companyId",e."storeId",e."createdAt",e."actorId",e."actorName",e."source",
         s."name" AS "storeName",p."name" AS "productName",p."sku"
@@ -398,10 +397,11 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const eventTypeQuery=String(eventType||"").toLocaleLowerCase("el-GR"),eventTypeMatches=row=>!eventTypeQuery||(row.eventType===eventType)||row.eventType.toLocaleLowerCase("el-GR").includes(eventTypeQuery)||greekAuditEventLabel(row.eventType).toLocaleLowerCase("el-GR").includes(eventTypeQuery),operatorQuery=String(operatorId||"").toLocaleLowerCase("el-GR"),operatorMatches=row=>!operatorQuery||(row.actorId===operatorId)||String(row.actorId||"").toLocaleLowerCase("el-GR").includes(operatorQuery)||String(row.actorName||"").toLocaleLowerCase("el-GR").includes(operatorQuery),terminalQuery=String(terminalPos||"").toUpperCase(),terminalMatches=row=>!terminalQuery||(row.terminalPos===terminalPos)||String(row.terminalPos||"").toUpperCase().includes(terminalQuery),inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems,...stockItems,...creationItems].filter(row=>inTime(row)&&operatorMatches(row)&&terminalMatches(row)&&eventTypeMatches(row)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
     const companies=superAdmin?await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`:[];
     const stores=superAdmin?await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (${companyId}::text IS NULL OR "companyId"=${companyId}) ORDER BY "name"`:[];
-    const readableItems=(await enrichAuditSaleItems(prisma,items,{companyId,storeId})).map(auditReadableRecord);
-    res.json({items:readableItems,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement + InventoryCountEvent",videoAccessAllowed:await hasVideoAccess(req),superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
-  }catch(error){next(error)}
-});
+    const readableItems=(enrichSaleItems?await enrichAuditSaleItems(prisma,items,{companyId,storeId}):items).map(auditReadableRecord);
+    return ({items:readableItems,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement + InventoryCountEvent",videoAccessAllowed:typeof videoAccessAllowed==='function'?await videoAccessAllowed():videoAccessAllowed,superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
+
+}
+router.get("/audit-events",requireManagement,async(req,res,next)=>{try{res.json(await readOwnerAuditReport(auditFilters(req),{videoAccessAllowed:()=>hasVideoAccess(req),boundInventoryStore:req.user.storeId||null}))}catch(error){next(error)}});
 
 router.get("/audit-events/:sourceType/:sourceId/video-context",requireManagement,requireVideoAccess,async(req,res,next)=>{
   try{

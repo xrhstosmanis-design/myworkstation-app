@@ -13,22 +13,21 @@ const router=Router();
 router.use(auth);
 const storeScope=(req,storeId)=>({id:storeId,...(isSuperAdmin(req.user)?{}:{companyId:req.user.companyId})});
 
-router.get("/dashboard",async(req,res,next)=>{
-  try{
+export async function readOwnerDashboard(companyId,{db=prisma}={}){
     const [stores,employees,temporary]=await Promise.all([
-      prisma.store.count({where:{companyId:req.user.companyId,active:true}}),
-      prisma.employee.count({where:{store:{companyId:req.user.companyId},active:true}}),
-      prisma.employee.count({where:{store:{companyId:req.user.companyId},active:true,type:"TEMPORARY"}})
+      db.store.count({where:{companyId:companyId,active:true}}),
+      db.employee.count({where:{store:{companyId:companyId},active:true}}),
+      db.employee.count({where:{store:{companyId:companyId},active:true,type:"TEMPORARY"}})
     ]);
-    const latest=await prisma.schedule.findFirst({
-      where:{store:{companyId:req.user.companyId}},
+    const latest=await db.schedule.findFirst({
+      where:{store:{companyId:companyId}},
       orderBy:{weekStart:"desc"},
       include:{assignments:true}
     });
     const uncovered=latest ? latest.assignments.filter(a=>!a.employeeId).length : 0;
-    res.json({stores,employees,temporary,uncovered});
-  }catch(e){next(e)}
-});
+    return {stores,employees,temporary,uncovered};
+}
+router.get("/dashboard",async(req,res,next)=>{try{res.json(await readOwnerDashboard(req.user.companyId))}catch(error){next(error)}});
 
 router.get("/stores",async(req,res,next)=>{
   try{

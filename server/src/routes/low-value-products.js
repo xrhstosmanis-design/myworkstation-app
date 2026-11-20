@@ -4,6 +4,7 @@ import {prisma} from "../prisma.js";
 import {requireStoreModule} from "../middleware/module-access.js";
 import {lowValueLabOwnerAccess} from "../services/low-value-lab-owner-access.js";
 import {buildLowValueProducts} from "../lib/low-value-products.js";
+import {requireStaffGrant,staffError} from "../services/backoffice-staff-access.js";
 
 const optionsSchema=z.object({historyDays:z.coerce.number().int().min(7).max(365).default(30),slowDays:z.coerce.number().int().min(1).max(730).default(90),marginPercent:z.coerce.number().min(0).max(100).default(20)});
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -62,16 +63,26 @@ export async function readLowValueProducts(db,{storeId,companyId,options,now=new
 
 const router=Router();
 const requireReportModule=requireStoreModule("LOW_VALUE_PRODUCTS",{temporaryAccess:lowValueLabOwnerAccess});
-function requireReportRole(req,res,next){
+async function requireReportRole(req,res,next){
+  if(req.user?.staffAccess===true){
+    try{
+      if(req.user.storeId!==req.targetStore.id||req.user.companyId!==req.targetStore.companyId||req.staffGrant?.capability!=="low-value-products.read")throw staffError();
+      await requireStaffGrant(prisma,req.user,req.targetStore.id,"low-value-products.read");
+      return next();
+    }catch(error){return next(error);}
+  }
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)){
     return res.status(403).json({error:"Η αναφορά είναι διαθέσιμη μόνο σε διαχειριστικούς ρόλους.",code:"ROLE_MODULE_DENIED"});
   }
   next();
 }
 
-router.get("/low-value-products/access",requireReportModule,requireReportRole,(req,res)=>{
-  res.set("Cache-Control","no-store");
-  res.json({storeId:req.targetStore.id});
+router.get("/low-value-products/access",requireReportModule,requireReportRole,async(req,res,next)=>{
+  try{
+    if(req.user?.staffAccess===true)await requireStaffGrant(prisma,req.user,req.targetStore.id,"low-value-products.read");
+    res.set("Cache-Control","no-store");
+    res.json({storeId:req.targetStore.id});
+  }catch(error){next(error);}
 });
 
 router.get("/low-value-products",requireReportModule,requireReportRole,async(req,res,next)=>{
@@ -80,6 +91,7 @@ router.get("/low-value-products",requireReportModule,requireReportRole,async(req
     if(!parsed.success)return res.status(400).json({error:"Έλεγξε το ιστορικό (7–365), τις ημέρες αργής κίνησης (1–730) και το όριο περιθωρίου (0–100%)."});
     res.set("Cache-Control","no-store");
     const result=await prisma.$transaction(tx=>readLowValueProducts(tx,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data}),{isolationLevel:"RepeatableRead",timeout:30000});
+    if(req.user?.staffAccess===true)await requireStaffGrant(prisma,req.user,req.targetStore.id,"low-value-products.read");
     res.json(result);
   }catch(error){next(error);}
 });

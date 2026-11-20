@@ -1,0 +1,114 @@
+{
+  "format": "MWS_BACKOFFICE_COMPANY_COMPATIBILITY_PROPOSAL_V1",
+  "executionEnabled": false,
+  "productionActivated": false,
+  "column": {
+    "table": "BackofficeStaffAccount",
+    "name": "companyCapabilities",
+    "type": "jsonb",
+    "notNull": true,
+    "default": [],
+    "owner": "COMPANY_SECURITY",
+    "storeDeletionSelector": false
+  },
+  "variants": [
+    {
+      "profile": "BASE",
+      "sourceManifest": "ops/backup/lifecycle/manifest.json",
+      "sourceReview": "ops/backup/lifecycle/column-review.json",
+      "proposedProfileId": "BACKOFFICE_COMPANY_BASE_PROPOSED_V1",
+      "proposedPlanHash": "87531261fbaaed42f2a25282042cd8f817c5991a0aa9e62bef1f1c92f727a20f",
+      "proposedReviewHash": "1fec682a7404108ac79ca49297e84abf972c918c11aaec6be8b6de85faa98132"
+    },
+    {
+      "profile": "CAPTURE",
+      "sourceManifest": "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json",
+      "sourceReview": "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json",
+      "proposedProfileId": "BACKOFFICE_COMPANY_CAPTURE_PROPOSED_V1",
+      "proposedPlanHash": "8b298f318699a72d4b88b077d309953b9dc5f014f6f2ee763600103d0df93d95",
+      "proposedReviewHash": "a5d2aa8894d07d3116c939577df5725c0e8a57600fffbe7e8298961d4a55a9e2"
+    },
+    {
+      "profile": "CURRENT_CAPTURE",
+      "sourceManifest": "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json",
+      "sourceReview": "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json",
+      "sourceFencePlanHash": "59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2",
+      "sourceManifestHash": "b4bf19367ca9371ad527c19a3246bf0309c9e0044b7c9a109cf9852e597bf0aa",
+      "proposedProfileId": "BACKOFFICE_COMPANY_CURRENT_CAPTURE_PROPOSED_V1",
+      "proposedPlanHash": "9485ee86e3f706b4ead00cdaa240646e761b93f7420a40233dd97b12442f5419",
+      "proposedReviewHash": "a39600ecda5cdd45a794bc547735d2fae7ce092c0aa2f714b8dce1c376e98118",
+      "preparedState": "REQUIRES_NATIVE_AND_CURRENT_SOURCE_PROOF"
+    }
+  ],
+  "sourceHashes": {
+    "ops/backup/lifecycle/manifest.json": "ebcf6739449cca8049dae3e74e8ab8842e51b92447a7e31b42f303c7dae3f9db",
+    "ops/backup/lifecycle/column-review.json": "6a298105bb95bd4260fd1e38640c0c15518b6a198579a34527410c7bd7056300",
+    "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json": "363d168d3cdaad93eb350da616a764f73ac3556b92d37d09bd47ecd453fece03",
+    "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json": "186a879072dec4796d878477233b887fdab8f9952ea8c5a35bb44ecd46a8e931",
+    "server/src/services/store-lifecycle-executor.js": "cadfad9b134af54290dc69c8c67c1f4976881fd6e80cf3eef6d4dc93102d154c",
+    "server/src/services/store-lifecycle-worker-ready.js": "35730d0f89545a1d5bbfcd5feec74390cc4465363e102d34bb748f6c5ace12b8",
+    "server/src/services/store-lifecycle-manifest.js": "67b3d0c2357fc06abac592ee995a6e6fea0744bb076001bb014e657ac4f8a379",
+    "ops/backup/lifecycle/worker.py": "a847f6a1c4d333d4297f055d568e8b7d2da6ac8f15b7739cfcf315b8b1c7db1e",
+    "ops/backup/lifecycle/verify_restore.py": "fe5afb951424b2338b0b9d4f746838adb44e7b502ebf0e2bc23dfb09ba8aa212",
+    "server/src/services/backoffice-company-profile.js": "a4cee6730eb2bb7075f5721578a9686ca0486458c77b91f5f2a3b9db361fc11d",
+    "ops/backup/lifecycle/backoffice_company_profile.py": "c8e76a717aa718d2608d4acb4a4376b8a7cb0875e0fff3da6f8419b157d3145e",
+    "server/src/services/backoffice-company-installation-proof.js": "33a3477b79fe54faee187e28d5a52a7fe0c8b413b3f83eff8fa8f164114d3fe3",
+    "server/src/services/backoffice-company-installation.js": "ac253591ec90a473d77714655477a1cb7c0b18789e5c3b50d61249088a61b093",
+    "ops/backup/lifecycle/company-installation-backup.py": "06cddc7a01a37ffddab3f4ed8a36c03d9f334938a87deebd7652b21a5aec03a0",
+    "ops/backup/lifecycle/company-installation-observe.sql": "360de622fd576932dcb7495129b1485835a8664c6bd1948a842a870fbb6e1c5a",
+    "server/src/services/monthly-inventory-capture-schema.js": "933d7c73cad16f4851a8438e33947f3cfcb015ab701a72cb1dba7a0c79a918ea",
+    "server/src/services/monthly-inventory-capture-authorization.js": "bdce7571c588445882ca8e5568e12e23748f0e0893c816e4b621f5befd053a92",
+    "server/src/services/monthly-inventory-capture-status.js": "6f3c79ceb28c079a7e37093f9d90b39995c89eb48982201752f3fd5e12393547",
+    "ops/backup/lifecycle/company_source_root.py": "2c9985e29890a5ec1d46892f0100b6bc7b0bf4d4d7aa01bef6d923a01dac8d2a",
+    "server/scripts/store-lifecycle-verify-copy.py": "e3f6436c830a5cdeaefe1f0ef9637234ea0e5bab9d44cda27cafeaf05c70c765",
+    "server/src/services/automatic-report-operational-profile.js": "b1886dbda12e20bccd1bac66746633af8c0d0dd1b35268a2632fd7d83c940e5d",
+    "server/src/services/automatic-report-source-compatibility.js": "3e4deeb6a2dee3a5d78590574494a6f5adcefa72b0ab634ab4891d33ec353563",
+    "ops/backup/lifecycle/report-operational-compatibility.proposed.json": "620d42d21d7f7eee43c9a4c45de787ef53f77e85cd47e5e772f0934d0cbf218a",
+    "server/src/services/backoffice-company-current-capture.js": "648c31e886af224b34910e3ab3f0c145ce321aab7e249f6f3196770a5ada75ed",
+    "server/src/services/backoffice-company-read-worker-ready.js": "8234e26ea10cbc85483891db461f153f4c2dfa36c7dbe0c56466a436f208ed2a",
+    "server/scripts/backoffice-company-current-guard-review.mjs": "a0bf3865d0a7cdde20b04cf5f2e539f3edbaae6f7040c510e599e69d014b6221",
+    "ops/backup/lifecycle/backoffice-company-current-capture.proposed.json": "53b9d6453351eb44b31c3ec844e6db58e4fe61632995c8916c9659054eb09b93",
+    "ops/backup/lifecycle/backoffice-company-current-capture-guards.proposed.json": "4c3158e2a8634bbbe6a9a99957f03a4d3ea214db675e9ca43f2296ec1c4b4704",
+    "ops/backup/lifecycle/backoffice_company_readiness.py": "4d92c7dbda5fab48fd3babf351d654bbd8108a29ceff7e1cc2b73dc3883f3d0b",
+    "ops/backup/lifecycle/backoffice-company-current-readiness.sql": "11d2b1722b96065aa0404fefe2beec189879c52caf569ae680e621a590596a25",
+    "server/test/fixtures/ftext-full-schema-metadata-20261024.json": "3958f78d444bc92ebef5f9ae95d92605264c193b5b893ea092e8711cf2e9ec4b",
+    "server/src/backoffice-staff-bootstrap.js": "2c9cb29576a050c0cc938cbc5931f5e184ea043869b1ff77edb6678ccd8a3b42",
+    "server/src/services/ai-owner-wallet-schema.js": "3b06c5f0db1d13e548d426064d44c0e1f5db1c896ae81f0329f365d20e05aafa",
+    "server/src/services/automatic-report-consent-inspection.js": "213de1e1d0602bc3325f253a607aa88df55a3ccdafbe7a68bfcf061e62f93afd",
+    "server/src/services/automatic-report-event-schema.js": "8f571ed9a5d9739ad1aa58ee485ebf1b9186445416c77a269495f72fdce3405c",
+    "ops/backup/lifecycle/automatic-report-consent-extension.proposed.json": "118d1ee7145c7e8672390da804a88fe6234eae3a701f745cd742505017ce7d23",
+    "ops/backup/lifecycle/backoffice-company-current-columns.proposed.json": "76f09a5d414c0e793137c3c4c5a1c043dab57c29c2e4dcb310452fe3568234ee",
+    "server/src/routes/purchase-orders.js": "9ba31f1de7b32aa92a0eef1cf8f9ce612377d2a6fda1e2d94fdd44ddcdf1266a",
+    "server/src/commercial-bootstrap.js": "91069d5664d0ec0f1c04c665a3340dfa1546e01dd3c4db677db51f03ca121749",
+    "server/src/routes/store-table-orders.js": "b1300a7668938f914e10e66703c0a921bed0f21881d794c911f5e1598e7b20cd",
+    "ops/backup/lifecycle/backoffice-company-current-defaults.proposed.json": "aa2b9527cd6738e3d2c3a36b3c071838bf7c408c36e140d7b610adf0fd726be2",
+    "server/scripts/backoffice-company-current-default-review.mjs": "4e3cbad391b9f79a105950b7c51e8aa13a9482fd7d11d7e083786e3b1307ccc2",
+    "server/src/services/ftext-cash-schema.js": "37e1e19b339281b38ab6a52bb63db17121741ce19a5fed0a97b59dfd8199ff27",
+    "server/src/chat-interactions.mjs": "d22b4099f37b71d4ef4472b390046c01ac1da9f1cd8fb153d97a169a90fa7577",
+    "server/src/services/monthly-inventory-snapshot-schema.js": "878572e5678aa1e43650dfdd2d41204c1c8e783e9d8ae79ad8c9344f6839927c",
+    "server/src/services/automatic-report-column-compatibility.js": "a669cd0799305470ceb4c2a7f0827eb6743ddfe6c1a9101320bf34efdf640d78",
+    "ops/backup/lifecycle/report-column-compatibility.proposed.json": "8d7a8392b9e619a2abb7758981736ecf7d1016ad1ccdfad563c089ca8bf7b473"
+  },
+  "runtimeProfilesUnchanged": [
+    "BASE",
+    "MONTHLY_INVENTORY_CAPTURE_V1",
+    "AUTOMATIC_EVENT_REPORTS_V1",
+    "MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1"
+  ],
+  "eventReportVariantsPrepared": false,
+  "rollbackRequires": {
+    "nonFinalOperations": 0,
+    "nonEmptyCompanyPolicies": 0,
+    "sessionsRevoked": true,
+    "verifiedBackup": true
+  },
+  "patch": {
+    "accountColumn": [
+      "companyCapabilities",
+      "jsonb",
+      true
+    ],
+    "reviewedColumn": "BackofficeStaffAccount.companyCapabilities",
+    "classification": "COMPANY_SECURITY_POLICY_NEVER_STORE_OWNERSHIP_OR_DELETION_SELECTOR"
+  }
+}

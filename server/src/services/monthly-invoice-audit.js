@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from './backoffice-staff-access.js';
 import {invoiceAuditMonth} from './invoice-audit-month.js';
 import crypto from 'node:crypto';
 import {Prisma} from '@prisma/client';
@@ -262,8 +263,9 @@ export function classifyInvoiceMonth(facts,period){
  const {counts,items}=classifyInvoiceMonthCore(facts,period);return {counts,items};
 }
 
-async function readInvoiceSources(tx,actor,input,now,fullPending=false){
- const store=await authorize(tx,actor,input.storeId,now);
+async function readInvoiceSources(tx,actor,input,now,fullPending=false,delegatedRead=false){
+ const store=delegatedRead?await tx.store.findFirst({where:{id:input.storeId,companyId:actor.companyId,active:true},select:{id:true,companyId:true,name:true}}):await authorize(tx,actor,input.storeId,now);
+ if(!store)fail('Δεν βρέθηκε ενεργό κατάστημα στην επιλεγμένη εταιρεία.',404);
  return readInvoiceSourcesCore(tx,actor.companyId,store,input,()=> (fullPending?readPendingInvoiceSnapshotRows:readPendingInvoices)(tx,{companyId:actor.companyId,storeId:store.id,user:actor}));
 }
 
@@ -380,6 +382,22 @@ function ordinaryCounts(counts,items){
 
 export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}){
  if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input?.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
+ return readMonthlyInvoiceAuditCore(db,actor,input,{now});
+}
+
+// Only this mounted delegated reader admits a personal read grant. Snapshot,
+// automation and email-preview authorization retain their original entry gates.
+export async function readDelegatedMonthlyInvoiceAudit(db,req,input){
+ const actor=req.user,storeId=input?.storeId;
+ if(req.method!=='GET'||actor?.staffAccess!==true||actor?.role!=='EMPLOYEE'||actor.storeId!==storeId||req.staffGrant?.capability!=='monthly-invoice-audit.read')throw staffError();
+ await requireStaffGrant(db,actor,storeId,'monthly-invoice-audit.read');
+ const result=await readMonthlyInvoiceAuditCore(db,actor,input,{now:new Date(),delegatedRead:true});
+ // Fresh authority observation after the held RepeatableRead source snapshot.
+ await requireStaffGrant(db,actor,storeId,'monthly-invoice-audit.read');
+ return {...result,companyId:actor.companyId,storeId};
+}
+
+async function readMonthlyInvoiceAuditCore(db,actor,input,{now,delegatedRead=false}){
  if(!input||Object.keys(input).some(k=>!['storeId','month','page','filter'].includes(k))||!safeText(input.storeId))fail('Επίλεξε συγκεκριμένο κατάστημα.');
  const filter=input.filter===undefined?'ALL':input.filter;
  if(!detailFilters.has(filter))fail('Μη έγκυρο φίλτρο παραστατικών.');
@@ -388,7 +406,7 @@ export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}
  return db.$transaction(async tx=>{
   await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
   await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8000ms'");
-  const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending,paymentMetadataAvailable,allocationMetadataAvailable}=await readInvoiceSources(tx,actor,input,now);
+  const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending,paymentMetadataAvailable,allocationMetadataAvailable}=await readInvoiceSources(tx,actor,input,now,false,delegatedRead);
   const complete=unavailable.length===0&&limited.length===0;
   const ordinary=complete?normalizePostingProjections(facts,{companyId:actor.companyId,storeId:store.id}):{facts,projections:[]};
   const analysis=complete?classifyInvoiceMonth(ordinary.facts,period):{counts:null,items:[]};

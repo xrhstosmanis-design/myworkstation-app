@@ -13,7 +13,7 @@ import {createPosScanCatalog} from '../../client/src/utils/pos-scanner.js';
 function handlers(prisma){
   const routes=new Map(),middleware=[];
   const Router=()=>({get:(path,...fns)=>routes.set(path,fns),post(){},put(){},delete(){},use:(path,fn)=>middleware.push(fn)});
-  const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','');
+  const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','').replace(/^export (?=(?:async )?function )/gm,'');
   // Isolate legacy catalogue routes; real new-product registration is covered by its mounted/native tests.
   new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','registerPosNewProductRoutes','posNewProductAllowed','readLifecycleGeneration','packageCatalog',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,()=>{},posNewProductAllowed,readLifecycleGeneration,packageCatalog);
   const older=fs.readFileSync(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');

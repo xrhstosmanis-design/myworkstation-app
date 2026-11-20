@@ -423,6 +423,10 @@ router.post("/device/rbs-capdriver-v1/:requestId/dispatch-result",deviceAuth,rou
   send(res,{ok:true,request:updated[0],automaticRetry:false});
 }));
 
+export function normalizeCloudOverviewDevices(devices,now=Date.now()){
+  return devices.map(device=>{const isWriter=device.platform==="WINDOWS_RBS_CAPDRIVER_V1",writerPolled=device.metadata?.rbsCapDriverV1WriterPoll===true,writerOnline=isWriter&&writerPolled&&device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.metadata?.rbsCapDriverV1PolledAt||device.lastSeenAt).getTime()<15000;return {...device,isOnline:isWriter?Boolean(writerOnline):Boolean(device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<120000),writerOnline:Boolean(writerOnline)}});
+}
+
 router.get("/stores/:storeId/overview",auth,requireCloudManager,route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const [devices,catalog,latestChange,auditRows]=await Promise.all([
@@ -432,7 +436,7 @@ router.get("/stores/:storeId/overview",auth,requireCloudManager,route(async(req,
     prisma.$queryRaw`SELECT * FROM "CloudAudit" WHERE "storeId"=${store.id} ORDER BY "createdAt" DESC LIMIT 20`
   ]);
   const now=Date.now();
-  const normalized=devices.map(device=>{const isWriter=device.platform==="WINDOWS_RBS_CAPDRIVER_V1",writerPolled=device.metadata?.rbsCapDriverV1WriterPoll===true,writerOnline=isWriter&&writerPolled&&device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.metadata?.rbsCapDriverV1PolledAt||device.lastSeenAt).getTime()<15000;return {...device,isOnline:isWriter?Boolean(writerOnline):Boolean(device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<120000),writerOnline:Boolean(writerOnline)}});
+  const normalized=normalizeCloudOverviewDevices(devices,now);
   send(res,{store,devices:normalized,catalog,latestChange:latestChange[0]||null,audit:auditRows});
 }));
 

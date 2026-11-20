@@ -1,6 +1,6 @@
 import {LOCAL_INVOICE_OCR_LIMITS} from "../../../shared/local-invoice-ocr-limits.mjs";
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
-import {requireStaffGrant} from '../services/backoffice-staff-access.js';
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -114,7 +114,14 @@ router.get("/suppliers",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
 router.get("/supplier-price-comparison",requireStoreModule("INVENTORY"),async(req,res,next)=>{
   try {
     const {id: storeId, companyId} = req.targetStore;
-    res.json(await readSupplierComparison(prisma,{storeId,companyId,month:req.query?.month}));
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(req.user.storeId!==storeId||req.user.companyId!==companyId||req.staffGrant?.capability!=='supplier-price-comparison.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,storeId,'supplier-price-comparison.read');
+    }
+    const result=await readSupplierComparison(prisma,{storeId,companyId,month:req.query?.month});
+    if(delegated)await requireStaffGrant(prisma,req.user,storeId,'supplier-price-comparison.read');
+    res.json(result);
   } catch(error) { next(error); }
 });
 
@@ -279,6 +286,11 @@ router.get("/sales/unsold-products",requireCompanyModule("SALES_ANALYTICS"),asyn
 
 router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),async(req,res,next)=>{
   try{
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(!req.query.storeId||req.query.storeId!==req.user.storeId||req.staffGrant?.capability!=='analytics.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,'analytics.read');
+    }
     const storeId=req.query.storeId?String(req.query.storeId):null;if(storeId&&!await ownedStore(req.user.companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     const to=req.query.to?greeceRangeDate(req.query.to,true):new Date(),from=req.query.from?greeceRangeDate(req.query.from):new Date(to.getTime()-30*86400000);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
     const duration=to.getTime()-from.getTime(),compareTo=req.query.compareTo?greeceRangeDate(req.query.compareTo,true):new Date(from.getTime()-1),compareFrom=req.query.compareFrom?greeceRangeDate(req.query.compareFrom):new Date(compareTo.getTime()-duration);
@@ -294,12 +306,24 @@ router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),asyn
       prisma.$queryRaw`SELECT p."method",COUNT(*)::int AS payments,SUM(p."amount") AS total FROM "Payment" p JOIN "Sale" s ON s."id"=p."saleId" WHERE s."companyId"=${req.user.companyId} AND (${storeId}::text IS NULL OR s."storeId"=${storeId}) AND s."occurredAt">=${from} AND s."occurredAt"<=${to} GROUP BY p."method" ORDER BY total DESC`,
       prisma.$queryRaw`SELECT "status",COUNT(*)::int AS count,COALESCE(SUM("total"),0) AS total FROM "Sale" WHERE "companyId"=${req.user.companyId} AND (${storeId}::text IS NULL OR "storeId"=${storeId}) AND "occurredAt">=${from} AND "occurredAt"<=${to} GROUP BY "status" ORDER BY count DESC`
     ]);
-    const current=summary[0]||{},previous=comparison[0]||{},revenue=Number(current.revenue||0),previousRevenue=Number(previous.revenue||0);res.json({from,to,compareFrom,compareTo,summary:{...current,revenueChangePercent:previousRevenue?((revenue-previousRevenue)/previousRevenue)*100:null},comparison:previous,daily,hours,categories,products,employees,stores:storeRows,methods,statuses,nonFiscal:true});
+    if(delegated)await requireStaffGrant(prisma,req.user,req.user.storeId,'analytics.read');
+    const current=summary[0]||{},previous=comparison[0]||{},revenue=Number(current.revenue||0),previousRevenue=Number(previous.revenue||0);res.json({storeId,from,to,compareFrom,compareTo,summary:{...current,revenueChangePercent:previousRevenue?((revenue-previousRevenue)/previousRevenue)*100:null},comparison:previous,daily,hours,categories,products,employees,stores:storeRows,methods,statuses,nonFiscal:true});
   }catch(error){next(error)}
 });
 
 router.get("/handover",requireCompanyModule("SHIFT_HANDOVER"),async(req,res,next)=>{
-  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});res.json(await prisma.$queryRaw`SELECT h."id",h."priority",h."message",h."status",h."acknowledgedAt",h."acknowledgedByName",h."createdAt",COALESCE(h."fromName",f."fullName") AS "fromName",t."fullName" AS "toName",(h."attachmentData" IS NOT NULL) AS "hasAttachment",h."attachmentFilename" FROM "ShiftHandover" h LEFT JOIN "Employee" f ON f."id"=h."fromEmployeeId" LEFT JOIN "Employee" t ON t."id"=h."toEmployeeId" WHERE h."storeId"=${store.id} ORDER BY CASE WHEN h."status"='OPEN' THEN 0 ELSE 1 END,h."createdAt" DESC LIMIT 200`)}catch(error){next(error)}
+  try{
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(req.query?.storeId!==req.user.storeId||req.staffGrant?.capability!=='handover.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,'handover.read');
+    }
+    const store=await ownedStore(req.user.companyId,req.query.storeId);
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    const rows=await prisma.$queryRaw`SELECT h."id",h."priority",h."message",h."status",h."acknowledgedAt",h."acknowledgedByName",h."createdAt",COALESCE(h."fromName",f."fullName") AS "fromName",t."fullName" AS "toName",(h."attachmentData" IS NOT NULL) AS "hasAttachment",h."attachmentFilename" FROM "ShiftHandover" h LEFT JOIN "Employee" f ON f."id"=h."fromEmployeeId" LEFT JOIN "Employee" t ON t."id"=h."toEmployeeId" WHERE h."storeId"=${store.id} ORDER BY CASE WHEN h."status"='OPEN' THEN 0 ELSE 1 END,h."createdAt" DESC LIMIT 200`;
+    if(delegated)await requireStaffGrant(prisma,req.user,store.id,'handover.read');
+    res.json(rows);
+  }catch(error){next(error)}
 });
 
 router.post("/handover",requireCompanyModule("SHIFT_HANDOVER"),async(req,res,next)=>{
@@ -311,7 +335,19 @@ router.post("/handover/:handoverId/ack",requireCompanyModule("SHIFT_HANDOVER"),a
 });
 
 router.get("/handover/:handoverId/attachment",requireCompanyModule("SHIFT_HANDOVER"),async(req,res,next)=>{
-  try{const rows=await prisma.$queryRaw`SELECT h."storeId",h."attachmentData",h."attachmentMimeType",h."attachmentFilename" FROM "ShiftHandover" h JOIN "Store" s ON s."id"=h."storeId" WHERE h."id"=${req.params.handoverId} AND s."companyId"=${req.user.companyId} LIMIT 1`;const row=rows[0];if(!row||!row.attachmentData)return res.status(404).json({error:"Δεν υπάρχει συνημμένο."});if(req.user.tokenType==="STORE_OPERATOR"&&req.user.storeId!==row.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το συνημμένο."});res.json({dataUrl:row.attachmentData,mimeType:row.attachmentMimeType,filename:row.attachmentFilename})}catch(error){next(error)}
+  try{
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(req.query?.storeId!==req.user.storeId||req.staffGrant?.capability!=='handover.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,'handover.read');
+    }
+    const rows=await prisma.$queryRaw`SELECT h."storeId",h."attachmentData",h."attachmentMimeType",h."attachmentFilename" FROM "ShiftHandover" h JOIN "Store" s ON s."id"=h."storeId" WHERE h."id"=${req.params.handoverId} AND s."companyId"=${req.user.companyId} AND (${!delegated} OR h."storeId"=${req.user.storeId||null}) LIMIT 1`;
+    const row=rows[0];
+    if(!row||!row.attachmentData)return res.status(404).json({error:"Δεν υπάρχει συνημμένο."});
+    if((req.user.tokenType==="STORE_OPERATOR"||delegated)&&req.user.storeId!==row.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το συνημμένο."});
+    if(delegated)await requireStaffGrant(prisma,req.user,row.storeId,'handover.read');
+    res.json({dataUrl:row.attachmentData,mimeType:row.attachmentMimeType,filename:row.attachmentFilename});
+  }catch(error){next(error)}
 });
 
 router.get("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{
@@ -341,8 +377,24 @@ router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,n
   try{const rows=await prisma.$queryRaw`SELECT COUNT(*)::int AS drafts FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "sourceType" IN ('OCR_DRAFT','AI_DRAFT') AND "status"='DRAFT'`;res.json({twoStageReader:true,drafts:rows[0]?.drafts||0,localConfidenceThreshold:65,aiAutomatic:false,aiProviderConnected:false,message:"Η βάση και το workflow δύο σταδίων είναι έτοιμα. Η πραγματική κλήση AI θα ενεργοποιηθεί μόνο μετά τη σύνδεση provider/API και χειροκίνητη επιλογή «Επανέλεγχος με AI»."})}catch(error){next(error)}
 });
 
+const invoiceReadFields=(value,keys)=>Object.fromEntries(keys.filter(key=>value?.[key]!==undefined&&['string','number','boolean'].includes(typeof value[key])).map(key=>[key,value[key]]));
+function invoiceReadDiagnostics(result){
+  const lineKeys=['code','description','quantity','unitCost','netAmount','grossAmount','vatRate','confidence','sourceColumnsVerified','quantitySource'];
+  const compact=evidence=>evidence?{...invoiceReadFields(evidence,['stage','lineCount','truncated']),lines:(Array.isArray(evidence.lines)?evidence.lines:[]).map(line=>invoiceReadFields(line,[...lineKeys,'discount1']))}:null;
+  const reading=result?.posReadingEvidence||{};
+  return {...invoiceReadFields(result,['pdfNote','tableRecheckCalled','tableRecheckRecovered','tableRecheckError','azurePageRecoveryCalled','azurePageRecoveryRecovered','duplicateTableReplayCollapsed','duplicateTableReplayRemoved','unverifiedTrailingReplayDiscarded','unverifiedTrailingReplayRemoved','productLinesGrossBeforeRecovery','productLinesGrossAfterRecovery','invoiceTotalForCompleteness','productLinesTotalDifference','productLinesComplete']),
+    posHandoff:invoiceReadFields(result?.posHandoff,['documentNumber']),posBackground:invoiceReadFields(result?.posBackground,['status','error']),
+    productLines:(Array.isArray(result?.productLines)?result.productLines:[]).map(line=>invoiceReadFields(line,lineKeys)),
+    posReadingEvidence:{original:compact(reading.original),provider:compact(reading.provider),reread:compact(reading.reread)}};
+}
+
 router.get("/ai-reader/jobs",requireCompanyModule("AI_READER"),async(req,res,next)=>{
-  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT j."id",j."stage",j."status",j."localConfidence",j."aiConfidence",j."purchaseDocumentId",j."resultJson" AS "result",j."createdAt",a."filename",a."mimeType",d."documentNumber",d."totalGross",CASE WHEN d."status"='DRAFT' AND d."purchaseOrderId" IS NULL AND d."sourceType"='OCR_DRAFT' THEN true ELSE false END AS "standaloneDraft" FROM "AiReaderJob" j LEFT JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" LEFT JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" AND d."storeId"=j."storeId" WHERE j."companyId"=${req.user.companyId} AND j."storeId"=${store.id} AND COALESCE(j."status",'')<>'MERGED_PAGE' ORDER BY j."createdAt" DESC LIMIT 100`;const canApprove=req.user.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user.role);res.json(rows.map(row=>({...row,canApproveStandaloneDraft:canApprove&&row.standaloneDraft})))}catch(error){next(error)}
+  try{const delegated=req.user?.staffAccess===true;
+    if(delegated){if(req.query.storeId!==req.user.storeId||req.staffGrant?.capability!=='invoice-ai.read')throw staffError();await requireStaffGrant(prisma,req.user,req.user.storeId,'invoice-ai.read');}
+    const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT j."id",j."stage",j."status",j."localConfidence",j."aiConfidence",j."purchaseDocumentId",j."resultJson" AS "result",j."createdAt",a."filename",a."mimeType",d."documentNumber",d."totalGross",CASE WHEN d."status"='DRAFT' AND d."purchaseOrderId" IS NULL AND d."sourceType"='OCR_DRAFT' THEN true ELSE false END AS "standaloneDraft" FROM "AiReaderJob" j LEFT JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId" LEFT JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" AND d."storeId"=j."storeId" WHERE j."companyId"=${req.user.companyId} AND j."storeId"=${store.id} AND COALESCE(j."status",'')<>'MERGED_PAGE' ORDER BY j."createdAt" DESC LIMIT 100`;const canApprove=!delegated&&req.user.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user.role);
+    const items=rows.map(row=>({...row,...(delegated?{companyId:req.user.companyId,storeId:store.id,result:invoiceReadDiagnostics(row.result)}:{}),canApproveStandaloneDraft:canApprove&&row.standaloneDraft}));
+    if(delegated)await requireStaffGrant(prisma,req.user,store.id,'invoice-ai.read');
+    res.json(delegated?{companyId:req.user.companyId,storeId:store.id,items}:items)}catch(error){next(error)}
 });
 
 router.post("/ai-reader/jobs",requireCompanyModule("AI_READER"),async(req,res,next)=>{

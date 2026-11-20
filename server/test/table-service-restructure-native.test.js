@@ -27,7 +27,9 @@ test('native PostgreSQL restructure conserves lines, priced modifiers, KDS and p
  const source=fs.readFileSync(new URL('../src/routes/store-table-orders.js',import.meta.url),'utf8');
  const helpers=await import('../src/table-order-idempotency.js');
  vm.runInNewContext(source.replace(/^import .*\n/gm,'').replace(/^export default router;$/m,''),{prisma,z,crypto,Router:()=>router,...helpers,ensurePreparationBatchTable:()=>db.exec(prep+'; ALTER TABLE "StorePreparationBatch" ADD COLUMN "tableOrderId" text;ALTER TABLE "StorePreparationBatch" ADD COLUMN "readyAt" timestamptz;')});
- await new Promise((resolve,reject)=>bootstrap(null,null,e=>e?reject(e):resolve()));
+ // Bootstrap follows the authenticated Owner path used by the native router.
+ const ownerRequest={method:'GET',originalUrl:'/api/store-pos/stores/store/table-service',params:{storeId:'store'},user:{id:'owner',companyId:'company',role:'OWNER',tokenType:'BACKOFFICE_USER'}};
+ await new Promise((resolve,reject)=>bootstrap(ownerRequest,{},e=>e?reject(e):resolve()));
  await db.exec(`CREATE TABLE "StoreOperatorAudit" ("id" text,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb);
  INSERT INTO "StoreTableServiceConfig" ("companyId","storeId","enabled") VALUES ('company','store',true);
  INSERT INTO "DiningTable" ("id","companyId","storeId","name") SELECT x,'company','store',x FROM unnest(ARRAY['a','b','c','d']) x;

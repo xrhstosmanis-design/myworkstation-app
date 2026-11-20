@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {getReviewedMonthlyCaptureLifecycleGuardDefinitions} from './store-lifecycle-executor.js';
 import {monthlyInventorySnapshotLifecycleManifestProposal} from './monthly-inventory-snapshot-schema.js';
+import {backofficeCompanyProfile} from './backoffice-company-profile.js';
 const grant='MonthlyInventoryCaptureGrant',job='MonthlyInventoryCaptureJob',names=[grant,job],q=s=>'"'+s.replaceAll('"','""')+'"',sha=s=>createHash('sha256').update(s).digest('hex');
 const fields={
  [grant]:[['id','text',true,null],['companyId','text',true,null],['storeId','text',true,null],['purpose','text',true,null],['purposeVersion','integer',true,'1'],['lifecycleGeneration','bigint',true,null],['revision','bigint',true,'1'],['active','boolean',true,'false'],['delegatorUserId','text',true,null],['delegatorSessionVersion','integer',true,null],['activationId','text',false,null],['firstIssueMonth','text',false,null],['firstScheduledFor','timestamp with time zone',false,null],['createdByUserId','text',true,null],['createdAt','timestamp with time zone',true,'clock_timestamp()'],['grantedByUserId','text',false,null],['grantedAt','timestamp with time zone',false,null],['revokedByUserId','text',false,null],['revokedAt','timestamp with time zone',false,null],['updatedByUserId','text',true,null],['updatedAt','timestamp with time zone',true,'clock_timestamp()']],
@@ -57,6 +58,7 @@ const fks=table=>[
 const unique=table=>table===grant?[['mws_capture_grant_scope',['companyId','storeId','purpose']],['mws_capture_grant_identity',scoped]]:[['mws_capture_job_slot',['companyId','storeId','lifecycleGeneration','issueMonth']]];
 export const monthlyInventoryCaptureRecoveryColumns=()=>Object.fromEntries(names.map(n=>[n,fields[n].map(c=>c.slice(0,3))]));
 export function monthlyInventoryCaptureLifecycleManifestProposal(){return JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json',import.meta.url),'utf8'))}
+export function monthlyInventoryCaptureRuntimeManifest(env=process.env){return ['BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'].includes(env.MWS_STORE_LIFECYCLE_PROFILE)?backofficeCompanyProfile(env).manifest:monthlyInventoryCaptureLifecycleManifestProposal()}
 export function assertMonthlyInventoryCaptureLifecycleCatalogue(manifest=monthlyInventoryCaptureLifecycleManifestProposal()){
  const baseline=monthlyInventorySnapshotLifecycleManifestProposal(),without=structuredClone(manifest),columns=monthlyInventoryCaptureRecoveryColumns();
  for(const table of names){
@@ -80,7 +82,7 @@ export async function createMonthlyInventoryCaptureSchema(tx){
 const normalize=v=>String(v).replace(/::(?:text|bigint|integer|interval)/g,'').replace(/[\s()"]/g,'').replace(/1mon(?=')/g,'1month').replace(/07:00:00/g,'7hours').replace(/interval'/g,"'");
 export async function validateMonthlyInventoryCaptureSchema(tx){
  const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS schema'))[0]?.schema;if(schema!=='public')fail();
- const lifecycle=getReviewedMonthlyCaptureLifecycleGuardDefinitions(monthlyInventoryCaptureLifecycleManifestProposal(),schema);let lifecycleCount=0;
+ const lifecycle=getReviewedMonthlyCaptureLifecycleGuardDefinitions(monthlyInventoryCaptureRuntimeManifest(),schema);let lifecycleCount=0;
  for(const table of names){
   const relation=(await tx.$queryRawUnsafe(`SELECT c.relkind::text AS kind,c.relispartition AS partition,c.relrowsecurity AS rls,c.relforcerowsecurity AS forced,c.relowner=(SELECT s.relowner FROM pg_class s JOIN pg_namespace sn ON sn.oid=s.relnamespace WHERE sn.nspname=$1 AND s.relname='Store') AS owner_valid,EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhrelid=c.oid OR i.inhparent=c.oid) AS inherited,EXISTS(SELECT 1 FROM pg_rewrite r WHERE r.ev_class=c.oid) AS rules FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=$2`,schema,table))[0];
   if(!relation)fail('MONTHLY_CAPTURE_SCHEMA_UNAVAILABLE');if(relation.kind!=='r'||relation.partition||relation.rls||relation.forced||!relation.owner_valid||relation.inherited||relation.rules)fail();

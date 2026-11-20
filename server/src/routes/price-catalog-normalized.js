@@ -43,16 +43,15 @@ function requireAccess(req,res,next){
 router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureCompatibility();next()}catch(error){next(error)}});
 
-router.get("/products",async(req,res,next)=>{
-  try{
-    const companyId=req.user.companyId;
-    const q=String(req.query.q||"").trim();
-    const storeId=String(req.query.storeId||"")||null;
-    const page=Math.max(1,Number.parseInt(String(req.query.page||"1"),10)||1);
-    const pageSize=Math.min(500,Math.max(25,Number.parseInt(String(req.query.pageSize||"100"),10)||100));
+export async function readPriceCatalogProducts(companyId,rawQuery={}, {db=prisma}={}){const prisma=db;
+
+    const q=String(rawQuery.q||"").trim();
+    const storeId=String(rawQuery.storeId||"")||null;
+    const page=Math.max(1,Number.parseInt(String(rawQuery.page||"1"),10)||1);
+    const pageSize=Math.min(500,Math.max(25,Number.parseInt(String(rawQuery.pageSize||"100"),10)||100));
     const offset=(page-1)*pageSize;
     const text=q?`%${q}%`:null;
-    if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."})}
+    if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});if(!store)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404})}
     const countRows=await prisma.$queryRaw`
       SELECT COUNT(*)::int AS count FROM "Product" p
       WHERE p."companyId"=${companyId} AND p."active"=true
@@ -84,9 +83,9 @@ router.get("/products",async(req,res,next)=>{
       return {...r,salePrice,vatRate,lastCost,saleNet,margin:saleNet>0?((saleNet-lastCost)/saleNet)*100:0,markup:lastCost>0?((saleNet-lastCost)/lastCost)*100:0};
     });
     const total=Number(countRows[0]?.count||0);
-    res.json({items,count:items.length,total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize)),storeId});
-  }catch(error){next(error)}
-});
+    return ({items,count:items.length,total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize)),storeId});
+  }
+router.get("/products",async(req,res,next)=>{try{res.json(await readPriceCatalogProducts(req.user.companyId,req.query))}catch(error){if(error.status===404)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});next(error)}});
 
 async function ownedPromotion(companyId,promotionId){
   const rows=await prisma.$queryRaw`SELECT "id","promotionType","productId","active" FROM "PriceCatalogPromotion" WHERE "id"=${promotionId} AND "companyId"=${companyId} LIMIT 1`;

@@ -10,7 +10,7 @@ import {barcodeRegistrationList} from '../src/lib/pos-barcode-pending.js';
 function handler(prisma){
  const routes=new Map(),middleware=[];
  const Router=()=>({get:(path,...fns)=>routes.set(path,fns),post(){},put(){},delete(){},use:(_,fn)=>middleware.push(fn)});
- const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','').replace('const {barcodeRegistrationList}=await import("../lib/pos-barcode-pending.js");','');
+ const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','').replace(/^export /gm,'').replace('const {barcodeRegistrationList}=await import("../lib/pos-barcode-pending.js");','');
  // Isolate legacy catalogue routes; real new-product registration is covered by its mounted/native tests.
  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','registerPosNewProductRoutes','posNewProductAllowed','barcodeRegistrationList',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,()=>{},posNewProductAllowed,barcodeRegistrationList);
  return async(query={},user={id:'u',companyId:'c',role:'OWNER'},storeId='s')=>{

@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,Box,ChevronDown,ChevronUp,Clock3,CreditCard,FileCheck2,RefreshCw,Search,ShoppingBag} from "lucide-react";
 import "./online-orders-backoffice.css";
 import {matchesGreekSearch} from "../../utils/greek-search.js";
@@ -23,10 +23,15 @@ function LinkSummary({order}){
   return <div className="online-reconciliation">{order.integrity?.issues?.length>0&&<div className="online-integrity-alert"><AlertTriangle/><div><b>ΠΙΘΑΝΟ DUPLICATE — απαιτείται χειροκίνητος έλεγχος</b><span>{order.integrity.issues.join(' · ')}. Δεν έγινε αυτόματη διαγραφή ή διόρθωση.</span></div></div>}<div className="online-reconciliation-title"><b>Παραγγελία → Πώληση → Φορολογική → EFTPOS → Απόθεμα</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
 }
 
-export default function OnlineOrdersBackofficePanel({api,activeStoreId=""}){
+export default function OnlineOrdersBackofficePanel({api,activeStoreId="",stores=[],companyId,readOnly=false}){
   const [managedStores,setManagedStores]=useState([]);
-  const [storeId,setStoreId]=useState("");
-  const [rows,setRows]=useState([]);
+  const [selectedStoreId,setStoreId]=useState("");
+  const storeId=readOnly?activeStoreId:selectedStoreId;
+  const [storedRows,setRows]=useState([]);
+  const sequence=useRef(0),currentScope=useRef("");
+  const scope=JSON.stringify([companyId,storeId,readOnly]);currentScope.current=scope;
+  const [loadedScope,setLoadedScope]=useState("");
+  const rows=loadedScope===scope?storedRows:[];
   const [loading,setLoading]=useState(false);
   const [storeLoading,setStoreLoading]=useState(true);
   const [error,setError]=useState("");
@@ -36,6 +41,11 @@ export default function OnlineOrdersBackofficePanel({api,activeStoreId=""}){
 
   useEffect(()=>{
     let active=true;
+    if(readOnly){
+      const selected=stores.filter(store=>store.id===activeStoreId);
+      setManagedStores(selected);setStoreLoading(false);setExpanded(null);setError(selected.length?'':'Δεν προσδιορίστηκε διαθέσιμο κατάστημα.');
+      return()=>{active=false};
+    }
     setStoreLoading(true);
     setError("");
     api("/api/public/kat/backoffice-managed/stores",{cache:"no-store"})
@@ -51,19 +61,24 @@ export default function OnlineOrdersBackofficePanel({api,activeStoreId=""}){
       .catch(e=>{if(active){setManagedStores([]);setStoreId("");setError(e?.message||"Δεν ήταν δυνατή η φόρτωση των καταστημάτων Online Παραγγελιών.")}})
       .finally(()=>{if(active)setStoreLoading(false)});
     return()=>{active=false};
-  },[api,activeStoreId]);
+  },[api,activeStoreId,readOnly]);
 
   const selectedStore=useMemo(()=>managedStores.find(store=>store.id===storeId)||null,[managedStores,storeId]);
 
   const load=async()=>{
-    if(!storeId){setRows([]);return}
-    setLoading(true);setError("");
+    const current=++sequence.current,own=scope;
+    setRows([]);setLoadedScope("");if(readOnly)setExpanded(null);setError("");
+    if(!storeId){setLoading(false);return}
+    setLoading(true);
     try{
       const data=await api(`/api/public/kat/backoffice-managed/stores/${encodeURIComponent(storeId)}/orders?limit=250`,{cache:"no-store"});
-      setRows(data.rows||[]);
-    }catch(e){setError(e?.message||"Δεν ήταν δυνατή η φόρτωση των Online Παραγγελιών.");setRows([])}finally{setLoading(false)}
+      if(current!==sequence.current||own!==currentScope.current)return;
+      if(readOnly&&(data?.companyId!==companyId||data.storeId!==storeId||data.store?.id!==storeId||!Array.isArray(data.rows)||data.rows.some(row=>row.companyId!==companyId||row.storeId!==storeId)))throw Error("Δεν επιβεβαιώθηκε το κατάστημα των Online Παραγγελιών.");
+      setRows(data.rows||[]);setLoadedScope(own);
+    }catch(e){if(current===sequence.current&&own===currentScope.current)setError(e?.message||"Δεν ήταν δυνατή η φόρτωση των Online Παραγγελιών.")}
+    finally{if(current===sequence.current&&own===currentScope.current)setLoading(false)}
   };
-  useEffect(()=>{if(storeId)load()},[storeId]);
+  useEffect(()=>{if(storeId)load();return()=>{sequence.current++}},[api,storeId,companyId,readOnly]);
 
   const filtered=useMemo(()=>rows.filter(order=>{
     if(status!=="ALL"&&order.status!==status)return false;
@@ -87,12 +102,12 @@ export default function OnlineOrdersBackofficePanel({api,activeStoreId=""}){
     </div>
 
     <div className="online-bo-toolbar">
-      <label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)} disabled={storeLoading||!managedStores.length}>{storeLoading?<option value="">Φόρτωση…</option>:managedStores.map(store=><option key={store.id} value={store.id}>{store.id===TEST_STORE_ID?"TEST · Online Παραγγελίες":store.name}</option>)}</select></label>
+      <label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)} disabled={readOnly||storeLoading||!managedStores.length}>{storeLoading?<option value="">Φόρτωση…</option>:managedStores.map(store=><option key={store.id} value={store.id}>{store.id===TEST_STORE_ID?"TEST · Online Παραγγελίες":store.name}</option>)}</select></label>
       <label>Κατάσταση<select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Όλες</option><option value="NEW">Νέες</option><option value="ACCEPTED">Αποδοχή</option><option value="PREPARING">Ετοιμάζεται</option><option value="READY">Έτοιμη</option><option value="OUT_FOR_DELIVERY">Delivery</option><option value="DELIVERED">Παραδόθηκε</option><option value="CANCELLED">Ακυρώθηκε</option></select></label>
       <label className="online-bo-search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Αρ. παραγγελίας, πελάτης, τηλέφωνο…"/></label>
     </div>
 
-    {error&&<div className="online-bo-error">{error}</div>}
+    {error&&<div className="online-bo-error" role="alert">{error}</div>}
     {!storeLoading&&!managedStores.length&&!error&&<div className="online-bo-empty">Δεν βρέθηκε κατάστημα με Online Παραγγελίες.</div>}
     {selectedStore&&!loading&&!error&&!filtered.length&&<div className="online-bo-empty">Δεν υπάρχουν παραγγελίες για τα επιλεγμένα φίλτρα.</div>}
 
