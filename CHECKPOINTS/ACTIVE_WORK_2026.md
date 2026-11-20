@@ -1,3 +1,11 @@
+<!-- Νο 3: PR #4052, CHECKPOINTS/CHANGES/2026-11-19-no3-ocr-consolidated.md. Πλήρες CI PASS 44779396092. Τελική κοινή δοκιμή εκκρεμεί. -->
+Warning: truncated output (original token count: 45914)
+Total output lines: 860
+
+## 20/11/2026 — SHIFT-CLOSE-SIGNED-LEDGER-01 — bounded pre-source claim
+
+Owner /root, fix/shift-close-return-totals-20261120. Real LAB normal close rejects negative cashSales from returns before transaction. Only bounded close-schema signed ledger fields plus regression and necessary pinned hash; preserve physical-count/PIN/tenant/authoritative-ledger/pending guards and other No5/shared owners. [Claim and exact evidence](CHANGES/2026-11-20-shift-close-signed-ledger.md). Claim4107 merged a2929e8 before source. Source candidate:26targeted+32nativePASS/0FAIL; signed schema only, physical counts/credentials/authoritative transaction unchanged. FullCI/deploy and normalLAB close OPEN.
+
 ## 20/11/2026 — Νο02 — ordinary verified original attachment / ROOT REVIEW APPROVED — AWAITING FULL SOURCE CI
 
 SameNo02owner/root. Before-source4098/heada51c1ca8 passed docsCI44758637414SUCCESS3applicable/2docs-runtimeSKIP and merged7335e740 before code. Actual ordinary createAiJob=true9.3branch nowuses scoped read-only metadata/purepolicy/recheckunderexistinglocks; provenstrictzeroPDF attacheswithoutjob/purchase/originalJobId and replayreusesit. NineactualstrictPASSexactEpsilonpairswiredthroughnewexactregistry; validIssuer/main8/Impact/S1/e-invoicing6–8/vs/OneSignretained,159/169/failedredirectprofilesexcluded. Root73pure/original/providerPASS/0FAIL/0SKIP and9actualprivatePDFcachedadapterreplaysPASS(Node20/0network); finalprofile12PASS/0FAIL/0SKIP304.27ms; actualnativeNode20.20.2PG18.7final9PASS/0FAIL/0SKIP6342.819012ms aftertypedXMLreviewguard, exit0/PGshutdownverified. Initialnativeharnesswrongpre-networkassumption correctedtoafterdownloadproof; uppercaseFDfixturecorrectedtopreserveoldcaseinsensitivecontract. RootlateactualXMLarrayflatteningidentitybugfixedwithtypedtuple+initialXMLstringguard; delayedarraymutation/initialnonstringsrefuse, finalcombined73PASS249.82ms+9cachePDFreplaysagainPASS/0network. Old4099/e90CI44761099674historical/supersedednotproofnewhead. Rootfoundforeign-storeMARKqueryomission andPDFprefix-onlyreplayacceptance; metadataquery/signature-minlengthguardfixed andfinalnativeproofPASS. Earlyempty/npm-onlylogs gave no testproof; localUnixsocketpermissionfailure resolvedbyisolatedTCPloopbacksetup, notproductionchanges. No falsecall/bulk/scheduler/activation/No04/No27 changes. Draft4095policycarriedinordinaryintegration, notseparatelymerged. Full exactsource/mainCI/guardedrelease/hostedacceptancePENDING; overallNo02OPEN. [Actual implementation, review history and limits](CHANGES/2026-11-20-no2-ordinary-original-boundary-claim.md).
@@ -181,6 +189,10 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 20/11 No5 follow-up: gated navigation and sales/cash/shift table presentation prepared after the observed delegated UI issue. Common LAB acceptance and review of remaining capabilities are open.
 
+20/11: local server candidate for explicitly delegated shift-template create, update and status actions. Staff editor, staff rules and LAB acceptance remain open. See [checkpoint](CHANGES/2026-11-20-no5-shift-template-actions.md).
+
+20/11 No5: scoped staff actions for Workforce rules and shift templates include create/edit/status controls. Local build and focused regression checks passed. Browser/LAB and release remain open. See [checkpoint](CHANGES/2026-11-20-no5-workforce-action-editors.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
@@ -271,7 +283,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - POS εσωτερική διακίνηση · Διόρθωση αναγνωριστικού χειριστή στην κίνηση αποθέματος · [Checkpoint](CHANGES/2026-11-16-pos-transfer-minimize-lab.md) · LAB επαναδοκιμή εκκρεμεί.
 
 - 2026-11-17 · Νο 9 · Αυτόματα email προσφορών και απογραφής · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Προσφορές CI 5/5, προστέθηκαν απογραφή και lifecycle, ενιαίο CI και τελικό LAB εκκρεμούν.
-- 2026-11-20 · 7–9 · ASSIGNED /root, fix/report-mail-presentation-20261120 · #4094 claim merged c33173f μετά green CI. Actual RAW JSON presentation FAIL διορθώνεται μόνο στο rendering: ελληνικό CASH κείμενο/θέμα/ώρα Ελλάδας, reviewed text byte-identical, null/blank όνομα ασφαλές. Immutable payload/proof/grants/send-once και transport ανέπαφα. Τελική Node20 παρτίδα 67 PASS / 0 FAIL / 3 native-env SKIP· πραγματικό ληφθέν payload ελέγχθηκε ιδιωτικά ως preview χωρίς επαναποστολή. Full CI/deploy/νέο πραγματικό email presentation εκκρεμούν. [Validation](CHANGES/2026-11-20-report-cash-human-mail-validation.md).
+- 2026-11-20 · 7–9 · ASSIGNED /root · #4096 merged 46ec68e, full source/main CI 5/5 SUCCESS, 6915 PASS / 0 FAIL / 4 optional SKIP και 8 backup PASS· native driver/dispatch/legacy/START εκτελέστηκαν. Ανθρώπινη CASH παρουσίαση και ιδιωτικό actual-payload preview με ίδια στοιχεία, χωρίς resend/reset. LIVE 46ec68e επιβεβαιώθηκε με κανονικό guard 44759535947 και exact no-cache health· παλιό ledger 2 ACCEPTED/version 4 αμετάβλητο έως 15:13:59 UTC και θετικό mailbox control 15:14:38 UTC μόνο αρχικό μήνυμα. Δεν έγινε resend και δεν δηλώνεται νέο formatted inbox. Το παλιό RAW JSON email παραμένει παλιό delivery proof, όχι νέο formatted inbox PASS. [Validation](CHANGES/2026-11-20-report-cash-human-mail-validation.md).
 - 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-closed-carry-in-20261120 · Προ-source claim #4085 merged 4c25a5a μετά CI 44720105539 SUCCESS. Πραγματικό Διαδόχου DAILY 19/11 πριν: 4 βάρδιες/HOLD. Υποψήφια περιορισμένη διόρθωση: έγκυρος κλειστός μη επικαλυπτόμενος predecessor context, εκτός owned totals/count/reviewed evidence, εντός fingerprint· open/invalid/foreign/duplicate/overlap HOLD προστατεύονται. Node20 42 PASS / 0 FAIL / 1 native-env SKIP, ανεξάρτητη ανασκόπηση χωρίς blocker. Πλήρες native CI και πραγματικό after εκκρεμούν. [Ανάληψη](CHANGES/2026-11-20-report-closed-carry-in.md), [validation](CHANGES/2026-11-20-report-closed-carry-in-validation.md).
 - 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-chat-compatibility-20261120 · Προ-source ανάληψη strict reports-only V3 για τους τέσσερις υφιστάμενους πίνακες Chat που αποκλείουν το πραγματικό installer inspect με 503. V1/V2 και auth διατηρούνται, καμία αλλαγή συμπεριφοράς Chat ή ανάληψη Νο16/Νο14. [Checkpoint](CHANGES/2026-11-20-report-chat-compatibility-claim.md). Claim #4079 merged e23eaa1 πριν source. V3 source prepared: 25 focused PASS και 16 ανεξάρτητοι COMPANY/package PASS, 1 τοπικό Docker skip· native PostgreSQL V3 PASS στο source CI44697723679, μία παλιά προσδοκία 47→49 διορθώθηκε· νέο full CI και LAB εκκρεμούν. Κλειστή provenance 47→49, παλιά manifest/COMPANY hashes αμετάβλητα. [Ανασκόπηση](CHANGES/2026-11-20-report-chat-compatibility-provenance.md).
 - 2026-11-19 · 7–9 · Συνεδρία καρτέλας εγκατάστασης αναφορών · /root · fix/report-installer-session-binding-20261119 ·13 context/mounted +2 πραγματικά issueSession/auth HTTP PASS· installer-only mount capture, ακριβές request binding και ακύρωση πακέτου/έγκρισης σε αλλαγή identity· shared login και γενική PlatformAdminApp ανέπαφες, κοινή αρμοδιότητα Νο5 διατηρείται· CI και hosted αποδοχή εκκρεμούν. [Checkpoint](CHANGES/2026-11-19-report-installer-tab-session.md).
@@ -368,51 +380,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 
 Ενημέρωση: 2026-11-08 — αρχικό μικρό μητρώο / migration draft.
 
-Τεκμήριο #28 / test-only PR #3749 (2026-11-08): απομονωμένη HTTP + PostgreSQL ακύρωση BackOffice εκτελέστηκε PASS στο CI #9526 (old SHA `2421d979`, 5/5 jobs, 5.978 server tests, 0 skipped). Απαιτείται νέο exact-head CI μετά τη συμφιλίωση. Hosted LAB: NOT TESTED· #28: OPEN.
-
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / QR/PIN Enter and +1 per scan. Retained owner /root. [Scope and next steps](CHANGES/2026-11-09-inventory-link-scan.md). Separate LAB acceptance pending.
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / #3702 same-draft product attachment: main CI and scoped staff LAB PASS. Owner confirmed temporary create-grant removal.
-
-Source `5cfa4d9d` published on the scoped branch. Synthetic handler check verified repeated and alternate barcode, different-item protection, one save on repeated Enter, additive total and reset. Exact PR CI and physical scanner LAB remain pending.
-
-QR/PIN count correction implemented in `5099e0dc`. Focused arithmetic check passed for 7 → 5, 7 → 9, 7 → 0 and additive 7 + 5 → 12. Full CI and live acceptance pending.
-
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / exact existing barcode store assignment implemented through `eff05d16`. Explicit assignment, scoped active grant and draft lock, existing records preserved. CI and live Rizareio verification pending.
-
-09/11/2026 — QR/PIN product creation checks exact barcode duplicates within the stocktake company. Production read-only diagnosis confirmed two outside-company matches and no same-company match for 52016165. CI and live acceptance pending.
-
-## 09/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01
-
-Personal inventory detail pages and stocktake-wide exact barcode/SKU lookup. Frontend build, 28 mounted UI tests and local HTTP/Express + PGlite integration passed. Exact CI and authenticated LAB acceptance pending. Retained ownership and all-functions scope stay open.
-
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / QR/PIN finalization opt-in. Prior #3771 CI and seven mocked authorization scenarios passed. Current-main CI and LAB pending.
-
-10/11/2026 — QR/PIN selection displays current store stock from a read-only, scoped line endpoint. CI and LAB pending.
-
-10/11/2026 — Store warehouse browsing implemented with explicit owner opt-in, scoped read-only search and paging. Price/taxonomy editing remains pending. CI and LAB pending.
-
-## INVENTORY-PRODUCT-CREATE-EVENTS
-
-Assigned to `fix/inventory-product-create-events`. Central Events shows historical inventory PRODUCT_CREATE records with store, date and operator filters. Local syntax and mocked query/mapping checks passed. LAB and production lookup pending. See [change checkpoint](CHANGES/inventory-product-create-events.md).
-
-
-## MYDATA-DRAFT-PREFILL
-
-Create missing supplier from verified myDATA invoice fields. [Checkpoint](CHANGES/mydata-draft-create-supplier.md).
-
-Show the XML issuer name on unlinked myDATA drafts. [Checkpoint](CHANGES/mydata-draft-issuer-name.md).
-
-Unconfirmed packaging remains in the draft for correction. [Checkpoint](CHANGES/mydata-unconfirmed-packaging.md). CI and production validation pending.
-
-Automatic recovery of attached empty drafts: [checkpoint](CHANGES/mydata-automatic-empty-draft.md). Syntax checks passed; CI and live verification pending.
-
-Follow-up `fix/mydata-draft-vat-zero-retry`. Local replay passed for an empty myDATA draft with VAT category 7. CI and deployed retry pending. See [checkpoint](CHANGES/mydata-draft-vat-zero-retry.md).
-
-Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pending. See [checkpoint](CHANGES/mydata-draft-prefill.md).
-
-11/11/2026 — Central Offers & Gifts: allow a fixed price for multiple selected products in one submission. See CHECKPOINTS/CHANGES/2026-11-11-platform-bulk-fixed-offer.md.
-
-11/11/2026 — Central Offers & Gifts: reuse an existing company item when SKU and master barcode match. See CHECKPOINTS/CHANGES/2026-11-11-platform-promotion-existing-sku.md.
+Τεκμήριο #28 / test-only PR #3749 (2026-11-08): απομονωμένη HTTP + PostgreSQL ακύρωση BackOffice εκτελέστηκε PASS στο CI #9526 (old SHA `2421d979`, 5/5 jobs, 5.978 serv…914 tokens truncated…ifts: reuse an existing company item when SKU and master barcode match. See CHECKPOINTS/CHANGES/2026-11-11-platform-promotion-existing-sku.md.
 
 11/11/2026 — Inventory Archive duplicate scan by selected store. See CHECKPOINTS/CHANGES/2026-11-11-inventory-duplicate-check.md.
 
@@ -811,6 +779,10 @@ Owner /root retained. #4059 claim merged8396da191. Two UI filter-only changes re
 Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI44490139724 all5SUCCESS, each6353PASS/0FAIL/3optionalSKIP+8backupPASS. Guardedrelease44492043448SUCCESS; Renderdep-dbvbk7jrjlhs73bfs0agLIVE10:59:38Athens exact05b5b350. Publichealth200/exactrevision/HTML200 and delivered main-Dt7Lq7S0.js linked-row guard verified11:00:38. Scoped realDB stillFINAL/7/113.11; actual server+client read-only replay old6/106.91→new7/113.11, raw unchanged. No approval/invoicing/payment/stock action. Legacy OCR panel remains disabled. Actual user-tab visual readback pending; no new manual USER PASS or broader Gate closure. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
 
 
+## 20/11/2026 — Μενού είδους Αποθήκης — Τοπική υλοποίηση, LAB NOT TESTED
+
+Διαδόχου KM3282. Δεδομένα προϊόντος και καταστήματος από την ανοιχτή Αποθήκη, σύνδεση υπομενού και έλεγχοι εκτυπώσεων, ιστορικών και εξαγωγών. 33 στοχευμένοι έλεγχοι και frontend build πέρασαν τοπικά. Εκκρεμούν δημοσίευση, CI και συγκεντρωτική δοκιμή LAB. [Checkpoint](CHANGES/2026-11-20-warehouse-product-menu.md).
+
 ## 20/11/2026 07:19 EET — Warehouse/invoice review — compatibility checked / grouped LAB pending
 
 Same /root owner and three existing warehouse/invoice task IDs retained. Main a020ce84 targeted Node20 suite:32PASS/0FAIL/1nativePostgreSQLSKIP. Compact CSS/taxonomy helpers and A71942 filter repair retained; changed surrounding No5 archive/store authority tested with actual mounted fixtures. No source change or hosted business/login action. Prior #4040/#4061 native/LIVE proofs reused, no transaction repeated. No5 deployment remains its owner's scope. One combined geometry/taxonomy/markup role session is specified in CHANGES/2026-11-20-warehouse-invoice-common-readiness.md; no new manual PASS.
@@ -830,4 +802,19 @@ Same /root owner and three existing warehouse/invoice task IDs retained. Main a0
 
 Draft4051/root ίδιο scope. CI44725877823:6894PASS/12FAIL/4SKIP, τέσσερα άλλα jobsSUCCESS. ΈντεκαFAILαπό ένα παλιό sourcehash και ένα από null nativefixture request. Ενημερώθηκε μόνο το ανασκοπημένο table-route digest στο ανενεργόCOMPANY packet· guards/profiles/activation αμετάβλητα.23στοχευμέναPASS/0FAIL/2υποδομήςSKIP, συν actualPG17.12 native print PASS1/0FAIL/0SKIP και έλεγχος middleware predicate. Main8e3d91905και No14handoff διατηρήθηκαν. Νέο πλήρες CI πριν merge/deploy· καμία hosted πράξη και καμία επανάληψη παλιών LABPASS. [Checkpoint](CHANGES/2026-11-19-table-service-final-batch.md).
 
-- Νο 3 · [Πολυσέλιδα OCR](CHANGES/2026-11-19-no3-ocr-consolidated.md) · PR #4052 · 92 τοπικοί έλεγχοι, αναμονή CI και κοινής τελικής δοκιμής.
+
+## No02 — original identity OCR boundary claim20Nov2026
+
+Retained /root; explicit user START. Independent same-byte local server identity-only fallback for verified169/cosmote22/telekom22, not No04 line/model/wallet or4048 bulk. Claim before source, NOT TESTED/NOT INSTALLED. See [bounded claim](CHANGES/2026-11-20-no2-identity-ocr-claim.md). Claim CI and main merge required before implementation.
+
+
+### No02 identity OCR implementation after claim4101
+
+Claim4101 green44779300097, merged00cf9603a before source. Local isolated same-byte server header OCR implemented only for169/cosmote22/telekom22, missingissuer-only gating, no expected IDs sent to OCR, existing strict verifier retained. Root47focusedPASS0FAIL0SKIP with actualPDF4/NAPI/WASM+cleanup. Actualcachedreplay/fullCI/release pending. No No04 line/model/wallet or4048 bulk takeover; no hosted business transaction. [Checkpoint](CHANGES/2026-11-20-no2-identity-ocr-claim.md).
+
+Final No02 identity OCR source: root57PASS0FAIL0SKIP; three actual cached PDFs pass the default same-byte fetch/reader/OCR pipeline after bitmap cap, no external network. Fourteen protected cached profiles PASS with OCRcalls0; older six-suffix sample metadata unavailable in this replay, NOT TESTED here. Source/fullCI/release pending; see same checkpoint.
+
+
+## Νο02 — bounded original identity OCR / TECHNICAL LIVE — GROUPED ACCEPTANCE OPEN (20/11/2026)
+
+Source4103/headde7368170dd8324d3a79475b1df2e8c93bac857b passed exactCI44781073685ALL5SUCCESS:6963serverPASS/0FAIL/4optionalWASM-catalogueSKIP+8recoveryPASS. Mergedruntime613894fae8dc2ab8d43de920ddc1397c7113c323 retainsall8reviewedNo02source/test/packageblobs; peerwarehouse/No4documentationarepreserved, notawholemergedtreeidentityclaim. ExactmainCI44783947813ALL5SUCCESS:6964serverPASS/0FAIL/4optionalSKIP+8recoveryPASS; actualworker7/pipeline9/nativeordinary9/zero-note-nulljobPASS,noSKIPintheaddedchecks. Normalguard44788175656actual2SUCCESS, Renderdep-dc08k70m7kps73d8l0p0LIVE20/11/2026at20:03:30.108350Ελλάδας exact613894. Independentrootnonce/no-cachehealth20:04:15.527928Ελλάδας HTTP200/oktrue/exact613894. Earlierpending/notinstalledentriesforthissameOCRslicearehistorical. TechnicalinstallationONLY: no new hostedfeature/LAB/userPASSorpaid/uploadedreplay. Header-onlysame-byteOCRrestrictedto169/cosmote22/telekom22; noNo04line/model/walletor4048bulk/scheduleractivation. NewdiscountrequirementNOTIMPLEMENTED; No4baselinecoordination7046220114awaiting. Externalprovider/historyretrievalandgroupedfinalacceptanceremainOPEN. [Exact release and limits](CHANGES/2026-11-20-no2-identity-ocr-claim.md).

@@ -35,10 +35,10 @@ export async function requireStaffGrant(db,user,storeId,capability,{additionalMo
   if(storeReportCapabilities.includes(capability)&&!freeStoreReportCapabilities.includes(capability)&&!license.activeModules?.includes('INVENTORY'))throw staffError(403,'MODULE_DISABLED','Η εταιρική λειτουργία αναφορών αποθήκης δεν είναι ενεργή.');
   if(['workforce-evaluations.read','workforce-performance.read','schedule-validation.read'].includes(capability)){const paid=await db.$queryRaw`SELECT "companyId","storeId","moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 257`;if(paid.length>256||paid.some(row=>row.companyId!==user.companyId||row.storeId!==storeId)||!resolvePersonnelPackageStates(paid).states[PERSONNEL_BASIC].effectiveActive)throw staffError(403,'MODULE_DISABLED')}
   if(capability==='pending-sources.read'&&!license.activeModules?.includes('PENDING_CENTER'))throw staffError(403,'MODULE_DISABLED');
-  if(['employees.read','schedule.read','attendance.read','leaves.read','payroll.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(capability)){
+  if(['employees.read','schedule.read','attendance.read','leaves.read','payroll.read','workforce-roles.read','workforce-rules.read','workforce-rules.manage','shift-templates.read','shift-templates.manage','workforce-audit.read'].includes(capability)){
     const rows=await db.$queryRaw`SELECT "moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId}`;
     const states=resolvePersonnelPackageStates(rows).states;
-    if(!states[['attendance.read','workforce-rules.read'].includes(capability)?PERSONNEL_PRO:PERSONNEL_BASIC].effectiveActive||(capability==='payroll.read'&&!states[PERSONNEL_PAYROLL].effectiveActive))throw staffError(403,'MODULE_DISABLED','Το πακέτο προσωπικού δεν είναι ενεργό στο κατάστημα.');
+    if(!states[['attendance.read','workforce-rules.read','workforce-rules.manage'].includes(capability)?PERSONNEL_PRO:PERSONNEL_BASIC].effectiveActive||(capability==='payroll.read'&&!states[PERSONNEL_PAYROLL].effectiveActive))throw staffError(403,'MODULE_DISABLED','Το πακέτο προσωπικού δεν είναι ενεργό στο κατάστημα.');
   }
   if(capability==='store-reports-payroll-expenses.read'){
     const paid=await db.$queryRaw`SELECT "companyId","storeId","moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId}`;
@@ -85,7 +85,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
   if(storeReportCapabilities.includes(capability)&&req.query?.storeId!==storeId)throw staffError();
   if(['analytics.read','handover.read','stock.read','pending.read','promotions.read','monthly-invoice-audit.read','invoice-ai.read','wholesale.read','approvals.read','monthly-inventory.read'].includes(capability)&&req.query?.storeId!==storeId)throw staffError();
-  const workforce=path.match(/^\/api\/platform\/store-modules\/companies\/([^/]+)\/stores\/([^/]+)\/workforce-v2\/(?:employees(?:\/[^/]+)?|schedules|attendance|leaves|roles|rules|shift-templates|audit|payroll\/(?:preview|periods(?:\/[^/]+)?))$/);
+  const workforce=path.match(/^\/api\/platform\/store-modules\/companies\/([^/]+)\/stores\/([^/]+)\/workforce-v2\/(?:employees(?:\/[^/]+)?|schedules|attendance|leaves|roles|(?:rules|shift-templates)(?:\/[^/]+(?:\/status)?)?|audit|payroll\/(?:preview|periods(?:\/[^/]+)?))$/);
   if(workforce&&(workforce[1]!==user.companyId||workforce[2]!==storeId))throw staffError();
   const chatRead=path.match(/^\/api\/store-chat\/stores\/([^/]+)\/messages(?:\/search|\/[^/]+\/attachment)?$/);
   if(chatRead&&(chatRead[1]!==storeId||path.endsWith('/attachment')&&req.query?.download==='1'))throw staffError();
