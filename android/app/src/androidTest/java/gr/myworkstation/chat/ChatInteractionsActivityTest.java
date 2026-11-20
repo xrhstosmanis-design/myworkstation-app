@@ -35,7 +35,7 @@ public class ChatInteractionsActivityTest {
    if(method.equals("POST")&&(path.endsWith("/messages")||path.endsWith("/voice-messages")||path.endsWith("/video-messages")))return new JSONObject().put("ok",true).put("id","sent-fixture");
    throw new AssertionError("Unexpected API or automatic read: "+method+" "+path);
   }
-  @Override byte[] image(String path, String token) {
+  @Override byte[] image(String path, String token) throws Exception {
    assertTrue(photo);
    assertEquals("fixture-token",token);
    assertTrue(path.endsWith("/fixture-message/attachment"));
