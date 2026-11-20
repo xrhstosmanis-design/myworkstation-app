@@ -28,14 +28,14 @@ test("warehouse menu uses the selected store and product independently of displa
       isCurrent:()=>current,
       onEdit:tab=>tabs.push(tab),
       onDelivery:()=>callbacks.push("delivery"),
-      onOrders:()=>callbacks.push("orders"),
+      onOrders:id=>callbacks.push(id),
       async api(path, options) {
         calls.push([path,options]);
         if(path.startsWith("/api/price-catalog/lookups"))return {customers:[{id:"customer",name:"Customer"}]};
         if(path.startsWith("/api/price-catalog/wholesale"))return {items:[]};
         if(path.startsWith("/api/commerce/suppliers"))return [{id:"supplier",name:"Supplier"}];
         if(path.includes("/price-history"))return [];
-        if(path.includes("/purchases"))return {purchases:[]};
+        if(path.includes("/purchases"))return {purchases:[{orderId:"exact-order",status:"NEW",supplierName:"Supplier"}]};
         return {product:{currentStock:112},movements:[]};
       },
     };
@@ -81,12 +81,16 @@ test("warehouse menu uses the selected store and product independently of displa
       assert.match(document.querySelector(".mws-inv-modal header").textContent,new RegExp(title),action);
     }
 
-    for (const action of ["edit","edit-active","delivery","orders","barcode","barcodes","comment","comments","a4","a5","a6","exportrow","export-movements","export-purchases","export-history"]){
+    for (const action of ["edit","edit-active","delivery","barcode","barcodes","comment","comments","a4","a5","a6","exportrow","export-movements","export-purchases","export-history"]){
       open();
       await click(action);
     }
     assert.deepEqual(tabs,["barcodes","suppliers","basic","basic"]);
-    assert.deepEqual(callbacks,["delivery","orders"]);
+    open();
+    await click("orders");
+    assert.match(document.querySelector(".mws-inv-modal header").textContent,/Παραγγελίες \/ Αγορές/);
+    document.querySelector("[data-order-index]").click();
+    assert.deepEqual(callbacks,["delivery","exact-order"]);
     assert.equal(prints.length,7);
     assert.match(prints[0],/4006381333931/);
     assert.match(prints[2],/Label note/);

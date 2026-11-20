@@ -1,4 +1,3 @@
-import {openWarehousePurchaseOrders} from "./installPurchaseOrdersSuite.js";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {BarChart3,Boxes,Camera,ChevronRight,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
@@ -43,7 +42,22 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
   },[initialInvoiceOrder,onInitialInvoiceOrderHandled]);
   useEffect(()=>{
     if(!warehouseOrders||!commerceRoot.current)return;
-    onWarehouseOrdersHandled?.(openWarehousePurchaseOrders(commerceRoot.current,warehouseOrders));
+    const hub=commerceRoot.current;
+    const open=()=>{
+      if(!hub.isConnected||hub.dataset.activeStoreId!==warehouseOrders.storeId)return false;
+      const button=hub.querySelector("[data-purchase-orders-launch]");
+      if(!button)return false;
+      if(warehouseOrders.orderId){
+        hub.dispatchEvent(new CustomEvent("purchase-orders:open",{bubbles:true,detail:{...warehouseOrders,navigationOnly:true}}));
+      }else button.click();
+      onWarehouseOrdersHandled?.(true);
+      return true;
+    };
+    if(open())return;
+    const observer=new MutationObserver(()=>{if(open())observer.disconnect()});
+    observer.observe(hub,{childList:true,subtree:true});
+    const timeout=setTimeout(()=>{observer.disconnect();onWarehouseOrdersHandled?.(false)},2500);
+    return()=>{observer.disconnect();clearTimeout(timeout)};
   },[warehouseOrders,onWarehouseOrdersHandled]);
   const [cachedActiveModules,setActiveModules]=useState(readActive);
   // The selected-store entry owns fresh module checks. Events/catalog reads

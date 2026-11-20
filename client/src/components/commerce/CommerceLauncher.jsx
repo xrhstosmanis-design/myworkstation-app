@@ -169,10 +169,10 @@ export default function CommerceLauncher(){
     return()=>{window.removeEventListener("mws:commerce-open",handleOpen);window.removeEventListener("mws:store-invoice-entry-request",reserveWorkspace)};
   },[]);
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
-  const openWarehouseOrders=(row,storeId)=>{
+  const openWarehouseOrders=(row,storeId,orderId)=>{
     if(!stores.some(store=>store.id===storeId))return;
     setWarehouseOrdersError("");
-    setWarehouseOrders({storeId,productId:row?.productId,productName:row?.name});
+    setWarehouseOrders({storeId,orderId});
     setSupportStoreId(storeId);
     setLegacyView("operations");setMode("legacy");
   };
