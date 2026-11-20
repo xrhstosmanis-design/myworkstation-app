@@ -3,6 +3,7 @@ import React,{useEffect,useRef,useState} from "react";
 export default function StoreChatGroups({api,storeId,onClose,isCurrentSession}) {
   const endpoint = `/api/store-chat/stores/${encodeURIComponent(storeId)}/groups`;
   const [roster,setRoster] = useState(null);
+  const [moderation,setModeration] = useState(null);
   const [selected,setSelected] = useState(null);
   const [messages,setMessages] = useState([]);
   const [name,setName] = useState("");
@@ -90,6 +91,35 @@ export default function StoreChatGroups({api,storeId,onClose,isCurrentSession}) 
     }
   }
 
+  async function loadModeration() {
+    try {
+      const result = await api(`${endpoint}/moderation`);
+      if (active()) setModeration(result.groups);
+    } catch (error) {
+      if (active()) setError(error.message);
+    }
+  }
+
+  async function removeMember(member) {
+    if (!active() || busy || !window.confirm(`Αφαίρεση του μέλους «${member.memberName}» από την ομάδα «${member.name}»;`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`${endpoint}/${encodeURIComponent(member.id)}/remove-member`, {
+        method:"POST", body:JSON.stringify({userId:member.userId}),
+      });
+      const updated = await api(endpoint);
+      if (!active()) return;
+      setRoster(updated);
+      if (selected && !updated.groups.some(group => group.id === selected.id)) select(null);
+      await loadModeration();
+    } catch (error) {
+      if (active()) setError(error.message);
+    } finally {
+      if (active()) setBusy(false);
+    }
+  }
+
   async function send(event) {
     event.preventDefault();
     if (!active() || !selected || busy || !draft.trim()) return;
@@ -136,6 +166,19 @@ export default function StoreChatGroups({api,storeId,onClose,isCurrentSession}) 
       <button ref={closeButton} type="button" onClick={onClose}>Κλείσιμο</button>
     </div>
     {error && <p className="store-chat-error" role="alert">{error}</p>}
+    {roster?.mayModerate && <details onToggle={event => {
+      if (event.currentTarget.open) void loadModeration();
+    }}>
+      <summary>Διαχείριση μελών ομάδων</summary>
+      {moderation === null && <p>Φόρτωση μελών…</p>}
+      {moderation?.length === 0 && <p>Δεν υπάρχουν ομάδες.</p>}
+      {moderation?.filter(member => member.userId).map(member =>
+        <div key={JSON.stringify([member.id,member.userId])}>
+          <span>{member.name} · {member.memberName}</span>{" "}
+          <button type="button" disabled={busy} onClick={() => removeMember(member)}>Αφαίρεση από ομάδα</button>
+        </div>
+      )}
+    </details>}
     {roster && <>
       <label>Ομάδα
         <select value={selected?.id || ""} disabled={busy} onChange={event =>
