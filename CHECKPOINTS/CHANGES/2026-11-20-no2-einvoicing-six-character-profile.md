@@ -1,0 +1,11 @@
+# Νο02 — Verified e-invoicing six-character profile / BEFORE SOURCE
+
+20/11/2026 Europe/Athens. Same retained No02 owner /root. This continues #4075/#4076 provider compatibility, with one newly established stored URL-profile gap. Overall No02 remains OPEN.
+
+A read-only aggregate corpus audit in the same three selected stores found 19 existing Ριζαρείου rows whose e-invoicing UUID path ends in a six-character alphanumeric suffix. The installed/prepared parser accepts only seven or eight suffix characters, so those rows reject before fetching. All 19 lack a stored file. These are raw stored records, not logical invoice or financial counts. The other seven audited store/host groups matched their exact new provider patterns.
+
+Claim one bounded follow-up in the same original-provider parser and synthetic tests. Extend the exact e-invoicing host/UUID-path suffix to six characters only after one owner-approved actual PDF response and strict production identity verification pass for that profile. Preserve seven/eight-character support, reject five/nine-character suffixes and malformed hosts, paths, credentials, query/fragment and controls, and run the full original pipeline regression for accepted six/seven/eight profiles. Private invoice URLs and identities remain outside GitHub.
+
+At claim publication the real six-character profile PDF probe is pending, source correction NOT STARTED / NOT TESTED. Existing four-profile #4076 head724f0d92 passed full source CI44691724843, 6875PASS/0FAIL/3optionalSKIP plus8recoveryPASS and merged6d788694. Its exact main CI remains in progress. Existing normal CI/deployment gates remain active. A documentation-only claim does not suppress an otherwise eligible normal deployment. Do not cancel, disable or change the guard or add artificial source changes to control that ordering.
+
+After this claim is green and merged and the actual six-character provider response/identity proof passes, implement the narrow suffix fix, tests and full exact source/main CI before normal guarded installation. #4048 bulk/scheduler recovery, No04 core, invoice/payment/stock/fiscal writers and other owners remain outside this follow-up. No application business operation is part of the probe or diagnosis.
