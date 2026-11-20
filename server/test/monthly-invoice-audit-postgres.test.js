@@ -318,6 +318,25 @@ test('native monthly invoice audit executes the registered reader with complete 
    const changedBefore=await digest();await assert.rejects(read({...input,filter:'PAID',page:first.nextPage}),error=>error.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');const changed=await readMonthlyInvoiceAuditRecord(db,owner,{...input,id:'doc:tol-native-065'},{now});assert.equal(changed.item.payment.status,'PARTIALLY_PAID');assert.equal(changed.item.payment.withinTolerance,undefined);assert.equal(changed.item.payment.remainingCents,6);assert.equal(await digest(),changedBefore);
   });
 
+  await t.test('native standalone zero delivery note is nonfinancial and explicit null original job blocks exemption',async()=>{
+   const initial=await digest(),input={storeId:'control',month:'2026-04'};
+   try{
+    await db.$executeRawUnsafe(`INSERT INTO "DocumentInbox" VALUES('zero-delivery-inbox','c','control',NULL,'RECEIVED','2026-04-12')`);
+    await db.$executeRawUnsafe(`INSERT INTO "MyDataInboundDocument"("id","companyId","storeId","inboxId","mark","issuerVat","series","documentNumber","issueDate","invoiceType","totalGross","rawPayload","fetchedAt") VALUES('zero-delivery','c','control','zero-delivery-inbox','40000000993','099999999','DEL','93','2026-04-12','9.3',0,'{}','2026-04-12')`);
+    const before=await digest(),list=await read(input);assert.equal(list.items.length,1);
+    const row=list.items[0];assert.equal(row.documentType,'DELIVERY_NOTE');assert.equal(row.payment.status,'NOT_APPLICABLE');assert.equal(row.purchaseReview.status,'NON_FINANCIAL');assert.deepEqual(row.reasons,[]);assert.deepEqual(row.categories,[]);
+    assert.equal(list.financialSummary.reviewRequired,0);assert.equal(list.financialSummary.paid,0);for(const key of ['unposted','purchaseLinkReview','identityReview'])assert.equal(list.summary[key],0);
+    const record=await readMonthlyInvoiceAuditRecord(db,owner,{...input,id:row.id,fingerprint:list.fingerprint},{now});assert.deepEqual(record.item,row);assert.equal(await digest(),before);
+    await db.$executeRawUnsafe(`UPDATE "MyDataInboundDocument" SET "rawPayload"='{"originalJobId":null}'::jsonb WHERE "id"='zero-delivery'`);
+    const changedBefore=await digest(),changed=await read(input);assert.equal(changed.items[0].payment.status,'REVIEW_REQUIRED');assert.notEqual(changed.items[0].purchaseReview.status,'NON_FINANCIAL');assert.equal(changed.financialSummary.paid,0);assert.notEqual(changed.fingerprint,list.fingerprint);
+    const changedRecord=await readMonthlyInvoiceAuditRecord(db,owner,{...input,id:row.id},{now});assert.equal(changedRecord.item.payment.status,'REVIEW_REQUIRED');assert.equal(await digest(),changedBefore);
+   }finally{
+    await db.$executeRawUnsafe(`DELETE FROM "MyDataInboundDocument" WHERE "id"='zero-delivery'`);
+    await db.$executeRawUnsafe(`DELETE FROM "DocumentInbox" WHERE "id"='zero-delivery-inbox'`);
+   }
+   assert.equal(await digest(),initial);
+  });
+
   await t.test('actual SQL count above safe source cap suppresses findings rather than exposing partial exact totals',async()=>{
    await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" SELECT 'large-'||n,'c','s','sup','INVOICE','LARGE '||n,'2026-10-12'::timestamp,1,'DRAFT','MANUAL',NULL,NULL,'2026-10-12'::timestamp FROM generate_series(1,20001)n`);
    const before=await digest(),r=await read();assert.equal(r.coverage.complete,false);assert.ok(r.coverage.sourceCounts.documents>20000);assert.ok(r.coverage.limited.includes('documents'));assert.equal(r.summary,null);assert.deepEqual(r.items,[]);assert.equal(r.nextPage,null);assert.equal(r.allClear,false);assert.equal(await digest(),before);
