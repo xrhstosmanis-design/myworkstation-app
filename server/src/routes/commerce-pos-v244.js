@@ -230,7 +230,7 @@ function scheduleBoundFastBackground({companyId,storeId,jobId,pageJobIds,handoff
           if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;sourceLines=null}
           if(!sourceLines&&handoff.fullReader==="ASSISTANT"){
             operationStage="assistant-read";
-            sourceLines=await readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross:handoff.totalGross,activity:walletActivityForJob({companyId,storeId,purpose:"PAYMENT_INVOICE_READ",jobId,documentNumber:handoff.documentNumber},handoff.walletActivity)});
+            sourceLines=await readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross:handoff.totalGross,documentNumber:handoff.documentNumber,activity:walletActivityForJob({companyId,storeId,purpose:"PAYMENT_INVOICE_READ",jobId,documentNumber:handoff.documentNumber},handoff.walletActivity)});
             requiresCompletePrintedTable=true;
           }
           if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{backgroundScope,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines;requiresCompletePrintedTable=ai?.result?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true}

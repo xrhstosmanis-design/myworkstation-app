@@ -6,8 +6,8 @@ import {pathToFileURL} from 'node:url';
 // Dependency injection keeps this actual reader test free of provider/DB calls.
 const root=new URL('../../',import.meta.url).pathname;
 const load=relative=>import(pathToFileURL(`${root}/${relative}`).href);
-const {invoiceAssistantPageCount,invoiceAssistantPageLayout}=await import(pathToFileURL(`${root}/server/src/lib/invoice-assistant-page-count.js`).href);
-const {assessInvoicePages,normalizedAssistantPages}=await load('server/src/routes/invoice-assistant-review.js');
+const {invoiceAssistantPageCount,invoiceAssistantPageLayout,normalizePdfPageEvidence}=await import(pathToFileURL(`${root}/server/src/lib/invoice-assistant-page-count.js`).href);
+const {assessInvoicePages,invoicePageReviewChecks,normalizedAssistantPages}=await load('server/src/routes/invoice-assistant-review.js');
 const {rawRowSupportsStructuredLine}=await load('server/src/lib/invoice-line-review.js');
 const {invoiceAssistantDiscounts}=await load('server/src/lib/invoice-assistant-discounts.js');
 const {default:sharp}=await load('node_modules/sharp/lib/index.js');
@@ -35,7 +35,7 @@ const modelReading=(pageCount)=>({
 function fixture(attachments,{reading=modelReading(2),totalGross=Number(reading.printedTotal)}={}){
  const pageJobIds=attachments.map((_,i)=>`existing-job-${i+1}`),queries=[],requests=[],viewCalls=[],scopeCalls=[];
  const deps={process:{env:{OPENAI_API_KEY:'synthetic-not-a-real-key'}},AbortSignal,
-  invoiceAssistantPageCount,invoiceAssistantPageLayout,assessInvoicePages,normalizedAssistantPages,rawRowSupportsStructuredLine,invoiceAssistantDiscounts,
+  invoiceAssistantPageCount,invoiceAssistantPageLayout,normalizePdfPageEvidence,assessInvoicePages,invoicePageReviewChecks,normalizedAssistantPages,rawRowSupportsStructuredLine,invoiceAssistantDiscounts,
   assertCustomerDemoOutboundAllowed:scope=>assert.deepEqual(scope,{companyId:'synthetic-company',storeId:'synthetic-store'}),
   withInvoiceWalletScope:async(scope,work)=>{scopeCalls.push(scope);return work()},
   throwIfWalletError:error=>{throw error},
@@ -104,7 +104,7 @@ test('physical page layout preserves file boundaries and legacy count results',a
 });
 
 test('direct converter without source layout retains existing photo provenance',()=>{
- const convert=new Function(...Object.keys({assessInvoicePages,normalizedAssistantPages,rawRowSupportsStructuredLine,invoiceAssistantDiscounts}),`${source}\nreturn assistantRowsToProductLines;`)(assessInvoicePages,normalizedAssistantPages,rawRowSupportsStructuredLine,invoiceAssistantDiscounts);
+ const convert=new Function(...Object.keys({assessInvoicePages,invoicePageReviewChecks,normalizedAssistantPages,rawRowSupportsStructuredLine,invoiceAssistantDiscounts}),`${source}\nreturn assistantRowsToProductLines;`)(assessInvoicePages,invoicePageReviewChecks,normalizedAssistantPages,rawRowSupportsStructuredLine,invoiceAssistantDiscounts);
  const rows=convert(modelReading(2),{pageCount:2,totalGross:2});
  assert.deepEqual(rows.map(row=>row.sourceFileIndex),[0,1]);assert.ok(rows.every(row=>row.sourcePage===undefined));
  for(const pageSources of [[],[{sourceFileIndex:0,sourcePage:1},{sourceFileIndex:0,sourcePage:1}],[{sourceFileIndex:0,sourcePage:1},{sourceFileIndex:2,sourcePage:1}]])assert.throws(()=>convert(modelReading(2),{pageCount:2,totalGross:2,pageSources}),/αντιστοίχιση/);

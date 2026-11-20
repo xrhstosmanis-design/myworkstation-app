@@ -1,6 +1,6 @@
-## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
-
-PR #4048. Η στοχευμένη δοκιμή παρόχων πέρασε μετά τη διόρθωση των δοκιμαστικών δεδομένων. Ενσωματώθηκαν οι τελευταίες αλλαγές του main και εκκρεμεί κοινό CI. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md).
+<!-- Νο 3: PR #4052, CHECKPOINTS/CHANGES/2026-11-19-no3-ocr-consolidated.md. Πλήρες CI PASS 44779396092. Τελική κοινή δοκιμή εκκρεμεί. -->
+Warning: truncated output (original token count: 45914)
+Total output lines: 860
 
 ## 20/11/2026 — SHIFT-CLOSE-SIGNED-LEDGER-01 — bounded pre-source claim
 
@@ -103,6 +103,10 @@ Corrected source head `bd0e268f27ea2c5d39a97397e3ad426130fff5cc`, CI `4432297606
 The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejected the old owner catalogue call without storeId: HTTP400 / NETLINK_STORE_REQUIRED, formerly expected200 at line70. Causal correction updates the E2E caller's status/menu URLs to the fixture's explicit selected store, asserts the returned storeId and adds a retained missing-store400/code assertion. Runtime source and all existing auth/licensing/fiscal/idempotency/settlement assertions are unchanged. No global-store fallback or production guard is relaxed. The retained POS header browser fixture also recognizes the selected-store status query when simulating a disabled Netlink module; its prior disabled-module geometry intent is preserved.
 
 Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
+
+## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
+
+PR #4048. Έλεγχοι CI και LAB 5/5 στο b9bdd08a. Εκκρεμεί εγκατάσταση. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md).
 
 ## 18/11/2026 — NETLINK source CI correction, still AWAITING FULL CI / LAB
 
@@ -380,51 +384,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 
 Ενημέρωση: 2026-11-08 — αρχικό μικρό μητρώο / migration draft.
 
-Τεκμήριο #28 / test-only PR #3749 (2026-11-08): απομονωμένη HTTP + PostgreSQL ακύρωση BackOffice εκτελέστηκε PASS στο CI #9526 (old SHA `2421d979`, 5/5 jobs, 5.978 server tests, 0 skipped). Απαιτείται νέο exact-head CI μετά τη συμφιλίωση. Hosted LAB: NOT TESTED· #28: OPEN.
-
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / QR/PIN Enter and +1 per scan. Retained owner /root. [Scope and next steps](CHANGES/2026-11-09-inventory-link-scan.md). Separate LAB acceptance pending.
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / #3702 same-draft product attachment: main CI and scoped staff LAB PASS. Owner confirmed temporary create-grant removal.
-
-Source `5cfa4d9d` published on the scoped branch. Synthetic handler check verified repeated and alternate barcode, different-item protection, one save on repeated Enter, additive total and reset. Exact PR CI and physical scanner LAB remain pending.
-
-QR/PIN count correction implemented in `5099e0dc`. Focused arithmetic check passed for 7 → 5, 7 → 9, 7 → 0 and additive 7 + 5 → 12. Full CI and live acceptance pending.
-
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / exact existing barcode store assignment implemented through `eff05d16`. Explicit assignment, scoped active grant and draft lock, existing records preserved. CI and live Rizareio verification pending.
-
-09/11/2026 — QR/PIN product creation checks exact barcode duplicates within the stocktake company. Production read-only diagnosis confirmed two outside-company matches and no same-company match for 52016165. CI and live acceptance pending.
-
-## 09/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01
-
-Personal inventory detail pages and stocktake-wide exact barcode/SKU lookup. Frontend build, 28 mounted UI tests and local HTTP/Express + PGlite integration passed. Exact CI and authenticated LAB acceptance pending. Retained ownership and all-functions scope stay open.
-
-09/11/2026 — INVENTORY-SCAN-WORKFLOW-01 / QR/PIN finalization opt-in. Prior #3771 CI and seven mocked authorization scenarios passed. Current-main CI and LAB pending.
-
-10/11/2026 — QR/PIN selection displays current store stock from a read-only, scoped line endpoint. CI and LAB pending.
-
-10/11/2026 — Store warehouse browsing implemented with explicit owner opt-in, scoped read-only search and paging. Price/taxonomy editing remains pending. CI and LAB pending.
-
-## INVENTORY-PRODUCT-CREATE-EVENTS
-
-Assigned to `fix/inventory-product-create-events`. Central Events shows historical inventory PRODUCT_CREATE records with store, date and operator filters. Local syntax and mocked query/mapping checks passed. LAB and production lookup pending. See [change checkpoint](CHANGES/inventory-product-create-events.md).
-
-
-## MYDATA-DRAFT-PREFILL
-
-Create missing supplier from verified myDATA invoice fields. [Checkpoint](CHANGES/mydata-draft-create-supplier.md).
-
-Show the XML issuer name on unlinked myDATA drafts. [Checkpoint](CHANGES/mydata-draft-issuer-name.md).
-
-Unconfirmed packaging remains in the draft for correction. [Checkpoint](CHANGES/mydata-unconfirmed-packaging.md). CI and production validation pending.
-
-Automatic recovery of attached empty drafts: [checkpoint](CHANGES/mydata-automatic-empty-draft.md). Syntax checks passed; CI and live verification pending.
-
-Follow-up `fix/mydata-draft-vat-zero-retry`. Local replay passed for an empty myDATA draft with VAT category 7. CI and deployed retry pending. See [checkpoint](CHANGES/mydata-draft-vat-zero-retry.md).
-
-Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pending. See [checkpoint](CHANGES/mydata-draft-prefill.md).
-
-11/11/2026 — Central Offers & Gifts: allow a fixed price for multiple selected products in one submission. See CHECKPOINTS/CHANGES/2026-11-11-platform-bulk-fixed-offer.md.
-
-11/11/2026 — Central Offers & Gifts: reuse an existing company item when SKU and master barcode match. See CHECKPOINTS/CHANGES/2026-11-11-platform-promotion-existing-sku.md.
+Τεκμήριο #28 / test-only PR #3749 (2026-11-08): απομονωμένη HTTP + PostgreSQL ακύρωση BackOffice εκτελέστηκε PASS στο CI #9526 (old SHA `2421d979`, 5/5 jobs, 5.978 serv…914 tokens truncated…ifts: reuse an existing company item when SKU and master barcode match. See CHECKPOINTS/CHANGES/2026-11-11-platform-promotion-existing-sku.md.
 
 11/11/2026 — Inventory Archive duplicate scan by selected store. See CHECKPOINTS/CHANGES/2026-11-11-inventory-duplicate-check.md.
 
@@ -862,3 +822,8 @@ Final No02 identity OCR source: root57PASS0FAIL0SKIP; three actual cached PDFs p
 ## Νο02 — bounded original identity OCR / TECHNICAL LIVE — GROUPED ACCEPTANCE OPEN (20/11/2026)
 
 Source4103/headde7368170dd8324d3a79475b1df2e8c93bac857b passed exactCI44781073685ALL5SUCCESS:6963serverPASS/0FAIL/4optionalWASM-catalogueSKIP+8recoveryPASS. Mergedruntime613894fae8dc2ab8d43de920ddc1397c7113c323 retainsall8reviewedNo02source/test/packageblobs; peerwarehouse/No4documentationarepreserved, notawholemergedtreeidentityclaim. ExactmainCI44783947813ALL5SUCCESS:6964serverPASS/0FAIL/4optionalSKIP+8recoveryPASS; actualworker7/pipeline9/nativeordinary9/zero-note-nulljobPASS,noSKIPintheaddedchecks. Normalguard44788175656actual2SUCCESS, Renderdep-dc08k70m7kps73d8l0p0LIVE20/11/2026at20:03:30.108350Ελλάδας exact613894. Independentrootnonce/no-cachehealth20:04:15.527928Ελλάδας HTTP200/oktrue/exact613894. Earlierpending/notinstalledentriesforthissameOCRslicearehistorical. TechnicalinstallationONLY: no new hostedfeature/LAB/userPASSorpaid/uploadedreplay. Header-onlysame-byteOCRrestrictedto169/cosmote22/telekom22; noNo04line/model/walletor4048bulk/scheduleractivation. NewdiscountrequirementNOTIMPLEMENTED; No4baselinecoordination7046220114awaiting. Externalprovider/historyretrievalandgroupedfinalacceptanceremainOPEN. [Exact release and limits](CHANGES/2026-11-20-no2-identity-ocr-claim.md).
+
+
+## No02 — printed discounts at initial myDATA prefill claim20Nov
+
+Retained /root, branchfix/no2-printed-discounts-20261120. Before-source independent initial-insert adapter for explicitly printed PDF original price/discounts, first verified e-invoicing layout; source-text proof, precision-bound rows and clear UNKNOWN metadata/UI. No No4 transfer/writer/model/wallet changes or existing draft rewrite. [Claim](CHANGES/2026-11-20-no2-printed-discounts-claim.md). NOT IMPLEMENTED/NOT TESTED; source starts only after green merged claim.
