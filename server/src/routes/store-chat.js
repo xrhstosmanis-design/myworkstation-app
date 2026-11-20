@@ -81,6 +81,8 @@ async function checkedChatModule(req,res,id){
 }
 mountChatGroups(router, {
   db:prisma, selectStore:selectedChatStore, checkModule:checkedChatModule,
+  canModerate:user=>canPin(user)&&!user.supportContext&&!user.staffAccess,
+  auditModeration:audit,
   canManage:user=>canPin(user)||(user?.tokenType!=="STORE_OPERATOR"&&user?.role==="MANAGER"),
 });
 router.get("/stores/:storeId/messages/search",async(req,res,next)=>{try{
