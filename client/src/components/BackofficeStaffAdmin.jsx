@@ -83,6 +83,15 @@ export default function BackofficeStaffAdmin({api}){
       <fieldset disabled={busy}>
         <legend>Καταστήματα και δικαιώματα</legend>
         <p>Επίλεξε κατάστημα και όρισε τι μπορεί να βλέπει και τι μπορεί να κάνει ο χειριστής εκεί. Αποεπίλεξε κατάστημα για να ανακαλέσεις την πρόσβασή του σε αυτό.</p>
+        {grants.some(grant=>grant.profile==='MANAGER')&&<div className="staff-actions">
+          <button type="button"
+            disabled={!grants.some(grant=>grant.profile==='MANAGER'&&!capabilitiesMatch(staffCapabilities,grant.capabilities))}
+            onClick={()=>setGrants(rows=>rows.map(grant=>grant.profile==='MANAGER'
+              ? {...grant,capabilities:[...staffCapabilities]}
+              : grant))}>
+            Όλες οι προβολές και ενέργειες στα επιλεγμένα καταστήματα Υπευθύνου
+          </button>
+        </div>}
         {data.stores.map(store=>{
           const grant=grants.find(row=>row.storeId===store.id);
           return <div key={store.id} className="staff-grant">

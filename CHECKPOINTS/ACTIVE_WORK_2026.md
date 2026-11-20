@@ -171,6 +171,8 @@ Main 885f00f0 changed the bound purchase-order route again. The refreshed inacti
 
 Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps with invoice inspection, expected receipts and reversal costing. Full candidate CI and guarded common LAB installation remain pending.
 
+20/11 No5 follow-up: gated navigation and sales/cash/shift table presentation prepared after the observed delegated UI issue. Common LAB acceptance and review of remaining capabilities are open.
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB

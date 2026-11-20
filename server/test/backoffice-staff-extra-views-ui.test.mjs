@@ -262,7 +262,7 @@ test('transfer and invoice AI views grant only existing history reads and never 
    assert.ok(document.body.textContent.includes(rowText));assert.equal(document.querySelector('img'),null);
    for(const text of ['Εξόφληση','Καταχώριση είσπραξης','Αποστολή PDF','Υπολογισμός αξίας','Ελαχιστοποίηση','Έναρξη τοπικού OCR','Έλεγχος & αντιστοίχιση','Επανέλεγχος με AI','Έγκριση αποθήκης'])assert.ok(!button(text),text);
    assert.equal(document.querySelector('input[type="file"]'),null);assert.ok(!calls.some(path=>/destinations|products|suppliers|status/.test(path)));
-   if(c.right==='invoice-ai.read')assert.ok(document.querySelector('summary').textContent.includes('Διαγνωστικά OCR'));
+   if(c.right==='invoice-ai.read')assert.ok([...document.querySelectorAll('summary')].some(summary=>summary.textContent.includes('Διαγνωστικά OCR')));
    if(c.right==='stock-transfers.read'){
     await m.act(async()=>button('Κλείσιμο').click());assert.equal(document.querySelector('.pos-transfer-overlay'),null);
     await m.act(async()=>button(c.label).click());await m.act(async()=>new Promise(r=>setTimeout(r,30)));

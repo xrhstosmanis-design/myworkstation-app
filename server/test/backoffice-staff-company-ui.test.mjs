@@ -125,3 +125,29 @@ test('recipe cost distinguishes genuine zero from redacted missing-ingredient co
 test('named supplier selection drops an older supplier reply and clears names and financial rows after denied detail',async()=>{
  const Panel=await component('backoffice/CompanyDirectoryView');let late,denied=false;const api=async path=>{if(path==='/api/commerce/suppliers')return envelope(['a','b'].map(id=>({id,name:'Supplier '+id,taxId:null,email:null,phone:null,city:null,active:true})));if(denied)throw Error('SUPPLIER_REVOKED');if(path.endsWith('/a/detail'))return new Promise(resolve=>{late=resolve});return supplierDetail('b')};const m=await mount(Panel,{api,companyId:'a',capability:'supplier-details.read',authorityKey:'u:a:1'});const choose=async id=>m.act(async()=>{const select=document.querySelector('[aria-label="Προμηθευτής"]');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}))});try{await choose('a');assert.equal(document.querySelector('table'),null);await choose('b');assert.match(document.querySelector('h3').textContent,/Supplier b/);await m.act(async()=>late(supplierDetail('a')));assert.match(document.querySelector('h3').textContent,/Supplier b/);denied=true;await m.act(async()=>button('Ανανέωση εταιρικής').click());assert.match(document.querySelector('[role="alert"]').textContent,/SUPPLIER_REVOKED/);assert.equal(document.querySelector('table'),null);assert.equal(document.querySelector('[aria-label="Προμηθευτής"]').options.length,1);assert.ok(!document.body.textContent.includes('Εκτιμώμενο υπόλοιπο'))}finally{await m.close()}
 });
+
+test('bulk manager selection grants all store actions only to assigned manager stores on save',async()=>{
+ const Admin=await component('BackofficeStaffAdmin');
+ const {staffCapabilities}=await import('../../shared/backoffice-staff.mjs');
+ const account={id:'u',username:'usr',fullName:'User',active:true,revision:1,companyCapabilities:[],grants:[
+  {storeId:'a',profile:'MANAGER',capabilities:['cash.read']},
+  {storeId:'b',profile:'MANAGER',capabilities:['cash.read']},
+  {storeId:'c',profile:'AUDITOR',capabilities:['cash.read']},
+ ]};
+ let submitted;
+ const api=async(_path,options={})=>{
+  if(options.method){submitted=JSON.parse(options.body);Object.assign(account,{grants:submitted.grants,revision:2});return{id:'u',revision:2}}
+  return{accounts:[account],stores:['a','b','c','d'].map(id=>({id,name:id.toUpperCase()}))};
+ };
+ const m=await mount(Admin,{api});
+ try{
+  await m.act(async()=>button('Δικαιώματα / Απενεργοποίηση').click());
+  await m.act(async()=>button('Όλες οι προβολές και ενέργειες στα επιλεγμένα').click());
+  assert.equal(submitted,undefined);
+  await m.act(async()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  assert.deepEqual(submitted.grants.map(({storeId})=>storeId),['a','b','c']);
+  for(const grant of submitted.grants.slice(0,2))assert.deepEqual(new Set(grant.capabilities),new Set(staffCapabilities));
+  assert.deepEqual(submitted.grants[2].capabilities,['cash.read']);
+  assert.equal(Object.hasOwn(submitted,'companyCapabilities'),false);
+ }finally{await m.close()}
+});

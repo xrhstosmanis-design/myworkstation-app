@@ -24,3 +24,15 @@ test("BackOffice sales journal shows item quantity payment total and state",()=>
   assert.match(client,/payments\.map\(p=>/);
   assert.match(client,/\/api\/store-pos\/sales\/journal/);
 });
+
+test("owner sales tabs do not install inside the delegated workspace",async()=>{
+  const {JSDOM}=await import("jsdom");
+  const dom=new JSDOM('<div class="staff-backoffice"><div class="kiosk-sales"><main class="kiosk-main" id="staff"></main></div></div><div class="kiosk-sales"><main class="kiosk-main" id="owner"></main></div>');
+  try{
+    const selector=client.match(/const install=\(\)=>\{const main=document.querySelector\('([^']+)'\)/)?.[1];
+    assert.ok(selector);
+    assert.deepEqual([...dom.window.document.querySelectorAll(selector)].map(node=>node.id),["owner"]);
+  }finally{
+    dom.window.close();
+  }
+});
