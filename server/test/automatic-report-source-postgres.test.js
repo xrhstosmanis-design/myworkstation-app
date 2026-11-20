@@ -40,6 +40,27 @@ test("native automatic cash reader uses selected scope, overnight opening bounda
   assert.deepEqual([store.originalShortage,store.originalSurplus,store.offset,store.netVariance],[10,8,8,-2]);assert.equal(delivery.netVariance,20);
   assert.deepEqual(await snapshot(),before);
   for(const change of [{actorId:"owner"},{companyId:"x"},{storeId:"inactive"},{storeId:"other"}])await assert.rejects(readAutomaticDailyCashPreview(db,{...args,...change}),e=>[403,404].includes(e.status));
+  // Real tagged SQL must retain a late closed predecessor as fingerprint/
+  // overlap context while excluding its 999 variance from this day's totals.
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "closedAt"=${new Date("2026-10-15T07:30:00+03:00")} WHERE "id"='previous'`;
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "openedAt"=${new Date("2026-10-15T07:30:00+03:00")} WHERE "id"='morning'`;
+  try{
+   const lateBefore=await fullSnapshot(),late=await readAutomaticDailyCashPreview(db,args);
+   assert.equal(late.ready,true);assert.equal(late.sourceCount,4);
+   assert.deepEqual(late.dayReadiness[0].sessionIds,['delivery','morning','afternoon','night']);
+   assert.deepEqual(late.groups.map(g=>g.netVariance).sort((a,b)=>a-b),[-2,20]);
+   assert.deepEqual(await fullSnapshot(),lateBefore);
+   await db.$executeRaw`UPDATE "CashShiftSession" SET "variance"=998 WHERE "id"='previous'`;
+   assert.notEqual((await readAutomaticDailyCashPreview(db,args)).sourceFingerprint,late.sourceFingerprint);
+   await db.$executeRaw`UPDATE "CashShiftSession" SET "closedAt"=${new Date("2026-10-15T07:30:00.001+03:00")} WHERE "id"='previous'`;
+   const crossing=await readAutomaticDailyCashPreview(db,args);
+   assert.equal(crossing.ready,false);assert.equal(crossing.groups,null);
+   assert.ok(crossing.holds.some(h=>h.sessionId==='morning'&&h.overlappingSessionId==='previous'));
+  }finally{
+   await db.$executeRaw`UPDATE "CashShiftSession" SET "closedAt"=${new Date("2026-10-15T07:00:00+03:00")},"variance"=999 WHERE "id"='previous'`;
+   await db.$executeRaw`UPDATE "CashShiftSession" SET "openedAt"=${new Date("2026-10-15T07:00:00+03:00")} WHERE "id"='morning'`;
+  }
+  assert.deepEqual(await snapshot(),before);
   const fullBefore=await fullSnapshot();
   // Fixture-only change: two CLOSED MAIN sessions now overlap although each
   // opening slot is present. DELIVERY's legitimate concurrency stays untouched.

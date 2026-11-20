@@ -1,0 +1,11 @@
+# 7–9 · Υποψήφια διόρθωση κλειστού carry-in
+
+Ίδιος owner /root, fix/report-closed-carry-in-20261120. Προ-source claim #4085 πέρασε docs CI 44720105539 και συγχωνεύτηκε ως 4c25a5a27f071465d291762f5239513452072779 πριν source. Πραγματικό before Διαδόχου από γνήσια κεντρική UI: DAILY 19/11, 4 καταγεγραμμένες βάρδιες και HOLD ασαφούς/επικαλυπτόμενης/προηγούμενης ανολοκλήρωτης βάρδιας. Καμία οικονομική πράξη.
+
+Η υποψήφια αλλαγή περιορίζεται σε automatic-report-policy.js/source.js και υφιστάμενα automatic-report-overlap.test.js/source-postgres.test.js. Έγκυρος κλειστός predecessor με έναρξη πριν από την περίοδο διατηρείται ως interval context για πραγματική επικάλυψη. Δεν συμπληρώνει slot ούτε συνεισφέρει ποσά, sourceCount ή reviewed evidence της περιόδου. Το πλήρες αρχικό rows snapshot, περιλαμβανομένου του context, παραμένει δεσμευμένο στο sourceFingerprint. Ανοικτός/άκυρος/μελλοντικός/ξένος/διπλός predecessor, μη ρυθμισμένο terminal, άγνωστη variance και πραγματική επικάλυψη παραμένουν HOLD. Η προστασία ισχύει για DAILY/WEEKLY/MONTHLY. Δεν αλλάζουν ωράρια, cash chain, writers, approvals ή οικονομικά.
+
+Ο /root/daily εκτέλεσε τελική Node20 παρτίδα 42 PASS / 0 FAIL / 1 native-environment SKIP. Log SHA256 e89d9ee58303a890e69d95e2100a69419ee81f11657701a68e6ff10bc2f52d4a. Ο /root/supplier εξέτασε ανεξάρτητα και τα 4 αρχεία χωρίς blocker, συμπεριλαμβανομένου του sourceCount και των owned-only reviewed rows. Το native PostgreSQL test έχει γραφτεί αλλά δεν εκτελέστηκε τοπικά λόγω απουσίας απομονωμένης βάσης· είναι υποχρεωτικό στο πλήρες source CI. Η τοπική απόδειξη δεν ισοδυναμεί με πραγματικό after UI PASS.
+
+Έλεγχος dependencies δεν βρήκε policy.js/source.js στα lifecycle/company sourceHashes· το ομώνυμο source-compatibility.js είναι άλλο, ανέπαφο αρχείο. Δεν τροποποιήθηκαν profiles, provenance, schema, environment, grants, παραλήπτες, email, backup/restore ή επιχειρησιακά δεδομένα. Τα peer scopes και το ήδη αποδεκτό LAB promotion παραμένουν ανέπαφα.
+
+Κατάσταση CANDIDATE / AWAITING FULL CI. Απομένουν native/full exact-head CI, root ανασκόπηση, κανονικό release και επανάληψη μόνο της read-only προεπισκόπησης Διαδόχου. Δεν εγκρίνεται αυτόματα αναφορά με άλλες ελλείψεις και δεν μετατρέπεται το συνολικό 7–9 σε PASS.
