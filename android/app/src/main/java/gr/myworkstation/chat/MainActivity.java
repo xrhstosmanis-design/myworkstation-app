@@ -462,7 +462,7 @@ public final class MainActivity extends Activity {
             JSONObject row = (JSONObject) card.getTag();
             String messageId = row.optString("id");
             if (row.optBoolean("readByMe") || visiblePhotoReceipts.contains(messageId)
-                    || !card.getLocalVisibleRect(visible) || visible.height() * 2 < card.getHeight()) continue;
+                    || !card.getLocalVisibleRect(visible) || visible.height() < Math.min(dp(48), (card.getHeight() + 1) / 2)) continue;
             final long generation = epoch.capture();
             final String captured = token, store = id(selected, "id"), company = id(selected, "companyId");
             final String path = chatBase() + "/messages/" + enc(messageId) + "/read";
@@ -595,9 +595,13 @@ public final class MainActivity extends Activity {
                         swiped = false;
                         return false;
                     case MotionEvent.ACTION_MOVE:
-                        if (tracking && Math.abs(event.getY() - startY) > dp(24)) tracking = false;
-                        if (tracking && event.getX() - startX >= dp(56)) {
+                        if (swiped) return true;
+                        float dx = event.getX() - startX;
+                        float dy = Math.abs(event.getY() - startY);
+                        if (tracking && dy > dp(24) && dy >= Math.abs(dx)) tracking = false;
+                        if (tracking && dx >= dp(36) && dx > dy * 1.5f) {
                             swiped = true;
+                            view.getParent().requestDisallowInterceptTouchEvent(true);
                             view.cancelLongPress();
                             view.setPressed(false);
                         }
@@ -619,7 +623,9 @@ public final class MainActivity extends Activity {
     }
     private Button messageMediaButton(String label,Runnable previewAction,JSONObject row,boolean own) {
         Button button=chatButton(label,previewAction,false);Runnable open=scopedMessageAction(() -> showMessageActions(row,own));
-        button.setOnLongClickListener(v->{open.run();return true;});return button;
+        button.setOnLongClickListener(v->{open.run();return true;});
+        if (interactionsReady) enableSwipeReply(button, scopedMessageAction(() -> chooseChatReply(row)));
+        return button;
     }
     private Runnable scopedMessageAction(Runnable action) {
         final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
