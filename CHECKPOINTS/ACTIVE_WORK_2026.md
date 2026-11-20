@@ -1,6 +1,6 @@
-## 20/11/2026 — Νο02 — e-invoicing six-character corpus profile / ASSIGNED BEFORE SOURCE
+## 20/11/2026 — Νο02 — e-invoicing six-character corpus profile / VERIFIED SOURCE — AWAITING EXACT CI/INSTALLATION
 
-Same No02 owner/root, bounded follow-up to4075/4076. Read-only corpus coverage found19Ριζαρείου rawrows with exacte-invoicingUUIDpath+6alnumsuffix rejected by7/8parser; allnofile, notlogicalinvoice/financialcounts. ActualPDFstrictidentityprobePENDING; sourceNOTSTARTED. Claim6suffixonlyafterproof, tests6/7/8acceptedand5/9rejected+oldguards, fullCI/normalguard unchanged. Existing4provider6d788694mainCIcontinues; docsclaimdoesnotsuppresseligibledeploy. No4048bulk/No04/financialwrites. [Before-source evidence](CHANGES/2026-11-20-no2-einvoicing-six-character-profile.md).
+Same No02 owner/root. Claim4077 merged502862af before source. Actual6suffixPDFstrictidentity and fullfetchOriginalPdfcachedreplayPASS1page/1request/redirect:error. Exacte-invoicingUUIDsuffix6–8only;5/9reject+6/7/8fullfetchregressions. RootdiffreviewPASS,36/36localtests0FAIL0SKIP,productionclient/serverbuildPASS;generatedindexrestored. Corpus782rawrows:763priorpatternmatches+19verified6suffixmisses; rawrows≠logicalinvoices≠downloadPASS≠financialbalance. SourceawaitingexactfullCI/mainCI/normalguard. Existing4providerhistoricalreleaseprotected; no4048bulk/No04/financialwrites. OverallNo02OPEN. [Proof, correction and limits](CHANGES/2026-11-20-no2-einvoicing-six-character-profile.md).
 
 ## 20/11/2026 — Νο02 — all-supplier PDF audit across three stores / VERIFIED FOUR-PROVIDER SOURCE — AWAITING CI/INSTALLATION
 

@@ -16,7 +16,7 @@ export function originalDownloadUrl(xml,issuerVat){
   const epsilon = validIssuer && url.hostname === "epsilondigital.epsilonnet.gr"
     && /^\/fd\/[a-f0-9]{32}:8\/?$/i.test(url.pathname);
   const einvoicing = validIssuer && url.hostname === "e-invoicing.gr"
-    && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_[A-Za-z0-9]{7,8}\/?$/i.test(url.pathname);
+    && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_[A-Za-z0-9]{6,8}\/?$/i.test(url.pathname);
   const vs = validIssuer && url.hostname === "vs.gr"
     && /^\/iv\/invoice\/download\/([A-Za-z0-9]{4}_[0-9])\/\1~k1~[a-f0-9]{40}~[A-Za-z0-9_-]{43}\/?$/.test(url.pathname);
   const onesign = validIssuer && url.hostname === "onesign-api.onesys.gr"
