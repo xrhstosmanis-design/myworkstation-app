@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import express from 'express';
 import {z} from 'zod';
 import {chatTopic,topicRow} from '../src/chat-topics.mjs';
+import {mountChatGroups} from '../src/chat-groups.mjs';
 import {searchChatMessages} from '../src/chat-search-forward.mjs';
 import {enforceBackofficeStaff,requireStaffGrant,staffError} from '../src/services/backoffice-staff-access.js';
 import {ownerRestrictedModuleKeys} from '../src/services/module-catalog.js';
@@ -35,7 +36,7 @@ test('native chat reads preserve scoped metadata and validated attachment audit 
   }
  };
  const modules=await moduleRuntime(db),source=await readFile(new URL('../src/routes/store-chat.js',import.meta.url),'utf8');
- const env={chatTopic,topicRow,searchChatMessages,forwardChatMessage:forbidden,forwardInput:forbidden,mobileChatStores:forbidden,ensureStoreChatInteractions:forbidden,chatSendContext:forbidden,acknowledgeChatDelivery:forbidden,setChatReaction:forbidden,sendNativeChatPush:forbidden,nativePushStatus:forbidden,renewChatOperatorSession:forbidden,parseVoiceAttachment:forbidden,parseVideoAttachment:forbidden,crypto,express,prisma:db,companyModuleState:modules.companyModuleState,effectiveModuleEnabled:modules.effectiveModuleEnabled,isPlatformSuperAdmin:modules.isPlatformSuperAdmin,requireStoreModule:modules.requireStoreModule,ensureStoreChatPushSchema:forbidden,saveStoreChatPushSubscription:forbidden,sendStoreChatPush:forbidden,storeChatPushPublicKey:forbidden,requireStaffGrant,staffError};
+ const env={chatTopic,topicRow,mountChatGroups,searchChatMessages,forwardChatMessage:forbidden,forwardInput:forbidden,mobileChatStores:forbidden,ensureStoreChatInteractions:forbidden,chatSendContext:forbidden,acknowledgeChatDelivery:forbidden,setChatReaction:forbidden,sendNativeChatPush:forbidden,nativePushStatus:forbidden,renewChatOperatorSession:forbidden,parseVoiceAttachment:forbidden,parseVideoAttachment:forbidden,crypto,express,prisma:db,companyModuleState:modules.companyModuleState,effectiveModuleEnabled:modules.effectiveModuleEnabled,isPlatformSuperAdmin:modules.isPlatformSuperAdmin,requireStoreModule:modules.requireStoreModule,ensureStoreChatPushSchema:forbidden,saveStoreChatPushSubscription:forbidden,sendStoreChatPush:forbidden,storeChatPushPublicKey:forbidden,requireStaffGrant,staffError};
  const router=evaluate(source,env),app=await listen(db,'/api/store-chat',router,modules.requireStoreModule('STORE_CHAT'));
  try{
   for(const path of ['/stores/store/messages?topic=GENERAL','/stores/store/messages/search?q=Synthetic&topic=GENERAL']){

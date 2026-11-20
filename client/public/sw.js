@@ -17,6 +17,7 @@ const sameStore=(client,storeId)=>{
     return url.origin===self.location.origin&&[`/store/${encodeURIComponent(String(storeId))}`,`/chat/${encodeURIComponent(String(storeId))}`].includes(url.pathname.replace(/\/$/,""));
   }catch{return false}
 };
+const replyTarget=(messageId,topic)=>typeof messageId==="string"&&/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(messageId)&&["GENERAL","CASH","INVOICE"].includes(topic)?{messageId,topic}:null;
 self.addEventListener("push",event=>{
   let data={};
   try{data=event.data?.json()||{}}catch{}
@@ -26,10 +27,12 @@ self.addEventListener("push",event=>{
       visibleStoreWindows.forEach(client=>client.postMessage({...data,type:"STORE_CHAT_PUSH"}));
       return;
     }
+    const reply=data.storeId?replyTarget(data.messageId,data.topic):null;
     return self.registration.showNotification(data.title||"MyWorkStation · Chat",{
       body:data.body||"Νέο μήνυμα στο Chat",icon:"/pwa-192.png",badge:"/pwa-192.png",
       tag:`store-chat-${data.storeId||"message"}`,renotify:true,silent:false,vibrate:[200,100,200],
-      data:{url:applicationUrl(data.storeId?`/chat/${encodeURIComponent(String(data.storeId))}${isChatWorker()?"/":""}`:data.url).href}
+      ...(reply?{actions:[{action:"reply",title:"Απάντηση"}]}:{}),
+      data:{reply,url:applicationUrl(data.storeId?`/chat/${encodeURIComponent(String(data.storeId))}${isChatWorker()?"/":""}`:data.url).href}
     });
   }));
 });
@@ -38,13 +41,16 @@ self.addEventListener("notificationclick",event=>{
   const original=applicationUrl(event.notification.data?.url);
   const legacyStore=original.pathname.match(/^\/store\/([^/]+)\/?$/);
   const target=legacyStore?applicationUrl(`/chat/${legacyStore[1]}`):original;
+  const reply=event.action==="reply"&&/^\/chat\/[^/]+\/?$/.test(target.pathname)
+    ?replyTarget(event.notification.data?.reply?.messageId,event.notification.data?.reply?.topic):null;
+  if(reply){target.searchParams.set("reply",reply.messageId);target.searchParams.set("topic",reply.topic)}
   event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{
     const chatScope=isChatWorker();
     const existing=windows.find(client=>{
       try{const url=new URL(client.url);return url.origin===target.origin&&(url.pathname.replace(/\/$/,"")===target.pathname.replace(/\/$/,"")||(chatScope&&target.pathname.startsWith("/chat/")&&url.pathname.startsWith("/chat/")))}catch{return false}
     });
     if(existing){
-      if(target.pathname.startsWith("/chat/"))existing.postMessage({type:"STORE_CHAT_OPEN",storeId:decodeURIComponent(target.pathname.split("/")[2])});
+      if(target.pathname.startsWith("/chat/"))existing.postMessage({type:"STORE_CHAT_OPEN",storeId:decodeURIComponent(target.pathname.split("/")[2]),...(reply?{reply}:{})});
       return existing.focus();
     }
     return clients.openWindow(target.href);

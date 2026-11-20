@@ -410,6 +410,12 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / delegated bank transfer history. [Checkpoint](CHANGES/2026-11-13-manager-payment-history-implementation.md), PR #3851. CI passed before synchronization; hosted LAB pending.
 
 
+## 19/11/2026 — Νο 16 · Chat καταστημάτων / #4028
+
+Συνέχεια της ίδιας ανάθεσης στο `codex/store-chat-photo-read-swipe`. Στο `a12325ae` πέρασε το Chat browser probe 44406483121. Το πλήρες CI 44406483116 χρειάζεται την παρούσα ενεργή λίστα. Η νέα παρτίδα συγκεντρώνει γρήγορη απάντηση από ειδοποίηση, σίγαση ανά ενότητα, αναφορές προσωπικού και ομάδες, μαζί με την ανάγνωση ορατής φωτογραφίας και το σύρσιμο για απάντηση. Η αποδοχή χρήστη παραμένει μία συγκεντρωτική συνεδρία στο υπάρχον LAB.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-store-chat-photo-read-swipe.md`.
+
 ## 2026-11-13 — Inventory audit purchase document links
 
 PRs #3852 and #3856 merged. Scoped hosted LAB PASS on fbc7167: standalone OCR approval linked the purchase document to the +2 movement in inventory reconciliation (8 → 10, zero net difference). Physical receipt time and verified original remain open. [Checkpoint](CHANGES/2026-11-13-inventory-receipt-lab-pass.md).

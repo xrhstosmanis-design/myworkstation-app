@@ -1,8 +1,11 @@
 import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
-import {chatTopic,topicRow} from '../chat-topics.mjs';
+import {chatGroupRoster} from "../chat-groups.mjs";
+import {ensureChatGroups,mountChatGroups} from "../chat-groups.mjs";
+import {ensureChatNotificationPreferences,mutedChatUsers,setChatTopicMuted} from "../chat-notification-preferences.js";
+import {categoryTopic,chatTopic,topicRow} from '../chat-topics.mjs';
 import {searchChatMessages,forwardChatMessage,forwardInput} from "../chat-search-forward.mjs";
 import {mobileChatStores} from "../chat-mobile.mjs";
-import {ensureStoreChatInteractions,chatSendContext,acknowledgeChatDelivery,setChatReaction} from "../chat-interactions.mjs";
+import {ensureStoreChatInteractions,chatSendContext,chatMessageId,acknowledgeChatDelivery,setChatReaction} from "../chat-interactions.mjs";
 import {sendNativeChatPush,nativePushStatus} from '../native-chat-push.mjs';
 import {renewChatOperatorSession} from '../chat-operator-auth.mjs';
 import {parseVoiceAttachment} from '../chat-voice.mjs';
@@ -19,6 +22,7 @@ const ATTACHMENT_TYPES=new Set(["image/jpeg","image/png","image/webp","applicati
 
 export async function ensureStoreChatSchema(){
   await ensureStoreChatPushSchema();
+  await ensureChatNotificationPreferences();
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreChatMessage" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"senderId" TEXT NOT NULL,"category" TEXT NOT NULL DEFAULT 'GENERAL',"body" TEXT NOT NULL,"important" BOOLEAN NOT NULL DEFAULT false,"pinned" BOOLEAN NOT NULL DEFAULT false,"completed" BOOLEAN NOT NULL DEFAULT false,"createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMP NOT NULL DEFAULT NOW())`);
   for(const sql of [`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "attachmentName" TEXT`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "attachmentSize" INTEGER`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "attachmentData" TEXT`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "completedBy" TEXT`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "aiReaderJobId" TEXT`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "aiReaderSentBy" TEXT`,`ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "aiReaderSentAt" TIMESTAMP`])await prisma.$executeRawUnsafe(sql);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreChatMessage_store_created_idx" ON "StoreChatMessage" ("storeId","createdAt")`);
@@ -35,6 +39,7 @@ export async function ensureStoreChatSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "StoreChatSettings" ADD COLUMN IF NOT EXISTS "employeeTaskCreationEnabled" BOOLEAN NOT NULL DEFAULT true`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreChatAcknowledgement" ("messageId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"userId" TEXT NOT NULL,"acknowledgedAt" TIMESTAMP NOT NULL DEFAULT NOW(),PRIMARY KEY ("messageId","userId"))`);
   await ensureStoreChatInteractions(prisma);
+  await ensureChatGroups(prisma);
 }
 async function storeFor(req,res){const id=String(req.params.storeId||req.body?.storeId||"");if(req.user?.staffAccess===true){if(req.method!=='GET'||req.user.storeId!==id||req.staffGrant?.capability!=='chat.read'||!/^\/api\/store-chat\/stores\/[^/]+\/messages(?:\/search|\/[^/]+\/attachment)?$/.test(String(req.originalUrl||'').split('?')[0]))throw staffError();await requireStaffGrant(prisma,req.user,id,'chat.read');}if(!id){res.status(400).json({error:"Δεν προσδιορίστηκε κατάστημα."});return null;}const store=await prisma.store.findUnique({where:{id},select:{id:true,companyId:true,name:true}}),user=req.user||{};if(!store||(!isPlatformSuperAdmin(user)&&String(user.companyId)!==String(store.companyId))||(user.tokenType==="STORE_OPERATOR"&&String(user.storeId)!==String(id))){res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});return null;}return store}
 function canPin(user){return isPlatformSuperAdmin(user)||(user?.tokenType!=="STORE_OPERATOR"&&user?.role==="OWNER")}
@@ -74,6 +79,10 @@ async function checkedChatModule(req,res,id){
  let allowed=false;await requireStoreModule("STORE_CHAT")(probe,res,error=>{if(error)throw error;allowed=true});
  return allowed?probe.targetStore:null;
 }
+mountChatGroups(router, {
+  db:prisma, selectStore:selectedChatStore, checkModule:checkedChatModule,
+  canManage:user=>canPin(user)||(user?.tokenType!=="STORE_OPERATOR"&&user?.role==="MANAGER"),
+});
 router.get("/stores/:storeId/messages/search",async(req,res,next)=>{try{
  res.setHeader("Cache-Control","no-store, private");
  const store=await selectedChatStore(req,res);if(!store)return;if(!await checkedChatModule(req,res,store.id))return;
@@ -97,8 +106,8 @@ router.post("/stores/:storeId/messages/:messageId/forward",async(req,res,next)=>
  const result=await forwardChatMessage(prisma,{source,target,user:req.user,messageId:req.params.messageId,requestId:input.requestId,topic:input.topic,attachmentPolicy:{canCopyAttachment:canDownload(req.user,sourceSettings),photosEnabled:targetSettings.photosEnabled,pdfEnabled:targetSettings.pdfEnabled}},
   (tx,id)=>audit(req,target,"STORE_CHAT_MESSAGE_FORWARDED",{messageId:id,category:input.topic||"GENERAL"},tx));
  if(!result.replayed){
-  await sendStoreChatPush({store:target,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));
-  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store:target,senderId:req.user.id}).catch(()=>{});});
+  await sendStoreChatPush({store:target,senderId:req.user.id,messageId:result.id,topic:result.topic}).catch(()=>({attempted:0,delivered:0}));
+  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store:target,senderId:req.user.id,messageId:result.id,topic:result.topic}).catch(()=>{});});
  }
  res.status(result.replayed?200:201).json(result);
 }catch(e){next(e)}});
@@ -189,19 +198,49 @@ router.put("/stores/:storeId/messages/:messageId/reaction",async(req,res,next)=>
  res.setHeader("Cache-Control","no-store, private");res.json(result);
 }catch(e){next(e)}});
 
+// A notification reply inherits the live category from its scoped parent message.
+router.post('/stores/:storeId/messages/:messageId/notification-reply',async(req,res,next)=>{try{
+  res.setHeader('Cache-Control','no-store, private');
+  const store=await selectedChatStore(req,res);if(!store)return;
+  const parent=chatMessageId(req.params.messageId);
+  const requestId=req.body?.requestId;
+  const body=typeof req.body?.body==='string'?req.body.body.trim():'';
+  if(!body||body.length>5000||typeof requestId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(requestId))
+    return res.status(400).json({error:'Μη έγκυρη απάντηση από ειδοποίηση.'});
+  const id='chat-notification-'+crypto.createHash('sha256').update(JSON.stringify([req.user.id,requestId])).digest('hex');
+  const saved=await prisma.$transaction(async tx=>{
+    const {replyToId,category}=await chatSendContext(tx,store,parent);
+    const inserted=await tx.$queryRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${replyToId},NOW(),NOW()) ON CONFLICT ("id") DO NOTHING RETURNING "id"`;
+    if(!inserted.length){
+      const previous=await tx.$queryRaw`SELECT "id" FROM "StoreChatMessage" WHERE "id"=${id} AND "companyId"=${store.companyId} AND "storeId"=${store.id} AND "senderId"=${req.user.id} AND "replyToId"=${replyToId} AND "body"=${body}`;
+      if(previous.length!==1)throw Object.assign(new Error('Η απάντηση από ειδοποίηση έχει ήδη χρησιμοποιηθεί.'),{status:409});
+    }else await audit(req,store,'STORE_CHAT_MESSAGE_SENT',{messageId:id,category,hasAttachment:false},tx);
+    return {topic:categoryTopic(category),created:inserted.length===1};
+  });
+  if(saved.created){
+    const {topic}=saved;
+    setImmediate(()=>{
+      sendStoreChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>{});
+      if(nativePushStatus().configured)sendNativeChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>{});
+    });
+  }
+  res.status(saved.created?201:200).json({ok:true,id});
+}catch(e){next(e)}});
+
 // Independent voice endpoint: old image/PDF parsing and invoice handling stay unchanged.
 router.post('/stores/:storeId/voice-messages',async(req,res,next)=>{try{
   const store=await storeFor(req,res);if(!store)return;
   const text=req.body?.body??'';
   if(typeof text!=='string'||text.trim().length>5000||(req.body?.topic===undefined&&req.body?.category!==undefined&&req.body.category!=='GENERAL'))return res.status(400).json({error:'Μη έγκυρο φωνητικό μήνυμα.'});
   const attachment=parseVoiceAttachment(req.body?.attachment),body=text.trim(),id=crypto.randomUUID();
-  await prisma.$transaction(async tx=>{
+  const topic=await prisma.$transaction(async tx=>{
     const {replyToId,category}=await chatSendContext(tx,store,req.body?.replyToId,req.body);
     await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},${replyToId},NOW(),NOW())`;
     await audit(req,store,'STORE_CHAT_MESSAGE_SENT',{messageId:id,category,hasAttachment:true,attachmentName:attachment.name,attachmentMimeType:attachment.mimeType,attachmentSize:attachment.size,attachmentChecksum:attachment.checksum,durationMs:attachment.durationMs},tx);
+    return categoryTopic(category);
   });
-  const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));
-  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id}).catch(()=>{});});
+  const push=await sendStoreChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>({attempted:0,delivered:0}));
+  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>{});});
   res.setHeader('Cache-Control','no-store, private');res.status(201).json({ok:true,id,push});
 }catch(e){next(e)}});
 
@@ -212,15 +251,36 @@ router.post('/stores/:storeId/video-messages',async(req,res,next)=>{try{
   const text=req.body?.body??'';
   if(typeof text!=='string'||text.trim().length>5000||(req.body?.topic===undefined&&req.body?.category!==undefined&&req.body.category!=='GENERAL'))return res.status(400).json({error:'Μη έγκυρο βίντεο μήνυμα.'});
   const attachment=parseVideoAttachment(req.body?.attachment),body=text.trim(),id=crypto.randomUUID();
-  await prisma.$transaction(async tx=>{
+  const topic=await prisma.$transaction(async tx=>{
     const {replyToId,category}=await chatSendContext(tx,store,req.body?.replyToId,req.body);
     await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},${replyToId},NOW(),NOW())`;
     await audit(req,store,'STORE_CHAT_MESSAGE_SENT',{messageId:id,category,hasAttachment:true,attachmentName:attachment.name,attachmentMimeType:attachment.mimeType,attachmentSize:attachment.size,attachmentChecksum:attachment.checksum,durationMs:attachment.durationMs},tx);
+    return categoryTopic(category);
   });
-  const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));
-  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id}).catch(()=>{});});
+  const push=await sendStoreChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>({attempted:0,delivered:0}));
+  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>{});});
   res.setHeader('Cache-Control','no-store, private');res.status(201).json({ok:true,id,push});
 }catch(e){next(e)}});
+
+router.get("/stores/:storeId/mention-choices", async (req,res,next) => {try {
+  const store=await selectedChatStore(req,res);if(!store||!await checkedChatModule(req,res,store.id))return;
+  const members=await chatGroupRoster(prisma,store);
+  res.setHeader("Cache-Control","no-store, private");
+  res.json({members});
+} catch(error) {next(error)}});
+
+router.get("/stores/:storeId/notification-preferences/:topic", async (req,res,next) => {try {
+  const store=await selectedChatStore(req,res);if(!store||!await checkedChatModule(req,res,store.id))return;
+  const muted=await mutedChatUsers(store,req.params.topic);
+  res.setHeader("Cache-Control","no-store, private");
+  res.json({muted:muted.has(req.user.id)});
+} catch(error) {next(error)}});
+router.put("/stores/:storeId/notification-preferences/:topic", async (req,res,next) => {try {
+  const store=await selectedChatStore(req,res);if(!store||!await checkedChatModule(req,res,store.id))return;
+  res.setHeader("Cache-Control","no-store, private");
+  await setChatTopicMuted(store,req.user.id,req.params.topic,req.body?.muted);
+  res.json({muted:req.body.muted});
+} catch(error) {next(error)}});
 
 router.get("/stores/:storeId/push-key",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;res.setHeader("Cache-Control","no-store");res.json({publicKey:await storeChatPushPublicKey()})}catch(e){next(e)}});
 router.post("/stores/:storeId/push-subscription",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;await saveStoreChatPushSubscription({store,user:req.user,subscription:req.body?.subscription});await audit(req,store,"STORE_CHAT_PUSH_SUBSCRIBED",{messageId:null});res.status(201).json({ok:true})}catch(e){next(e)}});
@@ -278,7 +338,7 @@ router.patch("/stores/:storeId/tasks/:taskId",async(req,res,next)=>{try{
   await prisma.$executeRaw`UPDATE "StoreChatTask" SET "status"=${completed?"COMPLETED":"OPEN"},"completedBy"=${completed?req.user.id:null},"completedAt"=${completed?new Date():null} WHERE "id"=${taskId} AND "companyId"=${store.companyId} AND "storeId"=${store.id}`;
   await audit(req,store,completed?"STORE_CHAT_TASK_COMPLETED":"STORE_CHAT_TASK_REOPENED",{messageId:found[0].messageId,taskId,status:completed?"COMPLETED":"OPEN"});res.json({ok:true});
 }catch(e){next(e)}});
-router.post("/stores/:storeId/messages",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;const body=String(req.body?.body||"").trim(),requestedCategory=String(req.body?.category||"GENERAL").toUpperCase(),attachment=parseAttachment(req.body?.attachment),settings=await chatSettings(store);if(attachment?.mimeType.startsWith("image/")&&!settings.photosEnabled)return res.status(403).json({error:"Οι φωτογραφίες είναι ανενεργές για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PHOTOS_DISABLED"});if(attachment?.mimeType==="application/pdf"&&!settings.pdfEnabled)return res.status(403).json({error:"Τα PDF είναι ανενεργά για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PDF_DISABLED"});if((!body&&!attachment)||body.length>5000||!TYPES.has(requestedCategory))return res.status(400).json({error:"Μη έγκυρο μήνυμα ή κατηγορία."});const id=`chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;await prisma.$transaction(async tx=>{const {replyToId,category}=await chatSendContext(tx,store,req.body?.replyToId,{topic:req.body?.topic,category:requestedCategory});await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${attachment?.name||null},${attachment?.mimeType||null},${attachment?.size||null},${attachment?.checksum||null},${attachment?.data||null},${replyToId},NOW(),NOW())`;await audit(req,store,"STORE_CHAT_MESSAGE_SENT",{messageId:id,category,hasAttachment:Boolean(attachment),attachmentName:attachment?.name||null,attachmentMimeType:attachment?.mimeType||null,attachmentSize:attachment?.size||null,attachmentChecksum:attachment?.checksum||null},tx);});const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id}).catch(()=>{});});res.status(201).json({ok:true,id,push})}catch(e){next(e)}});
+router.post("/stores/:storeId/messages",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;const body=String(req.body?.body||"").trim(),requestedCategory=String(req.body?.category||"GENERAL").toUpperCase(),attachment=parseAttachment(req.body?.attachment),settings=await chatSettings(store);if(attachment?.mimeType.startsWith("image/")&&!settings.photosEnabled)return res.status(403).json({error:"Οι φωτογραφίες είναι ανενεργές για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PHOTOS_DISABLED"});if(attachment?.mimeType==="application/pdf"&&!settings.pdfEnabled)return res.status(403).json({error:"Τα PDF είναι ανενεργά για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PDF_DISABLED"});if((!body&&!attachment)||body.length>5000||!TYPES.has(requestedCategory))return res.status(400).json({error:"Μη έγκυρο μήνυμα ή κατηγορία."});const id=`chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;const topic=await prisma.$transaction(async tx=>{const {replyToId,category}=await chatSendContext(tx,store,req.body?.replyToId,{topic:req.body?.topic,category:requestedCategory});await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${attachment?.name||null},${attachment?.mimeType||null},${attachment?.size||null},${attachment?.checksum||null},${attachment?.data||null},${replyToId},NOW(),NOW())`;await audit(req,store,"STORE_CHAT_MESSAGE_SENT",{messageId:id,category,hasAttachment:Boolean(attachment),attachmentName:attachment?.name||null,attachmentMimeType:attachment?.mimeType||null,attachmentSize:attachment?.size||null,attachmentChecksum:attachment?.checksum||null},tx);return categoryTopic(category);});const push=await sendStoreChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>({attempted:0,delivered:0}));if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id,messageId:id,topic}).catch(()=>{});});res.status(201).json({ok:true,id,push})}catch(e){next(e)}});
 router.post("/stores/:storeId/mobile-renew",async(req,res,next)=>{try{
  const store=await storeFor(req,res);if(!store)return;
  res.setHeader("Cache-Control","no-store");
