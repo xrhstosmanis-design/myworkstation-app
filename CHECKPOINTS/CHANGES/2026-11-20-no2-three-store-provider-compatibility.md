@@ -1,4 +1,4 @@
-# Νο02 — Three-store supplier PDF compatibility audit / BEFORE SOURCE
+# Νο02 — Three-store supplier PDF compatibility audit / VERIFIED FOUR-PROVIDER SOURCE — AWAITING EXACT CI AND INSTALLATION
 
 20/11/2026 Europe/Athens. Retained No02 owner `/root`, branch `fix/no2-verified-provider-compatibility-20261120`. The owner expanded the existing request to all suppliers with PDF acquisition problems in Αχαρνών 309, Ριζαρείου and Διαδόχου Παύλου. Overall No02 remains OPEN.
 
@@ -21,3 +21,33 @@ The audit may prepare a selected-store status breakdown and reasons that disting
 ## Acceptance and current status
 
 This is a documentation-only before-source claim. New compatibility source is NOT STARTED / NOT TESTED. The provider inventory is read-only work in progress. After claim CI and merge, require targeted provider regression tests, original-acquisition/draft preservation regressions, build, full exact source/main CI and ordinary guarded installation for any runtime correction. Group remaining supplier-original recovery/read/confirmed same-draft lines into the agreed final session using existing authorized records. Previously observed successes and external blockers retain their precise scope.
+
+
+## Offline audit and S1 source preparation — 20/11/2026
+
+Before-source claim #4075 merged as 7ecb878ab0b7b752bc18984ee58b431ff8991c16 after documentation CI 44686875481 passed all three applicable checks; two runtime jobs were skipped by documentation classification. The retained No02 adapter scope is independent of #4048. That unmerged bulk/scheduler recovery work has unconfirmed page ownership and is not taken over, activated or changed here.
+
+The read-only three-store metadata inventory is complete. It groups 53 provider URL profiles and 511 supplier-name/profile combinations. Source rows are stored records, not logical invoice counts. The private audit retains each store's row totals, missing-URL/unattempted/failed/PDF/non-PDF distinctions and potential S1 candidates. Missing PDF evidence does not establish acquisition failure or a financial balance.
+
+Only two source/test files are prepared. The original URL parser accepts the exact existing S1 QR-provider host einvoice.s1ecos.gr with its issuer-bound canonical path and appends the existing /pdf suffix. It also rejects raw or XML-decoded whitespace/control characters before URL parsing. Targeted tests cover that exact host, issuer/path/token shape, credentials, nondefault ports, query/fragment, lookalike/subdomains and malformed controls. The mocked PDF path retains redirect rejection and existing PDF identity checks. All other provider profiles remain inventory-only; the earlier Epsilon third-party verification/export blocker remains unchanged.
+
+The final combined original-download, QR, PDF-route and HTTP-error regression batch passed **25 tests / 25 PASS / 0 FAIL / 0 SKIP** locally. A preceding broader startup failed because the local Prisma dependency had not been generated; after local generation the combined batch passed. No production database was used for this preparation. Root source review passed for the two-file diff. These results establish local synthetic behavior only. No current real-provider PDF download or application-side identity verification PASS is claimed for S1 or other audited providers.
+
+Automatic approval review rejected the external PDF probe batch because it would transmit private invoice URLs/tokens to a provider without specific authorization for that disclosure. No retry or alternate provider request followed the rejection. The user must review the concrete destinations, data and purpose before live acquisition tests continue; the exact private destination inventory is retained outside this public repository. No additional provider email is authorized here.
+
+Publish this preparation only as a **DRAFT source PR**. Do not merge or deploy before the root review and explicit private-link transmission approval/live proof. Full source/main CI and ordinary guarded installation remain future gates for an approved correction. The installed #4069 bridge, No04 core and financial/stock/fiscal behavior retain their previous evidence. Overall No02 remains OPEN.
+
+
+## Explicit approval and verified four-provider source — 20/11/2026
+
+The owner explicitly approved using the private invoice links and tokens solely with their respective named providers for the disclosed PDF acquisition/identity checks. This resolves the earlier automatic-review disclosure blocker for those approved probes only. The previous DRAFT hold above records the earlier state and is superseded by this approved, bounded evidence.
+
+Read-only approved acquisition returned actual PDFs from **einvoice.s1ecos.gr**, **e-invoicing.gr**, **onesign-api.onesys.gr** and **vs.gr**. The production strict identity verifier passed for all four. A cached run of the complete fetchOriginalPdf pipeline also passed exact expected URL, redirect:error, byte checksum and page-count checks for each original. The S1 sample has two pages; the other three samples have one page each. Private URLs, document identities, PDF contents and checksums remain outside this public repository. These results establish provider acquisition and PDF identity for the observed samples. No application invoice/draft/payment/stock/finalization write was performed.
+
+The final correction remains exactly two source/test files. It enables only the four verified host/path profiles with the existing bounded original parser and strict PDF identity pipeline. OneSign uses its direct public-download path; the other verified formats use their specific PDF suffix contract. Unknown hosts/profiles, query/credentials/nondefault ports, malformed controls and redirect responses remain rejected. Public tests use synthetic tokens and invoices.
+
+The combined original-download, QR, PDF-route and HTTP-error regression batch passed **36/36 tests**, with **0 failures and 0 skips**. Production client/server build passed. Root reviewed the final two-file provider diff and the unchanged existing gates. A generated server index change from the build was restored before publication.
+
+Epsilon third-party remains blocked with no retry or bypass. Megasoft, Wedo and ESKAP returned HTML for the observed requests and are not enabled. Their signals differ: an unhandled provider error with a verification script, an HTML invoice response, and a print-only HTML response respectively. This is not a blanket conclusion that every provider is blocked by the same verifier. No HTML-rendering fallback is added. Other inventoried profiles remain unverified, and #4048 bulk/scheduler recovery remains outside this implementation.
+
+Update the same source PR #4076 with this combined correction. Exact final-head full CI, expected-head merge, exact merged-main full CI and ordinary guarded deployment are authorized after their gates pass. This authorization does not enable bulk production recovery or transfer No04/financial-writer ownership. Hosted application recovery/read/confirmed same-draft line acceptance remains in the grouped final session. Overall No02 remains OPEN.
