@@ -1,3 +1,7 @@
+## 20/11/2026 — Νο02 — standalone zero-value delivery-note financial scope / ASSIGNED BEFORE SOURCE
+
+Same retainedNo02owner/root. Read-only finding: recognizedmyDATA9.3 zero-gross deliverynote currentlyfallsintopaymentREVIEW_REQUIRED andallClear though nofinancialamount; financialPendingincrementnotclaimed. Claimonlystrictstandalone9.3+zero+noinvoice/paymentconflict→financialNOT_APPLICABLE andcorrectmonthlyUIlabel. Unknown/zeroINVOICE/positive/conflictingcasesremainreview; credits/paymentproof/storeguardsprotected. No writers/4048bulk/No04/providerpipelinechanges. SourceNOTSTARTED untilclaimCImerge, exactfullCI/normalguard/groupedacceptance required. [Before-source scope](CHANGES/2026-11-20-no2-delivery-note-financial-scope.md).
+
 ## 20/11/2026 — Νο02 — e-invoicing six-character corpus profile / VERIFIED SOURCE — AWAITING EXACT CI/INSTALLATION
 
 Same No02 owner/root. Claim4077 merged502862af before source. Actual6suffixPDFstrictidentity and fullfetchOriginalPdfcachedreplayPASS1page/1request/redirect:error. Exacte-invoicingUUIDsuffix6–8only;5/9reject+6/7/8fullfetchregressions. RootdiffreviewPASS,36/36localtests0FAIL0SKIP,productionclient/serverbuildPASS;generatedindexrestored. Corpus782rawrows:763priorpatternmatches+19verified6suffixmisses; rawrows≠logicalinvoices≠downloadPASS≠financialbalance. SourceawaitingexactfullCI/mainCI/normalguard. Existing4providerhistoricalreleaseprotected; no4048bulk/No04/financialwrites. OverallNo02OPEN. [Proof, correction and limits](CHANGES/2026-11-20-no2-einvoicing-six-character-profile.md).
