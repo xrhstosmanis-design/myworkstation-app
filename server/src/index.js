@@ -153,6 +153,7 @@ import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoic
 import platformAdminRoutes from "./routes/platform-admin.js";
 import {createBackofficeCompanyInstallationRouter} from './routes/backoffice-company-installation.js';
 import {createAutomaticReportEventInstallationRouter} from './routes/automatic-report-event-installation.js';
+import {createExpectedReceiptInstallationRouter} from './routes/supplier-expected-receipts-installation.js';
 import {createAutomaticReportDispatchRouter} from './routes/automatic-report-dispatch.js';
 import {createAutomaticReportInvitationRouter} from './routes/automatic-report-invitations.js';
 import {readActivation} from './services/automatic-report-activation.js';
@@ -252,6 +253,8 @@ app.use("/api/platform/store-modules",platformStoreModulesRoutes);
 app.use('/api/report-invitations',createAutomaticReportInvitationRouter(prisma));
 app.use('/api/platform/backoffice-company-installation',auth,createBackofficeCompanyInstallationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-event-installation',auth,createAutomaticReportEventInstallationRouter(prisma));
+app.use('/api/platform/companies/:companyId/stores/:storeId/expected-receipt-installation',auth,createExpectedReceiptInstallationRouter(prisma));
+app.use('/api/platform/expected-receipt-installation/stores/:storeId',auth,createExpectedReceiptInstallationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',auth,createAutomaticReportDispatchRouter(prisma));
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);

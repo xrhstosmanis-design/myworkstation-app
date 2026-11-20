@@ -18,6 +18,8 @@ SOURCE_PATHS += ('server/src/services/automatic-report-column-compatibility.js',
 
 SOURCE_PATHS += ('server/src/services/automatic-report-chat-compatibility.js', 'ops/backup/lifecycle/report-chat-compatibility.proposed.json')
 
+SOURCE_PATHS += ('server/src/services/supplier-expected-receipts-lifecycle-profile.js', 'server/src/services/supplier-expected-receipts-lifecycle-inspection.js', 'server/src/services/supplier-expected-receipts-compatibility-definition.js', 'server/src/services/supplier-expected-receipts-compatibility.js')
+
 def compact(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
 

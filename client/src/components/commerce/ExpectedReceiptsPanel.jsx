@@ -1,3 +1,4 @@
+import ExpectedReceiptInstallationPanel from './ExpectedReceiptInstallationPanel.jsx';
 import {expectedReceiptIntentContext,sameExpectedReceiptContext,readExpectedReceiptIntent,createExpectedReceiptIntent,saveExpectedReceiptIntent,clearExpectedReceiptIntent} from './expected-receipt-intents.js';
 import {expectedReceiptProduct} from '../../../../shared/supplier-expected-receipts.mjs';
 import React,{useEffect,useRef,useState} from 'react';
@@ -68,6 +69,7 @@ export default function ExpectedReceiptsPanel({api,storeId,products,onChanged,on
   const pendingProduct=products.find(row=>row.productId===pendingBody?.productId)?.name||data?.rows.find(row=>row.id===pendingIntent?.path.split('/')[4])?.productName;
   const candidate=candidates?.rows.find(row=>row.orderId===link.orderId);
   return <section aria-label="Αναμενόμενες παραλαβές" aria-busy={busy}>
+    <ExpectedReceiptInstallationPanel api={api} storeId={storeId} onInstalled={()=>{load(generation.current).catch(e=>setError(e.message));onChanged();}}/>
     <header><h3>Αναμενόμενες παραλαβές</h3><button type="button" onClick={onClose}>Κλείσιμο</button></header>
     <p>Δήλωσε πρόσθετες μελλοντικές ποσότητες προμηθευτή πέρα από το ήδη καταγεγραμμένο απόθεμα. Η δήλωση είναι χειροκίνητη και δεν συνδέεται αυτόματα με γραμμή εξερχόμενης παραγγελίας. Όταν η παραλαβή περαστεί στην αποθήκη, σύνδεσέ την εδώ πριν χρησιμοποιήσεις νέα πρόταση παραγγελίας.</p>
     <p>{data?.sourceSupportNote||'Οι αυτόνομες αγορές εκτός παραγγελίας χρειάζονται χωριστό έλεγχο και δεν προσφέρονται για σύνδεση εδώ.'}</p>
