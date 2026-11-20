@@ -1,8 +1,8 @@
+import {automaticCashMailPresentation} from './automatic-report-cash-mail-presentation.js';
 import {monthlyTurnoverMailSections} from './daily-turnover-report.js';
 import {SUPPLIER_COMPARISON_PAYLOAD_FORMAT} from './supplier-comparison-email.js';
 import {createHash} from "node:crypto";
 import {reconcileDeliverySlot} from "./automatic-report-delivery-lifecycle.js";
-import {automaticReviewedMailText} from "./automatic-report-cash-payload.js";
 
 // Dormant dependency-injected adapter. No SMTP client, credentials, DB or timer.
 // startAttempt MUST be a trusted lock-safe repository driver, resolving only
@@ -54,7 +54,7 @@ function request(raw){
     text(content.subject,300);
     if(typeof content.text!=='string'||!content.text.trim())fail();
   }
-  if(Object.hasOwn(content,'reviewedCash'))try{automaticReviewedMailText(content)}catch{fail()}
+  if(!supplier&&!promotion)try{automaticCashMailPresentation(content)}catch{fail()}
   if(!iso(p.period?.from)||!iso(p.period?.to)||p.period.from>=p.period.to||p.period.to>args.now)fail();
   return freeze(args);
 }
@@ -121,12 +121,13 @@ export function createAutomaticReportMailAdapter({startAttempt,sendMail}){
         const result=await sendMail(Object.freeze({to:r.input.recipient,subject:content.subject,text:content.text}));
         return evidence(result,r.input.recipient);
       }
-      const cashText = Object.hasOwn(content,'reviewedCash') ? automaticReviewedMailText(content) : args.payload.body;
+      const presentation=automaticCashMailPresentation(content);
+      const cashText=presentation.text;
       const turnover = content.dailyTurnover;
       const text = turnover
         ? [...monthlyTurnoverMailSections(turnover, content.shiftTurnover, content.storeName), cashText].join("\n\n")
         : cashText;
-      const subject = `ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ${turnover ? ' ΚΑΙ ΤΖΙΡΟΥ' : ''} · ${r.input.frequency} · ${r.input.periodFrom} — ${r.input.periodTo}`;
+      const subject=presentation.subject;
       const result=await sendMail(Object.freeze({to:r.input.recipient,subject,text}));
       return evidence(result,r.input.recipient);
     }catch{return unknown("TRANSPORT_UNCERTAIN")}
