@@ -1,4 +1,4 @@
-# Νο02 — Three-store supplier PDF compatibility audit / BEFORE SOURCE
+# Νο02 — Three-store supplier PDF compatibility audit / SOURCE PREPARED — DRAFT REVIEW HOLD
 
 20/11/2026 Europe/Athens. Retained No02 owner `/root`, branch `fix/no2-verified-provider-compatibility-20261120`. The owner expanded the existing request to all suppliers with PDF acquisition problems in Αχαρνών 309, Ριζαρείου and Διαδόχου Παύλου. Overall No02 remains OPEN.
 
@@ -21,3 +21,18 @@ The audit may prepare a selected-store status breakdown and reasons that disting
 ## Acceptance and current status
 
 This is a documentation-only before-source claim. New compatibility source is NOT STARTED / NOT TESTED. The provider inventory is read-only work in progress. After claim CI and merge, require targeted provider regression tests, original-acquisition/draft preservation regressions, build, full exact source/main CI and ordinary guarded installation for any runtime correction. Group remaining supplier-original recovery/read/confirmed same-draft lines into the agreed final session using existing authorized records. Previously observed successes and external blockers retain their precise scope.
+
+
+## Offline audit and S1 source preparation — 20/11/2026
+
+Before-source claim #4075 merged as 7ecb878ab0b7b752bc18984ee58b431ff8991c16 after documentation CI 44686875481 passed all three applicable checks; two runtime jobs were skipped by documentation classification. The retained No02 adapter scope is independent of #4048. That unmerged bulk/scheduler recovery work has unconfirmed page ownership and is not taken over, activated or changed here.
+
+The read-only three-store metadata inventory is complete. It groups 53 provider URL profiles and 511 supplier-name/profile combinations. Source rows are stored records, not logical invoice counts. The private audit retains each store's row totals, missing-URL/unattempted/failed/PDF/non-PDF distinctions and potential S1 candidates. Missing PDF evidence does not establish acquisition failure or a financial balance.
+
+Only two source/test files are prepared. The original URL parser accepts the exact existing S1 QR-provider host einvoice.s1ecos.gr with its issuer-bound canonical path and appends the existing /pdf suffix. It also rejects raw or XML-decoded whitespace/control characters before URL parsing. Targeted tests cover that exact host, issuer/path/token shape, credentials, nondefault ports, query/fragment, lookalike/subdomains and malformed controls. The mocked PDF path retains redirect rejection and existing PDF identity checks. All other provider profiles remain inventory-only; the earlier Epsilon third-party verification/export blocker remains unchanged.
+
+The final combined original-download, QR, PDF-route and HTTP-error regression batch passed **25 tests / 25 PASS / 0 FAIL / 0 SKIP** locally. A preceding broader startup failed because the local Prisma dependency had not been generated; after local generation the combined batch passed. No production database was used for this preparation. Root source review passed for the two-file diff. These results establish local synthetic behavior only. No current real-provider PDF download or application-side identity verification PASS is claimed for S1 or other audited providers.
+
+Automatic approval review rejected the external PDF probe batch because it would transmit private invoice URLs/tokens to a provider without specific authorization for that disclosure. No retry or alternate provider request followed the rejection. The user must review the concrete destinations, data and purpose before live acquisition tests continue; the exact private destination inventory is retained outside this public repository. No additional provider email is authorized here.
+
+Publish this preparation only as a **DRAFT source PR**. Do not merge or deploy before the root review and explicit private-link transmission approval/live proof. Full source/main CI and ordinary guarded installation remain future gates for an approved correction. The installed #4069 bridge, No04 core and financial/stock/fiscal behavior retain their previous evidence. Overall No02 remains OPEN.

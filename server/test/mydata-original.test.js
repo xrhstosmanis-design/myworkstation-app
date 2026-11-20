@@ -25,6 +25,23 @@ test("provider adapter rejects arbitrary hosts, credentials, redirects targets a
   for(const url of [base.replace("https:","http:"),base.replace("einvoice.impact.gr","127.0.0.1"),base.replace("einvoice.impact.gr","einvoice.impact.gr.evil.test"),base.replace("//","//user:pass@"),base+"?redirect=evil",base.replace("099999999","088888888")])assert.throws(()=>originalDownloadUrl(`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`,row.issuerVat));
   assert.throws(()=>originalDownloadUrl("<qrCodeUrl>https://mydatapi.aade.gr</qrCodeUrl>",row.issuerVat),/δεν έχει/);
 });
+test("S1 original accepts only the issuer-bound canonical provider URL", async () => {
+  const original=base.replace("einvoice.impact.gr","einvoice.s1ecos.gr");
+  const xml=url=>`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
+  assert.equal(originalDownloadUrl(xml(original),row.issuerVat),original+"/pdf");
+  assert.equal(originalDownloadUrl(xml(original+"/"),row.issuerVat),original+"/pdf");
+  for(const url of [original.replace("https:","http:"),original.replace("s1ecos.gr","s1ecos.gr.evil.test"),original.replace("s1ecos.gr","other.s1ecos.gr"),original.replace("099999999","088888888"),original.replace("/p/","/v/"),original.slice(0,-1),original+"/pdf",original.replace("https://","https://user:pass@"),original.replace(".gr/",".gr:8443/"),original+"?redirect=evil",original+"#fragment",original.replace("s1ecos","s1\necos"),original.replace("/EL","/E&#9;L"),original.replace("/EL","/E%09L")]){
+    assert.throws(()=>originalDownloadUrl(xml(url),row.issuerVat));
+  }
+  const bytes=Buffer.from("%PDF-"+"x".repeat(110));
+  const calls=[];
+  const result=await fetchOriginalPdf({...row,rawPayload:{xml:xml(original)}},async(url,options)=>{
+    calls.push(url);assert.equal(options.redirect,"error");
+    return new Response(bytes,{headers:{"content-type":"application/pdf"}});
+  },async()=>({text:`${row.mark} ${row.issuerVat} ${row.counterpartVat} ${row.documentNumber}`,pageCount:2}));
+  assert.deepEqual(calls,[original+"/pdf"]);
+  assert.equal(result.pageCount,2);assert.deepEqual(result.bytes,bytes);
+});
 test("Epsilon Digital original uses a restricted provider URL and verifies PDF identity", async () => {
   const original = "https://epsilondigital.epsilonnet.gr/fd/" + "a".repeat(32) + ":8";
   const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
