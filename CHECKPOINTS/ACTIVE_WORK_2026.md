@@ -1,7 +1,3 @@
-## 20/11/2026 — Μενού είδους Αποθήκης — Τοπική υλοποίηση, LAB NOT TESTED
-
-Διαδόχου KM3282. Δεδομένα προϊόντος και καταστήματος από την ανοιχτή Αποθήκη, σύνδεση υπομενού και έλεγχοι εκτυπώσεων, ιστορικών και εξαγωγών. 33 στοχευμένοι έλεγχοι και frontend build πέρασαν τοπικά. Εκκρεμούν δημοσίευση, CI και συγκεντρωτική δοκιμή LAB. [Checkpoint](CHANGES/2026-11-20-warehouse-product-menu.md).
-
 ## 20/11/2026 — Νο02 — ordinary verified original attachment / ROOT REVIEW APPROVED — AWAITING FULL SOURCE CI
 
 SameNo02owner/root. Before-source4098/heada51c1ca8 passed docsCI44758637414SUCCESS3applicable/2docs-runtimeSKIP and merged7335e740 before code. Actual ordinary createAiJob=true9.3branch nowuses scoped read-only metadata/purepolicy/recheckunderexistinglocks; provenstrictzeroPDF attacheswithoutjob/purchase/originalJobId and replayreusesit. NineactualstrictPASSexactEpsilonpairswiredthroughnewexactregistry; validIssuer/main8/Impact/S1/e-invoicing6–8/vs/OneSignretained,159/169/failedredirectprofilesexcluded. Root73pure/original/providerPASS/0FAIL/0SKIP and9actualprivatePDFcachedadapterreplaysPASS(Node20/0network); finalprofile12PASS/0FAIL/0SKIP304.27ms; actualnativeNode20.20.2PG18.7final9PASS/0FAIL/0SKIP6342.819012ms aftertypedXMLreviewguard, exit0/PGshutdownverified. Initialnativeharnesswrongpre-networkassumption correctedtoafterdownloadproof; uppercaseFDfixturecorrectedtopreserveoldcaseinsensitivecontract. RootlateactualXMLarrayflatteningidentitybugfixedwithtypedtuple+initialXMLstringguard; delayedarraymutation/initialnonstringsrefuse, finalcombined73PASS249.82ms+9cachePDFreplaysagainPASS/0network. Old4099/e90CI44761099674historical/supersedednotproofnewhead. Rootfoundforeign-storeMARKqueryomission andPDFprefix-onlyreplayacceptance; metadataquery/signature-minlengthguardfixed andfinalnativeproofPASS. Earlyempty/npm-onlylogs gave no testproof; localUnixsocketpermissionfailure resolvedbyisolatedTCPloopbacksetup, notproductionchanges. No falsecall/bulk/scheduler/activation/No04/No27 changes. Draft4095policycarriedinordinaryintegration, notseparatelymerged. Full exactsource/mainCI/guardedrelease/hostedacceptancePENDING; overallNo02OPEN. [Actual implementation, review history and limits](CHANGES/2026-11-20-no2-ordinary-original-boundary-claim.md).
@@ -814,6 +810,10 @@ Owner /root retained. #4059 claim merged8396da191. Two UI filter-only changes re
 
 Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI44490139724 all5SUCCESS, each6353PASS/0FAIL/3optionalSKIP+8backupPASS. Guardedrelease44492043448SUCCESS; Renderdep-dbvbk7jrjlhs73bfs0agLIVE10:59:38Athens exact05b5b350. Publichealth200/exactrevision/HTML200 and delivered main-Dt7Lq7S0.js linked-row guard verified11:00:38. Scoped realDB stillFINAL/7/113.11; actual server+client read-only replay old6/106.91→new7/113.11, raw unchanged. No approval/invoicing/payment/stock action. Legacy OCR panel remains disabled. Actual user-tab visual readback pending; no new manual USER PASS or broader Gate closure. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
 
+
+## 20/11/2026 — Μενού είδους Αποθήκης — Τοπική υλοποίηση, LAB NOT TESTED
+
+Διαδόχου KM3282. Δεδομένα προϊόντος και καταστήματος από την ανοιχτή Αποθήκη, σύνδεση υπομενού και έλεγχοι εκτυπώσεων, ιστορικών και εξαγωγών. 33 στοχευμένοι έλεγχοι και frontend build πέρασαν τοπικά. Εκκρεμούν δημοσίευση, CI και συγκεντρωτική δοκιμή LAB. [Checkpoint](CHANGES/2026-11-20-warehouse-product-menu.md).
 
 ## 20/11/2026 07:19 EET — Warehouse/invoice review — compatibility checked / grouped LAB pending
 
