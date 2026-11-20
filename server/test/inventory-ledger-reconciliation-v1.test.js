@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const route=fs.readFileSync(new URL("../src/routes/inventory-product-ledger.js",import.meta.url),"utf8");
-const client=fs.readFileSync(new URL("../../client/src/components/commerce/inventoryContextCorrections.js",import.meta.url),"utf8");
+const client=fs.readFileSync(new URL("../../client/src/components/commerce/inventoryProductActionsV2.js",import.meta.url),"utf8");
 
 test("inventory reconciliation compares current stock with the complete tenant-scoped ledger",()=>{
   assert.match(route,/storePaidModuleState\(storeId,"LOSS_DETECTION"\)/);

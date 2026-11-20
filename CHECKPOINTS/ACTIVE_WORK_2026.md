@@ -823,6 +823,10 @@ Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI444
 
 Διαδόχου KM3282. Δεδομένα προϊόντος και καταστήματος από την ανοιχτή Αποθήκη, σύνδεση υπομενού και έλεγχοι εκτυπώσεων, ιστορικών και εξαγωγών. 33 στοχευμένοι έλεγχοι και frontend build πέρασαν τοπικά. Εκκρεμούν δημοσίευση, CI και συγκεντρωτική δοκιμή LAB. [Checkpoint](CHANGES/2026-11-20-warehouse-product-menu.md).
 
+## 20/11/2026 — Μενού Αποθήκης · Ενοποίηση χειριστών
+
+Μετά το #4093, ο χρήστης επιβεβαίωσε λειτουργικές μόνο τις Κινήσεις είδους. Αφαιρέθηκαν οι δύο παλιοί χειριστές, διατηρήθηκε η συμφωνία αποθέματος και οι Παραγγελίες ανοίγουν για το επιλεγμένο είδος και κατάστημα. Έλεγχοι με προσομοιωμένο API πέρασαν. Εκκρεμεί λειτουργική δοκιμή στο LAB. [Λεπτομέρειες](CHANGES/2026-11-20-warehouse-menu-dispatch.md).
+
 ## 20/11/2026 07:19 EET — Warehouse/invoice review — compatibility checked / grouped LAB pending
 
 Same /root owner and three existing warehouse/invoice task IDs retained. Main a020ce84 targeted Node20 suite:32PASS/0FAIL/1nativePostgreSQLSKIP. Compact CSS/taxonomy helpers and A71942 filter repair retained; changed surrounding No5 archive/store authority tested with actual mounted fixtures. No source change or hosted business/login action. Prior #4040/#4061 native/LIVE proofs reused, no transaction repeated. No5 deployment remains its owner's scope. One combined geometry/taxonomy/markup role session is specified in CHANGES/2026-11-20-warehouse-invoice-common-readiness.md; no new manual PASS.

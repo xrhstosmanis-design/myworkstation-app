@@ -1,3 +1,4 @@
+import {openWarehousePurchaseOrders} from "./installPurchaseOrdersSuite.js";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {BarChart3,Boxes,Camera,ChevronRight,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
@@ -24,7 +25,7 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled}){
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled,warehouseOrders,onWarehouseOrdersHandled}){
   const commerceRoot=useRef(null);
   useEffect(()=>{
     if(!initialInvoiceOrder||!commerceRoot.current)return;
@@ -40,6 +41,10 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
     observer.observe(hub,{childList:true,subtree:true});
     return()=>observer.disconnect();
   },[initialInvoiceOrder,onInitialInvoiceOrderHandled]);
+  useEffect(()=>{
+    if(!warehouseOrders||!commerceRoot.current)return;
+    onWarehouseOrdersHandled?.(openWarehousePurchaseOrders(commerceRoot.current,warehouseOrders));
+  },[warehouseOrders,onWarehouseOrdersHandled]);
   const [cachedActiveModules,setActiveModules]=useState(readActive);
   // The selected-store entry owns fresh module checks. Events/catalog reads
   // must not replace that verified scope or remount an in-progress inbox.
