@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 
-test('installation UI binds inspected scope and packet, requires approval, consumes packets and ignores stale responses',async()=>{
+for(const profile of ['CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V3'])test('installation UI '+profile+' binds inspected scope and packet, requires approval, consumes packets and ignores stale responses',async()=>{
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'});
  const keys=['window','document','navigator','HTMLElement','Node','Event','IS_REACT_ACT_ENVIRONMENT'],previous=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
  for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});
@@ -17,7 +17,7 @@ test('installation UI binds inspected scope and packet, requires approval, consu
  const centralToken=credential({});
  dom.window.localStorage.setItem('token',centralToken);
  const root=createRoot(document.getElementById('root')),calls=[];
- const description={profile:'CAPTURE_REPORTS_ONLY',sourceRevision:'a'.repeat(40),oldPlanHash:'b'.repeat(64),targetPlanHash:'c'.repeat(64)};
+ const description={profile,sourceRevision:'a'.repeat(40),oldPlanHash:'b'.repeat(64),targetPlanHash:'c'.repeat(64)};
  let holdDescribe=false,lateDescribe,lateInstall,failInstall=false,wrongScope=false;
  const packet=store=>({...description,companyId:'c',storeId:store,schema:'public',catalogueSignature:'d'.repeat(64),globalStateSignature:'e'.repeat(64)});
  const request=async(path,options={})=>{
@@ -33,7 +33,7 @@ test('installation UI binds inspected scope and packet, requires approval, consu
  try{
   await render('A');assert.equal(calls.length,0);
   dom.window.localStorage.setItem('token',credential({supportContext:{storeId:'other-store'}}));
-  await act(async()=>{const select=document.querySelector('select');select.value='CAPTURE_REPORTS_ONLY';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  await act(async()=>{const select=document.querySelector('select');select.value=profile;select.dispatchEvent(new Event('change',{bubbles:true}));});
   assert.equal(calls.length,0);
   assert.match(document.body.textContent,/επαναφορά, εξαγωγή και διαγραφή/);
   await act(async()=>button('Έλεγχος εγκατάστασης αναφορών').click());
@@ -42,7 +42,7 @@ test('installation UI binds inspected scope and packet, requires approval, consu
   await act(async()=>document.querySelector('input[type=checkbox]').click());
   await act(async()=>{button('Εγκατάσταση προετοιμασίας αναφορών').click();button('Εγκατάσταση προετοιμασίας αναφορών')?.click();});
   const installs=calls.filter(call=>call.path.endsWith('/install'));assert.equal(installs.length,1);
-  assert.deepEqual(JSON.parse(installs[0].body),{profile:'CAPTURE_REPORTS_ONLY',packet:packet('A'),explicitAuthorization:true});
+  assert.deepEqual(JSON.parse(installs[0].body),{profile,packet:packet('A'),explicitAuthorization:true});
   await act(async()=>lateInstall({installed:true}));assert.equal(button('Εγκατάσταση προετοιμασίας αναφορών'),undefined);
   holdDescribe=true;await act(async()=>button('Έλεγχος εγκατάστασης αναφορών').click());
   await render('B');const count=calls.length;
