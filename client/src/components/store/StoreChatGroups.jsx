@@ -2,6 +2,8 @@ import React,{useEffect,useRef,useState} from "react";
 
 export default function StoreChatGroups({api,storeId,onClose,isCurrentSession}) {
   const endpoint = `/api/store-chat/stores/${encodeURIComponent(storeId)}/groups`;
+  const accessEndpoint = `/api/store-chat/stores/${encodeURIComponent(storeId)}/access-moderation`;
+  const [accessMembers,setAccessMembers] = useState(null);
   const [roster,setRoster] = useState(null);
   const [moderation,setModeration] = useState(null);
   const [selected,setSelected] = useState(null);
@@ -120,6 +122,31 @@ export default function StoreChatGroups({api,storeId,onClose,isCurrentSession}) 
     }
   }
 
+  async function loadAccessMembers() {
+    try {
+      const data = await api(accessEndpoint);
+      if (active()) setAccessMembers(data.members);
+    } catch (error) {
+      if (active()) setError(error.message);
+    }
+  }
+
+  async function changeAccess(member) {
+    const revoked = !member.revoked;
+    const action = revoked ? "Ανάκληση" : "Επαναφορά";
+    if (!active() || busy || !window.confirm(`${action} πρόσβασης του χρήστη «${member.name}» σε όλο το Chat αυτού του καταστήματος;`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(accessEndpoint,{method:"PUT",body:JSON.stringify({userId:member.id,revoked})});
+      await loadAccessMembers();
+    } catch (error) {
+      if (active()) setError(error.message);
+    } finally {
+      if (active()) setBusy(false);
+    }
+  }
+
   async function send(event) {
     event.preventDefault();
     if (!active() || !selected || busy || !draft.trim()) return;
@@ -178,6 +205,19 @@ export default function StoreChatGroups({api,storeId,onClose,isCurrentSession}) 
           <button type="button" disabled={busy} onClick={() => removeMember(member)}>Αφαίρεση από ομάδα</button>
         </div>
       )}
+    </details>}
+    {roster?.mayModerate && <details onToggle={event => {
+      if (event.currentTarget.open) void loadAccessMembers();
+    }}>
+      <summary>Πρόσβαση στο Chat καταστήματος</summary>
+      {accessMembers === null && <p>Φόρτωση χρηστών…</p>}
+      {accessMembers?.length === 0 && <p>Δεν υπάρχουν διαθέσιμοι χρήστες.</p>}
+      {accessMembers?.map(member => <div key={member.id}>
+        <span>{member.name}</span>{" "}
+        <button type="button" disabled={busy} onClick={() => changeAccess(member)}>
+          {member.revoked ? "Επαναφορά πρόσβασης" : "Ανάκληση πρόσβασης"}
+        </button>
+      </div>)}
     </details>}
     {roster && <>
       <label>Ομάδα
