@@ -829,3 +829,8 @@ Same /root owner and three existing warehouse/invoice task IDs retained. Main a0
 ### Νο15 · 20/11/2026 · COMPANY binding και native print fixture
 
 Draft4051/root ίδιο scope. CI44725877823:6894PASS/12FAIL/4SKIP, τέσσερα άλλα jobsSUCCESS. ΈντεκαFAILαπό ένα παλιό sourcehash και ένα από null nativefixture request. Ενημερώθηκε μόνο το ανασκοπημένο table-route digest στο ανενεργόCOMPANY packet· guards/profiles/activation αμετάβλητα.23στοχευμέναPASS/0FAIL/2υποδομήςSKIP, συν actualPG17.12 native print PASS1/0FAIL/0SKIP και έλεγχος middleware predicate. Main8e3d91905και No14handoff διατηρήθηκαν. Νέο πλήρες CI πριν merge/deploy· καμία hosted πράξη και καμία επανάληψη παλιών LABPASS. [Checkpoint](CHANGES/2026-11-19-table-service-final-batch.md).
+
+
+## No02 — original identity OCR boundary claim20Nov2026
+
+Retained /root; explicit user START. Independent same-byte local server identity-only fallback for verified169/cosmote22/telekom22, not No04 line/model/wallet or4048 bulk. Claim before source, NOT TESTED/NOT INSTALLED. See [bounded claim](CHANGES/2026-11-20-no2-identity-ocr-claim.md). Claim CI and main merge required before implementation.
