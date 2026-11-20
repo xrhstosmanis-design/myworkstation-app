@@ -1,3 +1,4 @@
+import {withExpectedReceiptProfile,EXPECTED_RECEIPT_TARGET_PROFILE,EXPECTED_RECEIPT_SOURCE_PROFILE} from './supplier-expected-receipts-lifecycle-profile.js';
 import {withReportOperationalCompatibility,withReportColumnCompatibility,withReportChatCompatibility} from './automatic-report-operational-profile.js';
 import {withAutomaticReportEventConsent} from './automatic-report-event-schema.js';
 import {backofficeCompanyProfile} from './backoffice-company-profile.js';
@@ -10,6 +11,7 @@ const document=JSON.parse(readFileSync(baseUrl,'utf8'));
 export const reviewedFreshStoreManifest=()=>structuredClone(document);
 export function selectedStoreLifecycleManifest(env=process.env){
  const profile=env.MWS_STORE_LIFECYCLE_PROFILE;
+ if(profile===EXPECTED_RECEIPT_TARGET_PROFILE)return withExpectedReceiptProfile(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:EXPECTED_RECEIPT_SOURCE_PROFILE}));
  if(['BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'].includes(profile))return backofficeCompanyProfile(env).manifest;
  if(profile===undefined||profile==='BASE')return reviewedFreshStoreManifest();
  if(profile==='AUTOMATIC_EVENT_REPORTS_V1')return withAutomaticReportEventConsent(document);

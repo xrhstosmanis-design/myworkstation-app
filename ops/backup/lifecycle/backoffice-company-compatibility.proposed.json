@@ -45,9 +45,9 @@
     "ops/backup/lifecycle/column-review.json": "6a298105bb95bd4260fd1e38640c0c15518b6a198579a34527410c7bd7056300",
     "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json": "363d168d3cdaad93eb350da616a764f73ac3556b92d37d09bd47ecd453fece03",
     "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json": "186a879072dec4796d878477233b887fdab8f9952ea8c5a35bb44ecd46a8e931",
-    "server/src/services/store-lifecycle-executor.js": "5a535e6266b69b3e2437959d93a8e4c9f566bb1d8aacdfae433b35c36a580a9b",
+    "server/src/services/store-lifecycle-executor.js": "fff23f69465517e146c60d2f4effb7eb858ba86f5682c4d2858235c36a239752",
     "server/src/services/store-lifecycle-worker-ready.js": "35730d0f89545a1d5bbfcd5feec74390cc4465363e102d34bb748f6c5ace12b8",
-    "server/src/services/store-lifecycle-manifest.js": "03e15c8c1cca5e02820c160697b83285e4fd264a5b0ed06ce90172c9c4535c9d",
+    "server/src/services/store-lifecycle-manifest.js": "4c2d21bddb5ec92f78b777e059e26901dbf932835025791898c09edf2f674d01",
     "ops/backup/lifecycle/worker.py": "6fbfb256eb40122ba603f7dfd0c6f52435549fc16f19c65e1f6388d6180509c4",
     "ops/backup/lifecycle/verify_restore.py": "fe5afb951424b2338b0b9d4f746838adb44e7b502ebf0e2bc23dfb09ba8aa212",
     "server/src/services/backoffice-company-profile.js": "a4cee6730eb2bb7075f5721578a9686ca0486458c77b91f5f2a3b9db361fc11d",
@@ -69,7 +69,7 @@
     "server/scripts/backoffice-company-current-guard-review.mjs": "a0bf3865d0a7cdde20b04cf5f2e539f3edbaae6f7040c510e599e69d014b6221",
     "ops/backup/lifecycle/backoffice-company-current-capture.proposed.json": "53b9d6453351eb44b31c3ec844e6db58e4fe61632995c8916c9659054eb09b93",
     "ops/backup/lifecycle/backoffice-company-current-capture-guards.proposed.json": "4c3158e2a8634bbbe6a9a99957f03a4d3ea214db675e9ca43f2296ec1c4b4704",
-    "ops/backup/lifecycle/backoffice_company_readiness.py": "6616212cb939a89994f6d5e204b3ea0f049832968bb4fea70e8652ed59ec6ce4",
+    "ops/backup/lifecycle/backoffice_company_readiness.py": "563a271e317da1b65609af8e2267dcb1871abe82666b6f4318386d3aaf400780",
     "ops/backup/lifecycle/backoffice-company-current-readiness.sql": "11d2b1722b96065aa0404fefe2beec189879c52caf569ae680e621a590596a25",
     "server/test/fixtures/ftext-full-schema-metadata-20261024.json": "3958f78d444bc92ebef5f9ae95d92605264c193b5b893ea092e8711cf2e9ec4b",
     "server/src/backoffice-staff-bootstrap.js": "2c9cb29576a050c0cc938cbc5931f5e184ea043869b1ff77edb6678ccd8a3b42",
@@ -89,7 +89,11 @@
     "server/src/services/automatic-report-column-compatibility.js": "a669cd0799305470ceb4c2a7f0827eb6743ddfe6c1a9101320bf34efdf640d78",
     "ops/backup/lifecycle/report-column-compatibility.proposed.json": "8d7a8392b9e619a2abb7758981736ecf7d1016ad1ccdfad563c089ca8bf7b473",
     "server/src/services/automatic-report-chat-compatibility.js": "776719e9bbb527652ba6f7a20b2ce589b437f2db77314a285cd04f3ebc473fa8",
-    "ops/backup/lifecycle/report-chat-compatibility.proposed.json": "c430666be89d376dcbc44a585c27422f48f014d9538b0fcc2c903d470113f39d"
+    "ops/backup/lifecycle/report-chat-compatibility.proposed.json": "c430666be89d376dcbc44a585c27422f48f014d9538b0fcc2c903d470113f39d",
+    "server/src/services/supplier-expected-receipts-lifecycle-profile.js": "6c2ab29b20f3535b426363c59db16aa8cb8d4876297480d6ec39f99bdb241b14",
+    "server/src/services/supplier-expected-receipts-lifecycle-inspection.js": "68c89d480cda10c17f00e8399d34385506765bfc592538d58345119bb12c64fa",
+    "server/src/services/supplier-expected-receipts-compatibility-definition.js": "3c6aebcbe0b2106f891f637f13ea6c5f542cd328328a69933ef0c44995403662",
+    "server/src/services/supplier-expected-receipts-compatibility.js": "7c599a5412a644fe078c347e105c453262d1b2d02cd491b25945e69c2fdea89a"
   },
   "runtimeProfilesUnchanged": [
     "BASE",
