@@ -13,13 +13,19 @@ test('No14 UI capability gate, explicit shared-schema approval and ambiguous sam
  const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/commerce/ExpectedReceiptInstallationPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime']});
  const module={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
  const root=createRoot(document.getElementById('root')),calls=[];
- let permitted=false,ambiguous=true,installed=false,heldInstall,hold=false,actorId='admin',revision='a'.repeat(40),inspectFails=false,postRefreshFails=false,enabled=false,enrollmentGeneration=0;
+ let permitted=false,ambiguous=true,installed=false,heldInstall,hold=false,actorId='admin',revision='a'.repeat(40),inspectFails=false,postRefreshFails=false,enabled=false,enrollmentGeneration=0,malformedInspection,postMalformed=false;
  const packet={actorId:'admin',companyId:'c',storeId:'s',sourceRevision:'a'.repeat(40),oldPlanHash:'b'.repeat(64),targetPlanHash:'c'.repeat(64),targetProfile:'NO14',schema:'public',enrollments:[{companyId:'c',storeId:'s',generation:0}],installed:false};
- const api=async(path,options)=>{calls.push({path,options});if(path.endsWith('/inspect')){if(!permitted||inspectFails)throw Error('denied');return {eligible:enabled,reasons:enabled?[]:['EXPECTED_RECEIPT_INSTALL_DISABLED'],packet:{...packet,enrollments:[{companyId:'c',storeId:'s',generation:enrollmentGeneration}],actorId,sourceRevision:revision,storeId:path.includes('/stores/B/')?'B':'s',installed}};}if(path.endsWith('/install')){assert.deepEqual(JSON.parse(options.body),{packet,explicitAuthorization:true});if(ambiguous)throw Error('connection lost');if(hold)return new Promise(resolve=>heldInstall=resolve);installed=true;if(postRefreshFails)inspectFails=true;return {installed:true};}throw Error('unexpected path');};
+ const api=async(path,options)=>{calls.push({path,options});if(path.endsWith('/inspect')){if(malformedInspection!==undefined)return malformedInspection;if(!permitted||inspectFails)throw Error('denied');return {eligible:enabled,reasons:enabled?[]:['EXPECTED_RECEIPT_INSTALL_DISABLED'],packet:{...packet,enrollments:[{companyId:'c',storeId:'s',generation:enrollmentGeneration}],actorId,sourceRevision:revision,storeId:path.includes('/stores/B/')?'B':'s',installed}};}if(path.endsWith('/install')){assert.deepEqual(JSON.parse(options.body),{packet,explicitAuthorization:true});if(ambiguous)throw Error('connection lost');if(hold)return new Promise(resolve=>heldInstall=resolve);installed=true;if(postMalformed)malformedInspection={eligible:true};if(postRefreshFails)inspectFails=true;return {installed:true};}throw Error('unexpected path');};
  const render=(storeId='s')=>act(async()=>root.render(React.createElement(module.exports.default,{api,storeId})));
  const button=label=>[...document.querySelectorAll('button')].find(n=>n.textContent===label);
  try{
   await render();assert.equal(document.querySelector('section'),null,'role alone cannot reveal installation controls');
+  for(const malformed of [null,{}, {actorId:'owner',companyId:'c',storeId:'s',rows:[]}, {eligible:true}, {eligible:true,packet:{}}, {eligible:true,packet:{...packet,installed:null}}, {eligible:true,packet:{...packet,actorId:''}}, {eligible:true,packet:{...packet,enrollments:null}}]){
+   await act(async()=>root.render(null));malformedInspection=malformed;await render();
+   assert.equal(document.querySelector('section'),null,'malformed capability response must not reveal installer controls');
+   assert.equal(calls.filter(c=>c.path.endsWith('/install')).length,0);
+  }
+  malformedInspection=undefined;
   await act(async()=>root.render(null));permitted=true;await render();
   assert.match(document.body.textContent,/κοινό schema/);
   assert.equal(button('Ρητή εγκατάσταση αναμενόμενων παραλαβών').disabled,true);
@@ -31,6 +37,13 @@ test('No14 UI capability gate, explicit shared-schema approval and ambiguous sam
   assert.match(document.querySelector('[role=alert]').textContent,/connection lost/);
   assert.equal(calls.filter(c=>c.path.endsWith('/install')).length,1,'no automatic retry');
   assert.deepEqual(JSON.parse(sessionStorage.getItem('mws:no14-install:admin:c:s')),packet);
+  malformedInspection={eligible:true,packet:{}};
+  await act(async()=>button('Επανέλεγχος εγκατάστασης').click());
+  assert.match(document.querySelector('[role=alert]').textContent,/Μη έγκυρη απάντηση/);
+  assert.deepEqual(JSON.parse(sessionStorage.getItem('mws:no14-install:admin:c:s')),packet,'malformed explicit refresh cannot clear or replace the retained packet');
+  assert(button('Επανάληψη ίδιου αιτήματος'));
+  assert.equal(calls.filter(c=>c.path.endsWith('/install')).length,1);
+  malformedInspection=undefined;
   await act(async()=>button('Επανέλεγχος εγκατάστασης').click());
   assert.equal(calls.filter(c=>c.path.endsWith('/install')).length,1);
   actorId='other-admin';await act(async()=>button('Επανέλεγχος εγκατάστασης').click());
@@ -45,6 +58,17 @@ test('No14 UI capability gate, explicit shared-schema approval and ambiguous sam
   assert.equal(calls.filter(c=>c.path.endsWith('/install')).length,2);
   assert.equal(sessionStorage.getItem('mws:no14-install:admin:c:s'),null);
   assert.match(document.body.textContent,/τρέχον target επαληθεύτηκε/);
+  installed=false;await act(async()=>root.render(null));await render();
+  await act(async()=>document.querySelector('input[type=checkbox]').click());postMalformed=true;
+  await act(async()=>button('Ρητή εγκατάσταση αναμενόμενων παραλαβών').click());
+  assert.match(document.querySelector('[role=alert]').textContent,/Μη έγκυρη απάντηση/);
+  assert.deepEqual(JSON.parse(sessionStorage.getItem('mws:no14-install:admin:c:s')),packet,'malformed verification after successful POST must retain the original packet');
+  const postsAfterMalformed=calls.filter(c=>c.path.endsWith('/install')).length;
+  assert(button('Επανάληψη ίδιου αιτήματος'));
+  postMalformed=false;malformedInspection=undefined;
+  await act(async()=>button('Επανέλεγχος εγκατάστασης').click());
+  assert.equal(sessionStorage.getItem('mws:no14-install:admin:c:s'),null);
+  assert.equal(calls.filter(c=>c.path.endsWith('/install')).length,postsAfterMalformed,'recovering malformed verification uses GET without another POST');
   installed=false;await act(async()=>root.render(null));await render();
   await act(async()=>document.querySelector('input[type=checkbox]').click());postRefreshFails=true;
   await act(async()=>button('Ρητή εγκατάσταση αναμενόμενων παραλαβών').click());
