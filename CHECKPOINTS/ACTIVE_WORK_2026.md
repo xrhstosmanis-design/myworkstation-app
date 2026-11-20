@@ -834,3 +834,10 @@ Draft4051/root ίδιο scope. CI44725877823:6894PASS/12FAIL/4SKIP, τέσσερ
 ## No02 — original identity OCR boundary claim20Nov2026
 
 Retained /root; explicit user START. Independent same-byte local server identity-only fallback for verified169/cosmote22/telekom22, not No04 line/model/wallet or4048 bulk. Claim before source, NOT TESTED/NOT INSTALLED. See [bounded claim](CHANGES/2026-11-20-no2-identity-ocr-claim.md). Claim CI and main merge required before implementation.
+
+
+### No02 identity OCR implementation after claim4101
+
+Claim4101 green44779300097, merged00cf9603a before source. Local isolated same-byte server header OCR implemented only for169/cosmote22/telekom22, missingissuer-only gating, no expected IDs sent to OCR, existing strict verifier retained. Root47focusedPASS0FAIL0SKIP with actualPDF4/NAPI/WASM+cleanup. Actualcachedreplay/fullCI/release pending. No No04 line/model/wallet or4048 bulk takeover; no hosted business transaction. [Checkpoint](CHANGES/2026-11-20-no2-identity-ocr-claim.md).
+
+Final No02 identity OCR source: root57PASS0FAIL0SKIP; three actual cached PDFs pass the default same-byte fetch/reader/OCR pipeline after bitmap cap, no external network. Fourteen protected cached profiles PASS with OCRcalls0; older six-suffix sample metadata unavailable in this replay, NOT TESTED here. Source/fullCI/release pending; see same checkpoint.

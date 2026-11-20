@@ -12,6 +12,11 @@ const epsilonFormats=new Map([
  ['epsilondigital19.epsilonnet.gr','177'],
  ['epsilondigital-3rdpartb.epsilonnet.gr','129'],
  ['epsilondigital9.epsilonnet.gr','145'],
+ // Image-header originals: the download pipeline additionally requires the
+ // bounded server OCR proof when the embedded issuer VAT is absent.
+ ['epsilondigital-3rdparte.epsilonnet.gr','169'],
+ ['epsilondigital-cosmote.epsilonnet.gr','22'],
+ ['epsilondigital-telekom.epsilonnet.gr','22'],
 ]);
 
 export function matchesVerifiedEpsilonOriginal(url,issuerVat){
