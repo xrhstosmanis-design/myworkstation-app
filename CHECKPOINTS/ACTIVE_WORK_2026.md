@@ -189,6 +189,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 20/11 No5: scoped staff actions for Workforce rules and shift templates include create/edit/status controls. Local build and focused regression checks passed. Browser/LAB and release remain open. See [checkpoint](CHANGES/2026-11-20-no5-workforce-action-editors.md).
 
+20/11 No5 — scoped leave approval and rejection prepared locally. [Checkpoint](CHANGES/2026-11-20-no5-leave-decisions.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
