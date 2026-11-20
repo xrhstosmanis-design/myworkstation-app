@@ -30,8 +30,8 @@ const querySchema=z.object({from:z.string().optional(),to:z.string().optional(),
 function parseQuery(raw){const q=querySchema.parse(raw||{}),now=new Date(),to=q.to?greeceRangeDate(q.to,true):now,from=q.from?greeceRangeDate(q.from):greeceMonthStart(to);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const error=new Error("Μη έγκυρο διάστημα ημερομηνιών.");error.status=400;throw error}return{...q,from,to,supplierId:q.supplierId||null,text:q.q?`%${q.q}%`:null}}
 async function supplierOptions(companyId){return prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`}
 
-async function balanceReport(companyId,rawQuery){
-  await ensureSupplierControlSchema();
+export async function readSupplierBalances(companyId,rawQuery,{db=prisma}={}){
+  const prisma=db;const supplierOptions=async(companyId)=>db.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`;
   const{from,to,supplierId,text}=parseQuery(rawQuery),suppliers=await supplierOptions(companyId);
   const rows=await prisma.$queryRaw`
     SELECT s."id" AS "supplierId",s."name" AS "supplierName",s."taxId",
@@ -48,8 +48,71 @@ async function balanceReport(companyId,rawQuery){
   const items=rows.map(r=>{const invoiceGross=n(r.invoiceGross),creditGross=n(r.creditGross),payments=n(r.payments),adjustments=n(r.adjustments),balance=n(r.balance);return{...r,invoiceGross,creditGross,payments,adjustments,periodNet:invoiceGross-creditGross-payments+adjustments,balance}});
   const summary=items.reduce((a,r)=>{a.suppliers++;a.invoiceGross+=r.invoiceGross;a.creditGross+=r.creditGross;a.payments+=r.payments;a.adjustments+=r.adjustments;a.periodNet+=r.periodNet;a.balance+=r.balance;return a},{suppliers:0,invoiceGross:0,creditGross:0,payments:0,adjustments:0,periodNet:0,balance:0});return{from,to,suppliers,items,summary};
 }
+async function balanceReport(companyId,rawQuery){await ensureSupplierControlSchema();return readSupplierBalances(companyId,rawQuery)}
 const htmlEsc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 const euro=value=>n(value).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+export async function readSupplierSalesReport(scopeCompanyId,rawQuery={},partyId=null,{db=prisma}={}){const prisma=db;const supplierOptions=async(companyId)=>db.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`;
+
+  const companyId=scopeCompanyId,{from,to,supplierId}=parseQuery(rawQuery),suppliers=await supplierOptions(companyId);
+  const rows=await prisma.$queryRaw`
+    WITH latest_purchase AS (
+      SELECT DISTINCT ON (l."productId") l."productId",d."supplierId"
+      FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+      WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId" IS NOT NULL
+      ORDER BY l."productId",d."documentDate" DESC,d."createdAt" DESC
+    ), product_supplier AS (
+      SELECT p."id" AS "productId",COALESCE(link."supplierId",lp."supplierId") AS "supplierId"
+      FROM "Product" p
+      LEFT JOIN LATERAL (SELECT spl."supplierId" FROM "SupplierProductLink" spl WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1) link ON true
+      LEFT JOIN latest_purchase lp ON lp."productId"=p."id"
+      WHERE p."companyId"=${companyId}
+    ), product_cost AS (
+      SELECT l."productId",d."supplierId",SUM(l."netAmount")/NULLIF(SUM(CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(l."unitsPerPackage",1) ELSE l."quantity" END),0) AS "avgCost"
+      FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+      WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId" IS NOT NULL AND d."supplierId" IS NOT NULL
+      GROUP BY l."productId",d."supplierId"
+    )
+    SELECT s."id" AS "supplierId",s."name" AS "supplierName",COUNT(DISTINCT sa."id")::int AS transactions,COUNT(DISTINCT sl."productId")::int AS items,
+      COALESCE(SUM(sl."lineTotal"),0) AS sales,
+      COALESCE(SUM(sl."quantity"*COALESCE(pc."avgCost",0)),0) AS cost,
+      COALESCE(SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))),0) AS "vatSales"
+    FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" JOIN product_supplier ps ON ps."productId"=sl."productId" JOIN "Supplier" s ON s."id"=ps."supplierId" AND s."companyId"=${companyId} LEFT JOIN product_cost pc ON pc."productId"=sl."productId" AND pc."supplierId"=s."id"
+    WHERE sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND sa."occurredAt">=${from} AND sa."occurredAt"<=${to} AND (${supplierId}::text IS NULL OR s."id"=${supplierId})
+    GROUP BY s."id",s."name" ORDER BY sales DESC`;
+  const items=rows.map(r=>{const sales=n(r.sales),cost=n(r.cost),profit=sales-cost;return{...r,transactions:n(r.transactions),items:n(r.items),sales,cost,profit,vatSales:n(r.vatSales),margin:sales?profit/sales*100:0}}),summary=items.reduce((a,r)=>{a.suppliers++;a.sales+=r.sales;a.cost+=r.cost;a.profit+=r.profit;a.vatSales+=r.vatSales;a.items+=r.items;return a},{suppliers:0,sales:0,cost:0,profit:0,vatSales:0,items:0});summary.margin=summary.sales?summary.profit/summary.sales*100:0;items.forEach(r=>r.percentOfSales=summary.sales?r.sales/summary.sales*100:0);return ({from,to,suppliers,items,summary});
+
+}
+
+export async function readSupplierSalesItems(scopeCompanyId,rawQuery={},partyId=null,{db=prisma}={}){const prisma=db;
+
+  const companyId=scopeCompanyId,{from,to}=parseQuery(rawQuery),supplierId=partyId;
+  const exists=(await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} LIMIT 1`)[0];if(!exists)throw Object.assign(new Error("Δεν βρέθηκε ο προμηθευτής."),{status:404});
+  const rows=await prisma.$queryRaw`
+    WITH assigned AS (
+      SELECT p."id" AS "productId"
+      FROM "Product" p
+      LEFT JOIN LATERAL (SELECT spl."supplierId" FROM "SupplierProductLink" spl WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1) link ON true
+      LEFT JOIN LATERAL (SELECT d."supplierId" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId"=p."id" ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) hist ON true
+      WHERE p."companyId"=${companyId} AND COALESCE(link."supplierId",hist."supplierId")=${supplierId}
+    ), costs AS (
+      SELECT l."productId",SUM(l."netAmount")/NULLIF(SUM(CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(l."unitsPerPackage",1) ELSE l."quantity" END),0) AS "avgCost",
+        (array_agg(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END ORDER BY d."documentDate" DESC))[1] AS "lastCost"
+      FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+      WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId} AND l."productId" IN (SELECT "productId" FROM assigned) GROUP BY l."productId"
+    )
+    SELECT p."id" AS "productId",p."sku",p."name",COALESCE(link."supplierCode",pol."supplierCode") AS "supplierCode",SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS sales,
+      SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))) AS "vatSales",COALESCE(stock."currentStock",0) AS "currentStock",COALESCE(c."lastCost",0) AS "lastCost",COALESCE(c."avgCost",0) AS "avgCost"
+    FROM assigned a JOIN "Product" p ON p."id"=a."productId" JOIN "SaleLine" sl ON sl."productId"=p."id" JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId}
+    LEFT JOIN costs c ON c."productId"=p."id"
+    LEFT JOIN LATERAL (SELECT COALESCE(SUM(sp."currentStock"),0) AS "currentStock" FROM "StoreProduct" sp WHERE sp."productId"=p."id") stock ON true
+    LEFT JOIN "SupplierProductLink" link ON link."companyId"=${companyId} AND link."supplierId"=${supplierId} AND link."productId"=p."id" AND link."active"=true
+    LEFT JOIN LATERAL (SELECT l2."supplierCode" FROM "PurchaseOrderLine" l2 JOIN "PurchaseOrder" o2 ON o2."id"=l2."orderId" WHERE o2."companyId"=${companyId} AND o2."supplierId"=${supplierId} AND l2."productId"=p."id" AND l2."supplierCode" IS NOT NULL ORDER BY l2."updatedAt" DESC NULLS LAST,l2."createdAt" DESC LIMIT 1) pol ON true
+    WHERE sa."status"='COMPLETED' AND sa."occurredAt">=${from} AND sa."occurredAt"<=${to}
+    GROUP BY p."id",p."sku",p."name",link."supplierCode",pol."supplierCode",c."lastCost",c."avgCost",stock."currentStock" ORDER BY sales DESC`;
+  const items=rows.map(r=>{const quantity=n(r.quantity),sales=n(r.sales),avgCost=n(r.avgCost),lastCost=n(r.lastCost),costAvg=quantity*avgCost,costLast=quantity*lastCost;return{...r,quantity,sales,vatSales:n(r.vatSales),currentStock:n(r.currentStock),avgCost,lastCost,averageSale:quantity?sales/quantity:0,profitWithAverage:sales-costAvg,profitWithLast:sales-costLast,margin:sales?(sales-costAvg)/sales*100:0}});return ({supplierId,from,to,items});
+
+}
+
 router.get("/reports/balances",async(req,res,next)=>{try{res.json(await balanceReport(req.user.companyId,req.query))}catch(error){next(error)}});
 router.get("/reports/balances/export",async(req,res,next)=>{try{
   const data=await balanceReport(req.user.companyId,req.query),format=z.enum(["xlsx","pdf"]).parse(req.query.format),date=supplierReportDate;
@@ -79,62 +142,8 @@ router.get("/reports/purchases",async(req,res,next)=>{try{
   const items=rows.map(r=>({...r,documents:n(r.documents),net:n(r.net),vat:n(r.vat),gross:n(r.gross)})),summary=items.reduce((a,r)=>{a.documents+=r.documents;a.net+=r.net;a.vat+=r.vat;a.gross+=r.gross;return a},{documents:0,net:0,vat:0,gross:0});items.forEach(r=>r.percentOfTotal=summary.gross?r.gross/summary.gross*100:0);res.json({from,to,suppliers,items,summary});
 }catch(error){next(error)}});
 
-router.get("/reports/sales",async(req,res,next)=>{try{
-  const companyId=req.user.companyId,{from,to,supplierId}=parseQuery(req.query),suppliers=await supplierOptions(companyId);
-  const rows=await prisma.$queryRaw`
-    WITH latest_purchase AS (
-      SELECT DISTINCT ON (l."productId") l."productId",d."supplierId"
-      FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-      WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId" IS NOT NULL
-      ORDER BY l."productId",d."documentDate" DESC,d."createdAt" DESC
-    ), product_supplier AS (
-      SELECT p."id" AS "productId",COALESCE(link."supplierId",lp."supplierId") AS "supplierId"
-      FROM "Product" p
-      LEFT JOIN LATERAL (SELECT spl."supplierId" FROM "SupplierProductLink" spl WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1) link ON true
-      LEFT JOIN latest_purchase lp ON lp."productId"=p."id"
-      WHERE p."companyId"=${companyId}
-    ), product_cost AS (
-      SELECT l."productId",d."supplierId",SUM(l."netAmount")/NULLIF(SUM(CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(l."unitsPerPackage",1) ELSE l."quantity" END),0) AS "avgCost"
-      FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-      WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId" IS NOT NULL AND d."supplierId" IS NOT NULL
-      GROUP BY l."productId",d."supplierId"
-    )
-    SELECT s."id" AS "supplierId",s."name" AS "supplierName",COUNT(DISTINCT sa."id")::int AS transactions,COUNT(DISTINCT sl."productId")::int AS items,
-      COALESCE(SUM(sl."lineTotal"),0) AS sales,
-      COALESCE(SUM(sl."quantity"*COALESCE(pc."avgCost",0)),0) AS cost,
-      COALESCE(SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))),0) AS "vatSales"
-    FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" JOIN product_supplier ps ON ps."productId"=sl."productId" JOIN "Supplier" s ON s."id"=ps."supplierId" AND s."companyId"=${companyId} LEFT JOIN product_cost pc ON pc."productId"=sl."productId" AND pc."supplierId"=s."id"
-    WHERE sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND sa."occurredAt">=${from} AND sa."occurredAt"<=${to} AND (${supplierId}::text IS NULL OR s."id"=${supplierId})
-    GROUP BY s."id",s."name" ORDER BY sales DESC`;
-  const items=rows.map(r=>{const sales=n(r.sales),cost=n(r.cost),profit=sales-cost;return{...r,transactions:n(r.transactions),items:n(r.items),sales,cost,profit,vatSales:n(r.vatSales),margin:sales?profit/sales*100:0}}),summary=items.reduce((a,r)=>{a.suppliers++;a.sales+=r.sales;a.cost+=r.cost;a.profit+=r.profit;a.vatSales+=r.vatSales;a.items+=r.items;return a},{suppliers:0,sales:0,cost:0,profit:0,vatSales:0,items:0});summary.margin=summary.sales?summary.profit/summary.sales*100:0;items.forEach(r=>r.percentOfSales=summary.sales?r.sales/summary.sales*100:0);res.json({from,to,suppliers,items,summary});
-}catch(error){next(error)}});
+router.get("/reports/sales",async(req,res,next)=>{try{res.json(await readSupplierSalesReport(req.user.companyId,req.query,null))}catch(error){next(error)}});
 
-router.get("/reports/sales/:supplierId/items",async(req,res,next)=>{try{
-  const companyId=req.user.companyId,{from,to}=parseQuery(req.query),supplierId=req.params.supplierId;
-  const exists=(await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} LIMIT 1`)[0];if(!exists)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
-  const rows=await prisma.$queryRaw`
-    WITH assigned AS (
-      SELECT p."id" AS "productId"
-      FROM "Product" p
-      LEFT JOIN LATERAL (SELECT spl."supplierId" FROM "SupplierProductLink" spl WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1) link ON true
-      LEFT JOIN LATERAL (SELECT d."supplierId" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId"=p."id" ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) hist ON true
-      WHERE p."companyId"=${companyId} AND COALESCE(link."supplierId",hist."supplierId")=${supplierId}
-    ), costs AS (
-      SELECT l."productId",SUM(l."netAmount")/NULLIF(SUM(CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(l."unitsPerPackage",1) ELSE l."quantity" END),0) AS "avgCost",
-        (array_agg(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END ORDER BY d."documentDate" DESC))[1] AS "lastCost"
-      FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-      WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId} AND l."productId" IN (SELECT "productId" FROM assigned) GROUP BY l."productId"
-    )
-    SELECT p."id" AS "productId",p."sku",p."name",COALESCE(link."supplierCode",pol."supplierCode") AS "supplierCode",SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS sales,
-      SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))) AS "vatSales",COALESCE(stock."currentStock",0) AS "currentStock",COALESCE(c."lastCost",0) AS "lastCost",COALESCE(c."avgCost",0) AS "avgCost"
-    FROM assigned a JOIN "Product" p ON p."id"=a."productId" JOIN "SaleLine" sl ON sl."productId"=p."id" JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId}
-    LEFT JOIN costs c ON c."productId"=p."id"
-    LEFT JOIN LATERAL (SELECT COALESCE(SUM(sp."currentStock"),0) AS "currentStock" FROM "StoreProduct" sp WHERE sp."productId"=p."id") stock ON true
-    LEFT JOIN "SupplierProductLink" link ON link."companyId"=${companyId} AND link."supplierId"=${supplierId} AND link."productId"=p."id" AND link."active"=true
-    LEFT JOIN LATERAL (SELECT l2."supplierCode" FROM "PurchaseOrderLine" l2 JOIN "PurchaseOrder" o2 ON o2."id"=l2."orderId" WHERE o2."companyId"=${companyId} AND o2."supplierId"=${supplierId} AND l2."productId"=p."id" AND l2."supplierCode" IS NOT NULL ORDER BY l2."updatedAt" DESC NULLS LAST,l2."createdAt" DESC LIMIT 1) pol ON true
-    WHERE sa."status"='COMPLETED' AND sa."occurredAt">=${from} AND sa."occurredAt"<=${to}
-    GROUP BY p."id",p."sku",p."name",link."supplierCode",pol."supplierCode",c."lastCost",c."avgCost",stock."currentStock" ORDER BY sales DESC`;
-  const items=rows.map(r=>{const quantity=n(r.quantity),sales=n(r.sales),avgCost=n(r.avgCost),lastCost=n(r.lastCost),costAvg=quantity*avgCost,costLast=quantity*lastCost;return{...r,quantity,sales,vatSales:n(r.vatSales),currentStock:n(r.currentStock),avgCost,lastCost,averageSale:quantity?sales/quantity:0,profitWithAverage:sales-costAvg,profitWithLast:sales-costLast,margin:sales?(sales-costAvg)/sales*100:0}});res.json({supplierId,from,to,items});
-}catch(error){next(error)}});
+router.get("/reports/sales/:supplierId/items",async(req,res,next)=>{try{res.json(await readSupplierSalesItems(req.user.companyId,req.query,req.params.supplierId))}catch(error){if(error.status===404)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});next(error)}});
 
 export default router;

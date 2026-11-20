@@ -58,5 +58,26 @@ class ReportsOnlyV2ScheduledProcess(unittest.TestCase):
             self.assertEqual(json.loads(result.stdout)['state'], 'DISABLED')
             self.assertEqual(marker.read_text(), 'cleanup')
 
+class ReportsOnlyV3ScheduledProcess(unittest.TestCase):
+    def test_v3_worker_exit_success_preserves_cleanup_and_denies_scoped_restore(self):
+        document = worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE': 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3'})
+        self.assertTrue(document['executionDisabled'])
+        with self.assertRaisesRegex(ValueError, 'reports-only'):
+            verify_restore.verify_archive(None, None, document, None)
+        with tempfile.TemporaryDirectory() as directory:
+            filename = pathlib.Path(directory) / 'manifest.json'
+            filename.write_text(json.dumps(document))
+            with patch.object(worker, 'query', side_effect=AssertionError('unexpected database')):
+                self.assertEqual(worker.process_one(filename, None), {'state': 'DISABLED', 'reason': 'REPORTS_ONLY_PROFILE'})
+            import subprocess, sys
+            script = pathlib.Path(directory) / 'worker_then_cleanup.sh'
+            marker = pathlib.Path(directory) / 'cleanup'
+            script.write_text('set -e\n"$1" "$2"\nprintf cleanup > "$3"\n')
+            environment = dict(worker.os.environ, MWS_STORE_LIFECYCLE_PROFILE='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3')
+            result = subprocess.run(['sh', str(script), sys.executable, worker.__file__, str(marker)], env=environment, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)['state'], 'DISABLED')
+            self.assertEqual(marker.read_text(), 'cleanup')
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -8,9 +9,19 @@ import {assertNoPendingRemuneration} from "../workforce-pending-pay.js";
 
 const router=Router({mergeParams:true});
 const dateValue=value=>{const date=new Date(value);return Number.isNaN(date.getTime())?null:date;};
-router.use(async(req,res,next)=>{try{await requirePersonnelPackage(req,String(req.params.storeId||""),PERSONNEL_PAYROLL);next();}catch(error){next(error)}});
+router.use(async(req,res,next)=>{try{
+  if(req.user?.staffAccess===true){
+    if(req.staffGrant?.capability!=='payroll.read'||req.user.storeId!==req.params.storeId||req.user.companyId!==req.params.companyId)throw staffError();
+    await requireStaffGrant(prisma,req.user,req.params.storeId,'payroll.read');
+  }else await requirePersonnelPackage(req,String(req.params.storeId||""),PERSONNEL_PAYROLL);
+  next();
+}catch(error){next(error)}});
 
-const payrollEmployees=(context,from,to,db=prisma)=>db.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},include:{hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},orderBy:{validFrom:"desc"},take:1}}});
+const payrollEmployeeSelection=(from,to)=>({
+  id:true,fullName:true,paymentType:true,dailyRate:true,fixedMonthlyAmount:true,
+  hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},select:{hourlyRate:true},orderBy:{validFrom:"desc"},take:1}
+});
+const payrollEmployees=(context,from,to,db=prisma)=>db.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},...(context.payrollRead?{select:payrollEmployeeSelection(from,to)}:{include:{hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},orderBy:{validFrom:"desc"},take:1}}})});
 const seedPayrollRows=employees=>new Map(employees.map(employee=>[employee.id,{employeeId:employee.id,employeeName:employee.fullName,paymentType:employee.paymentType,actualMinutes:0,overtimeMinutes:0,hourlyRate:employee.hourlyRates[0]?.hourlyRate==null?null:Number(employee.hourlyRates[0].hourlyRate),dailyRate:employee.paymentType==="DAILY"?Number(employee.dailyRate||0):null,fixedAmount:employee.paymentType==="FIXED_MONTHLY"?Number(employee.fixedMonthlyAmount||0):null,workDates:new Set()}]));
 
 router.get("/open-cash-sessions",async(req,res,next)=>{
@@ -25,9 +36,9 @@ async function addPayrollEvidence(context,from,to,rows,db=prisma){
   const employeeIds=[...rows.keys()];
   if(!employeeIds.length)return;
   const [assignments,absences,leaves]=await Promise.all([
-    db.workforceScheduleAssignment.findMany({where:{employeeId:{in:employeeIds},date:{gte:from,lt:to},schedule:{companyId:context.company.id,storeId:context.store.id,status:{in:["APPROVED","PUBLISHED","LOCKED"]}}},include:{shiftTemplate:true}}),
-    db.workforceAbsence.findMany({where:{companyId:context.company.id,employeeId:{in:employeeIds},startsAt:{lt:to},OR:[{endsAt:null},{endsAt:{gte:from}}],AND:[{OR:[{storeId:null},{storeId:context.store.id}]},{approvedByUserId:{not:null}}]}}),
-    db.workforceLeaveRequest.findMany({where:{companyId:context.company.id,employeeId:{in:employeeIds},status:"APPROVED",startDate:{lt:to},endDate:{gte:from},OR:[{storeId:null},{storeId:context.store.id}]}})
+    db.workforceScheduleAssignment.findMany({where:{employeeId:{in:employeeIds},date:{gte:from,lt:to},schedule:{companyId:context.company.id,storeId:context.store.id,status:{in:["APPROVED","PUBLISHED","LOCKED"]}}},...(context.payrollRead?{select:{employeeId:true,shiftTemplate:{select:{startTime:true,endTime:true}}}}:{include:{shiftTemplate:true}})}),
+    db.workforceAbsence.findMany({where:{companyId:context.company.id,employeeId:{in:employeeIds},startsAt:{lt:to},OR:[{endsAt:null},{endsAt:{gte:from}}],AND:[{OR:[{storeId:null},{storeId:context.store.id}]},{approvedByUserId:{not:null}}]},...(context.payrollRead?{select:{employeeId:true,startsAt:true,endsAt:true,minutes:true}}:{})}),
+    db.workforceLeaveRequest.findMany({where:{companyId:context.company.id,employeeId:{in:employeeIds},status:"APPROVED",startDate:{lt:to},endDate:{gte:from},OR:[{storeId:null},{storeId:context.store.id}]},...(context.payrollRead?{select:{employeeId:true,startDate:true,endDate:true,leaveType:true}}:{})})
   ]);
   for(const row of rows.values()){row.plannedMinutes=0;row.absenceMinutes=0;row.approvedLeaveDays=0;row.approvedLeaveTypes=[]}
   for(const item of assignments){const row=rows.get(item.employeeId);if(row)row.plannedMinutes+=shiftDurationMinutes(item.shiftTemplate.startTime,item.shiftTemplate.endTime)}
@@ -46,15 +57,17 @@ async function calculatedLines(context,from,to,db=prisma){
 
 router.get("/preview",async(req,res,next)=>{
   try{
-    const context=await contextFor(req),from=dateValue(req.query.from),to=dateValue(req.query.to);
+    const context=await contextFor(req),delegated=req.user?.staffAccess===true,from=dateValue(req.query.from),to=dateValue(req.query.to);
     if(!from||!to||to<=from)return res.status(400).json({error:"Συμπλήρωσε έγκυρο διάστημα μισθοδοσίας."});
-    const [sessions,employees]=await Promise.all([prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:from,lt:to},status:payrollableAttendanceWhere()},include:{employee:{include:{hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},orderBy:{validFrom:"desc"},take:1}}}},orderBy:{startedAt:"asc"}}),payrollEmployees(context,from,to)]);
+    const previewContext={...context,payrollRead:delegated};
+    const [sessions,employees]=await Promise.all([prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:from,lt:to},status:payrollableAttendanceWhere(),...(delegated?{employee:{companyId:context.company.id}}:{})},...(delegated?{select:{employeeId:true,startedAt:true,workedMinutes:true,overtimeMinutes:true,employee:{select:payrollEmployeeSelection(from,to)}}}:{include:{employee:{include:{hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},orderBy:{validFrom:"desc"},take:1}}}}}),orderBy:{startedAt:"asc"}}),payrollEmployees(previewContext,from,to)]);
     const rows=seedPayrollRows(employees);
     for(const session of sessions){const employee=session.employee,rate=employee.hourlyRates[0]?.hourlyRate??null,item=rows.get(employee.id)||{employeeId:employee.id,employeeName:employee.fullName,paymentType:employee.paymentType,actualMinutes:0,overtimeMinutes:0,hourlyRate:rate?Number(rate):null,dailyRate:employee.paymentType==="DAILY"?Number(employee.dailyRate||0):null,fixedAmount:employee.paymentType==="FIXED_MONTHLY"?Number(employee.fixedMonthlyAmount||0):null,workDates:new Set()};item.actualMinutes+=session.workedMinutes;item.overtimeMinutes+=session.overtimeMinutes;item.workDates.add(payrollWorkDate(session.startedAt));rows.set(employee.id,item);}
-    await addPayrollEvidence(context,from,to,rows);
+    await addPayrollEvidence(previewContext,from,to,rows);
     const entries=[...rows.values()].map(({workDates,...item})=>({...item,workDays:workDates.size,grossAmount:payrollGross({...item,workDays:workDates.size})}));
     const pendingRemunerationCount=entries.filter(item=>item.paymentType==="UNSET").length;
-    res.json({from,to,entries,pendingRemunerationCount,totalAmount:pendingRemunerationCount?null:Number(entries.reduce((sum,item)=>sum+(item.grossAmount||0),0).toFixed(2)),note:pendingRemunerationCount?"Εκκρεμούν αμοιβές εργαζομένων. Δεν μπορεί να δημιουργηθεί περίοδος μισθοδοσίας.":"Προεπισκόπηση από ολοκληρωμένες πραγματικές ώρες. Η τελική μισθοδοσία απαιτεί έλεγχο και κλείδωμα."});
+    if(delegated)await requireStaffGrant(prisma,req.user,context.store.id,'payroll.read');
+    res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),from,to,entries,pendingRemunerationCount,totalAmount:pendingRemunerationCount?null:Number(entries.reduce((sum,item)=>sum+(item.grossAmount||0),0).toFixed(2)),note:pendingRemunerationCount?"Εκκρεμούν αμοιβές εργαζομένων. Δεν μπορεί να δημιουργηθεί περίοδος μισθοδοσίας.":"Προεπισκόπηση από ολοκληρωμένες πραγματικές ώρες. Η τελική μισθοδοσία απαιτεί έλεγχο και κλείδωμα."});
   }catch(error){next(error)}
 });
 
@@ -70,8 +83,31 @@ router.post("/periods",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
-router.get("/periods",async(req,res,next)=>{try{const context=await contextFor(req);res.json(await prisma.workforcePayrollPeriod.findMany({where:{companyId:context.company.id,storeId:context.store.id},include:{_count:{select:{lines:true}}},orderBy:{periodStart:"desc"},take:100}));}catch(error){next(error)}});
-router.get("/periods/:id",async(req,res,next)=>{try{const context=await contextFor(req),period=await prisma.workforcePayrollPeriod.findFirst({where:{id:req.params.id,companyId:context.company.id,storeId:context.store.id},include:{lines:{include:{employee:{select:{fullName:true}}}},payments:true,closing:true}});if(!period)return res.status(404).json({error:"Δεν βρέθηκε η περίοδος."});const paid=new Map();for(const p of period.payments)paid.set(p.employeeId,(paid.get(p.employeeId)||0)+Number(p.amount));res.json({...period,lines:period.lines.map(line=>({...line,employeeName:line.employee.fullName,paidAmount:Number(paid.get(line.employeeId)||0),balanceAmount:Number(line.grossAmount)-Number(paid.get(line.employeeId)||0)}))});}catch(error){next(error)}});
+const payrollPeriodSelection={id:true,companyId:true,storeId:true,name:true,periodStart:true,periodEnd:true,status:true,closedAt:true,createdAt:true,updatedAt:true};
+router.get("/periods",async(req,res,next)=>{try{
+  const context=await contextFor(req),delegated=req.user?.staffAccess===true;
+  const items=await prisma.workforcePayrollPeriod.findMany({where:{companyId:context.company.id,storeId:context.store.id},...(delegated?{select:{...payrollPeriodSelection,_count:{select:{lines:true}}}}:{include:{_count:{select:{lines:true}}}}),orderBy:{periodStart:"desc"},take:100});
+  if(delegated){
+    await requireStaffGrant(prisma,req.user,context.store.id,'payroll.read');
+    return res.json({companyId:context.company.id,storeId:context.store.id,items});
+  }
+  res.json(items);
+}catch(error){next(error)}});
+router.get("/periods/:id",async(req,res,next)=>{try{
+  const context=await contextFor(req),delegated=req.user?.staffAccess===true;
+  const selection={...payrollPeriodSelection,
+    lines:{where:{employee:{companyId:context.company.id}},select:{id:true,employeeId:true,plannedMinutes:true,actualMinutes:true,overtimeMinutes:true,absenceMinutes:true,hourlyRate:true,dailyRate:true,fixedAmount:true,grossAmount:true,paidAmount:true,balanceAmount:true,employee:{select:{fullName:true}}}},
+    payments:{where:{companyId:context.company.id,storeId:context.store.id,employee:{companyId:context.company.id}},select:{id:true,employeeId:true,paymentDate:true,paymentType:true,amount:true,paymentMethod:true,approvalStatus:true}},
+    closing:{select:{id:true,closedAt:true,reopenedAt:true}}
+  };
+  const period=await prisma.workforcePayrollPeriod.findFirst({where:{id:req.params.id,companyId:context.company.id,storeId:context.store.id},...(delegated?{select:selection}:{include:{lines:{include:{employee:{select:{fullName:true}}}},payments:true,closing:true}})});
+  if(!period)return res.status(404).json({error:"Δεν βρέθηκε η περίοδος."});
+  const paid=new Map();
+  for(const p of period.payments)paid.set(p.employeeId,(paid.get(p.employeeId)||0)+Number(p.amount));
+  if(delegated)await requireStaffGrant(prisma,req.user,context.store.id,'payroll.read');
+  res.json({...period,lines:period.lines.map(line=>({...line,employeeName:line.employee.fullName,paidAmount:Number(paid.get(line.employeeId)||0),balanceAmount:Number(line.grossAmount)-Number(paid.get(line.employeeId)||0)}))});
+}catch(error){next(error)}});
+
 router.post("/periods/:id/recalculate",async(req,res,next)=>{try{
   const context=await contextFor(req),reason=String(req.body?.reason||"").trim();
   if(req.body?.confirmed!==true||reason.length<3)return res.status(400).json({error:"Ο επανυπολογισμός απαιτεί επιβεβαίωση και αιτιολογία."});

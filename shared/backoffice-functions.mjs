@@ -1,8 +1,58 @@
+import {finalPassiveCompanyActions,finalPassiveStoreActions} from './backoffice-staff-final-passive.mjs';
+import {companyProductCenterActions} from './backoffice-staff-company-product-center.mjs';
+import {observerLogisticsActions} from './backoffice-staff-company-observer-logistics.mjs';
+import {companyWholesaleActions} from './backoffice-staff-company-wholesale.mjs';
+import {companyPartyControlActions} from './backoffice-staff-company-party-control.mjs';
+import {companyOwnerReportActions} from './backoffice-staff-company-owner-reports.mjs';
+import {companyConfigurationActions} from './backoffice-staff-company-configuration.mjs';
+import {storeReportNames,storeReportLabels} from './backoffice-staff-reports.mjs';
 // Function families under review for the requested complete coverage, not an authorization allowlist.
 // Native audit/adapter coverage must exist before an action becomes grantable.
 // STORE rights cannot authorize COMPANY operations. Existing persisted rights
 // stay unchanged; adding a catalogue entry never grants access automatically.
 export const backofficeFunctionCatalogue=Object.freeze([
+ ...finalPassiveCompanyActions.map(action=>({key:'company-passive-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
+ ...finalPassiveStoreActions.map(action=>({key:'store-passive-'+action.key.slice(0,-5),label:action.label,scope:'STORE',actions:['read']})),
+ ...companyProductCenterActions.map(action=>({key:'company-product-center-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
+ ...observerLogisticsActions.map(action=>({key:'company-operations-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
+ ...companyWholesaleActions.map(action=>({key:'company-wholesale-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
+ ...companyPartyControlActions.map(action=>({key:'company-party-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
+ ...companyOwnerReportActions.map(action=>({key:'company-owner-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
+ ...companyConfigurationActions.map(action=>({key:'company-config-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
+ ...storeReportNames.map((name,i)=>({key:`store-reports-${name}`,label:storeReportLabels[i]+' καταστήματος',scope:'STORE',actions:['read']})),
+ {key:"reports-price-changes",label:"Εταιρική αναφορά μεταβολών τιμών",scope:"COMPANY",actions:["read"]},
+ {key:"reports-departments",label:"Εταιρική διοικητική αναφορά τμημάτων",scope:"COMPANY",actions:["read"]},
+ {key:"reports-documents",label:"Εταιρική αναφορά παραστατικών",scope:"COMPANY",actions:["read"]},
+ {key:"reports-deactivations",label:"Εταιρική αναφορά απενεργοποιήσεων προϊόντων",scope:"COMPANY",actions:["read"]},
+ {key:"reports-logins",label:"Εταιρική αναφορά συνδέσεων χρηστών (email/IP)",scope:"COMPANY",actions:["read"]},
+ {key:"reports-sale-deletions",label:"Εταιρική αναφορά διαγραφών καλαθιού",scope:"COMPANY",actions:["read"]},
+ {key:"reports-pos-sale-actions",label:"Εταιρική αναφορά ενεργειών πωλήσεων POS",scope:"COMPANY",actions:["read"]},
+ {key:"reports-destructions",label:"Εταιρική αναφορά καταστροφών POS και κόστους",scope:"COMPANY",actions:["read"]},
+ {key:"reports-movements",label:"Εταιρική αναφορά κινήσεων αποθέματος και κόστους",scope:"COMPANY",actions:["read"]},
+ {key:"reports-stocktakes",label:"Εταιρική αναφορά απογραφών και διαφορών",scope:"COMPANY",actions:["read"]},
+ {key:"reports-stock-snapshot",label:"Εταιρική αναφορά στιγμιοτύπου αποθήκης και κόστους",scope:"COMPANY",actions:["read"]},
+ {key:"reports-item-snapshot",label:"Εταιρική αναφορά στιγμιοτύπου είδους και κόστους",scope:"COMPANY",actions:["read"]},
+ {key:"reports-stock-analysis",label:"Εταιρική αναφορά ανάλυσης αποθήκης και κόστους",scope:"COMPANY",actions:["read"]},
+ {key:"reports-sales-analysis",label:"Εταιρική αναφορά ανάλυσης πωλήσεων και κέρδους",scope:"COMPANY",actions:["read"]},
+ {key:"reports-payroll-expenses",label:"Εταιρική αναφορά καταγεγραμμένων πληρωμών προσωπικού",scope:"COMPANY",actions:["read"]},
+ {key:"reports-supplier-invoices",label:"Εταιρική αναφορά παραστατικών προμηθευτών",scope:"COMPANY",actions:["read"]},
+ {key:"reports-supplier-payments",label:"Εταιρική αναφορά πληρωμών προμηθευτών",scope:"COMPANY",actions:["read"]},
+ {key:"reports-supplier-purchases",label:"Εταιρική αναφορά αγορών ανά προμηθευτή",scope:"COMPANY",actions:["read"]},
+ {key:"reports-customer-turnover",label:"Εταιρική αναφορά τζίρου και επιστροφών πελατών",scope:"COMPANY",actions:["read"]},
+ {key:"reports-delivery",label:"Εταιρική αναφορά delivery",scope:"COMPANY",actions:["read"]},
+ {key:"unsold-products",label:"Απούλητα είδη καταστήματος",scope:"STORE",actions:["read"]},
+ {key:"sales-journal",label:"Ημερολόγιο πωλήσεων καταστήματος",scope:"STORE",actions:["read"]},
+  {key:"workforce-roles",label:"Ρόλοι σχετικοί με το κατάστημα",scope:"STORE",actions:["read"]},
+  {key:"workforce-rules",label:"Κανόνες προσωπικού καταστήματος",scope:"STORE",actions:["read"]},
+  {key:"shift-templates",label:"Πρότυπα βαρδιών καταστήματος",scope:"STORE",actions:["read"]},
+  {key:"workforce-audit",label:"Ιστορικό προσωπικού καταστήματος",scope:"STORE",actions:["read"]},
+  {key:"payroll",label:"Μισθοδοσία",scope:"STORE",actions:["read"]},
+  {
+    "key": "low-value-products",
+    "label": "Προϊόντα Χαμηλής Απόδοσης",
+    "scope": "STORE",
+    "actions": ["read"]
+  },
   {
     "key": "access",
     "label": "Χειριστές και δικαιώματα",
@@ -251,7 +301,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     ]
   },
   {
-    "key": "supplier-comparison",
+    "key": "supplier-price-comparison",
     "label": "Σύγκριση προμηθευτών",
     "scope": "STORE",
     "actions": [

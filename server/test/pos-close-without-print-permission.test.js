@@ -29,7 +29,7 @@ async function withRegisteredCatalog(run){
   const sql=parts.join('?');assert.match(sql,/StoreOperatorCredential/);assert.match(sql,/c\."active"=TRUE/);assert.ok(values.includes('operator-A')&&values.includes('A')&&values.includes('company-A'));state.reads++;
   return state.credentialActive?[{permissions:state.permissions,backofficeMenu:{},posAccess:true}]:[];
  },$executeRaw:async()=>{state.writes++;throw Error('business writes forbidden')},$executeRawUnsafe:async()=>{state.writes++;throw Error('DDL forbidden')}};
- const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','return router;');
+ const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','return router;').replace(/^export (?=(?:async )?function )/gm,'');
  // Register the actual catalog middleware. Unrelated creator routes are isolated;
  // the real permission guard and current-profile query are not replaced.
  const router=new Function('Router','prisma','crypto','z','registerPermanentPriceRoutes','registerPosNewProductRoutes','posNewProductAllowed',source)(Router,prisma,crypto,z,()=>{},()=>{},()=>false);

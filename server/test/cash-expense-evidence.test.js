@@ -40,7 +40,7 @@ const transactions=[{...row,sessionId:'shift',subtractFromShift:true}],paid={...
 const db={$queryRaw:async strings=>{const sql=strings.join('');return sql.includes('FROM "PurchaseDocument" p')?[paid]:sql.includes('SELECT s.*')?[session]:sql.includes('FROM "StoreTransaction"')?transactions:[]}};
 test('actual Platform and cloud investigators share matched, missing, partial and overpaid findings without changing variance',async()=>{
  const api=readFileSync(new URL('../src/routes/platform-admin.js',import.meta.url),'utf8'),body=api.slice(api.indexOf('function platformCashAuditAmount('),api.indexOf('function companyView('));
- const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('router.get("/sessions/:sessionId/investigation"'),end=source.indexOf('router.post("/sessions/:sessionId/reviews"',start);
+ const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('export async function readCashSessionInvestigation('),end=source.indexOf('router.post("/sessions/:sessionId/reviews"',start);
  for(const [currentRows,currentDoc,status,code] of [
   [transactions,paid,'MATCHED',null],
   [[{...transactions[0],purchaseDocumentId:null}],null,'NO_DOCUMENT','EXPENSE_WITHOUT_DOCUMENT'],
@@ -53,7 +53,7 @@ test('actual Platform and cloud investigators share matched, missing, partial an
   const platform=await investigate(session,{purchaseDocuments:true,operator:true,actions:true,safety:true});assert.equal(platform.expenseChecks[0].status,status);assert.equal(platform.completed,false);
   let handler;
   const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:scopedDb,normalize:x=>x,assertStoreAccess:()=>{},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),existingAuditTables:async()=>({}),partitionCashAuditEvents,readCashExpenseEvidence,cashExpenseFindings,confirmedExplanationBalance,suspiciousOperatorEvent:()=>true,auditAmount:()=>null,money:v=>Number(v||0),reviewSnapshot:async()=>({}),sameSnapshot:()=>true};
-  new Function(...Object.keys(deps),source.slice(start,end))(...Object.values(deps));let cloud;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{cloud=x}});
+  new Function(...Object.keys(deps),source.slice(start,end).replace(/^export /gm,''))(...Object.values(deps));let cloud;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{cloud=x}});
   assert.deepEqual(cloud.expenseChecks,platform.expenseChecks);assert.equal(cloud.initialVariance,-5);assert.equal(cloud.unexplainedVariance,-5);assert.equal(cloud.transactions[0].amount,31);assert.equal(cloud.coverageStatus,'PROVISIONAL');
   for(const result of [cloud,platform])assert.deepEqual(result.findings.filter(f=>f.code.startsWith('EXPENSE_')).map(f=>f.code),code?[code]:[]);
  }
@@ -64,9 +64,9 @@ test('actual written finding labels disclose aggregate period/source and cannot 
  const image=label(cashExpenseFindings([expenseDocumentCheck({...row,purchaseDocumentId:null,hasAttachment:true},null)])[0]);assert.match(image,/χωρίς επιβεβαιωμένη συμφωνία ποσών/);assert.match(image,/Δεν εξηγεί αυτόματα/);
 });
 test('actual daily report leaves selected-period expense totals intact while reading lifetime settlement',async()=>{
- const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('router.get("/stores/:storeId/daily-summary"'),end=source.indexOf('router.get("/sessions/:sessionId/investigation"',start);let handler;
+ const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('export async function readCashDailySummary('),end=source.indexOf('export async function readCashSessionInvestigation(',start);let handler;
  const dailyDb={$queryRaw:async strings=>{const sql=strings.join('');return sql.includes('FROM "PurchaseDocument" p')?[paid]:sql.includes('SELECT * FROM "CashShiftSession"')?[{...session,status:'CLOSED',expenses:31,variance:-5}]:sql.includes('SELECT t."id"')?transactions:[];}};
  const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:dailyDb,assertStoreAccess:()=>{},ownedStore:async()=>({id:'s'}),reportDateSchema:{parse:x=>x},resolveCashReportPeriod:()=>({from:'2026-10-01',to:'2026-10-01'}),ensurePosSaleSafetySchema:async()=>{},cashControlRule:async()=>({mode:'FULL'}),normalize:x=>x,money:v=>Number(v||0),readCashExpenseEvidence,buildKatShiftReconciliation:()=>({status:'AGREEMENT'})};
- new Function(...Object.keys(deps),source.slice(start,end))(...Object.values(deps));let result;await handler({params:{storeId:'s'},query:{date:'2026-10-01'},user:{companyId:'c'}},{json:x=>{result=x}});
+ new Function(...Object.keys(deps),source.slice(start,end).replace(/^export /gm,''))(...Object.values(deps));let result;await handler({params:{storeId:'s'},query:{date:'2026-10-01'},user:{companyId:'c'}},{json:x=>{result=x}});
  assert.equal(result.totals.expenses,31);assert.equal(result.totals.variance,-5);assert.equal(result.expenseChecks[0].documentPaymentTotal,124);assert.equal(result.expenseChecks[0].cashPaymentTotal,31);assert.equal(result.expenseChecks[0].externalPaymentTotal,93);assert(!result.alerts.some(x=>x.type==='AMOUNT_MISMATCH'));assert.equal(result.coverageStatus,'PROVISIONAL');
 });

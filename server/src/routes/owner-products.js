@@ -10,6 +10,84 @@ import {createScopedPromotionBatch} from "./price-catalog-promotion-guard.js";
 import {parsePromotionDate} from "../promotion-time.js";
 import {requireCompanyModule as defaultRequireCompanyModule} from "../middleware/module-access.js";
 
+export async function readOwnerMasterCatalog(companyId,q,{db=prisma}={}){
+ if(q.length<2)return [];const like=`%${q}%`;
+    const rows=await db.$queryRaw`
+      SELECT mp."id",mp."sourceCode",mp."name",mp."categoryName",mp."subcategoryName",mp."supplierName",mp."brandName",
+             mp."defaultRetailPrice",mp."defaultCostPrice",mp."vatRate",mp."vatVerified",
+             COALESCE(json_agg(mb."barcode") FILTER (WHERE mb."barcode" IS NOT NULL AND mb."scanEnabled"=true),'[]') AS "safeBarcodes",
+             COUNT(mb."barcode") FILTER (WHERE mb."duplicateBarcode"=true)::int AS "duplicateBarcodeCount",
+             p."id" AS "companyProductId"
+      FROM "MasterProduct" mp
+      LEFT JOIN "MasterProductBarcode" mb ON mb."masterProductId"=mp."id"
+      LEFT JOIN "Product" p ON p."companyId"=${companyId} AND p."masterProductId"=mp."id"
+      WHERE mp."active"=true AND (mp."name" ILIKE ${like} OR mp."sourceCode" ILIKE ${like} OR mb."barcode" ILIKE ${like})
+      GROUP BY mp."id",p."id"
+      ORDER BY mp."name" LIMIT 100`;
+ return rows;
+}
+
+export async function readOwnerProductArchive(scopeCompanyId,rawQuery={},productId=null,{db=prisma,scopedStoreId=null,includeOptions=true}={}){const prisma=db;const ownedProduct=async(company,id)=>(await db.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${id} AND "companyId"=${company} LIMIT 1`)[0]||null;
+
+    const company=scopeCompanyId;
+    if(!await ownedProduct(company,productId))throw Object.assign(new Error("Δεν βρέθηκε το προϊόν."),{status:404});
+    const [supplierCodes,purchases,stats,lastEvents,suppliers]=await Promise.all([
+      prisma.$queryRaw`WITH links AS (
+        SELECT spl."id",spl."supplierId",spl."supplierCode",spl."updatedAt",0 AS priority FROM "SupplierProductLink" spl
+        WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."active"=true
+        UNION ALL
+        SELECT m."id",m."supplierId",m."supplierItemCode" AS "supplierCode",m."updatedAt",1 AS priority FROM "SupplierProductMapping" m
+        WHERE m."companyId"=${company} AND m."productId"=${productId} AND NOT EXISTS (SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."supplierId"=m."supplierId" AND spl."active"=true)
+      ) SELECT DISTINCT ON (links."supplierId") links."id",links."supplierId",s."name" AS "supplierName",links."supplierCode",links."updatedAt",
+        COALESCE(lp."unitCost",CASE WHEN ${scopedStoreId}::text IS NULL THEN pm."lastUnitCost" END,0) AS "lastCost",COALESCE(lp."documentDate",CASE WHEN ${scopedStoreId}::text IS NULL THEN pm."lastSeenAt" END) AS "lastPurchaseAt"
+        FROM links JOIN "Supplier" s ON s."id"=links."supplierId" AND s."companyId"=${company}
+        LEFT JOIN "SupplierProductMapping" pm ON pm."companyId"=${company} AND pm."supplierId"=links."supplierId" AND pm."productId"=${productId}
+        LEFT JOIN LATERAL (SELECT history."unitCost",history."documentDate" FROM (
+          SELECT l."unitCost",d."documentDate",d."createdAt" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=links."supplierId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) AND d."status"='APPROVED'
+          UNION ALL SELECT l."unitCost",o."createdAt",o."createdAt" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=${productId} AND o."supplierId"=links."supplierId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice"
+        ) history ORDER BY history."documentDate" DESC,history."createdAt" DESC LIMIT 1) lp ON true
+        ORDER BY links."supplierId",links.priority,s."name"`,
+      prisma.$queryRaw`SELECT * FROM (
+        SELECT d."id",d."documentNumber",d."documentDate",d."supplierId",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",d."createdAt"
+        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE l."productId"=${productId} AND d."status"='APPROVED'
+        UNION ALL
+        SELECT o."id",o."invoiceNumber",o."createdAt",o."supplierId",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
+        FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
+        WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice" AND NOT EXISTS (
+          SELECT 1 FROM "PurchaseDocumentLine" document_line JOIN "PurchaseDocument" document ON document."id"=document_line."purchaseDocumentId"
+          WHERE document."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR document."storeId"=${scopedStoreId}) AND document."status"='APPROVED' AND document_line."productId"=${productId}
+            AND (document_line."purchaseOrderLineId"=l."id" OR (document."supplierId"=o."supplierId" AND NULLIF(TRIM(document."documentNumber"),'')=NULLIF(TRIM(o."invoiceNumber"),'')))
+        )
+      ) purchase_history ORDER BY "documentDate" DESC,"createdAt" DESC LIMIT 250`,
+      prisma.$queryRaw`SELECT
+        COALESCE(SUM(sl."quantity") FILTER (WHERE sale."status"='COMPLETED'),0) AS "soldQuantity",
+        COALESCE(SUM(sl."lineTotal") FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesGross",
+        COALESCE(SUM(sl."lineTotal"/(1+sl."vatRate"/100)) FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesNet",
+        MAX(sale."occurredAt") FILTER (WHERE sale."status"='COMPLETED') AS "lastSaleAt"
+        FROM "SaleLine" sl JOIN "Sale" sale ON sale."id"=sl."saleId" AND sale."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sale."storeId"=${scopedStoreId}) WHERE sl."productId"=${productId}`,
+      prisma.$queryRaw`SELECT
+        (SELECT MAX(st."finalizedAt") FROM "StocktakeLine" line JOIN "Stocktake" st ON st."id"=line."stocktakeId" WHERE line."productId"=${productId} AND st."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR st."storeId"=${scopedStoreId}) AND st."status"='FINALIZED') AS "lastStocktakeAt",
+        (SELECT MAX(h."createdAt") FROM "ProductPriceHistory" h WHERE h."productId"=${productId} AND h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId})) AS "lastPriceChangeAt",
+        (SELECT COALESCE(SUM(sp."currentStock"),0) FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${productId} AND s."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sp."storeId"=${scopedStoreId})) AS "currentStock"`,
+      includeOptions?prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`:[]
+    ]);
+    const purchaseSummary=purchases.reduce((a,row)=>{a.quantity+=Number(row.quantity||0)*(row.unit==='PACKAGE'?Number(row.unitsPerPackage||1):1);a.net+=Number(row.netAmount||0);a.gross+=Number(row.grossAmount||0);return a},{quantity:0,net:0,gross:0});
+    const latestPurchaseWithSupplier=purchases.find(row=>row.supplierId);
+    const latestSupplier=latestPurchaseWithSupplier?{supplierId:latestPurchaseWithSupplier.supplierId,supplierName:latestPurchaseWithSupplier.supplierName||""}:null;
+    const vatDepartments=includeOptions?await productCardVatOptions(prisma,company):[];
+    return ({supplierCodes,purchases,latestSupplier,suppliers,vatDepartments,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
+
+}
+
+export async function readOwnerProductPriceHistory(scopeCompanyId,rawQuery={},productId=null,{db=prisma,scopedStoreId=null}={}){const prisma=db;const ownedProduct=async(company,id)=>(await db.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${id} AND "companyId"=${company} LIMIT 1`)[0]||null;
+
+    const company=scopeCompanyId;
+    if(!await ownedProduct(company,productId))throw Object.assign(new Error("Δεν βρέθηκε το προϊόν."),{status:404});
+    const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId}) AND h."productId"=${productId} ORDER BY h."createdAt" DESC LIMIT 100`;
+    return (rows);
+
+}
+
 export function createOwnerProductsRouter({db=prisma,scope=null}={}){
 const prisma=db;
 const scopedStoreId=scope?.storeId||null;
@@ -47,19 +125,7 @@ router.get("/master",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
     const company=companyId(req);
     const q=String(req.query.q||"").trim();
     if(q.length<2)return res.json([]);
-    const like=`%${q}%`;
-    const rows=await prisma.$queryRaw`
-      SELECT mp."id",mp."sourceCode",mp."name",mp."categoryName",mp."subcategoryName",mp."supplierName",mp."brandName",
-             mp."defaultRetailPrice",mp."defaultCostPrice",mp."vatRate",mp."vatVerified",
-             COALESCE(json_agg(mb."barcode") FILTER (WHERE mb."barcode" IS NOT NULL AND mb."scanEnabled"=true),'[]') AS "safeBarcodes",
-             COUNT(mb."barcode") FILTER (WHERE mb."duplicateBarcode"=true)::int AS "duplicateBarcodeCount",
-             p."id" AS "companyProductId"
-      FROM "MasterProduct" mp
-      LEFT JOIN "MasterProductBarcode" mb ON mb."masterProductId"=mp."id"
-      LEFT JOIN "Product" p ON p."companyId"=${company} AND p."masterProductId"=mp."id"
-      WHERE mp."active"=true AND (mp."name" ILIKE ${like} OR mp."sourceCode" ILIKE ${like} OR mb."barcode" ILIKE ${like})
-      GROUP BY mp."id",p."id"
-      ORDER BY mp."name" LIMIT 100`;
+    const rows=await readOwnerMasterCatalog(company,q,{db:prisma});
     res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
     res.setHeader("Pragma","no-cache");
     res.setHeader("Expires","0");
@@ -165,56 +231,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
 });
 
 router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req),productId=String(req.params.productId);
-    if(!await ownedProduct(company,productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
-    const [supplierCodes,purchases,stats,lastEvents,suppliers]=await Promise.all([
-      prisma.$queryRaw`WITH links AS (
-        SELECT spl."id",spl."supplierId",spl."supplierCode",spl."updatedAt",0 AS priority FROM "SupplierProductLink" spl
-        WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."active"=true
-        UNION ALL
-        SELECT m."id",m."supplierId",m."supplierItemCode" AS "supplierCode",m."updatedAt",1 AS priority FROM "SupplierProductMapping" m
-        WHERE m."companyId"=${company} AND m."productId"=${productId} AND NOT EXISTS (SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."supplierId"=m."supplierId" AND spl."active"=true)
-      ) SELECT DISTINCT ON (links."supplierId") links."id",links."supplierId",s."name" AS "supplierName",links."supplierCode",links."updatedAt",
-        COALESCE(lp."unitCost",CASE WHEN ${scopedStoreId}::text IS NULL THEN pm."lastUnitCost" END,0) AS "lastCost",COALESCE(lp."documentDate",CASE WHEN ${scopedStoreId}::text IS NULL THEN pm."lastSeenAt" END) AS "lastPurchaseAt"
-        FROM links JOIN "Supplier" s ON s."id"=links."supplierId" AND s."companyId"=${company}
-        LEFT JOIN "SupplierProductMapping" pm ON pm."companyId"=${company} AND pm."supplierId"=links."supplierId" AND pm."productId"=${productId}
-        LEFT JOIN LATERAL (SELECT history."unitCost",history."documentDate" FROM (
-          SELECT l."unitCost",d."documentDate",d."createdAt" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=links."supplierId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) AND d."status"='APPROVED'
-          UNION ALL SELECT l."unitCost",o."createdAt",o."createdAt" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=${productId} AND o."supplierId"=links."supplierId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice"
-        ) history ORDER BY history."documentDate" DESC,history."createdAt" DESC LIMIT 1) lp ON true
-        ORDER BY links."supplierId",links.priority,s."name"`,
-      prisma.$queryRaw`SELECT * FROM (
-        SELECT d."id",d."documentNumber",d."documentDate",d."supplierId",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",d."createdAt"
-        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE l."productId"=${productId} AND d."status"='APPROVED'
-        UNION ALL
-        SELECT o."id",o."invoiceNumber",o."createdAt",o."supplierId",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
-        FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
-        WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED') AND NOT o."awaitingInvoice" AND NOT EXISTS (
-          SELECT 1 FROM "PurchaseDocumentLine" document_line JOIN "PurchaseDocument" document ON document."id"=document_line."purchaseDocumentId"
-          WHERE document."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR document."storeId"=${scopedStoreId}) AND document."status"='APPROVED' AND document_line."productId"=${productId}
-            AND (document_line."purchaseOrderLineId"=l."id" OR (document."supplierId"=o."supplierId" AND NULLIF(TRIM(document."documentNumber"),'')=NULLIF(TRIM(o."invoiceNumber"),'')))
-        )
-      ) purchase_history ORDER BY "documentDate" DESC,"createdAt" DESC LIMIT 250`,
-      prisma.$queryRaw`SELECT
-        COALESCE(SUM(sl."quantity") FILTER (WHERE sale."status"='COMPLETED'),0) AS "soldQuantity",
-        COALESCE(SUM(sl."lineTotal") FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesGross",
-        COALESCE(SUM(sl."lineTotal"/(1+sl."vatRate"/100)) FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesNet",
-        MAX(sale."occurredAt") FILTER (WHERE sale."status"='COMPLETED') AS "lastSaleAt"
-        FROM "SaleLine" sl JOIN "Sale" sale ON sale."id"=sl."saleId" AND sale."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sale."storeId"=${scopedStoreId}) WHERE sl."productId"=${productId}`,
-      prisma.$queryRaw`SELECT
-        (SELECT MAX(st."finalizedAt") FROM "StocktakeLine" line JOIN "Stocktake" st ON st."id"=line."stocktakeId" WHERE line."productId"=${productId} AND st."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR st."storeId"=${scopedStoreId}) AND st."status"='FINALIZED') AS "lastStocktakeAt",
-        (SELECT MAX(h."createdAt") FROM "ProductPriceHistory" h WHERE h."productId"=${productId} AND h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId})) AS "lastPriceChangeAt",
-        (SELECT COALESCE(SUM(sp."currentStock"),0) FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${productId} AND s."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sp."storeId"=${scopedStoreId})) AS "currentStock"`,
-      prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`
-    ]);
-    const purchaseSummary=purchases.reduce((a,row)=>{a.quantity+=Number(row.quantity||0)*(row.unit==='PACKAGE'?Number(row.unitsPerPackage||1):1);a.net+=Number(row.netAmount||0);a.gross+=Number(row.grossAmount||0);return a},{quantity:0,net:0,gross:0});
-    const latestPurchaseWithSupplier=purchases.find(row=>row.supplierId);
-    const latestSupplier=latestPurchaseWithSupplier?{supplierId:latestPurchaseWithSupplier.supplierId,supplierName:latestPurchaseWithSupplier.supplierName||""}:null;
-    const vatDepartments=await productCardVatOptions(prisma,company);
-    res.json({supplierCodes,purchases,latestSupplier,suppliers,vatDepartments,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
-  }catch(error){next(error)}
-});
+  try{res.json(await readOwnerProductArchive(req.user.companyId,req.query,req.params.productId,{db:prisma,scopedStoreId}))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -441,13 +458,7 @@ router.post("/prices/bulk",requireCompanyModule("INVENTORY"),async(req,res,next)
 });
 
 router.get("/:productId/price-history",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);
-    if(!await ownedProduct(company,req.params.productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
-    const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId}) AND h."productId"=${req.params.productId} ORDER BY h."createdAt" DESC LIMIT 100`;
-    res.json(rows);
-  }catch(error){next(error)}
-});
+  try{res.json(await readOwnerProductPriceHistory(req.user.companyId,req.query,req.params.productId,{db:prisma,scopedStoreId}))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 
 router.get("/promotions/efood-xlsx", requireCompanyModule("INVENTORY"), async (req, res, next) => {
   try {

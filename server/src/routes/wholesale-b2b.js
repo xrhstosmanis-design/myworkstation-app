@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -14,9 +15,24 @@ const context=req=>({companyId:req.user?.companyId,actorId:req.user?.id,role:req
 const uid=()=>crypto.randomUUID();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 
-router.use((req,res,next)=>{if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Wholesale access denied."});next();});
-router.use(["/products","/quotes","/orders"],(req,res,next)=>{try{assertWholesaleManager(context(req));next()}catch(error){next(error)}});
-router.use(async(req,res,next)=>{try{await assertWholesaleEntitlement(prisma,req.user?.companyId);await ensureWholesaleSchema();next()}catch(error){next(error)}});
+function delegatedWholesaleRead(req){return req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='wholesale.read'&&/^\/api\/wholesale\/orders(?:\/[^/]+)?$/.test(String(req.originalUrl||'').split('?')[0])}
+async function requireWholesaleRead(req){
+ if(!delegatedWholesaleRead(req)||typeof req.query.storeId!=='string'||req.query.storeId!==req.user.storeId)throw staffError();
+ await requireStaffGrant(prisma,req.user,req.user.storeId,'wholesale.read');
+ await assertWholesaleEntitlement(prisma,req.user.companyId);
+}
+const fields=(value,keys)=>Object.fromEntries(keys.filter(key=>value?.[key]!==undefined).map(key=>[key,value[key]]));
+function wholesaleReadRecord(row,companyId){
+ const snapshot=typeof row.snapshot==='string'?JSON.parse(row.snapshot):row.snapshot;
+ if(!snapshot||snapshot.storeId!==row.storeId||snapshot.companyId&&snapshot.companyId!==companyId)throw staffError(409,'STAFF_SOURCE_CHANGED','Η αποθηκευμένη παραγγελία χρειάζεται έλεγχο.');
+ const record=orderRecord(row);
+ return {...fields(record,['id','storeId','customerId','channel','status','revision','notes','createdAt','netTotal','vatTotal','grossTotal']),companyId,
+  snapshot:{...fields(snapshot,['storeId','customerName','currency']),items:(Array.isArray(snapshot.items)?snapshot.items:[]).map(item=>fields(item,['productId','name','unit','quantity','netTotal','vatTotal','grossTotal'])),totals:fields(snapshot.totals,['net','vat','gross'])}};
+}
+
+router.use((req,res,next)=>{if(req.user?.staffAccess===true)return delegatedWholesaleRead(req)?next():next(staffError());if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Wholesale access denied."});next();});
+router.use(["/products","/quotes","/orders"],(req,res,next)=>{try{if(req.user?.staffAccess!==true)assertWholesaleManager(context(req));next()}catch(error){next(error)}});
+router.use(async(req,res,next)=>{try{if(req.user?.staffAccess===true)await requireWholesaleRead(req);else{await assertWholesaleEntitlement(prisma,req.user?.companyId);await ensureWholesaleSchema();}next()}catch(error){next(error)}});
 
 const customerPayload=z.object({name:z.string().trim().min(1).max(200),code:z.string().trim().max(60).optional().nullable(),taxId:z.string().trim().max(30).optional().nullable(),creditLimit:z.coerce.number().min(0).default(0),paymentTermsDays:z.coerce.number().int().min(0).max(3650).default(0),active:z.boolean().default(true)});
 const listPayload=z.object({code:z.string().trim().min(1).max(60),name:z.string().trim().min(1).max(160),discountPercent:z.coerce.number().min(0).max(100).default(0),active:z.boolean().default(true)});
@@ -141,7 +157,9 @@ router.get("/orders",async(req,res,next)=>{try{
     const items=await tx.$queryRaw`SELECT "id","storeId","customerId","actorId","channel","status","revision","clientOrderId","quoteId","snapshot","notes","netTotal","vatTotal","grossTotal","createdAt" FROM "WholesaleOrderRequest" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt" DESC,"id" DESC LIMIT ${pageSize} OFFSET ${offset}`;
     const counts=await tx.$queryRaw`SELECT COUNT(*) AS total FROM "WholesaleOrderRequest" WHERE "companyId"=${companyId} AND "storeId"=${storeId}`;
     return {items:items.map(orderRecord),total:Number(counts[0]?.total||0),page,pageSize};
-  },{isolationLevel:"RepeatableRead"});res.json(result);
+  },{isolationLevel:"RepeatableRead"});
+  if(req.user?.staffAccess===true){await requireWholesaleRead(req);return res.json({...result,companyId,storeId,items:result.items.map(row=>wholesaleReadRecord(row,companyId))});}
+  res.json(result);
 }catch(error){next(error)}});
 router.get("/orders/:id",async(req,res,next)=>{try{
   const companyId=req.user.companyId,{storeId}=detailQuery.parse(req.query);
@@ -150,7 +168,9 @@ router.get("/orders/:id",async(req,res,next)=>{try{
     await activeStore(tx,companyId,storeId);
     const rows=await tx.$queryRaw`SELECT "id","storeId","customerId","actorId","channel","status","revision","clientOrderId","quoteId","snapshot","notes","netTotal","vatTotal","grossTotal","createdAt" FROM "WholesaleOrderRequest" WHERE "id"=${req.params.id} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw wholesaleError(404,"ORDER_NOT_FOUND","Η παραγγελία δεν βρέθηκε στο επιλεγμένο κατάστημα.");return orderRecord(rows[0]);
-  },{isolationLevel:"RepeatableRead"});res.json({order});
+  },{isolationLevel:"RepeatableRead"});
+  if(req.user?.staffAccess===true){await requireWholesaleRead(req);return res.json({companyId,storeId,order:wholesaleReadRecord(order,companyId)});}
+  res.json({order});
 }catch(error){next(error)}});
 // Preserve typed stale-price information for the mounted client. Unexpected
 // errors continue to the application's ordinary logging/error handler.

@@ -1,0 +1,17 @@
+{
+  "format": "MWS_BACKOFFICE_COMPANY_CURRENT_COLUMNS_V1",
+  "productionActivated": false,
+  "columns": [
+    {"table":"PurchaseOrder","name":"awaitingInvoice","position":18,"type":"boolean","notNull":true,"defaultExpression":"false","identity":"","generated":""},
+    {"table":"StoreProduct","name":"costPriceOverride","position":10,"type":"numeric(12,4)","notNull":false,"defaultExpression":null,"identity":"","generated":""},
+    {"table":"StoreProduct","name":"vatDepartmentIdOverride","position":11,"type":"text","notNull":false,"defaultExpression":null,"identity":"","generated":""},
+    {"table":"StoreProduct","name":"categoryIdOverride","position":12,"type":"text","notNull":false,"defaultExpression":null,"identity":"","generated":""},
+    {"table":"StoreProduct","name":"subcategoryIdOverride","position":13,"type":"text","notNull":false,"defaultExpression":null,"identity":"","generated":""},
+    {"table":"TableOrder","name":"cashParts","position":14,"type":"jsonb","notNull":true,"defaultExpression":"'[]'::jsonb","identity":"","generated":""}
+  ],
+  "costCheck": {"table":"StoreProduct","name":"StoreProduct_costPriceOverride_check","kind":"c","validated":true,"deferrable":false,"deferred":false,"definition":"CHECK (\"costPriceOverride\" >= 0::numeric)"},
+  "opaquePreservedColumns": ["StoreProduct.vatDepartmentIdOverride","StoreProduct.categoryIdOverride","StoreProduct.subcategoryIdOverride","TableOrder.cashParts"],
+  "ownershipInference": false,
+  "scopedRecovery": false,
+  "sourceInputs": ["server/src/routes/purchase-orders.js","server/src/commercial-bootstrap.js","server/src/routes/store-table-orders.js"]
+}

@@ -1,5 +1,6 @@
+import {mountChatGroups} from "../src/chat-groups.mjs";
 import {chatSendContext} from '../src/chat-interactions.mjs';
-import {chatTopic,topicRow} from '../src/chat-topics.mjs';
+import {categoryTopic,chatTopic,topicRow} from '../src/chat-topics.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -34,7 +35,7 @@ function harness(){
   };
   const router={get:(p,...handlers)=>routes.set('GET '+p,handlers.at(-1)),post:(p,...handlers)=>routes.set('POST '+p,handlers.at(-1)),put(){},patch(){}};
   const source=fs.readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace('export async function','async function').replace('export default router;','return router;');
-  new Function('express','prisma','crypto','parseVoiceAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus','chatSendContext','chatTopic','topicRow',source)({Router:()=>router},db,crypto,parseVoiceAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {attempted:0,delivered:0}},()=>({configured:false}),chatSendContext,chatTopic,topicRow);
+  new Function('express','prisma','crypto','parseVoiceAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus','chatSendContext','categoryTopic','chatTopic','topicRow','mountChatGroups',source)({Router:()=>router},db,crypto,parseVoiceAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {attempted:0,delivered:0}},()=>({configured:false}),chatSendContext,categoryTopic,chatTopic,topicRow,mountChatGroups);
   const request=async(body,user={id:'owner',role:'OWNER',companyId:'company'},method='POST',storeId='store')=>{
     const res={statusCode:200,headers:{},status(code){this.statusCode=code;return this},setHeader(k,v){this.headers[k]=v},json(value){this.body=value;return this}};let error;
     await routes.get(method==='GET'?'GET /stores/:storeId/messages':'POST /stores/:storeId/voice-messages')({body,user,params:{storeId},query:{}},res,e=>{error=e});
@@ -47,7 +48,7 @@ test('registered voice handler commits one scoped GENERAL message and metadata a
   assert.equal(result.error,undefined);assert.equal(result.statusCode,201);assert.equal(result.body.ok,true);assert.equal(result.body.id,h.messages[0].id);assert.equal(h.messages.length,1);
   assert.deepEqual({company:h.messages[0].companyId,store:h.messages[0].storeId,sender:h.messages[0].sender,mime:h.messages[0].mime},{company:'company',store:'store',sender:'owner',mime:'audio/wav'});
   assert.equal(h.messages[0].data,data.dataUrl.split(',')[1]);assert.equal(h.audits.length,1);assert.equal(h.audits[0].durationMs,1000);assert.doesNotMatch(JSON.stringify(h.audits),/Private caption|base64/);
-  assert.deepEqual(h.pushes,[{store:{id:'store',companyId:'company',name:'LAB'},senderId:'owner'}]);assert.match(result.headers['Cache-Control'],/no-store/);
+  assert.deepEqual(h.pushes,[{store:{id:'store',companyId:'company',name:'LAB'},senderId:'owner',messageId:h.messages[0].id,topic:'GENERAL'}]);assert.match(result.headers['Cache-Control'],/no-store/);
 });
 test('registered voice handler rejects foreign store/company and malformed requests with no writes or push',async()=>{
   for(const [user,store] of [[{id:'foreign',companyId:'foreign'},'store'],[{id:'op',companyId:'company',tokenType:'STORE_OPERATOR',storeId:'other'},'store'],[{id:'owner',companyId:'company'},'missing']]){

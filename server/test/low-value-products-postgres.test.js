@@ -7,6 +7,7 @@ import {z} from "zod";
 import {lowValueLabOwnerAccess} from "../src/services/low-value-lab-owner-access.js";
 import {buildLowValueProducts} from "../src/lib/low-value-products.js";
 import {ownerRestrictedModuleKeys} from "../src/services/module-catalog.js";
+import {requireStaffGrant,staffError} from "../src/services/backoffice-staff-access.js";
 
 // Real handler/guard/SQL, injected user contexts, isolated loopback TEMP data only.
 test("product value HTTP/SQL: historic net cost, returns, isolation, roles and no writes",{skip:!process.env.DATABASE_URL,timeout:45000},async t=>{
@@ -63,7 +64,7 @@ test("product value HTTP/SQL: historic net cost, returns, isolation, roles and n
     const guardSource=await readFile(new URL("../src/middleware/module-access.js",import.meta.url),"utf8");
     const guard=new Function("prisma","ownerRestrictedModuleKeys",guardSource.replace(/^import .*;\s*$/gm,"").replace(/^export /gm,"")+"\nreturn requireStoreModule;")(db,ownerRestrictedModuleKeys);
     const routeSource=await readFile(new URL("../src/routes/low-value-products.js",import.meta.url),"utf8");
-    const registrations=[];new Function("Router","z","prisma","requireStoreModule","lowValueLabOwnerAccess","buildLowValueProducts",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,lowValueLabOwnerAccess,buildLowValueProducts);
+    const registrations=[];new Function("Router","z","prisma","requireStoreModule","lowValueLabOwnerAccess","buildLowValueProducts","requireStaffGrant","staffError",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,lowValueLabOwnerAccess,buildLowValueProducts,requireStaffGrant,staffError);
     const users={owner:{role:"OWNER",companyId:"a"},sa:{role:"SUPER_ADMIN",companyId:"different"},employee:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a"},permitted:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a",permissions:["MODULE:LOW_VALUE_PRODUCTS"]},suspended:{role:"OWNER",companyId:"c"}};
     const app=express();app.use((req,res,next)=>{req.user=users[req.get("x-fixture-user")];return req.user?next():res.status(401).end();});for(const [path,...handlers] of registrations)app.get(`/api/commerce${path}`,...handlers);app.use((err,req,res,next)=>res.status(500).json({error:err.message}));
     const server=app.listen(0,"127.0.0.1");await once(server,"listening");

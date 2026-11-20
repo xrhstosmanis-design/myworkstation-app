@@ -52,9 +52,9 @@ function dateRange(query){
   return {from,to};
 }
 function txFilterType(type){return type==="ALL"?null:type}
-async function verifyStore(companyId,storeId){
+async function verifyStore(companyId,storeId,{db=prisma}={}){
   if(!storeId)return null;
-  const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});
+  const store=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});
   if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα.");error.status=404;throw error}
   return store;
 }
@@ -69,17 +69,16 @@ function mergeByKey(primary,secondary,key,fields){
   return [...rows.values()];
 }
 
-router.get("/business-picture",async(req,res,next)=>{
-  try{
-    requireOwnerReport(req);
-    const query=reportQuery.pick({from:true,to:true,storeId:true}).extend({calendarFrom:z.string().optional(),calendarTo:z.string().optional()}).parse(req.query||{});
+export async function readOwnerBusinessPicture(scopeCompanyId,rawQuery,{db=prisma,strictTenant=false}={}){
+ const prisma=db;
+    const query=reportQuery.pick({from:true,to:true,storeId:true}).extend({calendarFrom:z.string().optional(),calendarTo:z.string().optional()}).parse(rawQuery||{});
     const calendar=query.calendarFrom!==undefined||query.calendarTo!==undefined;
     if(calendar&&(query.from!==undefined||query.to!==undefined))throw Object.assign(new Error("Μη συνδυάζεις ημερολογιακές και ISO ημερομηνίες."),{status:400});
     const period=calendar?businessPictureCalendarRange(query.calendarFrom,query.calendarTo):{...dateRange(query),timeZone:"Europe/Athens"};
-    const {from,to}=period,companyId=req.user.companyId,storeId=query.storeId||null;
+    const {from,to}=period,companyId=scopeCompanyId,storeId=query.storeId||null;
     // Calendar periods end at the next midnight, including sub-millisecond ledger timestamps.
     const upper=calendar?new Date(to.getTime()+1):to,inclusiveUpper=!calendar;
-    await verifyStore(companyId,storeId);
+    await verifyStore(companyId,storeId,{db:prisma});
     const [stores,sales,purchases,expenses]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
       prisma.$queryRaw`
@@ -123,14 +122,14 @@ router.get("/business-picture",async(req,res,next)=>{
           SELECT sa."id" AS "saleId",sa."source",sa."reversalKind",sa."storeId",p."categoryId",COALESCE(p."unit",'UNKNOWN') AS "costUnit",
             TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,
             TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
-            sl."productId",COALESCE(p."name",sl."description") AS "productName",p."sku",sl."quantity",sl."lineTotal",
+            CASE WHEN ${strictTenant} THEN p."id" ELSE sl."productId" END AS "productId",COALESCE(p."name",sl."description") AS "productName",p."sku",sl."quantity",sl."lineTotal",
             CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END AS "salesNet",
             CASE WHEN sa."source"='POS_REVERSAL' AND original."id" IS NULL THEN NULL ELSE sl."quantity"*COALESCE(pc."unitCost",catalog."unitCost",0) END AS "lineCost",
             (COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) OR (pc."unitCost" IS NULL AND (p."costPrice" IS NULL OR p."costPrice"<=0))) AS "missingCost",
             (COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) OR sl."quantity"*sl."lineTotal"<0 OR sl."quantity"=0) AS "unsafeEstimate",
             COALESCE(pc."pieceCost" IS NOT NULL AND ABS(pc."pieceCost"-pc."legacyUnitCost")>0.000001,false) AS "purchaseAdjusted",
             COALESCE(pc."unitCost" IS NULL AND ABS(catalog."unitCost"-p."costPrice")>0.000001,false) AS "catalogAdjusted"
-          FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED'
+          FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=sa."storeId" AND scopeStore."companyId"=sa."companyId"))
           LEFT JOIN "Sale" original ON sa."source"='POS_REVERSAL' AND original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId" AND original."status"='COMPLETED' AND original."source"<>'POS_REVERSAL'
           LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
           LEFT JOIN "purchaseCostTimeline" pc ON pc."companyId"=sa."companyId" AND pc."storeId"=sa."storeId" AND pc."productId"=sl."productId"
@@ -171,14 +170,14 @@ router.get("/business-picture",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,COUNT(*)::int AS documents,
           COALESCE(SUM("totalNet"),0) AS "purchaseNet",COALESCE(SUM("totalVat"),0) AS "purchaseVat",COALESCE(SUM("totalGross"),0) AS "purchaseGross"
-        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND ("documentDate"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND "documentDate"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
+        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="PurchaseDocument"."storeId" AND scopeStore."companyId"="PurchaseDocument"."companyId")) AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND ("documentDate"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND "documentDate"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
         WITH "expenseLinks" AS (
           SELECT "companyId","storeId","attachmentFilename",SUM("amount") AS paid,
             MIN("amount") AS "minAmount",MAX("amount") AS "maxAmount"
-          FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "type"='OTHER_EXPENSE' AND "reversedAt" IS NULL AND "attachmentMimeType"=${purchaseDocumentMime}
+          FROM "StoreTransaction" WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="StoreTransaction"."storeId" AND scopeStore."companyId"="StoreTransaction"."companyId")) AND "type"='OTHER_EXPENSE' AND "reversedAt" IS NULL AND "attachmentMimeType"=${purchaseDocumentMime}
           GROUP BY "companyId","storeId","attachmentFilename"
         ), "expenseAllocation" AS (
           -- Allocate before the report date filter; cumulative rounding preserves the final cent.
@@ -192,7 +191,7 @@ router.get("/business-picture",async(req,res,next)=>{
             AND links."minAmount"*pd."totalGross">=0 AND links."maxAmount"*pd."totalGross">=0
             AND ROUND(pd."totalNet"+pd."totalVat",2)=ROUND(pd."totalGross",2)
             AND pd."totalNet"*pd."totalGross">=0 AND pd."totalVat"*pd."totalGross">=0 AND ABS(pd."totalVat")<=ABS(pd."totalGross")
-          WHERE tx."companyId"=${companyId} AND tx."type"='OTHER_EXPENSE' AND tx."reversedAt" IS NULL AND tx."attachmentMimeType"=${purchaseDocumentMime}
+          WHERE tx."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=tx."storeId" AND scopeStore."companyId"=tx."companyId")) AND tx."type"='OTHER_EXPENSE' AND tx."reversedAt" IS NULL AND tx."attachmentMimeType"=${purchaseDocumentMime}
           WINDOW payment_order AS (PARTITION BY tx."companyId",tx."storeId",tx."attachmentFilename" ORDER BY tx."occurredAt",tx."id" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
         )
         SELECT TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
@@ -213,7 +212,7 @@ router.get("/business-picture",async(req,res,next)=>{
         FROM "StoreTransaction" tx
         LEFT JOIN "expenseAllocation" allocation ON allocation."id"=tx."id"
         LEFT JOIN "PurchaseDocument" evidence ON tx."attachmentMimeType"=${purchaseDocumentMime} AND evidence."id"=tx."attachmentFilename" AND evidence."companyId"=tx."companyId" AND evidence."storeId"=tx."storeId"
-        WHERE tx."companyId"=${companyId} AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND (tx."occurredAt"<${upper} OR (${inclusiveUpper}::boolean AND tx."occurredAt"=${upper}))
+        WHERE tx."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=tx."storeId" AND scopeStore."companyId"=tx."companyId")) AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND (tx."occurredAt"<${upper} OR (${inclusiveUpper}::boolean AND tx."occurredAt"=${upper}))
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`
     ]);
@@ -225,22 +224,21 @@ router.get("/business-picture",async(req,res,next)=>{
     const daily=[...rows.values()].sort((a,b)=>b.day.localeCompare(a.day)).map(finish);
     const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
     const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()}));
-    res.set("Cache-Control","no-store, private");
-    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,missingCostDetails:collectBusinessPictureMissingCosts(sales).map(row=>({...row,storeName:stores.find(store=>store.id===row.storeId)?.name||null})),missingExpenseVatDetails:expenses.flatMap(row=>(row.missingExpenseVatDetails||[]).map(item=>({...item,day:row.day,month:row.month,amount:n(item.amount),storeName:stores.find(store=>store.id===item.storeId)?.name||null}))).sort((a,b)=>String(b.occurredAt).localeCompare(String(a.occurredAt))||b.id.localeCompare(a.id)),calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Κάθε ενεργή πληρωμή εμφανίζεται στην ημερομηνία της. Καθαρό ποσό και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό του ίδιου καταστήματος, με συμφωνία στρογγυλοποίησης στην εξόφληση. Όπου δεν υπάρχει έγκυρη ανάλυση ΦΠΑ (χωρίς σύνδεση, μη διαθέσιμο ή ασυνεπές παραστατικό, υπερπληρωμή), ολόκληρο το ποσό υπολογίζεται ως έξοδο με ΦΠΑ 0% στην εικόνα ιδιοκτήτη, σύμφωνα με την οδηγία του. Τα αρχικά παραστατικά δεν τροποποιούνται. Ακυρωμένες πληρωμές δεν προσμετρώνται. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, τα οριστικά κέρδη και Margin παραμένουν άγνωστα. Εμφανίζεται χωριστά εκτίμηση από τα γνωστά κόστη της ίδιας κατηγορίας και μονάδας στην επιλεγμένη περίοδο, με εναλλακτική βάση το ίδιο κατάστημα. Οι δωρεάν πωλήσεις εκτιμώνται από γνωστό κόστος ανά μονάδα. Χωρίς επαρκή βάση ή αρχική πώληση επιστροφής δεν παράγεται εκτίμηση. Η κάλυψη αφορά τις πωλήσεις με γνωστό κόστος, όχι εγγύηση ακρίβειας. Μηδενικό πραγματικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",units:"Στις παλιές εγγραφές συσκευασίας το κόστος μετατρέπεται ανά τεμάχιο μόνο με άμεση σύνδεση στο οριστικοποιημένο αρχικό παραστατικό και συμφωνία ποσοτήτων/καθαρών αξιών. Περιλαμβάνονται οι τελικές εκπτώσεις και ο ΕΦΚ. Τα αρχικά στοιχεία δεν τροποποιούνται.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
-  }catch(error){next(error)}
-});
+    return ({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,missingCostDetails:collectBusinessPictureMissingCosts(sales).map(row=>({...row,storeName:stores.find(store=>store.id===row.storeId)?.name||null})),missingExpenseVatDetails:expenses.flatMap(row=>(row.missingExpenseVatDetails||[]).map(item=>({...item,day:row.day,month:row.month,amount:n(item.amount),storeName:stores.find(store=>store.id===item.storeId)?.name||null}))).sort((a,b)=>String(b.occurredAt).localeCompare(String(a.occurredAt))||b.id.localeCompare(a.id)),calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Κάθε ενεργή πληρωμή εμφανίζεται στην ημερομηνία της. Καθαρό ποσό και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό του ίδιου καταστήματος, με συμφωνία στρογγυλοποίησης στην εξόφληση. Όπου δεν υπάρχει έγκυρη ανάλυση ΦΠΑ (χωρίς σύνδεση, μη διαθέσιμο ή ασυνεπές παραστατικό, υπερπληρωμή), ολόκληρο το ποσό υπολογίζεται ως έξοδο με ΦΠΑ 0% στην εικόνα ιδιοκτήτη, σύμφωνα με την οδηγία του. Τα αρχικά παραστατικά δεν τροποποιούνται. Ακυρωμένες πληρωμές δεν προσμετρώνται. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, τα οριστικά κέρδη και Margin παραμένουν άγνωστα. Εμφανίζεται χωριστά εκτίμηση από τα γνωστά κόστη της ίδιας κατηγορίας και μονάδας στην επιλεγμένη περίοδο, με εναλλακτική βάση το ίδιο κατάστημα. Οι δωρεάν πωλήσεις εκτιμώνται από γνωστό κόστος ανά μονάδα. Χωρίς επαρκή βάση ή αρχική πώληση επιστροφής δεν παράγεται εκτίμηση. Η κάλυψη αφορά τις πωλήσεις με γνωστό κόστος, όχι εγγύηση ακρίβειας. Μηδενικό πραγματικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",units:"Στις παλιές εγγραφές συσκευασίας το κόστος μετατρέπεται ανά τεμάχιο μόνο με άμεση σύνδεση στο οριστικοποιημένο αρχικό παραστατικό και συμφωνία ποσοτήτων/καθαρών αξιών. Περιλαμβάνονται οι τελικές εκπτώσεις και ο ΕΦΚ. Τα αρχικά στοιχεία δεν τροποποιούνται.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
 
-router.get("/report",async(req,res,next)=>{
-  try{
-    requireOwnerReport(req);
-    const query=reportQuery.parse(req.query||{});
+}
+router.get("/business-picture",async(req,res,next)=>{try{requireOwnerReport(req);res.set("Cache-Control","no-store, private");res.json(await readOwnerBusinessPicture(req.user.companyId,req.query||{}))}catch(error){next(error)}});
+
+export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,strictTenant=false}={}){
+ const prisma=db;
+    const query=reportQuery.parse(rawQuery||{});
     const {from,to}=dateRange(query);
-    const companyId=req.user.companyId;
+    const companyId=scopeCompanyId;
     const storeId=query.storeId||null;
     const supplierId=query.supplierId||null;
     const type=txFilterType(query.type);
     const needle=query.q||null;
-    await verifyStore(companyId,storeId);
+    await verifyStore(companyId,storeId,{db:prisma});
 
     const [stores,suppliers,ledgerTable]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
@@ -249,7 +247,7 @@ router.get("/report",async(req,res,next)=>{
     ]);
 
     if(!ledgerTable[0]?.exists){
-      return res.json({
+      return ({
         generatedAt:new Date().toISOString(),from,to,stores,suppliers,summary:{count:0,totalExpenses:0,supplierPayments:0,otherExpenses:0,averageExpense:0,missingAttachments:0,reversedCount:0,salesTotal:0,purchasesTotal:0,percentOfSales:0,changePercent:null},
         byStore:[],bySupplier:[],categories:[],daily:[],movements:[],sourceStatus:{ledger:false,sales:true,purchases:true}
       });
@@ -272,9 +270,9 @@ router.get("/report",async(req,res,next)=>{
         )::int AS "missingAttachments",
         COUNT(*) FILTER (WHERE t."reversedAt" IS NOT NULL)::int AS "reversedCount"
       FROM "StoreTransaction" t
-      JOIN "Store" st ON st."id"=t."storeId"
-      LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-      WHERE t."companyId"=${companyId}
+      JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+      LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+      WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId"))
         AND t."occurredAt">=${rangeFrom} AND t."occurredAt"<=${rangeTo}
         AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
         AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
@@ -289,14 +287,14 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT COALESCE(SUM("total"),0) AS total
         FROM "Sale"
-        WHERE "companyId"=${companyId} AND "status"='COMPLETED'
+        WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="Sale"."storeId" AND scopeStore."companyId"="Sale"."companyId")) AND "status"='COMPLETED'
           AND "occurredAt">=${from} AND "occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
       `,
       prisma.$queryRaw`
         SELECT COALESCE(SUM("totalGross"),0) AS total
         FROM "PurchaseDocument"
-        WHERE "companyId"=${companyId} AND "status"='APPROVED'
+        WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="PurchaseDocument"."storeId" AND scopeStore."companyId"="PurchaseDocument"."companyId")) AND "status"='APPROVED'
           AND "documentDate">=${from} AND "documentDate"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR "supplierId"=${supplierId})
@@ -307,9 +305,9 @@ router.get("/report",async(req,res,next)=>{
                t."subtractFromShift",t."actorId",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",
                (t."attachmentData" IS NOT NULL) AS "hasAttachment",t."attachmentMimeType",t."attachmentFilename"
         FROM "StoreTransaction" t
-        JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId}
+        JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId"))
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
@@ -323,9 +321,9 @@ router.get("/report",async(req,res,next)=>{
         SELECT t."storeId",st."name" AS name,
                COUNT(*) FILTER (WHERE t."reversedAt" IS NULL)::int AS count,
                COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS expenses
-        FROM "StoreTransaction" t JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
+        FROM "StoreTransaction" t JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -335,23 +333,23 @@ router.get("/report",async(req,res,next)=>{
       `,
       prisma.$queryRaw`
         SELECT s."storeId",st."name" AS name,COALESCE(SUM(s."total"),0) AS sales
-        FROM "Sale" s JOIN "Store" st ON st."id"=s."storeId"
+        FROM "Sale" s JOIN "Store" st ON st."id"=s."storeId" AND (${strictTenant}=false OR st."companyId"=s."companyId")
         WHERE s."companyId"=${companyId} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR s."storeId"=${storeId})
         GROUP BY s."storeId",st."name"
       `,
       prisma.$queryRaw`
         SELECT d."storeId",st."name" AS name,COALESCE(SUM(d."totalGross"),0) AS purchases
-        FROM "PurchaseDocument" d JOIN "Store" st ON st."id"=d."storeId"
-        WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND d."documentDate">=${from} AND d."documentDate"<=${to}
+        FROM "PurchaseDocument" d JOIN "Store" st ON st."id"=d."storeId" AND (${strictTenant}=false OR st."companyId"=d."companyId")
+        WHERE d."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=d."storeId" AND scopeStore."companyId"=d."companyId")) AND d."status"='APPROVED' AND d."documentDate">=${from} AND d."documentDate"<=${to}
           AND (${storeId}::text IS NULL OR d."storeId"=${storeId})
         GROUP BY d."storeId",st."name"
       `,
       prisma.$queryRaw`
         SELECT COALESCE(t."supplierId",'') AS "supplierId",COALESCE(NULLIF(t."supplierName",''),sp."name",'Χωρίς προμηθευτή') AS name,
                COUNT(*)::int AS count,COALESCE(SUM(t."amount"),0) AS payments
-        FROM "StoreTransaction" t LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."reversedAt" IS NULL AND t."type"='SUPPLIER_PAYMENT'
+        FROM "StoreTransaction" t LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."reversedAt" IS NULL AND t."type"='SUPPLIER_PAYMENT'
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -363,8 +361,8 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT COALESCE(d."supplierId",'') AS "supplierId",COALESCE(sp."name",'Χωρίς προμηθευτή') AS name,
                COUNT(*)::int AS documents,COALESCE(SUM(d."totalGross"),0) AS purchases
-        FROM "PurchaseDocument" d LEFT JOIN "Supplier" sp ON sp."id"=d."supplierId"
-        WHERE d."companyId"=${companyId} AND d."status"='APPROVED'
+        FROM "PurchaseDocument" d LEFT JOIN "Supplier" sp ON sp."id"=d."supplierId" AND (${strictTenant}=false OR sp."companyId"=d."companyId")
+        WHERE d."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=d."storeId" AND scopeStore."companyId"=d."companyId")) AND d."status"='APPROVED'
           AND d."documentDate">=${from} AND d."documentDate"<=${to}
           AND (${storeId}::text IS NULL OR d."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR d."supplierId"=${supplierId})
@@ -374,9 +372,9 @@ router.get("/report",async(req,res,next)=>{
         SELECT COALESCE(NULLIF(BTRIM(t."description"),''),'Λοιπά έξοδα') AS name,
                COUNT(*)::int AS count,COALESCE(SUM(t."amount"),0) AS amount
         FROM "StoreTransaction" t
-        JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."reversedAt" IS NULL AND t."type"='OTHER_EXPENSE'
+        JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."reversedAt" IS NULL AND t."type"='OTHER_EXPENSE'
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -387,9 +385,9 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT DATE(t."occurredAt" AT TIME ZONE 'Europe/Athens') AS day,COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS expenses
         FROM "StoreTransaction" t
-        JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
+        JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -400,7 +398,7 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT DATE("occurredAt" AT TIME ZONE 'Europe/Athens') AS day,COALESCE(SUM("total"),0) AS sales
         FROM "Sale"
-        WHERE "companyId"=${companyId} AND "status"='COMPLETED' AND "occurredAt">=${from} AND "occurredAt"<=${to}
+        WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="Sale"."storeId" AND scopeStore."companyId"="Sale"."companyId")) AND "status"='COMPLETED' AND "occurredAt">=${from} AND "occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY DATE("occurredAt" AT TIME ZONE 'Europe/Athens') ORDER BY day
       `
@@ -436,7 +434,7 @@ router.get("/report",async(req,res,next)=>{
       ...categoryRows.map(row=>({name:row.name,type:"OTHER_EXPENSE",count:n(row.count),amount:n(row.amount)}))
     ].sort((a,b)=>b.amount-a.amount);
 
-    res.json({
+    return ({
       generatedAt:new Date().toISOString(),from,to,previousFrom,previousTo,stores,suppliers,
       summary:{
         count:n(raw.count),totalExpenses,supplierPayments:n(raw.supplierPayments),otherExpenses:n(raw.otherExpenses),averageExpense:n(raw.average),
@@ -449,7 +447,8 @@ router.get("/report",async(req,res,next)=>{
       bySupplier,categories,daily:[...dailyMap.values()].sort((a,b)=>a.day.localeCompare(b.day)),movements:movementRows.map(mapMovement),
       sourceStatus:{ledger:true,sales:true,purchases:true}
     });
-  }catch(error){next(error)}
-});
+
+}
+router.get("/report",async(req,res,next)=>{try{requireOwnerReport(req);res.json(await readOwnerPaymentReport(req.user.companyId,req.query||{}))}catch(error){next(error)}});
 
 export default router;

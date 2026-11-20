@@ -144,9 +144,10 @@ test('shared shortage filter selects exact actual rows without changing candidat
 
 test('CSV appends six shortage columns after the original 32 and preserves historical raw quantities', () => {
   const {snapshot} = pipeline(), records = csvRecords(buildSupplierProposalCsv({snapshot, rows: snapshot.rows, filters: filters()}));
-  const header = records[0]; assert.equal(header.length, 39);
+  const header = records[0]; assert.equal(header.length, 41);
+  assert.deepEqual(header.slice(39), ['Επιβεβαιωμένο αναμενόμενο υπόλοιπο (μονάδα αποθήκης)','Έλεγχος αναμενόμενων παραλαβών']);
   assert.deepEqual(header.slice(32,38), ['Φίλτρο τρέχοντος ελλείμματος', 'Κατάσταση τρέχοντος αποθέματος', 'Έλλειμμα κάτω από ελάχιστο', 'Βάση ελλείμματος', 'Φυσικό απόθεμα επαληθευμένο', 'Αιτίες ελέγχου ελλείμματος']);
-  for (const record of records.slice(1)) {assert.equal(record.length, 39); assert.equal(record[9], 'YES'); assert.equal(record[10], 'NO'); assert.equal(record[32], 'ALL'); assert.equal(record[35], 'RECORDED_CURRENT_STOCK_MINIMUM'); assert.equal(record[36], 'NO');}
+  for (const record of records.slice(1)) {assert.equal(record.length, 41); assert.equal(record[9], 'YES'); assert.equal(record[10], 'NO'); assert.equal(record[32], 'ALL'); assert.equal(record[35], 'RECORDED_CURRENT_STOCK_MINIMUM'); assert.equal(record[36], 'NO');}
   const negative = records.find(record => record[15] === 'historical-negative');
   assert.deepEqual([negative[19], negative[20], negative[21], negative[22], negative[23], negative[25]], ['-71', '0', '36', '5', '31', '82']);
   assert.deepEqual(negative.slice(33,38), ['REVIEW_REQUIRED', '', 'RECORDED_CURRENT_STOCK_MINIMUM', 'NO', 'NEGATIVE_RECORDED_STOCK']);

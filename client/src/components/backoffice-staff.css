@@ -12,3 +12,13 @@
 .staff-backoffice .staff-store-nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;margin-top:10px}
 .staff-backoffice .staff-store-nav button{width:auto;min-height:34px;padding:5px 12px;background:#edf4fa;color:#17324b}
 .staff-backoffice .staff-store-nav button.active{background:#203653;color:#fff}
+.staff-backoffice{display:grid;grid-template-columns:260px minmax(0,1fr);align-items:start}
+.staff-backoffice>main{min-width:0}
+.staff-backoffice>aside{position:sticky;top:0;height:100vh;max-height:100vh;min-height:0;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;align-self:start}
+.staff-backoffice>aside>.brand,.staff-backoffice>aside>button{flex-shrink:0}
+.staff-backoffice>aside>nav{display:grid;grid-template-columns:1fr;gap:7px;margin-left:0;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;align-content:start}
+.staff-backoffice>aside>.logout{margin-top:8px}
+.staff-company-nav-search{display:flex;flex-direction:column;gap:6px;margin:12px 0;font-size:13px;grid-column:1/-1}
+.staff-company-nav-search input{width:100%;min-width:0;box-sizing:border-box;padding:9px;border:1px solid #b9c9dc;border-radius:7px;font:inherit}
+@media(max-width:700px){.staff-backoffice{display:block}.staff-backoffice>aside{position:static;height:auto;max-height:none;min-height:0}.staff-backoffice>aside>nav{flex:none;grid-template-columns:repeat(2,minmax(0,1fr));max-height:35vh;overflow-y:auto}.staff-backoffice>aside>button{margin-top:8px}}
+@media(max-width:420px){.staff-backoffice>aside>nav{grid-template-columns:1fr}}

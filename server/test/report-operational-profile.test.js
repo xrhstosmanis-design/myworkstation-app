@@ -44,3 +44,21 @@ test('V2 pins six additional columns while V1 hash remains immutable and scoped 
  const result=spawnSync('python3',['-c',script,fileURLToPath(new URL('../../ops/backup/lifecycle',import.meta.url)),v2profile],{encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);assert.deepEqual(JSON.parse(result.stdout),v2);
 });
+
+test('V3 preserves four pinned chat tables without guards, keeps V2 immutable, and matches Python',()=>{
+ const v2=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2'});
+ assert.equal(createHash('sha256').update(JSON.stringify(v2)).digest('hex'),'5289a68fb0c18be65ff51a970f395029853afab7ea43bf068039ed300fb6b84e');
+ const profile='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3';
+ const v3=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile});
+ assert.deepEqual(v3.preservedReportChatTables,['StoreChatGroup','StoreChatGroupMember','StoreChatGroupMessage','StoreChatMutedTopic']);
+ assert.equal(v3.preservedOperationalTables.length,13);
+ for(const name of v3.preservedReportChatTables){assert.ok(v3.knownColumns[name]);assert.equal(v3.tables.some(table=>table.name===name),false);}
+ assert.ok(createLifecycleInstallationCore(v3,{sourceRevision:revision}).describe().planHash);
+ for(const factory of [createLifecycleExecutionCore,createLifecycleInspectionCore])assert.throws(()=>factory(v3,{}),{code:'STORE_LIFECYCLE_REPORTS_ONLY'});
+ for(const alter of [m=>m.preservedReportChatTables.pop(),m=>m.knownColumns.StoreChatGroup.pop(),m=>m.reviewedColumns=m.reviewedColumns.filter(c=>c!=='StoreChatGroup.createdBy')]){
+  const invalid=structuredClone(v3);alter(invalid);assert.throws(()=>createLifecycleInstallationCore(invalid,{sourceRevision:revision}),/Report chat/);
+ }
+ const script="import sys,json;sys.path.insert(0,sys.argv[1]);import worker;print(json.dumps(worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':sys.argv[2]})))";
+ const result=spawnSync('python3',['-c',script,fileURLToPath(new URL('../../ops/backup/lifecycle',import.meta.url)),profile],{encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);assert.deepEqual(JSON.parse(result.stdout),v3);
+});

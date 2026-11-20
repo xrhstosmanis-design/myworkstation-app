@@ -1,4 +1,5 @@
 import {Router} from 'express';
+import {readMonthlyInventoryCaptureStatus} from '../services/monthly-inventory-capture-status.js';
 import {createMonthlyInventoryCaptureGrantManager} from '../services/monthly-inventory-capture-grants.js';
 import {createMonthlyPersonalCaptureNowService} from '../services/monthly-inventory-capture-now.js';
 
@@ -29,6 +30,10 @@ function request(req,action){
 export function createMonthlyInventoryCaptureRouter(db,{manager=createMonthlyInventoryCaptureGrantManager(db),personalNow=createMonthlyPersonalCaptureNowService(db)}={}){
  const router=Router();
  router.use((_req,res,next)=>{res.set('Cache-Control','no-store');next()});
+ router.get('/status',async(req,res)=>{
+  try{res.json(await readMonthlyInventoryCaptureStatus(db,req))}
+  catch(error){res.status(error?.status===403?403:503).json({error:'Η κατάσταση μηνιαίας απογραφής δεν επιβεβαιώθηκε.',code:error?.status===403?'STAFF_ACCESS_DENIED':'MONTHLY_CAPTURE_STATUS_UNAVAILABLE'})}
+ });
  const nowHandle=action=>async(req,res)=>{
   try{
    let input;

@@ -40,3 +40,11 @@ test('supplier CSV retains pending purchase review separately from suggested qua
   assert.match(csv,/Προς τιμολόγηση: 2 \/ Μετατροπή προς έλεγχο/);
   assert.ok(csv.includes('"5.125"'));
 });
+
+test('supplier CSV distinguishes installed expected remainder from unavailable installation',()=>{
+  const snapshot=fixture(),row=snapshot.rows[0];
+  row.expectedReceiptsAvailable=true;row.confirmedPendingStockQuantity=5;row.expectedReceiptReviewReasons=[];
+  const installed=buildSupplierProposalCsv({snapshot,rows:snapshot.rows,filters});assert.match(installed,/"5",""\r\n$/);
+  row.expectedReceiptsAvailable=false;row.confirmedPendingStockQuantity=null;row.expectedReceiptsAvailabilityReason='Αναμονή εγκατάστασης';
+  const missing=buildSupplierProposalCsv({snapshot,rows:snapshot.rows,filters});assert.match(missing,/"","Αναμονή εγκατάστασης"\r\n$/);
+});

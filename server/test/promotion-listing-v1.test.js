@@ -12,6 +12,7 @@ test("promotion listing is read-only and tenant scoped",()=>{
   assert.match(route,/const companyId\s*=\s*req\.user\.companyId/);
   assert.match(route,/WHERE pr\."companyId"=\$\{companyId\}/);
   assert.match(route,/LIMIT 1000/);
-  assert.match(route,/res\.json\(\{\s*items:\s*rows,\s*count:\s*rows\.length\s*\}\)/);
+  const listing=route.slice(route.indexOf('router.get("/promotions/scoped"'),route.indexOf('router.get("/promotions/analysis"'));
+  assert.match(listing,/items:\s*rows,\s*count:\s*rows\.length/);
   assert.doesNotMatch(route,/router\.get\("\/promotions\/scoped"[\s\S]*?(INSERT INTO|UPDATE .*PriceCatalogPromotion|DELETE FROM)/);
 });

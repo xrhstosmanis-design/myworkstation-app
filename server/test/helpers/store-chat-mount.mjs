@@ -10,6 +10,13 @@ export async function mount(transport){
  const child={exports:{}};
  new Function('require','module','exports',transformSync(fs.readFileSync(new URL('../../../client/src/components/store/ChatHistoryTools.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs'}).code)(name=>{if(name==='./chat-topics.mjs')return topics;if(name!=='react')throw Error(name);return React},child,child.exports);
  dependencies['./ChatHistoryTools.jsx']=child.exports;
+ for(const filename of ['StoreChatGroups','ChatTopicMute']){
+  const dependency={exports:{}};
+  new Function('require','module','exports',transformSync(fs.readFileSync(new URL(`../../../client/src/components/store/${filename}.jsx`,import.meta.url),'utf8'),{loader:'jsx',format:'cjs'}).code)(name=>{
+   if(name!=='react')throw Error(name);return React;
+  },dependency,dependency.exports);
+  dependencies[`./${filename}.jsx`]=dependency.exports;
+ }
  const source=fs.readFileSync(new URL('../../../client/src/components/store/StoreChatPanel.jsx',import.meta.url),'utf8'),module={exports:{}};
  new Function('require','module','exports',transformSync(source,{loader:'jsx',format:'cjs'}).code)(name=>{if(!(name in dependencies))throw Error(name);return dependencies[name]},module,module.exports);
  const root=createRoot(document.getElementById('root')),calls=[];

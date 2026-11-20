@@ -27,12 +27,12 @@ function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||
 router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
 
-router.get("/:supplierId/products",async(req,res,next)=>{
-  try{
-    const companyId=req.user.companyId,supplierId=req.params.supplierId;
-    const query=z.object({q:z.string().trim().max(180).optional()}).parse(req.query||{}),text=query.q?`%${query.q}%`:null;
+export async function readSupplierCatalog(scopeCompanyId,rawQuery={},partyId=null,{db=prisma}={}){const prisma=db;
+
+    const companyId=scopeCompanyId,supplierId=partyId;
+    const query=z.object({q:z.string().trim().max(180).optional()}).parse(rawQuery||{}),text=query.q?`%${query.q}%`:null;
     const supplier=(await prisma.$queryRaw`SELECT "id","name","taxId","active" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} LIMIT 1`)[0];
-    if(!supplier)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+    if(!supplier)throw Object.assign(new Error("Δεν βρέθηκε ο προμηθευτής."),{status:404});
     const rows=await prisma.$queryRaw`
       WITH latest_purchase AS (
         SELECT DISTINCT ON (l."productId") l."productId",d."supplierId",d."documentDate",l."unitCost"
@@ -85,8 +85,10 @@ router.get("/:supplierId/products",async(req,res,next)=>{
       ORDER BY p."active" DESC,p."name"`;
     const items=rows.map(row=>({...row,vatRate:n(row.vatRate),salePrice:n(row.salePrice),avgCost:n(row.avgCost),lastCost:n(row.lastCost),purchaseCount:n(row.purchaseCount),currentStock:n(row.currentStock),active:Boolean(row.active),barcodes:Array.isArray(row.barcodes)?row.barcodes:[]}));
     const summary=items.reduce((a,row)=>{a.items++;if(row.active)a.active++;a.stock+=row.currentStock;a.stockValue+=row.currentStock*row.avgCost;a.purchaseDocs+=row.purchaseCount;return a},{items:0,active:0,stock:0,stockValue:0,purchaseDocs:0});
-    res.json({supplier,items,summary,sourceNote:"Η τρέχουσα αντιστοίχιση χρησιμοποιεί ενεργό SupplierProductLink και, όπου δεν υπάρχει, τον προμηθευτή της πιο πρόσφατης εγκεκριμένης αγοράς. Ο κωδικός προμηθευτή προέρχεται από την ενεργή σύνδεση ή την τελευταία πραγματική γραμμή παραγγελίας."});
-  }catch(error){next(error)}
-});
+    return ({supplier,items,summary,sourceNote:"Η τρέχουσα αντιστοίχιση χρησιμοποιεί ενεργό SupplierProductLink και, όπου δεν υπάρχει, τον προμηθευτή της πιο πρόσφατης εγκεκριμένης αγοράς. Ο κωδικός προμηθευτή προέρχεται από την ενεργή σύνδεση ή την τελευταία πραγματική γραμμή παραγγελίας."});
+
+}
+
+router.get("/:supplierId/products",async(req,res,next)=>{try{res.json(await readSupplierCatalog(req.user.companyId,req.query,req.params.supplierId))}catch(error){if(error.status===404)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});next(error)}});
 
 export default router;

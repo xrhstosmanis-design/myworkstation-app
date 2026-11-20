@@ -1,3 +1,4 @@
+import {mutedChatUsers} from "./chat-notification-preferences.js";
 import {chatCredentialStamp} from "./chat-operator-auth.mjs";
 import {chatEnabled,ensureChatMobileSchema,mobilePushRecipients,removeMobilePushEndpoints,retireMobilePushEndpoint} from "./chat-mobile.mjs";
 import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
@@ -43,19 +44,21 @@ export async function saveStoreChatPushSubscription({store,user,subscription}){
   });
 }
 
-export async function sendStoreChatPush({store,senderId}){
+export async function sendStoreChatPush({store,senderId,topic,messageId}){
   assertCustomerDemoOutboundAllowed({companyId:store.companyId,storeId:store.id});
   await vapidKeys();
-  const legacyRows=await prisma.$queryRaw`SELECT "endpoint","subscriptionJson","chatSessionId","credentialStamp" FROM "StoreChatPushSubscription" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "userId"<>${senderId}`;
+  const muted=await mutedChatUsers(store,topic);
+  const legacyRows=await prisma.$queryRaw`SELECT "endpoint","subscriptionJson","chatSessionId","credentialStamp","userId" FROM "StoreChatPushSubscription" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "userId"<>${senderId}`;
   const verifiedLegacy=[];
   for(const row of legacyRows){
+    if(muted.has(row.userId))continue;
     if(!row.chatSessionId){verifiedLegacy.push(row);continue}
     const credentials=await prisma.$queryRawUnsafe('SELECT c."id",c."pinHash",c."cardCodeHash",c."role" FROM "StoreChatMobileSession" sm JOIN "StoreOperatorCredential" c ON c."id"=sm."operatorId" AND c."storeId"=sm."storeId" AND c."companyId"=sm."companyId" AND c."active"=TRUE JOIN "Employee" e ON e."id"=c."employeeId" AND e."active"=TRUE JOIN "Store" s ON s."id"=c."storeId" AND s."active"=TRUE JOIN "Company" co ON co."id"=c."companyId" AND co."active"=TRUE WHERE sm."id"=$1 AND sm."storeId"=$2 AND sm."companyId"=$3 AND sm."revokedAt" IS NULL',row.chatSessionId,store.id,store.companyId);
     if(credentials[0]&&chatCredentialStamp(credentials[0])===row.credentialStamp&&await chatEnabled(store))verifiedLegacy.push(row);
   }
   const mobileRows=await mobilePushRecipients(store,senderId).catch(error=>{console.error("Chat mobile recipient lookup unavailable",error?.code||"unknown");return []});
-  const rows=[...new Map([...verifiedLegacy,...mobileRows].map(row=>[row.endpoint,row])).values()];
-  const payload={title:"MyWorkStation · Chat",body:`Νέο μήνυμα στο ${store.name}`,url:"/",storeId:store.id};
+  const rows=[...new Map([...verifiedLegacy,...mobileRows.filter(row=>!muted.has(row.userId))].map(row=>[row.endpoint,row])).values()];
+  const payload={title:"MyWorkStation · Chat",body:`Νέο μήνυμα στο ${store.name}`,url:"/",storeId:store.id,...(messageId&&topic?{messageId,topic}:{})};
   const results=await Promise.allSettled(rows.map(row=>webpush.sendNotification(row.subscriptionJson,JSON.stringify({...payload,requiresSystemNotification:isApplePushEndpoint(row.endpoint)}),{TTL:300,urgency:"high"})));
   const expired=rows.filter((_,index)=>results[index].status==="rejected"&&[404,410].includes(results[index].reason?.statusCode)).map(row=>row.endpoint);
   if(expired.length)await prisma.$executeRaw`DELETE FROM "StoreChatPushSubscription" WHERE "endpoint"=ANY(${expired}::text[])`;

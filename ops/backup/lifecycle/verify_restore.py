@@ -9,6 +9,7 @@ import json
 import os
 import pathlib
 import pwd
+import re
 import shutil
 import subprocess
 import tempfile
@@ -62,6 +63,145 @@ def delete_order(snapshot, descriptor, schema):
         remaining.difference_update(ready)
     return order
 
+PRIVATE_POSTGRES_COMMANDS = frozenset({'initdb', 'pg_ctl', 'psql', 'pg_dump', 'pg_restore'})
+PRIVATE_SQLSTATE_CATEGORIES = {
+    '42601': 'SQLSTATE_42601_SQL_SYNTAX', '42704': 'SQLSTATE_42704_UNDEFINED_OBJECT',
+    '42P01': 'SQLSTATE_42P01_MISSING_RELATION', '42703': 'SQLSTATE_42703_MISSING_COLUMN',
+    '42883': 'SQLSTATE_42883_MISSING_FUNCTION_OR_OPERATOR', '3F000': 'SQLSTATE_3F000_MISSING_SCHEMA',
+    '42P06': 'SQLSTATE_42P06_DUPLICATE_SCHEMA', '42P07': 'SQLSTATE_42P07_DUPLICATE_RELATION',
+    '42710': 'SQLSTATE_42710_DUPLICATE_OBJECT', '42501': 'SQLSTATE_42501_PERMISSION',
+    '22023': 'SQLSTATE_22023_INVALID_PARAMETER_VALUE', '0A000': 'SQLSTATE_0A000_FEATURE_NOT_SUPPORTED',
+    'XX000': 'SQLSTATE_XX000_INTERNAL_ERROR', '23502': 'SQLSTATE_23502_NOT_NULL_CONSTRAINT',
+    '23503': 'SQLSTATE_23503_FOREIGN_KEY_CONSTRAINT', '23505': 'SQLSTATE_23505_UNIQUE_CONSTRAINT',
+    '23514': 'SQLSTATE_23514_CHECK_CONSTRAINT', '53100': 'SQLSTATE_53100_DISK_FULL',
+    '53200': 'SQLSTATE_53200_MEMORY', '08006': 'SQLSTATE_08006_CONNECTION_FAILURE',
+    '58P01': 'SQLSTATE_58P01_UNDEFINED_FILE', '42P16': 'SQLSTATE_42P16_INVALID_TABLE_DEFINITION',
+    '42P17': 'SQLSTATE_42P17_INVALID_OBJECT_DEFINITION', '42804': 'SQLSTATE_42804_DATATYPE_MISMATCH',
+}
+PRIVATE_22023_SETTINGS = frozenset({'composite_type_mismatch', 'timezone', 'lc_collate', 'lc_ctype', 'lc_messages', 'lc_monetary', 'lc_numeric', 'lc_time', 'client_encoding', 'server_encoding', 'default_toast_compression', 'default_table_access_method', 'default_tablespace', 'temp_tablespaces', 'session_replication_role', 'xmloption', 'row_security', 'transaction_timeout', 'restrict_nonsystem_relation_kind', 'search_path', 'datestyle', 'extra_float_digits'})
+PRIVATE_22023_OPERATIONS = frozenset({'SET', 'CREATE_COLLATION', 'CREATE_FUNCTION', 'CREATE_INDEX', 'CREATE_TABLE', 'ALTER_TABLE', 'COPY', 'SELECT_SETVAL', 'SELECT_SET_CONFIG', 'CREATE_SCHEMA', 'CREATE_SEQUENCE', 'ALTER_SEQUENCE', 'CREATE_EXTENSION', 'ALTER_TYPE', 'CREATE_TYPE', 'CREATE_TRIGGER', 'COMMENT', 'GRANT', 'ALTER_FUNCTION', 'ALTER_DATABASE'})
+PRIVATE_22023_DETAILS = frozenset({'SETTING_VALUE', 'SETTING_NAME', 'SETTING_CONTEXT', 'SEQUENCE_BOUNDS', 'SEQUENCE_OPTIONS', 'LOCALE', 'JSON_ARGUMENT', 'STORAGE_OPTION', 'EXTENSION_OPTION'})
+PRIVATE_22023_PARAMETER_NAMES = PRIVATE_22023_SETTINGS | frozenset({'autovacuum_enabled', 'fillfactor', 'deduplicate_items', 'toast_tuple_target', 'vacuum_index_cleanup', 'vacuum_truncate', 'parallel_workers', 'autovacuum_vacuum_threshold', 'autovacuum_vacuum_max_threshold', 'autovacuum_vacuum_scale_factor', 'autovacuum_vacuum_insert_threshold', 'autovacuum_vacuum_insert_scale_factor', 'autovacuum_analyze_threshold', 'autovacuum_analyze_scale_factor', 'autovacuum_vacuum_cost_delay', 'autovacuum_vacuum_cost_limit', 'autovacuum_freeze_min_age', 'autovacuum_freeze_max_age', 'autovacuum_freeze_table_age', 'autovacuum_multixact_freeze_min_age', 'autovacuum_multixact_freeze_max_age', 'autovacuum_multixact_freeze_table_age', 'user_catalog_table', 'security_barrier', 'security_invoker', 'check_option', 'buffering', 'pages_per_range', 'autosummarize', 'fastupdate', 'gin_pending_list_limit', 'siglen', 'default_version', 'module_pathname', 'relocatable', 'requires', 'schema', 'superuser', 'trusted', 'no_relocate', 'locale', 'provider', 'deterministic', 'version', 'rules', 'publish_generated_columns', 'publish_via_partition_root'})
+PRIVATE_22023_CATEGORIES = (frozenset('SQLSTATE_22023_SETTING_' + name.upper() for name in PRIVATE_22023_SETTINGS)
+    | frozenset('SQLSTATE_22023_' + name for name in PRIVATE_22023_DETAILS)
+    | frozenset('SQLSTATE_22023_OPERATION_' + name for name in PRIVATE_22023_OPERATIONS)
+    | frozenset('SQLSTATE_22023_PARAMETER_NAME_' + name.upper() for name in PRIVATE_22023_PARAMETER_NAMES)
+    | frozenset('SQLSTATE_22023_PARAMETER_OPERATION_' + name for name in PRIVATE_22023_OPERATIONS))
+PRIVATE_POSTGRES_CATEGORIES = frozenset({'UNSUPPORTED_SETTING', 'ARCHIVE_VERSION', 'PERMISSION', 'MISSING_ROLE', 'MISSING_TYPE', 'COLLATION', 'DUPLICATE_RELATION', 'ENCODING', 'MEMORY', 'PRIVATE_CONNECTION', 'DUPLICATE_SCHEMA', 'MISSING_SCHEMA', 'MISSING_FUNCTION', 'MISSING_EXTENSION', 'MISSING_RELATION', 'MISSING_COLUMN', 'MISSING_OPERATOR', 'CONSTRAINT', 'SQL_SYNTAX', 'ARCHIVE_IO', 'FILE_IO', 'RESOURCE', 'UNKNOWN'}) | frozenset(PRIVATE_SQLSTATE_CATEGORIES.values()) | PRIVATE_22023_CATEGORIES
+
+
+def private_22023_operation(remainder):
+    statement = re.search(r'\bSTATEMENT:\s+([^\n]{0,100})', remainder)
+    if statement:
+        text = statement.group(1).upper()
+        operations = [('SELECT_SETVAL', r'SELECT\s+(?:PG_CATALOG\.)?SETVAL\s*\('), ('SELECT_SET_CONFIG', r'SELECT\s+(?:PG_CATALOG\.)?SET_CONFIG\s*\('), ('CREATE_COLLATION', r'CREATE\s+COLLATION\b'), ('CREATE_FUNCTION', r'CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\b'), ('CREATE_INDEX', r'CREATE\s+(?:UNIQUE\s+)?INDEX\b'), ('CREATE_TABLE', r'CREATE\s+TABLE\b'), ('ALTER_TABLE', r'ALTER\s+TABLE\b'), ('COPY', r'COPY\b'), ('SET', r'SET\b'), ('CREATE_SCHEMA', r'CREATE\s+SCHEMA\b'), ('CREATE_SEQUENCE', r'CREATE\s+SEQUENCE\b'), ('ALTER_SEQUENCE', r'ALTER\s+SEQUENCE\b'), ('CREATE_EXTENSION', r'CREATE\s+EXTENSION\b'), ('ALTER_TYPE', r'ALTER\s+TYPE\b'), ('CREATE_TYPE', r'CREATE\s+TYPE\b'), ('CREATE_TRIGGER', r'CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\b'), ('COMMENT', r'COMMENT\s+ON\b'), ('GRANT', r'GRANT\b'), ('ALTER_FUNCTION', r'ALTER\s+FUNCTION\b'), ('ALTER_DATABASE', r'ALTER\s+DATABASE\b')]
+        for name, pattern in operations:
+            if re.match(pattern, text):
+                return name
+    return None
+
+
+def private_22023_category(primary, remainder):
+    """Map known server templates/operation families to constants, never text."""
+    setting = re.search(r'invalid value for parameter "([a-z_]+)"', primary.lower())
+    if setting:
+        name = setting.group(1)
+        return 'SQLSTATE_22023_SETTING_' + name.upper() if name in PRIVATE_22023_SETTINGS else 'SQLSTATE_22023_SETTING_VALUE'
+    patterns = [
+        ('SETTING_NAME', r'unrecognized (?:configuration )?parameter'),
+        ('SETTING_CONTEXT', r'parameter .{0,200} cannot be changed|cannot set parameter'),
+        ('SEQUENCE_BOUNDS', r'setval: value .{0,200} is out of bounds'),
+        ('SEQUENCE_OPTIONS', r'(?:minvalue|maxvalue|increment|cache|start value).{0,200}(?:must be|cannot|invalid|out of)'),
+        ('LOCALE', r'invalid locale|could not create locale|invalid collation|collation .{0,200} is incompatible'),
+        ('JSON_ARGUMENT', r'cannot (?:get|call|extract|delete).{0,100}(?:array|object|scalar)|json.{0,100}(?:must be|cannot)'),
+        ('STORAGE_OPTION', r'unrecognized (?:storage )?option|invalid value for .{0,100} option'),
+        ('EXTENSION_OPTION', r'extension .{0,200}(?:version|update script|installation script)'),
+    ]
+    for name, pattern in patterns:
+        if re.search(pattern, primary.lower()):
+            if name == 'SETTING_NAME':
+                parameter = re.search(r'unrecognized (?:configuration )?parameter \"([a-z_]+)\"', primary.lower())
+                if parameter and parameter.group(1) in PRIVATE_22023_PARAMETER_NAMES:
+                    return 'SQLSTATE_22023_PARAMETER_NAME_' + parameter.group(1).upper()
+                operation = private_22023_operation(remainder)
+                if operation:
+                    return 'SQLSTATE_22023_PARAMETER_OPERATION_' + operation
+            return 'SQLSTATE_22023_' + name
+    operation = private_22023_operation(remainder)
+    if operation:
+        return 'SQLSTATE_22023_OPERATION_' + operation
+    return PRIVATE_SQLSTATE_CATEGORIES['22023']
+
+
+class PrivatePostgresCommandError(ValueError):
+    def __init__(self, command, exit_code, category):
+        self.command = command if isinstance(command, str) and command in PRIVATE_POSTGRES_COMMANDS else 'UNKNOWN_COMMAND'
+        self.exit_code = exit_code if type(exit_code) is int and -255 <= exit_code <= 255 else -1
+        self.category = category if isinstance(category, str) and category in PRIVATE_POSTGRES_CATEGORIES else 'UNKNOWN'
+        super().__init__(f'Private PostgreSQL command failed: {self.command} [exit={self.exit_code}, category={self.category}]')
+
+
+def private_command_failure_category(stderr):
+    """Return only an allowlisted diagnostic; never return captured stderr."""
+    if isinstance(stderr, (bytes, str)):
+        sample = stderr if len(stderr) <= 131072 else stderr[:65536] + (b'\n' if isinstance(stderr, bytes) else '\n') + stderr[-65536:]
+        text = (sample.decode('utf-8', errors='replace') if isinstance(sample, bytes) else sample).lower()
+    else:
+        text = ''
+    patterns = [
+        ('UNSUPPORTED_SETTING', r'(?:unrecognized|unsupported) configuration parameter'),
+        ('ARCHIVE_VERSION', r'unsupported version.*file header|archive version|unsupported archive format'),
+        ('PERMISSION', r'permission denied|must be (?:owner|superuser)|not permitted|authentication failed'),
+        ('MISSING_ROLE', r'role [^\n]{0,200} does not exist'),
+        ('MISSING_TYPE', r'type [^\n]{0,200} does not exist'),
+        ('COLLATION', r'collation [^\n]{0,200} does not exist|collation[^\n]{0,200}version mismatch|invalid locale|invalid collation'),
+        ('DUPLICATE_RELATION', r'relation [^\n]{0,200} already exists|duplicate table'),
+        ('ENCODING', r'invalid byte sequence|character [^\n]{0,200} has no equivalent|encoding mismatch|conversion between[^\n]{0,200}encoding'),
+        ('MEMORY', r'out of memory|cannot allocate memory|memory exhausted|could not resize shared memory'),
+        ('PRIVATE_CONNECTION', r'could not connect to server|connection (?:refused|timed out)|connection to server[^\n]{0,200}failed|server closed[^\n]{0,200}connection'),
+        ('DUPLICATE_SCHEMA', r'schema [^\n]{0,200} already exists'),
+        ('MISSING_SCHEMA', r'schema [^\n]{0,200} does not exist'),
+        ('MISSING_FUNCTION', r'function [^\n]{0,200} does not exist'),
+        ('MISSING_EXTENSION', r'could not open extension control file|extension [^\n]{0,200} (?:does not exist|is not available)|no installation script[^\n]{0,200}extension'),
+        ('MISSING_COLUMN', r'column [^\n]{0,200} does not exist'),
+        ('MISSING_RELATION', r'relation [^\n]{0,200} does not exist'),
+        ('MISSING_OPERATOR', r'operator(?: [^\n]{0,200})? does not exist'),
+        ('CONSTRAINT', r'violates (?:not-null|unique|foreign key|check|exclusion) constraint|contains null values|could not create unique index'),
+        ('SQL_SYNTAX', r'syntax error (?:at|in)|unterminated (?:quoted|dollar-quoted)|invalid input syntax'),
+        ('ARCHIVE_IO', r'could not read from input file|input file is too short|unexpected end of file|does not appear to be a valid archive|input file appears to be a text format dump|could not uncompress data|decompression failed'),
+        ('FILE_IO', r'could not open (?:input|output) file|could not read (?:input|output) file|could not write (?:to )?(?:file|output file)|no such file or directory'),
+        ('RESOURCE', r'no space left on device|disk quota exceeded|too many open files|resource temporarily unavailable'),
+    ]
+    return next((category for category, pattern in patterns if re.search(pattern, text)), 'UNKNOWN')
+
+
+def private_server_log_category(logfile, start_offset=0):
+    """Inspect bounded private log bytes; publish only explicitly known states."""
+    try:
+        with open(logfile, 'rb') as stream:
+            stream.seek(0, 2)
+            end = stream.tell()
+            if type(start_offset) is not int or start_offset < 0 or start_offset >= end:
+                return 'UNKNOWN'
+            stream.seek(start_offset)
+            if end - start_offset <= 131072:
+                sample = stream.read(131072)
+            else:
+                sample = stream.read(65536)
+                stream.seek(end - 65536)
+                sample += b'\n' + stream.read(65536)
+            text = sample.decode('utf-8', errors='replace')
+    except (OSError, TypeError, ValueError):
+        return 'UNKNOWN'
+    errors = list(re.finditer(r'(?m)^\d{4}-\d{2}-\d{2}[^\n]{0,160}\b(?:ERROR|FATAL|PANIC):\s+([A-Z0-9]{5}):([^\n]{0,4096})', text))
+    if not errors:
+        return 'UNKNOWN'
+    error = errors[-1]
+    if error.group(1) == '22023':
+        return private_22023_category(error.group(2), text[error.end():])
+    return PRIVATE_SQLSTATE_CATEGORIES.get(error.group(1), 'UNKNOWN')
+
+
 class PrivatePostgres:
     def __init__(self, root):
         self.root = pathlib.Path(root)
@@ -78,15 +218,27 @@ class PrivatePostgres:
         self.started = False
 
     def run(self, args, **options):
+        logfile = self.root / 'postgres.log' if getattr(self, 'root', None) is not None else None
+        try:
+            log_offset = logfile.stat().st_size if logfile is not None else 0
+        except OSError:
+            log_offset = 0
         result = subprocess.run(args, timeout=300, env=self.env, **(self.user or {}), stderr=subprocess.PIPE, **options)
         if result.returncode:
             # Do not expose row values, SQL, archive paths or credentials.
-            raise ValueError('Private PostgreSQL command failed: ' + pathlib.Path(args[0]).name)
+            command = pathlib.Path(str(args[0])).name
+            if command not in PRIVATE_POSTGRES_COMMANDS:
+                command = 'UNKNOWN_COMMAND'
+            code = result.returncode if type(result.returncode) is int and -255 <= result.returncode <= 255 else -1
+            category = private_command_failure_category(result.stderr)
+            if category == 'UNKNOWN' and logfile is not None:
+                category = private_server_log_category(logfile, log_offset)
+            raise PrivatePostgresCommandError(command, code, category)
         return result
 
     def __enter__(self):
         self.run(['initdb', '-D', str(self.data), '-U', 'postgres', '--auth-local=trust', '--auth-host=reject', '--no-locale', '--encoding=UTF8'], stdout=subprocess.DEVNULL)
-        self.run(['pg_ctl', '-D', str(self.data), '-l', str(self.root / 'postgres.log'), '-o', "-F -k " + str(self.socket) + " -h '' -p 55439 -c max_connections=5 -c shared_buffers=16MB -c work_mem=1MB -c maintenance_work_mem=16MB -c max_parallel_workers=0 -c max_worker_processes=0", '-w', 'start'], stdout=subprocess.DEVNULL)
+        self.run(['pg_ctl', '-D', str(self.data), '-l', str(self.root / 'postgres.log'), '-o', "-F -k " + str(self.socket) + " -h '' -p 55439 -c max_connections=5 -c shared_buffers=16MB -c work_mem=1MB -c maintenance_work_mem=16MB -c max_parallel_workers=0 -c max_worker_processes=0 -c log_error_verbosity=verbose", '-w', 'start'], stdout=subprocess.DEVNULL)
         self.started = True
         return self
 
@@ -126,6 +278,8 @@ def row_digest(filename):
     return {'rowCount': count, 'sha256': digest.hexdigest(), 'sourceBytes': size}
 
 def verify_archive(archive, job, manifest, audit_module):
+    if manifest.get('purpose') == 'COMPANY_READ_ONLY':
+        raise ValueError('Scoped store recovery is unavailable for the COMPANY read-only profile')
     if manifest.get('executionDisabled') is True:
         raise ValueError('Scoped store recovery is unavailable for the reports-only profile')
     if job.get('protocol') != 'MWS_STORE_RECOVERY_JOB_V1':
