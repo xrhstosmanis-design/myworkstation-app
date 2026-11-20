@@ -1,3 +1,4 @@
+import {chatAccessRevoked} from "./chat-access.mjs";
 import {prisma} from "./prisma.js";
 import {companyModuleState,effectiveModuleEnabled,isPlatformSuperAdmin} from "./middleware/module-access.js";
 import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
@@ -26,7 +27,7 @@ export async function mobileChatStores(user){
  }
  const platform=isPlatformSuperAdmin(user)&&!user.supportContext;
  const stores=await prisma.store.findMany({where:{active:true,company:{active:true},...(platform?{}:{companyId:{in:companyIds}})},select:{id:true,name:true,companyId:true,company:{select:{name:true}}},orderBy:[{companyId:"asc"},{name:"asc"}]});
- const enabled=[];for(const store of stores)if(platform||await chatEnabled(store))enabled.push({id:store.id,name:store.name,companyId:store.companyId,companyName:store.company.name});
+ const enabled=[];for(const store of stores)if((platform||await chatEnabled(store))&&!await chatAccessRevoked(prisma,store,user.id))enabled.push({id:store.id,name:store.name,companyId:store.companyId,companyName:store.company.name});
  const ids=enabled.map(s=>s.id);
  const unread=ids.length?await prisma.$queryRawUnsafe('SELECT m."storeId",COUNT(*)::int AS unread FROM "StoreChatMessage" m JOIN "Store" s ON s."id"=m."storeId" AND s."companyId"=m."companyId" LEFT JOIN "StoreChatRead" r ON r."messageId"=m."id" AND r."userId"=$1 WHERE m."storeId"=ANY($2::text[]) AND m."senderId"<>$1 AND r."messageId" IS NULL GROUP BY m."storeId"',user.id,ids):[];
  return {stores:enabled.map(s=>({...s,unread:unread.find(r=>r.storeId===s.id)?.unread||0})),currentCompanyId:user.companyId,canSwitchCompany:user.role==="OWNER"&&!isPlatformSuperAdmin(user)&&!user.supportContext};

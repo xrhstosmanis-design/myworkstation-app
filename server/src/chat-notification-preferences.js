@@ -12,10 +12,11 @@ export async function ensureChatNotificationPreferences() {
 }
 
 export async function mutedChatUsers(store, topic) {
-  if (!topic) return new Set();
   const rows = await prisma.$queryRaw`
     SELECT "userId" FROM "StoreChatMutedTopic"
-    WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "topic"=${chatTopic(topic)}
+    WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "topic"=${topic ? chatTopic(topic) : null}
+    UNION SELECT "userId" FROM "StoreChatAccessRevocation"
+    WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}
   `;
   return new Set(rows.map(row => row.userId));
 }

@@ -110,7 +110,7 @@ async function sendGroupMessage(db, store, groupId, user, input) {
   return {id, replayed:true};
 }
 
-export function mountChatGroups(router, {db, selectStore, checkModule, canManage}) {
+export function mountChatGroups(router, {db, selectStore, checkModule, canManage, canModerate = () => false, auditModeration}) {
   const base = "/stores/:storeId/groups";
   const handler = operation => async (req, res, next) => {
     try {
@@ -131,11 +131,38 @@ export function mountChatGroups(router, {db, selectStore, checkModule, canManage
     const mayCreate = canManage(req.user);
     const groups = await listGroups(db, store, req.user.id);
     const members = mayCreate ? await chatGroupRoster(db, store) : [];
-    res.json({groups, mayCreate, members});
+    res.json({groups, mayCreate, members, ...(canModerate(req.user) ? {mayModerate:true} : {})});
   }));
   router.post(base, handler(async (req, res, store) => {
     if (!canManage(req.user)) throw invalid("Δεν έχεις δικαίωμα δημιουργίας ομάδας Chat.", 403);
     res.status(201).json(await createGroup(db, store, req.user.id, req.body));
+  }));
+  router.get(`${base}/moderation`, handler(async (req, res, store) => {
+    if (!canModerate(req.user)) throw invalid("Δεν έχεις δικαίωμα διαχείρισης μελών Chat.", 403);
+    const groups = await db.$queryRaw`SELECT g."id", g."name", m."userId",
+      COALESCE(c."displayName", u."fullName", 'Χρήστης') AS "memberName"
+      FROM "StoreChatGroup" g
+      LEFT JOIN "StoreChatGroupMember" m ON m."groupId"=g."id"
+      LEFT JOIN "StoreOperatorCredential" c ON c."id"=m."userId"
+        AND c."storeId"=g."storeId" AND c."companyId"=g."companyId"
+      LEFT JOIN "User" u ON u."id"=m."userId"
+      WHERE g."companyId"=${store.companyId} AND g."storeId"=${store.id}
+      ORDER BY g."name", g."id", "memberName", m."userId"`;
+    res.json({groups});
+  }));
+  router.post(`${base}/:groupId/remove-member`, handler(async (req, res, store) => {
+    if (!canModerate(req.user)) throw invalid("Δεν έχεις δικαίωμα διαχείρισης μελών Chat.", 403);
+    const groupId = req.params.groupId;
+    const userId = req.body?.userId;
+    if (typeof userId !== "string" || !userId || userId.length > 120) throw invalid("Μη έγκυρο μέλος Chat.");
+    await db.$transaction(async tx => {
+      const removed = await tx.$executeRaw`DELETE FROM "StoreChatGroupMember" m USING "StoreChatGroup" g
+        WHERE m."groupId"=g."id" AND m."userId"=${userId} AND g."id"=${groupId}
+          AND g."companyId"=${store.companyId} AND g."storeId"=${store.id}`;
+      if (removed !== 1) throw invalid("Δεν βρέθηκε το μέλος σε αυτή την ομάδα.", 404);
+      await auditModeration(req, store, "STORE_CHAT_GROUP_MEMBER_REMOVED", {groupId,userId}, tx);
+    });
+    res.json({ok:true});
   }));
   router.get(`${base}/:groupId/messages`, handler(async (req, res, store) => {
     res.json({messages:await groupHistory(db, store, req.params.groupId, req.user.id)});

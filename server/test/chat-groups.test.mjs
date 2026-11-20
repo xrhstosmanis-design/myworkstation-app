@@ -36,6 +36,10 @@ function fixture() {
         for (const userId of userIds) groups.get(groupId).members.add(userId);
         return userIds.length;
       }
+      if (sql.includes('DELETE FROM "StoreChatGroupMember"')) {
+        const [userId,groupId,companyId,storeId] = args;
+        return lookup(companyId,storeId,groupId,userId)?.members.delete(userId) ? 1 : 0;
+      }
       assert.match(sql, /JOIN "StoreChatGroupMember"/);
       const [id, senderId, senderName, body, companyId, storeId, groupId, userId] = args;
       if (!lookup(companyId,storeId,groupId,userId) || messages.has(id)) return 0;
@@ -78,14 +82,16 @@ function fixture() {
       return false;
     },
     canManage:user => user.role === "OWNER",
+    canModerate:user => ["OWNER","SUPER_ADMIN"].includes(user.role),
+    auditModeration:async () => {},
   });
   return {
     deactivate:() => { active = false; },
     size:() => messages.size,
-    async request(method,{user=owner,selected=store,groupId,body,allowed=true}={}) {
+    async request(method,{user=owner,selected=store,groupId,body,allowed=true,action="messages"}={}) {
       const res = {code:200,status(code){this.code=code;return this;},
         setHeader(name,value){this[name]=value;},json(data){this.data=data;}};
-      const path = groupId ? `${base}/:groupId/messages` : base;
+      const path = groupId ? `${base}/:groupId/${action}` : base;
       await handlers.get(`${method} ${path}`)({store:selected,allowed,user,body,params:{groupId}},
         res,error => { res.status(error.status).json({message:error.message}); });
       return res;
@@ -173,4 +179,18 @@ test("web Chat opens only its selected staff group and sends in that group", asy
   } finally {
     await h.close();
   }
+});
+
+test("owner and Super Admin can remove members only in the selected store", async () => {
+  const h = fixture();
+  const input = {name:"Βάρδια",memberIds:[member.id]};
+  const {data:{id:groupId}} = await h.request("POST",{body:input});
+  const remove = {groupId,action:"remove-member",body:{userId:member.id}};
+  assert.equal((await h.request("POST",{...remove,user:member})).code,403);
+  assert.equal((await h.request("POST",{...remove,selected:{...store,id:"other"}})).code,404);
+  const result = await h.request("POST",remove);
+  assert.equal(result.code,200);
+  assert.equal((await h.request("GET",{groupId,user:member})).code,404);
+  const second = await h.request("POST",{body:input});
+  assert.equal((await h.request("POST",{...remove,groupId:second.data.id,user:{id:"admin",role:"SUPER_ADMIN"}})).code,200);
 });
