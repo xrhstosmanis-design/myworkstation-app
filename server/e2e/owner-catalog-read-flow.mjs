@@ -11,10 +11,11 @@ const db=new PrismaClient();
 const source=fs.readFileSync(new URL("../src/routes/owner-product-smart-entry.js",import.meta.url),"utf8");
 const current=source.match(/const rows=await prisma\.\$queryRaw`([\s\S]*?)`;/)[1];
 const previous=fs.readFileSync(new URL("./fixtures/owner-catalog-before.sql",import.meta.url),"utf8");
-function query(template,companyId,q=""){
-  const parts=template.split(/\$\{(companyId|q===""|like|scopedStoreId)\}/);
+function query(template,companyId,q="",productId=""){
+  const bindings={companyId,'q===""':q==="",like:`%${q}%`,scopedStoreId:null,'productId===""':productId==="",productId};
+  const parts=template.split(/\$\{(companyId|q===""|like|scopedStoreId|productId===""|productId)\}/);
   const strings=[],values=[];
-  for(let i=0;i<parts.length;i++)i%2?values.push(parts[i]==="scopedStoreId"?null:parts[i]==="companyId"?companyId:parts[i]==='q===""'?q==="":`%${q}%`):strings.push(parts[i]);
+  for(let i=0;i<parts.length;i++)i%2?values.push(bindings[parts[i]]):strings.push(parts[i]);
   assert.ok(strings.every(part=>!part.includes("${")),"Every source SQL interpolation must be explicitly bound");
   return Prisma.sql(strings,...values);
 }
@@ -39,6 +40,12 @@ try{
   const concurrent=await Promise.all([...Array.from({length:8},()=>get("/api/owner-products/catalog?q=CI-CATALOG-HTTP")),get("/api/health",false)]);
   for(const result of concurrent.slice(0,8)){assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.body.length,1);assert.equal(result.body[0].id,productId);assert.equal(result.body[0].active,false);assert.equal(result.body[0].salePrice,1.25);assert.match(result.cache,/no-store/)}
   assert.equal(concurrent[8].status,200);
+  const exact=await get(`/api/owner-products/catalog?productId=${encodeURIComponent(productId)}`);
+  assert.equal(exact.status,200,JSON.stringify(exact.body));
+  assert.deepEqual(exact.body.map(row=>row.id),[productId]);
+  const missing=await get("/api/owner-products/catalog?productId=missing-product");
+  assert.equal(missing.status,200,JSON.stringify(missing.body));
+  assert.deepEqual(missing.body,[]);
 
   await db.$transaction(async tx=>{
     // Temporary copies shadow application tables only on this isolated connection.
@@ -67,6 +74,9 @@ try{
       }
       if(term==="9990000600")assert.equal(after[0].id,"p0600","Search outside the first page still finds the barcode");
     }
+    const exact=await tx.$queryRaw(query(current,"tenant-a","","p0600"));
+    assert.deepEqual(exact.map(row=>row.id),["p0600"],"Exact ID works beyond the unfiltered window");
+    assert.deepEqual(await tx.$queryRaw(query(current,"tenant-a","","foreign")),[],"Exact ID does not cross companies");
     // A reviewed purchase must stay out of supplier history until it is invoiced.
     await tx.$executeRawUnsafe(`UPDATE "PurchaseOrder" SET "awaitingInvoice"=true WHERE "id"='o1'`);
     assert.equal((await tx.$queryRaw(query(current,"tenant-a","sku4"))).find(row=>row.id==="p0004").supplierName,null);

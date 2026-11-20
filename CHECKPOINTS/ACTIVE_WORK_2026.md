@@ -811,6 +811,10 @@ Owner /root retained. #4059 claim merged8396da191. Two UI filter-only changes re
 Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI44490139724 all5SUCCESS, each6353PASS/0FAIL/3optionalSKIP+8backupPASS. Guardedrelease44492043448SUCCESS; Renderdep-dbvbk7jrjlhs73bfs0agLIVE10:59:38Athens exact05b5b350. Publichealth200/exactrevision/HTML200 and delivered main-Dt7Lq7S0.js linked-row guard verified11:00:38. Scoped realDB stillFINAL/7/113.11; actual server+client read-only replay old6/106.91→new7/113.11, raw unchanged. No approval/invoicing/payment/stock action. Legacy OCR panel remains disabled. Actual user-tab visual readback pending; no new manual USER PASS or broader Gate closure. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
 
 
+## 20/11/2026 — Μενού είδους Αποθήκης — Τοπική υλοποίηση, LAB NOT TESTED
+
+Διαδόχου KM3282. Δεδομένα προϊόντος και καταστήματος από την ανοιχτή Αποθήκη, σύνδεση υπομενού και έλεγχοι εκτυπώσεων, ιστορικών και εξαγωγών. 33 στοχευμένοι έλεγχοι και frontend build πέρασαν τοπικά. Εκκρεμούν δημοσίευση, CI και συγκεντρωτική δοκιμή LAB. [Checkpoint](CHANGES/2026-11-20-warehouse-product-menu.md).
+
 ## 20/11/2026 07:19 EET — Warehouse/invoice review — compatibility checked / grouped LAB pending
 
 Same /root owner and three existing warehouse/invoice task IDs retained. Main a020ce84 targeted Node20 suite:32PASS/0FAIL/1nativePostgreSQLSKIP. Compact CSS/taxonomy helpers and A71942 filter repair retained; changed surrounding No5 archive/store authority tested with actual mounted fixtures. No source change or hosted business/login action. Prior #4040/#4061 native/LIVE proofs reused, no transaction repeated. No5 deployment remains its owner's scope. One combined geometry/taxonomy/markup role session is specified in CHANGES/2026-11-20-warehouse-invoice-common-readiness.md; no new manual PASS.

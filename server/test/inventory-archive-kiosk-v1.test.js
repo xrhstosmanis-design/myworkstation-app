@@ -110,9 +110,9 @@ test("new archive reuses existing navigation without an observer",()=>{
 });
 
 test("stock, destruction and price saves refresh the open archive without leaving BackOffice",()=>{
-  assert.match(panel,/mws:inventory-archive-refresh/);
-  assert.match(actions,/refreshArchive\('Η διόρθωση αποθέματος καταχωρίστηκε\.'/);
-  assert.match(actions,/refreshArchive\('Η καταστροφή ποσότητας καταχωρίστηκε\.'/);
+  assert.match(panel,/onRefresh:async message=>{await load/);
+  assert.match(actions,/onRefresh\('Η διόρθωση αποθέματος καταχωρίστηκε\.'/);
+  assert.match(actions,/onRefresh\('Η καταστροφή ποσότητας καταχωρίστηκε\.'/);
   assert.doesNotMatch(actions,/location\.reload\(\)/);
 });
 
