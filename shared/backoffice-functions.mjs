@@ -43,8 +43,8 @@ export const backofficeFunctionCatalogue=Object.freeze([
  {key:"unsold-products",label:"Απούλητα είδη καταστήματος",scope:"STORE",actions:["read"]},
  {key:"sales-journal",label:"Ημερολόγιο πωλήσεων καταστήματος",scope:"STORE",actions:["read"]},
   {key:"workforce-roles",label:"Ρόλοι σχετικοί με το κατάστημα",scope:"STORE",actions:["read"]},
-  {key:"workforce-rules",label:"Κανόνες προσωπικού καταστήματος",scope:"STORE",actions:["read"]},
-  {key:"shift-templates",label:"Πρότυπα βαρδιών καταστήματος",scope:"STORE",actions:["read"]},
+  {key:"workforce-rules",label:"Κανόνες προσωπικού καταστήματος",scope:"STORE",actions:["read","manage"]},
+  {key:"shift-templates",label:"Πρότυπα βαρδιών καταστήματος",scope:"STORE",actions:["read","manage"]},
   {key:"workforce-audit",label:"Ιστορικό προσωπικού καταστήματος",scope:"STORE",actions:["read"]},
   {key:"payroll",label:"Μισθοδοσία",scope:"STORE",actions:["read"]},
   {
