@@ -1,3 +1,4 @@
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -6,6 +7,23 @@ import {audit,contextFor} from "./workforce-v2-access.js";
 import {confirmed,workforceShiftTemplateSchema} from "./workforce-v2-validation.js";
 
 const router=Router({mergeParams:true});
+async function requireTemplateWrite(tx,req,context,roleId){
+  if(req.user?.staffAccess!==true)return;
+  const {id:storeId}=context.store;
+  await requireStaffGrant(tx,req.user,storeId,'shift-templates.manage');
+  if(!roleId)return;
+  const companyId=context.company.id;
+  const visible=await tx.workforceRole.findFirst({where:{
+    id:roleId,companyId,active:true,OR:[
+      {requiredByTemplates:{some:{companyId,storeId}}},
+      {employeeAssignments:{some:{employee:{companyId,OR:[
+        {baseStoreId:storeId},{storeAccess:{some:{storeId,active:true}}}
+      ]}}}}
+    ]
+  },select:{id:true}});
+  if(!visible)throw Object.assign(new Error("Ο απαιτούμενος ρόλος δεν είναι διαθέσιμος στο επιλεγμένο κατάστημα."),{status:403});
+}
+
 const includeTemplate={requiredRole:true,_count:{select:{assignments:true}}};
 
 async function loadTemplate(context,templateId){
@@ -47,6 +65,7 @@ router.post("/",async(req,res,next)=>{
     const code=workforceShiftCode(body.code||body.name);
     await ensureTemplateAvailable(context,{name:body.name,code});
     const created=await prisma.$transaction(async tx=>{
+      await requireTemplateWrite(tx,req,context,role?.id);
       const item=await tx.workforceShiftTemplate.create({data:{
         companyId:context.company.id,storeId:context.store.id,name:body.name,code,category:body.category,
         startTime:body.startTime,endTime:body.endTime,minimumPeople:body.minimumPeople,maximumPeople:body.maximumPeople??null,
@@ -65,6 +84,7 @@ router.put("/:templateId",async(req,res,next)=>{
     const code=workforceShiftCode(body.code||body.name);
     await ensureTemplateAvailable(context,{name:body.name,code,excludeId:existing.id});
     const updated=await prisma.$transaction(async tx=>{
+      await requireTemplateWrite(tx,req,context,role?.id);
       const item=await tx.workforceShiftTemplate.update({where:{id:existing.id},data:{
         name:body.name,code,category:body.category,startTime:body.startTime,endTime:body.endTime,
         minimumPeople:body.minimumPeople,maximumPeople:body.maximumPeople??null,requiredRoleId:role?.id||null,
@@ -89,6 +109,7 @@ router.patch("/:templateId/status",async(req,res,next)=>{
       if(activeAssignments)return res.status(409).json({error:"Το πρότυπο χρησιμοποιείται σε ενεργό ή μελλοντικό πρόγραμμα και δεν μπορεί να απενεργοποιηθεί.",usage:{activeAssignments}});
     }
     const updated=await prisma.$transaction(async tx=>{
+      await requireTemplateWrite(tx,req,context);
       const item=await tx.workforceShiftTemplate.update({where:{id:existing.id},data:{active:body.active},include:includeTemplate});
       await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:body.active?"WORKFORCE_SHIFT_TEMPLATE_ACTIVATED":"WORKFORCE_SHIFT_TEMPLATE_DEACTIVATED",entityType:"WORKFORCE_SHIFT_TEMPLATE",entityId:item.id,before:existing,after:item,reason:body.reason});
       return item;

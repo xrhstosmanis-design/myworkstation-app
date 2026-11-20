@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -10,8 +11,21 @@ const router=Router({mergeParams:true});
 
 async function rulesContext(req){
   const context=await contextFor(req);
-  await requirePersonnelPackage(req,context.store.id,PERSONNEL_PRO);
+  if(req.user?.staffAccess!==true)await requirePersonnelPackage(req,context.store.id,PERSONNEL_PRO);
   return context;
+}
+
+async function requireRuleWrite(tx,req,context,...employeeIds){
+  if(req.user?.staffAccess!==true)return;
+  const {id:storeId}=context.store;
+  await requireStaffGrant(tx,req.user,storeId,'workforce-rules.manage');
+  for(const id of new Set(employeeIds.filter(Boolean))){
+    const employee=await tx.workforceEmployee.findFirst({
+      where:{id,companyId:context.company.id,baseStoreId:storeId,storeAccess:{none:{active:true,storeId:{not:storeId}}}},
+      select:{id:true}
+    });
+    if(!employee)throw staffError();
+  }
 }
 
 async function loadRuleEmployee(req,context,employeeId){
@@ -83,6 +97,7 @@ router.post("/",async(req,res,next)=>{
     const employee=await loadRuleEmployee(req,context,body.employeeId),related=await relatedEmployee(req,context,employee.id,body.relatedEmployeeId);
     await ensureRuleAvailable({employeeId:employee.id,ruleType:body.ruleType,relatedEmployeeId:related?.id||null});
     const created=await prisma.$transaction(async tx=>{
+      await requireRuleWrite(tx,req,context,employee.id,related?.id);
       const item=await tx.workforceEmployeeRule.create({data:{
         employeeId:employee.id,ruleType:body.ruleType,severity:body.severity,relatedEmployeeId:related?.id||null,
         valueJson:normalizeWorkforceRuleValue(body.ruleType,body.value),note:cleanText(body.note),active:true,
@@ -101,6 +116,7 @@ router.put("/:ruleId",async(req,res,next)=>{
     const employee=await loadRuleEmployee(req,context,body.employeeId),related=await relatedEmployee(req,context,employee.id,body.relatedEmployeeId);
     await ensureRuleAvailable({employeeId:employee.id,ruleType:body.ruleType,relatedEmployeeId:related?.id||null,excludeId:existing.id});
     const updated=await prisma.$transaction(async tx=>{
+      await requireRuleWrite(tx,req,context,existing.employeeId,existing.relatedEmployeeId,employee.id,related?.id);
       const item=await tx.workforceEmployeeRule.update({where:{id:existing.id},data:{
         employeeId:employee.id,ruleType:body.ruleType,severity:body.severity,relatedEmployeeId:related?.id||null,
         valueJson:normalizeWorkforceRuleValue(body.ruleType,body.value),note:cleanText(body.note),
@@ -116,14 +132,16 @@ router.put("/:ruleId",async(req,res,next)=>{
 router.patch("/:ruleId/status",async(req,res,next)=>{
   try{
     const context=await rulesContext(req),body=z.object({active:z.boolean(),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),existing=await loadRule(req,context,req.params.ruleId);
-    if(existing.active===body.active)return res.json({item:await serializeWithNames(existing),changed:false});
+    if(req.user?.staffAccess!==true&&existing.active===body.active)return res.json({item:await serializeWithNames(existing),changed:false});
     if(body.active)await ensureRuleAvailable({employeeId:existing.employeeId,ruleType:existing.ruleType,relatedEmployeeId:existing.relatedEmployeeId,excludeId:existing.id});
     const updated=await prisma.$transaction(async tx=>{
+      await requireRuleWrite(tx,req,context,existing.employeeId,existing.relatedEmployeeId);
+      if(existing.active===body.active)return null;
       const item=await tx.workforceEmployeeRule.update({where:{id:existing.id},data:{active:body.active}});
       await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:body.active?"WORKFORCE_RULE_ACTIVATED":"WORKFORCE_RULE_DEACTIVATED",entityType:"WORKFORCE_EMPLOYEE_RULE",entityId:item.id,before:existing,after:item,reason:body.reason});
       return item;
     });
-    res.json({item:await serializeWithNames(updated),changed:true});
+    res.json({item:await serializeWithNames(updated??existing),changed:updated!==null});
   }catch(error){next(error)}
 });
 

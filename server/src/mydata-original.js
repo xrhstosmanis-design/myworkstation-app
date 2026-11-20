@@ -5,6 +5,7 @@ import {invoiceDetailLines} from "./mydata-xml.js";
 import {evaluateStandaloneDeliveryAttachment} from './lib/mydata-standalone-original-eligibility.js';
 import {readStandaloneOriginalSnapshot} from './lib/mydata-standalone-original-metadata.js';
 import {matchesVerifiedEpsilonOriginal} from './lib/mydata-original-provider-profiles.js';
+import {readOriginalIdentityHeader} from './lib/mydata-original-identity-ocr.js';
 
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
 // Host and format-code pairs confirmed against provider PDFs. Each host is exact.
@@ -81,15 +82,15 @@ export function verifyOriginalText(text,row){
   const withoutPadding=value=>value.replace(/^0+(?=\d)/,"");
   if(!number||!tokens.some(token=>token===number||(/^[0-9]+$/.test(number)&&withoutPadding(token)===withoutPadding(number))))mismatch();
 }
-export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf){
+export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf,identityReader=readOriginalIdentityHeader){
   assertCustomerDemoOutboundAllowed(row);
   const signal=AbortSignal.timeout(45000);
-  try{return await downloadOriginalPdf(row,fetcher,reader,signal)}catch(cause){
+  try{return await downloadOriginalPdf(row,fetcher,reader,signal,identityReader)}catch(cause){
     if(cause?.name==="TimeoutError"||(signal.aborted&&signal.reason?.name==="TimeoutError"))throw error("Η λήψη του πρωτοτύπου δεν ολοκληρώθηκε εντός 45 δευτερολέπτων. Ο πάροχος δεν απάντησε εγκαίρως. Το παραστατικό παραμένει σε αναμονή· δοκιμάστε αργότερα.",504);
     throw cause;
   }
 }
-async function downloadOriginalPdf(row,fetcher,reader,signal){
+async function downloadOriginalPdf(row,fetcher,reader,signal,identityReader){
   const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat);
   const response=await fetcher(url,{redirect:"error",signal,headers:{Accept:"application/pdf"}});
   if(!response.ok||!/^application\/pdf\b/i.test(response.headers.get("content-type")||""))throw error("Ο πάροχος δεν επέστρεψε πρωτότυπο PDF.");
@@ -99,8 +100,40 @@ async function downloadOriginalPdf(row,fetcher,reader,signal){
   for await(const chunk of response.body){size+=chunk.length;if(size>max){await response.body.cancel?.().catch(()=>{});throw error("Το PDF υπερβαίνει τα 3,4 MB.")}chunks.push(Buffer.from(chunk))}
   const bytes=Buffer.concat(chunks);
   if(bytes.length<100||bytes.subarray(0,5).toString()!=="%PDF-")throw error("Το αρχείο δεν είναι PDF.");
-  const {text,pageCount}=await reader(bytes);verifyOriginalText(text,row);
-  return {bytes,text,pageCount,checksum:crypto.createHash("sha256").update(bytes).digest("hex"),filename:`mydata-${row.documentNumber}-${row.mark}.pdf`};
+  let {text,pageCount}=await reader(bytes);
+  signal.throwIfAborted();
+  const checksum=crypto.createHash("sha256").update(bytes).digest("hex");
+  try{verifyOriginalText(text,row)}catch(cause){
+    if(!canReadIdentityHeader(url,text,pageCount,row))throw cause;
+    // Expected identity fields never enter OCR generation. Only the same PDF
+    // bytes and cancellation signal cross the isolated local reader boundary.
+    const header=await identityReader(bytes,{signal});
+    signal.throwIfAborted();
+    if(header?.checksum!==checksum||header?.pageCount!==1||header?.region!=="FIRST_PAGE_TOP_45_PERCENT"
+      ||!Number.isFinite(header?.confidence)||(header.confidence<50||header.confidence>100)
+      ||typeof header.text!=="string"||!header.text.trim()||header.text.length>20000)throw cause;
+    text=String(text)+"\n"+header.text;
+    verifyOriginalText(text,row);
+  }
+  return {bytes,text,pageCount,checksum,filename:`mydata-${row.documentNumber}-${row.mark}.pdf`};
+}
+
+function canReadIdentityHeader(downloadUrl,text,pageCount,row){
+  if(pageCount!==1||!/^\d{9}$/.test(String(row.issuerVat??"")))return false;
+  const url=new URL(downloadUrl);
+  const profiles=new Map([
+    ["epsilondigital-3rdparte.epsilonnet.gr","169"],
+    ["epsilondigital-cosmote.epsilonnet.gr","22"],
+    ["epsilondigital-telekom.epsilonnet.gr","22"],
+  ]);
+  const format=url.pathname.match(/^\/fd\/[a-f0-9]{32}:(\d{1,3})\/pdf$/i)?.[1];
+  if(!format||profiles.get(url.hostname)!==format)return false;
+  const tokens=String(text||"").match(/[0-9]+/g)||[];
+  if(tokens.includes(String(row.issuerVat)))return false;
+  for(const value of [row.mark,row.counterpartVat])if(!value||!tokens.includes(String(value)))return false;
+  const number=String(row.documentNumber??"");
+  const unpad=value=>value.replace(/^0+(?=\d)/,"");
+  return !!number&&tokens.some(token=>token===number||(/^[0-9]+$/.test(number)&&unpad(token)===unpad(number)));
 }
 
 // Network work precedes the row lock; competing downloads can only attach once.

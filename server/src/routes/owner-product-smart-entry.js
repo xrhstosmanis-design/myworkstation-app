@@ -45,11 +45,13 @@ async function nextSku(companyId,tx=prisma){
 
 router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
-    const companyId=req.user.companyId,q=String(req.query.q||"").trim(),like=`%${q}%`;await ensureSchema();
+    const companyId=req.user.companyId,q=String(req.query.q||"").trim(),like=`%${q}%`;
+    const productId=typeof req.query.productId==="string"?req.query.productId.trim():"";
+    await ensureSchema();
     const rows=await prisma.$queryRaw`
       WITH candidates AS MATERIALIZED (
         SELECT p.* FROM "Product" p
-        WHERE p."companyId"=${companyId} AND (${scopedStoreId}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" bound WHERE bound."productId"=p."id" AND bound."storeId"=${scopedStoreId})) AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${like}))
+        WHERE p."companyId"=${companyId} AND (${productId===""} OR p."id"=${productId}) AND (${scopedStoreId}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" bound WHERE bound."productId"=p."id" AND bound."storeId"=${scopedStoreId})) AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${like}))
         ORDER BY p."name" LIMIT 500
       ), suppliers AS MATERIALIZED (
         SELECT DISTINCT ON (history."productId") history."productId",history."supplierName" FROM (
