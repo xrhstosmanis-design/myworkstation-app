@@ -2,7 +2,11 @@ import React,{useEffect,useRef,useState} from "react";
 import WholesalePortalAdmin from "./WholesalePortalAdmin.jsx";
 import WholesaleSalesAssignments from "./WholesaleSalesAssignments.jsx";
 
-export default function WholesaleB2BPanel({api,stores=[],activeStoreId="",onSubmissionLockChange,suspended=false}){
+export default function WholesaleB2BPanel(props){
+ return props.readOnly?<WholesaleOrderReadView {...props}/>:<WholesaleB2BEditable {...props}/>;
+}
+
+function WholesaleB2BEditable({api,stores=[],activeStoreId="",onSubmissionLockChange,suspended=false}){
   const [submissionLocked,setSubmissionLocked]=useState(false);
   const [tab,setTab]=useState("customers"),[customers,setCustomers]=useState([]),[lists,setLists]=useState([]),[error,setError]=useState("");
   const [selectedList,setSelectedList]=useState(""),[productQuery,setProductQuery]=useState(""),[products,setProducts]=useState([]);
@@ -101,8 +105,44 @@ function WholesaleOrders({api,stores,activeStoreId,customers,active,onLock,suspe
     {quote&&validStore&&!locked&&<section className="wholesale-order-quote" aria-label="Υπολογισμός παραγγελίας"><h4>Υπολογισμός · {quote.customerName}</h4><OrderSnapshot snapshot={quote}/><p>Δεν έχει γίνει έλεγχος πίστωσης. Η διαθεσιμότητα δεν αποτελεί δέσμευση αποθέματος.</p><button type="button" onClick={send}>Υποβολή προς έγκριση</button></section>}
     {phase==="uncertain"&&<button type="button" onClick={send}>Επανάληψη ίδιου αιτήματος</button>}
     {ack&&<p role="status">Προς έγκριση · {ack.orderId}{ack.replayed?" · Επιβεβαιώθηκε η αρχική καταχώρηση":""}</p>}
-    <section aria-label="Καταχωρισμένες παραγγελίες"><h3>Παραγγελίες καταστήματος</h3>{!validStore?null:loading?<p role="status">Φόρτωση παραγγελιών…</p>:listError?<div role="alert">{listError}<button type="button" onClick={()=>setRefresh(value=>value+1)}>Επανάληψη φόρτωσης</button></div>:validStore&&orders.length===0?<p>Δεν υπάρχουν παραγγελίες.</p>:orders.map(order=><button type="button" className="wholesale-order-list-row" key={order.id} onClick={()=>openOrder(order.id)}>{order.snapshot?.customerName||order.customerId} · {order.status==="SUBMITTED"?"Προς έγκριση":order.status} · {amount(order.grossTotal)} € · {order.id}</button>)}{validStore&&total>50&&<nav><button type="button" disabled={page<=1||loading} onClick={()=>setPage(value=>value-1)}>Προηγούμενες παραγγελίες</button><span>Σελίδα {page}</span><button type="button" disabled={page*50>=total||loading} onClick={()=>setPage(value=>value+1)}>Επόμενες παραγγελίες</button></nav>}</section>
-    {detailError&&<div role="alert">{detailError}</div>}{detail&&validStore&&<section aria-label="Λεπτομέρειες παραγγελίας"><h3>Προς έγκριση · {detail.id}</h3><p>{detail.snapshot?.customerName} · {detail.createdAt}</p><OrderSnapshot snapshot={detail.snapshot}/>{detail.notes&&<p>{detail.notes}</p>}</section>}
+    <WholesaleOrderHistory validStore={validStore} loading={loading} listError={listError} orders={orders} total={total} page={page} onRefresh={()=>setRefresh(value=>value+1)} onPrevious={()=>setPage(value=>value-1)} onNext={()=>setPage(value=>value+1)} openOrder={openOrder} detail={detail} detailError={detailError}/>
+
   </section>;
 }
 function OrderSnapshot({snapshot}){return <><div className="wholesale-tier-scroll"><table><thead><tr><th>Προϊόν</th><th>Ποσότητα</th><th>Καθαρή αξία</th><th>ΦΠΑ</th><th>Σύνολο</th></tr></thead><tbody>{(snapshot?.items||[]).map(item=><tr key={item.productId}><td>{item.name}</td><td>{item.quantity} {item.unit}</td><td>{amount(item.netTotal)} €</td><td>{amount(item.vatTotal)} €</td><td>{amount(item.grossTotal)} €</td></tr>)}</tbody></table></div><p className="wholesale-order-totals">Καθαρή αξία {amount(snapshot?.totals?.net)} € · ΦΠΑ {amount(snapshot?.totals?.vat)} € · Σύνολο {amount(snapshot?.totals?.gross)} €</p></>}
+
+function WholesaleOrderHistory({validStore,loading,listError,orders,total,page,onRefresh,onPrevious,onNext,openOrder,detail,detailError}){return <>
+    <section aria-label="Καταχωρισμένες παραγγελίες"><h3>Παραγγελίες καταστήματος</h3>{!validStore?null:loading?<p role="status">Φόρτωση παραγγελιών…</p>:listError?<div role="alert">{listError}<button type="button" onClick={onRefresh}>Επανάληψη φόρτωσης</button></div>:validStore&&orders.length===0?<p>Δεν υπάρχουν παραγγελίες.</p>:orders.map(order=><button type="button" className="wholesale-order-list-row" key={order.id} onClick={()=>openOrder(order.id)}>{order.snapshot?.customerName||order.customerId} · {order.status==="SUBMITTED"?"Προς έγκριση":order.status} · {amount(order.grossTotal)} € · {order.id}</button>)}{validStore&&total>50&&<nav><button type="button" disabled={page<=1||loading} onClick={onPrevious}>Προηγούμενες παραγγελίες</button><span>Σελίδα {page}</span><button type="button" disabled={page*50>=total||loading} onClick={onNext}>Επόμενες παραγγελίες</button></nav>}</section>
+    {detailError&&<div role="alert">{detailError}</div>}{detail&&validStore&&<section aria-label="Λεπτομέρειες παραγγελίας"><h3>Προς έγκριση · {detail.id}</h3><p>{detail.snapshot?.customerName} · {detail.createdAt}</p><OrderSnapshot snapshot={detail.snapshot}/>{detail.notes&&<p>{detail.notes}</p>}</section>}
+</>}
+function WholesaleOrderReadView({api,companyId,stores=[],activeStoreId=''}){
+ const [page,setPage]=useState(1),[refresh,setRefresh]=useState(0),[result,setResult]=useState(null),[loadedScope,setLoadedScope]=useState(''),[detail,setDetail]=useState(null),[detailScope,setDetailScope]=useState(''),[loading,setLoading]=useState(false),[listError,setListError]=useState(''),[detailError,setDetailError]=useState('');
+ const sequence=useRef(0),detailSequence=useRef(0),currentScope=useRef('');
+ const scope=JSON.stringify([companyId,activeStoreId,page,refresh]);currentScope.current=scope;
+ const validStore=Boolean(activeStoreId&&stores.some(store=>store.id===activeStoreId&&store.active!==false));
+ const orders=loadedScope===scope?result?.items||[]:[],total=loadedScope===scope?result?.total||0:0;
+ const visibleDetail=detailScope===scope?detail:null;
+ const validOrder=order=>order?.companyId===companyId&&order.storeId===activeStoreId&&order.snapshot?.storeId===activeStoreId;
+ useEffect(()=>{setPage(1)},[activeStoreId,companyId]);
+ useEffect(()=>{
+  const current=++sequence.current,own=scope;detailSequence.current++;setResult(null);setLoadedScope('');setDetail(null);setDetailScope('');setListError('');setDetailError('');setLoading(validStore);
+  if(!validStore)return;
+  const query=new URLSearchParams({storeId:activeStoreId,page:String(page),pageSize:'50'});
+  api('/api/wholesale/orders?'+query).then(value=>{
+   if(current!==sequence.current||own!==currentScope.current)return;
+   if(value?.companyId!==companyId||value.storeId!==activeStoreId||!Array.isArray(value.items)||value.items.some(order=>!validOrder(order))||Number(value.page)!==page||Number(value.pageSize)!==50)throw Error('Δεν επιβεβαιώθηκε το κατάστημα των παραγγελιών χονδρικής.');
+   setResult(value);setLoadedScope(own);
+  }).catch(e=>{if(current===sequence.current&&own===currentScope.current)setListError(e.message)}).finally(()=>{if(current===sequence.current&&own===currentScope.current)setLoading(false)});
+  return()=>{sequence.current++;detailSequence.current++};
+ },[api,scope,validStore]);
+ const openOrder=async id=>{
+  const current=++detailSequence.current,own=scope;setDetail(null);setDetailScope('');setDetailError('');
+  try{
+   const value=await api('/api/wholesale/orders/'+encodeURIComponent(id)+'?'+new URLSearchParams({storeId:activeStoreId}));
+   if(current!==detailSequence.current||own!==currentScope.current)return;
+   if(value?.companyId!==companyId||value.storeId!==activeStoreId||value.order?.id!==id||!validOrder(value.order))throw Error('Δεν επιβεβαιώθηκε η παραγγελία χονδρικής του καταστήματος.');
+   setDetail(value.order);setDetailScope(own);
+  }catch(e){if(current===detailSequence.current&&own===currentScope.current){setDetail(null);setResult(null);setLoadedScope('');setDetailError(e.message)}}
+ };
+ return <section className="wholesale-b2b-panel"><div className="wholesale-head"><div><h2>Χονδρική / B2B · Παραγγελίες</h2><p>{stores.find(store=>store.id===activeStoreId)?.name||activeStoreId}</p></div><button type="button" disabled={loading||!validStore} onClick={()=>setRefresh(value=>value+1)}>Ανανέωση παραγγελιών</button></div><WholesaleOrderHistory validStore={validStore} loading={loading} listError={listError} orders={orders} total={total} page={page} onRefresh={()=>setRefresh(value=>value+1)} onPrevious={()=>setPage(value=>value-1)} onNext={()=>setPage(value=>value+1)} openOrder={openOrder} detail={visibleDetail} detailError={detailError}/></section>;
+}

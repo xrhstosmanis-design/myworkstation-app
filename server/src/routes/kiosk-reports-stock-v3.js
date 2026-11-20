@@ -15,11 +15,12 @@ function requireAccess(req,res,next){
 router.use(requireAccess);
 
 // Keep the canonical SQL and arithmetic shared; callers authorize their own scope.
-export async function readStockAnalysisReport({companyId,from,to,storeId,q},{db=prisma}={}){
+export async function readStockAnalysisReport({companyId,from,to,storeId,q},{db=prisma,strictRead=false}={}){
     const text=q?`%${q}%`:null;
     if(storeId){const store=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});if(!store)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404})}
     const rows=await db.$queryRaw`
       SELECT p."id" AS "productId",p."sku",p."name",p."vatRate",p."unit",
+        (COALESCE(sp."salePrice",p."salePrice") IS NULL) AS "_salePriceUnavailable",(COALESCE(lp."unitCost",p."costPrice") IS NULL) AS "_purchasePriceUnavailable",(p."vatRate" IS NULL) AS "_vatUnavailable",
         c."name" AS "categoryName",mp."subcategoryName",s."id" AS "storeId",s."name" AS "storeName",
         COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
         COALESCE(sa."salesQuantity",0) AS "salesQuantity",sa."lastSaleAt",COALESCE(sa."reversalQuantity",0) AS "reversalQuantity",
@@ -27,7 +28,7 @@ export async function readStockAnalysisReport({companyId,from,to,storeId,q},{db=
       FROM "StoreProduct" sp
       JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${companyId}
       JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
-      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=p."companyId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       LEFT JOIN LATERAL (
         SELECT COALESCE(SUM(sl."quantity"),0) AS "salesQuantity",
@@ -41,17 +42,18 @@ export async function readStockAnalysisReport({companyId,from,to,storeId,q},{db=
         SELECT CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END AS "unitCost",
           d."documentDate",sup."name" AS "supplierName"
         FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-        LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
+        LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId" AND sup."companyId"=d."companyId"
         WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND d."storeId"=sp."storeId" AND l."productId"=p."id"
         ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
       ) lp ON true
       WHERE sp."active"=true AND p."active"=true AND (${storeId}::text IS NULL OR sp."storeId"=${storeId})
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
-      ORDER BY p."name",s."name" LIMIT 10000`;
-    const items=rows.map(r=>{
+      ORDER BY p."name",s."name" LIMIT ${strictRead?10001:10000}`;
+    if(strictRead&&rows.length>10000)throw Object.assign(new Error("Υπέρβαση ορίου αναφοράς."),{status:503,code:"STAFF_REPORT_LIMIT"});
+    const items=rows.map(({_salePriceUnavailable,_purchasePriceUnavailable,_vatUnavailable,...r})=>{
       const currentStock=n(r.currentStock),salePrice=n(r.salePrice),purchasePrice=n(r.purchasePrice),vatRate=n(r.vatRate),salesQuantity=n(r.salesQuantity),reversalQuantity=n(r.reversalQuantity);
       const saleNet=salePrice/(1+vatRate/100),retailValue=currentStock*salePrice,purchaseValue=currentStock*purchasePrice;
-      return {...r,currentStock,salePrice,purchasePrice,vatRate,salesQuantity,reversalQuantity,retailValue,purchaseValue,margin:saleNet>0?((saleNet-purchasePrice)/saleNet)*100:0};
+      return {...r,...(strictRead?{_salePriceUnavailable,_purchasePriceUnavailable,_vatUnavailable}:{}),currentStock,salePrice,purchasePrice,vatRate,salesQuantity,reversalQuantity,retailValue,purchaseValue,margin:saleNet>0?((saleNet-purchasePrice)/saleNet)*100:0};
     });
     return {items,count:items.length,totalStockQuantity:items.reduce((a,r)=>a+r.currentStock,0),totalRetailValue:items.reduce((a,r)=>a+r.retailValue,0),totalPurchaseValue:items.reduce((a,r)=>a+r.purchaseValue,0),totalSalesQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalReversalQuantity:items.reduce((a,r)=>a+r.reversalQuantity,0),from,to,reversalAware:true};
 }

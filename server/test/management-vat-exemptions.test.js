@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import {z} from "zod";
+import {managementVatExemptions} from "../src/lib/management-vat-exemptions.js";
 
 function harness(){
   const routes=new Map(),writes=[],saved=[];
@@ -21,8 +22,8 @@ function harness(){
       return saved.filter(row=>row.companyId===values[0]).map(row=>({...row,productCount:0}));
     }
   };
-  const source=fs.readFileSync(new URL("../src/routes/management-vat-departments.js",import.meta.url),"utf8").replace(/^import .*;$/gm,"").replace("export async function","async function").replace("export default router;","return router;");
-  new Function("Router","z","prisma","crypto","executeHotTableBootstrap",source)(()=>router,z,prisma,crypto,async()=>{});
+  const source=fs.readFileSync(new URL("../src/routes/management-vat-departments.js",import.meta.url),"utf8").replace(/^import .*;$/gm,"").replace(/^export (?=(?:async )?function )/gm,"").replace("export default router;","return router;");
+  new Function("Router","z","prisma","crypto","executeHotTableBootstrap","EXEMPTIONS",source)(()=>router,z,prisma,crypto,async()=>{},managementVatExemptions);
   return {writes,async call(method,body={},user={role:"OWNER",companyId:"daily-bite"}){
     const req={user,body},res={statusCode:200,status(code){this.statusCode=code;return this},json(value){this.body=value;return this}};
     let authorized=false,error;access(req,res,()=>{authorized=true});

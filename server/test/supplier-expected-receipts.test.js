@@ -22,7 +22,8 @@ test('confirmation preview preserves exact decimal multiplication and validation
 });
 
 test('exact routes reuse invoice grants without exposing adjacent endpoints or new capabilities',()=>{
-  for(const path of ['/api/commerce/order-suggestions','/api/commerce/order-suggestions/by-supplier','/api/commerce/expected-receipts','/api/commerce/expected-receipts/candidates'])assert.equal(staffRequestCapability('GET',path),'invoices.read');
+  for(const path of ['/api/commerce/order-suggestions','/api/commerce/order-suggestions/by-supplier'])assert.equal(staffRequestCapability('GET',path),'order-suggestions.read');
+  for(const path of ['/api/commerce/expected-receipts','/api/commerce/expected-receipts/candidates'])assert.equal(staffRequestCapability('GET',path),'invoices.read');
   for(const path of ['/api/commerce/expected-receipts','/api/commerce/expected-receipts/id/link','/api/commerce/expected-receipts/id/cancel-remaining'])assert.equal(staffRequestCapability('POST',path),'invoices.approve');
   for(const path of ['/api/commerce/expected-receipts/id/delete','/api/commerce/order-suggestions/unrelated','/api/commerce/expected-receipts/id/link/other'])assert.equal(expectedReceiptAction('POST',path),null);
   assert.equal(staffRequestCapability('PATCH','/api/purchase-orders/id',{status:'FINAL'}),'invoices.approve');

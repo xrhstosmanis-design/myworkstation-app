@@ -44,7 +44,8 @@ async function unlock(ctx){await ctx.click('Χωρίς internet · τοπικά 
 
 test('online snapshot uses explicit selected store, strips prices/private fields and refuses incomplete pagination',async()=>{
  const server=backend(),result=await fetchOfflineSnapshot(server.api,session,'store-a');
- assert.deepEqual(result.customers,snapshot.customers);assert.deepEqual(result.products,snapshot.products);assert.equal(JSON.stringify(result).includes('PRIVATE'),false);assert.equal(JSON.stringify(result).includes('999'),false);
+ assert.deepEqual(result.customers,snapshot.customers);assert.deepEqual(result.products,snapshot.products);assert.equal(JSON.stringify(result).includes('PRIVATE'),false);for(const product of result.products)for(const field of ['salePrice','costPrice'])assert.equal(Object.hasOwn(product,field),false);
+ const expiry=1899999000000,dated=await fetchOfflineSnapshot(backend().api,{...session,expiresAt:expiry},'store-a',{now:()=>expiry-1000});assert.equal(dated.paidExpiresAt,expiry);assert.equal(JSON.stringify(dated).includes('999'),true,'valid expiry digits do not represent leaked prices');assert.deepEqual(dated.products,snapshot.products);
  assert.ok(server.calls.every(call=>!call.path.includes('scope=company')));assert.ok(server.calls.filter(call=>call.path.includes('/products?')).every(call=>call.path.includes('storeId=store-a')));
  await assert.rejects(fetchOfflineSnapshot(backend(path=>path.startsWith('/api/wholesale/products?')?{items:[],total:2}:undefined).api,session,'store-a'),/ολόκληρος/);
  await assert.rejects(fetchOfflineSnapshot(server.api,session,''),/συγκεκριμένο/);

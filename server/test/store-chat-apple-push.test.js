@@ -13,7 +13,7 @@ test("actual sender marks each provider separately and preserves tenant/sender b
   const rows=[{endpoint:"https://web.push.apple.com/id",subscriptionJson:{endpoint:"https://web.push.apple.com/id"}},{endpoint:"https://fcm.googleapis.com/id",subscriptionJson:{endpoint:"https://fcm.googleapis.com/id"}}],sent=[];
   const code=fs.readFileSync(new URL("../src/store-chat-push.js",import.meta.url),"utf8").split("export async function sendStoreChatPush")[1];
   const fn=vm.runInNewContext("async function sendStoreChatPush"+code+";sendStoreChatPush",{
-    vapidKeys:async()=>{},mobilePushRecipients:async()=>[],removeMobilePushEndpoints:async()=>{},isApplePushEndpoint,assertCustomerDemoOutboundAllowed,
+    vapidKeys:async()=>{},mutedChatUsers:async()=>new Set(),mobilePushRecipients:async()=>[],removeMobilePushEndpoints:async()=>{},isApplePushEndpoint,assertCustomerDemoOutboundAllowed,
     prisma:{$queryRaw:async(strings,...values)=>{assert.deepEqual(values,["company","B","sender"]);return rows}},
     webpush:{sendNotification:async(subscription,payload,options)=>sent.push({subscription,data:JSON.parse(payload),options})}
   });
@@ -46,7 +46,7 @@ test("optional mobile recipient failure keeps existing scoped Push delivery and 
  const legacy={endpoint:"https://fcm.googleapis.com/virtual",subscriptionJson:{endpoint:"https://fcm.googleapis.com/virtual"}},sent=[];
  const code=fs.readFileSync(new URL("../src/store-chat-push.js",import.meta.url),"utf8").split("export async function sendStoreChatPush")[1];
  const fn=vm.runInNewContext("async function sendStoreChatPush"+code+";sendStoreChatPush",{
-  vapidKeys:async()=>{},isApplePushEndpoint,assertCustomerDemoOutboundAllowed,
+  vapidKeys:async()=>{},mutedChatUsers:async()=>new Set(),isApplePushEndpoint,assertCustomerDemoOutboundAllowed,
   prisma:{$queryRaw:async(strings,...values)=>{assert.deepEqual(values,["company","B","sender"]);return [legacy]}},
   mobilePushRecipients:async()=>{throw Object.assign(new Error("private query values"),{code:"P2010"})},
   removeMobilePushEndpoints:async()=>{},console:{error:(...args)=>{assert.ok(!args.join(" ").includes("private"))}},
@@ -54,4 +54,27 @@ test("optional mobile recipient failure keeps existing scoped Push delivery and 
  });
  const result=await fn({store:{companyId:"company",id:"B",name:"Virtual"},senderId:"sender"});
  assert.deepEqual(sent,[legacy.endpoint]);assert.equal(result.attempted,1);assert.equal(result.delivered,1);
+});
+
+test("web push skips the muted user across legacy and mobile endpoints for the canonical store topic", async () => {
+  const store = {companyId:"company",id:"B",name:"LAB"}, sent = [];
+  const subscription = (userId, endpoint) => ({userId, endpoint, subscriptionJson:{endpoint}});
+  const code = fs.readFileSync(new URL("../src/store-chat-push.js", import.meta.url), "utf8")
+    .split("export async function sendStoreChatPush")[1];
+  const fn = vm.runInNewContext("async function sendStoreChatPush" + code + ";sendStoreChatPush", {
+    vapidKeys:async()=>{}, isApplePushEndpoint, assertCustomerDemoOutboundAllowed,
+    mutedChatUsers:async(target, topic)=>{
+      assert.equal(target, store);
+      assert.equal(topic, "CASH");
+      return new Set(["muted"]);
+    },
+    prisma:{$queryRaw:async()=>[subscription("muted","legacy"), subscription("active","allowed")]},
+    mobilePushRecipients:async()=>[subscription("muted","mobile")],
+    removeMobilePushEndpoints:async()=>{},
+    webpush:{sendNotification:async(subscription)=>sent.push(subscription.endpoint)}
+  });
+  const result = await fn({store,senderId:"sender",topic:"CASH"});
+  assert.deepEqual(sent, ["allowed"]);
+  assert.equal(result.attempted, 1);
+  assert.equal(result.delivered, 1);
 });

@@ -43,6 +43,12 @@ $ticket=@{
 }|ConvertTo-Json -Depth 10|ConvertFrom-Json
 $expectedLines=@('MYWORKSTATION - PRODUCTION','synthetic-loopback-only','DOCTOR','--------------------------------','1 x FREDDO ESPRESSO','  ΜΕΤΡΙΟΣ','--------------------------------','2 x CAPPUCCINO','  ΛΙΓΟΣ ΠΑΓΟΣ','  ΣΤΕΒΙΑ','NOTE: ΧΩΡΙΣ ΚΑΠΑΚΙ','ALLERGENS: ΓΑΛΑ')
 Assert (((Lines $ticket) -join "`n") -ceq ($expectedLines -join "`n")) 'Formatter lost or reordered ticket details'
+$ticket | Add-Member NoteProperty productionStation 'ΚΑΦΕ'
+$ticket | Add-Member NoteProperty tableName 'LAB ΤΡΑΠΕΖΙ'
+$ticket | Add-Member NoteProperty roundNumber 2
+$ticket | Add-Member NoteProperty note 'ΟΔΗΓΙΑ ΤΡΑΠΕΖΙΟΥ'
+$expectedLines=@($expectedLines[0..2])+@('STATION: ΚΑΦΕ','TABLE: LAB ΤΡΑΠΕΖΙ / ROUND: 2','NOTE: ΟΔΗΓΙΑ ΤΡΑΠΕΖΙΟΥ')+@($expectedLines[3..($expectedLines.Length-1)])
+Assert (((Lines $ticket) -join "`n") -ceq ($expectedLines -join "`n")) 'Table ticket lost station, table, round or instructions'
 $encoding=[Text.Encoding]::GetEncoding(1253)
 foreach($cut in @($true,$false)){
  $ticket.settings.cut=$cut

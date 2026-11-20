@@ -2,22 +2,31 @@ import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,attachInboundToExistingD
 import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
 import crypto from "node:crypto";
 import {invoiceDetailLines} from "./mydata-xml.js";
+import {evaluateStandaloneDeliveryAttachment} from './lib/mydata-standalone-original-eligibility.js';
+import {readStandaloneOriginalSnapshot} from './lib/mydata-standalone-original-metadata.js';
+import {matchesVerifiedEpsilonOriginal} from './lib/mydata-original-provider-profiles.js';
 
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
 export function originalDownloadUrl(xml,issuerVat){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
   const decoded=raw.trim().replace(/&amp;/g,"&").replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(n[0].toLowerCase()==="x"?parseInt(n.slice(1),16):Number(n)));
+  if(/[\u0000-\u0020\u007f]/.test(decoded))throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.");
   let url;try{url=new URL(decoded)}catch{throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.")}
   const validIssuer = /^\d{9}$/.test(issuerVat);
-  const impact = validIssuer && url.hostname === "einvoice.impact.gr"
+  const impact = validIssuer && ["einvoice.impact.gr","einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
-  const epsilon = validIssuer && url.hostname === "epsilondigital.epsilonnet.gr"
-    && /^\/fd\/[a-f0-9]{32}:8\/?$/i.test(url.pathname);
-  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon)) {
+  const epsilon = validIssuer && matchesVerifiedEpsilonOriginal(url,issuerVat);
+  const einvoicing = validIssuer && url.hostname === "e-invoicing.gr"
+    && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_[A-Za-z0-9]{6,8}\/?$/i.test(url.pathname);
+  const vs = validIssuer && url.hostname === "vs.gr"
+    && /^\/iv\/invoice\/download\/([A-Za-z0-9]{4}_[0-9])\/\1~k1~[a-f0-9]{40}~[A-Za-z0-9_-]{43}\/?$/.test(url.pathname);
+  const onesign = validIssuer && url.hostname === "onesign-api.onesys.gr"
+    && /^\/invoice\/public\/download\/[0-9]{1,20}\/?$/.test(url.pathname);
+  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon || einvoicing || vs || onesign)) {
     throw error("Ο σύνδεσμος απαιτεί διαφορετικό υποστηριζόμενο πάροχο ή δεν συμφωνεί με το ΑΦΜ εκδότη.");
   }
-  url.pathname=url.pathname.replace(/\/$/,"")+"/pdf";
+  url.pathname=url.pathname.replace(/\/$/,"")+(onesign?"":"/pdf");
   return url.href;
 }
 export async function readOriginalPdf(bytes){
@@ -68,6 +77,7 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
   await ensureInvoiceCommonDraftSchema(prisma);
   const rows=await prisma.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId} LIMIT 1`;
   const row=rows[0];if(!row)throw error("Δεν βρέθηκε το παραστατικό.",404);
+  if(createAiJob===true&&row.invoiceType==='9.3')return acquireStandaloneOriginal(prisma,row,{companyId,storeId,inboxId},download);
   if(row.attachmentId)return prisma.$transaction(tx=>attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,createAiJob));
   if(row.status!=="RECEIVED")throw error("Το παραστατικό έχει ήδη μεταφερθεί για έλεγχο.");
   const pdf=await download(row);
@@ -84,6 +94,30 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
     await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=("rawPayload"-'originalPending'-'originalError')||${JSON.stringify({originalDownloaded:true,originalJobId:jobId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
     const draft=await attachReviewDraft(tx,{...row,attachmentId},companyId,storeId,inboxId,userId,createAiJob);
     return {...draft,downloaded:true,reused:false,jobId};
+  });
+}
+
+// Ordinary UI only. The existing false/bulk and invoice paths above retain
+// their draft/worker contract. No job, purchase or financial writer is called.
+async function acquireStandaloneOriginal(prisma,source,scope,download){
+  if(typeof source.rawPayload?.xml!=='string')throw error('Τα στοιχεία ταυτότητας του πρωτοτύπου χρειάζονται χειροκίνητο έλεγχο.');
+  const pdf=source.attachmentId?null:await download(source);
+  const identity=row=>JSON.stringify([['id','companyId','storeId','inboxId','mark','issuerVat','counterpartVat','series','documentNumber','invoiceType','currency','totalNet','totalVat','totalGross'].map(key=>row[key]==null?null:String(row[key])),row.issueDate?new Date(row.issueDate).toISOString():null,row.rawPayload?.xml??null]);
+  return prisma.$transaction(async tx=>{
+    await lockInvoiceStore(tx,scope.companyId,scope.storeId);
+    const rows=await tx.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${scope.companyId} AND m."storeId"=${scope.storeId} AND m."inboxId"=${scope.inboxId} FOR UPDATE OF m,i`;
+    const row=rows[0];
+    if(rows.length!==1||identity(row)!==identity(source))throw error('Τα στοιχεία του παραστατικού άλλαξαν. Ανανεώστε τη θυρίδα πριν από νέα λήψη.');
+    const snapshot=await readStandaloneOriginalSnapshot(tx,scope,row);
+    const decision=evaluateStandaloneDeliveryAttachment(snapshot,scope);
+    if(!decision.eligible)throw error('Το δελτίο αποστολής χρειάζεται έλεγχο ταυτότητας ή συνδέσεων. Δεν δημιουργήθηκε αγορά.');
+    if(decision.replay)return {downloaded:false,reused:true,attachmentOnly:true};
+    if(!pdf)throw error('Το πρωτότυπο δεν είναι πλέον διαθέσιμο. Ανανεώστε τη θυρίδα.');
+    const attachmentId=crypto.randomUUID();
+    await tx.$executeRaw`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES (${attachmentId},${scope.companyId},${scope.storeId},'AI_READER_SOURCE',${pdf.filename},'application/pdf',${'DATABASE:'+pdf.checksum},${pdf.checksum},${'data:application/pdf;base64,'+pdf.bytes.toString('base64')})`;
+    await tx.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=${attachmentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${scope.inboxId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
+    await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=("rawPayload"-'originalPending'-'originalError')||jsonb_build_object('originalDownloaded',true) WHERE "id"=${row.id} AND "inboxId"=${scope.inboxId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
+    return {downloaded:true,reused:false,attachmentOnly:true};
   });
 }
 

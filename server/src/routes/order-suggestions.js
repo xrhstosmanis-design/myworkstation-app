@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {expectedReceiptRows,expectedReceiptReadiness} from '../services/supplier-expected-receipts.js';
 import {Router} from "express";
 import {z} from "zod";
@@ -79,13 +80,23 @@ export async function readSupplierOrderSuggestions(db,scope){
   },{isolationLevel:"RepeatableRead"});
 }
 
+async function requireOrderSuggestionsRead(req){
+  if(req.user?.staffAccess!==true)return;
+  const {id:storeId,companyId}=req.targetStore;
+  if(req.user.storeId!==storeId||req.user.companyId!==companyId||req.staffGrant?.capability!=='order-suggestions.read')throw staffError();
+  await requireStaffGrant(prisma,req.user,storeId,'order-suggestions.read');
+}
+
 const router=Router();
 router.get("/order-suggestions",requireStoreModule("ORDER_SUGGESTIONS"),async(req,res,next)=>{
   try{
     const parsed=optionsSchema.safeParse(req.query);
     if(!parsed.success)return res.status(400).json({error:"Έλεγξε τις ημέρες ιστορικού (7–90), κάλυψης (1–60) και παράδοσης (0–30)."});
     res.set("Cache-Control","no-store");
-    res.json(await readOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data}));
+    await requireOrderSuggestionsRead(req);
+    const result=await readOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data});
+    await requireOrderSuggestionsRead(req);
+    res.json(result);
   }catch(error){next(error);}
 });
 router.get("/order-suggestions/by-supplier",requireStoreModule("ORDER_SUGGESTIONS"),async(req,res,next)=>{
@@ -93,7 +104,10 @@ router.get("/order-suggestions/by-supplier",requireStoreModule("ORDER_SUGGESTION
     const parsed=optionsSchema.safeParse(req.query);
     if(!parsed.success)return res.status(400).json({error:"Έλεγξε τις ημέρες ιστορικού (7–90), κάλυψης (1–60) και παράδοσης (0–30)."});
     res.set("Cache-Control","no-store");
-    res.json(await readSupplierOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data}));
+    await requireOrderSuggestionsRead(req);
+    const result=await readSupplierOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data});
+    await requireOrderSuggestionsRead(req);
+    res.json(result);
   }catch(error){next(error);}
 });
 export default router;

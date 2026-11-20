@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -7,6 +8,11 @@ import {storePaidModuleState} from "../store-paid-modules.js";
 const router=Router();
 const n=value=>Number(value||0);
 const reconciliationEntitlement=async(req,companyId,storeId)=>{
+  if(req.user?.staffAccess===true){
+    const [company,rows]=await Promise.all([companyModuleState(companyId),prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"='LOSS_DETECTION' LIMIT 1`]);
+    const storeModule=rows[0]?{...rows[0],configured:true}:{configured:false};
+    return {allowed:Boolean(company?.licenseAllowed&&effectiveModuleEnabled(company.activeModules.includes("LOSS_DETECTION"),storeModule)),moduleKey:"LOSS_DETECTION",moduleName:"Έλεγχος Απωλειών"};
+  }
   if(isPlatformSuperAdmin(req.user))return {allowed:true,moduleKey:"LOSS_DETECTION",superAdminBypass:true};
   const [company,storeModule]=await Promise.all([companyModuleState(companyId),storePaidModuleState(storeId,"LOSS_DETECTION")]);
   return {
@@ -22,6 +28,11 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
     const productId=String(req.params.productId||"");
     const storeId=String(req.query.storeId||"");
     if(!companyId||!storeId)return res.status(400).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
+    const delegated=req.user?.staffAccess===true;
+    if(delegated){
+      if(req.query.storeId!==req.user.storeId||req.staffGrant?.capability!=='stock.read')throw staffError();
+      await requireStaffGrant(prisma,req.user,storeId,'stock.read');
+    }
     const from=req.query.from?greeceRangeDate(req.query.from):new Date(Date.now()-30*86400000);
     const to=req.query.to?greeceRangeDate(req.query.to,true):new Date();
     if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
@@ -175,7 +186,12 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
       const ledgerStock=n(ledgerTotals[0]?.ledgerStock),difference=currentStock-ledgerStock;
       reconciliation={status:Math.abs(difference)<0.0001&&duplicateRows.length===0?"AGREEMENT":"NEEDS_REVIEW",currentStock,ledgerStock,difference,movementCount:Number(ledgerTotals[0]?.movementCount||0),duplicateCandidates:duplicateRows.map(row=>({...row,quantity:n(row.quantity),count:Number(row.count||0)}))};
     }
-    res.json({product:{id:product.id,name:product.name,sku:product.sku,currentStock},reconciliationAccess,reconciliation,movements});
+    if(delegated){
+      await requireStaffGrant(prisma,req.user,storeId,'stock.read');
+      const currentAccess=await reconciliationEntitlement(req,companyId,storeId);
+      if(currentAccess.allowed!==reconciliationAccess.allowed)throw staffError(409,'STAFF_SOURCE_CHANGED','Άλλαξε η πρόσβαση στην αναφορά. Κάνε ανανέωση.');
+    }
+    res.json({...(delegated?{companyId,storeId}:{}),product:{id:product.id,name:product.name,sku:product.sku,currentStock},reconciliationAccess,reconciliation,movements});
   }catch(error){next(error)}
 });
 

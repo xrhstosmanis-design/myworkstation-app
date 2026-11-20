@@ -1,3 +1,4 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {Router} from 'express';
 import {prisma} from '../prisma.js';
 import {auth} from '../middleware/auth.js';
@@ -17,7 +18,16 @@ export function createProductionPrinterRouter({service=productionPrinting,userAu
  const scope=(req,res,next)=>{if(req.params.companyId&&!isPlatformSuperAdmin(req.user))return res.status(403).json({error:'Απαιτείται Platform Super Admin.'});if(req.user?.tokenType==='STORE_OPERATOR'&&req.user.storeId!==req.params.storeId)return res.status(403).json({error:'Λάθος κατάστημα.'});req.printerCompanyId=req.params.companyId||req.user.companyId;next()};
  const manager=(req,res,next)=>isPlatformSuperAdmin(req.user)?next():res.status(403).json({error:'Απαιτείται Platform Super Admin.'});
  for(const prefix of ['/stores/:storeId','/companies/:companyId/stores/:storeId']){
- router.get(prefix,scope,wrap(async(req,res)=>{const state=await service.view(req.printerCompanyId,req.params.storeId);res.json({...state,canConfigure:isPlatformSuperAdmin(req.user)})}));
+ router.get(prefix,scope,wrap(async(req,res)=>{
+  if(req.user?.staffAccess===true){
+   if(req.params.companyId||req.user.storeId!==req.params.storeId||req.staffGrant?.capability!=='printers.read')throw staffError();
+   await requireStaffGrant(prisma,req.user,req.params.storeId,'printers.read');
+   const state=await service.readStatus(req.printerCompanyId,req.params.storeId);
+   await requireStaffGrant(prisma,req.user,req.params.storeId,'printers.read');
+   return res.json({jobs:state.jobs.map(({id,batchId,status,createdAt,claimedAt})=>({id,batchId,status,createdAt,claimedAt})),companyId:req.printerCompanyId,storeId:req.params.storeId,canConfigure:false});
+  }
+  const state=await service.view(req.printerCompanyId,req.params.storeId);res.json({...state,canConfigure:isPlatformSuperAdmin(req.user)})
+ }));
  router.put(prefix,scope,manager,wrap(async(req,res)=>res.json({...await service.configure(req.printerCompanyId,req.params.storeId,req.body),canConfigure:true})));
  router.post(prefix+'/pairing',scope,manager,wrap(async(req,res)=>res.json(await service.pairing(req.printerCompanyId,req.params.storeId))));
  router.post(prefix+'/jobs/:id/resolve',scope,manager,wrap(async(req,res)=>res.json(await service.resolve(req.printerCompanyId,req.params.storeId,req.user.id,req.params.id,req.body))));

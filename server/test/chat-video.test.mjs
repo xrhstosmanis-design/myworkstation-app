@@ -1,5 +1,6 @@
+import {mountChatGroups} from "../src/chat-groups.mjs";
 import {chatSendContext} from '../src/chat-interactions.mjs';
-import {chatTopic,topicRow} from '../src/chat-topics.mjs';
+import {categoryTopic,chatTopic,topicRow} from '../src/chat-topics.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -30,7 +31,7 @@ function harness(){
  $transaction:async fn=>{const m=messages.length,a=audits.length;try{return await fn(db)}catch(e){messages.splice(m);audits.splice(a);throw e;}}};
  const router={get:(p,...h)=>routes.set('GET '+p,h.at(-1)),post:(p,...h)=>routes.set('POST '+p,h.at(-1)),put(){},patch(){}};
  const source=fs.readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace('export async function','async function').replace('export default router;','return router;');
- new Function('express','prisma','crypto','parseVideoAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus','chatSendContext','chatTopic','topicRow',source)({Router:()=>router},db,crypto,parseVideoAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {}},()=>({configured:false}),chatSendContext,chatTopic,topicRow);
+ new Function('express','prisma','crypto','parseVideoAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus','chatSendContext','categoryTopic','chatTopic','topicRow','mountChatGroups',source)({Router:()=>router},db,crypto,parseVideoAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {}},()=>({configured:false}),chatSendContext,categoryTopic,chatTopic,topicRow,mountChatGroups);
  return {messages,audits,pushes,fail(){fail=true},disable(){disabled=true},async request(body,user={id:'owner',role:'OWNER',companyId:'company'},storeId='store'){
   const res={statusCode:200,headers:{},status(code){this.statusCode=code;return this},setHeader(k,v){this.headers[k]=v},json(body){this.body=body;return this}};let error;await routes.get('POST /stores/:storeId/video-messages')({body,user,params:{storeId},query:{}},res,e=>{error=e});return {...res,error};
  }};

@@ -140,3 +140,14 @@
 /* A long store title may wrap on narrow phones; keep the subtitle out of its height budget. */
 @media(max-width:380px){.chat-mobile-app .store-chat-modal>header p{display:none}}
 @media(max-height:560px){.chat-mobile-app>.shift-overlay>.store-chat-modal>header{padding:2px 8px}}
+
+.store-chat-groups-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.store-chat-groups h3{margin:0}
+.store-chat-groups form,.store-chat-groups label:not(:has(input[type=checkbox])){display:grid;gap:8px}
+.store-chat-groups select,.store-chat-groups textarea,.store-chat-groups input:not([type=checkbox]){width:100%;box-sizing:border-box;font:inherit}
+.store-chat-groups textarea{min-height:60px}
+.store-chat-groups fieldset>label{display:flex;gap:8px;align-items:center;padding:5px 0}
+.store-chat-groups fieldset{max-height:180px;overflow:auto}
+.store-chat-group-messages{max-height:270px;overflow:auto;display:grid;gap:10px}
+.store-chat-group-messages article{background:#f4effb;border-radius:10px;padding:8px 10px}
+.store-chat-group-messages p{margin:4px 0 0;white-space:pre-wrap}

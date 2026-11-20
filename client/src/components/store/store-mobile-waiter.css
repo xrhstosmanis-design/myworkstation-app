@@ -18,3 +18,5 @@
     background: #fff;
   }
 }
+
+.mobile-waiter .mobile-waiter-retry{min-height:50px;width:100%;padding:10px 14px;border:0;border-radius:10px;background:#087a52;color:#fff;font:inherit;font-weight:800}.mobile-waiter .mobile-waiter-retry:disabled{opacity:.5}

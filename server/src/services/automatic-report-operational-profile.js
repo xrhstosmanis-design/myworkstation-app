@@ -15,8 +15,8 @@ export function withReportOperationalCompatibility(manifest){
  return result;
 }
 export function assertReportOperationalProfile(manifest){
- const definition=operationalReportDefinition(),expected=definition.tables.map(table=>table.name);
- const actualReviewed=(manifest.reviewedColumns||[]).filter(column=>expected.some(name=>column.startsWith(name+'.')));
+ const definition=operationalReportDefinition(),expected=[...definition.tables.map(table=>table.name),...(manifest.preservedReportChatTables||[])];
+ const actualReviewed=(manifest.reviewedColumns||[]).filter(column=>definition.tables.some(table=>column.startsWith(table.name+'.')));
  if(JSON.stringify(actualReviewed)!==JSON.stringify(definition.reviewedColumns))throw new Error('Operational report column review differs.');
  if(manifest.executionDisabled!==true||JSON.stringify(manifest.preservedOperationalTables)!==JSON.stringify(expected)||expected.some(name=>manifest.tables.some(table=>table.name===name)))throw new Error('Operational report profile differs from review.');
 }
@@ -38,4 +38,25 @@ export function assertReportColumnProfile(manifest){
   const actual=manifest.knownColumns[table.name].filter(column=>table.columns.some(reviewed=>reviewed[0]===column[0]));
   if(JSON.stringify(actual)!==JSON.stringify(table.columns))throw new Error('Reviewed report column layout differs.');
  }
+}
+
+export const reportChatDefinition=()=>JSON.parse(readFileSync(new URL('../../../ops/backup/lifecycle/report-chat-compatibility.proposed.json',import.meta.url),'utf8'));
+export function withReportChatCompatibility(manifest){
+ const definition=reportChatDefinition(),result=structuredClone(manifest);
+ result.id+='__REVIEWED_REPORT_CHAT_V1';
+ result.preservedReportChatTables=definition.tables.map(table=>table.name);
+ result.preservedOperationalTables.push(...result.preservedReportChatTables);
+ result.reviewedColumns.push(...definition.reviewedColumns);
+ for(const table of definition.tables){
+  if(result.knownTables.includes(table.name))throw new Error('Report chat table already declared.');
+  result.knownTables.push(table.name);result.knownColumns[table.name]=table.columns;
+ }
+ return result;
+}
+export function assertReportChatProfile(manifest){
+ const definition=reportChatDefinition(),expected=definition.tables.map(table=>table.name);
+ if(manifest.executionDisabled!==true||JSON.stringify(manifest.preservedReportChatTables)!==JSON.stringify(expected)||expected.some(name=>manifest.tables.some(table=>table.name===name)))throw new Error('Report chat profile differs from review.');
+ const actualReviewed=(manifest.reviewedColumns||[]).filter(column=>expected.some(name=>column.startsWith(name+'.')));
+ if(JSON.stringify(actualReviewed)!==JSON.stringify(definition.reviewedColumns))throw new Error('Report chat column review differs.');
+ for(const table of definition.tables)if(JSON.stringify(manifest.knownColumns[table.name])!==JSON.stringify(table.columns))throw new Error('Report chat column layout differs.');
 }

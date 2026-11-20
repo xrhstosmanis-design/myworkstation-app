@@ -91,6 +91,31 @@ async function ensureCompanyMappings(companyId){
   }
 }
 
+export async function readProductCompanyProducts(scopeCompanyId,rawQuery={},selectedId=null,{db=prisma,prepareSource=null}={}){const prisma=db;
+
+    const companyId=scopeCompanyId;if(prepareSource)await prepareSource();
+    const company=(await prisma.$queryRaw`SELECT "id","name" FROM "ManagementProductCompany" WHERE "id"=${selectedId} AND "companyId"=${companyId} LIMIT 1`)[0];
+    if(!company)throw Object.assign(new Error("Δεν βρέθηκε η εταιρεία."),{status:404});
+    const storeId=String(rawQuery.storeId||"")||null;if(storeId){const store=await prisma.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${storeId} AND "companyId"=${companyId} LIMIT 1`;if(!store[0])throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404})}
+    const q=String(rawQuery.q||"").trim(),text=q?`%${q}%`:null;
+    const page=Math.max(1,Number.parseInt(String(rawQuery.page||"1"),10)||1),pageSize=Math.min(200,Math.max(25,Number.parseInt(String(rawQuery.pageSize||"100"),10)||100)),offset=(page-1)*pageSize;
+    const countRows=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" p WHERE p."companyId"=${companyId} AND p."productCompanyId"=${company.id} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR EXISTS (SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${text}))`;
+    const rows=await prisma.$queryRaw`
+      SELECT p."id",p."sku",p."name",p."salePrice",p."vatRate",pc."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",pb."barcode",
+        COALESCE(sp."salePrice",p."salePrice") AS "storeSalePrice",lp."supplierName"
+      FROM "Product" p
+      LEFT JOIN "ProductCategory" pc ON pc."id"=p."categoryId"
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NOT NULL AND sp."storeId"=${storeId})
+      LEFT JOIN LATERAL (SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1) pb ON true
+      LEFT JOIN LATERAL (SELECT sup."name" AS "supplierName" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId" WHERE l."productId"=p."id" AND d."companyId"=${companyId} AND d."status"='APPROVED' AND (${storeId}::text IS NULL OR d."storeId"=${storeId}) ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) lp ON true
+      WHERE p."companyId"=${companyId} AND p."productCompanyId"=${company.id} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR EXISTS (SELECT 1 FROM "ProductBarcode" pbs WHERE pbs."productId"=p."id" AND pbs."barcode" ILIKE ${text}))
+      ORDER BY p."name" LIMIT ${pageSize} OFFSET ${offset}`;
+    const total=Number(countRows[0]?.count||0);return ({company,items:rows.map(r=>({...r,salePrice:Number(r.storeSalePrice??r.salePrice??0),vatRate:Number(r.vatRate||0)})),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
+
+}
+
 router.get("/",async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;await ensureCompanyMappings(companyId);
@@ -129,29 +154,7 @@ router.delete("/:id",async(req,res,next)=>{
 });
 
 router.get("/:id/products",async(req,res,next)=>{
-  try{
-    const companyId=req.user.companyId;await ensureCompanyMappings(companyId);
-    const company=(await prisma.$queryRaw`SELECT "id","name" FROM "ManagementProductCompany" WHERE "id"=${req.params.id} AND "companyId"=${companyId} LIMIT 1`)[0];
-    if(!company)return res.status(404).json({error:"Δεν βρέθηκε η εταιρεία."});
-    const storeId=String(req.query.storeId||"")||null;if(storeId){const store=await prisma.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${storeId} AND "companyId"=${companyId} LIMIT 1`;if(!store[0])return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."})}
-    const q=String(req.query.q||"").trim(),text=q?`%${q}%`:null;
-    const page=Math.max(1,Number.parseInt(String(req.query.page||"1"),10)||1),pageSize=Math.min(200,Math.max(25,Number.parseInt(String(req.query.pageSize||"100"),10)||100)),offset=(page-1)*pageSize;
-    const countRows=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" p WHERE p."companyId"=${companyId} AND p."productCompanyId"=${company.id} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR EXISTS (SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${text}))`;
-    const rows=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",p."salePrice",p."vatRate",pc."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",pb."barcode",
-        COALESCE(sp."salePrice",p."salePrice") AS "storeSalePrice",lp."supplierName"
-      FROM "Product" p
-      LEFT JOIN "ProductCategory" pc ON pc."id"=p."categoryId"
-      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
-      LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
-      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NOT NULL AND sp."storeId"=${storeId})
-      LEFT JOIN LATERAL (SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1) pb ON true
-      LEFT JOIN LATERAL (SELECT sup."name" AS "supplierName" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId" WHERE l."productId"=p."id" AND d."companyId"=${companyId} AND d."status"='APPROVED' AND (${storeId}::text IS NULL OR d."storeId"=${storeId}) ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) lp ON true
-      WHERE p."companyId"=${companyId} AND p."productCompanyId"=${company.id} AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR EXISTS (SELECT 1 FROM "ProductBarcode" pbs WHERE pbs."productId"=p."id" AND pbs."barcode" ILIKE ${text}))
-      ORDER BY p."name" LIMIT ${pageSize} OFFSET ${offset}`;
-    const total=Number(countRows[0]?.count||0);res.json({company,items:rows.map(r=>({...r,salePrice:Number(r.storeSalePrice??r.salePrice??0),vatRate:Number(r.vatRate||0)})),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
-  }catch(error){next(error)}
-});
+  try{res.json(await readProductCompanyProducts(req.user.companyId,req.query,req.params.id,{db:prisma,prepareSource:()=>ensureCompanyMappings(req.user.companyId)}))}catch(error){if([400,403,404].includes(error.status))return res.status(error.status).json({error:error.message});next(error)}});
 
 router.patch("/products/bulk-assign",async(req,res,next)=>{
   try{

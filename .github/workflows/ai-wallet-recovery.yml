@@ -18,7 +18,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   native-full-schema:
-    runs-on: ubuntu-latest
+    # Match the native PG16 toolchain already exercised by the main CI job.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     services:
       postgres:
@@ -38,6 +39,7 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/wallet_recovery_test
       MWS_LIFECYCLE_RECOVERY_IMAGE: mws-wallet-recovery:ci
+      MWS_LIFECYCLE_MATCHING_RECOVERY_IMAGE: mws-wallet-recovery-pg16:ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,10 +49,27 @@ jobs:
       - run: npx prisma generate --schema server/prisma/schema.prisma
       - name: Build actual PG18 recovery image
         run: docker build --file ops/backup/Dockerfile --tag mws-wallet-recovery:ci .
-      - name: Use matching PG16 dump and private restore tools
+      - name: Build source-major private recovery image
+        # Use the same worker and full verifier with current PG16 binaries.
+        # Runner apt repositories may lag the floating source minor release.
+        run: docker build --build-arg POSTGRES_IMAGE=postgres:16-alpine --file ops/backup/Dockerfile --tag mws-wallet-recovery-pg16:ci .
+      - name: Refresh matching PG16 dump and private restore tools
         run: |
+          # The floating postgres:16 service receives minor security releases.
+          # Existing runner binaries can be an older minor even with major 16.
+          # Refresh both server and client instead of accepting stale binaries.
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends postgresql-16 postgresql-client-16
           test -x /usr/lib/postgresql/16/bin/pg_dump
+          test -x /usr/lib/postgresql/16/bin/initdb
           echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          pg_dump --version
+          pg_restore --version
+          initdb --version
+          postgres --version
+          pg_ctl --version
+          psql "$DATABASE_URL" -X -A -t -c 'SHOW server_version_num'
       - name: Verify actual schema, archive/COPY, pending and stale controls
         working-directory: server
         run: node --test test/ai-wallet-recovery.test.js test/ai-wallet-recovery-postgres.test.js test/ai-owner-wallet-postgres.test.js test/store-lifecycle-manifest.test.js

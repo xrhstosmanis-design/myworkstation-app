@@ -3,7 +3,7 @@ import {createHash,timingSafeEqual} from 'node:crypto';
 import {readCurrentMonthlyCaptureActivation} from './monthly-inventory-capture-activation.js';
 import {companyModuleState,isCurrentlyActive} from '../middleware/module-access.js';
 import {monthlyInventorySnapshotPeriod} from './monthly-inventory-snapshot-period.js';
-import {validateMonthlyInventoryCaptureSchema,monthlyInventoryCaptureLifecycleManifestProposal} from './monthly-inventory-capture-schema.js';
+import {validateMonthlyInventoryCaptureSchema,monthlyInventoryCaptureRuntimeManifest} from './monthly-inventory-capture-schema.js';
 const PURPOSE='MONTHLY_INVENTORY_CAPTURE',EXECUTOR='MONTHLY_INVENTORY_CAPTURE_V1';
 const contexts=new WeakMap(),attempts=new WeakMap(),MAX=9223372036854775807n;
 const fail=code=>{throw Object.assign(new Error('Monthly capture authorization refused.'),{status:403,code})};
@@ -33,7 +33,7 @@ async function authority(tx,current,scope,stage,now,actor=null){
  const modules=state.modules.filter(m=>m.moduleKey==='INVENTORY');if(modules.length>1)fail('MONTHLY_CAPTURE_MODULE_INACTIVE');const effective=overrides[0]??modules[0];if(effective?.startsAt!=null&&iso(effective.startsAt)>now)fail('MONTHLY_CAPTURE_MODULE_INACTIVE');if(!effective||!isCurrentlyActive(effective,new Date(now)))fail('MONTHLY_CAPTURE_MODULE_INACTIVE');if(effective.endsAt!=null)ends.push(iso(effective.endsAt));
  return {store:freeze({id:stores[0].id,companyId:stores[0].companyId,name:stores[0].name}),ends};
 }
-async function fence(tx,scope,stage){const rows=await tx.$queryRawUnsafe(`SELECT "companyId","generation"::text AS generation,"maintenance","retired","operationId","planHash" FROM "StoreLifecycleFence" WHERE "storeId"=$1${rowLock(stage)}`,scope.storeId);const f=rows[0];if(rows.length!==1||f.companyId!==scope.companyId||!integer(f.generation))fail('MONTHLY_CAPTURE_ENROLLMENT_REQUIRED');const expected=sha(JSON.stringify(monthlyInventoryCaptureLifecycleManifestProposal()));if(f.planHash!==expected)fail('MONTHLY_CAPTURE_ENROLLMENT_REQUIRED');if(f.maintenance||f.retired||f.operationId!==null)fail('MONTHLY_CAPTURE_MAINTENANCE');return f}
+async function fence(tx,scope,stage){const rows=await tx.$queryRawUnsafe(`SELECT "companyId","generation"::text AS generation,"maintenance","retired","operationId","planHash" FROM "StoreLifecycleFence" WHERE "storeId"=$1${rowLock(stage)}`,scope.storeId);const f=rows[0];if(rows.length!==1||f.companyId!==scope.companyId||!integer(f.generation))fail('MONTHLY_CAPTURE_ENROLLMENT_REQUIRED');const expected=sha(JSON.stringify(monthlyInventoryCaptureRuntimeManifest()));if(f.planHash!==expected)fail('MONTHLY_CAPTURE_ENROLLMENT_REQUIRED');if(f.maintenance||f.retired||f.operationId!==null)fail('MONTHLY_CAPTURE_MAINTENANCE');return f}
 async function schema(tx){const result=await validateMonthlyInventoryCaptureSchema(tx);if(result?.available!==true||result.lifecycleGuardsInstalled!==true)fail('MONTHLY_CAPTURE_SCHEMA_REQUIRED')}
 function mint(tx,stage,data){const context=Object.freeze({});contexts.set(context,{tx,stage,...data});return context}
 

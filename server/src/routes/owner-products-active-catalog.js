@@ -13,11 +13,11 @@ const aliasKey=value=>{
 const isDrinkName=value=>/ESPRESSO|ESPRESO|FREDDO|CAPPUCCINO|CAP\s|LATTE|AMERICANO|MACCHIATO|FLAT WHITE|CORTADO|MOCHA|ΕΛΛΗΝΙΚ|NESCAFE|ΦΡΑΠ|ΚΑΦΕΣ ΦΙΛΤΡΟΥ|ΣΟΚΟΛΑΤ|ΤΣΑΙ|ΤΣΑΪ|MATCHA|ΧΑΜΟΜΗΛ/.test(norm(value));
 const priority=row=>{const sku=String(row.sku||"");if(sku.startsWith("MWS-KAT-BEV-"))return 30;if(sku.startsWith("MWS-"))return 20;return 10};
 
-router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=req.user?.companyId||null;
-    if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const q=String(req.query.q||"").trim();
+export async function readOwnerActiveProductCatalog(scopeCompanyId,rawQuery={},productId=null,{db=prisma}={}){const prisma=db;
+
+    const company=scopeCompanyId;
+    if(!company)throw Object.assign(new Error("Δεν υπάρχει ενεργή εταιρεία."),{status:403});
+    const q=String(rawQuery.q||"").trim();
     const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
       SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",p."categoryId",p."subcategoryId",
@@ -40,7 +40,10 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       const key=aliasKey(row.name),current=bestByDrink.get(key);
       if(!current||priority(row)>priority(current))bestByDrink.set(key,row);
     }
-    res.json([...passthrough,...bestByDrink.values()].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"el")));
-  }catch(error){next(error)}
-});
+    return ([...passthrough,...bestByDrink.values()].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"el")));
+
+}
+
+router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{res.json(await readOwnerActiveProductCatalog(req.user.companyId,req.query,req.params.productId))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
 export default router;

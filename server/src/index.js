@@ -1,4 +1,8 @@
+import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
+import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
+import {readStaffWorkforceView} from './services/backoffice-staff-workforce.js';
 import {createInvoiceStockExclusionEmailScheduler} from "./services/invoice-stock-exclusion-email.js";
+import {readStaffCompanyDirectory} from './services/backoffice-staff-company.js';
 import {createAutomaticReportSmtpTransport} from "./services/mail.js";
 import attendedRemoteRoutes from './routes/attended-remote.js';
 import ftextRoutes from './routes/ftext-v1.js';
@@ -147,6 +151,7 @@ import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-onlin
 import commerceAdvancedOnlineSearchRoutes from "./routes/commerce-advanced-online-search.js";
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import {createBackofficeCompanyInstallationRouter} from './routes/backoffice-company-installation.js';
 import {createAutomaticReportEventInstallationRouter} from './routes/automatic-report-event-installation.js';
 import {createAutomaticReportDispatchRouter} from './routes/automatic-report-dispatch.js';
 import {createAutomaticReportInvitationRouter} from './routes/automatic-report-invitations.js';
@@ -220,6 +225,16 @@ app.use("/api/backoffice-staff",createBackofficeStaffRouter({db:prisma,authentic
 app.use("/api/lifecycle",storeLifecycleStateRoutes);
 app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
 app.use("/api/system/backup-monitor",backupMonitorRoutes);
+// Exact delegated sales reports do not execute legacy journal bootstrap.
+app.get(['/api/commerce/sales/unsold-products','/api/store-pos/sales/journal'],auth,async(req,res,next)=>{
+ if(!req.user?.staffAccess||!['unsold-products.read','sales-journal.read'].includes(req.staffGrant?.capability))return next();
+ try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffSalesExtra(prisma,req))}catch(error){next(error)}
+});
+// Exact delegated workforce settings bypass broad platform/bootstrap middleware.
+app.get('/api/platform/store-modules/companies/:companyId/stores/:storeId/workforce-v2/:view',auth,async(req,res,next)=>{
+ if(!req.user?.staffAccess||!['workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(req.staffGrant?.capability))return next();
+ try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffWorkforceView(prisma,req))}catch(error){next(error)}
+});
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",blockPreparedDemoMutation);
 app.use("/api/platform/customer-demos",customerDemoRoutes);
@@ -235,6 +250,7 @@ app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformSuperAdminAnalyticsDetailsRoutes);
 app.use("/api/platform/store-modules",platformStoreModulesRoutes);
 app.use('/api/report-invitations',createAutomaticReportInvitationRouter(prisma));
+app.use('/api/platform/backoffice-company-installation',auth,createBackofficeCompanyInstallationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-event-installation',auth,createAutomaticReportEventInstallationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',auth,createAutomaticReportDispatchRouter(prisma));
 app.use("/api/platform",platformAdminRoutes);
@@ -247,6 +263,12 @@ app.use("/api/platform/mail",mailRoutes);
 app.use("/api/license",licenseRoutes);
 app.use("/api/video-admin",auth,backofficeVideoAdminRoutes);
 app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operatorManagementV2Routes);
+// Exact company reads precede legacy Owner routers. Requests without an
+// authenticated company grant continue through their original middleware.
+app.get(['/api/owner-products/stores','/api/commerce/suppliers','/api/commerce/customers','/api/management/expense-categories','/api/management/customer-categories','/api/management/professions','/api/management/business-units/shipping-methods','/api/management/categories','/api/management/vat-departments','/api/management/product-companies','/api/management/business-units/banks','/api/commerce/products','/api/commerce/purchases','/api/commerce/recipes','/api/commerce/suppliers/:supplierId/detail','/api/reports/price-changes','/api/reports/departments','/api/reports/documents','/api/reports/delivery','/api/reports/delivery/:noteId/lines','/api/reports/deactivations','/api/reports/logins','/api/reports/sale-deletions','/api/reports/pos-sale-actions','/api/reports/destructions','/api/reports/movements','/api/reports/stocktakes','/api/reports/stock-snapshot','/api/reports/item-snapshot','/api/reports/stock-analysis','/api/reports/sales-analysis','/api/reports/recorded-payroll-expenses','/api/reports/stock-analysis/:productId/movements','/api/reports/sales-analysis/:productId','/api/supplier-control/reports/invoices','/api/supplier-control/reports/payments','/api/supplier-control/reports/purchases','/api/customer-control/turnover'],auth,async(req,res,next)=>{
+  if(!req.staffCompanyGrant&&!req.staffGrant?.capability?.startsWith('store-reports-'))return next();
+  try{res.setHeader('Cache-Control','private, no-store');res.json(req.staffCompanyGrant?await readStaffCompanyDirectory(prisma,req):await readStaffStoreReport(prisma,req))}catch(error){next(error)}
+});
 app.use("/api/management/vat-departments",auth,requireCompanyModule("INVENTORY"),managementVatDepartmentsRoutes);
 app.use("/api/management/expense-categories",auth,requireCompanyModule("CASH_CONTROL"),managementExpenseCategoriesRoutes);
 app.use("/api/management/product-companies",auth,requireCompanyModule("INVENTORY"),managementProductCompaniesRoutes);
@@ -269,6 +291,7 @@ app.use('/api/ai-wallet',aiOwnerWalletRoutes);
 startAiOwnerWalletNotices();
 app.get("/api/purchase-orders/:orderId/detail",auth,purchaseOrderInspectionAdmission,requireStoreModule("INVENTORY"),createPurchaseOrderInspectionHandler(prisma));
 app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
+
 app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce",auth,invoiceCommonDraftRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderUnresolvedGuardRoutes);
@@ -306,6 +329,26 @@ app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Ro
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ProductRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ImportRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2AuditRoutes);
+// Exact delegated table reads reach the native reader before broad POS
+// middleware that prepares schemas or persists operator catalogue state.
+app.use("/api/store-pos",(req,res,next)=>{
+  if(req.method!=="GET"||!/^\/stores\/[^/]+\/table-service(?:\/(?:history|preparation-queue))?$/.test(req.path))return next();
+  auth(req,res,error=>{
+    if(error)return next(error);
+    if(req.user?.staffAccess!==true)return next();
+    requireCompanyModule("STORE_MODE")(req,res,error=>error?next(error):storeTableOrdersRoutes(req,res,next));
+  });
+});
+// Read-only transfer history uses the same native reader before generic POS
+// catalogue/schema preparation. Transfer writers retain their existing chain.
+app.use("/api/store-pos",(req,res,next)=>{
+  if(req.method!=="GET"||!/^\/stores\/[^/]+\/internal-transfers\/(?:credit|pending-cash-receipts|external-history)$/.test(req.path))return next();
+  auth(req,res,error=>{
+    if(error)return next(error);
+    if(req.user?.staffAccess!==true)return next();
+    requireCompanyModule("STORE_MODE")(req,res,error=>error?next(error):storePosInternalTransferRoutes(req,res,next));
+  });
+});
 app.use("/api/store-pos/stores/:storeId/inventory",auth,posOperatorInventoryRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeBakingRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);

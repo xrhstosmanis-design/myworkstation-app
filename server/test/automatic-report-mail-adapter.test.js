@@ -2,6 +2,7 @@ import {summarizeDailyTurnover} from "../src/services/daily-turnover-summary.js"
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
+import {automaticCashMailPresentation} from '../src/services/automatic-report-cash-mail-presentation.js';
 import {createAutomaticReportMailAdapter} from "../src/services/automatic-report-mail-adapter.js";
 import {createDeliverySlot,claimDelivery,startDelivery,completeDelivery} from "../src/services/automatic-report-delivery-lifecycle.js";
 import {readAutomaticCashPreview} from "../src/services/automatic-report-source.js";
@@ -11,7 +12,7 @@ import {cashPreviewPeriod,reportDayOffset,reportWallTime} from "../src/services/
 // Actual source/payload/core functions, synthetic DB/start/transport only.
 // No network/SMTP/real repository/production or business action is performed.
 const wire=v=>JSON.parse(JSON.stringify(v)),recipient="report@example.com",digest=v=>createHash("sha256").update(v,"utf8").digest("hex");
-async function fixture(frequency="DAILY", includeTurnover=false){
+async function fixture(frequency="DAILY", includeTurnover=false, recordedName=undefined){
   const configuration={dayStartHour:7,terminals:["MAIN"]},period=cashPreviewPeriod("2020-01-15",frequency,configuration),rows=[];
   for(let day=period.fromDay;day<=period.toDay;day=reportDayOffset(day,1)){
     const from=reportWallTime(day,7).getTime();
@@ -22,6 +23,7 @@ async function fixture(frequency="DAILY", includeTurnover=false){
     const sql=strings.join("?");if(sql.includes('FROM "CashControlStoreRule"'))return [{mode:"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:true,posEftposEnabled:true}];if(sql.includes('FROM "AutomaticReportSettings"'))return [{version:7}];return rows;
   }})};
   const preview=await readAutomaticCashPreview(db,{actorId:"sa",companyId:"c",storeId:"s",day:"2020-01-15",frequency,configuration,settingsVersion:7,now:new Date(now)});
+  if(recordedName!==undefined)for(const group of preview.groups)for(const row of group.rows)row.employeeName=recordedName;
   if (includeTurnover) {
     const dailyTotals = new Map();
     for (let day = period.fromDay; day <= period.toDay; day = reportDayOffset(day, 1)) {
@@ -43,11 +45,11 @@ const accepted=()=>({accepted:[recipient],rejected:[],messageId:"<synthetic@exam
 function harness(f,{start=async()=>f.started,send=async()=>accepted()}={}){
   const calls=[];return {calls,adapter:createAutomaticReportMailAdapter({startAttempt:async(...a)=>{calls.push({kind:"start",args:a});return start(...a)},sendMail:async(...a)=>{calls.push({kind:"send",args:a});return send(...a)}})};
 }
-test("actual DAILY/WEEKLY/MONTHLY producer payload and committed core start bind one recipient and immutable exact body",async()=>{
+test("actual DAILY/WEEKLY/MONTHLY immutable producer payload binds one recipient and human presentation after committed start",async()=>{
   for(const frequency of ["DAILY","WEEKLY","MONTHLY"]){const f=await fixture(frequency),before=wire(f.args),h=harness(f),result=await h.adapter.attempt(f.args);
     assert.deepEqual(result,{outcome:"ACCEPTED",reason:"RECIPIENT_ACCEPTED",messageId:"<synthetic@example.com>",automaticRetryAllowed:false});assert.ok(Object.isFrozen(result));
     assert.deepEqual(h.calls.map(c=>c.kind),["start","send"]);assert.deepEqual(h.calls[0].args,[f.args.scope,{expectedVersion:2,token:"attempt-one",now:f.args.now}]);
-    const message=h.calls[1].args[0];assert.equal(message.to,recipient);assert.equal(message.text,f.payload.body);assert.equal(digest(message.text),f.started.input.snapshot.payloadFingerprint);assert.match(message.subject,/ΠΡΟΣΩΡΙΝΗ/);assert.ok(Object.isFrozen(message));assert.deepEqual(wire(f.args),before);
+    const message=h.calls[1].args[0];assert.equal(message.to,recipient);assert.deepEqual({subject:message.subject,text:message.text},automaticCashMailPresentation(JSON.parse(f.payload.body)));assert.notEqual(message.text,f.payload.body);assert.equal(digest(f.payload.body),f.started.input.snapshot.payloadFingerprint);assert.match(message.text,/ΠΡΟΣΩΡΙΝΗ/);assert.ok(Object.isFrozen(message));assert.deepEqual(wire(f.args),before);
     const terminal=completeDelivery(f.started,{expectedVersion:3,token:"attempt-one",now:f.args.now,outcome:result.outcome,messageId:result.messageId});assert.equal(terminal.status,"ACCEPTED");
   }
 });
@@ -70,7 +72,7 @@ test("malformed scope/body/hash/period/finality inputs reject before start and s
 test("detaches request before awaiting start and never lets a late caller change redirect the send",async()=>{
   const f=await fixture(),args=wire(f.args);let release;const waiting=new Promise(resolve=>{release=resolve}),h=harness(f,{start:()=>waiting});const operation=h.adapter.attempt(args);
   args.scope.storeId="other";args.payload.body="private changed";args.payload.payloadFingerprint="b".repeat(64);args.token="other";release(f.started);
-  assert.equal((await operation).outcome,"ACCEPTED");assert.equal(h.calls[1].args[0].to,recipient);assert.equal(h.calls[1].args[0].text,f.payload.body);
+  assert.equal((await operation).outcome,"ACCEPTED");assert.equal(h.calls[1].args[0].to,recipient);assert.equal(h.calls[1].args[0].text,automaticCashMailPresentation(JSON.parse(f.payload.body)).text);
 });
 test("accessors/hidden metadata reject before start without invoking getters",async()=>{
   const f=await fixture();let reads=0;
@@ -185,4 +187,25 @@ test("inventory payload uses its event identity and committed attempt before tra
   const wrongStarted=startDelivery(wrongClaimed,{expectedVersion:2,token:"attempt-one",now:f.args.now,current:changedCurrent});
   const invalid=createAutomaticReportMailAdapter({startAttempt:async()=>wrongStarted,sendMail:async()=>{throw Error("unexpected transport")}});
   assert.equal((await invalid.attempt(wrong)).reason,"START_RECEIPT_INVALID");
+});
+
+ test("malformed display fields reject before committed start instead of falling back to raw JSON",async()=>{
+  const f=await fixture();
+  for(const alter of [c=>c.storeName='Injected\nSubject',c=>c.groups[0].rows[0].variance='10',c=>c.sourceCount++,c=>c.groups[0].originalShortage++,c=>c.groups[0].rows[0].employeeName='Name\r\nInjected']){
+   const args=wire(f.args),content=JSON.parse(args.payload.body);alter(content);
+   args.payload.body=JSON.stringify(content);args.payload.byteLength=Buffer.byteLength(args.payload.body);args.payload.payloadFingerprint=digest(args.payload.body);
+   const h=harness(f);await assert.rejects(h.adapter.attempt(args),{code:'INVALID_MAIL_ATTEMPT'});assert.deepEqual(h.calls,[]);
+  }
+ });
+
+test("canonical payload blank recorded names render fallback without mutating payload or committed slot",async()=>{
+ for(const name of ['', '   ']){
+  const f=await fixture('DAILY',false,name),before=wire({args:f.args,started:f.started}),h=harness(f);
+  assert.ok(JSON.parse(f.payload.body).groups.every(g=>g.rows.every(r=>r.employeeName===name)));
+  assert.equal((await h.adapter.attempt(f.args)).outcome,'ACCEPTED');
+  assert.deepEqual(h.calls.map(c=>c.kind),['start','send']);
+  assert.match(h.calls[1].args[0].text,/Χειριστής ανοίγματος: Χωρίς καταγεγραμμένο όνομα/);
+  assert.equal(digest(f.payload.body),f.started.input.snapshot.payloadFingerprint);
+  assert.deepEqual(wire({args:f.args,started:f.started}),before);
+ }
 });

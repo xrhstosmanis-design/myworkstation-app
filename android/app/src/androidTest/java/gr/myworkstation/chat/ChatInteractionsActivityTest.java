@@ -16,22 +16,35 @@ public class ChatInteractionsActivityTest {
  private static JSONObject store()throws Exception{return new JSONObject().put("id","fixture-store").put("companyId","fixture-company").put("name","CI Chat");}
  private static final class Request{final String path,method;final JSONObject body;Request(String p,String m,JSONObject b)throws Exception{path=p;method=m;body=b==null?null:new JSONObject(b.toString());}}
  private static final class Api extends ChatApi {
-  final CopyOnWriteArrayList<Request> calls=new CopyOnWriteArrayList<>();boolean delivered,acknowledged,pinned=true,manager=true,ackRequired=true;String reaction="";
+  final CopyOnWriteArrayList<Request> calls=new CopyOnWriteArrayList<>();boolean delivered,acknowledged,pinned=true,manager=true,ackRequired=true,photo=false;String reaction="";
   @Override synchronized JSONObject json(String path,String method,JSONObject body,String token)throws Exception{
    assertEquals("fixture-token",token);calls.add(new Request(path,method,body));
    if(method.equals("GET")&&path.endsWith("/messages?limit=100&topic=GENERAL")){
     JSONObject row=new JSONObject().put("id","fixture-message").put("senderId","other").put("senderName","CI Other").put("body","Original announcement").put("createdAt","2026-10-31T12:00:00Z").put("category","ANNOUNCEMENT").put("pinned",pinned).put("readByMe",false).put("deliveredByMe",delivered).put("acknowledgedByMe",acknowledged);
+    if(photo)row.put("hasAttachment",true).put("attachmentMimeType","image/jpeg");
     row.put("reactions",reaction.isEmpty()?new JSONArray():new JSONArray().put(new JSONObject().put("id","actor").put("name","CI actor").put("reaction",reaction)));
     row.put("acknowledgements",acknowledged?new JSONArray().put(new JSONObject().put("id","actor").put("name","CI actor")):new JSONArray());
     return new JSONObject().put("store",store()).put("rows",new JSONArray().put(row)).put("pinnedAnnouncements",pinned?new JSONArray().put(row):new JSONArray()).put("interactionsAvailable",true).put("voiceMessagesAvailable",true).put("videoMessagesAvailable",true).put("settings",new JSONObject().put("photosEnabled",true).put("announcementAcknowledgementRequired",ackRequired)).put("permissions",new JSONObject().put("canPin",manager).put("canManageSettings",manager));
    }
    if(method.equals("POST")&&path.endsWith("/delivered")){delivered=true;assertEquals("fixture-message",body.getJSONArray("messageIds").getString(0));return new JSONObject().put("ok",true).put("received",1);}
+   if(photo&&method.equals("POST")&&path.endsWith("/fixture-message/read"))return new JSONObject().put("ok",true);
    if(method.equals("PUT")&&path.endsWith("/settings")){ackRequired=body.getBoolean("announcementAcknowledgementRequired");return new JSONObject().put("ok",true);}
    if(method.equals("PUT")&&path.endsWith("/reaction")){reaction=body.isNull("reaction")?"":body.getString("reaction");return new JSONObject().put("ok",true);}
    if(method.equals("PATCH")){pinned=body.getBoolean("pinned");return new JSONObject().put("ok",true);}
    if(method.equals("POST")&&path.endsWith("/acknowledge")){acknowledged=true;return new JSONObject().put("ok",true);}
    if(method.equals("POST")&&(path.endsWith("/messages")||path.endsWith("/voice-messages")||path.endsWith("/video-messages")))return new JSONObject().put("ok",true).put("id","sent-fixture");
    throw new AssertionError("Unexpected API or automatic read: "+method+" "+path);
+  }
+  @Override byte[] image(String path, String token) throws Exception {
+   assertTrue(photo);
+   assertEquals("fixture-token",token);
+   assertTrue(path.endsWith("/fixture-message/attachment"));
+   calls.add(new Request(path,"GET",null));
+   android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(12,12,android.graphics.Bitmap.Config.ARGB_8888);
+   java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();
+   assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG,90,out));
+   bitmap.recycle();
+   return out.toByteArray();
   }
   int count(String suffix){int n=0;for(Request r:calls)if(r.path.endsWith(suffix))n++;return n;}
  }
@@ -47,6 +60,19 @@ public class ChatInteractionsActivityTest {
   Api api=new Api();try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){start(s,api);assertEquals(1,api.count("/delivered"));assertEquals(0,api.count("/read"));click(s,"Απάντηση");
    s.onActivity(a->{try{assertNotNull(get(a,"quotedMessage"));((EditText)get(a,"composer")).setText("Quoted answer");invoke(a,"send");}catch(Exception e){throw new AssertionError(e);}});idle(s);
    Request sent=null;for(Request r:api.calls)if(r.method.equals("POST")&&r.path.endsWith("/messages"))sent=r;assertNotNull(sent);assertEquals("fixture-message",sent.body.getString("replyToId"));assertEquals("Quoted answer",sent.body.getString("body"));assertEquals(1,api.count("/messages"));assertEquals(0,api.count("/read"));assertEquals(0,api.count("/acknowledge"));s.onActivity(a->{try{assertNull(get(a,"quotedMessage"));}catch(Exception e){throw new AssertionError(e);}});
+  }
+ }
+ @Test public void visiblePhotoRendersInlineAndIsReadWithoutOpeningOrAcknowledgingTheAnnouncement()throws Exception{
+  Api api=new Api();api.photo=true;
+  try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
+   start(scenario,api);
+   for(int i=0;i<150&&api.count("/read")==0;i++)Thread.sleep(30);
+   assertEquals(1,api.count("/fixture-message/read"));
+   idle(scenario);
+   scenario.onActivity(a->{try{invoke(a,"markVisiblePhotoRead");assertNull(get(a,"imageDialog"));}catch(Exception e){throw new AssertionError(e);}});
+   assertEquals(1,api.count("/read"));
+   assertEquals(0,api.count("/acknowledge"));
+   assertEquals(1,api.count("/attachment"));
   }
  }
  @Test public void actualReactionButtonsSetReplaceAndExplicitlyRemoveOnlyOneSelection()throws Exception{

@@ -76,11 +76,19 @@ export function dailyCashReportReadiness(sessions,{companyId,storeId,day,dayStar
   if(!expected.length)holds.push({code:"TERMINALS_NOT_CONFIGURED"});
   if(thirdShiftStartHour===null&&policies.some(p=>p.requiredSlots.includes(3)))fail("Συμπλήρωσε ώρα έναρξης τρίτης βάρδιας ή αφαίρεσε την τρίτη από τα αναμενόμενα ταμεία.");
   if(new Date(now)<period.to)holds.push({code:"BUSINESS_DAY_NOT_FINISHED"});
-  const seen=new Set(),accepted=[];
+  const seen=new Set(),accepted=[],context=[];
   for(const row of sessions){
     const at=new Date(row.openedAt),closed=row.closedAt?new Date(row.closedAt):null;
-    if(row.companyId!==companyId||row.storeId!==storeId||!row.id||seen.has(row.id)||!Number.isFinite(at.getTime())||at<period.from||at>=period.to){holds.push({code:"SOURCE_SCOPE_OR_ID_INVALID"});continue;}
-    seen.add(row.id);accepted.push(row);
+    if(row.companyId!==companyId||row.storeId!==storeId||!row.id||seen.has(row.id)||!Number.isFinite(at.getTime())||at>=period.to){holds.push({code:"SOURCE_SCOPE_OR_ID_INVALID"});continue;}
+    seen.add(row.id);
+    // A valid closed predecessor belongs to its opening day. Keep it only as
+    // interval evidence: it cannot fill a slot or contribute this day's totals.
+    if(at<period.from){
+      if(!(row.openedAt instanceof Date||typeof row.openedAt==="string"&&row.openedAt.trim())||!(row.closedAt instanceof Date||typeof row.closedAt==="string"&&row.closedAt.trim())||row.status!=="CLOSED"||!closed||!Number.isFinite(closed.getTime())||closed<at||closed>now||!expected.includes(row.terminalPos)||!knownAmount(row.variance))holds.push({code:"SOURCE_SCOPE_OR_ID_INVALID"});
+      else context.push(row);
+      continue;
+    }
+    accepted.push(row);
     if(!expected.includes(row.terminalPos))holds.push({code:"UNCONFIGURED_TERMINAL",terminalPos:row.terminalPos});
     if(row.status!=="CLOSED"||!closed||!Number.isFinite(closed.getTime())||closed<at||closed>now)holds.push({code:"SHIFT_NOT_CLOSED",sessionId:row.id});
     if(!knownAmount(row.variance))holds.push({code:"SHIFT_VARIANCE_UNKNOWN",sessionId:row.id});
@@ -91,7 +99,7 @@ export function dailyCashReportReadiness(sessions,{companyId,storeId,day,dayStar
     // Closed history can overlap even though the live one-OPEN-per-terminal
     // guard held at opening time. Compare actual positive UTC intervals, not
     // shift slots or a caller-supplied cash chain. Empty intervals stay empty.
-    const intervals=rows.map(row=>({row,start:new Date(row.openedAt).getTime(),end:row.closedAt?new Date(row.closedAt).getTime():NaN}))
+    const intervals=[...rows,...context.filter(row=>row.terminalPos===terminalPos)].map(row=>({row,start:new Date(row.openedAt).getTime(),end:row.closedAt?new Date(row.closedAt).getTime():NaN}))
       .filter(value=>value.row.status==="CLOSED"&&Number.isFinite(value.start)&&Number.isFinite(value.end)&&value.end>value.start&&value.end<=now.getTime())
       .sort((a,b)=>a.start-b.start||a.end-b.end||(String(a.row.id)<String(b.row.id)?-1:String(a.row.id)>String(b.row.id)?1:0));
     let furthest=null;
