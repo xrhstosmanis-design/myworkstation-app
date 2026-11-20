@@ -13,3 +13,11 @@ Verification: helper evidence records 25 distinct focused PASS, including 20 act
 No hosted configuration, schema, grants, recipient, email, stock or financial action was changed. The user deferred backup/restore to another day without a date. Existing cron configuration and jobs remain untouched; their reports-only branch exits before database capability checks and does not block ordinary full backup. Python V3 selection and dependency packaging are prepared for consistency, with no manual backup, cleanup, recovery or restore run.
 
 Next: full source CI, expected-head merge, exact main CI and normal guarded deployment; necessary web profile selection only after validated source is live; fresh authenticated V3 preflight and preservation baseline, one install and independent readback; existing approved recipient activation for future promotion/inventory events, then one eligible LAB promotion delivery with matching history/Message-ID/mailbox and no duplicate. Overall 7–9 remains OPEN.
+
+## Exact source CI 44697723679 follow-up
+
+At `7e04b0ba2d3ad60c79af68e366d28d65dfb7e67a`, the full source run had 6,890 server tests: 6,885 PASS, one FAIL, four optional WASM skips. The new native PostgreSQL V3 scenario executed successfully, including all five refusal/rollback subcases and final data/enrollment preservation. Other four CI jobs and AI wallet contract passed. This is technical isolated evidence, not hosted installation PASS.
+
+The sole failure was the pre-existing `backoffice-company-compatibility.test.js` dependency-closure assertion still expecting 47 instead of the reviewed 49. Root updated that exact expectation and strengthened corruption/missing-source checks to include both new dependencies. Runtime code and source provenance did not change. The targeted test file is locally blocked at import by the same ungenerated shared PrismaClient; no local PASS is inferred. Fresh full CI of the follow-up head remains required before merge or deployment.
+
+A separate direct Node20 execution of the real compatibility verifier passed the exact 49-path closed-source admission and five corrupt/missing dependency pairs, including both new Chat dependencies, while executionEnabled/productionActivated remained false. This avoids the unrelated Prisma import and does not replace the mandatory full-CI test-file run.
