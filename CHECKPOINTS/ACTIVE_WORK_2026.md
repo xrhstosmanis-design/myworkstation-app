@@ -1,3 +1,7 @@
+## 20/11/2026 — Νο02 — Epsilon third-party original PDF / EXTERNAL RETRIEVAL BLOCKED — NO SOURCE CHANGE
+
+Same No02 owner `/root`, future exact provider adapter remains assigned. Before-source claim #4072 merged9bb18809. Read-only browser inspection confirmed the official provider viewer renders the invoice and identity. Its Save → PDF export produced no observed file or new tab during the bounded capture retry; a provider verification warning was observed. Actual PDF retrieval and application-side verification remain BLOCKED / NOT VERIFIED. Provider attempts and runtime implementation stopped. No source changed, no actual app writes; installed9246 PDF bridge and prior evidence retained. This is not evidence of a missing document or incorrect VAT. OverallNo02OPEN. [Observed result and remaining scope](CHANGES/2026-11-20-no2-epsilon-thirdparty-original.md).
+
 ## 19/11/2026 — Νο02 — άνοιγμα/ανάγνωση PDF στο ίδιο πρόχειρο / TECHNICAL LIVE — GROUPED PDF ACCEPTANCE OPEN
 
 #4069/headc6f748e2 merged9246dfcb. Full sourceCI44569426991 and exactmainCI44571614418 SUCCESS5/5 each,6413PASS0FAIL3optionalSKIP+8recoveryPASS, named actualnativePG/desktop-mobileChromium PDFreadiness PASS. Normalguarddeploy44573707801 SUCCESS2/2, Renderdep-dbvipsk0916s73b97ia0 LIVE19:09:44Ελλάδας exact9246dfcb, independenthealth/servedassetsPASS. Scoped existingdraft PDFreader bridge installed. Prior tolerance recheck18:44–18:45 existing-session limitedhostedPASS for paid-within-tolerance label and financialfilter. PostLIVE existingbrowserauthinactive; new hostedPDFlabel/reading/linequality/confirmedline-transfer remains groupedNOTTESTED; overallNo02OPEN. [Exact release evidence and limits](CHANGES/2026-11-19-no2-mydata-pdf-reading-bridge.md).
@@ -406,6 +410,12 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / delegated bank transfer history. [Checkpoint](CHANGES/2026-11-13-manager-payment-history-implementation.md), PR #3851. CI passed before synchronization; hosted LAB pending.
 
 
+## 19/11/2026 — Νο 16 · Chat καταστημάτων / #4028
+
+Συνέχεια της ίδιας ανάθεσης στο `codex/store-chat-photo-read-swipe`. Στο `a12325ae` πέρασε το Chat browser probe 44406483121. Το πλήρες CI 44406483116 χρειάζεται την παρούσα ενεργή λίστα. Η νέα παρτίδα συγκεντρώνει γρήγορη απάντηση από ειδοποίηση, σίγαση ανά ενότητα, αναφορές προσωπικού και ομάδες, μαζί με την ανάγνωση ορατής φωτογραφίας και το σύρσιμο για απάντηση. Η αποδοχή χρήστη παραμένει μία συγκεντρωτική συνεδρία στο υπάρχον LAB.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-store-chat-photo-read-swipe.md`.
+
 ## 2026-11-13 — Inventory audit purchase document links
 
 PRs #3852 and #3856 merged. Scoped hosted LAB PASS on fbc7167: standalone OCR approval linked the purchase document to the +2 movement in inventory reconciliation (8 → 10, zero net difference). Physical receipt time and verified original remain open. [Checkpoint](CHANGES/2026-11-13-inventory-receipt-lab-pass.md).
@@ -773,10 +783,7 @@ Owner /root retained. #4059 claim merged8396da191. Two UI filter-only changes re
 
 Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI44490139724 all5SUCCESS, each6353PASS/0FAIL/3optionalSKIP+8backupPASS. Guardedrelease44492043448SUCCESS; Renderdep-dbvbk7jrjlhs73bfs0agLIVE10:59:38Athens exact05b5b350. Publichealth200/exactrevision/HTML200 and delivered main-Dt7Lq7S0.js linked-row guard verified11:00:38. Scoped realDB stillFINAL/7/113.11; actual server+client read-only replay old6/106.91→new7/113.11, raw unchanged. No approval/invoicing/payment/stock action. Legacy OCR panel remains disabled. Actual user-tab visual readback pending; no new manual USER PASS or broader Gate closure. Checkpoint CHANGES/2026-11-19-invoice-review-linked-lines.md.
 
-- 2026-11-19 · Νο 14 · ASSIGNED /root, συνέχεια #4004: επιβεβαιωμένη αναμενόμενη ποσότητα και σύνδεση υπάρχουσας καταχωρισμένης παραλαβής για τις προτάσεις. BEFORE SOURCE / NOT TESTED, σχέδιο και έλεγχος ανάθεσης για ανασκόπηση. [Checkpoint](CHANGES/2026-11-19-no14-expected-receipts-claim-design.md). Οι παλαιές αναθέσεις προτάσεων και Full Audit διατηρούνται εκτός του συγκεκριμένου νέου υποσυστήματος.
 
-## 19/11/2026 — Νο 16 · Chat καταστημάτων / #4028
+## 20/11/2026 07:19 EET — Warehouse/invoice review — compatibility checked / grouped LAB pending
 
-Συνέχεια της ίδιας ανάθεσης στο `codex/store-chat-photo-read-swipe`. Στο `a12325ae` πέρασε το Chat browser probe 44406483121. Το πλήρες CI 44406483116 χρειάζεται την παρούσα ενεργή λίστα. Η νέα παρτίδα συγκεντρώνει γρήγορη απάντηση από ειδοποίηση, σίγαση ανά ενότητα, αναφορές προσωπικού και ομάδες, μαζί με την ανάγνωση ορατής φωτογραφίας και το σύρσιμο για απάντηση. Η αποδοχή χρήστη παραμένει μία συγκεντρωτική συνεδρία στο υπάρχον LAB.
-
-Checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-store-chat-photo-read-swipe.md`.
+Same /root owner and three existing warehouse/invoice task IDs retained. Main a020ce84 targeted Node20 suite:32PASS/0FAIL/1nativePostgreSQLSKIP. Compact CSS/taxonomy helpers and A71942 filter repair retained; changed surrounding No5 archive/store authority tested with actual mounted fixtures. No source change or hosted business/login action. Prior #4040/#4061 native/LIVE proofs reused, no transaction repeated. No5 deployment remains its owner's scope. One combined geometry/taxonomy/markup role session is specified in CHANGES/2026-11-20-warehouse-invoice-common-readiness.md; no new manual PASS.
