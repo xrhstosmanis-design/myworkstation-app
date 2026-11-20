@@ -181,6 +181,10 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 20/11 No5 follow-up: gated navigation and sales/cash/shift table presentation prepared after the observed delegated UI issue. Common LAB acceptance and review of remaining capabilities are open.
 
+20/11: local server candidate for explicitly delegated shift-template create, update and status actions. Staff editor, staff rules and LAB acceptance remain open. See [checkpoint](CHANGES/2026-11-20-no5-shift-template-actions.md).
+
+20/11 No5: scoped staff actions for Workforce rules and shift templates include create/edit/status controls. Local build and focused regression checks passed. Browser/LAB and release remain open. See [checkpoint](CHANGES/2026-11-20-no5-workforce-action-editors.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
