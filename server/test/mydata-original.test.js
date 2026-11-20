@@ -48,7 +48,7 @@ test("verified original provider profiles use exact bounded paths and preserve P
   const onesign="https://onesign-api.onesys.gr/invoice/public/download/123456789";
   const xml=url=>`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
   const bytes=Buffer.from("%PDF-"+"x".repeat(110));
-  for(const original of [einvoicing,einvoicing.slice(0,-1),vs,onesign]){
+  for(const original of [einvoicing,einvoicing.slice(0,-1),einvoicing.slice(0,-2),vs,onesign]){
     const expected=original+(original===onesign?"":"/pdf");
     for(const suffix of ["","/"])assert.equal(originalDownloadUrl(xml(original+suffix),row.issuerVat),expected);
     const calls=[];
@@ -62,7 +62,7 @@ test("verified original provider profiles use exact bounded paths and preserve P
     }
     assert.throws(()=>originalDownloadUrl(xml(original),"invalid"));
   }
-  for(const bad of [einvoicing.slice(0,-2),einvoicing+"9",einvoicing.replace("/-1/","/1/"),einvoicing.replace("12345678-","1234567-"),vs.replace("/Ab12_3~","/Cd34_3~"),vs.replace("~k1~","~k2~"),vs.slice(0,-1),vs+"B",vs.replace("a".repeat(40),"a".repeat(39)),onesign.replace("123456789","1".repeat(21)),onesign.replace("123456789","-123"),onesign.replace("123456789","12abc")]){
+  for(const bad of [einvoicing.slice(0,-3),einvoicing+"9",einvoicing.replace("/-1/","/1/"),einvoicing.replace("12345678-","1234567-"),vs.replace("/Ab12_3~","/Cd34_3~"),vs.replace("~k1~","~k2~"),vs.slice(0,-1),vs+"B",vs.replace("a".repeat(40),"a".repeat(39)),onesign.replace("123456789","1".repeat(21)),onesign.replace("123456789","-123"),onesign.replace("123456789","12abc")]){
     assert.throws(()=>originalDownloadUrl(xml(bad),row.issuerVat));
   }
 });
