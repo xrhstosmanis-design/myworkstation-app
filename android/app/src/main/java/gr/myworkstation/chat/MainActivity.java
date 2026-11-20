@@ -1190,7 +1190,8 @@ public final class MainActivity extends Activity {
             setContentDescription("Φωτογραφία · άνοιγμα σε μεγάλη προβολή");
             setScaleType(ImageView.ScaleType.FIT_CENTER);
             setBackground(round(0xfff4f1f8, 12));
-            setImageBitmap(timelinePhotos.get(row.optString("id")));
+            Bitmap cached = timelinePhotos.get(row.optString("id"));
+            if (cached != null) setImageBitmap(cached);
             setOnClickListener(v -> viewPhoto(row));
             setOnLongClickListener(v -> { scopedMessageAction(() -> showMessageActions(row, own)).run(); return true; });
             if (interactionsReady) enableSwipeReply(this, scopedMessageAction(() -> chooseChatReply(row)));
