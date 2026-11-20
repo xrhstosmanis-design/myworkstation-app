@@ -33,3 +33,30 @@ Root final Node20.20.2 suite57PASS/0FAIL/0SKIP,7126.202396ms, including actual w
 Initial infrastructure probe failed on an incorrect upstream object-language API usage and missing local standard fonts; fixed before production source by using exact local langPath and local PDF.js standard fonts, without weakening identity checks. Real independent review resource fix and all final outcomes above remain recorded. No customer PDF, URL, identifier, screenshot or traineddata binary enters git. Private replay receipts remain in the owner evidence bundle.
 
 Source ready for full exact CI, NOT MERGED/NOT INSTALLED. Grouped hosted acceptance remains OPEN; no No04 line/model/wallet or4048 bulk changes.
+
+
+## Technical installation receipt — 20/11/2026
+
+This later receipt supersedes only the earlier NOT MERGED/NOT INSTALLED/pending CI statements for this same bounded identity-OCR slice. It records technical source validation and installation, **not a new hosted feature, LAB, user or invoice-line acceptance PASS**. Existing paid/uploaded examples were not resubmitted.
+
+[Source #4103](https://github.com/xrhstosmanis-design/myworkstation-app/pull/4103), head `de7368170dd8324d3a79475b1df2e8c93bac857b`, passed [exact source CI44781073685](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/44781073685): ALL5SUCCESS;6967server tests/6963PASS/0FAIL/4optionalWASM-catalogueSKIP, plus8recoveryPASS/0FAIL/0SKIP. Actual local PDF4/NAPI/pinned-WASM worker parent and six subtests ran7PASS without skip, including bitmap/resource refusal, abort/busy/cleanup/deadline. Nine OCR pipeline cases passed;13exact provider formats plus two negative guards passed15tests. Existing ordinary native attachment9 and monthly zero-note/null-job regression passed. The four optional skips did not include those new worker or native checks.
+
+Root merged the reviewed source as `613894fae8dc2ab8d43de920ddc1397c7113c323`, parent `ec71911407a18544f0ff3c8d3eb9cedf6d650c51`. Independent Git/blob inspection confirmed all eight No02 source/test/package blobs match the tested source. The merge also preserves the independent warehouse changes and No4 documentation. We do **not** claim that the entire merged tree equals the source-branch tree. The later current main `a2929e8db59c4025541609c56b38ab89c5a3ccd0` adds documentation only and retains those eight blobs; this receipt is based on that fresh main without changing peer files.
+
+[Exact merged-main CI44783947813](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/44783947813) completed ALL5SUCCESS:6968server tests/6964PASS/0FAIL/4optionalWASM-catalogueSKIP plus8recoveryPASS/0FAIL/0SKIP. Fresh terminal build136460443670 confirms actual worker7/pipeline9/ordinary native9 and monthly zero-note/null-job checks PASS without skip. Browser wholesale/offline and the actual main browser/HTTP checks also passed their required jobs. The normal main queue waited behind the prior peer CI; no peer run was cancelled, no main/source retry was used to hide a failure, and no docs push replaced the pending full run.
+
+Normal guarded release [44788175656](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/44788175656) passed both jobs: classify136468498337 and deploy136468597742. Actual Render deploy **dep-dc08k70m7kps73d8l0p0** became LIVE with exact runtime **613894fae8dc2ab8d43de920ddc1397c7113c323** at **2026-11-20T18:03:30.108350Z**, **20:03:30.108350 Europe/Athens**. The workflow event metadata carried later docs-only maina292; the validated deployed revision was independently confirmed as613894. Older successful guards with skipped trigger/wait steps are not treated as deployments. No manual deploy, direct deploy-hook call, restart, environment change or schema/business write was initiated by this work; the normal guarded workflow performed its own documented deploy-hook step.
+
+Independent root nonce/no-cache `/api/health` at **2026-11-20T18:04:15.527928Z**, **20:04:15.527928 Europe/Athens**, returned HTTP200,ok=true and exact613894. This demonstrates the installed runtime revision; it does not replace grouped authenticated original-retrieval/reader/draft/line acceptance.
+
+The bounded scope remains unchanged: same downloaded bytes, existing MARK/recipient/number proof before missing-issuer-only local header OCR, only169/cosmote22/telekom22, one-page top45%, confidence50..100 and strict existing verifier, local model/runtime assets, resource/cancellation/budget limits. No paid API, runtime model network, identifier injection, invoice-line interpretation, new payment, stock or fiscal operation is introduced. The previous three actual cached-original pipeline replays and fourteen protected cached profiles remain exactly the limited evidence recorded above, not proof that every supplier/PDF/history record now succeeds.
+
+## Residuals after this technical release
+
+- Grouped final authenticated hosted/LAB acceptance remains OPEN; no repetitive POS/SuperAdmin/Owner login or paid-upload replay is requested by this technical receipt.
+- The newly requested discount behavior remains **NOT IMPLEMENTED** in this release. No discount feature or correctness claim is inferred from identity OCR.
+- No4 baseline coordination [7046220114](https://github.com/xrhstosmanis-design/myworkstation-app/pull/4102#issuecomment-7046220114) remains awaiting the responsible page's reconciliation; its line-reading/model/wallet scope is not taken over.
+- #4048 historical bulk/recovery/scheduler/opt-in remains retained and OPEN; installing the ordinary provider/OCR source does not activate all-history recovery or restart old failed rows.
+- External-provider/original availability limitations, including the separately unverified159 and other unresolved provider/no-URL cases, remain OPEN. No blanket Epsilon/all-PDF support or completed overall Νο02/#4019 is asserted.
+
+This post-release change touches only the retained No02 ACTIVE receipt and this checkpoint. It changes no source, manual, permissions, provider settings or other owner's file, and requests no automatic redeployment.
