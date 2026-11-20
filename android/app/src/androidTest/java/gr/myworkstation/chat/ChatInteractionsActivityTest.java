@@ -35,6 +35,17 @@ public class ChatInteractionsActivityTest {
    if(method.equals("POST")&&(path.endsWith("/messages")||path.endsWith("/voice-messages")||path.endsWith("/video-messages")))return new JSONObject().put("ok",true).put("id","sent-fixture");
    throw new AssertionError("Unexpected API or automatic read: "+method+" "+path);
   }
+  @Override byte[] image(String path, String token) throws Exception {
+   assertTrue(photo);
+   assertEquals("fixture-token",token);
+   assertTrue(path.endsWith("/fixture-message/attachment"));
+   calls.add(new Request(path,"GET",null));
+   android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(12,12,android.graphics.Bitmap.Config.ARGB_8888);
+   java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();
+   assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG,90,out));
+   bitmap.recycle();
+   return out.toByteArray();
+  }
   int count(String suffix){int n=0;for(Request r:calls)if(r.path.endsWith(suffix))n++;return n;}
  }
  private void start(ActivityScenario<MainActivity> scenario,Api api)throws Exception{
@@ -51,7 +62,7 @@ public class ChatInteractionsActivityTest {
    Request sent=null;for(Request r:api.calls)if(r.method.equals("POST")&&r.path.endsWith("/messages"))sent=r;assertNotNull(sent);assertEquals("fixture-message",sent.body.getString("replyToId"));assertEquals("Quoted answer",sent.body.getString("body"));assertEquals(1,api.count("/messages"));assertEquals(0,api.count("/read"));assertEquals(0,api.count("/acknowledge"));s.onActivity(a->{try{assertNull(get(a,"quotedMessage"));}catch(Exception e){throw new AssertionError(e);}});
   }
  }
- @Test public void visiblePhotoIsReadWithoutOpeningOrAcknowledgingTheAnnouncement()throws Exception{
+ @Test public void visiblePhotoRendersInlineAndIsReadWithoutOpeningOrAcknowledgingTheAnnouncement()throws Exception{
   Api api=new Api();api.photo=true;
   try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
    start(scenario,api);
@@ -61,7 +72,7 @@ public class ChatInteractionsActivityTest {
    scenario.onActivity(a->{try{invoke(a,"markVisiblePhotoRead");assertNull(get(a,"imageDialog"));}catch(Exception e){throw new AssertionError(e);}});
    assertEquals(1,api.count("/read"));
    assertEquals(0,api.count("/acknowledge"));
-   assertEquals(0,api.count("/attachment"));
+   assertEquals(1,api.count("/attachment"));
   }
  }
  @Test public void actualReactionButtonsSetReplaceAndExplicitlyRemoveOnlyOneSelection()throws Exception{
