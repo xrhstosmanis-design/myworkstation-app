@@ -105,7 +105,7 @@ test("archive displays imported supplier and brand before the first purchase",()
 test("new archive reuses existing navigation without an observer",()=>{
   assert.match(launcher,/mode===?"inventory"|mode==="inventory"/);
   assert.match(launcher,/Αποθήκη/);
-  assert.match(launcher,/data-purchase-orders-launch/);
+  assert.match(launcher,/onOrders={openWarehouseOrders}/);
   assert.doesNotMatch(panel,/MutationObserver/);
 });
 

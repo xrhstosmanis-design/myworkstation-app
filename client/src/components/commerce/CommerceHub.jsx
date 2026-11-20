@@ -24,7 +24,7 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled}){
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled,warehouseOrders,onWarehouseOrdersHandled}){
   const commerceRoot=useRef(null);
   useEffect(()=>{
     if(!initialInvoiceOrder||!commerceRoot.current)return;
@@ -40,6 +40,25 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
     observer.observe(hub,{childList:true,subtree:true});
     return()=>observer.disconnect();
   },[initialInvoiceOrder,onInitialInvoiceOrderHandled]);
+  useEffect(()=>{
+    if(!warehouseOrders||!commerceRoot.current)return;
+    const hub=commerceRoot.current;
+    const open=()=>{
+      if(!hub.isConnected||hub.dataset.activeStoreId!==warehouseOrders.storeId)return false;
+      const button=hub.querySelector("[data-purchase-orders-launch]");
+      if(!button)return false;
+      if(warehouseOrders.orderId){
+        hub.dispatchEvent(new CustomEvent("purchase-orders:open",{bubbles:true,detail:{...warehouseOrders,navigationOnly:true}}));
+      }else button.click();
+      onWarehouseOrdersHandled?.(true);
+      return true;
+    };
+    if(open())return;
+    const observer=new MutationObserver(()=>{if(open())observer.disconnect()});
+    observer.observe(hub,{childList:true,subtree:true});
+    const timeout=setTimeout(()=>{observer.disconnect();onWarehouseOrdersHandled?.(false)},2500);
+    return()=>{observer.disconnect();clearTimeout(timeout)};
+  },[warehouseOrders,onWarehouseOrdersHandled]);
   const [cachedActiveModules,setActiveModules]=useState(readActive);
   // The selected-store entry owns fresh module checks. Events/catalog reads
   // must not replace that verified scope or remount an in-progress inbox.

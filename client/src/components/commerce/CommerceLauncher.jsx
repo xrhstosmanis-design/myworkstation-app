@@ -53,6 +53,12 @@ export default function CommerceLauncher(){
   const [entryLoading,setEntryLoading]=useState(false);
   const [entryError,setEntryError]=useState("");
   const [invoiceOrder,setInvoiceOrder]=useState(null);
+  const [warehouseOrders,setWarehouseOrders]=useState(null);
+  const [warehouseOrdersError,setWarehouseOrdersError]=useState("");
+  const finishWarehouseOrders=useCallback(opened=>{
+    setWarehouseOrders(null);
+    setWarehouseOrdersError(opened?"":"Οι Παραγγελίες & Αγορές δεν είναι διαθέσιμες για αυτό το κατάστημα.");
+  },[]);
   const [visible,setVisible]=useState(false);
   const visibleRef=useRef(false),workspaceElementRef=useRef(null);
   const [mode,setMode]=useState("products");
@@ -136,7 +142,7 @@ export default function CommerceLauncher(){
     const requestId=++openRequestRef.current;
     setMode(operations?"legacy":"products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
     entryStoreRef.current=requestedStoreId;
-    setSupportStoreId(requestedStoreId);setEntryLoading(scoped);setEntryError("");setInvoiceOrder(null);
+    setSupportStoreId(requestedStoreId);setEntryLoading(scoped);setEntryError("");setInvoiceOrder(null);setWarehouseOrders(null);setWarehouseOrdersError("");
     if(scoped){setStores([]);setInventoryStoreId("");setInventoryInitialProduct(null);setActiveModules([]);setInternetSearchOpen(false)}
     try{
       const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);
@@ -163,15 +169,14 @@ export default function CommerceLauncher(){
     return()=>{window.removeEventListener("mws:commerce-open",handleOpen);window.removeEventListener("mws:store-invoice-entry-request",reserveWorkspace)};
   },[]);
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
+  const openWarehouseOrders=(row,storeId,orderId)=>{
+    if(!stores.some(store=>store.id===storeId))return;
+    setWarehouseOrdersError("");
+    setWarehouseOrders({storeId,orderId});
+    setSupportStoreId(storeId);
+    setLegacyView("operations");setMode("legacy");
+  };
   const interceptWarehouse=event=>{
-    if(mode==="inventory"){
-      const orderButton=event.target.closest?.(".ia-toolbar button");
-      if(orderButton&&String(orderButton.textContent||"").includes("Παραγγελία")){
-        event.preventDefault();event.stopPropagation();setMode("legacy");setLegacyView("operations");
-        window.setTimeout(()=>document.querySelector("[data-purchase-orders-launch]")?.click(),60);
-      }
-      return;
-    }
     if(mode!=="legacy"||legacyView!=="operations")return;
     const button=event.target.closest?.(".commerce-hub .commerce-module-strip button");
     if(!button||!String(button.textContent||"").includes("Αποθήκη")||button.disabled)return;
@@ -193,13 +198,14 @@ export default function CommerceLauncher(){
         <button className={mode==="legacy"||mode==="inventory"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(wholesaleLockRef.current)return;setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
         {activeModules.includes("ADVANCED_ONLINE_PRODUCT_SEARCH")&&<button onClick={()=>setInternetSearchOpen(true)}><Globe2/>Αναζήτηση προϊόντων στο Internet</button>}
       </div>
-      {mode==="wholesale"?<WholesaleSuiteWorkspace api={request} stores={stores} activeStoreId={supportStoreId} identity={wholesaleIdentity} access={wholesaleAccess} getAccess={getWholesaleAccess} onRefreshAccess={refreshWholesaleAccess} onSubmissionLockChange={lockWholesaleSubmission}/>:mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores} activeStoreId={supportStoreId} onOpenFullProduct={product=>{setInventoryInitialProduct(product);setInventoryStoreId(product.storeId||supportStoreId||stores[0]?.id||"");setMode("inventory")}}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} initialProduct={inventoryInitialProduct} onInitialProductHandled={()=>setInventoryInitialProduct(null)} onClose={()=>{setInventoryInitialProduct(null);setMode("products")}}/>:<>
+      {mode==="wholesale"?<WholesaleSuiteWorkspace api={request} stores={stores} activeStoreId={supportStoreId} identity={wholesaleIdentity} access={wholesaleAccess} getAccess={getWholesaleAccess} onRefreshAccess={refreshWholesaleAccess} onSubmissionLockChange={lockWholesaleSubmission}/>:mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores} activeStoreId={supportStoreId} onOpenFullProduct={product=>{setInventoryInitialProduct(product);setInventoryStoreId(product.storeId||supportStoreId||stores[0]?.id||"");setMode("inventory")}}/>:mode==="inventory"?<InventoryArchivePanel api={request} onOrders={openWarehouseOrders} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} initialProduct={inventoryInitialProduct} onInitialProductHandled={()=>setInventoryInitialProduct(null)} onClose={()=>{setInventoryInitialProduct(null);setMode("products")}}/>:<>
         <div className="commerce-mode-switch">
           <button className={legacyView==="operations"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("operations")}}>Εμπορικές λειτουργίες</button>
           <button className={legacyView==="online"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("online")}}><ShoppingBag/>Online Παραγγελίες</button>
           {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("tables")}}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub key={supportStoreId} api={request} stores={stores} activeStoreId={supportStoreId} initialInvoiceOrder={invoiceOrder} onInitialInvoiceOrderHandled={()=>setInvoiceOrder(null)}/>}
+        {warehouseOrdersError&&<p role="alert">{warehouseOrdersError}</p>}
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub key={supportStoreId} api={request} stores={stores} activeStoreId={supportStoreId} initialInvoiceOrder={invoiceOrder} warehouseOrders={warehouseOrders} onWarehouseOrdersHandled={finishWarehouseOrders} onInitialInvoiceOrderHandled={()=>setInvoiceOrder(null)}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
