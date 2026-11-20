@@ -143,6 +143,7 @@ function TableRestructure({api,storeId,order,tables,orders,disabled,onBusyChange
 
 export default function StoreTableOrdersModal({api,store,cart,onClose,onLoad,onCartCleared,setError,setMessage}){
   const operationBusy=useRef(false);
+  const sending=useRef(false),sendAttempt=useRef(null);
   const [restructuring,setRestructuring]=useState(false);
   const [data,setData]=useState({areas:[],tables:[],orders:[],canConfigure:false}),[tableId,setTableId]=useState(""),[areaId,setAreaId]=useState("ALL"),[busy,setBusy]=useState(false),[configuring,setConfiguring]=useState(false),[newTable,setNewTable]=useState(blankTable);
   const load=async(force=false)=>{if(operationBusy.current&&!force)return;setBusy(true);try{const result=await api(`/api/store-pos/stores/${store.id}/table-service`);setData(result);setTableId(current=>result.tables?.some(table=>table.id===current)?current:result.tables?.[0]?.id||"")}catch(error){setError(error.message)}finally{setBusy(false)}};
@@ -152,7 +153,33 @@ export default function StoreTableOrdersModal({api,store,cart,onClose,onLoad,onC
   const addArea=async()=>{const name=String(window.prompt("Όνομα σάλας ή ζώνης:","")||"").trim();if(!name)return;setBusy(true);try{const area=await api(`/api/store-pos/stores/${store.id}/table-service/areas`,{method:"POST",body:JSON.stringify({name})});setAreaId(area.id);setMessage(`Δημιουργήθηκε η σάλα «${name}».`);await load()}catch(error){setError(error.message)}finally{setBusy(false)}};
   const addTable=async event=>{event.preventDefault();if(!newTable.name.trim())return setError("Συμπλήρωσε όνομα ή αριθμό τραπεζιού.");setBusy(true);try{const table=await api(`/api/store-pos/stores/${store.id}/tables`,{method:"POST",body:JSON.stringify({...newTable,name:newTable.name.trim(),areaId:newTable.areaId||null})});setTableId(table.id);setAreaId(table.areaId||"NONE");setNewTable(blankTable);setConfiguring(false);setMessage(`Δημιουργήθηκε το τραπέζι «${table.name}» για ${table.capacity} άτομα.`);await load()}catch(error){setError(error.message)}finally{setBusy(false)}};
   const loadedOrderInCart=cart.some(item=>item.tableLineId);
-  const send=async()=>{if(loadedOrderInCart)return setError("Το καλάθι περιέχει ήδη σταλμένες γραμμές τραπεζιού. Φόρτωσε τον τρέχοντα λογαριασμό για πληρωμή ή άδειασε το καλάθι και πρόσθεσε νέα είδη για νέο γύρο.");if(!tableId||!cart.length)return setError("Επίλεξε τραπέζι και πρόσθεσε προϊόντα.");setBusy(true);try{const result=await api(`/api/store-pos/stores/${store.id}/table-orders`,{method:"POST",body:JSON.stringify({tableId,items:cart.map(item=>({productId:item.id,quantity:item.quantity,notes:item.preparation?.note||null,allergens:item.preparation?.allergens||[],modifiers:item.preparation?.modifiers||[]}))})});onCartCleared();const stations=(result.preparationBatches||[]).map(batch=>batch.productionStation).join(", ");setMessage(`${result.roundNumber>1?`Ο γύρος ${result.roundNumber} προστέθηκε`:"Η παραγγελία στάλθηκε"} στο ${result.tableName} · Νέα είδη ${euro(result.addedTotal)} · Σύνολο λογαριασμού ${euro(result.total)}${stations?` · Παρασκευή: ${stations}`:" · Δεν περιέχει είδη παρασκευής"}.`);await load()}catch(error){setError(error.message)}finally{setBusy(false)}};
+  const send=async()=>{
+    if(sending.current)return;
+    if(loadedOrderInCart)return setError("Το καλάθι περιέχει ήδη σταλμένες γραμμές τραπεζιού. Φόρτωσε τον τρέχοντα λογαριασμό για πληρωμή ή άδειασε το καλάθι και πρόσθεσε νέα είδη για νέο γύρο.");
+    if(!tableId||!cart.length)return setError("Επίλεξε τραπέζι και πρόσθεσε προϊόντα.");
+    const payload={tableId,items:cart.map(item=>({productId:item.id,quantity:item.quantity,notes:item.preparation?.note||null,allergens:item.preparation?.allergens||[],modifiers:item.preparation?.modifiers||[]}))};
+    const fingerprint=JSON.stringify({storeId:store.id,...payload});
+    if(sendAttempt.current&&sendAttempt.current.fingerprint!==fingerprint)return setError("Υπάρχει αποστολή με αβέβαιη απάντηση. Έλεγξε το αρχικό τραπέζι και επανάλαβε μόνο με τα ίδια είδη πριν αλλάξεις τον γύρο.");
+    if(!sendAttempt.current)sendAttempt.current={fingerprint,uncertain:false,body:JSON.stringify({...payload,idempotencyKey:crypto.randomUUID()})};
+    sending.current=true;setBusy(true);
+    try{
+      const result=await api(`/api/store-pos/stores/${store.id}/table-orders`,{method:"POST",body:sendAttempt.current.body});
+      sendAttempt.current=null;onCartCleared();
+      const stations=(result.preparationBatches||[]).map(batch=>batch.productionStation).join(", ");
+      setMessage(`${result.roundNumber>1?`Ο γύρος ${result.roundNumber} προστέθηκε`:"Η παραγγελία στάλθηκε"} στο ${result.tableName} · Νέα είδη ${euro(result.addedTotal)} · Σύνολο λογαριασμού ${euro(result.total)}${stations?` · Παρασκευή: ${stations}`:" · Δεν περιέχει είδη παρασκευής"}.`);
+      await load();
+    }catch(error){
+      const detail=String(error.message||"Σφάλμα αποστολής").replace(" — δεν εκτελέστηκε συναλλαγή.","");
+      if(sendAttempt.current&&!sendAttempt.current.uncertain&&[400,404,409].includes(error.status)){
+        sendAttempt.current=null;
+        setError(`${detail} Διόρθωσε τα στοιχεία πριν από νέα αποστολή.`);
+      }else{
+        if(sendAttempt.current)sendAttempt.current.uncertain=true;
+        setError(`${detail} Έλεγξε πρώτα το τραπέζι. Η επανάληψη εδώ διατηρεί την ίδια αποστολή.`);
+      }
+    }
+    finally{sending.current=false;setBusy(false)}
+  };
   const restructureSaved=async result=>{
     setMessage(`${operationLabel[result.operation]} τραπεζιού ολοκληρώθηκε.`);
     setTableId(result.targetTableId);

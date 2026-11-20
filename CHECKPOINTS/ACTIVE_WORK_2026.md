@@ -1,6 +1,11 @@
-## 19/11/2026 — Ανάκτηση πρωτότυπων PDF myDATA σε τρία καταστήματα
+## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
 
-Διαδόχου Παύλου, Ριζαρείου και Αχαρνών 309. Έλεγχος παρόχων, στοχευμένη επανάκτηση συνδέσμων και ελεγχόμενη επανάληψη λήψης. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md). Κοινές δοκιμές στο LAB πριν από ενέργειες παραγωγής.
+PR #4048. Πέρασαν οι έλεγχοι CI και LAB της έκδοσης d01191b2, μαζί με τη δοκιμή διατήρησης φωτογραφίας POS και PDF στην ίδια αγορά. Η νέα ενημέρωση του main άλλαξε μόνο το κοινό αρχείο εργασιών μεταξύ των αρχείων του PR. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md).
+
+## 20/11/2026 — Νο02 — independent read-only standalone original eligibility / ASSIGNED BEFORE SOURCE
+
+Same retainedNo02owner `/root`, claim branch `docs/no2-standalone-original-eligibility-claim-20261120`, time2026-11-20T16:13:38+02:00. Claims only NEW unused `server/src/lib/mydata-standalone-original-eligibility.js` and its NEW dedicated pure/native read-only tests. Exact9.3/strictzero/unique scoped source/full no-link proof; missing metadata, nonzero, conflicting identities and originalJobId evennull refuse. No imports/callers/writes/network/schema/financial/stock actions. Existing acquireOriginal/routes/provider/bulk/scheduler remain retained4048; no takeover or runtime integration before explicit coordination/handoff. No04/No27/monthly projection and peer owners preserved. SOURCE NOTSTARTED/NOTTESTED until green merged claim; this is a preparatory helper, NOT the UI fix, recovery or overallPASS. [Exact independent boundaries](CHANGES/2026-11-20-no2-standalone-original-eligibility-claim.md).
+
 ## 20/11/2026 — Νο02 — standalone zero-value delivery-note financial scope / TECHNICAL LIVE — HOSTED ENTRY BLOCKED
 
 4082/finalhead671f1649 mergedbeb5858f. SourceCI44700330647SUCCESS5/5,6881PASS0FAIL3optionalSKIP+8recoveryPASS; exactcombinedmainCI44702789986SUCCESS5/5,6892PASS0FAIL4optionalWASM-catalogueSKIP+8recoveryPASS. Namedactualnativezero-note/nulljob, realdesktop/mobileChromium andactualDTOneutral/conflictingreviewcasesPASS. Normalguard44706019758SUCCESS2/2, Renderdep-dc00ks3rjlhs73fvu6u0 LIVE10:54:45Ελλάδας exactbeb; independenthealth+servedlabelsPASS. Boundedhostedfresh-tabentryblocked by mismatch betweenselectedheading andcontextrequeststore; normalcorrection/reopenstill404/unavailable, NOmonthlyGETreached. Noauth/token/storageinspection/newlogin/role/financialwrites. Handoffto retainedNo27entryscope viaACTIVE/common, noNo27sourceedits. MonthlyhostedrowacceptanceNOTTESTED; overallNo02/4019OPEN. [Exactrelease andblockedentryscope](CHANGES/2026-11-20-no2-delivery-note-financial-scope.md).
@@ -174,6 +179,8 @@ Main 885f00f0 changed the bound purchase-order route again. The refreshed inacti
 
 Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps with invoice inspection, expected receipts and reversal costing. Full candidate CI and guarded common LAB installation remain pending.
 
+20/11 No5 follow-up: gated navigation and sales/cash/shift table presentation prepared after the observed delegated UI issue. Common LAB acceptance and review of remaining capabilities are open.
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
@@ -264,7 +271,8 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - POS εσωτερική διακίνηση · Διόρθωση αναγνωριστικού χειριστή στην κίνηση αποθέματος · [Checkpoint](CHANGES/2026-11-16-pos-transfer-minimize-lab.md) · LAB επαναδοκιμή εκκρεμεί.
 
 - 2026-11-17 · Νο 9 · Αυτόματα email προσφορών και απογραφής · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Προσφορές CI 5/5, προστέθηκαν απογραφή και lifecycle, ενιαίο CI και τελικό LAB εκκρεμούν.
-- 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-closed-carry-in-20261120 · Πραγματικό Διαδόχου DAILY 19/11 εμφανίζει 4 βάρδιες και HOLD ασαφούς/επικαλυπτόμενης/προηγούμενης ανολοκλήρωτης βάρδιας. Προ-source ανάληψη μόνο για έγκυρο κλειστό μη επικαλυπτόμενο predecessor ως context εκτός owned totals, με διατήρηση fingerprint και όλων των open/invalid/foreign/duplicate/overlap HOLD. [Checkpoint](CHANGES/2026-11-20-report-closed-carry-in.md). Πρώτα green merge ανάληψης, καμία runtime ή επιχειρησιακή αλλαγή εδώ.
+- 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-cash-human-mail-20261120 · Πραγματικό daily email Διαδόχου παραδόθηκε αλλά το plain-text body είναι RAW JSON και θέμα με DAILY/UTC ISO· presentation FAIL, delivery proof διατηρείται χωριστά. Προ-source ανάληψη ανθρώπινης ελληνικής CASH παρουσίασης μόνο formatter/mail-adapter/στοχευμένοι tests, χωρίς αλλαγή payload/proof/grants/send-once. [Checkpoint](CHANGES/2026-11-20-report-cash-human-mail-claim.md). Πρώτα green docs merge, καμία επαναποστολή.
+- 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-closed-carry-in-20261120 · Προ-source claim #4085 merged 4c25a5a μετά CI 44720105539 SUCCESS. Πραγματικό Διαδόχου DAILY 19/11 πριν: 4 βάρδιες/HOLD. Υποψήφια περιορισμένη διόρθωση: έγκυρος κλειστός μη επικαλυπτόμενος predecessor context, εκτός owned totals/count/reviewed evidence, εντός fingerprint· open/invalid/foreign/duplicate/overlap HOLD προστατεύονται. Node20 42 PASS / 0 FAIL / 1 native-env SKIP, ανεξάρτητη ανασκόπηση χωρίς blocker. Πλήρες native CI και πραγματικό after εκκρεμούν. [Ανάληψη](CHANGES/2026-11-20-report-closed-carry-in.md), [validation](CHANGES/2026-11-20-report-closed-carry-in-validation.md).
 - 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-chat-compatibility-20261120 · Προ-source ανάληψη strict reports-only V3 για τους τέσσερις υφιστάμενους πίνακες Chat που αποκλείουν το πραγματικό installer inspect με 503. V1/V2 και auth διατηρούνται, καμία αλλαγή συμπεριφοράς Chat ή ανάληψη Νο16/Νο14. [Checkpoint](CHANGES/2026-11-20-report-chat-compatibility-claim.md). Claim #4079 merged e23eaa1 πριν source. V3 source prepared: 25 focused PASS και 16 ανεξάρτητοι COMPANY/package PASS, 1 τοπικό Docker skip· native PostgreSQL V3 PASS στο source CI44697723679, μία παλιά προσδοκία 47→49 διορθώθηκε· νέο full CI και LAB εκκρεμούν. Κλειστή provenance 47→49, παλιά manifest/COMPANY hashes αμετάβλητα. [Ανασκόπηση](CHANGES/2026-11-20-report-chat-compatibility-provenance.md).
 - 2026-11-19 · 7–9 · Συνεδρία καρτέλας εγκατάστασης αναφορών · /root · fix/report-installer-session-binding-20261119 ·13 context/mounted +2 πραγματικά issueSession/auth HTTP PASS· installer-only mount capture, ακριβές request binding και ακύρωση πακέτου/έγκρισης σε αλλαγή identity· shared login και γενική PlatformAdminApp ανέπαφες, κοινή αρμοδιότητα Νο5 διατηρείται· CI και hosted αποδοχή εκκρεμούν. [Checkpoint](CHANGES/2026-11-19-report-installer-tab-session.md).
 - 2026-11-18 · 7–9 · Κεντρική οθόνη προετοιμασίας αναφορών · /root · fix/report-event-installation-ui-20261118 · [Checkpoint](CHANGES/2026-11-18-report-event-installation-ui.md) · Συνέχεια #4000/#4021: UI και reports-only συμβατότητα εννέα πραγματικών πινάκων, strict hosted preflight PASS, native εγκατάσταση/CI σε εξέλιξη· hosted SQL/profile και επιχειρησιακή αποδοχή OPEN.
@@ -432,6 +440,8 @@ Assigned to `fix/mydata-draft-prefill`. Source prepared. Existing LAB and CI pen
 Συνέχεια της ίδιας ανάθεσης στο `codex/store-chat-photo-read-swipe`. Στο `a12325ae` πέρασε το Chat browser probe 44406483121. Το πλήρες CI 44406483116 χρειάζεται την παρούσα ενεργή λίστα. Η νέα παρτίδα συγκεντρώνει γρήγορη απάντηση από ειδοποίηση, σίγαση ανά ενότητα, αναφορές προσωπικού και ομάδες, μαζί με την ανάγνωση ορατής φωτογραφίας και το σύρσιμο για απάντηση. Η αποδοχή χρήστη παραμένει μία συγκεντρωτική συνεδρία στο υπάρχον LAB.
 
 Checkpoint: `CHECKPOINTS/CHANGES/2026-11-18-store-chat-photo-read-swipe.md`.
+
+**20/11/2026 · #4087 Android:** προεπισκόπηση φωτογραφίας στη συνομιλία, αυτόματη ανάγνωση μετά την εμφάνιση και σύρσιμο πάνω στην εικόνα. Εκκρεμεί CI και κοινή δοκιμή LAB. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-20-no16-android-inline-photo.md`.
 
 ## 2026-11-13 — Inventory audit purchase document links
 
@@ -778,7 +788,7 @@ Owner /root retained. Claim #4039 merged893e009c, docsCI44398751052 green. Compa
 - 2026-11-19 · 13-SALES-STATS-REVERSAL-COST · /root σελίδας 13–14, βοηθός /root/cost · #4046 πριν από κώδικα, υλοποίηση #4050 εγκατεστημένη τεχνικά ως 03964fe3. PR CI44470735150 και main CI44472405243 SUCCESS5/5, κανονική εγκατάσταση44473751002 SUCCESS, Render dep-dbv9jdbl550s7394u910 LIVE 19/11 08:41:26 Ελλάδας. Αρχική αστοχία fixture χωρίς originalSaleId διορθώθηκε με σύνδεση basket και 18 γραμμές assertions αμετάβλητες. [Checkpoint](CHANGES/2026-11-19-no13-sales-reversal-cost.md). Κοινή πραγματική LAB αποδοχή/PDF/χαρτί και συνολικό 13 OPEN.
 
 
-- 2026-11-19 · Νο 14 · ASSIGNED /root, βοηθοί /root/suppliers και /root/cost. #4053 τεχνική πηγή και #4057 compatibility 361193e6 με PR/main CI 44486238567/44488040952 SUCCESS. Στις 20/11 13:09:40 Ελλάδας, πραγματικός read-only έλεγχος βρήκε και τους τρεις πίνακες No14 απόντες. Τελευταίο κοινό τεκμήριο εγκατάστασης Νο 7 για πηγή reports-only V3 με καταγεγραμμένο fence plan 54ceb10a…· απαιτείται νέο ρητό V3→No14 target από τους owners Νο 7–9/5. [Handoff και μη καταστροφικό σχέδιο εγκατάστασης/native αποδοχής](../docs/testing/no14-expected-receipts-compatibility-handoff.md), [checkpoint](CHANGES/2026-11-19-no14-expected-receipts-compatibility-claim.md). Backup/restore μετατέθηκε για άλλη ημέρα, χωρίς ημερομηνία ή εκτέλεση· οι ανεξάρτητες υλοποιήσεις και δοκιμές συνεχίζονται. Εγκατάσταση πινάκων, ενεργοποίηση και κοινή τελική LAB αποδοχή OPEN / NOT TESTED, activationReady=false. Ο παλιός owner προτάσεων και οι owners lifecycle/installer διατηρούν το πεδίο τους.
+- 2026-11-19 · Νο 14 · ASSIGNED /root, βοηθοί /root/suppliers και /root/cost. Νέα BEFORE-SOURCE ανάληψη μη καταστροφικού installer από ήδη εγγεγραμμένο reports-only V3 προς ρητό No14 target, με τρεις νέους κενούς πίνακες και μόνο atomic fence planHash μετάβαση, αμετάβλητο generation/πλήθος fences και υπάρχον catalog. [Ακριβές πεδίο και native αποδοχή](CHANGES/2026-11-20-no14-v3-installation-claim.md). Περιλαμβάνει μόνο εννέα νέα αρχεία, τρία ακριβή shared hooks, own UI hook και έξι αναγκαίες No5 source-provenance/package ενημερώσεις (πρόσθετα μόνο SOURCE_PATHS στο backoffice_company_readiness.py πριν από αυτή την αλλαγή). Οι owners 7–9/5 διατηρούν όλες τις υπόλοιπες λειτουργίες· παλιά profiles/COMPANY hashes/αλγόριθμοι Python/permissions/dispatch ίδια. #4053/#4057 και παλιά PASS διατηρούνται. Πρώτα docs CI και δημοσίευση claim στο main, έπειτα μία πηγαία παρτίδα με πραγματικό native PostgreSQL 16/Node 20. Hosted εφαρμογή εκτός αυτής της παρτίδας, backup/restore άλλη ημέρα χωρίς ημερομηνία ή εκτέλεση. [Handoff](../docs/testing/no14-expected-receipts-compatibility-handoff.md). Συνολικό Νο 14 και κοινή LAB αποδοχή OPEN.
 
 
 ## 19/11/2026 00:15 Athens — WAREHOUSE-INVOICE-REVIEW-UI-01 — TECHNICALLY LIVE / COMMON LAB PENDING
@@ -804,3 +814,18 @@ Owner /root retained. #4061 merged05b5b350; candidateCI44488419061 and mainCI444
 ## 20/11/2026 07:19 EET — Warehouse/invoice review — compatibility checked / grouped LAB pending
 
 Same /root owner and three existing warehouse/invoice task IDs retained. Main a020ce84 targeted Node20 suite:32PASS/0FAIL/1nativePostgreSQLSKIP. Compact CSS/taxonomy helpers and A71942 filter repair retained; changed surrounding No5 archive/store authority tested with actual mounted fixtures. No source change or hosted business/login action. Prior #4040/#4061 native/LIVE proofs reused, no transaction repeated. No5 deployment remains its owner's scope. One combined geometry/taxonomy/markup role session is specified in CHANGES/2026-11-20-warehouse-invoice-common-readiness.md; no new manual PASS.
+
+
+## 2026-11-19 · Νο15 · Ενιαία τελική παρτίδα — AWAITING FULL CI / LAB
+
+Ίδια ανάθεση /root TABLE_SERVICE, τρεις βοηθοί σε ξεχωριστά worktrees: ανάκτηση αβέβαιης κινητής αποστολής μετά refresh, ατομική ένταξη νέου KDS δελτίου στην υπάρχουσα ουρά εκτύπωσης, αναστρέψιμη fiscal mapping επιλογή χωρίς αλλαγή hostedρύθμισης. Το χρεώσιμο KDS READY έκλεισε πραγματικά19/11,00:04Ελλάδας με UIκαιSQL· παλιότερα pendingτου ίδιου δελτίου υπερκαλύπτονται. Οι υπάρχουσες PASSπράξεις δεν επαναλαμβάνονται. [Checkpoint](CHANGES/2026-11-19-table-service-final-batch.md). Πλήρες CI/deploy/κοινή φυσική αποδοχή εκκρεμούν· συνολικόOPEN.
+
+
+### Νο15 · 20/11/2026 · επανεκκίνηση ακριβούς CI μετά διόρθωση fixture
+
+Ίδιος υπεύθυνος /root TABLE_SERVICE, Draft4051. CI44411163560:6292PASS/1FAIL/3SKIP· μοναδικό FAIL mounted SET fixture χωρίς εταιρεία/χειριστή. Προστέθηκαν μόνο συνθετικές ταυτότητες, με SET/POS και noPOST assertions αμετάβλητα. Node20:27στοχευμέναPASS/0FAIL/0SKIP. Main4c25a5a27/No5δικαιώματα και readStatus διατηρήθηκαν μαζί με νέα printqueue. Νέο πλήρες CI/merge/deploy εκκρεμούν, χωρίς hosted μεταβολές ή επανάληψη παλιών PASS. [Συνέχεια checkpoint](CHANGES/2026-11-19-table-service-final-batch.md).
+
+
+### Νο15 · 20/11/2026 · COMPANY binding και native print fixture
+
+Draft4051/root ίδιο scope. CI44725877823:6894PASS/12FAIL/4SKIP, τέσσερα άλλα jobsSUCCESS. ΈντεκαFAILαπό ένα παλιό sourcehash και ένα από null nativefixture request. Ενημερώθηκε μόνο το ανασκοπημένο table-route digest στο ανενεργόCOMPANY packet· guards/profiles/activation αμετάβλητα.23στοχευμέναPASS/0FAIL/2υποδομήςSKIP, συν actualPG17.12 native print PASS1/0FAIL/0SKIP και έλεγχος middleware predicate. Main8e3d91905και No14handoff διατηρήθηκαν. Νέο πλήρες CI πριν merge/deploy· καμία hosted πράξη και καμία επανάληψη παλιών LABPASS. [Checkpoint](CHANGES/2026-11-19-table-service-final-batch.md).

@@ -57,6 +57,8 @@ public final class MainActivity extends Activity {
     private LinearLayout root, content, messages;
     private ScrollView scroll;
     private ScrollView photoReadInFlight;
+    private ScrollView photoPreviewInFlight;
+    private final android.util.LruCache<String, Bitmap> timelinePhotos = new android.util.LruCache<>(16);
     private final java.util.Set<String> visiblePhotoReceipts = new java.util.HashSet<>();
     private ScrollView contentScroll;
     private TextView notice, attachmentLabel;
@@ -124,6 +126,7 @@ public final class MainActivity extends Activity {
         ui.removeCallbacks(refresh); ui.postDelayed(refresh, 10000);
     }
     @Override protected void onStop() {
+        timelinePhotos.evictAll();
         foreground = false; epoch.invalidate(); api.cancel(); busy = false; ui.removeCallbacks(refresh);
         history = new JSONArray(); clearPhoto(); clearVoice(); clearVideo(); clearChatInteractions(); dismissImage(); dismissReplies();
         if (root != null) {
@@ -351,6 +354,7 @@ public final class MainActivity extends Activity {
         messages = new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL); messages.setPadding(dp(12), dp(8), dp(12), dp(8)); scroll.addView(messages);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         visiblePhotoReceipts.clear();
+        timelinePhotos.evictAll();
         scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> markVisiblePhotoRead());
         root.removeView(notice); root.addView(notice);
         if (tab.equals("ai") && (staff() || (!platform() && !identity.optString("role").equals("OWNER")))) {
@@ -461,8 +465,21 @@ public final class MainActivity extends Activity {
             if (!(card.getTag() instanceof JSONObject)) continue;
             JSONObject row = (JSONObject) card.getTag();
             String messageId = row.optString("id");
-            if (row.optBoolean("readByMe") || visiblePhotoReceipts.contains(messageId)
-                    || !card.getLocalVisibleRect(visible) || visible.height() * 2 < card.getHeight()) continue;
+            TimelinePhoto photo = null;
+            LinearLayout message = (LinearLayout) card;
+            for (int child = 0; child < message.getChildCount(); child++) {
+                if (message.getChildAt(child) instanceof TimelinePhoto) {
+                    photo = (TimelinePhoto) message.getChildAt(child);
+                    break;
+                }
+            }
+            if (photo == null || !photo.getLocalVisibleRect(visible)
+                    || visible.height() < Math.min(dp(48), (photo.getHeight() + 1) / 2)) continue;
+            if (photo.getDrawable() == null) {
+                if (!photo.attempted && photoPreviewInFlight != timeline) loadTimelinePhoto(photo, timeline);
+                continue;
+            }
+            if (photo.own || row.optBoolean("readByMe") || visiblePhotoReceipts.contains(messageId)) continue;
             final long generation = epoch.capture();
             final String captured = token, store = id(selected, "id"), company = id(selected, "companyId");
             final String path = chatBase() + "/messages/" + enc(messageId) + "/read";
@@ -557,7 +574,7 @@ public final class MainActivity extends Activity {
         if (row != null && row.optBoolean("forwarded")) card.addView(text("Προωθημένο μήνυμα", 12, PURPLE));
         if (!body.isEmpty()) card.addView(text(body, 17, INK));
         if (row != null && row.optBoolean("hasAttachment")) {
-            if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(messageMediaButton("▧ Φωτογραφία · προβολή", () -> viewPhoto(row), row, own));
+            if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(new TimelinePhoto(row, own), new LinearLayout.LayoutParams(dp(220), dp(144)));
             else if (row.optString("attachmentMimeType").equals("video/mp4")) card.addView(messageMediaButton("▶ Βίντεο · αναπαραγωγή", () -> viewVideo(row), row, own));
             else if (row.optString("attachmentMimeType").equals("audio/wav")) card.addView(messageMediaButton("▶ Φωνητικό · αναπαραγωγή", () -> viewVoice(row), row, own));
             else card.addView(text("Συνημμένο · Η λήψη αρχείων είναι απενεργοποιημένη σε αυτή την εφαρμογή.", 14, MUTED));
@@ -576,7 +593,7 @@ public final class MainActivity extends Activity {
             card.setOnClickListener(v -> open.run());card.setOnLongClickListener(v -> {open.run();return true;});
             if (interactionsReady) enableSwipeReply(card, scopedMessageAction(() -> chooseChatReply(row)));
         }
-        if (row != null && !own && !row.optBoolean("readByMe") && row.optBoolean("hasAttachment")
+        if (row != null && row.optBoolean("hasAttachment")
                 && row.optString("attachmentMimeType").startsWith("image/")
                 && ChatInteractions.validId(row.optString("id"))) card.setTag(row);
         messages.addView(card, lp);
@@ -595,9 +612,13 @@ public final class MainActivity extends Activity {
                         swiped = false;
                         return false;
                     case MotionEvent.ACTION_MOVE:
-                        if (tracking && Math.abs(event.getY() - startY) > dp(24)) tracking = false;
-                        if (tracking && event.getX() - startX >= dp(56)) {
+                        if (swiped) return true;
+                        float dx = event.getX() - startX;
+                        float dy = Math.abs(event.getY() - startY);
+                        if (tracking && dy > dp(24) && dy >= Math.abs(dx)) tracking = false;
+                        if (tracking && dx >= dp(36) && dx > dy * 1.5f) {
                             swiped = true;
+                            view.getParent().requestDisallowInterceptTouchEvent(true);
                             view.cancelLongPress();
                             view.setPressed(false);
                         }
@@ -619,7 +640,9 @@ public final class MainActivity extends Activity {
     }
     private Button messageMediaButton(String label,Runnable previewAction,JSONObject row,boolean own) {
         Button button=chatButton(label,previewAction,false);Runnable open=scopedMessageAction(() -> showMessageActions(row,own));
-        button.setOnLongClickListener(v->{open.run();return true;});return button;
+        button.setOnLongClickListener(v->{open.run();return true;});
+        if (interactionsReady) enableSwipeReply(button, scopedMessageAction(() -> chooseChatReply(row)));
+        return button;
     }
     private Runnable scopedMessageAction(Runnable action) {
         final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
@@ -1155,6 +1178,69 @@ public final class MainActivity extends Activity {
         if (preview == null) { status("Δεν είναι έγκυρη εικόνα για προεπισκόπηση."); return; }
         showFullPhoto("Φωτογραφία " + (index + 1), preview);
     }
+    private final class TimelinePhoto extends ImageButton {
+        final JSONObject row;
+        final boolean own;
+        boolean attempted;
+
+        TimelinePhoto(JSONObject row, boolean own) {
+            super(MainActivity.this);
+            this.row = row;
+            this.own = own;
+            setContentDescription("Φωτογραφία · άνοιγμα σε μεγάλη προβολή");
+            setScaleType(ImageView.ScaleType.FIT_CENTER);
+            setBackground(round(0xfff4f1f8, 12));
+            Bitmap cached = timelinePhotos.get(row.optString("id"));
+            if (cached != null) setImageBitmap(cached);
+            setOnClickListener(v -> viewPhoto(row));
+            setOnLongClickListener(v -> { scopedMessageAction(() -> showMessageActions(row, own)).run(); return true; });
+            if (interactionsReady) enableSwipeReply(this, scopedMessageAction(() -> chooseChatReply(row)));
+        }
+    }
+
+    private void loadTimelinePhoto(TimelinePhoto photo, ScrollView timeline) {
+        photo.attempted = true;
+        photoPreviewInFlight = timeline;
+        final long generation = epoch.capture();
+        final String captured = token, store = id(selected, "id"), company = id(selected, "companyId");
+        final String messageId = photo.row.optString("id");
+        final String path = chatBase() + "/messages/" + enc(messageId) + "/attachment";
+        final ChatApi client = api;
+        worker.execute(() -> {
+            Bitmap decoded = null;
+            byte[] bytes = null;
+            try {
+                bytes = client.image(path, captured);
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+                options.inSampleSize = 1;
+                while (options.outWidth / options.inSampleSize > 480 || options.outHeight / options.inSampleSize > 480) {
+                    options.inSampleSize *= 2;
+                }
+                options.inJustDecodeBounds = false;
+                decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+            } catch (Exception ignored) {
+                // A tap can still retry the full-size view.
+            } finally {
+                if (bytes != null) Arrays.fill(bytes, (byte) 0);
+            }
+            final Bitmap bitmap = decoded;
+            ui.post(() -> {
+                if (photoPreviewInFlight == timeline) photoPreviewInFlight = null;
+                if (scroll != timeline || !chatScope(generation, captured, store, company) || !photo.isAttachedToWindow()) {
+                    if (bitmap != null) bitmap.recycle();
+                    return;
+                }
+                if (bitmap != null) {
+                    timelinePhotos.put(messageId, bitmap);
+                    photo.setImageBitmap(bitmap);
+                }
+                markVisiblePhotoRead();
+            });
+        });
+    }
+
     private void viewPhoto(JSONObject row) {
         if (busy) return; busy = true; long generation = epoch.capture(); String captured = token, path = chatBase() + "/messages/" + enc(row.optString("id")) + "/attachment";
         worker.execute(() -> {
