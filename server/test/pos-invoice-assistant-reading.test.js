@@ -100,3 +100,73 @@ test("contradictory printed whole-line discount remains blocked",()=>{
   const item=line({rawText:"703177 ΓΑΛΟΠΟΥΛΑ 3 1,5900 4,77 1,91 2,86 13%",code:"703177",description:"ΓΑΛΟΠΟΥΛΑ",quantity:"3",unitCost:"1.59",lineDiscountAmount:"1.00",netAmount:"2.86",grossAmount:"3.23"});
   assert.throws(()=>assistantRowsToProductLines(reading({printedTotal:"3.23",lines:[item]}),{pageCount:1,totalGross:3.23}),/τυπωμένη έκπτωση/);
 });
+
+const unnumberedReading=(overrides={})=>reading({
+  expectedPageCount:0,
+  visiblePageNumbers:[],
+  singlePageComplete:false,
+  printedQuantityTotal:"4",
+  printedNetTotal:"4.00",
+  printedVatTotal:"0.52",
+  printedTotal:"4.52",
+  unnumberedPageEvidence:[
+    {imageIndex:1,documentNumber:"LAB-UNNUMBERED-01",fullPageVisible:true,printedTotalsVisible:false},
+    {imageIndex:2,documentNumber:"LAB-UNNUMBERED-01",fullPageVisible:true,printedTotalsVisible:true}
+  ],
+  lines:[line(),line({page:"2"})],
+  ...overrides
+});
+const unnumberedContext={pageCount:2,totalGross:4.52,documentNumber:"LAB-UNNUMBERED-01"};
+
+test("two unnumbered photographs fill the draft only with matching sheet identity and printed totals",()=>{
+  const rows=assistantRowsToProductLines(unnumberedReading(),unnumberedContext);
+  assert.equal(rows.length,2);
+  assert.deepEqual(rows.map(row=>row.sourceFileIndex),[0,1]);
+  assert.ok(rows.every(row=>row.sourceColumnsVerified));
+});
+
+test("unnumbered pages in one PDF preserve physical page provenance",()=>{
+  const rows=assistantRowsToProductLines(unnumberedReading(),{
+    ...unnumberedContext,
+    pageSources:[{sourceFileIndex:0,sourcePage:1},{sourceFileIndex:0,sourcePage:2}]
+  });
+  assert.deepEqual(rows.map(row=>[row.sourceFileIndex,row.sourcePage]),[[0,1],[0,2]]);
+});
+
+test("matching amounts cannot authorize an unnumbered sheet from another invoice",()=>{
+  const input=unnumberedReading();
+  input.unnumberedPageEvidence[1].documentNumber="ANOTHER-INVOICE";
+  assert.throws(()=>assistantRowsToProductLines(input,unnumberedContext),/όλες τις φυσικές σελίδες/);
+  assert.throws(()=>assistantRowsToProductLines(unnumberedReading(),{...unnumberedContext,documentNumber:undefined}),/όλες τις φυσικές σελίδες/);
+});
+
+test("missing, repeated or cropped unnumbered sheet evidence cannot fill a draft",()=>{
+  for(const change of [
+    input=>input.unnumberedPageEvidence.pop(),
+    input=>input.unnumberedPageEvidence[1].imageIndex=1,
+    input=>input.unnumberedPageEvidence[0].fullPageVisible=false,
+    input=>input.unnumberedPageEvidence[1].printedTotalsVisible=false
+  ]){
+    const input=unnumberedReading();
+    change(input);
+    assert.throws(()=>assistantRowsToProductLines(input,unnumberedContext),/όλες τις φυσικές σελίδες/);
+  }
+});
+
+test("unnumbered sheet evidence requires readable and reconciling printed quantity, net and payable",()=>{
+  for(const overrides of [
+    {printedQuantityTotal:""},{printedNetTotal:""},{printedTotal:""},
+    {printedQuantityTotal:"4?"},{printedNetTotal:"4?"},
+    {printedQuantityTotal:"5"},{printedNetTotal:"5.00"},{printedTotal:"5.00"}
+  ])assert.throws(()=>assistantRowsToProductLines(unnumberedReading(overrides),unnumberedContext));
+});
+
+test("complete unnumbered evidence does not waive VAT or per-line discount verification",()=>{
+  assert.throws(()=>assistantRowsToProductLines(unnumberedReading({printedVatTotal:"0.80"}),unnumberedContext),/ΦΠΑ/);
+  assert.throws(()=>assistantRowsToProductLines(unnumberedReading({lines:[line({discount1:"10"}),line({page:"2"})]}),unnumberedContext),/αριθμητική/);
+});
+
+test("numbered multipage invoices retain their existing validation without unnumbered evidence",()=>{
+  const rows=assistantRowsToProductLines(unnumberedReading({expectedPageCount:2,visiblePageNumbers:[1,2],unnumberedPageEvidence:[]}),{pageCount:2,totalGross:4.52});
+  assert.equal(rows.length,2);
+});
