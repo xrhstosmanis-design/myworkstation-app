@@ -1,3 +1,4 @@
+import {chatAccessRevoked} from "../chat-access.mjs";
 import {assertPosShiftOwner} from "../lib/pos-shift-owner.js";
 import {issueChatOperatorSession} from "../chat-operator-auth.mjs";
 import { Router } from "express";
@@ -384,6 +385,9 @@ router.post("/login/chat-pin",route(async(req,res)=>{
   const operator=rows[0];
   if(!operator||!operator.pinHash||!(await bcrypt.compare(body.pin,operator.pinHash))){await recordLoginFailure(body.storeId,subjectKey);return res.status(401).json({error:"Λανθασμένο PIN."});}
   await clearLoginFailures(body.storeId,subjectKey);
+  if(await chatAccessRevoked(prisma,{id:operator.storeId,companyId:operator.companyId},operator.id)){
+    return res.status(403).json({error:"Η πρόσβαση στο Chat αυτού του καταστήματος έχει ανακληθεί.",code:"STORE_CHAT_ACCESS_REVOKED"});
+  }
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"STORE_CHAT_MOBILE_LOGIN",details:{employeeId:operator.employeeId}});
   res.json({token:await issueChatOperatorSession(operator,req),user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:["STORE_CHAT"]},store:{id:operator.storeId,name:operator.storeName},company:{id:operator.companyId,name:operator.companyName}});
 }));
