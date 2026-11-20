@@ -42,6 +42,30 @@ test("S1 original accepts only the issuer-bound canonical provider URL", async (
   assert.deepEqual(calls,[original+"/pdf"]);
   assert.equal(result.pageCount,2);assert.deepEqual(result.bytes,bytes);
 });
+test("verified original provider profiles use exact bounded paths and preserve PDF identity guards", async () => {
+  const einvoicing="https://e-invoicing.gr/edocuments/ViewInvoice/-1/12345678-abcd-1234-abcd-123456789abc_Ab123456";
+  const vs="https://vs.gr/iv/invoice/download/Ab12_3/Ab12_3~k1~"+"a".repeat(40)+"~"+"B".repeat(43);
+  const onesign="https://onesign-api.onesys.gr/invoice/public/download/123456789";
+  const xml=url=>`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
+  const bytes=Buffer.from("%PDF-"+"x".repeat(110));
+  for(const original of [einvoicing,einvoicing.slice(0,-1),vs,onesign]){
+    const expected=original+(original===onesign?"":"/pdf");
+    for(const suffix of ["","/"])assert.equal(originalDownloadUrl(xml(original+suffix),row.issuerVat),expected);
+    const calls=[];
+    const transport=async(url,options)=>{calls.push(url);assert.equal(options.redirect,"error");return new Response(bytes,{headers:{"content-type":"application/pdf"}})};
+    const providerRow={...row,rawPayload:{xml:xml(original)}};
+    const result=await fetchOriginalPdf(providerRow,transport,async()=>({text:`${row.mark} ${row.issuerVat} ${row.counterpartVat} ${row.documentNumber}`,pageCount:1}));
+    assert.deepEqual(calls,[expected]);assert.deepEqual(result.bytes,bytes);assert.equal(result.pageCount,1);
+    await assert.rejects(fetchOriginalPdf(providerRow,transport,async()=>({text:`${row.mark} ${row.counterpartVat} ${row.documentNumber}`,pageCount:1})),/δεν επιβεβαιώνει/);
+    for(const bad of [original.replace("https:","http:"),original.replace("https://","https://user:pass@"),original.replace(new URL(original).hostname,new URL(original).hostname+".evil.test"),original.replace(new URL(original).hostname,new URL(original).hostname+":8443"),original+"?x=1",original+"#fragment",original.replace("https://","https://\n"),original+"/pdf"]){
+      assert.throws(()=>originalDownloadUrl(xml(bad),row.issuerVat));
+    }
+    assert.throws(()=>originalDownloadUrl(xml(original),"invalid"));
+  }
+  for(const bad of [einvoicing.slice(0,-2),einvoicing+"9",einvoicing.replace("/-1/","/1/"),einvoicing.replace("12345678-","1234567-"),vs.replace("/Ab12_3~","/Cd34_3~"),vs.replace("~k1~","~k2~"),vs.slice(0,-1),vs+"B",vs.replace("a".repeat(40),"a".repeat(39)),onesign.replace("123456789","1".repeat(21)),onesign.replace("123456789","-123"),onesign.replace("123456789","12abc")]){
+    assert.throws(()=>originalDownloadUrl(xml(bad),row.issuerVat));
+  }
+});
 test("Epsilon Digital original uses a restricted provider URL and verifies PDF identity", async () => {
   const original = "https://epsilondigital.epsilonnet.gr/fd/" + "a".repeat(32) + ":8";
   const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
