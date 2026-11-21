@@ -883,3 +883,6 @@ INVOICE-PAYMENT-RECOVERY-01 responsible-person adapter SOURCE_IMPLEMENTED: expli
 
 
 INVOICE-PAYMENT-RECOVERY-01 exact4137sourceCI44910777670 ALL5SUCCESS7078serverPASS/0FAIL/4optionalSKIP+8recovery; actual PG18-image companion PASS. Next combined source adds locked immutable-original validation/preservation at canonical paid-draft and intake links;31actualnativePASS including real draft factory corruption/rollback/reuse/deleted-source behavior; compatibility92PASS/1nativeSKIP withoutDB. Still DRAFT/NOT_INSTALLED; explicit original/header promotion and normal-wallet/internal-admission integration remain OPEN. No actual business replay.
+
+
+INVOICE-PAYMENT-RECOVERY-01:61a832 CI44931804964 latestALL5SUCCESS after inspected Chromium startup failure and one-job retry request; originalFAIL retained. New own capture-source adapter binds the normal assistant loader to the exact locked PAID draft/job/payment/proof/original, without unrelated-photo fallback. Final6targetedPASS(4unit+2actualnative)/0FAIL/0SKIP. No creator/UI/provider call yet; source preparation/admission/legacy-header adapter remain OPEN. Draft4137NOTINSTALLED.

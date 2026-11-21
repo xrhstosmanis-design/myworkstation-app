@@ -27,3 +27,17 @@ export async function retainCapturedPaymentOriginal(db,scope,paymentId){
  if(bytes.length<100||bytes.length>6500000||bytes.toString('base64')!==encoded||hash(bytes)!==proof.checksum)fail();
  return true;
 }
+
+// The caller owns admission and transaction boundaries. Read only the exact
+// retained original; never accept replacement pages or a header from a client.
+export async function readCapturedPaymentOriginal(db,scope,paymentId){
+ const suffix=hash(paymentId);
+ if(!await retainCapturedPaymentOriginal(db,scope,paymentId))fail();
+ const intents=await db.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "id"=${'pi_pending_'+suffix} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "eventType"='POS_INVOICE_PENDING_CREATED' FOR SHARE`;
+ const rows=await db.$queryRaw`SELECT "attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum" FROM "StoreTransaction" WHERE "id"=${paymentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} FOR UPDATE`;
+ const original=rows[0],intent=intents[0]?.details;
+ if(rows.length!==1||intents.length!==1||!intent?.fingerprint)fail();
+ return {transactionId:paymentId,proofId:'pi_capture_'+suffix,fingerprint:intent.fingerprint,
+  header:{supplierId:intent.supplierId,documentNumber:intent.documentNumber,documentDate:intent.documentDate,totalGross:intent.amountCents/100},
+  pages:[{filename:original.attachmentFilename,mimeType:original.attachmentMimeType,contentData:original.attachmentData,checksum:original.attachmentChecksum}]};
+}

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import {z} from 'zod';
+import {loadInvoiceAssistantSource} from '../src/lib/invoice-assistant-source.js';
 import {retainCapturedPaymentOriginal} from '../src/lib/invoice-recovery-original.js';
 import {findInvoicePayment,assertReusableInvoicePayment} from '../src/lib/invoice-payment-reuse.js';
 import {lockInvoiceStore} from '../src/lib/invoice-common-draft.js';
@@ -48,6 +49,21 @@ test('native actual paid-draft factory retains capture bytes and proof, rolls ba
   const document=await f.db.$queryRaw`SELECT "id","paymentTransactionId","status" FROM "PurchaseDocument"`;
   assert.equal(document.length,1);assert.equal(document[0].paymentTransactionId,'payment');assert.equal(document[0].status,'DRAFT');
   const replay=await request();assert.equal(replay.body.documentId,created.body.documentId);assert.equal(replay.body.reused,true);assert.equal(await immutable(),before);
+  const marker={version:'CAPTURE_RECOVERY_V1',transactionId:'payment',proofId:'pi_capture_'+suffix,fingerprint:proof.fingerprint};
+  await f.db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify({captureRecovery:marker})}::jsonb WHERE "id"='recovery-job'`;
+  const linked=await f.db.$queryRaw`SELECT "purchaseOrderId" FROM "PurchaseDocument" WHERE "id"=${created.body.documentId}`;
+  const loaded=await loadInvoiceAssistantSource(f.db,'c',linked[0].purchaseOrderId);assert.deepEqual(loaded.pages,[{filename:'original.pdf',mimeType:'application/pdf',contentData:data}]);assert.equal(await immutable(),before);
+  await f.db.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"='foreign-supplier' WHERE "id"=${linked[0].purchaseOrderId}`;
+  assert.deepEqual((await loadInvoiceAssistantSource(f.db,'c',linked[0].purchaseOrderId)).pages,[]);
+  await f.db.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"='sup' WHERE "id"=${linked[0].purchaseOrderId}`;
+  await f.db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify({captureRecovery:{...marker,fingerprint:'b'.repeat(64)}})}::jsonb WHERE "id"='recovery-job'`;
+  assert.deepEqual((await loadInvoiceAssistantSource(f.db,'c',linked[0].purchaseOrderId)).pages,[]);
+  await f.db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify({captureRecovery:marker})}::jsonb WHERE "id"='recovery-job'`;
+  await f.db.$executeRaw`UPDATE "StoreTransaction" SET "attachmentData"='changed' WHERE "id"='payment'`;
+  await assert.rejects(loadInvoiceAssistantSource(f.db,'c',linked[0].purchaseOrderId),e=>e.code==='INVOICE_RECOVERY_ORIGINAL_CHANGED');
+  await f.db.$executeRaw`UPDATE "StoreTransaction" SET "attachmentData"=${data} WHERE "id"='payment'`;
+  assert.equal(await immutable(),before);
+
   await f.db.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${created.body.documentId}`;
   const deleted=await request();assert.equal(deleted.error?.status,409);assert.equal((await f.db.$queryRaw`SELECT COUNT(*)::int AS n FROM "PurchaseDocument"`)[0].n,0);assert.equal(await immutable(),before);
  }finally{await f.close()}

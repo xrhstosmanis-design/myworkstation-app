@@ -18,3 +18,6 @@ Approved responsible-person bridge implemented in the combined runtime branch; e
 
 
 4137first integrated source fullCIALL5SUCCESS7082tests/7078PASS+8recovery; actual native Docker companion executed PASS. New independently tested prerequisite retains original PLAIN_CAPTURE metadata/bytes at canonical paid draft and intake links, verifying locked proof/intent. Native paid-draft factory and retained pending/myDATA31PASS, no full protected-line intake or assistant acceptance claimed. Remaining: original/header binding for old expense, explicit normal-wallet source promotion, queued internal fresh grant/store admission, combined tests and ONE guarded release. KeepDRAFT and protected prior LAB behaviors.
+
+
+61a832fullCI44931804964 latestALL5SUCCESS after a targeted inspected Chromium infrastructure retry. Normal assistant source loader now reads retained originals for an exact closed CAPTURE_RECOVERY_V1 chain;6targetedPASS including2actualnative and unchanged legacy/myDATA/merged-page source cases. No binding creator/UI/provider read yet, therefore not completed workflow. Next exact bounded work: canonical deterministic prepare/open-one-draft action with fresh grant propagation; standard assistant source/preview admission; legacy expense original/header binding and combined acceptance. Keep one DRAFT/release.
