@@ -26,7 +26,13 @@ export function createOwnerWithdrawalRouter(db=prisma){
    else{
     if(!user.sessionId||!Number.isInteger(user.sessionVersion))fail(401,'Απαιτείται ενεργή προσωπική σύνδεση.');
     const rows=await tx.$queryRaw`SELECT u."role"::text AS role,u."companyId" FROM "User" u JOIN "UserSession" s ON s."userId"=u."id" WHERE u."id"=${user.id} AND s."id"=${user.sessionId} AND u."sessionVersion"=${user.sessionVersion} AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp() AND u."mustChangePassword"=false FOR SHARE OF u,s`;
-    if(!rows[0]||!(rows[0].role==='SUPER_ADMIN'||rows[0].role==='OWNER'&&rows[0].companyId===user.companyId&&user.role==='OWNER'))fail(401,'Η προσωπική σύνδεση ή ο ρόλος άλλαξε.');
+    const current=rows[0];
+    if(!current||!(current.role==='SUPER_ADMIN'||current.role==='OWNER'&&user.role==='OWNER'))fail(401,'Η προσωπική σύνδεση ή ο ρόλος άλλαξε.');
+    if(current.role==='OWNER'&&current.companyId!==user.companyId){
+     if(user.ownerCompanyId!==user.companyId)fail(403,'Δεν επιβεβαιώθηκε η επιλογή εταιρείας του ιδιοκτήτη.');
+     const access=await tx.$queryRaw`SELECT a."companyId" FROM "OwnerCompanyAccess" a JOIN "Company" c ON c."id"=a."companyId" JOIN "Company" original ON original."id"=${current.companyId} WHERE a."ownerId"=${user.id} AND a."companyId"=${user.companyId} AND c."active"=true AND original."active"=true FOR SHARE OF a,c,original`;
+     if(!access.length)fail(403,'Η πρόσβαση του ιδιοκτήτη σε αυτή την εταιρεία έχει αφαιρεθεί.');
+    }
    }
    const license=await companyModuleState(user.companyId,{db:tx});
    const paid=(await tx.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${user.companyId} AND "storeId"=${storeId} AND "moduleKey"='CASH_CONTROL' LIMIT 1`)[0];

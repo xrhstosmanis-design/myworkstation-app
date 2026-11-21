@@ -14,6 +14,9 @@ test('native registered HTTP withdrawal admits owner/SA/explicit responsible gra
   await db.$executeRawUnsafe("INSERT INTO \"Store\" VALUES ('store','company',true),('control','company',true),('foreign','other',true)");
   const staff=await installStaffActionPolicy(db,{companyId:'company',storeId:'store',capabilities:['payments.read','shifts.read']});
   await db.$executeRawUnsafe('ALTER TABLE "StorePaidModule" ADD COLUMN "companyId" text');
+  await db.$executeRawUnsafe('CREATE TABLE "OwnerCompanyAccess"("ownerId" text,"companyId" text,PRIMARY KEY("ownerId","companyId"))');
+  await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name") VALUES ('other','Other authorized company')`);
+  await db.$executeRawUnsafe(`INSERT INTO "CompanyModule"("id","companyId","moduleKey") VALUES ('other-cash','other','CASH_CONTROL')`);
   await db.$executeRawUnsafe("UPDATE \"BackofficeStaffGrant\" SET \"profile\"='MANAGER'");
   await db.$executeRawUnsafe(`INSERT INTO "User" ("id","companyId","role","fullName") VALUES ('owner','company','OWNER','Virtual Owner'),('sa','platform','SUPER_ADMIN','Virtual SA')`);
   await db.$executeRawUnsafe(`INSERT INTO "UserSession"("id","userId","expiresAt") VALUES ('owner-session','owner',now()+interval '1 hour'),('sa-session','sa',now()+interval '1 hour')`);
@@ -46,6 +49,14 @@ test('native registered HTTP withdrawal admits owner/SA/explicit responsible gra
    const own={...packet,amount:1,idempotencyKey:crypto.randomUUID()},p=await send('preview',{method:'POST',body:own});assert.equal(p.status,200,JSON.stringify(p));assert.equal((await send('confirm',{method:'POST',body:{...own,expectedSnapshot:p.body.expectedSnapshot}})).status,201);
   }
   assert.equal((await send('sessions?date=2026-01-02',{store:'foreign'})).status,404);
+  actor={id:'owner',companyId:'other',ownerCompanyId:'other',role:'OWNER',sessionId:'owner-session',sessionVersion:0,tokenType:'BACKOFFICE_USER'};
+  assert.equal((await send('sessions?date=2026-01-02',{store:'foreign'})).status,403);
+  await db.$executeRawUnsafe(`INSERT INTO "OwnerCompanyAccess" VALUES ('owner','other')`);
+  assert.equal((await send('sessions?date=2026-01-02',{store:'foreign'})).status,200);
+  actor.ownerCompanyId='company';assert.equal((await send('sessions?date=2026-01-02',{store:'foreign'})).status,403);actor.ownerCompanyId='other';
+  await db.$executeRawUnsafe(`DELETE FROM "OwnerCompanyAccess" WHERE "ownerId"='owner'`);
+  assert.equal((await send('sessions?date=2026-01-02',{store:'foreign'})).status,403);
+  actor={id:'owner',companyId:'company',role:'OWNER',sessionId:'owner-session',sessionVersion:0,tokenType:'BACKOFFICE_USER'};
   await db.$executeRawUnsafe(`INSERT INTO "StorePaidModule"("companyId","storeId","moduleKey","active") VALUES ('company','store','CASH_CONTROL',false)`);
   assert.equal((await send('sessions?date=2026-01-02')).status,403);
   const [s]=await db.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "id"='shift'`;assert.equal(Number(s.variance),2.82);assert.equal(Number(s.actualOperational),81.52);assert.equal(Number(s.nextOpeningTotal),81.52);
