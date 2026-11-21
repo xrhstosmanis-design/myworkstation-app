@@ -174,10 +174,36 @@ router.get("/:scheduleId/validation",async(req,res,next)=>{try{const context=awa
 router.post("/",async(req,res,next)=>{try{
   const context=await contextFor(req);context.requestUser=req.user;const body=z.object({periodStart:dateText,periodType:z.enum(["WEEK","MONTH"]).default("WEEK"),notes:z.string().trim().max(1000).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{});
   const start=body.periodType==="WEEK"?weekStart(body.periodStart):dayStart(`${body.periodStart.slice(0,7)}-01`),end=new Date(start);if(body.periodType==="WEEK")end.setUTCDate(end.getUTCDate()+6);else end.setUTCMonth(end.getUTCMonth()+1,0);
-  const active=await prisma.workforceSchedule.findFirst({where:{storeId:context.store.id,periodStart:start,periodEnd:end,status:{in:["DRAFT","PREVIEWED","APPROVED"]}}});if(active)throw Object.assign(new Error("Υπάρχει ήδη ενεργή πρόχειρη ή εγκεκριμένη έκδοση για το ίδιο διάστημα."),{status:409});
-  const published=await prisma.workforceSchedule.findFirst({where:{storeId:context.store.id,periodStart:start,periodEnd:end,status:"PUBLISHED"},include:scheduleInclude,orderBy:{version:"desc"}});
-  const created=await prisma.$transaction(async tx=>{if(published){await tx.workforceSchedule.update({where:{id:published.id},data:{status:"SUPERSEDED"}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_SUPERSEDED",entityType:"WORKFORCE_SCHEDULE",entityId:published.id,before:published,after:{status:"SUPERSEDED"},reason:body.reason})}const item=await tx.workforceSchedule.create({data:{companyId:context.company.id,storeId:context.store.id,periodStart:start,periodEnd:end,periodType:body.periodType,version:published?published.version+1:1,createdByUserId:req.user.id,notes:body.notes||null}});if(published?.assignments.length)await tx.workforceScheduleAssignment.createMany({data:published.assignments.map(row=>({scheduleId:item.id,date:row.date,shiftTemplateId:row.shiftTemplateId,employeeId:row.employeeId,slot:row.slot,status:"PLANNED",warningState:"OK",warningJson:null,note:row.note||null}))});const result=await tx.workforceSchedule.findUnique({where:{id:item.id},include:scheduleInclude});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_CREATED",entityType:"WORKFORCE_SCHEDULE",entityId:item.id,after:result,reason:body.reason});return result});
-  res.status(201).json({item:serialize(created),copiedFromPublished:Boolean(published)});
+  if(!Number.isFinite(+start)||!Number.isFinite(+end))return res.status(400).json({error:"Μη έγκυρη περίοδος προγράμματος."});
+  if(req.user?.staffAccess===true){
+    const storeScope={companyId:context.company.id,storeId:context.store.id};
+    const created=await prisma.$transaction(async tx=>{
+      await requireStaffGrant(tx,req.user,context.store.id,"schedule.create");
+      await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${"workforce-schedule:"+context.store.id},0))`;
+      const active=await tx.workforceSchedule.findFirst({where:{
+        ...storeScope,periodStart:{lte:end},periodEnd:{gte:start},status:{in:["DRAFT","PREVIEWED","APPROVED","PUBLISHED"]}
+      },select:{id:true}});
+      if(active)throw Object.assign(new Error("Υπάρχει ήδη πρόγραμμα που καλύπτει αυτό το διάστημα."),{status:409});
+      const periodScope={...storeScope,periodStart:start,periodEnd:end};
+      const latest=await tx.workforceSchedule.findFirst({where:periodScope,select:{version:true},orderBy:{version:"desc"}});
+      const item=await tx.workforceSchedule.create({data:{
+        ...periodScope,periodType:body.periodType,version:(latest?.version||0)+1,createdByUserId:req.user.id,notes:body.notes||null
+      }});
+      await audit(tx,req,{...storeScope,action:"WORKFORCE_SCHEDULE_CREATED",entityType:"WORKFORCE_SCHEDULE",entityId:item.id,after:item,reason:body.reason});
+      return item;
+    });
+    return res.status(201).json({item:{...storeScope,id:created.id,status:created.status},copiedFromPublished:false});
+  }
+  const {created,copiedFromPublished}=await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${"workforce-schedule:"+context.store.id},0))`;
+    const where={companyId:context.company.id,storeId:context.store.id,periodStart:start,periodEnd:end};
+    const active=await tx.workforceSchedule.findFirst({where:{...where,status:{in:["DRAFT","PREVIEWED","APPROVED"]}}});
+    if(active)throw Object.assign(new Error("Υπάρχει ήδη ενεργή πρόχειρη ή εγκεκριμένη έκδοση για το ίδιο διάστημα."),{status:409});
+    const published=await tx.workforceSchedule.findFirst({where:{...where,status:"PUBLISHED"},include:scheduleInclude,orderBy:{version:"desc"}});
+    const latest=await tx.workforceSchedule.findFirst({where,select:{version:true},orderBy:{version:"desc"}});
+    if(published){await tx.workforceSchedule.update({where:{id:published.id},data:{status:"SUPERSEDED"}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_SUPERSEDED",entityType:"WORKFORCE_SCHEDULE",entityId:published.id,before:published,after:{status:"SUPERSEDED"},reason:body.reason})}const item=await tx.workforceSchedule.create({data:{companyId:context.company.id,storeId:context.store.id,periodStart:start,periodEnd:end,periodType:body.periodType,version:(latest?.version||0)+1,createdByUserId:req.user.id,notes:body.notes||null}});if(published?.assignments.length)await tx.workforceScheduleAssignment.createMany({data:published.assignments.map(row=>({scheduleId:item.id,date:row.date,shiftTemplateId:row.shiftTemplateId,employeeId:row.employeeId,slot:row.slot,status:"PLANNED",warningState:"OK",warningJson:null,note:row.note||null}))});const result=await tx.workforceSchedule.findUnique({where:{id:item.id},include:scheduleInclude});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_CREATED",entityType:"WORKFORCE_SCHEDULE",entityId:item.id,after:result,reason:body.reason});return {created:result,copiedFromPublished:Boolean(published)};
+  });
+  res.status(201).json({item:serialize(created),copiedFromPublished});
 }catch(error){next(error)}});
 
 const assignmentBody=z.object({version:z.coerce.number().int().positive(),date:dateText,shiftTemplateId:z.string().min(1),employeeId:z.string().min(1).nullable().optional(),slot:z.coerce.number().int().min(1).max(100).default(1),note:z.string().trim().max(1000).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)});

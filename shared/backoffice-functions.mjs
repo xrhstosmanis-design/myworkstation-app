@@ -116,6 +116,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "edit",
       "approve",
       "reject",
+      "cancel",
       "delete"
     ]
   },
@@ -127,6 +128,8 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "read",
       "correct",
       "approve",
+      "approve-review",
+      "approve-overtime",
       "export",
       "print"
     ]

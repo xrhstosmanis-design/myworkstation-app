@@ -227,6 +227,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 21/11 No5 — added selectable store-scoped leave request creation, with live authorization, eligible employee selection and replay-safe submission. [Checkpoint](CHANGES/2026-11-21-no5-owner-parity.md).
 
+21/11 No5 — selectable attendance correction, review and overtime approval plus first schedule draft. Fixed catalogue and all-rights PostgreSQL fixture regressions. Joint CI and LAB acceptance pending. [Checkpoint](CHANGES/2026-11-21-no5-owner-parity.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
