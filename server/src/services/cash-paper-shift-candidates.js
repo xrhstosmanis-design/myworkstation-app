@@ -44,10 +44,18 @@ export function handwrittenShiftCandidates({scope,extraction,originals,selectedI
    if(fields.has(key)){conflict=true;break;}fields.set(key,{field:key,line:index,amountCents:line.amountCents});
   }
   if(conflict||fields.size<2||![...fields.values()].some(f=>f.field!=='openingOperational'&&f.amountCents>0))continue;
+  const heading=extraction.lines[from-1];
+  const printedName=heading?.kind==='OTHER'&&!heading.uncertain&&!heading.requiresReview&&
+    heading.amountText===null&&heading.quantityText===null&&heading.timeText===null
+    ?normalized(heading.label).match(/^ΧΕΙΡΙΣΤΗΣ:\s*([\p{L} ]+)$/u)?.[1]:null;
+  const nameParts=printedName?.split(' ').filter(Boolean)??[];
+  if(normalized(heading?.label).startsWith('ΧΕΙΡΙΣΤΗΣ:')&&!nameParts.length)continue;
   const candidates=originals.filter(original=>{
    const s=original.session,opened=day(s.openedAt),closed=day(s.closedAt);
    if(s.companyId!==scope.companyId||s.storeId!==scope.storeId||s.status!=='CLOSED'||!s.id||!s.terminalPos||!original.sourceHash||!opened||!closed||new Date(s.closedAt)<new Date(s.openedAt))return false;
    if(printedDate?opened!==printedDate:opened.slice(5)!==partial)return false;
+   const operatorParts=normalized(s.openedByName).split(' ');
+   if(nameParts.length&&(!s.openedByName||!nameParts.every(part=>part.length>=2&&operatorParts.includes(part))))return false;
    return [...fields.values()].every(f=>exactCents(s[f.field]??original.automaticSnapshot?.[f.field])===f.amountCents);
   });
   if(candidates.length!==1)continue;

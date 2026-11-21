@@ -14,6 +14,8 @@ test('native chat cash discovery: real owned SQL, late upload unassigned, exact 
   const out=await readCashChatEvidence(db,{companyId:'c',storeId:'s'});assert.equal(out.sources.length,1);assert.equal(out.sources[0].references.length,2);assert.equal(out.sources[0].documentDate,null);assert.equal(out.sources[0].sessionId,null);assert.equal(out.complete,false);assert.doesNotMatch(JSON.stringify(out),/foreign|voice|original/);
   assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreChatMessage" ORDER BY "id"`,before);
   await db.$executeRaw`INSERT INTO "StoreChatMessage" SELECT 'extra-'||g,'c','s','GENERAL','2026-10-27 12:00','other','image/png',7,NULL,'original' FROM generate_series(1,51) g`;
+  const cashOnly=await readCashChatEvidence(db,{companyId:'c',storeId:'s'});assert.equal(cashOnly.sources.length,1);
+  await db.$executeRaw`UPDATE "StoreChatMessage" SET "category"='SHIFT' WHERE "id" LIKE 'extra-%'`;
   const capped=await readCashChatEvidence(db,{companyId:'c',storeId:'s'});assert.equal(capped.status,'LIMITED');assert.equal(capped.sources.length,50);
   await db.$executeRawUnsafe('DROP TABLE "StoreChatMessage"');assert.equal((await readCashChatEvidence(db,{companyId:'c',storeId:'s'})).status,'UNAVAILABLE');
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}

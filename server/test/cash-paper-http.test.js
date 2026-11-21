@@ -41,6 +41,26 @@ test('mounted real HTTP GET is free/read-only; explicit POST reads once, reuses 
   const body={messageId:'m',checksum,generation:'0'};let out=await request('/stores/s/read',body);assert.equal(out.status,200);assert.equal(out.body.status,'EXTRACTED_UNVERIFIED');assert.equal(out.body.extraction.associationVerified,false);assert.equal(paid,1);assert.equal(f.records.length,2);
   out=await request('/stores/s/read',body);assert.equal(out.body.reused,true);assert.equal(paid,1);assert.equal(f.records.length,2);
   assert.equal((await request('/stores/s/read',{...body,role:'SUPER_ADMIN'})).status,400);assert.equal((await request('/stores/s/read',{...body,checksum:'a'.repeat(64)})).status,409);assert.equal((await request('/stores/foreign/read',body)).status,404);assert.equal(paid,1);
+  assert.equal((await request('/stores/s/reread',body)).body.code,'CASH_PAPER_REREAD_UNAVAILABLE');
+  const legacy=f.records.find(record=>record.action==='CASH_PAPER_COMPLETED');
+  delete legacy.afterJson.readerRevision; // Seed the representation used before multi-shift readings.
+  const previousRecords=JSON.stringify(f.records);
+  assert.equal((await request('/stores/s')).body.sources[0].reading.canReread,true);
+  f.role='EMPLOYEE';
+  assert.equal((await request('/stores/s/reread',body)).status,403);
+  f.role='OWNER';
+  assert.equal(paid,1);
+  const revised=await request('/stores/s/reread',body);
+  assert.equal(revised.status,200);
+  assert.notEqual(revised.body.sourceKey,legacy.entityId);
+  assert.equal((await request('/stores/s/reread',body)).body.reused,true);
+  const saved=(await request('/stores/s')).body.sources[0].reading;
+  assert.equal(saved.sourceKey,revised.body.sourceKey);
+  assert.equal(saved.readerRevision,'MULTI_SHIFT_V1');
+  assert.equal(saved.canReread,undefined);
+  assert.equal(paid,2);
+  assert.equal(f.records.length,4);
+  assert.equal(JSON.stringify(f.records.slice(0,2)),previousRecords);
   assert.equal(JSON.stringify(f.original),before);assert(f.records.every(r=>r.entityType==='CASH_PAPER_READING'));assert(!f.calls.some(q=>/StoreTransaction|CashControlReview|INSERT INTO "Sale"|AiReaderJob/.test(q)));
  }finally{await new Promise(resolve=>server.close(resolve));}
 });

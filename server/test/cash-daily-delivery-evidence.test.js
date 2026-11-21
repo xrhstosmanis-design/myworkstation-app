@@ -35,3 +35,13 @@ test('daily evidence bounds display and discloses additional comparisons',()=>{
   assert.equal(evidence.shifts[0].omittedComparisons,1);
   assert.equal(evidence.shifts[0].netlink,null);
 });
+
+test('three candidate shifts name the POS operator separately and remain unverified in email',()=>{
+ const rows=['Αλέξανδρος','Βασίλης','Κωνσταντίνος'].map((operatorName,i)=>({sessionId:String(i),operatorName,day:'2026-11-18',shiftLabel:'Βάρδια '+(i+1),terminalPos:'MAIN'}));
+ const shiftCandidates=rows.map(({sessionId})=>({sessionId,status:'UNVERIFIED_CANDIDATE'}));
+ shiftCandidates.push({sessionId:'outside',status:'UNVERIFIED_CANDIDATE'});
+ const evidence=projectDailyCashEvidence({coverage:{complete:false},items:[],shiftCandidates},new Map(),rows.map(r=>r.sessionId));
+ assert.deepEqual(evidence.shifts.map(s=>s.handwrittenCandidates),[1,1,1]);
+ const mail=dailyCashEvidenceText(evidence,{rows,storeName:'LAB',period:{from:'2026-11-18',to:'2026-11-18'}});
+ for(const row of rows)assert.ok(mail.some(text=>text.includes(row.operatorName)&&text.endsWith('προς έλεγχο.')));
+});

@@ -16,10 +16,16 @@ test('durable intent reuses an uncertain or successful outcome and makes only on
 test('original image preparation decodes bounded pixels; broken image/PDF fail before provider dispatch',async()=>{
  let paid=0;
  const provider=createCashPaperProvider({env:{OPENAI_API_KEY:'synthetic'},meter:async()=>{paid++;throw Error('unexpected dispatch')}});
- const bytes=await sharp({create:{width:12,height:8,channels:4,background:'#ff000080'}}).png().toBuffer();
+ const bytes=await sharp({create:{width:12,height:8,channels:4,background:'#ff000080'}})
+  .composite([{input:{create:{width:4,height:4,channels:4,background:'#0000ff'}},top:0,left:0}])
+  .png().toBuffer();
  const prepared=await provider.prepare({mimeType:'image/png',bytes,filename:'paper.png'});
- assert.equal(prepared.length,1);assert.equal(prepared[0].type,'input_image');
+ assert.equal(prepared.length,2);assert(prepared.every(view=>view.type==='input_image'));
  const output=await sharp(Buffer.from(prepared[0].image_url.split(',')[1],'base64')).metadata();assert.equal(output.format,'jpeg');assert.equal(output.width,12);assert.equal(output.height,8);
+ const [original,rotated]=await Promise.all(prepared.map(view=>sharp(Buffer.from(view.image_url.split(',')[1],'base64')).raw().toBuffer()));
+ assert(original[2]>original[0]);
+ assert(rotated[2]<rotated[0]);
+ assert(rotated.at(-1)>rotated.at(-3));
  await assert.rejects(provider.prepare({mimeType:'image/png',bytes:Buffer.from('broken'),filename:'broken.png'}));
  await assert.rejects(provider.prepare({mimeType:'application/pdf',bytes:Buffer.from('%PDF-broken'),filename:'broken.pdf'}));assert.equal(paid,0);
 });

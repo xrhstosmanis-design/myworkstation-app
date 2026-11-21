@@ -43,7 +43,7 @@ test('native stored preview: same-snapshot original validation, aggregate admiss
   const normal=await read();assert.equal(normal.evidence.coverage.readCount,1);assert.equal(normal.evidence.items[0].status,'MATCHED');assert.equal(normal.evidence.coverage.complete,true);assert.deepEqual(normal.validated,['good']);
   // Unrelated, unread metadata must not suppress the good original. It is not
   // fetched as an original and cannot satisfy paid admission or coverage.
-  await db.$executeRaw`INSERT INTO "StoreChatMessage" VALUES ('oversized','c','s','GENERAL','2026-11-01 14:00','unrelated.pdf','application/pdf',${automaticPaperByteLimit+1},${'b'.repeat(64)},'JVBERi0=')`;
+  await db.$executeRaw`INSERT INTO "StoreChatMessage" VALUES ('oversized','c','s','CASH','2026-11-01 14:00','unrelated.pdf','application/pdf',${automaticPaperByteLimit+1},${'b'.repeat(64)},'JVBERi0=')`;
   const over=await read();assert.equal(over.admitted.reason,'ATTACHMENT_BYTE_LIMIT');assert.deepEqual(over.admitted.sources,[]);
   assert.equal(over.evidence.coverage.readCount,1);assert.equal(over.evidence.coverage.complete,false);assert.equal(over.evidence.status,'INCOMPLETE');assert.equal(over.preview.discovery.status,'LIMITED');assert.deepEqual(over.validated,['good']);
   assert.equal(over.evidence.items.find(i=>i.checksum===checksum).status,'MATCHED');

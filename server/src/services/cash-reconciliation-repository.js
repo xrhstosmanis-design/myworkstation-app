@@ -14,9 +14,9 @@ import {readKioskCashEvidence} from './cash-kiosk-imports.js';
 export function createCashReconciliationRepository(db){
   async function generation(scope){const s=await readLifecycleGeneration(db,scope);if(s.maintenance||s.retired)throw reconcileError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
   async function state(tx,scope){const key=scopeKey(scope),rows=await tx.$queryRaw`SELECT "id","companyId","storeId","action","entityType","entityId","afterJson","createdAt" FROM "WorkforceAuditLog" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "entityType"=${reconciliationEntity} AND "entityId"=${key} ORDER BY "createdAt","id" LIMIT ${reconciliationLimit+1}`;return chainState(rows,scope);}
-  async function paperReading(tx,scope,data){
+  async function paperReading(tx,scope,data,historical=false){
     const papers=createCashPaperRepository(tx);await papers.source(scope,data.messageId,data.checksum);
-    const reading=await papers.get(scope,data.checksum);
+    const reading=await (historical?papers.getHistorical(scope,data.checksum,data.sourceKey):papers.get(scope,data.checksum));
     if(reading.status!=='EXTRACTED_UNVERIFIED'||reading.sourceKey!==data.sourceKey)throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
     return reading;
   }
@@ -40,7 +40,7 @@ export function createCashReconciliationRepository(db){
     const readings=new Map(),fileKey=d=>JSON.stringify([d.messageId,d.checksum,d.sourceKey]);
     if(new Set(associations.map(r=>fileKey(r.data))).size>50)throw reconcileError('CASH_RECONCILIATION_LIMIT');
     for(const r of associations){
-      try{const key=fileKey(r.data);if(!readings.has(key)){try{readings.set(key,await paperReading(tx,scope,r.data));}catch{readings.set(key,null);}}
+      try{const key=fileKey(r.data);if(!readings.has(key)){try{readings.set(key,await paperReading(tx,scope,r.data,true));}catch{readings.set(key,null);}}
         if(!readings.get(key))throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
         const proof=await paperProof(tx,scope,r.data,readings.get(key)),s=source.sessions.get(r.data.sessionId),t=r.data.transactionId?s.transactions.find(t=>t.id===r.data.transactionId):null;
         validity.set(r.id,proof.paperLineHash===r.proof.paperLineHash&&(!r.data.transactionId||transactionMatchesPaper(r.data.confirmedKind,t,r.data.confirmedAmountCents)));
@@ -112,7 +112,8 @@ export function createCashReconciliationRepository(db){
         proof={...proof,question:cashIssueQuestion(issue),reportHash:report.reportHash};
       }else if(d.kind==='ASSOCIATE'){
         const s=source.sessions.get(d.sessionId);if(!source.selectedIds.includes(d.sessionId)||!s||s.sourceHash!==d.sourceHash)throw reconcileError('CASH_RECONCILIATION_SOURCE_CHANGED');
-        if(active.some(r=>r.data.kind==='ASSOCIATE'&&r.data.sourceKey===d.sourceKey&&r.data.line===d.line))throw reconcileError('CASH_RECONCILIATION_LINE_USED');
+        if(active.some(r=>r.data.kind==='ASSOCIATE'&&r.data.checksum===d.checksum&&
+          (r.data.sourceKey!==d.sourceKey||r.data.line===d.line)))throw reconcileError('CASH_RECONCILIATION_LINE_USED');
         const p=await paperProof(tx,scope,d),t=d.transactionId?s.transactions.find(t=>t.id===d.transactionId):null;
         if(d.transactionId&&!transactionMatchesPaper(d.confirmedKind,t,d.confirmedAmountCents))throw reconcileError('CASH_RECONCILIATION_TRANSACTION_MISMATCH');
         proof={...proof,...p,sourceHash:s.sourceHash};

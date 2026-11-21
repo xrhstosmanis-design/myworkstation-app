@@ -1,4 +1,4 @@
-- 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
+- 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
 
 ## 21/11/2026,20:18Ελλάδας — No02 — recovery source4048 TECHNICAL LIVE / SCOPE GAPS OPEN
 
