@@ -68,12 +68,13 @@ import androidx.test.platform.app.InstrumentationRegistry;import androidx.lifecy
    scenario.onActivity(activity -> {
     try {
      AlertDialog confirm = (AlertDialog)get(activity, "imageDialog");
-     assertTrue(confirm.isShowing());
+     assertTrue("The removal confirmation is visible", confirm.isShowing());
      confirm.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
     } catch (Exception exception) { throw new AssertionError(exception); }
    });
-   waitForRequest(scenario);
-   assertEquals("/api/store-chat/stores/store-a/groups/group-a/remove-member:member-a", mutation.get());
+   for (int attempt = 0; attempt < 100 && mutation.get() == null; attempt++) SystemClock.sleep(30);
+   assertEquals("The positive confirmation sends one scoped removal",
+       "/api/store-chat/stores/store-a/groups/group-a/remove-member:member-a", mutation.get());
   }
  }
 
@@ -82,7 +83,7 @@ import androidx.test.platform.app.InstrumentationRegistry;import androidx.lifecy
    try {
     AlertDialog dialog = (AlertDialog)get(activity, "imageDialog");
     android.widget.ListView list = dialog.getListView();
-    list.performItemClick(list.getChildAt(0), 0, list.getAdapter().getItemId(0));
+    assertTrue("Moderation entry is visible and clickable", list.performItemClick(list.getChildAt(0), 0, list.getAdapter().getItemId(0)));
    } catch (Exception exception) { throw new AssertionError(exception); }
   });
  }
