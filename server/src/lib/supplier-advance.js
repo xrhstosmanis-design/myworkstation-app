@@ -18,14 +18,18 @@ async function assertReclassificationUnlinked(db,scope,row){
  if(payroll.length||documents.length)fail(409,'Το έξοδο συνδέεται με μισθοδοσία ή παραστατικό και δεν μπορεί να μεταφερθεί ως έναντι.');
 }
 export async function supplierAdvanceContext(db,scope){
- owner(scope);const row=await original(db,scope);eligible(row);await assertReclassificationUnlinked(db,scope,row);
+ if(scope.authorize)await scope.authorize(db);else owner(scope);
+ const row=await original(db,scope);eligible(row);await assertReclassificationUnlinked(db,scope,row);
  const suppliers=await db.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${scope.companyId} AND "active"=true ORDER BY "name"`;
+ if(scope.authorize)await scope.authorize(db);
  return {transactionId:row.id,storeId:scope.storeId,amount:Number(row.amount),description:row.description,occurredAt:row.occurredAt,expectedVersion:digest(row),suppliers};
 }
 const conversionSchema=z.object({supplierId:z.string().trim().min(1).max(180),expectedVersion:z.string().regex(/^[a-f0-9]{64}$/),expectedAmount:money,reason:z.string().trim().min(3).max(500),acknowledged:z.literal(true),idempotencyKey:z.string().uuid()}).strict();
 export async function associateExpenseAsAdvance(db,scope,input){
- owner(scope);const body=conversionSchema.parse(input),requestHash=digest(body);
+ if(!scope.authorize)owner(scope);
+ const body=conversionSchema.parse(input),requestHash=digest(body);
  return db.$transaction(async tx=>{
+  if(scope.authorize)await scope.authorize(tx);
   const row=await original(tx,scope,true);
   const previous=await tx.$queryRaw`SELECT "id","actorId","details" FROM "StoreOperatorAudit" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "eventType"='OTHER_EXPENSE_SUPPLIER_ADVANCE' AND "details"->>'transactionId'=${row.id} LIMIT 1`;
   if(previous[0]){if(previous[0].actorId!==scope.user.id||previous[0].details.requestHash!==requestHash)fail(409,'Το έξοδο έχει ήδη συνδεθεί με προμηθευτή.');return {...previous[0].details.result,duplicate:true};}
@@ -47,6 +51,7 @@ export async function associateExpenseAsAdvance(db,scope,input){
   const result={ok:true,transactionId:row.id,settlementId,amount:Number(row.amount),advanceAmount:Number(row.amount),status:'PENDING_REVIEW'};
   const details={transactionId:row.id,requestHash,idempotencyKey:body.idempotencyKey,reason:body.reason,supplierId:suppliers[0].id,supplierName:suppliers[0].name,before:{type:row.type,supplierId:row.supplierId,supplierName:row.supplierName,amount:Number(row.amount),sessionId:row.sessionId,occurredAt:row.occurredAt,description:row.description,subtractFromShift:row.subtractFromShift,paymentMethod:row.paymentMethod,review:reviews[0]},result,cashDelta:0};
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${auditId},${scope.companyId},${scope.storeId},${row.actorId},${scope.user.id},'OTHER_EXPENSE_SUPPLIER_ADVANCE',${JSON.stringify(details)}::jsonb)`;
+  if(scope.authorize)await scope.authorize(tx);
   return result;
  });
 }

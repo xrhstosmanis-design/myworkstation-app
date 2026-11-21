@@ -503,6 +503,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "read",
       "expense-confirm",
+      "supplier-recovery",
       "approve",
       "reject",
       "request-proof",
