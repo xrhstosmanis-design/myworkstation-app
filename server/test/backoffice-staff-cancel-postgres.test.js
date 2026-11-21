@@ -16,7 +16,6 @@ test('native actual delegated cancellation preserves fiscal/same-terminal gates 
  try{
   const user=await installStaffActionPolicy(db,{capabilities:['sales.read']});
   for(const sql of [
-   'ALTER TABLE "StoreProduct" ADD COLUMN "active" boolean DEFAULT true',
    'ALTER TABLE "StoreTransaction" ADD COLUMN "sessionId" text,ADD COLUMN "actorId" text,ADD COLUMN "actorName" text',
    'CREATE TABLE "CashShiftSession" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"terminalPos" text,"status" text,"openedAt" timestamptz DEFAULT now())',
    'CREATE TABLE "Sale" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorEmployeeId" text,"customerId" text,"fiscalStatus" text,"subtotal" numeric,"discount" numeric DEFAULT 0,"total" numeric,"status" text,"source" text,"occurredAt" timestamptz DEFAULT now(),"createdAt" timestamptz DEFAULT now(),"transactionMode" text,"originalSaleId" text,"reversalKind" text,"reversalState" text,"reversedAt" timestamptz,"reversedBy" text,"reversedByName" text)',
