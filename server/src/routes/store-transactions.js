@@ -943,16 +943,28 @@ router.post("/other-expenses/:reviewId/supplier-advance",requireSuperAdminSettle
   const scope=await expenseAdvanceScope(req);res.json(await associateExpenseAsAdvance(prisma,scope,req.body));
 }));
 
-router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+function requireExpenseConfirmation(req,res,next){
+  if(req.user?.staffAccess===true&&req.staffGrant?.capability==='approvals.expense-confirm')return next();
+  return requireSuperAdminSettlementReview(req,res,next);
+}
+router.post("/other-expenses/:reviewId/review",requireExpenseConfirmation,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
   const status="CONFIRMED";
+  const storeId=req.user?.staffAccess===true?req.user.storeId:null;
   const rows=await prisma.$transaction(async tx=>{
-    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    if(req.user?.staffAccess===true){
+      if(!storeId||body.note.length<3)throw staffError(400,'CONFIRMATION_REQUIRED','Απαιτείται αιτιολογία επιβεβαίωσης.');
+      await requireStaffGrant(tx,req.user,storeId,'approvals.expense-confirm');
+    }
+    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND (${storeId}::text IS NULL OR ("storeId"=${storeId} AND EXISTS (
+      SELECT 1 FROM "StoreTransaction" st WHERE st."id"="OtherExpenseReview"."transactionId" AND st."companyId"="OtherExpenseReview"."companyId" AND st."storeId"=${storeId} AND st."reversedAt" IS NULL
+    ))) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(!updated[0])return updated;
     await tx.$executeRaw`
       UPDATE "BankLedgerEntry" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
       WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
+        AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
     `;
     const transaction=await tx.$queryRaw`SELECT "amount","description" FROM "StoreTransaction" WHERE "id"=${updated[0].transactionId} AND "companyId"=${updated[0].companyId} LIMIT 1`;

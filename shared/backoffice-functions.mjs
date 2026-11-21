@@ -501,6 +501,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "scope": "STORE",
     "actions": [
       "read",
+      "expense-confirm",
       "approve",
       "reject",
       "request-proof",
