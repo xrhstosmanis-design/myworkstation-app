@@ -17,7 +17,10 @@ async function mount(Component,props){
   return {dom,act:React.act,async render(next){await React.act(async()=>root.render(React.createElement(Component,next)))},async close(){await React.act(async()=>root.unmount());dom.window.close();for(const k of keys){const d=saved.get(k);if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k]}}};
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
-const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+const button=text=>{
+  const buttons=[...document.querySelectorAll('button')].filter(b=>!b.closest('.staff-menu-groups'));
+  return buttons.find(b=>b.textContent.trim()===text) || buttons.find(b=>b.textContent.includes(text));
+};
 test('personal inventory page navigation clears old detail, uses scoped cursors and refresh resets to page one',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
  const row=id=>({id,name:'PAGE '+id,status:'DRAFT',storeId:'a1',lines:[]});
