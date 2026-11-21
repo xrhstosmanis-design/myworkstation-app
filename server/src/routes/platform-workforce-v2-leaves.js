@@ -1,3 +1,4 @@
+import {staffRequestCapability} from '../../../shared/backoffice-staff.mjs';
 import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {z} from "zod";
@@ -25,8 +26,8 @@ router.post("/:leaveId/decision",async(req,res,next)=>{try{const c=await context
 const updated=await prisma.$transaction(async tx=>{
   const where={id:String(req.params.leaveId),companyId:c.company.id};
   if(delegated){
-    if(b.status==='CANCELLED')throw Object.assign(new Error('Δεν επιτρέπεται η ακύρωση.'),{status:403});
-    await requireStaffGrant(tx,req.user,c.store.id,b.status==='APPROVED'?'leaves.approve':'leaves.reject');
+    const capability=staffRequestCapability(req.method,req.originalUrl.split('?')[0],b);
+    await requireStaffGrant(tx,req.user,c.store.id,capability);
     where.storeId=c.store.id;
     where.employee={companyId:c.company.id,baseStoreId:c.store.id,storeAccess:{none:{active:true,storeId:{not:c.store.id}}}};
   }

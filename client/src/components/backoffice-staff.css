@@ -36,3 +36,31 @@
 .staff-read-report tbody tr:nth-child(even){background:#f2f7fc}
 .staff-read-report td:has(details){min-width:150px}
 .staff-read-report [role="alert"]{padding:10px;background:#fff1f0;color:#9a241d;border-radius:6px}
+
+.staff-backoffice .staff-menu-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.staff-backoffice .staff-menu-groups button {
+  padding: 9px 14px;
+  min-height: 40px;
+  border: 1px solid #c8d8e8;
+  border-radius: 8px;
+  background: #f2f7fc;
+  color: #17324b;
+  font-weight: 650;
+  text-align: left;
+}
+.staff-backoffice .staff-menu-groups button[aria-expanded="true"] {
+  background: #203653;
+  color: #fff;
+  border-color: #203653;
+}
+.staff-backoffice .staff-store-nav[hidden] { display: none; }
+.staff-backoffice .staff-store-nav:not([hidden]) {
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #d8e3ee;
+  border-radius: 8px;
+}

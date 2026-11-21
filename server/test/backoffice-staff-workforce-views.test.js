@@ -55,3 +55,21 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
  });
 }
+
+test('workforce leave decisions require the matching scoped grant',async()=>{
+ const source=await readFile(new URL('../src/routes/workforce-v2-access.js',import.meta.url),'utf8');
+ const managementGuard=new Function('staffRequestCapability',source.slice(source.indexOf('export function managementGuard'),source.indexOf('export function cleanText')).replace('export function','function')+'\nreturn managementGuard;')(staffRequestCapability);
+ const decisions=[['APPROVED','leaves.approve'],['REJECTED','leaves.reject'],['CANCELLED','leaves.cancel']];
+ const request={method:'POST',originalUrl:base+'/company/stores/store/workforce-v2/leaves/leave/decision',
+  user:{staffAccess:true,companyId:'company',storeId:'store'},params:{companyId:'company',storeId:'store'}};
+ const result=(status,capability,params=request.params)=>managementGuard({...request,body:{status},staffGrant:{capability},params},
+  {status:code=>({json:()=>code})},()=>200);
+ for(const [status,capability] of decisions){
+  assert.equal(result(status,capability),200);
+  assert.equal(result(status,'leaves.read'),403);
+  for(const [,other] of decisions.filter(([,right])=>right!==capability))assert.equal(result(status,other),403);
+  assert.equal(result(status,capability,{companyId:'company',storeId:'other'}),403);
+  assert.equal(result(status,capability,{companyId:'other',storeId:'store'}),403);
+ }
+ assert.equal(result(undefined,'leaves.approve'),403);
+});

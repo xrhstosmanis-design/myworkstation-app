@@ -223,6 +223,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 21/11 No5 — Σύνδεση υπάρχοντος εξόδου ως έναντι. [Checkpoint](CHANGES/2026-11-21-no5-supplier-recovery.md).
 
+21/11 No5 — Owner comparison: separate bulk selection for available company views, matching action grants for leave approval/rejection/cancellation, scoped to the original store. Six focused tests pass. Full combined CI and LAB pending. [Checkpoint](CHANGES/2026-11-21-no5-owner-parity.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
@@ -863,6 +865,10 @@ Source4103/headde7368170dd8324d3a79475b1df2e8c93bac857b passed exactCI4478107368
 ## No02 — printed discounts at initial myDATA prefill claim20Nov
 
 Retained /root, branchfix/no2-printed-discounts-20261120. Before-source independent initial-insert adapter for explicitly printed PDF original price/discounts, first verified e-invoicing layout; source-text proof, precision-bound rows and clear UNKNOWN metadata/UI. No No4 transfer/writer/model/wallet changes or existing draft rewrite. [Claim](CHANGES/2026-11-20-no2-printed-discounts-claim.md). NOT IMPLEMENTED/NOT TESTED; source starts only after green merged claim.
+
+## 21/11/2026 — Μενού Υπευθύνου ανά λειτουργία
+
+Ομαδοποίηση των προβολών καταστήματος βάσει δικαιωμάτων. [Καταγραφή](CHANGES/2026-11-21-staff-functional-menu.md).
 
 ## INVOICE-PAYMENT-RECOVERY-01 — ASSIGNED / CLAIM ONLY — 21/11/2026
 
