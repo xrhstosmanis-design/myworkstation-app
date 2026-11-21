@@ -62,8 +62,10 @@ import androidx.test.platform.app.InstrumentationRegistry;import androidx.lifecy
    });
    waitForRequest(scenario);
    clickModerationEntry(scenario);
+   InstrumentationRegistry.getInstrumentation().waitForIdleSync();
    waitForRequest(scenario);
    clickModerationEntry(scenario);
+   InstrumentationRegistry.getInstrumentation().waitForIdleSync();
    assertNull(mutation.get());
    scenario.onActivity(activity -> {
     try {
