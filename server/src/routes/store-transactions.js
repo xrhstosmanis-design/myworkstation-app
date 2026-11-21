@@ -204,7 +204,15 @@ function route(handler){
 
 function requireLedgerAccess(req,res,next){
   if(delegatedApprovalsRead(req))return next();
-  if(req.user?.staffAccess===true&&['sales.read','payments.supplier','payments.expense'].includes(req.staffGrant?.capability))return next();
+  if(req.user?.staffAccess===true){
+    const capability=req.staffGrant?.capability;
+    const path=String(req.originalUrl||"").split("?")[0];
+    if(['sales.read','payments.supplier','payments.expense'].includes(capability))return next();
+    if(capability==='approvals.expense-confirm'&&req.method==='POST'&&/^\/api\/transactions\/other-expenses\/[^/]+\/review$/.test(path))return next();
+    if(capability==='approvals.supplier-recovery'&&['GET','POST'].includes(req.method)&&/^\/api\/transactions\/other-expenses\/[^/]+\/supplier-advance$/.test(path))return next();
+    if(capability==='payments.advance-allocate'&&req.method==='POST'&&/^\/api\/transactions\/stores\/[^/]+\/supplier-advances\/[^/]+\/allocate$/.test(path))return next();
+    return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
+  }
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
@@ -562,7 +570,7 @@ async function availableSupplierAdvances(companyId,storeId,supplierId){
 
 router.post("/stores/:storeId/supplier-advances/:settlementId/allocate",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);await ownedStore(req.params.storeId,req.user.companyId);
-  res.json(await allocateSupplierAdvance(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,settlementId:req.params.settlementId,user:req.user},req.body));
+  res.json(await allocateSupplierAdvance(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,settlementId:req.params.settlementId,user:req.user,authorize:req.user.staffAccess===true?db=>requireStaffAction(db,req,req.params.storeId,'payments.advance-allocate'):null},req.body));
 }));
 
 router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
@@ -930,16 +938,26 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
   res.json({items:checkedItems,companies,stores});
 }));
 
-async function expenseAdvanceScope(req){
-  const companyId=reviewScopeCompanyId(req);
-  const rows=await prisma.$queryRaw`SELECT er."companyId",er."storeId",er."transactionId" FROM "OtherExpenseReview" er JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId" WHERE er."id"=${req.params.reviewId} AND (${companyId}::text IS NULL OR er."companyId"=${companyId}) AND st."active"=true LIMIT 1`;
-  if(!rows[0]){const error=new Error("Δεν βρέθηκε το έξοδο στο ενεργό κατάστημα.");error.status=404;throw error}
-  return {...rows[0],user:req.user};
+function requireExpenseAdvanceAccess(req,res,next){
+  if(req.user?.staffAccess===true){
+    if(req.staffGrant?.capability==='approvals.supplier-recovery'&&req.user.storeId)return next();
+    return next(staffError());
+  }
+  return requireSuperAdminSettlementReview(req,res,next);
 }
-router.get("/other-expenses/:reviewId/supplier-advance",requireSuperAdminSettlementReview,route(async(req,res)=>{
+async function expenseAdvanceScope(req){
+  const storeId=req.user?.staffAccess===true?req.user.storeId:null;
+  const authorize=storeId?db=>requireStaffAction(db,req,storeId,'approvals.supplier-recovery'):null;
+  if(authorize)await authorize(prisma);
+  const companyId=reviewScopeCompanyId(req);
+  const rows=await prisma.$queryRaw`SELECT er."companyId",er."storeId",er."transactionId" FROM "OtherExpenseReview" er JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId" WHERE er."id"=${req.params.reviewId} AND (${companyId}::text IS NULL OR er."companyId"=${companyId}) AND (${storeId}::text IS NULL OR er."storeId"=${storeId}) AND st."active"=true LIMIT 1`;
+  if(!rows[0]){const error=new Error("Δεν βρέθηκε το έξοδο στο ενεργό κατάστημα.");error.status=404;throw error}
+  return {...rows[0],user:req.user,authorize};
+}
+router.get("/other-expenses/:reviewId/supplier-advance",requireExpenseAdvanceAccess,route(async(req,res)=>{
   const scope=await expenseAdvanceScope(req);res.json({...await supplierAdvanceContext(prisma,scope),companyId:scope.companyId});
 }));
-router.post("/other-expenses/:reviewId/supplier-advance",requireSuperAdminSettlementReview,route(async(req,res)=>{
+router.post("/other-expenses/:reviewId/supplier-advance",requireExpenseAdvanceAccess,route(async(req,res)=>{
   const scope=await expenseAdvanceScope(req);res.json(await associateExpenseAsAdvance(prisma,scope,req.body));
 }));
 

@@ -101,6 +101,8 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "create",
       "edit",
       "publish",
+      "preview",
+      "approve",
       "delete",
       "export",
       "print"
@@ -116,6 +118,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "edit",
       "approve",
       "reject",
+      "cancel",
       "delete"
     ]
   },
@@ -127,6 +130,8 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "read",
       "correct",
       "approve",
+      "approve-review",
+      "approve-overtime",
       "export",
       "print"
     ]
@@ -443,6 +448,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "label": "Πληρωμές",
     "scope": "STORE",
     "actions": [
+      "advance-allocate",
       "read",
       "supplier",
       "expense",
@@ -504,6 +510,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "read",
       "expense-confirm",
+      "supplier-recovery",
       "approve",
       "reject",
       "request-proof",

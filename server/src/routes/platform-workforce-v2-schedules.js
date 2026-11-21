@@ -2,7 +2,7 @@ import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
-import {audit,contextFor,loadEmployee} from "./workforce-v2-access.js";
+import {audit,contextFor,employeeInclude,loadEmployee} from "./workforce-v2-access.js";
 import {confirmed} from "./workforce-v2-validation.js";
 
 const router=Router({mergeParams:true});
@@ -63,10 +63,18 @@ function ruleBlockingError(employee,template,date){
   }
   return null;
 }
-async function loadEmployeeForAssignment(context,employeeId){return loadEmployee({user:context.requestUser,params:{companyId:context.company.id,storeId:context.store.id}},context,employeeId)}
-async function assignmentChecks(context,{schedule,employeeId,template,date,excludeId=null}){
+const scopedEmployee=context=>({companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true,canSchedule:true}}}]});
+async function loadEmployeeForAssignment(context,employeeId,db=prisma){
+  if(context.requestUser?.staffAccess===true){
+    const employee=await db.workforceEmployee.findFirst({where:{id:employeeId,...scopedEmployee(context)},include:employeeInclude});
+    if(!employee)throw Object.assign(new Error("Ο εργαζόμενος δεν είναι διαθέσιμος στο κατάστημα."),{status:404});
+    return employee;
+  }
+  return loadEmployee({user:context.requestUser,params:{companyId:context.company.id,storeId:context.store.id}},context,employeeId)}
+async function assignmentChecks(context,{schedule,employeeId,template,date,excludeId=null},prismaDb=prisma){
+  const prisma=prismaDb;
   if(!employeeId)return {warnings:[]};
-  const employee=await loadEmployeeForAssignment(context,employeeId);
+  const employee=await loadEmployeeForAssignment(context,employeeId,prisma);
   const access=employee.baseStoreId===context.store.id||employee.storeAccess.some(row=>row.storeId===context.store.id&&row.active&&row.canSchedule);
   if(!access)throw Object.assign(new Error("Ο εργαζόμενος δεν έχει δικαίωμα προγραμματισμού στο επιλεγμένο κατάστημα."),{status:409});
   const availability=availabilityError(employee,template,date)||ruleBlockingError(employee,template,date);
@@ -170,28 +178,88 @@ router.get("/",async(req,res,next)=>{try{
   res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),items:items.map(serialize)});
 }catch(error){next(error)}});
 
+router.get("/editor-options",async(req,res,next)=>{try{
+  const context=await contextFor(req);
+  if(req.user?.staffAccess!==true)return res.sendStatus(404);
+  const [employees,shiftTemplates]=await Promise.all([
+    prisma.workforceEmployee.findMany({where:scopedEmployee(context),select:{id:true,fullName:true,active:true},orderBy:{fullName:"asc"}}),
+    prisma.workforceShiftTemplate.findMany({where:{companyId:context.company.id,storeId:context.store.id,active:true},select:{id:true,name:true,startTime:true,endTime:true,active:true},orderBy:{startTime:"asc"}})
+  ]);
+  await requireStaffGrant(prisma,req.user,context.store.id,"schedule.edit");
+  res.json({companyId:context.company.id,storeId:context.store.id,employees,shiftTemplates});
+}catch(error){next(error)}});
 router.get("/:scheduleId/validation",async(req,res,next)=>{try{const context=await contextFor(req);context.requestUser=req.user;res.json(await scheduleValidation(context,await loadSchedule(context,req.params.scheduleId)));}catch(error){next(error)}});
 router.post("/",async(req,res,next)=>{try{
   const context=await contextFor(req);context.requestUser=req.user;const body=z.object({periodStart:dateText,periodType:z.enum(["WEEK","MONTH"]).default("WEEK"),notes:z.string().trim().max(1000).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{});
   const start=body.periodType==="WEEK"?weekStart(body.periodStart):dayStart(`${body.periodStart.slice(0,7)}-01`),end=new Date(start);if(body.periodType==="WEEK")end.setUTCDate(end.getUTCDate()+6);else end.setUTCMonth(end.getUTCMonth()+1,0);
-  const active=await prisma.workforceSchedule.findFirst({where:{storeId:context.store.id,periodStart:start,periodEnd:end,status:{in:["DRAFT","PREVIEWED","APPROVED"]}}});if(active)throw Object.assign(new Error("Υπάρχει ήδη ενεργή πρόχειρη ή εγκεκριμένη έκδοση για το ίδιο διάστημα."),{status:409});
-  const published=await prisma.workforceSchedule.findFirst({where:{storeId:context.store.id,periodStart:start,periodEnd:end,status:"PUBLISHED"},include:scheduleInclude,orderBy:{version:"desc"}});
-  const created=await prisma.$transaction(async tx=>{if(published){await tx.workforceSchedule.update({where:{id:published.id},data:{status:"SUPERSEDED"}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_SUPERSEDED",entityType:"WORKFORCE_SCHEDULE",entityId:published.id,before:published,after:{status:"SUPERSEDED"},reason:body.reason})}const item=await tx.workforceSchedule.create({data:{companyId:context.company.id,storeId:context.store.id,periodStart:start,periodEnd:end,periodType:body.periodType,version:published?published.version+1:1,createdByUserId:req.user.id,notes:body.notes||null}});if(published?.assignments.length)await tx.workforceScheduleAssignment.createMany({data:published.assignments.map(row=>({scheduleId:item.id,date:row.date,shiftTemplateId:row.shiftTemplateId,employeeId:row.employeeId,slot:row.slot,status:"PLANNED",warningState:"OK",warningJson:null,note:row.note||null}))});const result=await tx.workforceSchedule.findUnique({where:{id:item.id},include:scheduleInclude});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_CREATED",entityType:"WORKFORCE_SCHEDULE",entityId:item.id,after:result,reason:body.reason});return result});
-  res.status(201).json({item:serialize(created),copiedFromPublished:Boolean(published)});
+  if(!Number.isFinite(+start)||!Number.isFinite(+end))return res.status(400).json({error:"Μη έγκυρη περίοδος προγράμματος."});
+  if(req.user?.staffAccess===true){
+    const storeScope={companyId:context.company.id,storeId:context.store.id};
+    const created=await prisma.$transaction(async tx=>{
+      await requireStaffGrant(tx,req.user,context.store.id,"schedule.create");
+      await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${"workforce-schedule:"+context.store.id},0))`;
+      const active=await tx.workforceSchedule.findFirst({where:{
+        ...storeScope,periodStart:{lte:end},periodEnd:{gte:start},status:{in:["DRAFT","PREVIEWED","APPROVED","PUBLISHED"]}
+      },select:{id:true}});
+      if(active)throw Object.assign(new Error("Υπάρχει ήδη πρόγραμμα που καλύπτει αυτό το διάστημα."),{status:409});
+      const periodScope={...storeScope,periodStart:start,periodEnd:end};
+      const latest=await tx.workforceSchedule.findFirst({where:periodScope,select:{version:true},orderBy:{version:"desc"}});
+      const item=await tx.workforceSchedule.create({data:{
+        ...periodScope,periodType:body.periodType,version:(latest?.version||0)+1,createdByUserId:req.user.id,notes:body.notes||null
+      }});
+      await audit(tx,req,{...storeScope,action:"WORKFORCE_SCHEDULE_CREATED",entityType:"WORKFORCE_SCHEDULE",entityId:item.id,after:item,reason:body.reason});
+      return item;
+    });
+    return res.status(201).json({item:{...storeScope,id:created.id,status:created.status},copiedFromPublished:false});
+  }
+  const {created,copiedFromPublished}=await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${"workforce-schedule:"+context.store.id},0))`;
+    const where={companyId:context.company.id,storeId:context.store.id,periodStart:start,periodEnd:end};
+    const active=await tx.workforceSchedule.findFirst({where:{...where,status:{in:["DRAFT","PREVIEWED","APPROVED"]}}});
+    if(active)throw Object.assign(new Error("Υπάρχει ήδη ενεργή πρόχειρη ή εγκεκριμένη έκδοση για το ίδιο διάστημα."),{status:409});
+    const published=await tx.workforceSchedule.findFirst({where:{...where,status:"PUBLISHED"},include:scheduleInclude,orderBy:{version:"desc"}});
+    const latest=await tx.workforceSchedule.findFirst({where,select:{version:true},orderBy:{version:"desc"}});
+    if(published){await tx.workforceSchedule.update({where:{id:published.id},data:{status:"SUPERSEDED"}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_SUPERSEDED",entityType:"WORKFORCE_SCHEDULE",entityId:published.id,before:published,after:{status:"SUPERSEDED"},reason:body.reason})}const item=await tx.workforceSchedule.create({data:{companyId:context.company.id,storeId:context.store.id,periodStart:start,periodEnd:end,periodType:body.periodType,version:(latest?.version||0)+1,createdByUserId:req.user.id,notes:body.notes||null}});if(published?.assignments.length)await tx.workforceScheduleAssignment.createMany({data:published.assignments.map(row=>({scheduleId:item.id,date:row.date,shiftTemplateId:row.shiftTemplateId,employeeId:row.employeeId,slot:row.slot,status:"PLANNED",warningState:"OK",warningJson:null,note:row.note||null}))});const result=await tx.workforceSchedule.findUnique({where:{id:item.id},include:scheduleInclude});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_SCHEDULE_CREATED",entityType:"WORKFORCE_SCHEDULE",entityId:item.id,after:result,reason:body.reason});return {created:result,copiedFromPublished:Boolean(published)};
+  });
+  res.status(201).json({item:serialize(created),copiedFromPublished});
 }catch(error){next(error)}});
 
 const assignmentBody=z.object({version:z.coerce.number().int().positive(),date:dateText,shiftTemplateId:z.string().min(1),employeeId:z.string().min(1).nullable().optional(),slot:z.coerce.number().int().min(1).max(100).default(1),note:z.string().trim().max(1000).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)});
 async function loadTemplate(context,templateId){const template=await prisma.workforceShiftTemplate.findFirst({where:{id:templateId,companyId:context.company.id,storeId:context.store.id,active:true},include:{requiredRole:true}});if(!template)throw Object.assign(new Error("Δεν βρέθηκε ενεργό πρότυπο βάρδιας."),{status:404});return template}
+async function advanceScheduleVersion(tx,req,context,schedule,capability){
+  if(req.user?.staffAccess===true)await requireStaffGrant(tx,req.user,context.store.id,capability);
+  const result=await tx.workforceSchedule.updateMany({
+    where:{id:schedule.id,companyId:context.company.id,storeId:context.store.id,status:schedule.status,version:schedule.version},
+    data:{version:{increment:1}}
+  });
+  if(result.count!==1)throw Object.assign(new Error("Το πρόγραμμα άλλαξε. Ανανέωσε πριν συνεχίσεις."),{status:409});
+}
 async function saveAssignment(req,res,{existing=null}){
   const context=await contextFor(req);context.requestUser=req.user;const body=assignmentBody.parse(req.body||{}),schedule=await loadSchedule(context,req.params.scheduleId);assertMutable(schedule);assertVersion(schedule,body.version);const date=dayStart(body.date);if(date<schedule.periodStart||date>schedule.periodEnd)throw Object.assign(new Error("Η ημέρα είναι εκτός του διαστήματος προγράμματος."),{status:400});const template=await loadTemplate(context,body.shiftTemplateId),checks=await assignmentChecks(context,{schedule,employeeId:body.employeeId,template,date,excludeId:existing?.id||null}),data={date,shiftTemplateId:template.id,employeeId:body.employeeId||null,slot:body.slot,note:body.note||null,warningState:checks.warnings.length?"NEEDS_APPROVAL":"OK",warningJson:checks.warnings.length?checks.warnings:null};
-  const item=await prisma.$transaction(async tx=>{const result=existing?await tx.workforceScheduleAssignment.update({where:{id:existing.id},data}):await tx.workforceScheduleAssignment.create({data:{scheduleId:schedule.id,...data}});await tx.workforceSchedule.update({where:{id:schedule.id},data:{version:{increment:1}}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:existing?"WORKFORCE_ASSIGNMENT_UPDATED":"WORKFORCE_ASSIGNMENT_CREATED",entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:result.id,before:existing,after:result,reason:body.reason});return result});
-  res.status(existing?200:201).json({item,version:schedule.version+1,warnings:checks.warnings});
+  const item=await prisma.$transaction(async tx=>{
+    await advanceScheduleVersion(tx,req,context,schedule,"schedule.edit");
+    if(req.user?.staffAccess===true&&existing&&(existing.shiftTemplate.storeId!==context.store.id||existing.shiftTemplate.companyId!==context.company.id))throw Object.assign(new Error("Η ανάθεση δεν ανήκει στο κατάστημα."),{status:404});
+    const result=existing?await tx.workforceScheduleAssignment.update({where:{id:existing.id},data}):await tx.workforceScheduleAssignment.create({data:{scheduleId:schedule.id,...data}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:existing?"WORKFORCE_ASSIGNMENT_UPDATED":"WORKFORCE_ASSIGNMENT_CREATED",entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:result.id,before:existing,after:result,reason:body.reason});return result});
+  res.status(existing?200:201).json({item:req.user?.staffAccess===true?{id:item.id}:item,version:schedule.version+1,warnings:checks.warnings});
 }
 router.post("/:scheduleId/assignments",async(req,res,next)=>{try{await saveAssignment(req,res,{})}catch(error){next(error)}});
 router.put("/:scheduleId/assignments/:assignmentId",async(req,res,next)=>{try{const context=await contextFor(req),schedule=await loadSchedule(context,req.params.scheduleId),assignment=schedule.assignments.find(item=>item.id===req.params.assignmentId);if(!assignment)throw Object.assign(new Error("Δεν βρέθηκε η ανάθεση."),{status:404});await saveAssignment(req,res,{existing:assignment});}catch(error){next(error)}});
-router.delete("/:scheduleId/assignments/:assignmentId",async(req,res,next)=>{try{const context=await contextFor(req),body=z.object({version:z.coerce.number().int().positive(),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),schedule=await loadSchedule(context,req.params.scheduleId);assertMutable(schedule);assertVersion(schedule,body.version);const assignment=schedule.assignments.find(item=>item.id===req.params.assignmentId);if(!assignment)throw Object.assign(new Error("Δεν βρέθηκε η ανάθεση."),{status:404});await prisma.$transaction(async tx=>{await tx.workforceScheduleAssignment.delete({where:{id:assignment.id}});await tx.workforceSchedule.update({where:{id:schedule.id},data:{version:{increment:1}}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_ASSIGNMENT_REMOVED",entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:assignment.id,before:assignment,reason:body.reason})});res.status(204).end();}catch(error){next(error)}});
+router.delete("/:scheduleId/assignments/:assignmentId",async(req,res,next)=>{try{const context=await contextFor(req),body=z.object({version:z.coerce.number().int().positive(),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),schedule=await loadSchedule(context,req.params.scheduleId);assertMutable(schedule);assertVersion(schedule,body.version);const assignment=schedule.assignments.find(item=>item.id===req.params.assignmentId);if(!assignment)throw Object.assign(new Error("Δεν βρέθηκε η ανάθεση."),{status:404});await prisma.$transaction(async tx=>{
+    await advanceScheduleVersion(tx,req,context,schedule,"schedule.edit");
+    if(req.user?.staffAccess===true&&(assignment.shiftTemplate.storeId!==context.store.id||assignment.shiftTemplate.companyId!==context.company.id))throw Object.assign(new Error("Η ανάθεση δεν ανήκει στο κατάστημα."),{status:404});
+    await tx.workforceScheduleAssignment.delete({where:{id:assignment.id}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_ASSIGNMENT_REMOVED",entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:assignment.id,before:assignment,reason:body.reason})});res.status(204).end();}catch(error){next(error)}});
 
-router.post("/:scheduleId/transition",async(req,res,next)=>{try{const context=await contextFor(req);context.requestUser=req.user;const body=z.object({version:z.coerce.number().int().positive(),status:z.enum(["PREVIEWED","APPROVED","PUBLISHED"]),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),schedule=await loadSchedule(context,req.params.scheduleId);assertVersion(schedule,body.version);const allowed={DRAFT:["PREVIEWED"],PREVIEWED:["APPROVED"],APPROVED:["PUBLISHED"]};if(!allowed[schedule.status]?.includes(body.status))throw Object.assign(new Error("Η μετάβαση κατάστασης δεν επιτρέπεται."),{status:409});const validation=await scheduleValidation(context,schedule);if(body.status==="PUBLISHED"&&validation.errors.length)throw Object.assign(new Error("Δεν μπορεί να δημοσιευτεί πρόγραμμα με πραγματικά σφάλματα κάλυψης ή διαθεσιμότητας."),{status:409,validation});if(body.status==="PUBLISHED"&&validation.approvals.length)throw Object.assign(new Error("Υπάρχουν αναθέσεις που χρειάζονται έγκριση εξαίρεσης."),{status:409,validation});const updated=await prisma.$transaction(async tx=>{const item=await tx.workforceSchedule.update({where:{id:schedule.id},data:{status:body.status,version:{increment:1},...(body.status==="APPROVED"?{approvedByUserId:req.user.id,approvedAt:new Date()}:{}),...(body.status==="PUBLISHED"?{publishedAt:new Date(),lockedAt:new Date()}:{} )},include:scheduleInclude});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:`WORKFORCE_SCHEDULE_${body.status}`,entityType:"WORKFORCE_SCHEDULE",entityId:item.id,before:schedule,after:item,reason:body.reason});if(body.status==="PUBLISHED")await publishScheduleToStoreChat(tx,req,context,item);return item});res.json({item:serialize(updated),validation});}catch(error){next(error)}});
+router.post("/:scheduleId/transition",async(req,res,next)=>{try{const context=await contextFor(req);context.requestUser=req.user;const body=z.object({version:z.coerce.number().int().positive(),status:z.enum(["PREVIEWED","APPROVED","PUBLISHED"]),confirmed,reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),schedule=await loadSchedule(context,req.params.scheduleId);assertVersion(schedule,body.version);const allowed={DRAFT:["PREVIEWED"],PREVIEWED:["APPROVED"],APPROVED:["PUBLISHED"]};if(!allowed[schedule.status]?.includes(body.status))throw Object.assign(new Error("Η μετάβαση κατάστασης δεν επιτρέπεται."),{status:409});if(req.user?.staffAccess===true&&schedule.assignments.some(row=>row.shiftTemplate.companyId!==context.company.id||row.shiftTemplate.storeId!==context.store.id)){
+  throw Object.assign(new Error("Υπάρχουν αναθέσεις εκτός καταστήματος."),{status:409});
+}
+const validation=await scheduleValidation(context,schedule);if(body.status==="PUBLISHED"&&validation.errors.length)throw Object.assign(new Error("Δεν μπορεί να δημοσιευτεί πρόγραμμα με πραγματικά σφάλματα κάλυψης ή διαθεσιμότητας."),{status:409,validation});if(body.status==="PUBLISHED"&&validation.approvals.length)throw Object.assign(new Error("Υπάρχουν αναθέσεις που χρειάζονται έγκριση εξαίρεσης."),{status:409,validation});const updated=await prisma.$transaction(async tx=>{
+  if(req.user?.staffAccess===true&&body.status==="PUBLISHED"){
+    await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${"workforce-schedule:"+context.store.id},0))`;
+    const existing=await tx.workforceSchedule.findFirst({where:{id:{not:schedule.id},companyId:context.company.id,storeId:context.store.id,status:"PUBLISHED",periodStart:{lte:schedule.periodEnd},periodEnd:{gte:schedule.periodStart}},select:{id:true}});
+    if(existing)throw Object.assign(new Error("Υπάρχει ήδη δημοσιευμένο πρόγραμμα για την περίοδο."),{status:409});
+  }
+  await advanceScheduleVersion(tx,req,context,schedule,{PREVIEWED:"schedule.preview",APPROVED:"schedule.approve",PUBLISHED:"schedule.publish"}[body.status]);
+  const item=await tx.workforceSchedule.update({where:{id:schedule.id},data:{status:body.status,...(body.status==="APPROVED"?{approvedByUserId:req.user.id,approvedAt:new Date()}:{}),...(body.status==="PUBLISHED"?{publishedAt:new Date(),lockedAt:new Date()}:{} )},include:scheduleInclude});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:`WORKFORCE_SCHEDULE_${body.status}`,entityType:"WORKFORCE_SCHEDULE",entityId:item.id,before:schedule,after:item,reason:body.reason});if(body.status==="PUBLISHED")await publishScheduleToStoreChat(tx,req,context,item);return item});res.json({item:req.user?.staffAccess===true?{id:updated.id,status:updated.status,version:updated.version}:serialize(updated),validation});}catch(error){next(error)}});
 router.post("/:scheduleId/exceptions",async(req,res,next)=>{try{const context=await contextFor(req);if(!["SUPER_ADMIN","OWNER"].includes(req.user?.role)&&req.user?.platformRole!=="SUPER_ADMIN")throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει εξαίρεση προγράμματος."),{status:403});const body=z.object({assignmentId:z.string().min(1),ruleCode:z.enum(exceptionCodes),reason:z.string().trim().min(3).max(500),confirmed}).parse(req.body||{}),schedule=await loadSchedule(context,req.params.scheduleId),assignment=schedule.assignments.find(item=>item.id===body.assignmentId);if(!assignment)throw Object.assign(new Error("Δεν βρέθηκε η ανάθεση."),{status:404});const warnings=warningList(assignment);if(!warnings.some(item=>item.ruleCode===body.ruleCode))throw Object.assign(new Error("Ο κωδικός εξαίρεσης δεν αντιστοιχεί στην ανάθεση."),{status:409});const approvedRuleCodes=[...new Set([...(assignment.warningJson?.approvedRuleCodes||[]),body.ruleCode])],allApproved=warnings.every(item=>approvedRuleCodes.includes(item.ruleCode));await prisma.$transaction(async tx=>{await tx.workforceScheduleAssignment.update({where:{id:assignment.id},data:{warningState:allApproved?"APPROVED_EXCEPTION":"NEEDS_APPROVAL",warningJson:{warnings,approvedRuleCodes,approvedBy:req.user.id,approvedAt:new Date().toISOString(),reason:body.reason}}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_EXCEPTION_APPROVED",entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:assignment.id,after:{ruleCode:body.ruleCode,employeeId:assignment.employeeId,date:iso(assignment.date),shiftTemplateId:assignment.shiftTemplateId},reason:body.reason})});res.status(201).json({approved:true,ruleCode:body.ruleCode,allApproved});}catch(error){next(error)}});
 
 export default router;

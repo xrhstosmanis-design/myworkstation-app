@@ -20,6 +20,14 @@ test('advance reassociation refuses operator and foreign owner before reading an
  await assert.rejects(supplierAdvanceContext(db,{...scope,companyId:'foreign'}),e=>e.status===403);
  await assert.rejects(allocateSupplierAdvance(db,{...scope,user:{...user,companyId:'foreign'}},{}),e=>e.status===403);
 });
+test('delegated supplier recovery requires an explicit live authorization in the selected store',async()=>{
+ const db=new Proxy({},{get(){throw Error('unexpected database access')}});
+ const delegated={...scope,user:{...user,role:'EMPLOYEE',staffAccess:true,storeId:'store'}};
+ for(const [action,args] of [[supplierAdvanceContext,[]],[associateExpenseAsAdvance,[{}]],[allocateSupplierAdvance,[{}]]]){
+  await assert.rejects(action(db,delegated,...args),e=>e.status===403);
+  await assert.rejects(action(db,{...delegated,storeId:'foreign',authorize:()=>assert.fail('unexpected grant lookup')},...args),e=>e.status===403);
+ }
+});
 test('native advance: once-only cash-preserving reassociation, review boundary, future allocation, stale/scope rejection and atomic rollback',{skip:!isolated()},async()=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),name='supplier_advance_'+crypto.randomBytes(6).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',name);
  await admin.$executeRawUnsafe(`CREATE SCHEMA "${name}"`);const db=new PrismaClient({datasources:{db:{url:url.toString()}}});
