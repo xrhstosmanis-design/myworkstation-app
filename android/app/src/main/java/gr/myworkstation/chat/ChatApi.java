@@ -15,7 +15,9 @@ class ChatApi {
     private final Set<HttpsURLConnection> active = Collections.synchronizedSet(new HashSet<>());
     static final class Failure extends Exception {
         final int status;
-        Failure(int status, String message) { super(message); this.status = status; }
+        final String code;
+        Failure(int status, String message) { this(status, message, ""); }
+        Failure(int status, String message, String code) { super(message); this.status = status; this.code = code; }
     }
     JSONObject json(String path, String method, JSONObject body, String token) throws Exception {
         byte[] result = request(path, method, body == null ? null : body.toString().getBytes(StandardCharsets.UTF_8), token, 12 * 1024 * 1024);
@@ -50,7 +52,13 @@ class ChatApi {
             if (status < 200 || status >= 300) {
                 String message = status == 401 ? "Η σύνδεση έληξε. Συνδέσου ξανά." : status == 403 ? "Δεν υπάρχει δικαίωμα για αυτή τη λειτουργία." : "Το αίτημα δεν ολοκληρώθηκε. Έλεγξε τη σύνδεση και ανανέωσε.";
                 // Never turn a failed POST into an automatic replay: the server may have committed it.
-                throw new Failure(status, message);
+                String code = "";
+                if (status == 403) {
+                    try (InputStream error = connection.getErrorStream()) {
+                        if (error != null) code = new JSONObject(new String(bounded(error, 4096), StandardCharsets.UTF_8)).optString("code");
+                    } catch (Exception ignored) { /* Keep the generic HTTP error if its body is unavailable. */ }
+                }
+                throw new Failure(status, message, code);
             }
             if (connection.getContentLengthLong() > max) throw new Failure(0, "Η απάντηση ξεπερνά το όριο προβολής.");
             try (InputStream input = connection.getInputStream()) { return bounded(input, max); }

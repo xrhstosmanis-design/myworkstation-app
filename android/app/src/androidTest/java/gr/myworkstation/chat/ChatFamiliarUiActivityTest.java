@@ -28,4 +28,79 @@ import androidx.test.platform.app.InstrumentationRegistry;import androidx.lifecy
    boolean ready=false;for(int i=0;i<100;i++){boolean[] idle={false};s.onActivity(a->{try{idle[0]=!(Boolean)get(a,"busy");}catch(Exception e){throw new AssertionError(e);}});if(idle[0]){ready=true;break;}Thread.sleep(30);}assertTrue(ready);
    s.onActivity(a->{try{LinearLayout messages=(LinearLayout)get(a,"messages"),card=(LinearLayout)messages.getChildAt(0);View media=null;for(int i=0;i<card.getChildCount();i++)if(card.getChildAt(i) instanceof android.widget.ImageButton)media=card.getChildAt(i);assertNotNull(media);assertTrue("Media must offer the same long-press actions",media.isLongClickable());View actions=card.findViewWithTag("message-actions");assertEquals(View.GONE,actions.getVisibility());assertTrue(card.performLongClick());call(a,"dismissImage");assertTrue(media.performLongClick());AlertDialog d=(AlertDialog)get(a,"imageDialog");assertTrue(d.isShowing());assertEquals(View.GONE,actions.getVisibility());View actual=d.getWindow().getDecorView().findViewWithTag("message-actions");assertTrue(actual.isShown());assertTrue((d.getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_SECURE)!=0);call(a,"navigate");assertFalse(d.isShowing());assertEquals(View.GONE,actions.getVisibility());assertEquals("",((android.widget.TextView)((LinearLayout)actual).getChildAt(0)).getText().toString());}catch(Exception e){throw new AssertionError(e);}});assertEquals(0,writes[0]);}
  }
+
+ @Test public void moderationRequiresServerPermissionAndExplicitConfirmation() throws Exception {
+  java.util.concurrent.atomic.AtomicBoolean mayModerate = new java.util.concurrent.atomic.AtomicBoolean();
+  java.util.concurrent.atomic.AtomicReference<String> mutation = new java.util.concurrent.atomic.AtomicReference<>();
+  try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+   scenario.onActivity(activity -> {
+    try {
+     set(activity, "selected", new JSONObject().put("id", "store-a").put("companyId", "company").put("name", "LAB"));
+     set(activity, "token", "fixture-token");
+     set(activity, "interactionsReady", true);
+     set(activity, "api", new ChatApi() {
+      @Override JSONObject json(String path, String method, JSONObject body, String token) throws Exception {
+       if ("POST".equals(method)) {
+        mutation.set(path + ":" + body.getString("userId"));
+        return new JSONObject().put("ok", true);
+       }
+       if (path.endsWith("/moderation")) return new JSONObject().put("groups", new JSONArray()
+           .put(new JSONObject().put("id", "group-a").put("name", "Βάρδια").put("userId", "member-a").put("memberName", "Μέλος")));
+       return new JSONObject().put("groups", new JSONArray()).put("mayModerate", mayModerate.get());
+      }
+     });
+     call(activity, "showChatGroups");
+    } catch (Exception exception) { throw new AssertionError(exception); }
+   });
+   waitForRequest(scenario);
+   assertNull(mutation.get());
+   scenario.onActivity(activity -> {
+    try {
+     assertNull(get(activity, "imageDialog"));
+     mayModerate.set(true);
+     call(activity, "showChatGroups");
+    } catch (Exception exception) { throw new AssertionError(exception); }
+   });
+   waitForRequest(scenario);
+   clickModerationEntry(scenario);
+   InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+   waitForRequest(scenario);
+   clickModerationEntry(scenario);
+   InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+   assertNull(mutation.get());
+   scenario.onActivity(activity -> {
+    try {
+     AlertDialog confirm = (AlertDialog)get(activity, "imageDialog");
+     assertTrue("The removal confirmation is visible", confirm.isShowing());
+     confirm.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+    } catch (Exception exception) { throw new AssertionError(exception); }
+   });
+   for (int attempt = 0; attempt < 100 && mutation.get() == null; attempt++) SystemClock.sleep(30);
+   assertEquals("The positive confirmation sends one scoped removal",
+       "/api/store-chat/stores/store-a/groups/group-a/remove-member:member-a", mutation.get());
+  }
+ }
+
+ private void clickModerationEntry(ActivityScenario<MainActivity> scenario) {
+  scenario.onActivity(activity -> {
+   try {
+    AlertDialog dialog = (AlertDialog)get(activity, "imageDialog");
+    android.widget.ListView list = dialog.getListView();
+    assertTrue("Moderation entry is visible and clickable", list.performItemClick(list.getChildAt(0), 0, list.getAdapter().getItemId(0)));
+   } catch (Exception exception) { throw new AssertionError(exception); }
+  });
+ }
+
+ private void waitForRequest(ActivityScenario<MainActivity> scenario) {
+  for (int attempt = 0; attempt < 100; attempt++) {
+   boolean[] idle = {false};
+   scenario.onActivity(activity -> {
+    try { idle[0] = !(Boolean)get(activity, "busy"); }
+    catch (Exception exception) { throw new AssertionError(exception); }
+   });
+   if (idle[0]) return;
+   SystemClock.sleep(30);
+  }
+  fail("Chat request did not finish");
+ }
 }

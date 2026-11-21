@@ -1,3 +1,4 @@
+import {chatAccessRevoked} from "./chat-access.mjs";
 import {randomUUID} from "node:crypto";
 
 const MAX_GROUP_MEMBERS = 100;
@@ -149,6 +150,41 @@ export function mountChatGroups(router, {db, selectStore, checkModule, canManage
       WHERE g."companyId"=${store.companyId} AND g."storeId"=${store.id}
       ORDER BY g."name", g."id", "memberName", m."userId"`;
     res.json({groups});
+  }));
+  router.get(`${base}/:groupId/add-candidates`, handler(async (req, res, store) => {
+    if (!canModerate(req.user)) throw invalid("Δεν έχεις δικαίωμα διαχείρισης μελών Chat.", 403);
+    const groupId = req.params.groupId;
+    const groups = await db.$queryRaw`SELECT "id" FROM "StoreChatGroup"
+      WHERE "id"=${groupId} AND "companyId"=${store.companyId} AND "storeId"=${store.id}`;
+    if (!groups.length) throw invalid("Δεν βρέθηκε η ομάδα.", 404);
+    const excluded = await db.$queryRaw`SELECT "userId" FROM "StoreChatGroupMember" WHERE "groupId"=${groupId}
+      UNION SELECT "userId" FROM "StoreChatAccessRevocation"
+      WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}`;
+    const excludedIds = new Set(excluded.map(row => row.userId));
+    const members = (await chatGroupRoster(db, store)).filter(member => !excludedIds.has(member.id));
+    res.json({members});
+  }));
+  router.post(`${base}/:groupId/add-member`, handler(async (req, res, store) => {
+    if (!canModerate(req.user)) throw invalid("Δεν έχεις δικαίωμα διαχείρισης μελών Chat.", 403);
+    const groupId = req.params.groupId;
+    const userId = req.body?.userId;
+    if (typeof userId !== "string" || !userId || userId.length > 120) throw invalid("Μη έγκυρο μέλος Chat.");
+    await db.$transaction(async tx => {
+      const groups = await tx.$queryRaw`SELECT "id" FROM "StoreChatGroup"
+        WHERE "id"=${groupId} AND "companyId"=${store.companyId} AND "storeId"=${store.id} FOR UPDATE`;
+      if (!groups.length) throw invalid("Δεν βρέθηκε η ομάδα.", 404);
+      const roster = await chatGroupRoster(tx, store);
+      if (!roster.some(member => member.id === userId) || await chatAccessRevoked(tx, store, userId)) {
+        throw invalid("Ο υπάλληλος δεν είναι διαθέσιμος για Chat στο κατάστημα.", 404);
+      }
+      const members = await tx.$queryRaw`SELECT "userId" FROM "StoreChatGroupMember" WHERE "groupId"=${groupId}`;
+      if (members.some(member => member.userId === userId)) return;
+      if (members.length >= MAX_GROUP_MEMBERS + 1) throw invalid("Η ομάδα έχει φτάσει το όριο μελών.", 409);
+      await tx.$executeRaw`INSERT INTO "StoreChatGroupMember" ("groupId", "userId")
+        VALUES (${groupId}, ${userId}) ON CONFLICT DO NOTHING`;
+      await auditModeration(req, store, "STORE_CHAT_GROUP_MEMBER_ADDED", {groupId,userId}, tx);
+    });
+    res.json({ok:true});
   }));
   router.post(`${base}/:groupId/remove-member`, handler(async (req, res, store) => {
     if (!canModerate(req.user)) throw invalid("Δεν έχεις δικαίωμα διαχείρισης μελών Chat.", 403);

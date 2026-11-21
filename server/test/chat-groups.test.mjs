@@ -13,6 +13,7 @@ function fixture() {
   const groups = new Map();
   const messages = new Map();
   let active = true;
+  const revoked = new Set(), audits = [];
   const lookup = (companyId, storeId, groupId, userId) => {
     const group = groups.get(groupId);
     if (group?.companyId === companyId && group?.storeId === storeId && group.members.has(userId)) return group;
@@ -32,7 +33,8 @@ function fixture() {
         return 1;
       }
       if (sql.includes('INSERT INTO "StoreChatGroupMember"')) {
-        const [groupId, userIds] = args;
+        const [groupId, targets] = args;
+        const userIds = Array.isArray(targets) ? targets : [targets];
         for (const userId of userIds) groups.get(groupId).members.add(userId);
         return userIds.length;
       }
@@ -48,6 +50,18 @@ function fixture() {
     },
     async $queryRaw(parts, ...args) {
       const sql = parts.join("?");
+      if (sql.includes('SELECT "id" FROM "StoreChatGroup"')) {
+        const [groupId, companyId, storeId] = args;
+        const group = groups.get(groupId);
+        return group?.companyId === companyId && group?.storeId === storeId ? [{id:groupId}] : [];
+      }
+      if (sql.includes('SELECT "userId" FROM "StoreChatGroupMember"')) {
+        const [groupId] = args;
+        const ids = [...groups.get(groupId).members];
+        if (sql.includes("UNION")) ids.push(...revoked);
+        return ids.map(userId => ({userId}));
+      }
+      if (sql.includes('FROM "StoreChatAccessRevocation"')) return revoked.has(args[2]) ? [{}] : [];
       if (sql.includes('FROM "StoreOperatorCredential"')) {
         assert.match(sql, /c\."companyId"=\? AND c\."storeId"=\?/);
         assert.deepEqual(args,[store.companyId,store.id]);
@@ -83,9 +97,10 @@ function fixture() {
     },
     canManage:user => user.role === "OWNER",
     canModerate:user => ["OWNER","SUPER_ADMIN"].includes(user.role),
-    auditModeration:async () => {},
+    auditModeration:async (_req, _store, action) => { audits.push(action); },
   });
   return {
+    revoked, audits,
     deactivate:() => { active = false; },
     size:() => messages.size,
     async request(method,{user=owner,selected=store,groupId,body,allowed=true,action="messages"}={}) {
@@ -193,4 +208,24 @@ test("owner and Super Admin can remove members only in the selected store", asyn
   assert.equal((await h.request("GET",{groupId,user:member})).code,404);
   const second = await h.request("POST",{body:input});
   assert.equal((await h.request("POST",{...remove,groupId:second.data.id,user:{id:"admin",role:"SUPER_ADMIN"}})).code,200);
+});
+
+test("group addition respects moderator, store, eligibility and duplicate submissions", async () => {
+  const h = fixture();
+  const created = await h.request("POST",{body:{name:"Βάρδια",memberIds:[member.id]}});
+  const groupId = created.data.id, body = {userId:member.id}, action = "add-member";
+  assert.deepEqual((await h.request("GET",{groupId,action:"add-candidates"})).data.members,[]);
+  await h.request("POST",{groupId,action:"remove-member",body});
+  assert.deepEqual((await h.request("GET",{groupId,action:"add-candidates"})).data.members,[{id:member.id,name:member.fullName}]);
+  assert.equal((await h.request("POST",{groupId,action,body,user:member})).code,403);
+  assert.equal((await h.request("POST",{groupId,action,body,selected:{...store,id:"other"}})).code,404);
+  assert.equal((await h.request("POST",{groupId,action,body:{userId:outsider.id}})).code,404);
+  h.revoked.add(member.id);
+  assert.deepEqual((await h.request("GET",{groupId,action:"add-candidates"})).data.members,[]);
+  assert.equal((await h.request("POST",{groupId,action,body})).code,404);
+  h.revoked.delete(member.id);
+  assert.equal((await h.request("POST",{groupId,action,body})).code,200);
+  assert.equal((await h.request("POST",{groupId,action,body})).code,200);
+  assert.equal((await h.request("GET",{groupId,user:member})).code,200);
+  assert.deepEqual(h.audits,["STORE_CHAT_GROUP_MEMBER_REMOVED","STORE_CHAT_GROUP_MEMBER_ADDED"]);
 });
