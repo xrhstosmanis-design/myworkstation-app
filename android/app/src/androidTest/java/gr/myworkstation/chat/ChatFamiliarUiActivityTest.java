@@ -37,6 +37,7 @@ import androidx.test.platform.app.InstrumentationRegistry;import androidx.lifecy
     try {
      set(activity, "selected", new JSONObject().put("id", "store-a").put("companyId", "company").put("name", "LAB"));
      set(activity, "token", "fixture-token");
+     set(activity, "interactionsReady", true);
      set(activity, "api", new ChatApi() {
       @Override JSONObject json(String path, String method, JSONObject body, String token) throws Exception {
        if ("POST".equals(method)) {
