@@ -29,3 +29,19 @@ Thirteen existing dates/owner-picture/print/provisional-value tests PASS. Six ex
 Logs: /tmp/no13-credit-red.log, /tmp/no13-credit-green.log, /tmp/no13-credit-regressions.log, /tmp/no13-credit-owner-regression.log, /tmp/no13-credit-owner-regression-final.log. Local files are diagnostic evidence only; no credentials or real business data entered synthetic tests. Full remoteCI/review/merge/deployment and same-existing-credit read-only LAB acceptance pending. NativePDF/physicalpaper and overall13–14 remain OPEN.
 
 Independent final source review CLEAR: runtime3SUMs and real-handler/nativeSQL test inspected, no blocker or scope expansion; reviewer did not rerun tests.
+
+## Exact remote source result and merge
+
+PR4125/head379f63670da56b81e64e1ed0fb2327a3391fb4fa/treeee86e0cb9f51cbfd10d903a43d30e52643f293a4 matched localtestedda6da2d9ef8f8f8c238c60aa2022f1f8ab1c8da3 and all4blobs. CI44883264552attempt1:7023PASS/2FAIL/4optionalSKIP, new native credit regressionPASS. Both failures were existing Chrome startup/target timeouts in daily1920/device-setup browser tests. Requested failed-job retry on the same head; attempt2 build-and-test136786297521SUCCESS,7025PASS/0FAIL/4optionalSKIP plus8recoveryPASS, fullbuild/HTTP E2E green. No assertion/source/timeout/skip/workflow changes. All5jobsSUCCESS. The initial failure remains historical evidence.
+
+Expected-head merge4125 completed as3e34f1e3597f5eb8f6b932a21a4a124b7343fecb after full sourceCI. MainCI44885522389 started. Live deployment and grouped human acceptance are separate gates; do not infer LAB or physical-print acceptance from sourceCI.
+
+## Combined main result before deployment
+
+MainCI44885522389/job136789903456 exact3e34f1eSUCCESS5/5:7030tests/7026PASS/0FAIL/4optionalSKIP plus8recoveryPASS, production build/HTTP E2E green. The merge preserves newer peerNo16Chat5c785ff and No2docs0c905ba. Own owner-payments blob remains b5827cedaae866c7cc39981fe7e9239e9cef5f81; No14 adapter/profile, Chat access module and old Chat compatibility definition are unchanged frombe74. Normal guard44886838212/deployjob136793877849 TriggerSUCCESS; Renderdep-dc0lnee1egvs738bcr4g building exact3e34f1e. No direct Render trigger or skipped-step deployment claim.
+
+## Technical deployment verified21November2026
+
+Guard44886838212/job136793877849 completedSUCCESS; TriggerRenderSUCCESS and WaitexactSUCCESS. Renderdep-dc0lnee1egvs738bcr4g exact3e34f1e3597f5eb8f6b932a21a4a124b7343fecb LIVE08:54:01.773856UTC/10:54:01Athens, deploy_hook. Independent uncached /api/health HTTP200/oktrue/exactrevision confirmed afterLIVE. No direct hook override, new financial/stock transaction, hostedDDL/env/grant/email or deferred hostedrestore action.
+
+This is technical deployment evidence, not a new authenticated report-value/CSV/nativePDF/physical-paper LABPASS. Final grouped human acceptance still uses the same existing credit, with reference expectedgross2127.35 rather than2135.89 for01Sep–21Nov2026 if original rows remain unchanged. Protected old proofs are reused; no payment/invoice replay merely to fill evidence. OverallNo13–14 remainsOPEN. Existing partial-payment/CENT/ZERO/sales-return proofs and peer owners remain unchanged.
