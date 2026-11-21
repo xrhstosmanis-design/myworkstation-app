@@ -1,3 +1,7 @@
+## 21/11/2026 — Νο02 — proposed company packet source-hash extension / ASSIGNED BEFORE SOURCE
+
+Retained owner /root, same first-insert printed-discount scope. Local reconstructed source remains WIP / NOT DEPLOYED / NOT LAB TESTED. Full local regression detected a proposed compatibility packet source hash for the touched purchase-orders detail reader. Claim extension only the exact route entry in `ops/backup/lifecycle/backoffice-company-compatibility.proposed.json`, after native regression and independent invariant review; other52 source hashes (53 total) and BASE/CAPTURE/CURRENT plan/review hashes unchanged, no activation/backup/restore/schema/policy changes. This docs-only extension must pass applicable CI and merge before metadata edit. [Exact bounded claim](CHANGES/2026-11-20-no2-printed-discounts-claim.md). Existing No4 writers and other owners remain untouched; overall No02 OPEN, one grouped final manual session.
+
 <!-- Νο 3: PR #4052, CHECKPOINTS/CHANGES/2026-11-19-no3-ocr-consolidated.md. Πλήρες CI PASS 44779396092. Τελική κοινή δοκιμή εκκρεμεί. -->
 Warning: truncated output (original token count: 45914)
 Total output lines: 860
