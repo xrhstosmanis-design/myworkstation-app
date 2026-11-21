@@ -57,6 +57,7 @@ import managementBusinessUnitsRoutes from "./routes/management-business-units.js
 import managementParametersRoutes from "./routes/management-parameters.js";
 import preparationRecipeRoutes from "./routes/preparation-recipes.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
+import ownerCashWithdrawalRoutes from "./routes/owner-cash-withdrawal.js";
 import ownerPaymentsRoutes from "./routes/owner-payments.js";
 import ownerPaymentsImportRoutes from "./routes/owner-payments-import.js";
 import ownerPaymentsImportPreviewRoutes from "./routes/owner-payments-import-preview.js";
@@ -283,6 +284,7 @@ app.use("/api/management/business-units",auth,requireCompanyModule("CORE"),manag
 app.use("/api/management/parameters",auth,requireCompanyModule("CORE"),managementParametersRoutes);
 app.use("/api/management",auth,requireCompanyModule("INVENTORY"),managementCategoriesRoutes);
 app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
+app.use("/api/transactions",auth,requireCompanyOrStoreModule("CASH_CONTROL"),ownerCashWithdrawalRoutes);
 app.use("/api/transactions",auth,requireCompanyOrStoreModule("CASH_CONTROL"),storeTransactionRoutes);
 app.use("/api/transactions",auth,expenseDocumentRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportPreviewRoutes);
