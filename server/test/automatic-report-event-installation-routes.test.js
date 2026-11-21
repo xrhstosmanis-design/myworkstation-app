@@ -38,6 +38,8 @@ test('event installation HTTP requires current platform session and binds packet
   assert.equal((await send('/describe?profile=BASE')).status,200);
   delete actor.tokenType;assert.equal((await send('/describe?profile=BASE')).status,200);actor.tokenType='BACKOFFICE_USER';
   assert.deepEqual(calls.at(-1).options,{sourceRevision:'a'.repeat(40),enabled:false,profile:'BASE'});
+  assert.equal((await send('/inspect',{profile:'REPORTS_ONLY_V3_TO_V4'})).status,200);
+  assert.equal(calls.at(-2).options.profile,'REPORTS_ONLY_V3_TO_V4');
   assert.equal((await send('/inspect',{profile:'CAPTURE_REPORTS_ONLY_V3'})).status,200);
   assert.equal(calls.at(-2).options.profile,'CAPTURE_REPORTS_ONLY_V3');
   assert.equal((await send('/inspect',{profile:'CAPTURE'})).status,200);
@@ -60,6 +62,7 @@ test('event installation HTTP requires current platform session and binds packet
   catalogCode='REPORT_OPERATIONAL_CHAT_CATALOGUE_CHANGED';
   const chatDrift=await send('/inspect',{profile:'CAPTURE_REPORTS_ONLY_V3'});assert.equal(chatDrift.status,409);
   const chatRejected=await chatDrift.json();assert.equal(chatRejected.code,catalogCode);assert.doesNotMatch(chatRejected.error,/private catalogue/);
+  catalogCode='REPORT_SECURITY_PROFILE_CHANGED';const securityDrift=await send('/inspect',{profile:'REPORTS_ONLY_V3_TO_V4'});assert.equal(securityDrift.status,409);assert.equal((await securityDrift.json()).code,catalogCode);
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
 });
 

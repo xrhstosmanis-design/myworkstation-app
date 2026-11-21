@@ -55,6 +55,16 @@ test('native audit extraction retains all original SQL, financial calculations a
  const start=source.indexOf('export async function readOwnerAuditReport('),end=source.indexOf('\n}\nrouter.get("/audit-events",',start);assert.ok(start>0&&end>start);
  let body=source.slice(source.indexOf('\n const prisma=db;\n',start)+'\n const prisma=db;\n'.length,end);
  body=body.replace('const readableItems=(enrichSaleItems?await enrichAuditSaleItems(prisma,items,{companyId,storeId}):items).map(auditReadableRecord);','const readableItems=(await enrichAuditSaleItems(prisma,items,{companyId,storeId})).map(auditReadableRecord);').replace("videoAccessAllowed:typeof videoAccessAllowed==='function'?await videoAccessAllowed():videoAccessAllowed",'videoAccessAllowed:VIDEO_ACCESS_VALUE').trim();
+ // Allow only the exact reviewed withdrawal extension; every legacy byte and
+ // the original frozen hash remain protected. Its behavior has independent
+ // native transaction, formatter and HTTP authorization regression coverage.
+ const withdrawalAdapters=[
+  ["'OWNER_CASH_WITHDRAWAL_RECORDED','SUPPLIER_CREDIT_CASH_APPLIED'", "'SUPPLIER_CREDIT_CASH_APPLIED'"],
+  ['const eventAmount=r.eventType==="OWNER_CASH_WITHDRAWAL_RECORDED"?n(details.amount):','const eventAmount='],
+  ['      const withdrawalDescription=r.eventType==="OWNER_CASH_WITHDRAWAL_RECORDED"?ownerWithdrawalEventDescription(details,r.createdAt):null;\n',''],
+  ['const description=withdrawalDescription||transferDescription||','const description=transferDescription||']
+ ];
+ for(const [addition,legacy]of withdrawalAdapters){assert.equal(body.split(addition).length,2,'only the exact reviewed withdrawal adapter is permitted');body=body.replace(addition,legacy);}
  assert.equal(createHash('sha256').update(body).digest('hex'),'41177f1b2306689c4dd74c22c4a5bc52fb9d369397e95d952c07128dcb4862e2');
  assert.match(source,/videoAccessAllowed:\(\)=>hasVideoAccess\(req\)/,'Owner video-access check remains at the original late return point');
 });

@@ -3,6 +3,7 @@ import {Banknote,Building2,ChartNoAxesCombined,FileSpreadsheet,FileText,Landmark
 import BankPaymentImportPanel from "../commerce/BankPaymentImportPanel.jsx";
 import OwnerBusinessPicture from "./OwnerBusinessPicture.jsx";
 import ExpenseDocumentModal from "./ExpenseDocumentModal.jsx";
+import OwnerCashWithdrawalModal from "../store/OwnerCashWithdrawalModal.jsx";
 import StoreCashTransferModal from "../store/StoreCashTransferModal.jsx";
 import StoreSupplierOpenInvoicePayment from '../store/StoreSupplierOpenInvoicePayment.jsx';
 import StorePosPaymentsModal from "../store/StorePosPaymentsModal.jsx";
@@ -36,12 +37,14 @@ export default function OwnerPaymentQuickActions({api,store,onChanged,delegatedC
   const [ledger,setLedger]=useState(null),[active,setActive]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[bankOpen,setBankOpen]=useState(false),[businessOpen,setBusinessOpen]=useState(false),[supplierPaymentsOpen,setSupplierPaymentsOpen]=useState(false);
   const [form,setForm]=useState({amount:"",supplierId:"",purchaseDocumentId:"",description:"",paymentSource:"EXTERNAL"});
   const [transferOpen,setTransferOpen]=useState(false);
+  const [withdrawalOpen,setWithdrawalOpen]=useState(false);
   const [expenseDocumentOpen,setExpenseDocumentOpen]=useState(false);
   const [expenseRecoveryOpen,setExpenseRecoveryOpen]=useState(false);
   const delegated=Array.isArray(delegatedCapabilities),paymentKey=useRef(safeKey());
   const [responsibility,setResponsibility]=useState(false);
   const user=storedUser();
-  const allowed=delegated?delegatedCapabilities.includes('payments.read'):ownerRoles.has(user?.role);
+  const withdrawalAllowed=delegated?delegatedCapabilities.includes('payments.owner-withdrawal'):user?.role==='OWNER'||user?.role==='SUPER_ADMIN'||user?.isSuperAdmin===true;
+  const allowed=delegated?delegatedCapabilities.includes('payments.read'):ownerRoles.has(user?.role)||withdrawalAllowed;
   const visibleCategories=delegated?categories.filter(c=>c.id==='SUPPLIER'&&delegatedCapabilities.includes('payments.supplier')||c.id==='OTHER'&&delegatedCapabilities.includes('payments.expense')):categories;
   const suppliers=ledger?.suppliers||[];
   const documents=ledger?.purchaseDocuments||[];
@@ -154,6 +157,8 @@ export default function OwnerPaymentQuickActions({api,store,onChanged,delegatedC
         </table>
       </div>}
     </section>}
+    {withdrawalAllowed&&<button type="button" onClick={()=>setWithdrawalOpen(true)}>Ταμείο → Ιδιοκτήτης · Καταχώριση ανάληψης</button>}
+    {withdrawalOpen&&<OwnerCashWithdrawalModal key={store.id} api={api} store={store} actorKey={user?.id||""} allowed={withdrawalAllowed} onClose={()=>setWithdrawalOpen(false)} onChanged={()=>{load();onChanged?.()}}/>}
     {transferOpen&&<StoreCashTransferModal key={store.id} api={api} store={store} direction="IN" allowed={allowed} onClose={()=>setTransferOpen(false)} onChanged={()=>{load();onChanged?.()}}/>}
     {expenseRecoveryOpen&&!delegated&&user?.role==="OWNER"&&<OwnerExpenseRecoveryPanel key={store.id} api={api} store={store} onClose={()=>setExpenseRecoveryOpen(false)} setMessage={setMessage}/>}
     {businessOpen&&<OwnerBusinessPicture api={api} store={store} onClose={()=>setBusinessOpen(false)}/>}

@@ -18,6 +18,8 @@ COPY server/src/services/store-lifecycle-executor.js \
      server/src/services/supplier-expected-receipts-compatibility-definition.js \
      server/src/services/supplier-expected-receipts-compatibility.js \
      server/src/services/automatic-report-operational-profile.js \
+     server/src/services/automatic-report-security-transition.js \
+     server/src/services/automatic-report-security-compatibility.js \
      server/src/services/automatic-report-column-compatibility.js \
      server/src/services/automatic-report-chat-compatibility.js \
      server/src/services/automatic-report-source-compatibility.js \

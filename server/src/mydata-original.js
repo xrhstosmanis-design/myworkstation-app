@@ -7,7 +7,7 @@ import {readStandaloneOriginalSnapshot} from './lib/mydata-standalone-original-m
 import {matchesVerifiedEpsilonOriginal} from './lib/mydata-original-provider-profiles.js';
 import {readOriginalIdentityHeader} from './lib/mydata-original-identity-ocr.js';
 
-import {printedEconomicsProfileForUrl,parseMyDataPrintedLineEconomics} from './lib/mydata-printed-line-economics.js';
+import {ALFA19_PROFILE,printedEconomicsProfileForUrl,parseMyDataPrintedLineEconomics} from './lib/mydata-printed-line-economics.js';
 import {myDataPrintedEconomicsRowsFingerprint} from './lib/mydata-printed-economics-review.js';
 const textHash=value=>crypto.createHash('sha256').update(value).digest('hex');
 function providerOriginalTextProof(row,pdf){
@@ -27,6 +27,36 @@ function decimalFitsColumn(value,column){
     &&(match[2]||'').replace(/0+$/,'').length<=column.numeric_scale;
 }
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
+// Host and format-code pairs confirmed against provider PDFs. Each host is exact.
+const epsilonOriginalFormats = new Map([
+  ["epsilondigital.epsilonnet.gr", "8"],
+  ["epsilondigital3.epsilonnet.gr", "84"],
+  ["epsilondigital14.epsilonnet.gr", "160"],
+  ["epsilondigital22.epsilonnet.gr", "190"],
+  ["epsilondigital-enetgroup.epsilonnet.gr", "107"],
+  ["epsilondigital-nbg.epsilonnet.gr", "109"],
+  ["epsilondigitalsmart10.epsilonnet.gr", "227"],
+]);
+
+function originalRecoveryLinkPattern(formats) {
+  return "<(?:[[:alnum:]_]+:)?downloadingInvoiceUrl[^>]*>[[:space:]]*https://(?:"
+    + formats.join("|") + ")/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>";
+}
+
+const epsilonRecoveryFormats = Array.from(epsilonOriginalFormats, ([host, code]) =>
+  host.replaceAll(".", "[.]") + "/fd/[a-f0-9]{32}:" + code);
+
+// PostgreSQL ARE syntax, with host and paths anchored inside the XML value.
+export function providerOriginalRecoveryLinkPattern({includeExistingImpact = false} = {}) {
+  return originalRecoveryLinkPattern([
+    ...epsilonRecoveryFormats,
+    ...(includeExistingImpact ? ["einvoice[.]impact[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}"] : []),
+    "einvoice[.]s1ecos[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}",
+    "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}",
+    String.raw`vs[.]gr/iv/invoice/download/([a-z0-9]{4}_[0-9])/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}`,
+  ]);
+}
+
 export function originalDownloadUrl(xml,issuerVat){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
@@ -36,7 +66,9 @@ export function originalDownloadUrl(xml,issuerVat){
   const validIssuer = /^\d{9}$/.test(issuerVat);
   const impact = validIssuer && ["einvoice.impact.gr","einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
-  const epsilon = validIssuer && matchesVerifiedEpsilonOriginal(url,issuerVat);
+  const epsilonFormat = url.pathname.match(/^\/fd\/[a-f0-9]{32}:(\d{1,3})\/?$/i)?.[1];
+  const epsilon = validIssuer && (matchesVerifiedEpsilonOriginal(url,issuerVat)
+    || (epsilonFormat !== undefined && epsilonOriginalFormats.get(url.hostname) === epsilonFormat));
   const einvoicing = validIssuer && url.hostname === "e-invoicing.gr"
     && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_[A-Za-z0-9]{6,8}\/?$/i.test(url.pathname);
   const vs = validIssuer && url.hostname === "vs.gr"
@@ -124,7 +156,7 @@ function canReadIdentityHeader(downloadUrl,text,pageCount,row){
 }
 
 // Network work precedes the row lock; competing downloads can only attach once.
-export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,createAiJob,download=fetchOriginalPdf){
+export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,createAiJob,download=fetchOriginalPdf,{reconcileExisting=false}={}){
   assertCustomerDemoOutboundAllowed({companyId,storeId});
   await ensureInvoiceCommonDraftSchema(prisma);
   const rows=await prisma.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId} LIMIT 1`;
@@ -144,7 +176,9 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
     if(jobId)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({rawText:pdf.text,lines:[],pageCount:pdf.pageCount,source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,providerOriginalTextProof:providerOriginalTextProof(row,pdf)})}::jsonb,${userId})`;
     await tx.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=${attachmentId},"note"=${"Πρωτότυπο παρόχου • MARK "+row.mark+" • "+Number(row.totalGross).toFixed(2)+" € • Έλεγχος από βοηθό πριν από την καταχώρηση"},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
     await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=("rawPayload"-'originalPending'-'originalError')||${JSON.stringify({originalDownloaded:true,originalJobId:jobId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
-    const draft=await attachReviewDraft(tx,{...row,attachmentId},companyId,storeId,inboxId,userId,createAiJob);
+    const draft=reconcileExisting && !createAiJob
+      ? await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId)
+      : await attachReviewDraft(tx,{...row,attachmentId},companyId,storeId,inboxId,userId,createAiJob);
     return {...draft,downloaded:true,reused:false,jobId};
   });
 }
@@ -311,7 +345,11 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
       &&proof.rawTextSHA256===textHash(result.rawText)&&proof.pageCount===result.pageCount;
     let printed=proven&&/^(?:1\.[1-6]|2\.[1-4])$/.test(String(source.invoiceType))&&(!source.currency||source.currency==='EUR')
       ?parseMyDataPrintedLineEconomics({text:result.rawText,xmlLines,totalNet:String(source.totalNet),totalVat:String(source.totalVat),totalGross:String(source.totalGross),pageCount:result.pageCount,profile}):null;
-    if(printed&&(printed.rows.length!==lines.length||printed.rows.some((p,i)=>p.itemCode!==lines[i].itemCode||Number(p.quantity)!==lines[i].quantity)))printed=null;
+    if(printed&&(printed.profile!==profile||printed.rows.length!==lines.length||printed.rows.some((p,i)=>p.itemCode!==lines[i].itemCode||Number(p.quantity)!==lines[i].quantity)))printed=null;
+    if(printed?.profile===ALFA19_PROFILE){
+      const physical=printed.rows.map(p=>p.physicalLineNumber);
+      if(physical.some(n=>!Number.isInteger(n)||n<1||n>printed.rows.length)||new Set(physical).size!==physical.length)printed=null;
+    }
     if(printed){
       const columns=await tx.$queryRaw`SELECT column_name,data_type,numeric_precision,numeric_scale FROM information_schema.columns
         WHERE table_schema=current_schema() AND table_name='PurchaseOrderLine'
@@ -323,12 +361,20 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
     for (const [index,line] of lines.entries()) {
       const id=crypto.randomUUID(),economics=printed?.rows[index];inserted.push({id,line,economics});
       if(economics){
+        // Keep the confirmed decimal amounts exact across the driver boundary.
+        // A JS float parameter can otherwise become 8.130000000000001 in an
+        // unconstrained numeric column and invalidate the persisted proof.
+        const exactAlfa=printed.profile===ALFA19_PROFILE;
+        const netAmount=exactAlfa?economics.netValue:line.netValue;
+        const vatAmount=exactAlfa?economics.vatAmount:line.vatAmount;
+        const grossCents=cents(line.netValue)+cents(line.vatAmount);
+        const grossAmount=exactAlfa?`${Math.floor(grossCents/100)}.${String(grossCents%100).padStart(2,'0')}`:grossCents/100;
         await tx.$executeRaw`INSERT INTO "PurchaseOrderLine"
           ("id","orderId","productId","supplierCode","description","quantity","unitCost","initialUnitCost","discount1","discount2","discount3",
            "invoiceUnit","stockUnitsPerInvoiceUnit","vatRate","netAmount","vatAmount","grossAmount")
           VALUES (${id},${orderId},${byCode.get(line.itemCode)?.productId??null},${line.itemCode},${line.description},${line.quantity},
            ${economics.unitCost}::numeric,${economics.initialUnitCost}::numeric,${economics.discount1}::numeric,${economics.discount2}::numeric,${economics.discount3}::numeric,
-           ${line.measurementUnit===7?'PACKAGE':'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},${(cents(line.netValue)+cents(line.vatAmount))/100})`;
+           ${line.measurementUnit===7?'PACKAGE':'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${netAmount}::numeric,${vatAmount}::numeric,${grossAmount}::numeric)`;
         continue;
       }
       const unitCost = line.netValue / line.quantity;
@@ -355,9 +401,11 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
       const marker={version:'MYDATA_PRINTED_ECONOMICS_V1',state:printed?'VERIFIED':'UNKNOWN',companyId,storeId,inboxId:row.inboxId,mark:source.mark,
         orderId,documentId:target.documentId,jobId:job.id,attachmentId:attachment.id,supplierId:target.supplierId??null,
         attachmentChecksum:attachment.checksum,rawTextSHA256:proven?textHash(result.rawText):null,xmlSHA256:textHash(source.rawPayload.xml),rowsFingerprint,
+        ...(proven?{printedProfile:profile,pageCount:result.pageCount}:{}),
         lineCount:lines.length,reason:printed?'PRINTED_LINE_AMOUNT_CONFIRMED':lines.length>250?'ROW_LIMIT':!proven?'MISSING_ORIGINAL_TEXT_PROOF':'PRINTED_ECONOMICS_NOT_PROVEN',
         ...(printed?{discountAmountTotal:printed.totals.discount,rows:inserted.map(({id,economics:p})=>({lineId:id,lineNumber:p.lineNumber,itemCode:p.itemCode,
-          originalUnitCost:p.unitCost,printedInitialAmount:p.printedInitialAmount,printedDiscountSteps:p.printedDiscountSteps,storageEquivalentPercents:[p.discount1,p.discount2,p.discount3]}))}:{rows:[]})};
+          originalUnitCost:p.unitCost,printedInitialAmount:p.printedInitialAmount,printedDiscountSteps:p.printedDiscountSteps,
+          ...(Number.isInteger(p.physicalLineNumber)?{physicalLineNumber:p.physicalLineNumber}:{}),storageEquivalentPercents:[p.discount1,p.discount2,p.discount3]}))}:{rows:[]})};
       await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({printedEconomicsReview:marker})}::jsonb
         WHERE "id"=${source.id} AND "companyId"=${companyId} AND "storeId"=${storeId} AND "inboxId"=${row.inboxId}`;
     }

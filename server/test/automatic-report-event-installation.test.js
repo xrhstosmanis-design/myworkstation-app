@@ -19,3 +19,7 @@ test('installation is explicit and disabled before any database access',()=>{
  assert.throws(()=>on.install(actor,{companyId:'c',storeId:'s'}),{code:'REPORT_EVENT_INSTALL_AUTHORIZATION_REQUIRED'});
  assert.throws(()=>createAutomaticReportEventInstallation(db,{sourceRevision:'a'.repeat(40),profile:'unknown'}),{code:'REPORT_EVENT_INSTALL_REFUSED'});
 });
+test('explicit V3 to V4 transition binds immutable old hash and distinct security target without database work',()=>{
+ const service=createAutomaticReportEventInstallation({$transaction(){throw Error('unexpected')}},{sourceRevision:'a'.repeat(40),profile:'REPORTS_ONLY_V3_TO_V4'});
+ const d=service.describe();assert.equal(d.oldPlanHash,'54ceb10a4383faf7367d07bd3b8ad1c066b85c025a23e937c610d1f473423828');assert.equal(d.targetPlanHash,'e349bf37597939d918b098aaa434ce4dfd686b653b0fe013d8c4df83420ec68f');assert.equal(d.targetProfile,'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4');assert.throws(()=>service.install(actor,{}),{code:'REPORT_EVENT_INSTALL_DISABLED'});
+});

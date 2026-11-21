@@ -62,3 +62,19 @@ test('V3 preserves four pinned chat tables without guards, keeps V2 immutable, a
  const result=spawnSync('python3',['-c',script,fileURLToPath(new URL('../../ops/backup/lifecycle',import.meta.url)),profile],{encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);assert.deepEqual(JSON.parse(result.stdout),v3);
 });
+test('V4 security scope is exact, separately preserved and old V3 manifest stays immutable',()=>{
+ const v3=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3'}),before=JSON.stringify(v3);
+ const v4=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'});
+ assert.equal(createLifecycleInstallationCore(v3,{sourceRevision:revision}).describe().planHash,'54ceb10a4383faf7367d07bd3b8ad1c066b85c025a23e937c610d1f473423828');
+ assert.deepEqual(v4.preservedReportSecurityTables,['StoreChatAccessRevocation']);assert.deepEqual(v4.preservedOperationalTables,v3.preservedOperationalTables);assert.equal(v4.tables.some(t=>t.name==='StoreChatAccessRevocation'),false);assert.equal(JSON.stringify(v3),before);
+ assert.throws(()=>createLifecycleExecutionCore(v4,{}),{code:'STORE_LIFECYCLE_REPORTS_ONLY'});
+ for(const change of [m=>m.preservedReportSecurityTables.push('Unknown'),m=>m.knownColumns.StoreChatAccessRevocation.reverse(),m=>m.reviewedColumns.pop(),m=>m.reportSecurityCompatibility.definitionSha256='0'.repeat(64)]){const bad=structuredClone(v4);change(bad);assert.throws(()=>createLifecycleInstallationCore(bad,{sourceRevision:revision}),{code:'REPORT_SECURITY_PROFILE_CHANGED'});}
+});
+
+ test('security definition is deeply immutable and untagged security allowlists are refused',async()=>{
+ const {reportSecurityDefinition}=await import('../src/services/automatic-report-security-transition.js');
+ assert.throws(()=>{reportSecurityDefinition.columns[0][0]='spoof'},TypeError);
+ assert.throws(()=>{reportSecurityDefinition.sourcePlanHash='spoof'},TypeError);
+ const base=structuredClone(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'BASE'}));base.preservedReportSecurityTables=['Arbitrary'];
+ assert.throws(()=>createLifecycleInstallationCore(base,{sourceRevision:revision}),{code:'REPORT_SECURITY_PROFILE_CHANGED'});
+ });

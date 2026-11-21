@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 const VERSION = 'MYDATA_PRINTED_ECONOMICS_V1';
 const MAX_ROWS = 250;
 const PROFILE = 'E_INVOICING_DETAILED_LINE_AMOUNT_V1';
+const profilePages = new Map([[PROFILE,1],['EPSILON19_DETAILED_LINE_AMOUNTS_V1',2]]);
 const numericFields = ['quantity','unitCost','initialUnitCost','discount1','discount2','discount3','exciseTotal','vatRate','netAmount','vatAmount','grossAmount','stockUnitsPerInvoiceUnit'];
 const textFields = ['id','productId','supplierCode','description','invoiceUnit'];
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -112,11 +113,18 @@ export async function readMyDataPrintedEconomicsReview(db, {companyId,storeId,or
   if (!sha(marker.rowsFingerprint) || !fingerprint || fingerprint !== marker.rowsFingerprint) return {...output,reason:'STALE_ROWS'};
   if (marker.state === 'UNKNOWN') return {...output,reason:typeof marker.reason === 'string' && /^[A-Z_]{1,80}$/.test(marker.reason) ? marker.reason : 'PRINTED_ECONOMICS_NOT_PROVEN'};
   const result = source.resultJson, proof = result?.providerOriginalTextProof;
+  const expectedPages = profilePages.get(proof?.profile);
+  const hasMarkerProfile = Object.hasOwn(marker,'printedProfile'), hasMarkerPages = Object.hasOwn(marker,'pageCount');
+  // Legacy proof without these fields is valid only for the original one-page
+  // profile. A new multi-page profile always binds its own explicit metadata.
+  const markerProfileMatches = !hasMarkerProfile && !hasMarkerPages
+    ? proof?.profile === PROFILE && expectedPages === 1
+    : hasMarkerProfile && hasMarkerPages && marker.printedProfile === proof?.profile && marker.pageCount === expectedPages;
   if (!result || result.source !== 'MYDATA_PROVIDER_ORIGINAL' || result.myDataMark !== source.mark
     || typeof result.rawText !== 'string' || !result.rawText || result.rawText.length > 200000
     || !sha(marker.rawTextSHA256) || marker.rawTextSHA256 !== hash(result.rawText)
-    || !proof || proof.version !== 'SERVER_PROVIDER_PDF_V1' || proof.profile !== PROFILE
-    || proof.pageCount !== 1 || result.pageCount !== 1 || proof.pdfChecksum !== source.checksum
+    || !proof || proof.version !== 'SERVER_PROVIDER_PDF_V1' || !expectedPages || !markerProfileMatches
+    || proof.pageCount !== expectedPages || result.pageCount !== expectedPages || proof.pdfChecksum !== source.checksum
     || proof.rawTextSHA256 !== marker.rawTextSHA256) return output;
   const discount = decimal(marker.discountAmountTotal);
   if (discount === null || discount.startsWith('-') || !/^\d{1,12}(?:\.\d{1,2})?$/.test(discount)) return output;
