@@ -2,7 +2,7 @@
 
 ASSIGNED /root, retained reports/lifecycle owner. Το StoreChatAccessRevocation security table είναι άγνωστο στον αυστηρό V3 κατάλογο και εμποδίζει το No14 installer. Αυτή η ανάληψη είναι αποκλειστικά προετοιμασία ανεξάρτητου compatibility primitive, όχι αλλαγή του installer ή εξουσιοδότηση hosted εφαρμογής.
 
-Επαληθευμένη source DDL: commit58452c8264dd7c7dbf0e6ed683a1e3fa8f0bd72b, server/src/chat-access.mjs γραμμές2–5. Live metadata συμφωνεί: τρεις ordered TEXT NOT NULL στήλες companyId/storeId/userId, χωρίς default/identity/generated, composite PK ίδιας σειράς και μόνο μοναδικό btree PK index. Μηδέν FKs και στις δύο κατευθύνσεις, user triggers, inheritance, RLS/forced RLS/policies, rules ή dropped columns. ACL/reloptions null, replica identity default, ordinary permanent table, owner ίδιος με Store. Τα rows είναι deny-state ασφαλείας και διατηρούνται όλα, σε κάθε εταιρεία/κατάστημα.
+Επαληθευμένη source DDL: source blob58452c8264dd7c7dbf0e6ed683a1e3fa8f0bd72b, server/src/chat-access.mjs γραμμές2–5. Live metadata συμφωνεί: τρεις ordered TEXT NOT NULL στήλες companyId/storeId/userId, χωρίς default/identity/generated, composite PK ίδιας σειράς και μόνο μοναδικό btree PK index. Μηδέν FKs και στις δύο κατευθύνσεις, user triggers, inheritance, RLS/forced RLS/policies, rules ή dropped columns. ACL/reloptions null, replica identity default, ordinary permanent table, owner ίδιος με Store. Τα rows είναι deny-state ασφαλείας και διατηρούνται όλα, σε κάθε εταιρεία/κατάστημα.
 
 Μετά από root review και green claim merge επιτρέπονται μόνο νέα αρχεία
 
