@@ -169,7 +169,7 @@ export async function readOwnerBusinessPicture(scopeCompanyId,rawQuery,{db=prism
         FROM "saleCostLines" l GROUP BY month,day ORDER BY day`,
       prisma.$queryRaw`
         SELECT TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,COUNT(*)::int AS documents,
-          COALESCE(SUM("totalNet"),0) AS "purchaseNet",COALESCE(SUM("totalVat"),0) AS "purchaseVat",COALESCE(SUM("totalGross"),0) AS "purchaseGross"
+          COALESCE(SUM(CASE WHEN "documentType"='CREDIT_NOTE' THEN -"totalNet" ELSE "totalNet" END),0) AS "purchaseNet",COALESCE(SUM(CASE WHEN "documentType"='CREDIT_NOTE' THEN -"totalVat" ELSE "totalVat" END),0) AS "purchaseVat",COALESCE(SUM(CASE WHEN "documentType"='CREDIT_NOTE' THEN -"totalGross" ELSE "totalGross" END),0) AS "purchaseGross"
         FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="PurchaseDocument"."storeId" AND scopeStore."companyId"="PurchaseDocument"."companyId")) AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND ("documentDate"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND "documentDate"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`,
