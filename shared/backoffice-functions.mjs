@@ -448,6 +448,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "expense",
       "cash",
       "owner-withdrawal",
+      "supplier-recovery",
       "correct",
       "cancel",
       "export",

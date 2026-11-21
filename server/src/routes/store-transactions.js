@@ -204,7 +204,7 @@ function route(handler){
 
 function requireLedgerAccess(req,res,next){
   if(delegatedApprovalsRead(req))return next();
-  if(req.user?.staffAccess===true&&['sales.read','payments.supplier','payments.expense'].includes(req.staffGrant?.capability))return next();
+  if(req.user?.staffAccess===true&&['sales.read','payments.supplier','payments.expense','payments.supplier-recovery'].includes(req.staffGrant?.capability))return next();
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
@@ -928,6 +928,30 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
   });
   if(delegatedApprovalsRead(req))return sendApprovalsRead(req,res,checkedItems);
   res.json({items:checkedItems,companies,stores});
+}));
+
+// Dedicated recovery grant never inherits central approvals.read admission.
+async function selectedExpenseRecoveryScope(req){
+ const storeId=req.params.storeId;
+ if(req.user?.staffAccess===true)await requireStaffAction(prisma,req,storeId,'payments.supplier-recovery');
+ else if(req.user?.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(req.user?.role))throw Object.assign(new Error('Δεν έχεις δικαίωμα σύνδεσης εξόδου με προμηθευτή.'),{status:403});
+ assertStoreAccess(req,storeId);const store=(await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "id"=${storeId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`)[0];
+ if(!store)throw Object.assign(new Error('Δεν βρέθηκε ενεργό κατάστημα.'),{status:404});
+ return {companyId:store.companyId||req.user.companyId,storeId:store.id,transactionId:req.params.transactionId,user:req.user};
+}
+router.get('/stores/:storeId/invoice-recovery',route(async(req,res)=>{
+ const scope=await selectedExpenseRecoveryScope(req);
+ const filters=z.object({from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()}).strict().parse(req.query||{});
+ if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:'Μη έγκυρο διάστημα ημερομηνιών.'});
+ const items=await prisma.$queryRaw`SELECT er."id",er."status",er."createdAt",t."id" AS "transactionId",t."storeId",t."amount",t."description",t."paymentMethod",t."attachmentFilename",t."attachmentData" IS NOT NULL AS "hasAttachment",t."occurredAt",t."actorName",st."name" AS "storeName" FROM "OtherExpenseReview" er JOIN "StoreTransaction" t ON t."id"=er."transactionId" AND t."companyId"=er."companyId" AND t."storeId"=er."storeId" JOIN "Store" st ON st."id"=t."storeId" AND st."companyId"=t."companyId" WHERE er."companyId"=${scope.companyId} AND er."storeId"=${scope.storeId} AND er."status" IN ('PENDING_REVIEW','DISCREPANCY') AND t."type"='OTHER_EXPENSE' AND t."reversedAt" IS NULL AND t."amount">0 AND t."paymentMethod"='CASH_SHIFT' AND t."subtractFromShift"=true AND t."sessionId" IS NOT NULL AND t."supplierId" IS NULL AND t."invoiceDocumentNumber" IS NULL AND t."invoicePaymentKey" IS NULL AND (${filters.from||null}::date IS NULL OR t."occurredAt">=(${filters.from||null}::date::timestamp AT TIME ZONE 'Europe/Athens')) AND (${filters.to||null}::date IS NULL OR t."occurredAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens')) ORDER BY er."createdAt",er."id" LIMIT 500`;
+ await selectedExpenseRecoveryScope(req);
+ res.setHeader('Cache-Control','private, no-store');res.json({items:items.map(row=>({...row,amount:Number(row.amount)})),companies:[],stores:[]});
+}));
+router.get('/stores/:storeId/invoice-recovery/:transactionId/supplier',route(async(req,res)=>{
+ const scope=await selectedExpenseRecoveryScope(req);const context=await supplierAdvanceContext(prisma,scope);await selectedExpenseRecoveryScope(req);res.json(context);
+}));
+router.post('/stores/:storeId/invoice-recovery/:transactionId/supplier',route(async(req,res)=>{
+ const scope=await selectedExpenseRecoveryScope(req);res.json(await associateExpenseAsAdvance(prisma,scope,req.body));
 }));
 
 async function expenseAdvanceScope(req){

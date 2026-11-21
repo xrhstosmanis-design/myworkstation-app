@@ -1,3 +1,4 @@
+import {retainCapturedPaymentOriginal} from '../src/lib/invoice-recovery-original.js';
 import {findCompetingPosDraftReview} from "../src/lib/pos-invoice-duplicate-review.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,7 +31,7 @@ function actualDraftRoute(db){
  const body=source.slice(a,b),handler=body.slice(body.indexOf('async(req,res,next)=>'),-2).trim();
  const d=source.indexOf('async function duplicateInvoice('),e=source.indexOf('\nasync function productsForLines',d);
  const duplicateInvoice=new Function('findCompetingPosDraftReview','normalizeDocumentNumber',source.slice(d,e)+';return duplicateInvoice;')(findCompetingPosDraftReview,value=>String(value).trim().toUpperCase().replace(/\s+/g,''));
- const deps={z,prisma:db,id:randomUUID,ensureInvoiceCommonDraftSchema:async()=>{},lockInvoiceStore,assertNoUnresolvedInbound,findInvoicePayment,assertReusableInvoicePayment,reuseInboundDraftForPosJob,findUnlinkedMyDataOriginal,bindUnlinkedMyDataOriginal,duplicateInvoice};
+ const deps={retainCapturedPaymentOriginal,z,prisma:db,id:randomUUID,ensureInvoiceCommonDraftSchema:async()=>{},lockInvoiceStore,assertNoUnresolvedInbound,findInvoicePayment,assertReusableInvoicePayment,reuseInboundDraftForPosJob,findUnlinkedMyDataOriginal,bindUnlinkedMyDataOriginal,duplicateInvoice};
  const route=new Function(...Object.keys(deps),'return '+handler)(...Object.values(deps));
  return async(jobId='j-pos')=>{
   let result,error;const req={params:{jobId},user:{companyId:'c',id:'operator',fullName:'Synthetic operator'},body:{...identity,settlementMode:'PAID',paymentTransactionId:'payment'}};

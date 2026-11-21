@@ -1,3 +1,5 @@
+import {readCapturedPaymentOriginal} from './invoice-recovery-original.js';
+import {lockInvoiceStore} from './invoice-common-draft.js';
 export async function loadInvoiceAssistantSource(db,companyId,orderId,context={}){
   if(context.manualPhotos){
     const orders=await db.$queryRaw`
@@ -44,6 +46,19 @@ export async function loadInvoiceAssistantSource(db,companyId,orderId,context={}
     WHERE j."companyId"=${companyId} AND j."storeId"=${document.storeId}
       AND j."purchaseDocumentId"=${document.id} ORDER BY j."createdAt",j."id" LIMIT 1`;
   const job=jobs[0];if(!job)return {document,pages:[]};
+  if(job.resultJson?.captureRecovery){
+    // Recovery reads the same retained original; never fall through to unrelated
+    // receipt photos when its explicit source identity is stale or incomplete.
+    return db.$transaction(async tx=>{
+      await lockInvoiceStore(tx,companyId,document.storeId);
+      const chains=await tx.$queryRaw`SELECT d."id",d."storeId",d."supplierId",d."documentNumber",d."documentDate",d."totalGross",d."paymentTransactionId",j."resultJson" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId" JOIN "AiReaderJob" j ON j."purchaseDocumentId"=d."id" AND j."companyId"=d."companyId" AND j."storeId"=d."storeId" WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND d."id"=${document.id} AND d."documentType"='INVOICE' AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT' AND d."settlementMode"='PAID' AND o."supplierId"=d."supplierId" AND j."id"=${job.id} FOR SHARE OF o,d,j`;
+      const chain=chains[0],binding=chain?.resultJson?.captureRecovery;
+      if(chains.length!==1||binding?.version!=='CAPTURE_RECOVERY_V1'||!chain.paymentTransactionId||binding.transactionId!==chain.paymentTransactionId)return {document,pages:[]};
+      const original=await readCapturedPaymentOriginal(tx,{companyId,storeId:chain.storeId,supplierId:chain.supplierId,documentNumber:chain.documentNumber,documentDate:chain.documentDate,totalGross:chain.totalGross},chain.paymentTransactionId);
+      if(binding.proofId!==original.proofId||binding.fingerprint!==original.fingerprint)return {document,pages:[]};
+      return {document:{...document,supplierId:chain.supplierId,documentNumber:chain.documentNumber,totalGross:chain.totalGross,storeId:chain.storeId},pages:original.pages.map(({filename,mimeType,contentData})=>({filename,mimeType,contentData}))};
+    });
+  }
   const receiptIds=job.resultJson?.mydataPosReceipt?.attachmentIds;
   if(Array.isArray(receiptIds)&&receiptIds.length){
     const receiptPages=[];
