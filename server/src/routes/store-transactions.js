@@ -204,7 +204,15 @@ function route(handler){
 
 function requireLedgerAccess(req,res,next){
   if(delegatedApprovalsRead(req))return next();
-  if(req.user?.staffAccess===true&&['sales.read','payments.supplier','payments.expense'].includes(req.staffGrant?.capability))return next();
+  if(req.user?.staffAccess===true){
+    const capability=req.staffGrant?.capability;
+    const path=String(req.originalUrl||"").split("?")[0];
+    if(['sales.read','payments.supplier','payments.expense'].includes(capability))return next();
+    if(capability==='approvals.expense-confirm'&&req.method==='POST'&&/^\/api\/transactions\/other-expenses\/[^/]+\/review$/.test(path))return next();
+    if(capability==='approvals.supplier-recovery'&&['GET','POST'].includes(req.method)&&/^\/api\/transactions\/other-expenses\/[^/]+\/supplier-advance$/.test(path))return next();
+    if(capability==='payments.advance-allocate'&&req.method==='POST'&&/^\/api\/transactions\/stores\/[^/]+\/supplier-advances\/[^/]+\/allocate$/.test(path))return next();
+    return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
+  }
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
