@@ -1,3 +1,5 @@
+import {ALFA19_PROFILE,parseAlfa19PrintedLineEconomics} from './mydata-printed-line-economics-alfa19.js';
+export {ALFA19_PROFILE};
 // Deliberately layout-specific. Values absent from the printed original are never
 // inferred from catalogue prices or the already discounted XML unit value.
 const PROFILE = 'E_INVOICING_DETAILED_LINE_AMOUNT_V1';
@@ -24,14 +26,15 @@ export function printedEconomicsProfileForUrl(value) {
   if (typeof value !== 'string' || value.length > 500) return null;
   try {
     const url = new URL(value);
-    return url.href === value && url.protocol === 'https:' && url.hostname === 'e-invoicing.gr' && !url.port && !url.username && !url.password && !url.search && !url.hash &&
-      /^\/edocuments\/ViewInvoice\/-1\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_[A-Za-z0-9]{6,8}\/pdf$/.test(url.pathname)
-      ? PROFILE : null;
+    if(url.href!==value||url.protocol!=='https:'||url.port||url.username||url.password||url.search||url.hash)return null;
+    if(url.hostname==='e-invoicing.gr'&&/^\/edocuments\/ViewInvoice\/-1\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_[A-Za-z0-9]{6,8}\/pdf$/.test(url.pathname))return PROFILE;
+    if(url.hostname==='epsilondigital19.epsilonnet.gr'&&/^\/fd\/[a-fA-F0-9]{32}:177\/pdf$/.test(url.pathname))return ALFA19_PROFILE;
+    return null;
   } catch { return null; }
 }
 
 export function parseMyDataPrintedLineEconomics(input) {
-  try { return parse(input); } catch { return null; }
+  try { return input?.profile===ALFA19_PROFILE?parseAlfa19PrintedLineEconomics(input):parse(input); } catch { return null; }
 }
 function parse(input) {
   const { text, xmlLines, totalNet, totalVat, totalGross, pageCount, profile } = input || {};

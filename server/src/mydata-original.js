@@ -7,7 +7,7 @@ import {readStandaloneOriginalSnapshot} from './lib/mydata-standalone-original-m
 import {matchesVerifiedEpsilonOriginal} from './lib/mydata-original-provider-profiles.js';
 import {readOriginalIdentityHeader} from './lib/mydata-original-identity-ocr.js';
 
-import {printedEconomicsProfileForUrl,parseMyDataPrintedLineEconomics} from './lib/mydata-printed-line-economics.js';
+import {ALFA19_PROFILE,printedEconomicsProfileForUrl,parseMyDataPrintedLineEconomics} from './lib/mydata-printed-line-economics.js';
 import {myDataPrintedEconomicsRowsFingerprint} from './lib/mydata-printed-economics-review.js';
 const textHash=value=>crypto.createHash('sha256').update(value).digest('hex');
 function providerOriginalTextProof(row,pdf){
@@ -311,7 +311,11 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
       &&proof.rawTextSHA256===textHash(result.rawText)&&proof.pageCount===result.pageCount;
     let printed=proven&&/^(?:1\.[1-6]|2\.[1-4])$/.test(String(source.invoiceType))&&(!source.currency||source.currency==='EUR')
       ?parseMyDataPrintedLineEconomics({text:result.rawText,xmlLines,totalNet:String(source.totalNet),totalVat:String(source.totalVat),totalGross:String(source.totalGross),pageCount:result.pageCount,profile}):null;
-    if(printed&&(printed.rows.length!==lines.length||printed.rows.some((p,i)=>p.itemCode!==lines[i].itemCode||Number(p.quantity)!==lines[i].quantity)))printed=null;
+    if(printed&&(printed.profile!==profile||printed.rows.length!==lines.length||printed.rows.some((p,i)=>p.itemCode!==lines[i].itemCode||Number(p.quantity)!==lines[i].quantity)))printed=null;
+    if(printed?.profile===ALFA19_PROFILE){
+      const physical=printed.rows.map(p=>p.physicalLineNumber);
+      if(physical.some(n=>!Number.isInteger(n)||n<1||n>printed.rows.length)||new Set(physical).size!==physical.length)printed=null;
+    }
     if(printed){
       const columns=await tx.$queryRaw`SELECT column_name,data_type,numeric_precision,numeric_scale FROM information_schema.columns
         WHERE table_schema=current_schema() AND table_name='PurchaseOrderLine'
@@ -323,12 +327,20 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
     for (const [index,line] of lines.entries()) {
       const id=crypto.randomUUID(),economics=printed?.rows[index];inserted.push({id,line,economics});
       if(economics){
+        // Keep the confirmed decimal amounts exact across the driver boundary.
+        // A JS float parameter can otherwise become 8.130000000000001 in an
+        // unconstrained numeric column and invalidate the persisted proof.
+        const exactAlfa=printed.profile===ALFA19_PROFILE;
+        const netAmount=exactAlfa?economics.netValue:line.netValue;
+        const vatAmount=exactAlfa?economics.vatAmount:line.vatAmount;
+        const grossCents=cents(line.netValue)+cents(line.vatAmount);
+        const grossAmount=exactAlfa?`${Math.floor(grossCents/100)}.${String(grossCents%100).padStart(2,'0')}`:grossCents/100;
         await tx.$executeRaw`INSERT INTO "PurchaseOrderLine"
           ("id","orderId","productId","supplierCode","description","quantity","unitCost","initialUnitCost","discount1","discount2","discount3",
            "invoiceUnit","stockUnitsPerInvoiceUnit","vatRate","netAmount","vatAmount","grossAmount")
           VALUES (${id},${orderId},${byCode.get(line.itemCode)?.productId??null},${line.itemCode},${line.description},${line.quantity},
            ${economics.unitCost}::numeric,${economics.initialUnitCost}::numeric,${economics.discount1}::numeric,${economics.discount2}::numeric,${economics.discount3}::numeric,
-           ${line.measurementUnit===7?'PACKAGE':'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},${(cents(line.netValue)+cents(line.vatAmount))/100})`;
+           ${line.measurementUnit===7?'PACKAGE':'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${netAmount}::numeric,${vatAmount}::numeric,${grossAmount}::numeric)`;
         continue;
       }
       const unitCost = line.netValue / line.quantity;
@@ -355,9 +367,11 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
       const marker={version:'MYDATA_PRINTED_ECONOMICS_V1',state:printed?'VERIFIED':'UNKNOWN',companyId,storeId,inboxId:row.inboxId,mark:source.mark,
         orderId,documentId:target.documentId,jobId:job.id,attachmentId:attachment.id,supplierId:target.supplierId??null,
         attachmentChecksum:attachment.checksum,rawTextSHA256:proven?textHash(result.rawText):null,xmlSHA256:textHash(source.rawPayload.xml),rowsFingerprint,
+        ...(proven?{printedProfile:profile,pageCount:result.pageCount}:{}),
         lineCount:lines.length,reason:printed?'PRINTED_LINE_AMOUNT_CONFIRMED':lines.length>250?'ROW_LIMIT':!proven?'MISSING_ORIGINAL_TEXT_PROOF':'PRINTED_ECONOMICS_NOT_PROVEN',
         ...(printed?{discountAmountTotal:printed.totals.discount,rows:inserted.map(({id,economics:p})=>({lineId:id,lineNumber:p.lineNumber,itemCode:p.itemCode,
-          originalUnitCost:p.unitCost,printedInitialAmount:p.printedInitialAmount,printedDiscountSteps:p.printedDiscountSteps,storageEquivalentPercents:[p.discount1,p.discount2,p.discount3]}))}:{rows:[]})};
+          originalUnitCost:p.unitCost,printedInitialAmount:p.printedInitialAmount,printedDiscountSteps:p.printedDiscountSteps,
+          ...(Number.isInteger(p.physicalLineNumber)?{physicalLineNumber:p.physicalLineNumber}:{}),storageEquivalentPercents:[p.discount1,p.discount2,p.discount3]}))}:{rows:[]})};
       await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({printedEconomicsReview:marker})}::jsonb
         WHERE "id"=${source.id} AND "companyId"=${companyId} AND "storeId"=${storeId} AND "inboxId"=${row.inboxId}`;
     }
