@@ -874,3 +874,6 @@ Retained /root; originalclaim4112/67a8eb13 and reviewed single-hash provenance e
 
 ## 21/11/2026 — OWNER-HISTORICAL-CASH-WITHDRAWAL-01 — SOURCE IN PROGRESS
 Owner /root; feat/owner-cash-withdrawal-implementation-20261121. Before-source claim4129/91e8944, docsCI44888334995SUCCESS. Central owner cash withdrawal for original open/closed shift, explicit store grant for responsible users, preview/atomic ledger/closed snapshot/Events and durable same-packet replay. Native PostgreSQL18.7 focused tests and real mounted modal PASS; exact final counts in own checkpoint CHANGES/2026-11-21-owner-historical-cash-withdrawal.md. Full CI/release and actual correction pending; no production write or overall PASS. Other owner scopes preserved.
+
+
+INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes this owner to integrate ONLY dedicated responsible-person recovery and same-original assistant promotion. General No5/No04/No02 ownership retained. New exact mapping/default-off action and canonical writer checks are in the existing recovery checkpoint. Before-source expansion; no new runtime or actual transactions.
