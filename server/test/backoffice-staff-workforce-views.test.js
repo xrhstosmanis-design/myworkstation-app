@@ -33,9 +33,15 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
    workforceSchedule:{
     findFirst:async({where,select})=>{
      assert.equal(where.companyId,'company');assert.equal(where.storeId,'store');
-     if(select.id){assert.ok(where.status.in.includes('PUBLISHED'));return scheduleBlocked?{id:'published'}:null;}
+     if(where.id==='schedule')return {...schedule,assignments:[]};
+     if(select?.id){assert.ok(where.status.in.includes('PUBLISHED'));return scheduleBlocked?{id:'published'}:null;}
      return {version:2};
     },
+    updateMany:async({where})=>{
+     if(where.id!==schedule.id||where.version!==schedule.version||where.status!==schedule.status)return {count:0};
+     schedule.version++;return {count:1};
+    },
+    update:async({data})=>Object.assign(schedule,data),
     create:async({data})=>{assert.equal(data.version,3);scheduleWrites++;scheduleBlocked=true;return {id:'draft',status:'DRAFT',...data};},
     findMany:async options=>{assert.equal(options.select.assignments.where.shiftTemplate.storeId,'store');assert.equal(options.select.assignments.where.shiftTemplate.companyId,'company');assert.ok(JSON.stringify(options.select.assignments.where.OR).includes('baseStoreId'));return selected(options,schedule);}},
    workforceAttendanceSession:{
@@ -54,7 +60,8 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
     create:async({data})=>{leaveWrites++;const item={...data,status:'REQUESTED'};createdLeaves.set(item.id,item);return item;},
     findMany:async options=>{assert.equal(options.where.employee.companyId,'company');assert.ok(JSON.stringify(options.where.employee.OR).includes('store'));return selected(options,leave);}},
    workforcePayrollPeriod:{findFirst:async({where})=>{assert.equal(where.status,'CLOSED');assert.equal(where.storeId,'store');return payrollLocked?{id:'locked'}:null;}},
-   workforceHourlyRate:{findMany:forbidden},$transaction:async callback=>{assert.ok(capabilities.some(right=>['schedule.create','leaves.create','attendance.correct','attendance.approve-review','attendance.approve-overtime'].includes(right)));return callback(db);},$executeRaw:forbidden,$executeRawUnsafe:forbidden,$queryRawUnsafe:async sql=>{assert.match(sql,/StoreLifecycleFence/);return [{schema:"test",fence:null}];},
+   workforceShiftTemplate:{findMany:async()=>[]},
+   workforceHourlyRate:{findMany:forbidden},$transaction:async callback=>{assert.ok(capabilities.some(right=>['schedule.create','schedule.preview','schedule.approve','leaves.create','attendance.correct','attendance.approve-review','attendance.approve-overtime'].includes(right)));return callback(db);},$executeRaw:forbidden,$executeRawUnsafe:forbidden,$queryRawUnsafe:async sql=>{assert.match(sql,/StoreLifecycleFence/);return [{schema:"test",fence:null}];},
    $queryRaw:async(strings,...values)=>{const sql=strings.join('?');if(sql.includes('FOR UPDATE')&&sql.includes('WorkforceAttendanceSession'))return [];if(sql.includes('pg_advisory_xact_lock'))return [{locked:1}];if(sql.includes('FROM "BackofficeStaffAccount" a'))return [{mustChangePassword:false}];if(sql.includes('FROM "BackofficeStaffGrant" g'))return values[2]==='store'?[{profile:'AUDITOR',capabilities}]:[];if(sql.includes('FROM "StorePaidModule"'))return paid?[{moduleKey:paid,active:true}]:[];assert.fail(sql);}
   };
   const accessSource=await readFile(new URL('../src/routes/workforce-v2-access.js',import.meta.url),'utf8');
@@ -84,6 +91,18 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
     assert.deepEqual(created.body,{item:{companyId:'company',storeId:'store',id:'draft',status:'DRAFT'},copiedFromPublished:false});
     assert.equal((await request(input)).status,409);
     assert.equal(scheduleWrites,1);
+    Object.assign(schedule,{status:'DRAFT'});
+    const preview={method:'POST',suffix:'/schedule/transition',body:{status:'PREVIEWED',version:1,confirmed:true,reason:'Synthetic preview'}};
+    assert.equal((await request(preview)).status,403);
+    capabilities=['schedule.read','schedule.preview'];
+    assert.equal((await request({...preview,body:{...preview.body,status:'APPROVED'}})).status,403);
+    const previewed=await request(preview);
+    assert.equal(previewed.status,200,JSON.stringify(previewed.body));
+    assert.equal(previewed.body.item.version,2);
+    assert.equal((await request(preview)).status,409);
+    capabilities=['schedule.read','schedule.approve'];
+    const approved=await request({...preview,body:{...preview.body,status:'APPROVED',version:2}});
+    assert.equal(approved.body.item?.status,'APPROVED',JSON.stringify(approved.body));
     capabilities=['schedule.read'];
    }
    if(path==='attendance'){

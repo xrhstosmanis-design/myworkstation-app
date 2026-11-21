@@ -8,7 +8,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.advance-allocate','payments.expense','payments.cash','payments.owner-withdrawal','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','schedule.create','attendance.read','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','invoice-ai.photo-preview','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','approvals.expense-confirm','approvals.supplier-recovery','monthly-inventory.read','workforce-roles.read','workforce-rules.read','workforce-rules.manage','shift-templates.read','shift-templates.manage','workforce-audit.read','unsold-products.read','sales-journal.read',...storeReportCapabilities,...finalPassiveStoreActions.map(action=>action.key)]);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.advance-allocate','payments.expense','payments.cash','payments.owner-withdrawal','sales.cancel','shifts.read','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','attendance.read','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','invoice-ai.photo-preview','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','approvals.expense-confirm','approvals.supplier-recovery','monthly-inventory.read','workforce-roles.read','workforce-rules.read','workforce-rules.manage','shift-templates.read','shift-templates.manage','workforce-audit.read','unsold-products.read','sales-journal.read',...storeReportCapabilities,...finalPassiveStoreActions.map(action=>action.key)]);
 export const staffPermissionSections=Object.freeze([
  {key:'owner-withdrawals',label:'Αναλήψεις ιδιοκτήτη',actions:[{key:'payments.owner-withdrawal',label:'Καταχώριση ανάληψης ιδιοκτήτη',description:'Καταχωρίζει παραλαβή μετρητών από ιδιοκτήτη σε ανοικτή ή κλεισμένη βάρδια του καταστήματος, με προεπισκόπηση και συμβάν.',requires:['payments.read','shifts.read']}]},
  {key:'final-passive',label:'Πρόσθετες παθητικές προβολές',actions:finalPassiveStoreActions.map(({modules,...action})=>action)},
@@ -76,6 +76,10 @@ export const staffPermissionSections=Object.freeze([
   {key:'employees',label:'Προσωπικό',actions:[
     {key:'payroll.read',label:'Προβολή μισθοδοσίας',description:'Βλέπει προεπισκόπηση μισθοδοσίας, περιόδους, ποσά πληρωμών και υπόλοιπα του επιλεγμένου καταστήματος.'},
     {key:'schedule.create',label:'Δημιουργία πρόχειρου προγράμματος βαρδιών',requires:['schedule.read']},
+    {key:'schedule.edit',label:'Επεξεργασία αναθέσεων βάρδιας',requires:['schedule.read']},
+    {key:'schedule.preview',label:'Προεπισκόπηση προγράμματος',requires:['schedule.read']},
+    {key:'schedule.approve',label:'Έγκριση προγράμματος',requires:['schedule.read']},
+    {key:'schedule.publish',label:'Δημοσίευση προγράμματος βαρδιών',requires:['schedule.read']},
     {key:'schedule.read',label:'Προβολή προγράμματος',description:'Βλέπει το πρόγραμμα και τις αναθέσεις του επιλεγμένου καταστήματος.'},
     {key:'attendance.correct',label:'Διόρθωση ωρών παρουσίας',requires:['attendance.read']},
     {key:'attendance.approve-review',label:'Έγκριση ελέγχου παρουσίας',requires:['attendance.read']},
@@ -192,6 +196,17 @@ export function staffRequestCapability(method,path,body={}){
     if(body?.status==='CANCELLED')return 'leaves.cancel';
   }
   if(method==='POST'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/schedules$/.test(path))return 'schedule.create';
+  const scheduleAction=path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/schedules\/(editor-options|[^/]+\/(?:assignments(?:\/[^/]+)?|transition))$/);
+  if(scheduleAction){
+    const action=scheduleAction[1].split('/');
+    if(method==='GET'&&action[0]==='editor-options')return 'schedule.edit';
+    if(action[1]==='assignments'&&((method==='POST'&&action.length===2)||(['PUT','DELETE'].includes(method)&&action.length===3)))return 'schedule.edit';
+    if(method==='POST'&&action[1]==='transition'){
+      if(body?.status==='PREVIEWED')return 'schedule.preview';
+      if(body?.status==='APPROVED')return 'schedule.approve';
+      if(body?.status==='PUBLISHED')return 'schedule.publish';
+    }
+  }
   const attendanceAction=method==='POST'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/attendance\/[^/]+\/(correct-hours|approve-review|approve-over-8-hours)$/);
   if(attendanceAction)return {'correct-hours':'attendance.correct','approve-review':'attendance.approve-review','approve-over-8-hours':'attendance.approve-overtime'}[attendanceAction[1]];
   const leaveCollection=path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/leaves(\/eligible-employees)?$/);

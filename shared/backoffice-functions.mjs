@@ -101,6 +101,8 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "create",
       "edit",
       "publish",
+      "preview",
+      "approve",
       "delete",
       "export",
       "print"
