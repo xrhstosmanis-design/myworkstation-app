@@ -18,3 +18,7 @@ Own new service/route/modal/tests; minimal mount in server/src/index.js and Owne
 Before code: publish this claim. Then native PostgreSQL atomicity/concurrency/idempotency/scope and actual mounted owner UI tests, exact-source full CI, reviewed merge and normal guarded deployment. Existing transaction replay is forbidden. Real owner-confirmed production correction is a separate explicit UI action with before/after verification; no direct production SQL write. Partial code/CI does not claim real correction or LAB PASS.
 
 Status: CLAIM ONLY; application code NOT IMPLEMENTED. No financial, stock, shift or production mutation.
+
+## Events requirement added before implementation
+
+The same atomic correction must appear in the existing Events screen, linked to the original store/session/operator and ledger transaction. Display the withdrawal occurrence time separately from correction recordedAt, recording actor, reason, amount and before/after expected cash and variance. Add only the exact event label/allowlist/description mapping in server/src/routes/kiosk-reports-audit.js with linked-event regression coverage. Preserve existing access scope, event filters and chronological meanings. Historical session investigator must resolve the explicit session link even when registration is later. No duplicated financial effect from the audit row.
