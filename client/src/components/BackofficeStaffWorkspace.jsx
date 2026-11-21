@@ -11,6 +11,7 @@ import {staffCompanyCapabilities,staffCompanyPermissionSections,validStaffCompan
 const MonthlyInventoryCapturePanel=React.lazy(()=>import('./commerce/MonthlyInventoryCapturePanel.jsx'));
 const StoreChatPanel=React.lazy(()=>import('./store/StoreChatPanel.jsx'));
 const PosOnlineRadioPlayer=React.lazy(()=>import('./store/PosOnlineRadioPlayer.jsx'));
+const OwnerExpenseRecoveryPanel=React.lazy(()=>import('./cloud/OwnerExpenseRecoveryPanel.jsx'));
 const OwnerPendingApprovals=React.lazy(()=>import('./cloud/OwnerPendingApprovals.jsx'));
 const WholesaleB2BPanel=React.lazy(()=>import('./commerce/WholesaleB2BPanel.jsx'));
 const BackofficeVideoAuditPanel=React.lazy(()=>import('./commerce/BackofficeVideoAuditPanel.jsx'));
@@ -51,8 +52,11 @@ import {Building2,LayoutDashboard,LogOut} from 'lucide-react';
 import {staffProfiles,staffPermissionSections} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
 export default function BackofficeStaffWorkspace({api,user,onLogout}){
+  const [recoveryStoreId,setRecoveryStoreId]=useState('');
+  const [recoveryNotice,setRecoveryNotice]=useState('');
   const [page,setPage]=useState('stores');
   const [identity,setIdentity]=useState(null),[storeId,setStoreId]=useState(''),[view,setView]=useState(''),[data,setData]=useState(null),[detail,setDetail]=useState(null),[from,setFrom]=useState(()=>greeceDateInput(new Date())),[to,setTo]=useState(()=>greeceDateInput(new Date())),[error,setError]=useState(''),[busy,setBusy]=useState(false),[pending,setPending]=useState(null);
+  useEffect(()=>{setRecoveryStoreId('');setRecoveryNotice('')},[storeId,view]);
   const [terminalPos,setTerminalPos]=useState(''),[terminals,setTerminals]=useState([]),[invoicePage,setInvoicePage]=useState('archive'),[closeOpen,setCloseOpen]=useState(false);
   const moduleWriting=useRef(false);
   const sequence=useRef(0),scope=useRef(''),sending=useRef(false),selectedStocktakeId=useRef(null);scope.current=JSON.stringify([storeId,view,from,to,terminalPos]);
@@ -183,6 +187,11 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
       {view==='monthly-inventory'&&selected&&capabilities.includes('monthly-inventory.read')&&<React.Suspense fallback={<p role="status">Φόρτωση κατάστασης μηνιαίας παρατήρησης…</p>}><MonthlyInventoryCapturePanel key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} storeName={selected.name} readOnly/></React.Suspense>}
       {view==='chat'&&selected&&capabilities.includes('chat.read')&&<React.Suspense fallback={<p role="status">Φόρτωση Chat…</p>}><StoreChatPanel key={storeId} api={scoped} companyId={identity.companyId} store={{...selected,companyId:identity.companyId}} readOnly onClose={()=>setView('')}/></React.Suspense>}
       {view==='radio'&&selected&&capabilities.includes('radio.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ραδιοφώνου…</p>}><PosOnlineRadioPlayer key={storeId} api={scoped} companyId={identity.companyId} store={selected} readOnly onClose={()=>setView('')}/></React.Suspense>}
+      {view==='approvals'&&selected&&capabilities.includes('approvals.supplier-recovery')&&<React.Suspense fallback={<p role="status">Φόρτωση…</p>}>
+        <button type="button" onClick={()=>{setRecoveryNotice('');setRecoveryStoreId(storeId)}}>Σύνδεση εξόδου ως έναντι προμηθευτή</button>
+        {recoveryNotice&&<p role="status">{recoveryNotice}</p>}
+        {recoveryStoreId===storeId&&<OwnerExpenseRecoveryPanel key={storeId} api={scoped} store={selected} onClose={()=>setRecoveryStoreId('')} setMessage={setRecoveryNotice}/>}
+      </React.Suspense>}
       {view==='approvals'&&selected&&capabilities.includes('approvals.read')&&<React.Suspense fallback={<p role="status">Φόρτωση επιβεβαιώσεων…</p>}><OwnerPendingApprovals key={storeId} api={scoped} companyId={identity.companyId} store={selected} readOnly canConfirmExpense={capabilities.includes("approvals.expense-confirm")}/></React.Suspense>}
       {view==='wholesale'&&selected&&capabilities.includes('wholesale.read')&&<React.Suspense fallback={<p role="status">Φόρτωση χονδρικής…</p>}><WholesaleB2BPanel key={storeId} api={scoped} companyId={identity.companyId} stores={[selected]} activeStoreId={storeId} readOnly/></React.Suspense>}
       {view==='video'&&selected&&capabilities.includes('video.read')&&<React.Suspense fallback={<p role="status">Φόρτωση καμερών…</p>}><BackofficeVideoAuditPanel key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} readOnly/></React.Suspense>}
