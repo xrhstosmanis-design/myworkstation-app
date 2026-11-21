@@ -562,7 +562,7 @@ async function availableSupplierAdvances(companyId,storeId,supplierId){
 
 router.post("/stores/:storeId/supplier-advances/:settlementId/allocate",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);await ownedStore(req.params.storeId,req.user.companyId);
-  res.json(await allocateSupplierAdvance(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,settlementId:req.params.settlementId,user:req.user},req.body));
+  res.json(await allocateSupplierAdvance(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,settlementId:req.params.settlementId,user:req.user,authorize:req.user.staffAccess===true?db=>requireStaffAction(db,req,req.params.storeId,'payments.advance-allocate'):null},req.body));
 }));
 
 router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{

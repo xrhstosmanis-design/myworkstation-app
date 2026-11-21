@@ -443,6 +443,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "label": "Πληρωμές",
     "scope": "STORE",
     "actions": [
+      "advance-allocate",
       "read",
       "supplier",
       "expense",

@@ -58,10 +58,11 @@ export async function associateExpenseAsAdvance(db,scope,input){
 
 const allocationSchema=z.object({expectedAvailable:money,allocations:z.array(z.object({purchaseDocumentId:z.string().trim().min(1).max(180),amount:money}).strict()).min(1).max(80),idempotencyKey:z.string().min(8).max(180)}).strict();
 export async function allocateSupplierAdvance(db,scope,input){
- const user=scope.user;if(!user||user.tokenType!=='STORE_OPERATOR'&&!['OWNER','SUPER_ADMIN','ADMIN','MANAGER'].includes(user.role))fail(403,'Δεν έχεις δικαίωμα συμψηφισμού έναντι.');if(user?.companyId!==scope.companyId||user.tokenType==='STORE_OPERATOR'&&(user.storeId!==scope.storeId||!user.permissions?.includes('SUPPLIER_PAYMENT')))fail(403,'Δεν έχεις πρόσβαση στο έναντι αυτού του καταστήματος.');
+ const user=scope.user;if(!user||!scope.authorize&&user.tokenType!=='STORE_OPERATOR'&&!['OWNER','SUPER_ADMIN','ADMIN','MANAGER'].includes(user.role))fail(403,'Δεν έχεις δικαίωμα συμψηφισμού έναντι.');if(user?.companyId!==scope.companyId||user.tokenType==='STORE_OPERATOR'&&(user.storeId!==scope.storeId||!user.permissions?.includes('SUPPLIER_PAYMENT')))fail(403,'Δεν έχεις πρόσβαση στο έναντι αυτού του καταστήματος.');
  const body=allocationSchema.parse(input),requestHash=digest(body),ids=body.allocations.map(a=>a.purchaseDocumentId).sort();
  if(new Set(ids).size!==ids.length)fail(400,'Κάθε τιμολόγιο επιλέγεται μία φορά.');
  return db.$transaction(async tx=>{
+  if(scope.authorize)await scope.authorize(tx);
   const documents=await tx.$queryRaw`SELECT "id","documentNumber","totalGross","supplierId" FROM "PurchaseDocument" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "id"=ANY(${ids}::text[]) AND "status" IN ('DRAFT','APPROVED') AND "settlementMode"='CREDIT' AND "documentType"<>'CREDIT_NOTE' ORDER BY "id" FOR UPDATE`;
   if(documents.length!==ids.length)fail(409,'Τα τιμολόγια δεν είναι πλέον ανοιχτές οφειλές του καταστήματος.');
   const settlements=await tx.$queryRaw`SELECT ss.*,t."amount",t."reversedAt",t."type",t."supplierId" AS "transactionSupplierId" FROM "SupplierPaymentSettlement" ss JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND t."storeId"=ss."storeId" WHERE ss."id"=${scope.settlementId} AND ss."companyId"=${scope.companyId} AND ss."storeId"=${scope.storeId} FOR UPDATE OF ss,t`;
@@ -80,6 +81,7 @@ export async function allocateSupplierAdvance(db,scope,input){
   }
   const result={ok:true,settlementId:settlement.id,allocatedAmount:requested/100,advanceAmount:(available-requested)/100,cashDelta:0};
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${scope.companyId},${scope.storeId},${user.operatorId||user.id},${user.id},'SUPPLIER_ADVANCE_ALLOCATED',${JSON.stringify({settlementId:settlement.id,transactionId:settlement.transactionId,idempotencyKey:body.idempotencyKey,requestHash,allocations:body.allocations,result,cashDelta:0})}::jsonb)`;
+  if(scope.authorize)await scope.authorize(tx);
   return result;
  });
 }
