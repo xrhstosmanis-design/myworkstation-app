@@ -7,6 +7,25 @@ import {readStandaloneOriginalSnapshot} from './lib/mydata-standalone-original-m
 import {matchesVerifiedEpsilonOriginal} from './lib/mydata-original-provider-profiles.js';
 import {readOriginalIdentityHeader} from './lib/mydata-original-identity-ocr.js';
 
+import {printedEconomicsProfileForUrl,parseMyDataPrintedLineEconomics} from './lib/mydata-printed-line-economics.js';
+import {myDataPrintedEconomicsRowsFingerprint} from './lib/mydata-printed-economics-review.js';
+const textHash=value=>crypto.createHash('sha256').update(value).digest('hex');
+function providerOriginalTextProof(row,pdf){
+  if(typeof pdf.text!=='string'||pdf.text.length>200000||!Buffer.isBuffer(pdf.bytes)||pdf.bytes.length<100||pdf.bytes.length>3400000
+    ||!Number.isInteger(pdf.pageCount)||pdf.pageCount<1||pdf.pageCount>20||textHash(pdf.bytes)!==pdf.checksum)return null;
+  let profile;try{profile=printedEconomicsProfileForUrl(originalDownloadUrl(row.rawPayload?.xml,row.issuerVat))}catch{return null}
+  return profile?{version:'SERVER_PROVIDER_PDF_V1',pdfChecksum:pdf.checksum,rawTextSHA256:textHash(pdf.text),pageCount:pdf.pageCount,profile}:null;
+}
+// Check each exact projected decimal against the actual SQL numeric capacity.
+// A low-scale legacy column must never silently round a VERIFIED discount.
+function decimalFitsColumn(value,column){
+  if(!column||column.data_type!=='numeric')return false;
+  if(column.numeric_precision==null&&column.numeric_scale==null)return true;
+  const match=String(value).match(/^(\d+)(?:\.(\d+))?$/);
+  if(!match||!Number.isInteger(column.numeric_precision)||!Number.isInteger(column.numeric_scale)||column.numeric_scale<0)return false;
+  return match[1].replace(/^0+/,'').length<=column.numeric_precision-column.numeric_scale
+    &&(match[2]||'').replace(/0+$/,'').length<=column.numeric_scale;
+}
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
 export function originalDownloadUrl(xml,issuerVat){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
@@ -122,7 +141,7 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
     if(current[0].status!=="RECEIVED")throw error("Το παραστατικό έχει ήδη μεταφερθεί για έλεγχο.");
     const attachmentId=crypto.randomUUID(),jobId=createAiJob?crypto.randomUUID():null;
     await tx.$executeRaw`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES (${attachmentId},${companyId},${storeId},'AI_READER_SOURCE',${pdf.filename},'application/pdf',${"DATABASE:"+pdf.checksum},${pdf.checksum},${"data:application/pdf;base64,"+pdf.bytes.toString("base64")})`;
-    if(jobId)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({rawText:pdf.text,lines:[],pageCount:pdf.pageCount,source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true})}::jsonb,${userId})`;
+    if(jobId)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({rawText:pdf.text,lines:[],pageCount:pdf.pageCount,source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,providerOriginalTextProof:providerOriginalTextProof(row,pdf)})}::jsonb,${userId})`;
     await tx.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=${attachmentId},"note"=${"Πρωτότυπο παρόχου • MARK "+row.mark+" • "+Number(row.totalGross).toFixed(2)+" € • Έλεγχος από βοηθό πριν από την καταχώρηση"},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
     await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=("rawPayload"-'originalPending'-'originalError')||${JSON.stringify({originalDownloaded:true,originalJobId:jobId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
     const draft=await attachReviewDraft(tx,{...row,attachmentId},companyId,storeId,inboxId,userId,createAiJob);
@@ -185,7 +204,7 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   await lockInvoiceStore(tx,companyId,storeId);
   const inbox=await tx.$queryRaw`SELECT "id","attachmentId","status" FROM "DocumentInbox" WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1 FOR UPDATE`;
   if(!inbox[0]?.attachmentId)throw error("Δεν βρέθηκε το πρωτότυπο για το πρόχειρο.",404);
-  const jobs=await tx.$queryRaw`SELECT "id","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "attachmentId"=${inbox[0].attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
+  const jobs=await tx.$queryRaw`SELECT "id","companyId","storeId","attachmentId","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "attachmentId"=${inbox[0].attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
   const job=jobs[0];
   const common=await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId);
   if(common){
@@ -229,7 +248,7 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   if(!job)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${inbox[0].attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true})}::jsonb,${userId})`;
   await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","purchaseOrderId") VALUES (${documentId},${companyId},${storeId},${supplierId},${String(row.invoiceType).startsWith("5.")?"CREDIT_NOTE":"INVOICE"},${number},${new Date(row.issueDate)},0,0,${Number(row.totalGross)},'POS_OCR_DRAFT','DRAFT',${userId},${orderId})`;
   await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${companyId},${storeId},${supplierId},'NEW',${number},${"myDATA • MARK "+row.mark+" — Ανάγνωση από βοηθό — ΠΡΟΣ ΕΛΕΓΧΟ"},${userId},'Λήψη myDATA','Λήψη myDATA','POS_OCR_DRAFT',${documentId})`;
-  await prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierId);
+  await prefillReviewDraft(tx,row,job||{id:jobId,companyId,storeId,attachmentId:inbox[0].attachmentId,resultJson:{}},companyId,storeId,orderId,supplierId);
   await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"stage"='MYDATA_DRAFT_READY',"status"='AWAITING_APPROVAL',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,mydataDraftOrderId:orderId})}::jsonb,"updatedAt"=NOW() WHERE "id"=${jobId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
   await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό"},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
   await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataDraftOrderId:orderId,mydataDraftDocumentId:documentId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
@@ -237,7 +256,23 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
 }
 
 async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierId){
-  const xmlLines = invoiceDetailLines(row.rawPayload?.xml);
+  const locked=await tx.$queryRaw`SELECT o."id",o."supplierId",d."id" AS "documentId" FROM "PurchaseOrder" o
+    JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
+    WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND o."storeId"=${storeId}
+      AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT'
+      AND COALESCE(to_jsonb(o)->>'reopenVersion','0')='0' FOR UPDATE OF o,d`;
+  const target=locked[0];
+  if(!target||target.supplierId!==supplierId)return false;
+  const counts=await tx.$queryRaw`SELECT (SELECT COUNT(*) FROM "PurchaseOrderLine" WHERE "orderId"=${orderId})::int AS orders,
+    (SELECT COUNT(*) FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${target.documentId})::int AS documents`;
+  if(counts[0]?.orders||counts[0]?.documents)return false;
+  const sources=await tx.$queryRaw`SELECT m.* FROM "MyDataInboundDocument" m WHERE m."id"=${row.id} AND m."companyId"=${companyId}
+    AND m."storeId"=${storeId} AND m."inboxId"=${row.inboxId} FOR UPDATE`;
+  const source=sources[0];
+  if(!source||source.rawPayload?.printedEconomicsReview||typeof source.rawPayload?.xml!=='string'||source.rawPayload.xml.length>1000000)return false;
+  const identity=x=>JSON.stringify(['mark','issuerVat','counterpartVat','series','documentNumber','invoiceType','currency','totalNet','totalVat','totalGross'].map(k=>x[k]==null?null:String(x[k])) .concat(x.issueDate?new Date(x.issueDate).toISOString():null));
+  if(identity(source)!==identity(row)||source.rawPayload.xml!==row.rawPayload?.xml)return false;
+  const xmlLines = invoiceDetailLines(source.rawPayload.xml);
   const lines = [...xmlLines, ...pdfPackagingLines(job?.resultJson?.rawText, xmlLines)];
   const vatRates = new Map([[1,24],[2,13],[3,6],[4,17],[5,9],[6,4],[7,0]]);
   const isCarton = line => line.measurementUnit === 7
@@ -263,14 +298,68 @@ async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierI
   const sumsMatch = ["netValue", "vatAmount"].every((key, index) =>
     lines.reduce((sum, line) => sum + cents(line[key]), 0) === cents(index ? row.totalVat : row.totalNet));
   if (prepared && sumsMatch && cents(row.totalNet) + cents(row.totalVat) === cents(row.totalGross)) {
-    for (const line of lines) {
+    const attachments=await tx.$queryRaw`SELECT a."id",a."checksum" FROM "DocumentAttachment" a JOIN "DocumentInbox" i
+      ON i."attachmentId"=a."id" AND i."companyId"=a."companyId" AND i."storeId"=a."storeId"
+      WHERE i."id"=${row.inboxId} AND i."companyId"=${companyId} AND i."storeId"=${storeId}`;
+    const attachment=attachments.length===1?attachments[0]:null;
+    const result=job?.resultJson,proof=result?.providerOriginalTextProof;
+    let profile;try{profile=printedEconomicsProfileForUrl(originalDownloadUrl(source.rawPayload.xml,source.issuerVat))}catch{}
+    const proven=attachment&&job?.companyId===companyId&&job?.storeId===storeId&&job?.attachmentId===attachment.id
+      &&(!job.purchaseDocumentId||job.purchaseDocumentId===target.documentId)&&result?.source==='MYDATA_PROVIDER_ORIGINAL'
+      &&String(result.myDataMark)===String(source.mark)&&proof?.version==='SERVER_PROVIDER_PDF_V1'&&profile&&proof.profile===profile
+      &&proof.pdfChecksum===attachment.checksum&&typeof result.rawText==='string'&&result.rawText.length<=200000
+      &&proof.rawTextSHA256===textHash(result.rawText)&&proof.pageCount===result.pageCount;
+    let printed=proven&&/^(?:1\.[1-6]|2\.[1-4])$/.test(String(source.invoiceType))&&(!source.currency||source.currency==='EUR')
+      ?parseMyDataPrintedLineEconomics({text:result.rawText,xmlLines,totalNet:String(source.totalNet),totalVat:String(source.totalVat),totalGross:String(source.totalGross),pageCount:result.pageCount,profile}):null;
+    if(printed&&(printed.rows.length!==lines.length||printed.rows.some((p,i)=>p.itemCode!==lines[i].itemCode||Number(p.quantity)!==lines[i].quantity)))printed=null;
+    if(printed){
+      const columns=await tx.$queryRaw`SELECT column_name,data_type,numeric_precision,numeric_scale FROM information_schema.columns
+        WHERE table_schema=current_schema() AND table_name='PurchaseOrderLine'
+          AND column_name IN ('unitCost','initialUnitCost','discount1','discount2','discount3')`;
+      const byName=new Map(columns.map(c=>[c.column_name,c]));
+      if(printed.rows.some(p=>['unitCost','initialUnitCost','discount1','discount2','discount3'].some(k=>!decimalFitsColumn(p[k],byName.get(k)))))printed=null;
+    }
+    const inserted=[];
+    for (const [index,line] of lines.entries()) {
+      const id=crypto.randomUUID(),economics=printed?.rows[index];inserted.push({id,line,economics});
+      if(economics){
+        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine"
+          ("id","orderId","productId","supplierCode","description","quantity","unitCost","initialUnitCost","discount1","discount2","discount3",
+           "invoiceUnit","stockUnitsPerInvoiceUnit","vatRate","netAmount","vatAmount","grossAmount")
+          VALUES (${id},${orderId},${byCode.get(line.itemCode)?.productId??null},${line.itemCode},${line.description},${line.quantity},
+           ${economics.unitCost}::numeric,${economics.initialUnitCost}::numeric,${economics.discount1}::numeric,${economics.discount2}::numeric,${economics.discount3}::numeric,
+           ${line.measurementUnit===7?'PACKAGE':'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},${(cents(line.netValue)+cents(line.vatAmount))/100})`;
+        continue;
+      }
       const unitCost = line.netValue / line.quantity;
       await tx.$executeRaw`INSERT INTO "PurchaseOrderLine"
         ("id","orderId","productId","supplierCode","description","quantity","unitCost","initialUnitCost",
          "invoiceUnit","stockUnitsPerInvoiceUnit","vatRate","netAmount","vatAmount","grossAmount")
-        VALUES (${crypto.randomUUID()},${orderId},${byCode.get(line.itemCode)?.productId ?? null},${line.itemCode},${line.description},${line.quantity},
+        VALUES (${id},${orderId},${byCode.get(line.itemCode)?.productId ?? null},${line.itemCode},${line.description},${line.quantity},
           ${unitCost},${unitCost},${line.measurementUnit === 7 ? 'PACKAGE' : 'PIECE'},${unitsFor(line)},${vatRates.get(line.vatCategory)},${line.netValue},${line.vatAmount},
           ${(cents(line.netValue) + cents(line.vatAmount)) / 100})`;
+    }
+    const persisted=lines.length<=250?await tx.$queryRaw`SELECT (SELECT jsonb_object_agg(e.key,CASE WHEN jsonb_typeof(e.value)='number' THEN to_jsonb(e.value::text) ELSE e.value END)
+      FROM jsonb_each(to_jsonb(l)) e) AS row FROM "PurchaseOrderLine" l WHERE l."orderId"=${orderId} ORDER BY l."id" LIMIT 251`:[];
+    const rowsFingerprint=myDataPrintedEconomicsRowsFingerprint(persisted.map(x=>x.row));
+    if(printed){
+      const expected=new Map(inserted.map(({id,line,economics:p})=>[id,{productId:byCode.get(line.itemCode)?.productId??null,
+        supplierCode:line.itemCode,description:line.description,quantity:line.quantity,unitCost:p.unitCost,initialUnitCost:p.initialUnitCost,
+        discount1:p.discount1,discount2:p.discount2,discount3:p.discount3,exciseTotal:0,vatRate:vatRates.get(line.vatCategory),
+        netAmount:line.netValue,vatAmount:line.vatAmount,grossAmount:(cents(line.netValue)+cents(line.vatAmount))/100,
+        invoiceUnit:line.measurementUnit===7?'PACKAGE':'PIECE',stockUnitsPerInvoiceUnit:unitsFor(line)}]));
+      const expectedFingerprint=myDataPrintedEconomicsRowsFingerprint(persisted.map(({row:r})=>({...r,...expected.get(r.id)})));
+      if(!rowsFingerprint||expected.size!==persisted.length||persisted.some(({row:r})=>!expected.has(r.id))||expectedFingerprint!==rowsFingerprint)printed=null;
+    }
+    if(attachment&&job?.id&&(rowsFingerprint||lines.length>250)){
+      const marker={version:'MYDATA_PRINTED_ECONOMICS_V1',state:printed?'VERIFIED':'UNKNOWN',companyId,storeId,inboxId:row.inboxId,mark:source.mark,
+        orderId,documentId:target.documentId,jobId:job.id,attachmentId:attachment.id,supplierId:target.supplierId??null,
+        attachmentChecksum:attachment.checksum,rawTextSHA256:proven?textHash(result.rawText):null,xmlSHA256:textHash(source.rawPayload.xml),rowsFingerprint,
+        lineCount:lines.length,reason:printed?'PRINTED_LINE_AMOUNT_CONFIRMED':lines.length>250?'ROW_LIMIT':!proven?'MISSING_ORIGINAL_TEXT_PROOF':'PRINTED_ECONOMICS_NOT_PROVEN',
+        ...(printed?{discountAmountTotal:printed.totals.discount,rows:inserted.map(({id,economics:p})=>({lineId:id,lineNumber:p.lineNumber,itemCode:p.itemCode,
+          originalUnitCost:p.unitCost,printedInitialAmount:p.printedInitialAmount,printedDiscountSteps:p.printedDiscountSteps,storageEquivalentPercents:[p.discount1,p.discount2,p.discount3]}))}:{rows:[]})};
+      await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({printedEconomicsReview:marker})}::jsonb
+        WHERE "id"=${source.id} AND "companyId"=${companyId} AND "storeId"=${storeId} AND "inboxId"=${row.inboxId}`;
     }
     return true;
   }

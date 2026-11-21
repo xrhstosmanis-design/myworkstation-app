@@ -843,3 +843,13 @@ Retained /root, branchfix/no2-printed-discounts-20261120. Before-source independ
 ## INVOICE-PAYMENT-RECOVERY-01 — ASSIGNED / CLAIM ONLY — 21/11/2026
 
 Owner /root, docs/invoice-payment-recovery-claim-20261121. Explicit user expansion: owner/delegated responsible-person recovery, stored photos through assistant, one existing payment and editable draft, later reviewed warehouse receipt. Existing PLAIN_CAPTURE is intentionally not an AI draft; generic guard remains. No5 shared rights/installer, No04 lines and No02 acquisition retained. [Before-source boundary](CHANGES/2026-11-21-invoice-payment-recovery.md); [small pending continuation](../docs/roadmap/INVOICE_RECOVERY_PENDING_2026-11-21.md). Source NOT STARTED; combined LAB NOT TESTED; do not replay protected close/plain capture PASS.
+
+
+## No02 — recovered first-insert printed discounts implementation21Nov2026
+
+Retained /root; originalclaim4112/67a8eb13 and reviewed single-hash provenance extension4117/8287c4b preceded source/packet edits. Branchfix/no2-printed-discounts-recovery-20261121 on8287c4b: exact original-cost/typed amount projection for the proven e-invoicing layout, actual SQL precision and persisted roundtrip, source/row fingerprint-bound read-only VERIFIED/UNKNOWN notice independent of description. Fresh acquisition/replay/native negatives39PASS/0FAIL/0SKIP on actual isolated PG18.7; focused46PASS, final18PASS, frontendbuildPASS. Company/inspection/supplier23PASS/2infraSKIP; broad local browserECONNRESET/stallexit130 recorded, no full localPASS. [Evidence and exact limits](CHANGES/2026-11-20-no2-printed-discounts-claim.md). SOURCE LOCAL / AWAITING FULL CI / NOT INSTALLED / groupedLABNOTTESTED. No No4 writers, old-draft rewrite, schema, payment, stock orbulk. OverallNo02/4019OPEN.
+
+
+### No02 — first full sourceCI passed; preserve incoming No5 photo rights
+
+4120/head8a96f6e exactCI44878203644ALL5SUCCESS:7014serverPASS/0FAIL/4optionalSKIP+8recoveryPASS, actual newnativechecks and HTTP/E2E executed. Currentmainb80/No5ec2+No14docs preserved in resolved integration; suite uses exactmain bytes plus separateNo02import/noticecall, peerlongline unchanged.13mounted/inspection/lockedUIchecksPASS and build13.80sPASS; server/parser/economicsblobs unchanged. Renewed combined-headCI/merge/exactmainCI/guardedLIVE stillOPEN, no installation/LABPASS asserted. [Receipt](CHANGES/2026-11-20-no2-printed-discounts-claim.md).

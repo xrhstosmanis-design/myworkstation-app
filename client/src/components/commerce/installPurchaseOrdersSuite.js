@@ -1,3 +1,4 @@
+import {installMyDataPrintedEconomicsNotice} from "../../lib/mydata-printed-economics-notice.mjs";
 import {installInvoiceLineTaxonomy} from "./invoiceLineTaxonomy.js";
 import {showPurchaseSupplierCorrection} from "./purchaseSupplierCorrection.js";
 import {greeceDateTimeToIso,greeceDateInput} from "../../../../shared/greece-time.mjs";
@@ -164,6 +165,7 @@ function showOrder(root,data,assistantSource=null,openAssistant=false){if(!root.
   if(!edit){m.querySelectorAll('[data-line-edit],[data-line-delete],[data-save-meta]').forEach(node=>node.remove());m.querySelectorAll('.po-order-meta input,.po-order-meta select').forEach(node=>node.disabled=true);}
   if(!approve)m.querySelectorAll('[data-finalize],[data-invoice]').forEach(node=>node.remove());
 }const refresh=async()=>{m.remove();await loadReport(root);openOrder(root,o.id,"",assistantSource)};const launchAssistant=(uploaded=null)=>import("../../invoice-assistant-pos-client.js").then(({openPosInvoiceAssistant})=>{if(!root.isConnected||!m.isConnected||posContext!==orderContext||state.storeId!==selectedStore)return;return openPosInvoiceAssistant(o.id,o,refresh,orderContext?api:null,assistantSource,()=>root.isConnected&&m.isConnected&&posContext===orderContext&&state.storeId===selectedStore,uploaded)}).catch(error=>alert(error.message));m.querySelector("[data-invoice-assistant]")?.addEventListener("click",()=>launchAssistant());if(openAssistant&&m.querySelector("[data-invoice-assistant]"))launchAssistant();
+  installMyDataPrintedEconomicsNotice(m,data.mydataPrintedEconomics,{orderId:o.id,storeId:o.storeId});
   const photoInput=m.querySelector("[data-order-photo-files]");
   m.querySelector("[data-order-photos]")?.addEventListener("click",()=>photoInput.click());
   photoInput?.addEventListener("change",async()=>{
