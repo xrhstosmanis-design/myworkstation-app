@@ -203,6 +203,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 21/11 No5 — φωτογραφική προεπισκόπηση βοηθού για Υπεύθυνο. [Checkpoint](CHANGES/2026-11-21-no5-invoice-photo.md).
 
+21/11 No5 — Αντιστοίχιση ειδών στις νέες γραμμές φωτογραφίας. [Checkpoint](CHANGES/2026-11-21-no5-invoice-photo-products.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB

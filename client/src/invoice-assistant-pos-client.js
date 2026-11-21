@@ -48,7 +48,7 @@ const defaultApi=async(path,options={})=>{
   return result;
 };
 
-export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null,sourceContext=null,scopeActive=null,manualSource=null){
+export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null,sourceContext=null,scopeActive=null,manualSource=null,{requireCatalogMatch=false}={}){
   sourceContext=sourceContext?{inboxId:sourceContext.inboxId,storeId:sourceContext.storeId}:null;
   const sourceKey=manualSource||(sourceContext?JSON.stringify([sourceContext.storeId,sourceContext.inboxId]):"POS");
   if(sourceContext&&(!sourceContext.inboxId||!sourceContext.storeId))throw new Error("Δεν υπάρχει έγκυρη εγγραφή myDATA και επιλεγμένο κατάστημα.");
@@ -153,7 +153,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   overlay.querySelector("[data-ask]").onclick=async()=>{
     if(scopeActive&&!scopeActive())return;
     const message=overlay.querySelector("[data-message]").value.trim();if(!message){status.textContent="Γράψε πρώτα τι θέλεις να ελέγξει.";return}
-    const ask=overlay.querySelector("[data-ask]");ask.disabled=true;apply.hidden=true;proposals.replaceChildren();status.textContent=sourceContext?"Ο βοηθός συγκρίνει το PDF myDATA με το πρόχειρο…":"Ο βοηθός συγκρίνει τις φωτογραφίες με το πρόχειρο…";
+    const ask=overlay.querySelector("[data-ask]");ask.disabled=true;apply.hidden=true;proposals.replaceChildren();overlay.querySelector("[data-catalog-matching]")?.remove();status.textContent=sourceContext?"Ο βοηθός συγκρίνει το PDF myDATA με το πρόχειρο…":"Ο βοηθός συγκρίνει τις φωτογραφίες με το πρόχειρο…";
     try{
       const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message,history:history.slice(-12),...(manualSource||sourceContext||{})})});
       if(!retainedWindow.isActive())return;
@@ -172,6 +172,12 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       if(!result.pagesComplete){status.textContent=result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";apply.hidden=true}
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
       activePagesComplete=result.pagesComplete;activePrintedTotal=printedTotal;
+      const catalogChoices=new Map();
+      const catalogPanel=document.createElement("section");
+      catalogPanel.hidden=true;
+      catalogPanel.dataset.catalogMatching="";
+      catalogPanel.setAttribute("aria-label","Αντιστοίχιση ειδών καταστήματος");
+      proposals.after(catalogPanel);
       const working=printed.map(line=>({...line,
         stockUnitsPerInvoiceUnit:line.invoiceUnit==="PIECE"&&String(line.stockUnitsPerInvoiceUnit??"").trim()===""?"1":line.stockUnitsPerInvoiceUnit
       }));
@@ -307,6 +313,39 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
           const patch={};for(const field of editableFields){const value=row[field];if(field==="supplierCode"||field==="description"||field==="invoiceUnit"){if(String(value??"")!==String(before[field]??""))patch[field]=value}else if(Math.abs(number(value)-number(before[field]))>0.000001)patch[field]=number(value)}
           if(Object.keys(patch).length||Math.abs(number(before.netAmount)-number(row.netAmount))>.000001){if(invoicePrintedRounding(row))patch.printedNetAmount=number(row.netAmount);rowPatches.set(row.matchingLineId,patch);chosen=chosen.filter(change=>change.lineId!==row.matchingLineId)}
         }
+        const unmatched=requireCatalogMatch?additions.filter(line=>!catalogChoices.has(line)): [];
+        if(unmatched.length){
+          catalogPanel.replaceChildren();
+          catalogPanel.hidden=false;
+          for(const line of unmatched){
+            const form=document.createElement("form");
+            form.innerHTML=`<label>Γραμμή ${esc(line.sequence)} · ${esc(line.description)} <input required maxlength="160" aria-label="Αναζήτηση είδους καταστήματος" value="${esc(line.supplierCode||line.description)}"></label> <button type="submit">Αναζήτηση</button> <select aria-label="Αντιστοίχιση είδους" disabled></select><span role="status"></span>`;
+            const input=form.querySelector("input"),select=form.querySelector("select"),message=form.querySelector("span");
+            let search=0;
+            form.onsubmit=async event=>{
+              event.preventDefault();
+              if(scopeActive&&!scopeActive())return;
+              const current=++search;
+              catalogChoices.delete(line);
+              select.disabled=true;
+              select.replaceChildren();
+              message.textContent="Αναζήτηση…";
+              try{
+                const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/catalog-matches?q=${encodeURIComponent(input.value.trim())}`);
+                if(current!==search||!form.isConnected||(scopeActive&&!scopeActive()))return;
+                const rows=Array.isArray(result?.rows)?result.rows:[];
+                select.replaceChildren(new Option("Επίλεξε είδος",""),...rows.map(row=>new Option(row.sku?`${row.name} · ${row.sku}`:row.name,row.id)));
+                select.disabled=!rows.length;
+                message.textContent=rows.length?"":"Δεν βρέθηκε είδος στο κατάστημα.";
+              }catch(error){if(current===search&&form.isConnected)message.textContent=error.message}
+            };
+            select.onchange=()=>{if(select.value)catalogChoices.set(line,select.value);else catalogChoices.delete(line)};
+            catalogPanel.append(form);
+          }
+          catalogPanel.scrollIntoView?.({block:"nearest"});
+          setApplyStatus("Αντιστοίχισε τις νέες γραμμές με είδη του καταστήματος και πάτησε ξανά Εφαρμογή.");
+          return;
+        }
         if(!chosen.length&&!additions.length&&!deletions.length&&!rowPatches.size){setApplyStatus(edited.length?"Οι επιλεγμένες γραμμές είναι ήδη ίδιες με το πρόχειρο. Δεν υπάρχουν αλλαγές προς αποθήκευση. Ελέγξτε τον προμηθευτή πριν την οριστικοποίηση.":"Επίλεξε τις γραμμές στον πίνακα ή την επιλογή όλων αφού τις συγκρίνεις με τη φωτογραφία. Έπειτα πάτησε ξανά Εφαρμογή.");return}
         const grouped=new Map();for(const change of chosen){const patch=grouped.get(change.lineId)||{};patch[change.field]=change.field==="description"||change.field==="invoiceUnit"?change.value:number(change.value);grouped.set(change.lineId,patch)}
         for(const [lineId,patch] of rowPatches)grouped.set(lineId,patch);
@@ -331,6 +370,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
               snapshot:latest.lines.map(({id,updatedAt})=>({id,updatedAt})),
               updates:[...grouped].map(([id,patch])=>({id,patch})),
               additions:additions.map(line=>({
+                ...(requireCatalogMatch?{productId:catalogChoices.get(line)}:{}),
                 supplierCode:line.supplierCode||null,description:line.description.trim().slice(0,250),
                 quantity:number(line.quantity),unitCost:number(line.unitCost),invoiceUnit:line.invoiceUnit,
                 stockUnitsPerInvoiceUnit:number(line.stockUnitsPerInvoiceUnit),discount1:number(line.discount1),
