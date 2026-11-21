@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 
-for(const profile of ['CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V3'])test('installation UI '+profile+' binds inspected scope and packet, requires approval, consumes packets and ignores stale responses',async()=>{
+for(const profile of ['CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4'])test('installation UI '+profile+' binds inspected scope and packet, requires approval, consumes packets and ignores stale responses',async()=>{
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'});
  const keys=['window','document','navigator','HTMLElement','Node','Event','IS_REACT_ACT_ENVIRONMENT'],previous=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
  for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});

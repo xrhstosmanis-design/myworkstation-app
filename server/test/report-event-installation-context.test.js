@@ -50,6 +50,7 @@ test('request binding admits only declared installer routes and methods',async()
  assert.equal(calls,0);
  await request(base+'/describe?profile=CAPTURE_REPORTS_ONLY_V2');assert.equal(calls,1);
  await request(base+'/describe?profile=CAPTURE_REPORTS_ONLY_V3');assert.equal(calls,2);
+ await request(base+'/describe?profile=REPORTS_ONLY_V3_TO_V4');assert.equal(calls,3);
 });
 
 test('another actor support context invalidates retained credentials until a native session is captured again',()=>{
