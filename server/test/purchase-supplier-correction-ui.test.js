@@ -1,3 +1,4 @@
+import {installMyDataPrintedEconomicsNotice} from '../../client/src/lib/mydata-printed-economics-notice.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
@@ -41,7 +42,7 @@ test('actual FINAL/INVOICED editor exposes the separate correction only to BackO
  const source=(await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
  for(const status of ['FINAL','INVOICED']){
   const dom=new JSDOM('<div id="root"></div>',{url:'https://fixture.invalid'}),document=dom.window.document;dom.window.localStorage.setItem('user',JSON.stringify({role:'SUPER_ADMIN'}));let opened=0;
-  const show=new Function('document','window','localStorage','fetch','greeceDateInput','installInvoiceProductMatcher','showPurchaseSupplierCorrection',source+';return showOrder;')(document,dom.window,dom.window.localStorage,async()=>{throw Error('No implicit requests')},()=> '2026-10-19',()=>{},()=>opened++);
+  const show=new Function('document','window','localStorage','fetch','greeceDateInput','installInvoiceProductMatcher','showPurchaseSupplierCorrection','installMyDataPrintedEconomicsNotice',source+';return showOrder;')(document,dom.window,dom.window.localStorage,async()=>{throw Error('No implicit requests')},()=> '2026-10-19',()=>{},()=>opened++,installMyDataPrintedEconomicsNotice);
   show(document.querySelector('#root'),{order:{id:'o',storeId:'s',sourceType:'POS_OCR_DRAFT',status},lines:[],totals:{net:0,gross:0}});assert.equal(document.querySelector('[data-order-supplier]').disabled,true);document.querySelector('[data-correct-supplier]').click();assert.equal(opened,1);dom.window.close();
  }
 });
