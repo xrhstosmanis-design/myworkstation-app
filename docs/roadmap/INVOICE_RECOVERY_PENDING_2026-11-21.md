@@ -15,3 +15,6 @@ Newer21Nov owner entry source implemented: selected-store owner UI and strict ad
 
 
 Approved responsible-person bridge implemented in the combined runtime branch; exact scoped default-off action, existing original-payment writer and client fences verified with54 distinct local PASS and1 Docker-only local SKIP. No deployment. Remaining: full source CI; immutable original/header binding for old expenses; explicit PLAIN_CAPTURE assistant promotion retaining proof, normal wallet and one job/draft; combined native/UI negative/retry proof; one guarded release and grouped existing-LAB acceptance. Keep DRAFT until the second approved adapter is complete.
+
+
+4137first integrated source fullCIALL5SUCCESS7082tests/7078PASS+8recovery; actual native Docker companion executed PASS. New independently tested prerequisite retains original PLAIN_CAPTURE metadata/bytes at canonical paid draft and intake links, verifying locked proof/intent. Native paid-draft factory and retained pending/myDATA31PASS, no full protected-line intake or assistant acceptance claimed. Remaining: original/header binding for old expense, explicit normal-wallet source promotion, queued internal fresh grant/store admission, combined tests and ONE guarded release. KeepDRAFT and protected prior LAB behaviors.

@@ -880,3 +880,6 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 
 INVOICE-PAYMENT-RECOVERY-01 responsible-person adapter SOURCE_IMPLEMENTED: explicit payments.supplier-recovery + payments.read, scoped routes/UI and canonical fresh transaction grant/module/lifecycle checks.54 distinct local PASS/0 unresolved FAIL/1 actual Docker-only SKIP; production client build PASS. Original owner/capture/close protected. Full combined assistant promotion remains OPEN; integration stays DRAFT, no partial feature deployment or actual money/AI/stock action. See existing recovery checkpoint.
+
+
+INVOICE-PAYMENT-RECOVERY-01 exact4137sourceCI44910777670 ALL5SUCCESS7078serverPASS/0FAIL/4optionalSKIP+8recovery; actual PG18-image companion PASS. Next combined source adds locked immutable-original validation/preservation at canonical paid-draft and intake links;31actualnativePASS including real draft factory corruption/rollback/reuse/deleted-source behavior; compatibility92PASS/1nativeSKIP withoutDB. Still DRAFT/NOT_INSTALLED; explicit original/header promotion and normal-wallet/internal-admission integration remain OPEN. No actual business replay.

@@ -1,3 +1,4 @@
+import {retainCapturedPaymentOriginal} from '../lib/invoice-recovery-original.js';
 import {findCompetingPosDraftReview} from "../lib/pos-invoice-duplicate-review.js";
 import {findUnlinkedMyDataOriginal,bindUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
 import {creditCashReadSettlement} from "../lib/supplier-credit-cash.js";
@@ -284,7 +285,7 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
       const documentId=id(),orderId=id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
       await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId","paymentTransactionId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber},${body.documentDate},0,0,${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId},${payment?.id||null})`;
       await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`POS πρόχειρο ${body.documentNumber} — Ανάγνωση από βοηθό`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
-      if(payment)await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber} WHERE "id"=${payment.id} AND "companyId"=${req.user.companyId}`;
+      if(payment&&!await retainCapturedPaymentOriginal(tx,{companyId:req.user.companyId,storeId:job.storeId,...body},payment.id))await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber} WHERE "id"=${payment.id} AND "companyId"=${req.user.companyId}`;
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_DRAFT_READY',"status"='POS_DRAFT_READY',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
       await bindUnlinkedMyDataOriginal(tx,originalIdentity,unlinkedOriginal,{jobId:job.id,documentId,orderId,paymentTransactionId:payment?.id||null});
       return {documentId,orderId,reused:false};
@@ -460,7 +461,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         if(existingPayment){
           stage="link-existing-payment";
           paymentTransactionId=existingPayment.id;
-          await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber},"invoicePaymentKey"=${invoicePaymentKey},"attachmentChecksum"=${invoicePaymentChecksum} WHERE "id"=${paymentTransactionId} AND "companyId"=${req.user.companyId}`;
+          if(!await retainCapturedPaymentOriginal(tx,{companyId:req.user.companyId,storeId:job.storeId,...body},paymentTransactionId))await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber},"invoicePaymentKey"=${invoicePaymentKey},"attachmentChecksum"=${invoicePaymentChecksum} WHERE "id"=${paymentTransactionId} AND "companyId"=${req.user.companyId}`;
         }else{
           stage="create-payment";
           paymentTransactionId=`pay_${crypto.createHash("sha256").update(`${req.user.companyId}:${job.storeId}:invoice:${documentId}`).digest("hex")}`;
