@@ -25,6 +25,8 @@ test('metadata action harness extracts only its handler when detail readers expo
 test('native delegated invoice metadata and canonical approval preserve one posting, actor, control stock and live withdrawal',{skip:!isolatedInvoiceDb(),timeout:90000},async()=>{
  const f=await invoiceDbFixture(),db=f.db;
  try{
+  await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN "active" boolean NOT NULL DEFAULT true');
+  await db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN "active" boolean NOT NULL DEFAULT true');
   await f.seed({posLines:1});const scope={companyId:'c',storeId:'s',inboxId:'inbox'},preview=await common.previewInvoiceReconciliation(db,scope);
   await db.$transaction(tx=>common.reconcileInvoiceDrafts(tx,scope,{posOrderId:'pos',expectedVersion:preview.version,confirmSameInvoice:true,confirmMark:preview.mark,confirmPaymentDiscrepancy:true,reason:'Synthetic original comparison',actorId:'owner'}));
   const user=await installStaffActionPolicy(db,{capabilities:['invoices.read','invoices.edit']});

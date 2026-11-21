@@ -36,3 +36,5 @@ Node20 client production build PASS15.00s. First19 focused tests PASS0FAIL0SKIP 
 No real store/shift/ledger/permission/schema/environment/stock change. No real correction yet. Exact source CI, complete HTTP/role acceptance, current-main reconciliation and normal release still required. Overall OPEN, not installed.
 
 Final focused Node20/native PostgreSQL18.7 batch:21PASS/0FAIL/0SKIP, including new Events formatter and existing payment correction Events behavior. Final native server stopped cleanly. No hosted mutation.
+
+Published Draft4132 initial head31ec51d47658d98a9d9ebac7345dbeccc9c0276c, identical local/public tree e2ea0737f12ba48b5aae046369c308f5efcde1f6. Reconciled newer main33f24bcf cleanly, preserving invoice recovery entry and No5 photo matching/other owners. No own backend/modal/test blobs changed. Integrated actual owner-parent/recovery API/form tests11PASS/0FAIL/0SKIP and production client build12.97sPASS. One mounted withdrawal test overlaps the first21; distinct focused coverage31tests, not32. Full source CI for integrated head still required; no live correction or permission grant.
