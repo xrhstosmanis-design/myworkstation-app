@@ -51,3 +51,9 @@ test('a late older refresh cannot replace the current list or its supplier conte
  pending[0]({items:[]});await assert.rejects(first,/λίστα ανανεώθηκε/);
  assert.equal((await api(path)).transactionId,'payment');
 });
+
+test('dedicated delegated adapter uses exact scoped routes and preserves original payment retry',async()=>{
+ const calls=[];const api=supplierExpenseRecoveryApi({storeId:'store',delegated:true,api:async(url,options)=>{calls.push({url,options});return options?{ok:true,transactionId:'payment',amount:12.4}:url.endsWith('/payment/supplier')?context:{items:[item]};}});
+ await api('/api/transactions/other-expenses/review');await api(path);const options={method:'POST',body:JSON.stringify(payload)};await api(path,options);
+ assert.deepEqual(calls.map(c=>c.url),['/api/transactions/stores/store/invoice-recovery','/api/transactions/stores/store/invoice-recovery/payment/supplier','/api/transactions/stores/store/invoice-recovery/payment/supplier']);assert.equal(calls[2].options,options);
+});

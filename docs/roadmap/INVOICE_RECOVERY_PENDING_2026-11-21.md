@@ -12,3 +12,6 @@ Newer21Nov owner entry source implemented: selected-store owner UI and strict ad
 
 
 21Nov explicit user approval supersedes the integration coordination hold for the two named recovery adapters only. This conversation now owns their bounded implementation; general No5 rights and No04 lines/wallet remain retained. Publish approved expansion first, then implement exact scoped admission, same-payment writer and immutable-source assistant recovery with native/HTTP/UI negative and retry tests. Overall workflow OPEN, no new LAB or production mutation.
+
+
+Approved responsible-person bridge implemented in the combined runtime branch; exact scoped default-off action, existing original-payment writer and client fences verified with54 distinct local PASS and1 Docker-only local SKIP. No deployment. Remaining: full source CI; immutable original/header binding for old expenses; explicit PLAIN_CAPTURE assistant promotion retaining proof, normal wallet and one job/draft; combined native/UI negative/retry proof; one guarded release and grouped existing-LAB acceptance. Keep DRAFT until the second approved adapter is complete.

@@ -1,6 +1,6 @@
 // Bind the existing owner endpoint to the selected store. This adapter never
 // grants authority; the existing server owner/company checks remain mandatory.
-export function supplierExpenseRecoveryApi({api,storeId,isCurrent=()=>true}){
+export function supplierExpenseRecoveryApi({api,storeId,isCurrent=()=>true,delegated=false}){
   const reviews=new Map(),contexts=new Map();let listGeneration=0;
   const assertCurrent=()=>{if(!isCurrent())throw Error('Το κατάστημα ή η σύνδεση άλλαξε. Άνοιξε ξανά τη σύνδεση εξόδου.');};
   if(typeof storeId!=='string'||!storeId||typeof api!=='function')throw Error('Επίλεξε έγκυρο κατάστημα.');
@@ -13,7 +13,9 @@ export function supplierExpenseRecoveryApi({api,storeId,isCurrent=()=>true}){
       for(const [key,value] of url.searchParams)if(!['storeId','from','to'].includes(key)||(key==='storeId'&&value!==storeId))throw Error('Η ανάκτηση αφορά μόνο το επιλεγμένο κατάστημα.');
       const generation=++listGeneration;reviews.clear();contexts.clear();
       url.searchParams.set('storeId',storeId);
-      const response=await api(url.pathname+'?'+url.searchParams.toString());assertCurrent();
+      const target=delegated?`/api/transactions/stores/${encodeURIComponent(storeId)}/invoice-recovery`:url.pathname;
+      if(delegated)url.searchParams.delete('storeId');
+      const response=await api(target+(url.searchParams.size?'?'+url.searchParams.toString():''));assertCurrent();
       if(generation!==listGeneration)throw Error('Η λίστα ανανεώθηκε. Χρησιμοποίησε την τελευταία εμφάνιση.');
       if(!Array.isArray(response?.items))throw Error('Δεν επιβεβαιώθηκε η λίστα εξόδων.');
       const items=response.items.filter(item=>item.paymentMethod==='CASH_SHIFT'&&Number(item.amount)>0);
@@ -27,7 +29,8 @@ export function supplierExpenseRecoveryApi({api,storeId,isCurrent=()=>true}){
     if(!review)throw Error('Επίλεξε έξοδο από την τρέχουσα λίστα του καταστήματος.');
     if(method==='GET'){
       const generation=listGeneration;
-      const data=await api(path);assertCurrent();
+      const target=delegated?`/api/transactions/stores/${encodeURIComponent(storeId)}/invoice-recovery/${encodeURIComponent(review.transactionId)}/supplier`:path;
+      const data=await api(target);assertCurrent();
       if(generation!==listGeneration||reviews.get(reviewId)!==review)throw Error('Η λίστα ανανεώθηκε. Επίλεξε ξανά το έξοδο.');
       if(data?.storeId!==storeId||data.transactionId!==review.transactionId||Number(data.amount)!==Number(review.amount)||!Array.isArray(data.suppliers)||!/^[a-f0-9]{64}$/.test(data.expectedVersion||''))throw Error('Το έξοδο δεν συμφωνεί με το επιλεγμένο κατάστημα.');
       contexts.set(reviewId,{...data,suppliers:data.suppliers.map(s=>({...s}))});return data;
@@ -37,7 +40,8 @@ export function supplierExpenseRecoveryApi({api,storeId,isCurrent=()=>true}){
     if(!context||body?.expectedVersion!==context.expectedVersion||Number(body.expectedAmount)!==Number(context.amount)||!context.suppliers.some(s=>s.id===body.supplierId)||body.acknowledged!==true)throw Error('Ανανέωσε και επιβεβαίωσε το ίδιο έξοδο πριν τη σύνδεση.');
     // Keep context after an uncertain response so a retry uses the same original
     // form/version/idempotency key. The existing writer handles the once-only audit.
-    const response=await api(path,options);assertCurrent();
+    const target=delegated?`/api/transactions/stores/${encodeURIComponent(storeId)}/invoice-recovery/${encodeURIComponent(review.transactionId)}/supplier`:path;
+    const response=await api(target,options);assertCurrent();
     if(response?.ok!==true||response.transactionId!==context.transactionId||Number(response.amount)!==Number(context.amount))throw Error('Δεν επιβεβαιώθηκε η σύνδεση. Επανέλαβε με τα ίδια στοιχεία.');
     return response;
   };

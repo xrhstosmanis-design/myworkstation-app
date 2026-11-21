@@ -877,3 +877,6 @@ Owner /root; feat/owner-cash-withdrawal-implementation-20261121. Before-source c
 
 
 INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes this owner to integrate ONLY dedicated responsible-person recovery and same-original assistant promotion. General No5/No04/No02 ownership retained. New exact mapping/default-off action and canonical writer checks are in the existing recovery checkpoint. Before-source expansion; no new runtime or actual transactions.
+
+
+INVOICE-PAYMENT-RECOVERY-01 responsible-person adapter SOURCE_IMPLEMENTED: explicit payments.supplier-recovery + payments.read, scoped routes/UI and canonical fresh transaction grant/module/lifecycle checks.54 distinct local PASS/0 unresolved FAIL/1 actual Docker-only SKIP; production client build PASS. Original owner/capture/close protected. Full combined assistant promotion remains OPEN; integration stays DRAFT, no partial feature deployment or actual money/AI/stock action. See existing recovery checkpoint.
