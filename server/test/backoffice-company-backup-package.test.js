@@ -8,7 +8,7 @@ import {join,dirname} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {selectedStoreLifecycleManifest} from '../src/services/store-lifecycle-manifest.js';
 const root=new URL('../../',import.meta.url),packetPath='ops/backup/lifecycle/backoffice-company-compatibility.proposed.json';
-const profiles=['BASE','MONTHLY_INVENTORY_CAPTURE_V1','AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3'];
+const profiles=['BASE','MONTHLY_INVENTORY_CAPTURE_V1','AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'];
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const env={BACKUP_MONITOR_SECRET:'isolated-package-proof-signing-secret',RENDER_GIT_COMMIT:'a'.repeat(40),AWS_REGION:'fixture-region',S3_BUCKET_NAME:'fixture-private',S3_ENDPOINT_URL:'https://fixture.invalid',PYTHONDONTWRITEBYTECODE:'1'};
 const probe=`import sys,json,hashlib,pathlib,importlib.util,datetime,os
@@ -19,7 +19,7 @@ expected=json.load(sys.stdin)
 root=company_source_root.source_root()
 packet=json.loads(company_source_root.source_file('${packetPath}').read_text())
 assert packet['sourceHashes']==expected['sourceHashes']
-assert len(packet['sourceHashes'])==53
+assert len(packet['sourceHashes'])==57
 for name,digest in packet['sourceHashes'].items(): assert hashlib.sha256(company_source_root.source_file(name).read_bytes()).hexdigest()==digest,name
 actual={p:hashlib.sha256(compact(worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':p})).encode()).hexdigest() for p in expected['profiles']}
 assert actual==expected['profiles']
@@ -61,7 +61,7 @@ print('RELOCATED_COMPANY_PACKAGE_PASS')
 async function expected(){const packet=JSON.parse(await readFile(new URL(packetPath,root),'utf8'));return {sourceHashes:packet.sourceHashes,profiles:Object.fromEntries(profiles.map(profile=>[profile,hash(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:profile}))]))}}
 function verify(result){assert.equal(result.status,0,(result.stderr||result.stdout||String(result.error)).slice(-8000));return result.stdout}
 
-test('relocated company worker source package resolves all fifty-three bound files and rejects escaping or altered runtime copies',async()=>{
+test('relocated company worker source package resolves all fifty-seven bound files and rejects escaping or altered runtime copies',async()=>{
  const directory=await mkdtemp(join(tmpdir(),'company-worker-package-')),source=join(directory,'company-source'),runtime=join(directory,'runtime');
  try{
   const values=await expected();
