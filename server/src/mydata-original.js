@@ -27,6 +27,36 @@ function decimalFitsColumn(value,column){
     &&(match[2]||'').replace(/0+$/,'').length<=column.numeric_scale;
 }
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
+// Host and format-code pairs confirmed against provider PDFs. Each host is exact.
+const epsilonOriginalFormats = new Map([
+  ["epsilondigital.epsilonnet.gr", "8"],
+  ["epsilondigital3.epsilonnet.gr", "84"],
+  ["epsilondigital14.epsilonnet.gr", "160"],
+  ["epsilondigital22.epsilonnet.gr", "190"],
+  ["epsilondigital-enetgroup.epsilonnet.gr", "107"],
+  ["epsilondigital-nbg.epsilonnet.gr", "109"],
+  ["epsilondigitalsmart10.epsilonnet.gr", "227"],
+]);
+
+function originalRecoveryLinkPattern(formats) {
+  return "<(?:[[:alnum:]_]+:)?downloadingInvoiceUrl[^>]*>[[:space:]]*https://(?:"
+    + formats.join("|") + ")/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>";
+}
+
+const epsilonRecoveryFormats = Array.from(epsilonOriginalFormats, ([host, code]) =>
+  host.replaceAll(".", "[.]") + "/fd/[a-f0-9]{32}:" + code);
+
+// PostgreSQL ARE syntax, with host and paths anchored inside the XML value.
+export function providerOriginalRecoveryLinkPattern({includeExistingImpact = false} = {}) {
+  return originalRecoveryLinkPattern([
+    ...epsilonRecoveryFormats,
+    ...(includeExistingImpact ? ["einvoice[.]impact[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}"] : []),
+    "einvoice[.]s1ecos[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}",
+    "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}",
+    String.raw`vs[.]gr/iv/invoice/download/([a-z0-9]{4}_[0-9])/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}`,
+  ]);
+}
+
 export function originalDownloadUrl(xml,issuerVat){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
@@ -36,7 +66,9 @@ export function originalDownloadUrl(xml,issuerVat){
   const validIssuer = /^\d{9}$/.test(issuerVat);
   const impact = validIssuer && ["einvoice.impact.gr","einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
-  const epsilon = validIssuer && matchesVerifiedEpsilonOriginal(url,issuerVat);
+  const epsilonFormat = url.pathname.match(/^\/fd\/[a-f0-9]{32}:(\d{1,3})\/?$/i)?.[1];
+  const epsilon = validIssuer && (matchesVerifiedEpsilonOriginal(url,issuerVat)
+    || (epsilonFormat !== undefined && epsilonOriginalFormats.get(url.hostname) === epsilonFormat));
   const einvoicing = validIssuer && url.hostname === "e-invoicing.gr"
     && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_[A-Za-z0-9]{6,8}\/?$/i.test(url.pathname);
   const vs = validIssuer && url.hostname === "vs.gr"
@@ -124,7 +156,7 @@ function canReadIdentityHeader(downloadUrl,text,pageCount,row){
 }
 
 // Network work precedes the row lock; competing downloads can only attach once.
-export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,createAiJob,download=fetchOriginalPdf){
+export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,createAiJob,download=fetchOriginalPdf,{reconcileExisting=false}={}){
   assertCustomerDemoOutboundAllowed({companyId,storeId});
   await ensureInvoiceCommonDraftSchema(prisma);
   const rows=await prisma.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId} LIMIT 1`;
@@ -144,7 +176,9 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
     if(jobId)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({rawText:pdf.text,lines:[],pageCount:pdf.pageCount,source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,providerOriginalTextProof:providerOriginalTextProof(row,pdf)})}::jsonb,${userId})`;
     await tx.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=${attachmentId},"note"=${"Πρωτότυπο παρόχου • MARK "+row.mark+" • "+Number(row.totalGross).toFixed(2)+" € • Έλεγχος από βοηθό πριν από την καταχώρηση"},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
     await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=("rawPayload"-'originalPending'-'originalError')||${JSON.stringify({originalDownloaded:true,originalJobId:jobId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
-    const draft=await attachReviewDraft(tx,{...row,attachmentId},companyId,storeId,inboxId,userId,createAiJob);
+    const draft=reconcileExisting && !createAiJob
+      ? await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId)
+      : await attachReviewDraft(tx,{...row,attachmentId},companyId,storeId,inboxId,userId,createAiJob);
     return {...draft,downloaded:true,reused:false,jobId};
   });
 }

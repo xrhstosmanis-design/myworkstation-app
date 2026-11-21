@@ -116,6 +116,10 @@ The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejecte
 
 Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
 
+## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
+
+PR #4048. Έλεγχοι CI και LAB 5/5 στο b9bdd08a. Εκκρεμεί εγκατάσταση. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md).
+
 ## 18/11/2026 — NETLINK source CI correction, still AWAITING FULL CI / LAB
 
 First source head `2e2a1054a258c6563d7a0f5941671559b0cfe169`, CI run `44320432551`, full server suite **6176 PASS / 1 FAIL / 1 SKIP**. New native PostgreSQL migration/HTTP/atomic-audit test and ordinary selected-store HTTP test both passed with no skip. All new credential/mounted/scoped tests passed. Existing Windows checks and isolated wholesale browser/offline job passed.

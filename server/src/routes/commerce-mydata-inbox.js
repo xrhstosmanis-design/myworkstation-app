@@ -13,7 +13,7 @@ import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "
 import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
-import {acquireOriginal} from "../mydata-original.js";
+import {acquireOriginal,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
@@ -114,6 +114,61 @@ export function syncMyDataStore(req,{db=prisma}={}){
   },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{if(admitted)syncStatus.set(key,{...syncStatus.get(key),lastSyncError:error.code==='MYDATA_HTTP_ERROR'?error.message:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
   syncInFlight.set(key,run);return run;
 }
+// Opt-in historical recovery for verified provider URL formats.
+const originalRecoveryVersion = "verified-provider-formats-202611-v1";
+
+export async function recoverHistoricalOriginals({
+  db, companyId, storeId, userId, source, excludeInboxIds = [],
+  storeIds = process.env.MYDATA_ORIGINAL_RECOVERY_STORE_IDS ?? "",
+  reconcileExisting = false,
+  acquire = acquireOriginal,
+}) {
+  if (source !== "AADE_MYDATA_PRODUCTION" || !storeIds.split(",").map(id => id.trim()).includes(storeId)) {
+    return {downloaded: 0, failed: 0};
+  }
+  const candidates = await db.$queryRaw`
+    SELECT m."inboxId" FROM "MyDataInboundDocument" m
+    JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+    WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
+      AND m."issueDate">=DATE '2026-11-01' AND m."issueDate"<DATE '2026-12-01'
+      AND m."rawPayload"->>'source'=${source}
+      AND i."attachmentId" IS NULL AND i."status"='RECEIVED'
+      AND m."rawPayload"->>'originalDownloaded' IS DISTINCT FROM 'true'
+      AND NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(${JSON.stringify(excludeInboxIds)}::jsonb) AS excluded("inboxId")
+        WHERE excluded."inboxId"=m."inboxId"
+      )
+      AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
+      AND m."rawPayload"->>'xml' ~* CASE
+        WHEN COALESCE((m."rawPayload"->>'originalAttempts')::int,0)=0
+        THEN ${providerOriginalRecoveryLinkPattern({includeExistingImpact:true})}
+        ELSE ${providerOriginalRecoveryLinkPattern()}
+      END
+    ORDER BY m."fetchedAt",m."id" LIMIT 2`;
+  let downloaded = 0, failed = 0;
+  for (const {inboxId} of candidates) {
+    try {
+      const result = await acquire(db, companyId, storeId, inboxId, userId, false, undefined, {reconcileExisting});
+      if (result.downloaded) downloaded++;
+    } catch {
+      failed++;
+      await db.$executeRaw`
+        UPDATE "MyDataInboundDocument" m SET "rawPayload"=m."rawPayload"||jsonb_build_object(
+          'originalRecoveryVersion',${originalRecoveryVersion},'originalError',
+          'Το πρωτότυπο δεν κατέβηκε κατά την επανάληψη. Δοκιμάστε από τη Θυρίδα.')
+        WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId}
+          AND m."rawPayload"->>'originalDownloaded' IS DISTINCT FROM 'true'
+          AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
+          AND EXISTS (
+            SELECT 1 FROM "DocumentInbox" i
+            WHERE i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+              AND i."attachmentId" IS NULL AND i."status"='RECEIVED'
+          )`;
+    }
+  }
+  return {downloaded, failed};
+}
+
 async function performSync(req){
   assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
   await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);const storeId=String(req.body?.storeId||"");
@@ -174,6 +229,13 @@ async function performSync(req){
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
   const canPrepareDraft=Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY")));
+  const recovery = await recoverHistoricalOriginals({
+    db: prisma, companyId: req.user.companyId, storeId: store.id, userId: req.user.id, source,
+    reconcileExisting: canPrepareDraft,
+    excludeInboxIds: [...pending.map(item => item.inboxId), ...created.map(item => item.id)],
+  });
+  originalsDownloaded += recovery.downloaded;
+  originalsFailed += recovery.failed;
   const existingPhotosLinked=canPrepareDraft?await prisma.$transaction(tx=>linkStoredPosInvoicePhotos(tx,{companyId:req.user.companyId,storeId:store.id})):0;
   if(canPrepareDraft){
     const emptyDrafts=await prisma.$queryRaw`
