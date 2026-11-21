@@ -13,7 +13,7 @@ function fixture(){
  const calls=[];
  const tx={user:{findUnique:async()=>({id:'u',role:'SUPER_ADMIN',companyId:'c'})},store:{findFirst:async({where})=>where.id==='s'&&where.companyId==='c'?{id:'s',companyId:'c',name:'Store'}:null},
   $executeRawUnsafe:async sql=>{calls.push(sql);assert.ok(sql.startsWith('SET '),'no writes');},
-  $queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});if(sql.includes('FROM "PurchaseOrder" o'))return values[0]==='o'&&values[1]==='c'&&values[2]==='s'?[{...order}]:[];if(sql.includes('FROM "PurchaseOrderLine" l'))return [{...line}];throw Error('Unexpected SQL '+sql)}
+  $queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});if(sql.includes('information_schema.columns'))return [];if(sql.includes('FROM "PurchaseOrder" o'))return values[0]==='o'&&values[1]==='c'&&values[2]==='s'?[{...order}]:[];if(sql.includes('FROM "PurchaseOrderLine" l'))return [{...line}];throw Error('Unexpected SQL '+sql)}
  };
  const db={$transaction:async(fn,options)=>{calls.push({transaction:options});return fn(tx)}};return {db,calls};
 }

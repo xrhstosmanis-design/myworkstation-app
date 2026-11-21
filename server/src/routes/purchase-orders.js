@@ -1,3 +1,4 @@
+import {readMyDataPrintedEconomicsReview} from "../lib/mydata-printed-economics-review.js";
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../lib/invoice-line-taxonomy.js";
 import {authorizeMonthlyInvoiceAuditInTransaction} from '../services/monthly-invoice-audit.js';
 import {invoiceIssuerName} from "../mydata-xml.js";
@@ -258,7 +259,9 @@ async function readOrderDetail(db,found,companyId,req){
       found.mydataIssuerVat=/^\d{9}$/.test(source.issuerVat||"")?source.issuerVat:null;
     }
   }
-  return {order:found,lines,totals};
+  const mydataPrintedEconomics=found.status==="NEW"&&found.sourceType==="POS_OCR_DRAFT"
+    ?await readMyDataPrintedEconomicsReview(db,{companyId,storeId:found.storeId,orderId:found.id}):null;
+  return {order:found,lines,totals,...(mydataPrintedEconomics?{mydataPrintedEconomics}:{})};
 }
 
 export async function readPurchaseOrderInspection(db,actor,storeId,orderId,{now=new Date()}={}){
