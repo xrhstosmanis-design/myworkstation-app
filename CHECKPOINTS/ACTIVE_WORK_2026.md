@@ -862,6 +862,10 @@ Source4103/headde7368170dd8324d3a79475b1df2e8c93bac857b passed exactCI4478107368
 
 Retained /root, branchfix/no2-printed-discounts-20261120. Before-source independent initial-insert adapter for explicitly printed PDF original price/discounts, first verified e-invoicing layout; source-text proof, precision-bound rows and clear UNKNOWN metadata/UI. No No4 transfer/writer/model/wallet changes or existing draft rewrite. [Claim](CHANGES/2026-11-20-no2-printed-discounts-claim.md). NOT IMPLEMENTED/NOT TESTED; source starts only after green merged claim.
 
+## 21/11/2026 — Μενού Υπευθύνου ανά λειτουργία
+
+Ομαδοποίηση των προβολών καταστήματος βάσει δικαιωμάτων. [Καταγραφή](CHANGES/2026-11-21-staff-functional-menu.md).
+
 ## INVOICE-PAYMENT-RECOVERY-01 — ASSIGNED / CLAIM ONLY — 21/11/2026
 
 Owner /root, docs/invoice-payment-recovery-claim-20261121. Explicit user expansion: owner/delegated responsible-person recovery, stored photos through assistant, one existing payment and editable draft, later reviewed warehouse receipt. Existing PLAIN_CAPTURE is intentionally not an AI draft; generic guard remains. No5 shared rights/installer, No04 lines and No02 acquisition retained. [Before-source boundary](CHANGES/2026-11-21-invoice-payment-recovery.md); [small pending continuation](../docs/roadmap/INVOICE_RECOVERY_PENDING_2026-11-21.md). Source NOT STARTED; combined LAB NOT TESTED; do not replay protected close/plain capture PASS.
