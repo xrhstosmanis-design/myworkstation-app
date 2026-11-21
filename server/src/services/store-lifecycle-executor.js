@@ -1,3 +1,4 @@
+import {assertReportSecurityProfile,inspectReportSecurityProfile} from './automatic-report-security-transition.js';
 import {assertExpectedReceiptProfile} from './supplier-expected-receipts-lifecycle-profile.js';
 import {inspectExpectedReceiptInstallationCatalogue} from './supplier-expected-receipts-lifecycle-inspection.js';
 import {prepareReportChatInspection} from './automatic-report-chat-compatibility.js';
@@ -32,10 +33,12 @@ const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for
 const drainFingerprint=(plan,scope,mode,operationId)=>hash({phase:'DRAINING',operationId,companyId:scope.companyId,storeId:scope.storeId,mode,planHash:plan.planHash,sourceRevision:plan.sourceRevision});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
- const legacy=manifest.expectedReceiptCompatibility!==undefined?assertExpectedReceiptProfile(manifest):manifest;
+ if(manifest.preservedReportSecurityTables!==undefined&&!manifest.reportSecurityCompatibility)throw Object.assign(new Error('Report security profile differs.'),{code:'REPORT_SECURITY_PROFILE_CHANGED',status:409});
+ const securityLegacy=manifest.reportSecurityCompatibility?assertReportSecurityProfile(manifest):manifest;
+ const legacy=securityLegacy.expectedReceiptCompatibility!==undefined?assertExpectedReceiptProfile(securityLegacy):securityLegacy;
  if(manifest.purpose!==undefined)assertCompanyCurrentCaptureManifest(manifest);
- if(manifest.reviewedColumnExtensions!==undefined)assertReportColumnProfile(manifest);
- if(manifest.preservedReportChatTables!==undefined)assertReportChatProfile(manifest);
+ if(manifest.reviewedColumnExtensions!==undefined)assertReportColumnProfile(securityLegacy);
+ if(manifest.preservedReportChatTables!==undefined)assertReportChatProfile(securityLegacy);
  if(manifest.preservedOperationalTables!==undefined)assertReportOperationalProfile(legacy);
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
  if(manifest.resetPolicy!==undefined&&manifest.resetPolicy!=='FRESH_STORE_V1')fail('Unknown reset policy.');
@@ -70,7 +73,7 @@ function planFor(manifest){
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!validColumns(row.owner.columns))fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
  if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
- return {expectedReceiptCompatibility:manifest.expectedReceiptCompatibility,id:manifest.id,executionDisabled:manifest.executionDisabled===true,purpose:manifest.purpose,reviewedColumnExtensions:manifest.reviewedColumnExtensions||[],preservedReportChatTables:manifest.preservedReportChatTables||[],preservedOperationalTables:manifest.companyCurrentCatalogue?.nonOwningTables||manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
+ return {expectedReceiptCompatibility:manifest.expectedReceiptCompatibility,id:manifest.id,executionDisabled:manifest.executionDisabled===true,purpose:manifest.purpose,reportSecurityCompatibility:manifest.reportSecurityCompatibility||null,reviewedColumnExtensions:manifest.reviewedColumnExtensions||[],preservedReportChatTables:manifest.preservedReportChatTables||[],preservedReportSecurityTables:manifest.reportSecurityCompatibility?[...manifest.preservedReportSecurityTables]:[],preservedOperationalTables:manifest.companyCurrentCatalogue?.nonOwningTables||manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
 }
 function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='ROOT')return `${alias}."id"=$1`;
@@ -163,6 +166,7 @@ function bindDatabaseReferences(plan,schema,fks){
  plan.databaseReferences=references;
 }
 async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
+ const reportSecurity=plan.reportSecurityCompatibility?await inspectReportSecurityProfile(tx,schema):null;
  const expectedReceipts=plan.expectedReceiptCompatibility?await inspectExpectedReceiptInstallationCatalogue(tx,schema):null;
  const chatCompatibility=plan.preservedReportChatTables.length?await prepareReportChatInspection(tx,schema):null;
  const columnCompatibility=plan.reviewedColumnExtensions.length?await prepareReportColumnInspection(tx,schema):null;
@@ -173,7 +177,7 @@ async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
  if(plan.knownColumns)for(const [name,expected] of Object.entries(plan.knownColumns))if(JSON.stringify(columns.filter(c=>c.table===name).map(c=>[c.name,c.type,c.notNull]))!==JSON.stringify(expected))fail('Reviewed column catalogue changed: '+name);
  for(const node of plan.ordered){const r=relations.find(r=>r.name===node.name);if(!r||r.kind!=='r'||r.partition||r.rls||r.forced||r.inherited||r.rewritten)fail('Complex or RLS relation requires a separate executor.');}
  if(columns.length>20000)fail('Schema review limit exceeded.');
- const byTable=new Map();for(const col of columns){if(!byTable.has(col.table))byTable.set(col.table,new Set());byTable.get(col.table).add(col.name);if(col.name==='storeId'&&!INTERNAL.has(col.table)&&!plan.nodes.has(col.table)&&!plan.preservedOperationalTables.includes(col.table))fail('Unreviewed store table: '+col.table)}
+ const byTable=new Map();for(const col of columns){if(!byTable.has(col.table))byTable.set(col.table,new Set());byTable.get(col.table).add(col.name);if(col.name==='storeId'&&!INTERNAL.has(col.table)&&!plan.nodes.has(col.table)&&!plan.preservedOperationalTables.includes(col.table)&&!plan.preservedReportSecurityTables.includes(col.table))fail('Unreviewed store table: '+col.table)}
  for(const node of plan.ordered){const cols=byTable.get(node.name);if(!cols||node.owner.kind==='ROOT'&&!cols.has('id')||node.owner.kind==='DIRECT'&&!cols.has('storeId')||node.owner.kind==='BASE_STORE'&&!cols.has('baseStoreId'))fail('Reviewed table layout changed.');}
  for(const guard of plan.valueGuards)if(!columns.some(c=>c.table===guard.table&&c.name===guard.column&&c.type==='text'))fail('Reviewed value guard layout changed.');
  const fks=await readForeignKeys(tx,schema);
@@ -205,7 +209,7 @@ async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
  }
  const primaryKeys=plan.streaming?await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,k.p::int AS position FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN LATERAL unnest(i.indkey) WITH ORDINALITY k(n,p) ON k.p<=i.indnkeyatts JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.n WHERE n.nspname=$1 AND i.indisprimary ORDER BY c.relname,k.p`,schema):[];
  if(plan.streaming)for(const node of plan.ordered)if(!primaryKeys.some(k=>k.table===node.name))fail('Streaming requires a reviewed primary key: '+node.name);
- const descriptor={...(expectedReceipts?{expectedReceiptMetadata:expectedReceipts.evidence}:{}),...(chatCompatibility?{preservedChatMetadata:chatCompatibility.evidence}:{}),...(columnCompatibility?{reviewedColumnMetadata:columnCompatibility.evidence}:{}),...(operational?{preservedOperationalMetadata:operational.evidence}:{}),relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})};
+ const descriptor={...(reportSecurity?{reportSecurity:reportSecurity.evidence}:{}),...(expectedReceipts?{expectedReceiptMetadata:expectedReceipts.evidence}:{}),...(chatCompatibility?{preservedChatMetadata:chatCompatibility.evidence}:{}),...(columnCompatibility?{reviewedColumnMetadata:columnCompatibility.evidence}:{}),...(operational?{preservedOperationalMetadata:operational.evidence}:{}),relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})};
  return {columns:byTable,fks:[...fks,...links],primaryKeys,descriptor,guardsInstalled:installedCounts.every(n=>n===2),signature:hash(descriptor)};
 }
 async function* scopedRows(tx,plan,schema,scope,node,meta){

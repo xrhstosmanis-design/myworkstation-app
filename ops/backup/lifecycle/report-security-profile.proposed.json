@@ -1,0 +1,26 @@
+{
+  "format": "MWS_REPORT_SECURITY_PROFILE_V1",
+  "sourcePlanHash": "54ceb10a4383faf7367d07bd3b8ad1c066b85c025a23e937c610d1f473423828",
+  "stageADefinitionSha256": "bb105475e3e14a3425d4fc67e5b2d855ee4c23f8c161d4c688bae5bbceca203f",
+  "table": "StoreChatAccessRevocation",
+  "columns": [
+    [
+      "companyId",
+      "text",
+      true
+    ],
+    [
+      "storeId",
+      "text",
+      true
+    ],
+    [
+      "userId",
+      "text",
+      true
+    ]
+  ],
+  "reviewedColumns": [
+    "StoreChatAccessRevocation.userId"
+  ]
+}

@@ -1,3 +1,4 @@
+import {withReportSecurityCompatibility} from './automatic-report-security-transition.js';
 import {withExpectedReceiptProfile,EXPECTED_RECEIPT_TARGET_PROFILE,EXPECTED_RECEIPT_SOURCE_PROFILE} from './supplier-expected-receipts-lifecycle-profile.js';
 import {withReportOperationalCompatibility,withReportColumnCompatibility,withReportChatCompatibility} from './automatic-report-operational-profile.js';
 import {withAutomaticReportEventConsent} from './automatic-report-event-schema.js';
@@ -15,6 +16,7 @@ export function selectedStoreLifecycleManifest(env=process.env){
  if(['BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'].includes(profile))return backofficeCompanyProfile(env).manifest;
  if(profile===undefined||profile==='BASE')return reviewedFreshStoreManifest();
  if(profile==='AUTOMATIC_EVENT_REPORTS_V1')return withAutomaticReportEventConsent(document);
+ if(profile==='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4')return withReportSecurityCompatibility(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3'}));
  if(profile==='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3')return withReportChatCompatibility(withReportColumnCompatibility(withReportOperationalCompatibility(withAutomaticReportEventConsent(JSON.parse(readFileSync(captureUrl,'utf8'))))));
  if(profile==='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2')return withReportColumnCompatibility(withReportOperationalCompatibility(withAutomaticReportEventConsent(JSON.parse(readFileSync(captureUrl,'utf8')))));
  if(profile==='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1')return withReportOperationalCompatibility(withAutomaticReportEventConsent(JSON.parse(readFileSync(captureUrl,'utf8'))));
