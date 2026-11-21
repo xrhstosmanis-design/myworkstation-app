@@ -378,6 +378,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "scope": "STORE",
     "actions": [
       "read",
+      "photo-preview",
       "submit",
       "recheck",
       "correct",
