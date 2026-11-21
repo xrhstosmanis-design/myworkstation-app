@@ -4,17 +4,19 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
+import {ownerWithdrawalStalePreview} from '../../shared/owner-cash-withdrawal.mjs';
 test('mounted owner withdrawal previews original shift, displays surplus and replays same durable packet after lost reply and remount',async()=>{
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),keys=['window','document','navigator','HTMLElement','Event','sessionStorage','IS_REACT_ACT_ENVIRONMENT'],saved=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
  const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/OwnerCashWithdrawalModal.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react/jsx-runtime'],loader:{'.css':'empty'}}),m={exports:{}};
  new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
- let calls=[],lost=true,changed=0,resolvePost;
+ let calls=[],lost=true,changed=0,resolvePost,staleReply=false,proof='a';
  const api=async(path,options)=>{
   if(!options)return {storeId:'store',sessions:[{id:'shift',terminalPos:'MAIN',openedByName:'Virtual',openedAt:'2026-01-01T20:00:00Z',closedAt:'2026-01-02T04:00:00Z'}]};
   const packet=JSON.parse(options.body);calls.push({path,packet});
-  if(path.endsWith('/preview'))return {storeId:'store',sessionId:'shift',amount:80,operatorName:'Virtual',expectedSnapshot:'a'.repeat(64),before:{variance:-79.18},after:{variance:0.82}};
+  if(path.endsWith('/preview'))return {storeId:'store',sessionId:'shift',amount:80,operatorName:'Virtual',expectedSnapshot:proof.repeat(64),before:{variance:-79.18},after:{variance:0.82}};
+  if(staleReply){staleReply=false;proof='b';throw Object.assign(new Error(ownerWithdrawalStalePreview),{status:409})}
   if(lost)throw Error('network lost');return new Promise(r=>{resolvePost=()=>r({ok:true,sessionId:'shift',amount:packet.amount,transactionId:'owner-withdrawal-test',after:{variance:0.82}})});
  };
  const root=createRoot(document.getElementById('root')),props={api,store:{id:'store',name:'Virtual'},actorKey:'owner',allowed:true,onClose:()=>{},onChanged:()=>changed++};
@@ -30,5 +32,13 @@ test('mounted owner withdrawal previews original shift, displays surplus and rep
   await settle(()=>root.render(React.createElement(m.exports.default,{...props,key:'remount'})));assert.match(document.body.textContent,/Εκκρεμεί/);assert.equal(calls.length,2);
   lost=false;await click('Επανάληψη');assert.deepEqual(calls[2].packet,original);await click('Επανάληψη');assert.equal(calls.length,3);
   await settle(resolvePost);assert.equal(changed,1);assert.match(document.body.textContent,/Συμβάντα/);assert.equal(sessionStorage.getItem('owner-withdrawal-v1:owner:store'),null);
+  staleReply=true;await settle(()=>root.render(React.createElement(m.exports.default,{...props,key:'stale-preview'})));
+  await settle(()=>{document.querySelector('select').value='shift';document.querySelector('select').dispatchEvent(new Event('change',{bubbles:true}))});
+  await fill('input[type="datetime-local"]','2026-01-02T02:00');await fill('input[inputmode="decimal"]','80');await fill('input[maxlength]','Omitted owner withdrawal');
+  await click('Προεπισκόπηση');await click('Επιβεβαίωση');const rejected=calls.at(-1).packet;
+  assert.match(document.body.textContent,/Δεν καταχωρίστηκε/);assert.equal(sessionStorage.getItem('owner-withdrawal-v1:owner:store'),null);assert.ok(document.querySelector('select'));
+  await settle(()=>{document.querySelector('select').value='shift';document.querySelector('select').dispatchEvent(new Event('change',{bubbles:true}))});
+  await click('Προεπισκόπηση');await click('Επιβεβαίωση');assert.equal(calls.at(-1).packet.idempotencyKey,rejected.idempotencyKey);assert.notEqual(calls.at(-1).packet.expectedSnapshot,rejected.expectedSnapshot);
+  await settle(resolvePost);assert.equal(changed,2);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,d] of saved)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]}
 });

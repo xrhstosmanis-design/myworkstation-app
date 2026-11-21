@@ -49,14 +49,14 @@ test('native PostgreSQL withdrawal atomically updates original closed shift, aud
    'CREATE TABLE "StoreOperatorAudit"("id" text primary key,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz)',
    `INSERT INTO "CashShiftSession" VALUES ('shift','company','store','CLOSED','MAIN','operator','Virtual','2026-01-01T20:00:00Z','2026-01-02T04:00:00Z',160.70,81.52,-79.18,81.52,now()),('control','company','other','CLOSED','MAIN','operator','Control','2026-01-01T20:00:00Z','2026-01-02T04:00:00Z',30,30,0,30,now())`
   ])await db.$executeRawUnsafe(sql);
-  const scope={companyId:'company',storeId:'store',user:{id:'owner',fullName:'Virtual Owner'},verify:async()=>{}};
+  const scope={companyId:'company',storeId:'store',user:{id:'owner',fullName:'Virtual Owner'},previewKey:'isolated-preview-proof-key',verify:async()=>{}};
   const raw=input(),preview=await previewOwnerWithdrawal(db,scope,raw),body={...raw,expectedSnapshot:preview.expectedSnapshot};
   const [a,b]=await Promise.all([recordOwnerWithdrawal(db,scope,body),recordOwnerWithdrawal(db,scope,body)]);assert.equal([a,b].filter(r=>r.duplicate).length,1);
   const [shift]=await db.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "id"='shift'`;
   assert.equal(Number(shift.expectedOperational),80.7);assert.equal(Number(shift.actualOperational),81.52);assert.equal(Number(shift.variance),0.82);assert.equal(Number(shift.nextOpeningTotal),81.52);assert.equal(shift.status,'CLOSED');
   const rows=await db.$queryRaw`SELECT * FROM "StoreTransaction"`,events=await db.$queryRaw`SELECT * FROM "StoreOperatorAudit"`;assert.equal(rows.length,1);assert.equal(events.length,1);assert.equal(rows[0].type,'TRANSFER_OUT');assert.equal(rows[0].occurredAt.toISOString(),raw.occurredAt.replace('Z','.000Z'));assert.ok(rows[0].createdAt>rows[0].occurredAt);assert.equal(events[0].details.result.after.variance,0.82);
   await assert.rejects(recordOwnerWithdrawal(db,scope,{...body,amount:81}),/διαφορετικά/);
-  await assert.rejects(recordOwnerWithdrawal(db,scope,{...body,idempotencyKey:crypto.randomUUID()}),/άλλαξε/);
+  await assert.rejects(recordOwnerWithdrawal(db,scope,{...body,idempotencyKey:crypto.randomUUID()}),/άλλαξαν/);
   await assert.rejects(previewOwnerWithdrawal(db,{...scope,storeId:'other'},raw),/Δεν βρέθηκε/);
   const second=input({amount:1}),fresh=await previewOwnerWithdrawal(db,scope,second);let checks=0;
   await assert.rejects(recordOwnerWithdrawal(db,{...scope,verify:async()=>{if(++checks===2)throw Error('grant revoked')}},{...second,expectedSnapshot:fresh.expectedSnapshot}),/grant revoked/);

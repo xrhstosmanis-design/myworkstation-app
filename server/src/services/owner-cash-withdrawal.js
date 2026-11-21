@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {z} from 'zod';
+import {ownerWithdrawalStalePreview} from '../../../shared/owner-cash-withdrawal.mjs';
 
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const cents=n=>Math.round(Number(n)*100);
@@ -29,9 +30,12 @@ async function lockedSession(tx,scope,input){
  if(!rows[0])fail(404,'Δεν βρέθηκε η βάρδια στο επιλεγμένο κατάστημα.');
  return rows[0];
 }
-async function snapshot(tx,scope,session){
+async function snapshot(tx,scope,session,input){
+ if(typeof scope.previewKey!=='string'||!scope.previewKey)fail(503,'Δεν είναι διαθέσιμη η ασφαλής επιβεβαίωση προεπισκόπησης.');
  const rows=await tx.$queryRaw`SELECT COUNT(*)::int AS count,COALESCE(SUM("amount") FILTER(WHERE "reversedAt" IS NULL),0)::text AS total,MAX(GREATEST("createdAt",COALESCE("reversedAt","createdAt")))::text AS last FROM "StoreTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${session.id}`;
- return digest({session,ledger:rows[0]});
+ const intent={sessionId:input.sessionId,amount:input.amount,occurredAt:input.occurredAt,reason:input.reason,idempotencyKey:input.idempotencyKey};
+ const proof={companyId:scope.companyId,storeId:scope.storeId,actorId:scope.user.id,session,ledger:rows[0],intent};
+ return crypto.createHmac('sha256',scope.previewKey).update('MWS_OWNER_WITHDRAWAL_PREVIEW_V1\n'+JSON.stringify(proof)).digest('hex');
 }
 // verify is supplied by the authenticated route and runs against this transaction.
 function verifier(scope){if(typeof scope.verify!=='function'||!scope.user?.id||!scope.companyId||!scope.storeId)fail(403,'Απαιτείται εξουσιοδοτημένη σύνδεση.');return scope.verify;}
@@ -39,7 +43,7 @@ export async function previewOwnerWithdrawal(db,scope,raw){
  const input=ownerWithdrawalSchema.parse(raw),verify=verifier(scope);
  return db.$transaction(async tx=>{
   await verify(tx);const session=await lockedSession(tx,scope,input),projection=withdrawalProjection(session,input);
-  const expectedSnapshot=await snapshot(tx,scope,session);await verify(tx);
+  const expectedSnapshot=await snapshot(tx,scope,session,input);await verify(tx);
   return {sessionId:session.id,storeId:scope.storeId,terminalPos:session.terminalPos,operatorName:session.openedByName,status:session.status,occurredAt:input.occurredAt,amount:input.amount,...projection,expectedSnapshot};
  });
 }
@@ -53,7 +57,7 @@ export async function recordOwnerWithdrawal(db,scope,raw){
   const session=await lockedSession(tx,scope,input);
   const prior=(await tx.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "actorId"=${scope.user.id} AND "eventType"='OWNER_CASH_WITHDRAWAL_RECORDED' LIMIT 1`)[0];
   if(prior){if(prior.details.requestHash!==requestHash)fail(409,'Το ίδιο αίτημα έχει διαφορετικά στοιχεία.');await verify(tx);return {...prior.details.result,duplicate:true};}
-  if(await snapshot(tx,scope,session)!==input.expectedSnapshot)fail(409,'Η βάρδια άλλαξε. Ανανέωσε την προεπισκόπηση.');
+  if(!crypto.timingSafeEqual(Buffer.from(await snapshot(tx,scope,session,input),'hex'),Buffer.from(input.expectedSnapshot,'hex')))fail(409,ownerWithdrawalStalePreview);
   const projection=withdrawalProjection(session,input);
   if(session.status==='OPEN'){
    const balance=(await tx.$queryRaw`SELECT COALESCE(SUM(CASE WHEN "type" IN ('SALE_CASH','CUSTOMER_RECEIPT_CASH','TRANSFER_AMOUNT') THEN "amount" WHEN "type"='TRANSFER_OUT' OR ("type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE','BANK_DEPOSIT') AND "subtractFromShift"=true) THEN -"amount" ELSE 0 END),0) AS net FROM "StoreTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${session.id} AND "reversedAt" IS NULL`)[0];

@@ -14,11 +14,11 @@ export function assertOwnerWithdrawalActor(user,storeId){
  if(user.staffAccess===true){if(user.storeId!==storeId)fail(403,'Επίλεξε το εξουσιοδοτημένο κατάστημα.');return;}
  if(!['OWNER','SUPER_ADMIN'].includes(user.role)&&user.isSuperAdmin!==true)fail(403,'Απαιτείται Ιδιοκτήτης, Super Admin ή ειδικό δικαίωμα Υπευθύνου.');
 }
-export function createOwnerWithdrawalRouter(db=prisma){
+export function createOwnerWithdrawalRouter(db=prisma,{previewKey=process.env.JWT_SECRET}={}){
  const router=Router(),wrap=fn=>async(req,res)=>{try{await fn(req,res)}catch(e){res.status(e?.name==='ZodError'?400:e.status||500).json({error:e?.name==='ZodError'?'Έλεγξε ποσό, ώρα, βάρδια και αιτιολογία.':e.message})}};
  const scope=req=>{
   const storeId=z.string().min(1).max(180).parse(req.params.storeId),user=req.user;assertOwnerWithdrawalActor(user,storeId);
-  return {companyId:user.companyId,storeId,user,verify:async tx=>{
+  return {companyId:user.companyId,storeId,user,previewKey,verify:async tx=>{
    assertOwnerWithdrawalActor(user,storeId);
    const store=(await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${storeId} AND "companyId"=${user.companyId} AND "active"=true FOR SHARE`)[0];
    if(!store)fail(404,'Δεν βρέθηκε ενεργό κατάστημα της εταιρείας.');

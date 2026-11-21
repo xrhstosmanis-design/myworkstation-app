@@ -29,7 +29,7 @@ test('native registered HTTP withdrawal admits owner/SA/explicit responsible gra
   // The authenticated identity boundary is injected. Admission and the actual
   // registered handlers below use real PostgreSQL policy/session/grant rows.
   app.use(async(req,res,next)=>{req.user={...actor};try{await enforceBackofficeStaff(db,req,res);next()}catch(e){res.status(e.status||500).json({error:e.message})}});
-  app.use('/api/transactions',createOwnerWithdrawalRouter(db));
+  app.use('/api/transactions',createOwnerWithdrawalRouter(db,{previewKey:'isolated-preview-proof-key'}));
   server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))});
   const send=async(suffix,{method='GET',body,store='store',headerStore=store}={})=>{const r=await fetch(`http://127.0.0.1:${server.address().port}/api/transactions/stores/${store}/owner-withdrawals/${suffix}`,{method,headers:{'Content-Type':'application/json','x-backoffice-store-id':headerStore},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()}};
   assert.equal((await send('sessions?date=2026-01-02')).status,403);
@@ -39,6 +39,10 @@ test('native registered HTTP withdrawal admits owner/SA/explicit responsible gra
   assert.equal((await send('sessions?date=2026-01-02',{store:'foreign'})).status,403);
   const packet={sessionId:'shift',amount:80,occurredAt:'2026-01-02T00:00:00Z',reason:'Omitted owner withdrawal',idempotencyKey:crypto.randomUUID()};
   const preview=await send('preview',{method:'POST',body:packet});assert.equal(preview.status,200,JSON.stringify(preview));const body={...packet,expectedSnapshot:preview.body.expectedSnapshot};
+  for(const changed of [{amount:81},{reason:'Changed after preview'},{occurredAt:'2026-01-02T00:01:00Z'},{idempotencyKey:crypto.randomUUID()}]){
+   const response=await send('confirm',{method:'POST',body:{...body,...changed}});assert.equal(response.status,409,'changed preview intent must not write: '+JSON.stringify(response));
+  }
+  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "StoreTransaction"`)[0].count,0);
   await db.$executeRawUnsafe('UPDATE "BackofficeStaffGrant" SET "active"=false');assert.equal((await send('confirm',{method:'POST',body})).status,403);
   assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "StoreTransaction"`)[0].count,0);
   await db.$executeRawUnsafe('UPDATE "BackofficeStaffGrant" SET "active"=true');const confirmed=await send('confirm',{method:'POST',body});assert.equal(confirmed.status,201,JSON.stringify(confirmed));assert.equal(confirmed.body.after.variance,0.82);
