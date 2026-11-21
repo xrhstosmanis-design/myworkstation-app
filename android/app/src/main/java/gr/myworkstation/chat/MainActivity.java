@@ -96,10 +96,14 @@ public final class MainActivity extends Activity {
         @Override public void run() {
             if (foreground && needsChatRenewal() && selected != null && view.equals("conversation") && !busy)
                 call("/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-renew", "POST", object(), false, MainActivity.this::saveRenewedConnection);
-            if (foreground && !token.isEmpty() && selected != null && view.equals("conversation") && tab.equals("chat") && chatGroupNotice == null && !busy) loadMessages(false);
+            if (foreground && !token.isEmpty() && selected != null && view.equals("conversation") && tab.equals("chat") && !busy) {
+                if (refreshOpenGroup != null) refreshOpenGroup.run();
+                else loadMessages(false);
+            }
             if (foreground) ui.postDelayed(this, 10000);
         }
     };
+    private Runnable refreshOpenGroup;
     interface Success { void run(JSONObject value) throws Exception; }
 
     @Override public void onCreate(Bundle state) {
@@ -169,6 +173,17 @@ public final class MainActivity extends Activity {
                     busy = false; if (chatSendButton != null) chatSendButton.setEnabled(true);
                     if (!anonymous && error instanceof ChatApi.Failure && ((ChatApi.Failure) error).status == 401) {
                         clearSession(); loginScreen(); status("Η σύνδεση έληξε. Συνδέσου ξανά.");
+                    } else if (!anonymous && error instanceof ChatApi.Failure && selected != null
+                            && path.startsWith(chatBase() + "/")
+                            && "STORE_CHAT_ACCESS_REVOKED".equals(((ChatApi.Failure) error).code)) {
+                        navigate();
+                        stores();
+                        status("Η πρόσβαση στο Chat αυτού του καταστήματος έχει ανακληθεί.");
+                    } else if (refreshOpenGroup != null && error instanceof ChatApi.Failure
+                            && ((ChatApi.Failure) error).status == 404
+                            && path.startsWith(chatBase() + "/groups/") && path.endsWith("/messages")) {
+                        dismissImage();
+                        status("Η ομάδα δεν είναι πλέον διαθέσιμη.");
                     } else status(error instanceof ChatApi.Failure ? error.getMessage() : "Δεν ολοκληρώθηκε η σύνδεση. Ανανέωσε πριν ξαναστείλεις μήνυμα.");
                 });
             }
@@ -721,18 +736,26 @@ public final class MainActivity extends Activity {
     private void showChatGroups() {
         call(chatBase() + "/groups", "GET", null, false, data -> {
             JSONArray groups = data.getJSONArray("groups");
-            if (groups.length() == 0) {
+            boolean mayModerate = data.optBoolean("mayModerate");
+            if (groups.length() == 0 && !mayModerate) {
                 status("Δεν συμμετέχεις σε ομάδα προσωπικού.");
                 return;
             }
-            String[] names = new String[groups.length()];
-            Runnable[] actions = new Runnable[groups.length()];
-            for (int index = 0; index < names.length; index++) {
+            int count = groups.length() + (mayModerate ? 2 : 0);
+            String[] names = new String[count];
+            Runnable[] actions = new Runnable[count];
+            for (int index = 0; index < groups.length(); index++) {
                 JSONObject group = groups.getJSONObject(index);
                 names[index] = group.getString("name");
                 String groupPath = chatBase() + "/groups/" + enc(group.getString("id")) + "/messages";
                 String name = names[index];
                 actions[index] = scopedChatAction(() -> showChatGroup(name, groupPath));
+            }
+            if (mayModerate) {
+                names[groups.length()] = "Αφαίρεση μέλους από ομάδα";
+                actions[groups.length()] = scopedChatAction(() -> showChatModeration(true));
+                names[groups.length() + 1] = "Πρόσβαση στο Chat καταστήματος";
+                actions[groups.length() + 1] = scopedChatAction(() -> showChatModeration(false));
             }
             dismissImage();
             imageDialog = new AlertDialog.Builder(this).setTitle("Ομάδες προσωπικού")
@@ -741,6 +764,52 @@ public final class MainActivity extends Activity {
             imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
             imageDialog.show();
         });
+    }
+
+    private void showChatModeration(boolean group) {
+        final String path = chatBase() + (group ? "/groups/moderation" : "/access-moderation");
+        call(path, "GET", null, false, data -> {
+            JSONArray rows = data.getJSONArray(group ? "groups" : "members");
+            ArrayList<String> names = new ArrayList<>();
+            ArrayList<Runnable> actions = new ArrayList<>();
+            for (int index = 0; index < rows.length(); index++) {
+                JSONObject row = rows.getJSONObject(index);
+                if (group && row.isNull("userId")) continue;
+                String userId = row.getString(group ? "userId" : "id");
+                String member = row.getString(group ? "memberName" : "name");
+                String groupName = group ? row.getString("name") : "";
+                boolean restore = !group && row.getBoolean("revoked");
+                String label = group ? "Αφαίρεση" : restore ? "Επαναφορά πρόσβασης" : "Ανάκληση πρόσβασης";
+                names.add(group ? groupName + " · " + member : member + " · " + label);
+                String mutationPath = group ? chatBase() + "/groups/" + enc(row.getString("id")) + "/remove-member" : path;
+                JSONObject body = group ? object("userId", userId) : object("userId", userId, "revoked", !restore);
+                String detail = group ? member + " · Ομάδα: " + groupName
+                        : member + " · Κατάστημα: " + id(selected, "name") + "\nΗ αλλαγή αφορά όλο το Chat του καταστήματος.";
+                actions.add(scopedChatAction(() -> confirmChatModeration(group, label, detail, mutationPath, body)));
+            }
+            dismissImage();
+            AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                    .setTitle(group ? "Αφαίρεση μέλους από ομάδα" : "Πρόσβαση στο Chat καταστήματος")
+                    .setNegativeButton("Κλείσιμο", null);
+            if (names.isEmpty()) builder.setMessage("Δεν υπάρχουν διαθέσιμα μέλη.");
+            else builder.setItems(names.toArray(new String[0]), (dialog, index) -> actions.get(index).run());
+            imageDialog = builder.create();
+            imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            imageDialog.show();
+        });
+    }
+
+    private void confirmChatModeration(boolean group, String label, String detail, String path, JSONObject body) {
+        dismissImage();
+        Runnable confirm = scopedChatAction(() -> call(path, group ? "POST" : "PUT", body, false, result -> {
+            if (!result.optBoolean("ok")) throw new IllegalArgumentException();
+            status("Η αλλαγή καταχωρίστηκε.");
+            showChatModeration(group);
+        }));
+        imageDialog = new AlertDialog.Builder(this).setTitle(label).setMessage(detail)
+                .setNegativeButton("Ακύρωση", null).setPositiveButton(label, (dialog, which) -> confirm.run()).create();
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        imageDialog.show();
     }
 
     private void showChatGroup(String name, String path) {
@@ -793,7 +862,9 @@ public final class MainActivity extends Activity {
                 refresh.run();
             });
         })));
+        refreshOpenGroup = refresh;
         dialog.setOnDismissListener(ignored -> {
+            if (refreshOpenGroup == refresh) refreshOpenGroup = null;
             wipeViews(panel);
             sendAttempt[0] = null;
             sendAttempt[1] = null;
