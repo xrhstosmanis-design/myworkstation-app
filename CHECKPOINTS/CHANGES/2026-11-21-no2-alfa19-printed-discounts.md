@@ -1,5 +1,7 @@
 # No02 — ALFA / Epsilon19 printed discounts at first myDATA insert
 
+Current status21Nov2026: TECHNICAL INSTALLATION VERIFIED at exactee7d24f / AWAITING GROUPED LAB. Source/mainCI and normalguard/actualRender/freshHTTP receipts below. Initial claim/source pending statuses are preserved historical steps; overall No02/#4019 remains OPEN.
+
 Retained No02 owner /root, explicit user continuation21Nov2026. Branch `fix/no2-epsilon19-printed-discounts-20261121`, baseline `3e34f1e3597f5eb8f6b932a21a4a124b7343fecb`. ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED / NOT INSTALLED / NOT LAB TESTED. Applicable claim CI and root-reviewed main merge must precede source edits. Existing e-invoicing source4120 and its technicalLIVE proof remain protected, not repeated business acceptance.
 
 ## Actual retained-source feasibility
@@ -37,3 +39,18 @@ Same cached actual PDF/exact stored source XML production dispatcher replay23/23
 
 
 Before opening the source PR, merged current main4017a53112e99eaf8ebb281a5d0205db0531c2cf locally to preserve No5 photo-products4122 and owner-withdrawal4129 claim. Automatic merge clean; No5 route/client/packet/test blobs are byte-identical to exact main, no edits by No02. All ALFA runtime/test blobs unchanged from root/native-tested a39e06b. This combined tree will receive one full source CI; prior native/source evidence is not presented as combined CI.
+
+
+## Final technical installation receipt —21Nov2026,12:04Ελλάδας
+
+Source4131 exacthead81e4e655633f9fd0ef719ed96d905ed2cc6a7502/tree4d8953f0471b3a8803ba00613bb16aed3a885621: fullCI44889092025 ALL5SUCCESS,7045tests/7041PASS/0FAIL/4optionalSKIP plus8recoveryPASS/0FAIL/0SKIP. All ALFA fresh/profile/precision/stale/rollback and3precisionchildren explicitly ran and passed, not skipped. Full log4,045,628bytes/SHA2569685b37aa5258b3b2a4c3ed7988a8aaad457fec141b8d35dbef4395792de0d29. Independent final static review found no blocker; root49targeted and actualisolated47nativePASS0FAIL0SKIP remain technical evidence, not duplicate business tests.
+
+Root expected-head squash mergeee7d24fdb43cec501e8b57b7899aec52a569fc9a has parent33f24bcfe2bb06a7b3da0568a6df9fcf060aed5b and tree0543a386e2092789b1155314998e1dc24934dd71 EXACT independently prepared clean merge. Only8ownedpaths differ from parent; every peer file preserved. All6ownedruntime/testblobs independently matched the tested source again at deployment. Recovery4118, No5photo-products4122 and securityclaim4130 remain intact. Protected the pending main queue without cancel/override; released the coordination hold once exact main became RUNNING.
+
+Exact mergedMAIN CI44890417227 ALL5SUCCESS:7069tests/7065PASS/0FAIL/4optionalSKIP plus8recoveryPASS/0FAIL/0SKIP. Every new ALFA native case and precisionchild ran/passed. Main build log4,052,815bytes/SHA256c6fbde00110405264706741536873eb9d2f79f6fbb86b4b6a0e748ec20ccdddc. No false conclusion from queued/running/deferred/optionalSKIP.
+
+Normal workflow_run guard44892306287, deployjob136810603931: VerifyfullCI/freshnessSUCCESS, TriggerRenderSUCCESS, WaitexactproductionSUCCESS. Renderdep-dc0mo3rm8hqs73f0nv40, deploy_hook, exactee7d, LIVE10:03:30.962264UTC/12:03:30Ελλάδας. Independent nonce/no-cache HTTP proof10:04:23.134216UTC/12:04:23Ελλάδας: healthHTTP200/oktrue/revisionexactee7d; HTML200 and actualsame-originbootstrap→entry-GTkggWIY.js3331774bytes/SHA256aadd36478dddd3f9a6637be1d0a4b765e614bfc51a48c76beb479cdc719510ea bothdata-mydata-printed-economics/MYDATA_PRINTED_ECONOMICS_V1markersPRESENT. Only six bounded publicassets inspected, no credentials/session/customeraction.
+
+Installed capability is ONLY the identity-verified closed ALFA19/177two-page layout on the first insert of a new empty unreopened myDATA draft, alongside alreadyinstalledEINV support. It does not retrofit populated/edited/reopened/final drafts, manufacture unprinted discounts, enable bulk/history4048 or take over No4 generic writers. Typed amount steps remain supplier amounts; equivalent percentages remain explicitly storage math. Preserve authoritative XMLVAT at this first-insert/read-only boundary. Native actualdetailhandler totals23rows148.84/19.35/168.19/VERIFIED are technical fixtures, not hostedOwner/Manager/businessacceptance or finalstockposting.
+
+Remaining: ONE grouped acceptance in existingLAB at central coordinator readiness; reuse accepted prior provider/payment/stock evidence and no new paid reading/upload/payment/finalization solely for documentation. OverallNo02/#4019 remains OPEN; unsupported formats and populatedlegacy drafts remain with retained owners. Selected existing Epsilon159supportthread was read afresh21Nov and still contains onlypriorSENT/no reply; no newemail/providerrequest. No3GatePASS/No4/No5/No7/recovery assignments are changed. No manual/PDF/fullPASS closure is asserted by this docs-only receipt.
