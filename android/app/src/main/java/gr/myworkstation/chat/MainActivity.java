@@ -759,7 +759,7 @@ public final class MainActivity extends Activity {
             }
             dismissImage();
             imageDialog = new AlertDialog.Builder(this).setTitle("Ομάδες προσωπικού")
-                    .setItems(names, (dialog, index) -> actions[index].run())
+                    .setItems(names, (dialog, index) -> ui.post(actions[index]))
                     .setNegativeButton("Κλείσιμο", null).create();
             imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
             imageDialog.show();
@@ -792,7 +792,7 @@ public final class MainActivity extends Activity {
                     .setTitle(group ? "Αφαίρεση μέλους από ομάδα" : "Πρόσβαση στο Chat καταστήματος")
                     .setNegativeButton("Κλείσιμο", null);
             if (names.isEmpty()) builder.setMessage("Δεν υπάρχουν διαθέσιμα μέλη.");
-            else builder.setItems(names.toArray(new String[0]), (dialog, index) -> actions.get(index).run());
+            else builder.setItems(names.toArray(new String[0]), (dialog, index) -> ui.post(actions.get(index)));
             imageDialog = builder.create();
             imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
             imageDialog.show();
