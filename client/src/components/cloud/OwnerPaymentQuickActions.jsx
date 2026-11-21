@@ -6,6 +6,7 @@ import ExpenseDocumentModal from "./ExpenseDocumentModal.jsx";
 import StoreCashTransferModal from "../store/StoreCashTransferModal.jsx";
 import StoreSupplierOpenInvoicePayment from '../store/StoreSupplierOpenInvoicePayment.jsx';
 import StorePosPaymentsModal from "../store/StorePosPaymentsModal.jsx";
+import OwnerExpenseRecoveryPanel from "./OwnerExpenseRecoveryPanel.jsx";
 
 const categories=[
   {id:"INVOICE",label:"Πληρωμή Τιμολογίου",type:"SUPPLIER_PAYMENT",icon:FileText,document:true},
@@ -36,6 +37,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged,delegatedC
   const [form,setForm]=useState({amount:"",supplierId:"",purchaseDocumentId:"",description:"",paymentSource:"EXTERNAL"});
   const [transferOpen,setTransferOpen]=useState(false);
   const [expenseDocumentOpen,setExpenseDocumentOpen]=useState(false);
+  const [expenseRecoveryOpen,setExpenseRecoveryOpen]=useState(false);
   const delegated=Array.isArray(delegatedCapabilities),paymentKey=useRef(safeKey());
   const [responsibility,setResponsibility]=useState(false);
   const user=storedUser();
@@ -128,6 +130,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged,delegatedC
     {!active&&message&&<p role={message.startsWith("❌")?"alert":"status"} style={{color:message.startsWith("❌")?"#b42318":"#08783e"}}>{message}</p>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(205px,1fr))",gap:12}}>
       {!delegated&&<button type="button" onClick={()=>setBusinessOpen(true)} style={{...tileStyle,border:"2px solid #1769e0",background:"linear-gradient(180deg,#eff6ff,#e8f1ff)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#dbeafe",color:"#1457b8"}}><ChartNoAxesCombined size={23}/></span><span><b style={{display:"block",fontSize:14,color:"#102f59"}}>Εικόνα Επιχειρήσεις</b><small style={{color:"#496b95"}}>Πωλήσεις · αγορές · ΦΠΑ · κέρδος · έξοδα</small></span></button>}
+      {!delegated&&user?.role==="OWNER"&&<button type="button" style={tileStyle} onClick={()=>setExpenseRecoveryOpen(true)}><WalletCards size={22}/><span><b>Σύνδεση εξόδου με προμηθευτή</b><small style={{display:"block"}}>Υπάρχουσα πληρωμή · χωρίς νέα εκταμίευση</small></span></button>}
       {visibleCategories.map(category=>{const Icon=category.icon;return <button key={category.id} type="button" onClick={()=>open(category)} style={tileStyle}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#eaf2ff",color:"#1769e0"}}><Icon size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#12233d"}}>{category.label}</b><small style={{color:"#718096"}}>{category.type==="TRANSFER_AMOUNT"?"Ιδιοκτήτης → Ταμείο · μετρητά":category.type==="SUPPLIER_PAYMENT"?"Προμηθευτές / παραστατικά":"Κατηγορία εξόδου"}</small></span></button>})}
       {!delegated&&<button type="button" onClick={()=>setBankOpen(true)} style={{...tileStyle,border:"2px solid #0f766e",background:"linear-gradient(180deg,#f0fdfa,#ecfdf5)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#d1fae5",color:"#047857"}}><FileSpreadsheet size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#064e3b"}}>Εισαγωγή αρχείου τράπεζας</b><small style={{color:"#47766d"}}>Excel / CSV · matching προμηθευτή / τιμολογίου</small></span></button>}
     </div>
@@ -152,6 +155,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged,delegatedC
       </div>}
     </section>}
     {transferOpen&&<StoreCashTransferModal key={store.id} api={api} store={store} direction="IN" allowed={allowed} onClose={()=>setTransferOpen(false)} onChanged={()=>{load();onChanged?.()}}/>}
+    {expenseRecoveryOpen&&!delegated&&user?.role==="OWNER"&&<OwnerExpenseRecoveryPanel key={store.id} api={api} store={store} onClose={()=>setExpenseRecoveryOpen(false)} setMessage={setMessage}/>}
     {businessOpen&&<OwnerBusinessPicture api={api} store={store} onClose={()=>setBusinessOpen(false)}/>}
     {supplierPaymentsOpen&&delegated&&<div className="pos-sale-actions-overlay"><section className="pos-sale-actions-modal"><header><h3>Πληρωμή προμηθευτή · {store.name}</h3><button type="button" onClick={()=>setSupplierPaymentsOpen(false)}>Κλείσιμο</button></header><p>Η καταχώριση παραμένει προς έλεγχο ιδιοκτήτη.</p><StoreSupplierOpenInvoicePayment api={api} store={store} suppliers={suppliers} allowCash={delegatedCapabilities.includes('payments.cash')} allowAdvanceAllocation={false} onCompleted={()=>{setSupplierPaymentsOpen(false);load();onChanged?.()}} setMessage={setMessage}/></section></div>}
     {supplierPaymentsOpen&&!delegated&&<StorePosPaymentsModal api={api} store={store} initialPaymentType="SUPPLIER_PAYMENT" onClose={()=>setSupplierPaymentsOpen(false)} onChanged={async()=>{await load();onChanged?.()}} setMessage={setMessage} setError={setError}/>}

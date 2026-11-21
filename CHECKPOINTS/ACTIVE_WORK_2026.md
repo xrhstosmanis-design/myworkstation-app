@@ -857,6 +857,9 @@ Retained /root, branchfix/no2-printed-discounts-20261120. Before-source independ
 
 Owner /root, docs/invoice-payment-recovery-claim-20261121. Explicit user expansion: owner/delegated responsible-person recovery, stored photos through assistant, one existing payment and editable draft, later reviewed warehouse receipt. Existing PLAIN_CAPTURE is intentionally not an AI draft; generic guard remains. No5 shared rights/installer, No04 lines and No02 acquisition retained. [Before-source boundary](CHANGES/2026-11-21-invoice-payment-recovery.md); [small pending continuation](../docs/roadmap/INVOICE_RECOVERY_PENDING_2026-11-21.md). Source NOT STARTED; combined LAB NOT TESTED; do not replay protected close/plain capture PASS.
 
+Claim4115 merged170182a after3applicable CI successes/2docs-runtime skips. Source branch feat/invoice-payment-recovery-20261121 adds only isolated read-only recovery projection and14synthetic tests PASS/0FAIL/0SKIP; no route/UI/permission/assistant/provenance integration. Full feature NOT IMPLEMENTED / NOT INSTALLED / LAB NOT TESTED. Shared No5 grant/provenance and No04 assistant boundaries require coordination before edits; their owners remain retained. No real payment/upload/AI/stock/close action.
+
+Newer21Nov: actual OWNER entry implemented in store payments, reusing existing owner-authorized endpoints with fixed-store/context/retry fences;25 distinct targeted PASS and frontend build PASS. Prior 'SA-only HTTP' diagnosis corrected: OWNER was already admitted. No server/No5 grant/No04 assistant/No02/No14/provenance changes. Draft4118 remains NOT INSTALLED/AWAITING full sourceCI and grouped owner acceptance; delegated recovery/allocation and PLAIN_CAPTURE promotion still pending coordination. No real financial/stock/AI action.
 
 ## No02 — recovered first-insert printed discounts implementation21Nov2026
 
