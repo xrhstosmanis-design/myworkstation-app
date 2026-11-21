@@ -1,5 +1,8 @@
 import {readLifecycleGeneration,assertLifecycleMutation} from './store-lifecycle-generation.js';
-import {CASH_PAPER_ENTITY,paperKey,intentId,completionId,paperError,validatePaperSource,normalizePaper} from './cash-paper-contract.js';
+import {CASH_PAPER_ENTITY,paperKey,paperRereadKey,intentId,completionId,paperError,validatePaperSource,normalizePaper} from './cash-paper-contract.js';
+
+const readerRevision='MULTI_SHIFT_V1';
+const canReread=state=>state.status==='EXTRACTED_UNVERIFIED'&&!state.readerRevision;
 
 export function paperState(rows,key,scope,checksum){
   const intent=rows.find(r=>r.id===intentId(key)),completion=rows.find(r=>r.id===completionId(key));
@@ -13,14 +16,36 @@ export function paperState(rows,key,scope,checksum){
   try{
     // Re-validate the stored raw fields; stored/model flags never verify a shift.
     const extraction=normalizePaper(detail.raw);
-    return {status:'EXTRACTED_UNVERIFIED',sourceKey:key,extraction,readAt:completion.createdAt,actorName:String(detail.actorName||'').slice(0,180)};
+    return {status:'EXTRACTED_UNVERIFIED',sourceKey:key,extraction,readAt:completion.createdAt,actorName:String(detail.actorName||'').slice(0,180),
+      ...(detail.readerRevision===readerRevision?{readerRevision}:{})};
   }catch{return {status:'REQUIRES_REVIEW',sourceKey:key,reason:'INVALID_READING'};}
 }
 
 export function createCashPaperRepository(db){
   const readRows=(tx,scope,key)=>tx.$queryRaw`SELECT "id","companyId","storeId","entityType","entityId","action","afterJson","createdAt" FROM "WorkforceAuditLog" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "entityType"=${CASH_PAPER_ENTITY} AND "entityId"=${key} ORDER BY "createdAt","id" LIMIT 3`;
   async function generation(scope){const s=await readLifecycleGeneration(db,scope);if(s.maintenance||s.retired)throw paperError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
-  async function get(scope,checksum){const key=paperKey(scope,checksum);return paperState(await readRows(db,scope,key),key,scope,checksum);}
+  const keyFor=(scope,checksum,reread)=>reread?paperRereadKey(scope,checksum):paperKey(scope,checksum);
+  async function readState(tx,scope,checksum,reread=false){
+    const key=keyFor(scope,checksum,reread);
+    return paperState(await readRows(tx,scope,key),key,scope,checksum);
+  }
+  async function get(scope,checksum){
+    const original=await readState(db,scope,checksum);
+    if(!canReread(original))return original;
+    const revised=await readState(db,scope,checksum,true);
+    if(revised.status==='NOT_READ')return {...original,canReread:true};
+    if(revised.status==='EXTRACTED_UNVERIFIED')return revised;
+    return {...original,rereadStatus:revised.status};
+  }
+  async function getHistorical(scope,checksum,sourceKey){
+    const original=paperKey(scope,checksum),revised=paperRereadKey(scope,checksum);
+    if(sourceKey!==original&&sourceKey!==revised)throw paperError('CASH_PAPER_NOT_FOUND',404);
+    return readState(db,scope,checksum,sourceKey===revised);
+  }
+  async function getReread(scope,checksum){
+    if(!canReread(await readState(db,scope,checksum)))throw paperError('CASH_PAPER_REREAD_UNAVAILABLE');
+    return readState(db,scope,checksum,true);
+  }
   async function source(tx,scope,messageId,checksum){
     const rows=await tx.$queryRaw`SELECT "id","companyId","storeId","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData" FROM "StoreChatMessage" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "id"=${messageId} LIMIT 1`;
     return validatePaperSource(rows[0],scope,checksum);
@@ -30,10 +55,11 @@ export function createCashPaperRepository(db){
     if(!stores.length)throw paperError('CASH_PAPER_NOT_FOUND',404);
     await assertLifecycleMutation(tx,scope,scope.generation);
   }
-  async function claim(scope,actor,messageId,checksum){
-    const key=paperKey(scope,checksum);
+  async function claim(scope,actor,messageId,checksum,reread=false){
+    const key=keyFor(scope,checksum,reread);
     return db.$transaction(async tx=>{
       await lock(tx,scope);await source(tx,scope,messageId,checksum);
+      if(reread&&!canReread(await readState(tx,scope,checksum)))throw paperError('CASH_PAPER_REREAD_UNAVAILABLE');
       const prior=await readRows(tx,scope,key);
       if(prior.length)return {claimed:false,state:paperState(prior,key,scope,checksum)};
       const detail={version:1,generation:scope.generation,checksum,messageId,actorName:actor.fullName||'',status:'PENDING'};
@@ -41,19 +67,19 @@ export function createCashPaperRepository(db){
       return {claimed:inserted.length===1,state:paperState(await readRows(tx,scope,key),key,scope,checksum)};
     },{maxWait:5000,timeout:15000});
   }
-  async function complete(scope,actor,messageId,checksum,result){
-    const key=paperKey(scope,checksum);
+  async function complete(scope,actor,messageId,checksum,result,reread=false){
+    const key=keyFor(scope,checksum,reread);
     return db.$transaction(async tx=>{
       await lock(tx,scope);await source(tx,scope,messageId,checksum);
       const rows=await readRows(tx,scope,key),prior=paperState(rows,key,scope,checksum);
       if(!rows.some(r=>r.id===intentId(key))||prior.status==='REQUIRES_REVIEW')throw paperError('CASH_PAPER_REVIEW_REQUIRED');
       if(prior.status==='EXTRACTED_UNVERIFIED')return prior;
       const detail={version:1,generation:scope.generation,checksum,messageId,actorName:actor.fullName||'',status:result.status,
-        ...(result.status==='EXTRACTED_UNVERIFIED'?{raw:result.raw}:{reason:'READING_UNCERTAIN'})};
+        ...(result.status==='EXTRACTED_UNVERIFIED'?{raw:result.raw,readerRevision}:{reason:'READING_UNCERTAIN'})};
       if(JSON.stringify(detail).length>26000)throw paperError('CASH_PAPER_INVALID_RESULT',502);
       await tx.$queryRaw`INSERT INTO "WorkforceAuditLog" ("id","companyId","storeId","actorUserId","action","entityType","entityId","afterJson","createdAt") VALUES (${completionId(key)},${scope.companyId},${scope.storeId},${actor.id},'CASH_PAPER_COMPLETED',${CASH_PAPER_ENTITY},${key},${JSON.stringify(detail)}::jsonb,NOW()) ON CONFLICT ("id") DO NOTHING RETURNING "id"`;
       return paperState(await readRows(tx,scope,key),key,scope,checksum);
     },{maxWait:5000,timeout:15000});
   }
-  return {generation,get,source:(scope,id,checksum)=>source(db,scope,id,checksum),claim,complete};
+  return {generation,get,getHistorical,getReread,source:(scope,id,checksum)=>source(db,scope,id,checksum),claim,complete};
 }

@@ -35,6 +35,7 @@ export const dailyCashEvidenceSchema=z.object({
     sessionId:z.string().min(1).max(200),
     unresolved:issueCounts,
     comparisons,
+    handwrittenCandidates:count.positive().optional(),
     omittedComparisons:count,
     netlink:z.object({completedCount:count,reviewCount:count,amountCents:cents.nullable()}).strict().nullable()
   }).strict()).min(1).max(200)
@@ -51,6 +52,11 @@ export function projectDailyCashEvidence(paper,netlink,sessionIds){
   const shifts=new Map(sessionIds.map(sessionId=>[sessionId,{
     sessionId,unresolved:new Map(),comparisons:[],omittedComparisons:0,netlink:netlink.get(sessionId)??null
   }]));
+  for(const candidate of paper.shiftCandidates??[]){
+    const shift=shifts.get(candidate.sessionId);
+    if(!shift||candidate.status!=='UNVERIFIED_CANDIDATE')continue;
+    shift.handwrittenCandidates=(shift.handwrittenCandidates??0)+1;
+  }
   for(const item of paper.items){
     const shift=shifts.get(item.sessionId);
     if(item.status==='UNRESOLVED')addIssue(shift?.unresolved??unassigned,item.reason);
@@ -79,6 +85,9 @@ export function dailyCashEvidenceText(evidence,report){
   for(const shift of evidence.shifts){
     const row=rows.get(shift.sessionId);
     lines.push(row.day+' · '+row.shiftLabel+' · '+row.terminalPos);
+    if(shift.handwrittenCandidates){
+      lines.push('Χειριστής POS: '+row.operatorName+' · Προτεινόμενες αντιστοιχίσεις χειρογράφου: '+shift.handwrittenCandidates+' · προς έλεγχο.');
+    }
     if(shift.unresolved.length)lines.push('Εκκρεμεί: '+issueText(shift.unresolved));
     for(const item of shift.comparisons){
       const source=item.status==='NETLINK_SUBTOTAL_COMPARISON'?'Ονομαστική αξία Netlink':sources[item.kind];

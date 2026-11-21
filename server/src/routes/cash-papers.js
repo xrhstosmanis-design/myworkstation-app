@@ -31,9 +31,9 @@ export async function authorizeCashPaper(db,user,storeId){
   return {scope:{companyId:store.companyId,storeId:store.id},actor};
 }
 const errorResponse=(res,error)=>{
-  const allowed=new Set(['CASH_PAPER_ACCESS_DENIED','CASH_PAPER_NOT_FOUND','CASH_PAPER_UNSUPPORTED','CASH_PAPER_SOURCE_CHANGED','CASH_PAPER_PROVIDER_UNAVAILABLE','CASH_PAPER_BUSY','STORE_LIFECYCLE_STALE_GENERATION','STORE_LIFECYCLE_MAINTENANCE']);
+  const allowed=new Set(['CASH_PAPER_ACCESS_DENIED','CASH_PAPER_NOT_FOUND','CASH_PAPER_UNSUPPORTED','CASH_PAPER_SOURCE_CHANGED','CASH_PAPER_PROVIDER_UNAVAILABLE','CASH_PAPER_BUSY','CASH_PAPER_REREAD_UNAVAILABLE','STORE_LIFECYCLE_STALE_GENERATION','STORE_LIFECYCLE_MAINTENANCE']);
   const code=allowed.has(error?.code)?error.code:'CASH_PAPER_UNAVAILABLE';
-  const messages={CASH_PAPER_ACCESS_DENIED:'Δεν υπάρχει πρόσβαση στην ανάγνωση χειρόγραφων.',CASH_PAPER_NOT_FOUND:'Δεν βρέθηκε το κατάστημα ή το συνημμένο.',CASH_PAPER_UNSUPPORTED:'Το συνημμένο δεν μπορεί να διαβαστεί με ασφάλεια.',CASH_PAPER_SOURCE_CHANGED:'Το συνημμένο άλλαξε. Ανανέωσε τα στοιχεία.',CASH_PAPER_PROVIDER_UNAVAILABLE:'Η ανάγνωση δεν είναι διαθέσιμη αυτή τη στιγμή.',CASH_PAPER_BUSY:'Εκτελούνται ήδη αναγνώσεις. Δοκίμασε ξανά αργότερα.',STORE_LIFECYCLE_STALE_GENERATION:'Η κατάσταση καταστήματος άλλαξε. Ανανέωσε τα στοιχεία.',STORE_LIFECYCLE_MAINTENANCE:'Το κατάστημα βρίσκεται σε συντήρηση.'};
+  const messages={CASH_PAPER_ACCESS_DENIED:'Δεν υπάρχει πρόσβαση στην ανάγνωση χειρόγραφων.',CASH_PAPER_NOT_FOUND:'Δεν βρέθηκε το κατάστημα ή το συνημμένο.',CASH_PAPER_UNSUPPORTED:'Το συνημμένο δεν μπορεί να διαβαστεί με ασφάλεια.',CASH_PAPER_SOURCE_CHANGED:'Το συνημμένο άλλαξε. Ανανέωσε τα στοιχεία.',CASH_PAPER_PROVIDER_UNAVAILABLE:'Η ανάγνωση δεν είναι διαθέσιμη αυτή τη στιγμή.',CASH_PAPER_BUSY:'Εκτελούνται ήδη αναγνώσεις. Δοκίμασε ξανά αργότερα.',CASH_PAPER_REREAD_UNAVAILABLE:'Η νέα ανάγνωση διατίθεται για συνημμένα με ολοκληρωμένη πρώτη ανάγνωση.',STORE_LIFECYCLE_STALE_GENERATION:'Η κατάσταση καταστήματος άλλαξε. Ανανέωσε τα στοιχεία.',STORE_LIFECYCLE_MAINTENANCE:'Το κατάστημα βρίσκεται σε συντήρηση.'};
   const status=Number.isInteger(error?.status)&&error.status>=400&&error.status<=503?error.status:503;
   res.status(status).json({error:messages[code]||'Δεν ολοκληρώθηκε η ανάγνωση. Το αίτημα χρειάζεται έλεγχο πριν επαναληφθεί.',code});
 };
@@ -58,14 +58,16 @@ export function createCashPaperRouter({db=prisma,provider=createCashPaperProvide
     if(await repository.generation(scope)!==scope.generation)throw paperError('STORE_LIFECYCLE_STALE_GENERATION');
     res.setHeader('Cache-Control','private, no-store');res.json({...discovery,sources,storeId:scope.storeId,generation:scope.generation});
   }catch(error){errorResponse(res,error);}});
-  router.post('/stores/:storeId/read',async(req,res)=>{try{
+  const readAttachment=reread=>async(req,res)=>{try{
     const parsed=paperRequest.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Μη έγκυρα στοιχεία συνημμένου.',code:'CASH_PAPER_INVALID_REQUEST'});
     const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;scope.activity=walletActivityFromRequest({...req,user:{...req.user,companyId:scope.companyId}},{storeId:scope.storeId,purpose:'CASH_PAPER_READING'});
-    const result=await reader.read(scope,actor,parsed.data);
+    const result=await (reread?reader.reread(scope,actor,parsed.data):reader.read(scope,actor,parsed.data));
     await authorize(db,req.user,req.params.storeId);
     if(await repository.generation(scope)!==scope.generation)throw paperError('STORE_LIFECYCLE_STALE_GENERATION');
     res.setHeader('Cache-Control','private, no-store');res.json({...result,storeId:scope.storeId,checksum:parsed.data.checksum,generation:scope.generation});
-  }catch(error){errorResponse(res,error);}});
+  }catch(error){errorResponse(res,error);}};
+  router.post('/stores/:storeId/read',readAttachment(false));
+  router.post('/stores/:storeId/reread',readAttachment(true));
   return router;
 }
 export default createCashPaperRouter();

@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 
 const maxSelectedAttachments=10;
 const canRead=source=>source.reading?.status==='NOT_READ'&&Boolean(source.checksum&&source.references?.[0]?.messageId);
+const canReread=source=>source.reading?.canReread===true&&Boolean(source.checksum&&source.references?.[0]?.messageId);
 const labels={NOT_READ:'Δεν έχει αναγνωστεί',PENDING:'Αναμονή αποτελέσματος — μην υποβάλεις νέο αίτημα',REQUIRES_REVIEW:'Το προηγούμενο αίτημα χρειάζεται έλεγχο',EXTRACTED_UNVERIFIED:'Αναγνώστηκε — προς αντιστοίχιση'};
 export default function CashPaperReadingPanel({api,storeId}){
   const [opened,setOpened]=useState(false),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
@@ -16,8 +17,8 @@ export default function CashPaperReadingPanel({api,storeId}){
     finally{if(id===sequence.current&&selectedStore.current===ownStore){busyRef.current=false;setBusy(false);}}
   };
   const update=(sourceId,reading)=>setData(previous=>previous?.storeId===storeId?{...previous,sources:previous.sources.map(source=>source.sourceId===sourceId?{...source,reading}:source)}:previous);
-  const read=async sources=>{
-    if(busyRef.current||data?.storeId!==storeId||!sources.length||sources.length>maxSelectedAttachments||!sources.every(canRead))return;
+  const read=async (sources,repeat=false)=>{
+    if(busyRef.current||data?.storeId!==storeId||!sources.length||sources.length>maxSelectedAttachments||!sources.every(repeat?canReread:canRead)||repeat&&sources.length!==1)return;
     const ownStore=storeId,generation=data.generation,id=++sequence.current;
     const current=()=>id===sequence.current&&selectedStore.current===ownStore;
     busyRef.current=true;setBusy(true);setError('');
@@ -25,10 +26,11 @@ export default function CashPaperReadingPanel({api,storeId}){
       for(const source of sources){
         if(!current())return;
         try{
-          const result=await api(`/api/cash-papers/stores/${encodeURIComponent(ownStore)}/read`,{method:'POST',body:JSON.stringify({messageId:source.references[0].messageId,checksum:source.checksum,generation})});
+          const result=await api(`/api/cash-papers/stores/${encodeURIComponent(ownStore)}/${repeat?'reread':'read'}`,{method:'POST',body:JSON.stringify({messageId:source.references[0].messageId,checksum:source.checksum,generation})});
           if(!current())return;
           if(result?.storeId!==ownStore||result.checksum!==source.checksum||result.generation!==generation)throw Error('Η κατάσταση άλλαξε. Πάτησε Ανανέωση.');
-          update(source.sourceId,result);
+          update(source.sourceId,repeat&&result.status!=='EXTRACTED_UNVERIFIED'
+            ?{...source.reading,canReread:false,rereadStatus:result.status}:result);
           setSelected(previous=>previous.filter(sourceId=>sourceId!==source.sourceId));
           if(result.status!=='EXTRACTED_UNVERIFIED'){
             setError('Η ανάγνωση χρειάζεται έλεγχο. Η σειρά σταμάτησε σε αυτό το συνημμένο.');
@@ -36,7 +38,7 @@ export default function CashPaperReadingPanel({api,storeId}){
           }
         }catch(e){
           if(current()){
-            update(source.sourceId,{status:'REQUIRES_REVIEW'});
+            update(source.sourceId,repeat?{...source.reading,canReread:false}:{status:'REQUIRES_REVIEW'});
             setSelected(previous=>previous.filter(sourceId=>sourceId!==source.sourceId));
             setError((e.message||'Δεν επιβεβαιώθηκε η ανάγνωση.')+' Πάτησε Ανανέωση για να ελέγξεις το προηγούμενο αίτημα.');
           }
@@ -52,7 +54,7 @@ export default function CashPaperReadingPanel({api,storeId}){
     {opened&&<div><button type="button" onClick={load} disabled={busy}>Ανανέωση χειρόγραφων</button>
       {busy&&<p role="status">Αναμονή αποτελέσματος…</p>}{error&&<p role="alert">{error}</p>}
       {data?.storeId===storeId&&<><p>Η προηγούμενη ολοκληρωμένη ανάγνωση επαναχρησιμοποιείται. Η ημερομηνία ανεβάσματος δεν είναι ημερομηνία του χαρτιού.</p>
-        {data.status==='LIMITED'&&<p>Εμφανίζονται μόνο τα πρόσφατα συνημμένα. Η κάλυψη παραμένει περιορισμένη.</p>}
+        {data.status==='LIMITED'&&<p>Εμφανίζονται μόνο τα πρόσφατα συνημμένα από Chat → Ταμεία. Η κάλυψη παραμένει περιορισμένη.</p>}
         {data.status==='UNAVAILABLE'?<p role="alert">Δεν είναι διαθέσιμη η αναζήτηση συνημμένων. Ανανέωσε τα στοιχεία.</p>:!data.sources?.length&&<p>Δεν βρέθηκαν συνημμένα στην πρόσφατη αναζήτηση.</p>}
         {!!(data.sources||[]).some(canRead)&&<><p>Επίλεξε έως {maxSelectedAttachments} συνημμένα που αφορούν την αναφορά. Η ανάγνωση γίνεται διαδοχικά με AI. Μετά άνοιξε νέα προεπισκόπηση της αναφοράς.</p><button type="button" disabled={busy||!selectedSources.length} onClick={()=>read(selectedSources)}>Ανάγνωση επιλεγμένων ({selectedSources.length})</button></>}
         {(data.sources||[]).map(source=>{const reading=source.reading||{},extraction=reading.extraction;return <article key={source.sourceId}>
@@ -60,6 +62,8 @@ export default function CashPaperReadingPanel({api,storeId}){
           <p>{labels[reading.status]||'Δεν επιβεβαιώθηκε η κατάσταση ανάγνωσης'}</p>
           {canRead(source)&&<label><input type="checkbox" checked={selected.includes(source.sourceId)} disabled={busy||(!selected.includes(source.sourceId)&&selected.length>=maxSelectedAttachments)} onChange={event=>{const checked=event.target.checked;setSelected(previous=>checked?[...previous,source.sourceId]:previous.filter(sourceId=>sourceId!==source.sourceId));}}/> Επιλογή για ανάγνωση</label>}
           <button type="button" disabled={busy||!canRead(source)} onClick={()=>read([source])}>Ανάγνωση με AI</button>
+          {reading.rereadStatus&&<p>Νέα ανάγνωση: {labels[reading.rereadStatus]||'χρειάζεται έλεγχο'}. Εμφανίζεται η προηγούμενη ανάγνωση.</p>}
+          {canReread(source)&&<button type="button" disabled={busy} onClick={()=>read([source],true)}>Νέα ανάγνωση με AI (με χρέωση)</button>}
           {reading.status==='EXTRACTED_UNVERIFIED'&&extraction&&<div>
             <p>Ημερομηνία που διαβάστηκε: {extraction.documentDate||extraction.dateText||'δεν διαβάστηκε καθαρά'} · Όνομα: {extraction.operatorText||'δεν διαβάστηκε καθαρά'} · Βάρδια: {extraction.shiftText||'δεν διαβάστηκε καθαρά'}.</p>
             {(extraction.lines||[]).map((line,index)=><p key={index}><strong>{line.label}</strong>: {line.amountText??'δεν διαβάστηκε καθαρά'}{line.quantityText?` · ποσότητα ${line.quantityText}`:''}{line.timeText?` · ώρα ${line.timeText}`:''}{line.requiresReview?' — ΠΡΟΣ ΕΛΕΓΧΟ':''}</p>)}

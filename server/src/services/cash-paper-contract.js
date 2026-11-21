@@ -45,6 +45,11 @@ export function paperKey({companyId,storeId,generation},checksum){
   if(!companyId||!storeId||! /^(0|[1-9][0-9]{0,18})$/.test(generation||'')||BigInt(generation)>9223372036854775807n||!/^[a-f0-9]{64}$/.test(checksum||''))throw paperError('CASH_PAPER_SCOPE_INVALID',400);
   return createHash('sha256').update(JSON.stringify(['CASH_PAPER_V1',companyId,storeId,generation,checksum])).digest('hex');
 }
+// One explicitly requested re-read with the multi-shift extractor is separate
+// from the original audit pair and is reused across retries and duplicate uploads.
+export function paperRereadKey(scope,checksum){
+  return createHash('sha256').update(JSON.stringify(['CASH_PAPER_MULTI_SHIFT_REREAD_V1',paperKey(scope,checksum)])).digest('hex');
+}
 export const intentId=key=>`cash-paper-intent:${key}`;
 export const completionId=key=>`cash-paper-result:${key}`;
 export function validatePaperSource(row,scope,checksum){

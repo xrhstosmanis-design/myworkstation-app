@@ -71,3 +71,13 @@ test('automatic report integration preserves unresolved dates and coverage and b
  assert.equal(JSON.stringify({paper,list}),before);list[0].sourceHash='changed';assert.notEqual(projectAutomaticPaperEvidence(input).hash,result.hash);
  const unavailable={...paper,reading:{status:'REQUIRES_REVIEW'}};assert.equal(projectAutomaticPaperEvidence({...input,papers:[unavailable]}).shiftCandidates.length,0);
 });
+
+test('three handwritten operator headings separate shifts with identical amounts',()=>{
+ const names=['Αλέξανδρος Δοκιμή Α','Βασίλης Δοκιμή Β','Κωνσταντίνος Δοκιμή Γ'];
+ const headings=['ΑΛΕΞΑΝΔΡΟΣ','ΒΑΣΙΛΗΣ','ΚΩΝΣΤΑΝΤΙΝΟΣ'];
+ const shifts=names.map((openedByName,i)=>original(String(i),'500','21.4',{openedByName}));
+ const rows=headings.flatMap(name=>[line('OTHER','Χειριστής: '+name,null),...lines().slice(0,2)]);
+ assert.deepEqual(run(raw({operatorText:null,lines:rows}),shifts).map(c=>c.operatorName),names);
+ rows[3]={...rows[3],uncertain:true};
+ assert.deepEqual(run(raw({operatorText:null,lines:rows}),[shifts[1]]),[]);
+});

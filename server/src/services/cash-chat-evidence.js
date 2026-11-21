@@ -14,6 +14,7 @@ export async function readCashChatEvidence(db, {companyId, storeId}) {
         "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum"
       FROM "StoreChatMessage"
       WHERE "companyId"=${companyId} AND "storeId"=${storeId}
+        AND "category" IN ('CASH','SHIFT')
         AND "attachmentData" IS NOT NULL
         AND "attachmentMimeType" IN ('image/jpeg','image/png','image/webp','application/pdf')
       ORDER BY "createdAt" DESC, "id" DESC LIMIT 51`;
