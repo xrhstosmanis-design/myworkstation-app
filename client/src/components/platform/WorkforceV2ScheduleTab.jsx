@@ -11,11 +11,12 @@ const dayName=value=>new Intl.DateTimeFormat("el-GR",{...({weekday:"short",day:"
 const periodDays=(start,end)=>{const rows=[];if(!start||!end)return rows;for(let cursor=new Date(`${start}T12:00:00Z`),last=new Date(`${end}T12:00:00Z`);cursor<=last;cursor=new Date(cursor.getTime()+86400000))rows.push(greeceDateInput(cursor));return rows};
 const warningsFor=assignment=>Array.isArray(assignment.warningJson)?assignment.warningJson:Array.isArray(assignment.warningJson?.warnings)?assignment.warningJson.warnings:[];
 
-export default function WorkforceV2ScheduleTab({company,store,request:sendRequest,data={employees:[],shiftTemplates:[]},readOnly=false,readOnlySection="SCHEDULE",canApproveLeave=false,canRejectLeave=false,canCancelLeave=false}){
+export default function WorkforceV2ScheduleTab({company,store,request:sendRequest,data={employees:[],shiftTemplates:[]},readOnly=false,readOnlySection="SCHEDULE",canCreateLeave=false,canApproveLeave=false,canRejectLeave=false,canCancelLeave=false}){
   const canDecideLeave=canApproveLeave||canRejectLeave||canCancelLeave;
   const request=(path,options={})=>{
     const scopedDecision=readOnlySection==="LEAVE"&&path.startsWith(base+"/leaves/")&&path.endsWith("/decision")&&canDecideLeave;
-    if(readOnly&&!scopedDecision&&String(options.method||"GET").toUpperCase()!=="GET")return Promise.reject(Error("Η πρόσβαση επιτρέπει μόνο προβολή."));
+    const scopedCreate=readOnlySection==="LEAVE"&&canCreateLeave&&path===base+"/leaves";
+    if(readOnly&&!scopedDecision&&!scopedCreate&&String(options.method||"GET").toUpperCase()!=="GET")return Promise.reject(Error("Η πρόσβαση επιτρέπει μόνο προβολή."));
     return sendRequest(path,options);
   };
   const base=`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/workforce-v2`;
@@ -23,8 +24,9 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
   const [date,setDate]=useState(today()),[periodType,setPeriodType]=useState("WEEK"),[selected,setSelected]=useState(""),[employeeId,setEmployeeId]=useState(""),[templateId,setTemplateId]=useState(""),[slot,setSlot]=useState("1"),[note,setNote]=useState("");
   const [view,setView]=useState("DAILY"),[activeSection,setActiveSection]=useState(readOnly?readOnlySection:"AI"),[validation,setValidation]=useState(null),[editing,setEditing]=useState(null),[assignmentError,setAssignmentError]=useState(""),[leaveForm,setLeaveForm]=useState({employeeId:"",leaveType:"DAY_OFF",startDate:today(),endDate:today(),comments:""});
   const [reasonDialog,setReasonDialog]=useState(null),[reasonText,setReasonText]=useState(""),[aiText,setAiText]=useState(""),[aiPreview,setAiPreview]=useState(null),[aiConversation,setAiConversation]=useState([]);
-  const sequence=useRef(0),currentScope=useRef("");
-  const scope=JSON.stringify([company.id,store.id,readOnly,readOnlySection,readOnly?date:null]);currentScope.current=scope;
+  const sequence=useRef(0),currentScope=useRef(""),leaveAttempt=useRef(null);
+  const [eligibleEmployees,setEligibleEmployees]=useState([]);
+  const scope=JSON.stringify([company.id,store.id,readOnly,readOnlySection,canCreateLeave,readOnly?date:null]);currentScope.current=scope;
   const [loadedScope,setLoadedScope]=useState("");
   const items=loadedScope===scope?storedItems:[],leaves=loadedScope===scope?storedLeaves:[];
   const selectedSchedule=useMemo(()=>items.find(item=>item.id===selected)||null,[items,selected]);
@@ -49,13 +51,20 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
 
   const load=async({keepNotice=false}={})=>{
     const current=++sequence.current,own=scope;
-    setItems([]);setLeaves([]);setAuditItems([]);setLoadedScope("");setValidation(null);setBusy(true);setError("");if(!keepNotice)setNotice("");
+    setItems([]);setLeaves([]);setEligibleEmployees([]);setAuditItems([]);setLoadedScope("");setValidation(null);setBusy(true);setError("");if(!keepNotice)setNotice("");
     try{
       if(readOnly){
         const endpoint=readOnlySection==="LEAVE"?"leaves":"schedules";
-        const result=await request(`${base}/${endpoint}?from=${date}`);
+        const [result,eligible]=await Promise.all([
+          request(`${base}/${endpoint}?from=${date}`),
+          readOnlySection==="LEAVE"&&canCreateLeave?request(`${base}/leaves/eligible-employees`):null
+        ]);
         if(current!==sequence.current||own!==currentScope.current)return;
         if(result?.companyId!==company.id||result.storeId!==store.id||!Array.isArray(result.items))throw Error("Δεν επιβεβαιώθηκε το κατάστημα της αναφοράς προσωπικού.");
+        if(eligible){
+          if(eligible.companyId!==company.id||eligible.storeId!==store.id||!Array.isArray(eligible.items))throw Error("Δεν επιβεβαιώθηκε το κατάστημα των εργαζομένων.");
+          setEligibleEmployees(eligible.items);
+        }
         if(readOnlySection==="LEAVE")setLeaves(result.items);else setItems(result.items);
       }else{
         const [s,l,a]=await Promise.all([request(`${base}/schedules?from=${date}`),request(`${base}/leaves?from=${date}`),request(`${base}/audit`)]);
@@ -66,7 +75,7 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
     }catch(e){if(current===sequence.current&&own===currentScope.current)setError(e.message)}
     finally{if(current===sequence.current&&own===currentScope.current)setBusy(false)}
   };
-  useEffect(()=>{setActiveSection(readOnly?readOnlySection:"AI");load();return()=>{sequence.current++}},[company.id,store.id,readOnly,readOnlySection,readOnly?date:null,sendRequest]);
+  useEffect(()=>{setActiveSection(readOnly?readOnlySection:"AI");load();return()=>{sequence.current++}},[company.id,store.id,readOnly,readOnlySection,canCreateLeave,readOnly?date:null,sendRequest]);
   useEffect(()=>{if(!busy&&selected&&!items.some(item=>item.id===selected))setSelected("")},[items,selected,busy]);
   const evaluate=async schedule=>{
     if(!schedule)return;
@@ -116,8 +125,21 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
   };
   const submitLeave=async()=>{
     if(!leaveForm.employeeId)return setError("Επίλεξε εργαζόμενο για το αίτημα.");
+    const payload={...leaveForm,storeId:store.id,comments:leaveForm.comments.trim()||null,confirmed:true,reason:"Καταχώριση αιτήματος άδειας ή ρεπό"};
+    if(readOnly){
+      if(!canCreateLeave||loadedScope!==scope||!eligibleEmployees.some(employee=>employee.id===leaveForm.employeeId))return;
+      const signature=JSON.stringify([company.id,payload]);
+      if(leaveAttempt.current?.signature!==signature)leaveAttempt.current={signature,id:crypto.randomUUID()};
+      payload.requestId=leaveAttempt.current.id;
+    }
     setBusy(true);setError("");
-    try{await request(`${base}/leaves`,{method:"POST",body:JSON.stringify({...leaveForm,storeId:store.id,comments:leaveForm.comments.trim()||null,confirmed:true,reason:"Καταχώριση αιτήματος άδειας ή ρεπό"})});setNotice("Το αίτημα καταχωρίστηκε για έγκριση.");setLeaveForm({employeeId:"",leaveType:"DAY_OFF",startDate:date,endDate:date,comments:""});await load({keepNotice:true});}
+    try{
+      await request(`${base}/leaves`,{method:"POST",body:JSON.stringify(payload)});
+      leaveAttempt.current=null;
+      setNotice("Το αίτημα καταχωρίστηκε για έγκριση.");
+      setLeaveForm({employeeId:"",leaveType:"DAY_OFF",startDate:date,endDate:date,comments:""});
+      await load({keepNotice:true});
+    }
     catch(e){setError(e.message)}finally{setBusy(false)}
   };
   const runLeaveDecision=async(item,status,value)=>{
@@ -152,7 +174,7 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
       {view==="WEEK_DETAILED"&&<section className="workforce-week-detail">{days.map(day=><article key={day} className="workforce-week-day"><h4>{dayName(day)}<small>{byDay[day].length} {byDay[day].length===1?"βάρδια":"βάρδιες"}</small></h4><div className="workforce-week-day-shifts">{byDay[day].map(item=><div key={item.id} className="workforce-week-shift"><div><span>Ωράριο</span><b>{item.shiftTemplate.startTime}–{item.shiftTemplate.endTime}</b></div><div><span>Βάρδια</span><b>{item.shiftTemplate.name}</b></div><div><span>Εργαζόμενος</span><strong>{item.employee?.fullName||"ΑΚΑΛΥΠΤΟ"}</strong></div><div><span>Ρόλος</span><small>{item.shiftTemplate.requiredRole?.name||"Χωρίς απαιτούμενο ρόλο"}</small></div></div>)}</div></article>)}</section>}{view==="BY_EMPLOYEE"&&<section className="workforce-employee-schedule">{byEmployee.map(({employee,days:employeeDays})=><article key={employee.id} className="workforce-employee-week"><header><UsersRound/><div><h4>{employee.fullName}</h4><span>{employeeDays.filter(day=>day.assignments.length).length} ημέρες εργασίας · {employeeDays.filter(day=>!day.assignments.length).length} ρεπό</span></div></header><div>{employeeDays.map(day=><div key={`${employee.id}-${day.date}`} className={day.assignments.length?"workforce-employee-day":"workforce-employee-day is-day-off"}><b>{dayName(day.date)}</b>{day.assignments.length?<span>{day.assignments.map(row=>`${row.shiftTemplate.name} · ${row.shiftTemplate.startTime}–${row.shiftTemplate.endTime}`).join(" / ")}</span>:<strong>ΡΕΠΟ</strong>}</div>)}</div></article>)}</section>}
     </>}
     </>}
-    {activeSection==="LEAVE"&&<section className="workforce-leave-panel"><div><h4><ClipboardCheck/> Άδειες, ρεπό και απουσίες</h4><p>Εγκεκριμένη άδεια ή ρεπό αποκλείει κανονική ανάθεση.</p></div>{!readOnly&&<div className="workforce-leave-form"><select value={leaveForm.employeeId} onChange={event=>setLeaveForm(current=>({...current,employeeId:event.target.value}))}><option value="">Εργαζόμενος</option>{activeEmployees.map(item=><option key={item.id} value={item.id}>{item.fullName}</option>)}</select><select value={leaveForm.leaveType} onChange={event=>setLeaveForm(current=>({...current,leaveType:event.target.value}))}>{Object.entries(leaveText).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select><input type="date" value={leaveForm.startDate} onChange={event=>setLeaveForm(current=>({...current,startDate:event.target.value}))}/><input type="date" value={leaveForm.endDate} onChange={event=>setLeaveForm(current=>({...current,endDate:event.target.value}))}/><button onClick={submitLeave} disabled={busy}>Καταχώριση αιτήματος</button></div>}<div className="workforce-leave-list">{leaves.length?leaves.map(item=><div key={item.id}><span><b>{item.employee.fullName}</b> · {leaveText[item.leaveType]||item.leaveType} · {item.startDate} έως {item.endDate}</span><em>{item.status==="REQUESTED"?"Σε αναμονή":item.status==="APPROVED"?"Εγκεκριμένο":item.status==="REJECTED"?"Απορρίφθηκε":"Ακυρώθηκε"}</em>{item.status==="REQUESTED"&&(!readOnly||canDecideLeave)&&<div>{(!readOnly||canApproveLeave)&&<button onClick={()=>decideLeave(item,"APPROVED")} disabled={busy}>Έγκριση</button>}{(!readOnly||canRejectLeave)&&<button className="secondary" onClick={()=>decideLeave(item,"REJECTED")} disabled={busy}>Απόρριψη</button>}{(!readOnly||canCancelLeave)&&<button className="secondary" onClick={()=>decideLeave(item,"CANCELLED")} disabled={busy}>Ακύρωση</button>}</div>}</div>):<div className="workforce-empty">Δεν υπάρχουν αιτήματα στο επιλεγμένο διάστημα.</div>}</div></section>}
+    {activeSection==="LEAVE"&&<section className="workforce-leave-panel"><div><h4><ClipboardCheck/> Άδειες, ρεπό και απουσίες</h4><p>Εγκεκριμένη άδεια ή ρεπό αποκλείει κανονική ανάθεση.</p></div>{(!readOnly||(canCreateLeave&&loadedScope===scope))&&<div className="workforce-leave-form"><select value={leaveForm.employeeId} onChange={event=>setLeaveForm(current=>({...current,employeeId:event.target.value}))}><option value="">Εργαζόμενος</option>{(readOnly?eligibleEmployees:activeEmployees).map(item=><option key={item.id} value={item.id}>{item.fullName}</option>)}</select><select value={leaveForm.leaveType} onChange={event=>setLeaveForm(current=>({...current,leaveType:event.target.value}))}>{Object.entries(leaveText).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select><input type="date" value={leaveForm.startDate} onChange={event=>setLeaveForm(current=>({...current,startDate:event.target.value}))}/><input type="date" value={leaveForm.endDate} onChange={event=>setLeaveForm(current=>({...current,endDate:event.target.value}))}/><button onClick={submitLeave} disabled={busy}>Καταχώριση αιτήματος</button></div>}<div className="workforce-leave-list">{leaves.length?leaves.map(item=><div key={item.id}><span><b>{item.employee.fullName}</b> · {leaveText[item.leaveType]||item.leaveType} · {item.startDate} έως {item.endDate}</span><em>{item.status==="REQUESTED"?"Σε αναμονή":item.status==="APPROVED"?"Εγκεκριμένο":item.status==="REJECTED"?"Απορρίφθηκε":"Ακυρώθηκε"}</em>{item.status==="REQUESTED"&&(!readOnly||canDecideLeave)&&<div>{(!readOnly||canApproveLeave)&&<button onClick={()=>decideLeave(item,"APPROVED")} disabled={busy}>Έγκριση</button>}{(!readOnly||canRejectLeave)&&<button className="secondary" onClick={()=>decideLeave(item,"REJECTED")} disabled={busy}>Απόρριψη</button>}{(!readOnly||canCancelLeave)&&<button className="secondary" onClick={()=>decideLeave(item,"CANCELLED")} disabled={busy}>Ακύρωση</button>}</div>}</div>):<div className="workforce-empty">Δεν υπάρχουν αιτήματα στο επιλεγμένο διάστημα.</div>}</div></section>}
     {!readOnly&&activeSection==="AUDIT"&&<section className="workforce-audit-panel"><header><div><h4><ScrollText/> Audit Workforce</h4><p>Χρήστης, χρόνος, αιτιολογία και αποτέλεσμα κάθε ενέργειας.</p></div><button className="secondary" onClick={()=>load({keepNotice:true})} disabled={busy}><RefreshCw/> Ανανέωση Audit</button></header>{auditItems.length?<div className="workforce-audit-list">{auditItems.map(item=><article key={item.id}><div><b>{auditText[item.action]||item.action}</b><span>{new Intl.DateTimeFormat("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens",hour12:false}).format(new Date(item.createdAt))} · {item.actorName} · {item.storeName}</span></div><div>{item.employeeName&&<span>Εργαζόμενος: <b>{item.employeeName}</b></span>}{item.date&&<span>Ημερομηνία: <b>{item.date}</b></span>}{item.shift&&<span>Βάρδια: <b>{item.shift}</b></span>}{item.ruleCode&&<span>Κανόνας: <b>{item.ruleCode}</b></span>}{item.reason&&<span>Αιτιολογία: <b>{item.reason}</b></span>}</div></article>)}</div>:<div className="workforce-empty">Δεν υπάρχουν ακόμη καταχωρίσεις Audit Workforce για αυτό το κατάστημα.</div>}</section>}
   </section>;
 }
