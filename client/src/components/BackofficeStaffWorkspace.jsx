@@ -1,3 +1,4 @@
+import {Boxes, ChartNoAxesCombined, ChevronDown, ClipboardList, Headset, ReceiptText, ShoppingCart, UsersRound} from "lucide-react";
 import CompanyAuthorityReadiness,{companyAuthoritySupported} from './backoffice/CompanyAuthorityReadiness.jsx';
 import StoreFinalPassiveReadView from './backoffice/StoreFinalPassiveReadView.jsx';
 import {finalPassiveStoreActions} from '../../../shared/backoffice-staff-final-passive.mjs';
@@ -51,6 +52,10 @@ import {Building2,LayoutDashboard,LogOut} from 'lucide-react';
 import {staffStoreMenu} from "./backoffice/staff-store-menu.mjs";
 import {staffProfiles} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
+const storeMenuIcons = {
+  cash: ChartNoAxesCombined, stock: Boxes, invoices: ReceiptText,
+  orders: ShoppingCart, people: UsersRound, support: Headset, reports: ClipboardList,
+};
 export default function BackofficeStaffWorkspace({api,user,onLogout}){
   const [page,setPage]=useState('stores');
   const [identity,setIdentity]=useState(null),[storeId,setStoreId]=useState(''),[view,setView]=useState(''),[data,setData]=useState(null),[detail,setDetail]=useState(null),[from,setFrom]=useState(()=>greeceDateInput(new Date())),[to,setTo]=useState(()=>greeceDateInput(new Date())),[error,setError]=useState(''),[busy,setBusy]=useState(false),[pending,setPending]=useState(null);
@@ -181,11 +186,13 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
       {selected&&identitySource.current?.api===api&&identitySource.current?.user===user&&
         <nav className="staff-store-menu" aria-label="Λειτουργίες BackOffice">
           <div className="staff-menu-groups">
-            {storeMenu.map(group=><button key={group.key} type="button"
+            {storeMenu.map(group=>{const Icon=storeMenuIcons[group.key];return <button key={group.key} type="button"
               aria-expanded={expandedGroup===group.key} aria-controls="staff-store-menu-options"
               onClick={()=>setOpenStoreGroup(expandedGroup===group.key?"":group.key)}>
-              {group.label}
-            </button>)}
+              <Icon size={18} aria-hidden="true"/>
+              <span>{group.label}</span>
+              <ChevronDown size={15} aria-hidden="true" className="staff-menu-chevron"/>
+            </button>})}
           </div>
           <div id="staff-store-menu-options">
             {storeMenu.map(group=><div key={group.key} className="staff-store-nav"
@@ -200,7 +207,7 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
           </div>
         </nav>}
     </section>
-    <section className="backoffice-module-workspace">
+    <section className="backoffice-module-workspace staff-module-presentation">
       {selected&&identitySource.current?.api===api&&identitySource.current?.user===user&&finalPassiveStoreActions.some(action=>action.key===view)&&capabilities.includes(view)&&<StoreFinalPassiveReadView key={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,view,capabilities])} api={scoped} companyId={identity.companyId} storeId={storeId} storeName={selected.name} capability={view} capabilities={capabilities} authorityKey={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,capabilities])} onOpenSource={source=>{const target={INVOICE:['invoices.read','invoices'],PAYMENT:['approvals.read','approvals'],STOCK:['products.read','products']}[source];if(target&&capabilities.includes(target[0]))setView(target[1])}}/>}
 
       {selected&&identitySource.current?.api===api&&identitySource.current?.user===user&&storeReportKinds.some(kind=>view==='store-reports-'+kind+'.read')&&capabilities.includes(view)&&<StoreReportsReadView key={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,view,capabilities])} api={scoped} companyId={identity.companyId} store={selected} capability={view} authorityKey={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,capabilities])}/>}
@@ -239,7 +246,7 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
       {['sales','payments','close'].includes(view)&&selected&&(capabilities.includes('sales.read')||view==='close'&&capabilities.includes('shifts.close'))&&<label>Ταμείο<select aria-label="Ταμείο" value={terminalPos} disabled={productBusy} onChange={e=>{setCloseOpen(false);setTerminalPos(e.target.value)}}><option value="">Επίλεξε ταμείο</option>{terminals.map(terminal=><option key={terminal} value={terminal}>{terminal}</option>)}</select></label>}
       {view==='sales'&&selected&&terminalPos&&capabilities.includes('sales.read')&&<React.Suspense fallback={<p role="status">Φόρτωση πωλήσεων…</p>}><StoreCloudPage key={`${storeId}:${terminalPos}`} api={scoped} store={selected} capabilities={capabilities} primaryView="shifts" onPrimaryChange={value=>setView(value==='payments'?'payments':'sales')} navigationLocked={busy||productBusy||Boolean(pending||stocktakeOperation)} onBack={()=>{setStoreId('');setView('')}} onOpenCommerce={openCommerce}/>{capabilities.includes('sales.cancel')&&<PosSaleActionsPanel key={`cancel:${storeId}:${terminalPos}`} api={scoped} storeId={storeId} delegatedCapabilities={capabilities}/>}{capabilities.includes('shifts.close')&&<><button type="button" disabled={productBusy} onClick={()=>setCloseOpen(value=>!value)}>{closeOpen?'Κλείσιμο φόρμας':'Κλείσιμο βάρδιας με καταμέτρηση'}</button>{closeOpen&&<StoreShiftClosePanel key={`close:${storeId}:${terminalPos}`} api={scoped} store={selected} backoffice/>}</>}</React.Suspense>}
       {view==='payments'&&selected&&capabilities.includes('payments.read')&&<React.Suspense fallback={<p role="status">Φόρτωση πληρωμών…</p>}><StoreCloudPage key={`payments:${storeId}:${terminalPos}`} api={scoped} store={selected} capabilities={terminalPos?capabilities:capabilities.filter(capability=>capability!=='payments.cash')} primaryView="payments" onOpenCommerce={openCommerce} onPrimaryChange={value=>setView(value==='payments'?'payments':'sales')} navigationLocked={busy||productBusy||Boolean(pending||stocktakeOperation)} onBack={()=>{setStoreId('');setView('')}}/></React.Suspense>}
-      {view==='products'&&selected&&capabilities.includes('products.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ειδών…</p>}>{capabilities.includes('products.create')&&<button type="button" disabled={productBusy} onClick={()=>setNewProduct(true)}>Νέο είδος · Πλήρης καρτέλα</button>}<InventoryArchivePanel key={`${storeId}:${catalogVersion}`} api={scoped} storeId={storeId} stores={[selected]} readOnly stockMovementRead={capabilities.includes("stock.read")} companyId={identity.companyId} staffCardEdit={capabilities.includes("products.edit")} onClose={()=>setView('')}/>{newProduct&&<InventoryNewProductCard key={storeId} api={scoped} storeId={storeId} lookupAllowed={false} allowOpeningStock={capabilities.includes('products.opening-stock')} onBusyChange={setProductBusy} onClose={()=>setNewProduct(false)} onSaved={()=>{setNewProduct(false);setCatalogVersion(v=>v+1)}}/>}</React.Suspense>}
+      {view==='products'&&selected&&capabilities.includes('products.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ειδών…</p>}>{capabilities.includes('products.create')&&<button className="staff-module-primary" type="button" disabled={productBusy} onClick={()=>setNewProduct(true)}>Νέο είδος · Πλήρης καρτέλα</button>}<InventoryArchivePanel key={`${storeId}:${catalogVersion}`} api={scoped} storeId={storeId} stores={[selected]} readOnly stockMovementRead={capabilities.includes("stock.read")} companyId={identity.companyId} staffCardEdit={capabilities.includes("products.edit")} onClose={()=>setView('')}/>{newProduct&&<InventoryNewProductCard key={storeId} api={scoped} storeId={storeId} lookupAllowed={false} allowOpeningStock={capabilities.includes('products.opening-stock')} onBusyChange={setProductBusy} onClose={()=>setNewProduct(false)} onSaved={()=>{setNewProduct(false);setCatalogVersion(v=>v+1)}}/>}</React.Suspense>}
       {view==='inventory'&&selected&&capabilities.includes('inventory.read')&&<React.Suspense fallback={<p role="status">Φόρτωση απογραφής…</p>}><InventoryV2Center key={storeId} api={scoped} stores={[selected]} delegated={{storeId,storeName:selected.name,stocktakes:data?.stocktakes||[],listLoaded:data!==null,pagination:data?{page:inventoryPages.length+1,hasPrevious:inventoryPages.length>0,hasNext:Boolean(data.nextCursor),onPrevious:()=>load(inventoryPages.slice(0,-1)),onNext:()=>data.nextCursor&&load([...inventoryPages,data.nextCursor])}:null,current:detail,detailPagination:detail?{
         page:detailPages.length+1,
         hasPrevious:detailPages.length>0,

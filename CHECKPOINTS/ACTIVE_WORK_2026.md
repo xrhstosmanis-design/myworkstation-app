@@ -866,6 +866,10 @@ Retained /root, branchfix/no2-printed-discounts-20261120. Before-source independ
 
 Ομαδοποίηση των προβολών καταστήματος βάσει δικαιωμάτων. [Καταγραφή](CHANGES/2026-11-21-staff-functional-menu.md).
 
+## 21/11/2026 — Λίστες και κουμπιά Υπευθύνου
+
+Ενιαία εμφάνιση λιστών, φίλτρων και ενεργειών στο BackOffice καταστήματος. [Καταγραφή](CHANGES/2026-11-21-staff-list-styling.md).
+
 ## INVOICE-PAYMENT-RECOVERY-01 — ASSIGNED / CLAIM ONLY — 21/11/2026
 
 Owner /root, docs/invoice-payment-recovery-claim-20261121. Explicit user expansion: owner/delegated responsible-person recovery, stored photos through assistant, one existing payment and editable draft, later reviewed warehouse receipt. Existing PLAIN_CAPTURE is intentionally not an AI draft; generic guard remains. No5 shared rights/installer, No04 lines and No02 acquisition retained. [Before-source boundary](CHANGES/2026-11-21-invoice-payment-recovery.md); [small pending continuation](../docs/roadmap/INVOICE_RECOVERY_PENDING_2026-11-21.md). Source NOT STARTED; combined LAB NOT TESTED; do not replay protected close/plain capture PASS.
