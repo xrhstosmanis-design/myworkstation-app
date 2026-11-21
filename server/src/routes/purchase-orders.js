@@ -394,7 +394,16 @@ router.post("/:orderId/assistant-line-transfer",async(req,res,next)=>{try{
   if(req.user.staffAccess===true&&body.additions.some(line=>!line.productId))throw purchaseBatchError(403,"Οι νέες γραμμές χρειάζονται αντιστοίχιση προϊόντος.");
   editable(found);
   const changed=await prisma.$transaction(async tx=>{
-    if(req.user.staffAccess===true)await requireStaffOrderAction(tx,req,found.id,'invoices.edit');
+    if(req.user.staffAccess===true){
+      await requireStaffOrderAction(tx,req,found.id,'invoices.edit');
+      const productIds=[...new Set([...body.additions.map(line=>line.productId),...body.updates.map(update=>update.patch.productId)].filter(Boolean))];
+      if(productIds.length){
+        const products=await tx.$queryRaw`SELECT p."id" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id"
+          WHERE p."companyId"=${found.companyId} AND sp."storeId"=${found.storeId}
+            AND p."active"=true AND sp."active"=true AND p."id"=ANY(${productIds}::text[]) FOR SHARE OF p,sp`;
+        if(new Set(products.map(product=>product.id)).size!==productIds.length)throw purchaseBatchError(404,"Κάποιο είδος δεν είναι διαθέσιμο στο επιλεγμένο κατάστημα.");
+      }
+    }
     await lockEditablePurchaseOrder(tx,found);
     const [current]=await tx.$queryRaw`SELECT "storeId","sourceType","sourceDocumentId","awaitingInvoice","reopenVersion"
       FROM "PurchaseOrder" WHERE "id"=${found.id}`;
