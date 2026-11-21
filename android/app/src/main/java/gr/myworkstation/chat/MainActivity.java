@@ -741,7 +741,7 @@ public final class MainActivity extends Activity {
                 status("Δεν συμμετέχεις σε ομάδα προσωπικού.");
                 return;
             }
-            int count = groups.length() + (mayModerate ? 2 : 0);
+            int count = groups.length() + (mayModerate ? 3 : 0);
             String[] names = new String[count];
             Runnable[] actions = new Runnable[count];
             for (int index = 0; index < groups.length(); index++) {
@@ -756,6 +756,8 @@ public final class MainActivity extends Activity {
                 actions[groups.length()] = scopedChatAction(() -> showChatModeration(true));
                 names[groups.length() + 1] = "Πρόσβαση στο Chat καταστήματος";
                 actions[groups.length() + 1] = scopedChatAction(() -> showChatModeration(false));
+                names[groups.length() + 2] = "Προσθήκη μέλους σε ομάδα";
+                actions[groups.length() + 2] = scopedChatAction(this::chooseGroupForNewMember);
             }
             dismissImage();
             imageDialog = new AlertDialog.Builder(this).setTitle("Ομάδες προσωπικού")
@@ -764,6 +766,103 @@ public final class MainActivity extends Activity {
             imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
             imageDialog.show();
         });
+    }
+
+    private void chooseGroupForNewMember() {
+        call(chatBase() + "/groups/moderation", "GET", null, false, data -> {
+            JSONArray rows = data.getJSONArray("groups");
+            java.util.LinkedHashMap<String, String> groups = new java.util.LinkedHashMap<>();
+            for (int index = 0; index < rows.length(); index++) {
+                JSONObject group = rows.getJSONObject(index);
+                groups.put(group.getString("id"), group.getString("name"));
+            }
+            ArrayList<String> ids = new ArrayList<>(groups.keySet());
+            dismissImage();
+            AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle("Επίλεξε ομάδα")
+                    .setNegativeButton("Κλείσιμο", null);
+            if (ids.isEmpty()) builder.setMessage("Δεν υπάρχουν ομάδες.");
+            else {
+                String[] names = groups.values().toArray(new String[0]);
+                Runnable[] actions = new Runnable[ids.size()];
+                for (int index = 0; index < ids.size(); index++) {
+                    String groupId = ids.get(index), name = names[index];
+                    actions[index] = scopedChatAction(() -> chooseNewGroupMember(groupId, name));
+                }
+                builder.setItems(names, (dialog, index) -> ui.post(actions[index]));
+            }
+            imageDialog = builder.create();
+            imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            imageDialog.show();
+        });
+    }
+
+    private void chooseNewGroupMember(String groupId, String groupName) {
+        final String path = chatBase() + "/groups/" + enc(groupId);
+        call(path + "/add-candidates", "GET", null, false, data -> {
+            JSONArray rows = data.getJSONArray("members");
+            ArrayList<JSONObject> members = new ArrayList<>();
+            for (int index = 0; index < rows.length(); index++) members.add(rows.getJSONObject(index));
+            dismissImage();
+            LinearLayout panel = new LinearLayout(this);
+            panel.setOrientation(LinearLayout.VERTICAL);
+            panel.setPadding(dp(16), dp(8), dp(16), dp(8));
+            EditText query = input("Αναζήτηση ονόματος", InputType.TYPE_CLASS_TEXT, 120);
+            panel.addView(query);
+            ListView results = new ListView(this);
+            TextView empty = text("", 14, MUTED);
+            panel.addView(empty);
+            panel.addView(results, new LinearLayout.LayoutParams(-1, dp(260)));
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
+            results.setAdapter(adapter);
+            ArrayList<JSONObject> visible = new ArrayList<>();
+            Runnable filter = () -> {
+                String term = normalizedMemberName(query.getText().toString().trim());
+                visible.clear();
+                adapter.clear();
+                for (JSONObject member : members) {
+                    String name = member.optString("name");
+                    if (normalizedMemberName(name).contains(term)) {
+                        visible.add(member);
+                        adapter.add(name);
+                    }
+                }
+                empty.setText(members.isEmpty() ? "Δεν υπάρχουν διαθέσιμα μέλη." : visible.isEmpty() ? "Δεν βρέθηκαν μέλη." : "");
+                empty.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE);
+            };
+            query.addTextChangedListener(new android.text.TextWatcher() {
+                public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+                public void onTextChanged(CharSequence value, int start, int before, int count) { filter.run(); }
+                public void afterTextChanged(Editable value) {}
+            });
+            results.setOnItemClickListener((parent, item, position, id) -> {
+                JSONObject member = visible.get(position);
+                if (!busy) confirmNewGroupMember(path, groupName, member);
+            });
+            filter.run();
+            imageDialog = new AlertDialog.Builder(this).setTitle("Προσθήκη στην ομάδα " + groupName)
+                    .setView(panel).setNegativeButton("Κλείσιμο", null).create();
+            imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            imageDialog.show();
+        });
+    }
+
+    private static String normalizedMemberName(String value) {
+        return java.text.Normalizer.normalize(value.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replace('ς', 'σ');
+    }
+
+    private void confirmNewGroupMember(String path, String groupName, JSONObject member) {
+        dismissImage();
+        Runnable confirm = scopedChatAction(() -> call(path + "/add-member", "POST",
+                object("userId", member.optString("id")), false, result -> {
+            if (!result.optBoolean("ok")) throw new IllegalArgumentException();
+            status("Το μέλος προστέθηκε στην ομάδα.");
+        }));
+        imageDialog = new AlertDialog.Builder(this).setTitle("Προσθήκη μέλους")
+                .setMessage(member.optString("name") + " · Ομάδα: " + groupName)
+                .setNegativeButton("Ακύρωση", null).setPositiveButton("Προσθήκη", (dialog, which) -> confirm.run()).create();
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        imageDialog.show();
     }
 
     private void showChatModeration(boolean group) {
