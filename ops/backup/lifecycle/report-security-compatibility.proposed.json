@@ -1,0 +1,12 @@
+{
+  "format": "MWS_REPORT_SECURITY_COMPATIBILITY_STAGE_A_V1",
+  "name": "StoreChatAccessRevocation",
+  "sourceBlob": "58452c8264dd7c7dbf0e6ed683a1e3fa8f0bd72b",
+  "columns": [
+    "companyId",
+    "storeId",
+    "userId"
+  ],
+  "semantics": "GLOBAL_DENY_STATE_PRESERVE_ALL_ROWS",
+  "productionWiring": false
+}
