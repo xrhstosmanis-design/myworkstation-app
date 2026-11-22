@@ -76,7 +76,11 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   else{
    const preview=await readAutomaticCashPreviewInTransaction(tx,{actorId:principal.id,companyId:scope.companyId,storeId:scope.storeId,day:period.fromDay,frequency:scope.frequency,configuration,settingsVersion:settings.version,now:new Date(now)});
    if(configuration.reviewedReconciliation===true&&preview.reviewedCash?.generation!==lifecycle.generation)hold();
-   if (scope.frequency === 'MONTHLY' && scope.storeId === process.env.MONTHLY_TURNOVER_REPORT_STORE_ID) {
+   const includeMonthlyTurnover = scope.frequency === 'MONTHLY' && (
+     scope.storeId === env.MONTHLY_TURNOVER_REPORT_STORE_ID ||
+     scope.storeId === env.MONTHLY_TURNOVER_SCHEDULED_LAB_STORE_ID
+   );
+   if (includeMonthlyTurnover) {
      const turnoverScope = {
        companyId: scope.companyId,
        storeId: scope.storeId,
