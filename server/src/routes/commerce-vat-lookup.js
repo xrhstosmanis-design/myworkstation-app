@@ -1,6 +1,8 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import {requireStaffGrant,staffError} from "../services/backoffice-staff-access.js";
+import {findInvoiceSupplier} from "../services/invoice-supplier-directory.js";
 import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from "./platform-store-integrations.js";
 
 const router=Router();
@@ -25,6 +27,16 @@ export function normalizeAadeResult(xml,taxId){
 
 router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId),official=req.query.official==="1",localOnly=req.query.localOnly==="1";
+  if(req.user.staffAccess===true){
+    const capability="invoices.supplier-lookup";
+    if(!storeId||storeId!==req.user.storeId||req.staffGrant?.capability!==capability||!localOnly||official)throw staffError();
+    if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
+    const existingSupplier=await prisma.$transaction(async tx=>{
+      await requireStaffGrant(tx,req.user,storeId,capability);
+      return findInvoiceSupplier(tx,req.user.companyId,taxId);
+    });
+    return res.json({valid:Boolean(existingSupplier),taxId,name:existingSupplier?.name||"",source:"MYWORKSTATION",existingSupplier,readOnly:true});
+  }
   const employee=req.user?.tokenType==="STORE_OPERATOR"||req.user?.role==="EMPLOYEE";
   if(employee&&(!req.user.permissions?.includes("SUPPLIER_PAYMENT")||!storeId||String(req.user.storeId)!==storeId))return res.status(403).json({error:"Δεν έχεις δικαίωμα ελέγχου ΑΦΜ σε αυτό το κατάστημα."});
   if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
