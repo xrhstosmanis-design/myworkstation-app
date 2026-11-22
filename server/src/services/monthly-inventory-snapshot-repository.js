@@ -78,6 +78,25 @@ function verifiedReceipt(row,expectedScope,status){
  else if(!plain(principal)||Object.keys(principal).sort().join(',')!=='authorizationBasis,sourceBasis,type,userId'||principal.type!=='BACKOFFICE_USER'||principal.authorizationBasis!=='RECHECKED_IN_FRESH_WRITE_TRANSACTION'||principal.sourceBasis!=='SUPPLIED_FORMAT_VALIDATED_FACTS'||typeof principal.userId!=='string'||!principal.userId||principal.userId.length>160||Buffer.byteLength(principal.userId)>160||/[\u0000-\u001f\u007f]/.test(principal.userId))fail('MONTHLY_SNAPSHOT_STORED_INVALID');
  return Object.freeze({status,receiptBasis:'FORMAT_VALIDATED_STORED_ONLY',sourceAuthenticityVerified:false,id:row.id,companyId:row.companyId,storeId:row.storeId,lifecycleGeneration:row.lifecycleGeneration,issueMonth:row.issueMonth,scheduledFor:row.scheduledFor,transactionStartedAt:row.transactionStartedAt,sourceReadStartedAt:row.sourceReadStartedAt,sourceReadFinishedAt:row.sourceReadFinishedAt,sourceObservedAt:row.sourceObservedAt,storedAt:row.storedAt,sourceHash:row.sourceHash,payloadHash:row.payloadHash,storedBytesSha256:row.storedBytesSha256,candidateJsonText:row.candidateJsonText,sourceCoverage:verifiedCoverage});
 }
+// Called inside the report eligibility transaction after its scope and grant checks.
+export async function readSettledMonthlySnapshotForReport(tx, { companyId, storeId, lifecycleGeneration, issueMonth }) {
+ const key = [companyId, storeId, normalizeLifecycleGeneration(lifecycleGeneration), monthlyInventorySnapshotPeriod(issueMonth).issueMonth];
+ await validateMonthlyInventorySnapshotSchema(tx);
+ const rows = await tx.$queryRawUnsafe(select + ' FOR SHARE NOWAIT', ...key);
+ if (rows.length === 0) return null;
+ if (rows.length !== 1) fail('MONTHLY_SNAPSHOT_STORED_INVALID');
+ const receipt = automationReceipt(rows[0], key, 'ALREADY_CAPTURED');
+ const principal = receipt.capturePrincipal;
+ if (principal.type !== 'SERVICE_DELEGATION') return null;
+ const [job] = await tx.$queryRaw`SELECT "id" FROM "MonthlyInventoryCaptureJob"
+   WHERE "id"=${principal.jobId} AND "grantId"=${principal.grantId}
+     AND "grantRevision"=${BigInt(principal.grantRevision)} AND "companyId"=${companyId}
+     AND "storeId"=${storeId} AND "lifecycleGeneration"=${BigInt(key[2])}
+     AND "issueMonth"=${issueMonth} AND "purpose"='MONTHLY_INVENTORY_CAPTURE'
+     AND "purposeVersion"=1 AND "status"='SUCCEEDED' FOR SHARE NOWAIT`;
+ return job ? receipt : null;
+}
+
 async function clock(tx){
  const [row]=await tx.$queryRawUnsafe(`SELECT current_setting('transaction_read_only') AS "readOnly",current_setting('transaction_isolation') AS isolation,to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "writeAt"`);
  if(row?.readOnly!=='off'||row.isolation!=='read committed'||!stamp(row.writeAt))fail('MONTHLY_SNAPSHOT_FRESH_WRITE_REQUIRED');return row.writeAt;

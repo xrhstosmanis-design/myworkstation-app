@@ -51,9 +51,9 @@ function normalizeInput(value){
   safe(value);shape(value,inputKeys(value));const result={};
   result.companyId=text(value.companyId,"companyId");result.storeId=text(value.storeId,"storeId");
   const cash=value.reportType==="CASH"&&["DAILY","WEEKLY","MONTHLY"].includes(value.frequency);
-  const supplierComparison=value.reportType==="SUPPLIER_COMPARISON"&&value.frequency==="MONTHLY";
+  const monthlyReport=["SUPPLIER_COMPARISON","MONTHLY_INVENTORY_SUMMARY"].includes(value.reportType)&&value.frequency==="MONTHLY";
   const promotionResult=["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value.reportType)&&value.frequency==="EVENT";
-  if(!cash&&!supplierComparison&&!promotionResult)invalid("Unsupported report kind.");
+  if(!cash&&!monthlyReport&&!promotionResult)invalid("Unsupported report kind.");
   if(promotionResult)result.eventId=text(value.eventId,"eventId");
   result.reportType=value.reportType;result.frequency=value.frequency;
   if(instant(value.periodFrom)>=instant(value.periodTo))invalid("Nonempty exclusive period required.");

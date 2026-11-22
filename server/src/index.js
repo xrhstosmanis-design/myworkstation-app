@@ -447,6 +447,8 @@ const supplierReportScheduler=createAutomaticReportScheduler({db:prisma,dispatch
 const promotionReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'PROMOTION_RESULT'});
 const promotionReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:promotionReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'PROMOTION_RESULT'});
 const inventoryResultDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'INVENTORY_RESULT'});
+const monthlyInventoryReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'MONTHLY_INVENTORY_SUMMARY'});
+const monthlyInventoryReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:monthlyInventoryReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'MONTHLY_INVENTORY_SUMMARY'});
 const inventoryResultScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:inventoryResultDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'INVENTORY_RESULT'});
 const monthlyInventoryCaptureJobs=createMonthlyInventoryCaptureJobs(prisma);
 const monthlyInventoryCaptureScheduler=createMonthlyInventoryCaptureScheduler({jobs:monthlyInventoryCaptureJobs,work:backgroundDrain});
@@ -463,6 +465,7 @@ const server=app.listen(process.env.PORT||8080,()=>{
   supplierReportScheduler.start();
   promotionReportScheduler.start();
   inventoryResultScheduler.start();
+  monthlyInventoryReportScheduler.start();
   invoiceStockEmailScheduler.start();
   monthlyInventoryCaptureScheduler.start();
 });

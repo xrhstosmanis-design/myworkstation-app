@@ -35,7 +35,7 @@ export function createAutomaticReportEventInstallationRouter(db,{env=process.env
    const input=exact(read?req.query:req.body,method==='install'?['profile','packet','explicitAuthorization']:['profile']);
    if(!read)exact(req.query,[]);
    if(read&&(req.headers['transfer-encoding']||Number(req.headers['content-length']||0)>0))throw inputError();
-   if(!['BASE','CAPTURE','CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4'].includes(input.profile)||method==='install'&&input.explicitAuthorization!==true)throw inputError();
+   if(!['BASE','CAPTURE','CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4','REPORTS_ONLY_V4_TO_V5'].includes(input.profile)||method==='install'&&input.explicitAuthorization!==true)throw inputError();
    const sourceRevision=env.RENDER_GIT_COMMIT||env.GIT_COMMIT;
    if(typeof sourceRevision!=='string'||!/^[a-f0-9]{40}$/.test(sourceRevision))return res.status(503).json({code:'REPORT_EVENT_INSTALL_REVISION_REQUIRED',error:'Δεν επιβεβαιώθηκε η έκδοση εγκατάστασης.'});
    const service=await createInstallation(db,{sourceRevision,enabled:env.AUTOMATIC_REPORT_EVENT_INSTALL_ENABLED==='1',profile:input.profile});
