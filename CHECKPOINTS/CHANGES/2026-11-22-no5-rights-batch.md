@@ -7,3 +7,5 @@ The package excludes unimplemented Owner workflows such as PIN and account provi
 Follow-up in the same release candidate: separately delegated POS access with open-shift protection, employee contact/availability updates, manual attendance, attendance print, and schedule CSV. 31 focused tests passed. Account/PIN provisioning, force-close and payment import remain separate gaps. Release and manual acceptance are pending.
 
 POS entry now rechecks the enabled profile under the same credential lock used by access revocation before either PIN or card issues a session. The isolated PostgreSQL fixture covers both credential types and verifies no session was created while disabled.
+
+Separate opt-in creation of an employee POS operator now provisions an initial hashed PIN, no linked BackOffice account and POS access disabled. Scoped idempotency and audit share the same transaction. Existing operators and Owner-managed PIN resets are outside this path.
