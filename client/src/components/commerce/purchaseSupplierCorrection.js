@@ -1,25 +1,32 @@
-export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,modal,esc,money,refresh,current}){
+export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,modal,esc,money,refresh,current,staff=false,lookup=true,create=true}){
  const valid=()=>root.isConnected&&parent.isConnected&&current();
  if(!valid()||parent.dataset.supplierCorrectionBusy)return;
  parent.dataset.supplierCorrectionBusy='1';
  const issuerVat=String(order.mydataIssuerVat||'');
  const issuerName=order.mydataIssuerName;
  const existingIssuer=suppliers.find(s=>s.id!==order.supplierId&&String(s.taxId||'').replace(/\D/g,'')===issuerVat);
- const canFindIssuer=!order.supplierId&&/^\d{9}$/.test(issuerVat);
+ const canFindIssuer=lookup&&!order.supplierId&&/^\d{9}$/.test(issuerVat);
  const lookupButton=canFindIssuer?`<button type="button" data-find-mydata-supplier>Εύρεση προμηθευτή με ΑΦΜ ${esc(issuerVat)}</button>`:'';
- const issuerForm=canFindIssuer&&issuerName&&!existingIssuer?`
+ const issuerForm=create&&canFindIssuer&&issuerName&&!existingIssuer?`
   <details><summary>Νέος προμηθευτής από myDATA</summary>
    <label>Επωνυμία <input value="${esc(issuerName)}" readonly></label>
    <label>ΑΦΜ <input value="${esc(issuerVat)}" readonly></label>
    <button type="button" data-create-mydata-supplier>Δημιουργία προμηθευτή</button>
   </details>`:'';
- const m=modal(`<div class="po-modal-title blue"><h2>Διόρθωση προμηθευτή τιμολογίου</h2><button data-po-close>×</button></div><form data-supplier-correction style="padding:20px;display:grid;gap:16px;font-size:18px"><p>Παραστατικό <b>${esc(order.invoiceNumber||'')}</b> · ${esc(order.supplierName||'Χωρίς προμηθευτή')}</p><label>Σωστός προμηθευτής<select name="supplierId" required style="display:block;width:100%;min-height:48px;font-size:18px"><option value="">Επίλεξε βάσει πρωτοτύπου και ΑΦΜ</option>${suppliers.filter(s=>s.id!==order.supplierId&&/^\d{9}$/.test(String(s.taxId||'').trim())).map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ΑΦΜ ${esc(s.taxId)}</option>`).join('')}</select></label>${lookupButton}${issuerForm}<button type="button" data-preview>Έλεγχος διόρθωσης</button><div data-preview-result style="display:grid;gap:14px"></div><p role="alert"></p><button type="button" data-po-close>Άκυρο</button><button type="submit" class="primary" disabled>Επιβεβαίωση διόρθωσης προμηθευτή</button></form>`);
+ const m=modal(`<div class="po-modal-title blue"><h2>Διόρθωση προμηθευτή τιμολογίου</h2><button data-po-close>×</button></div><form data-supplier-correction style="padding:20px;display:grid;gap:16px;font-size:18px"><p>Παραστατικό <b>${esc(order.invoiceNumber||'')}</b> · ${esc(order.supplierName||'Χωρίς προμηθευτή')}</p><label>Αναζήτηση προμηθευτή<input type="search" name="supplierSearch" placeholder="Επωνυμία ή ΑΦΜ"></label><label>Σωστός προμηθευτής<select name="supplierId" required style="display:block;width:100%;min-height:48px;font-size:18px"><option value="">Επίλεξε βάσει πρωτοτύπου και ΑΦΜ</option>${suppliers.filter(s=>s.id!==order.supplierId&&/^\d{9}$/.test(String(s.taxId||'').trim())).map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ΑΦΜ ${esc(s.taxId)}</option>`).join('')}</select></label>${lookupButton}${issuerForm}<button type="button" data-preview>Έλεγχος διόρθωσης</button><div data-preview-result style="display:grid;gap:14px"></div><p role="alert"></p><button type="button" data-po-close>Άκυρο</button><button type="submit" class="primary" disabled>Επιβεβαίωση διόρθωσης προμηθευτή</button></form>`);
  const form=m.querySelector('[data-supplier-correction]'),select=form.elements.supplierId,previewButton=form.querySelector('[data-preview]'),host=form.querySelector('[data-preview-result]'),submit=form.querySelector('[type=submit]'),error=form.querySelector('[role=alert]');
  let preview=null,busy=false,generation=0;
  const alive=()=>valid()&&m.isConnected;
  const update=()=>{submit.disabled=busy||!preview||!form.elements.reason?.value.trim()||form.elements.reason.value.trim().length<5||!form.elements.original?.checked||Boolean(preview.payment)&&!form.elements.payment?.checked};
  const invalidate=()=>{generation++;preview=null;host.innerHTML='';error.textContent='';update()};
  select.addEventListener('change',invalidate);
+ const search=form.elements.supplierSearch;
+ const fold=value=>String(value||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase('el').trim();
+ search.addEventListener('input',()=>{
+  const query=fold(search.value);
+  for(const option of select.options)option.hidden=Boolean(option.value&&option.value!==select.value&&!fold(option.textContent).includes(query));
+ });
+
  form.addEventListener('input',update);form.addEventListener('change',update);
  m.addEventListener('click',event=>{if(event.target===m||event.target.closest('[data-po-close]')){generation++;delete parent.dataset.supplierCorrectionBusy}},{capture:true});
  const createButton=form.querySelector('[data-create-mydata-supplier]');
@@ -36,7 +43,7 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
     if(createButton)createButton.closest('details').open=true;
     throw new Error('Δεν βρέθηκε καταχωρισμένος προμηθευτής με αυτό το ΑΦΜ.');
    }
-   const supplier=lookup.existingSupplier||await api('/api/commerce/suppliers',{method:'POST',body:JSON.stringify({name:issuerName,taxId:issuerVat})});
+   const supplier=lookup.existingSupplier||await api(staff?`/api/commerce/purchase-orders/${encodeURIComponent(order.id)}/issuer-supplier`:'/api/commerce/suppliers',{method:'POST',body:JSON.stringify(staff?{storeId:order.storeId}:{name:issuerName,taxId:issuerVat})});
    if(!alive())return;
    if(!supplier?.id)throw new Error('Δεν βρέθηκε η καρτέλα προμηθευτή.');
    supplierId=supplier.id;
