@@ -916,3 +916,7 @@ Owner /root; feat/owner-cash-withdrawal-implementation-20261121. Before-source c
 
 
 INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes this owner to integrate ONLY dedicated responsible-person recovery and same-original assistant promotion. General No5/No04/No02 ownership retained. New exact mapping/default-off action and canonical writer checks are in the existing recovery checkpoint. Before-source expansion; no new runtime or actual transactions.
+
+## 22/11/2026 — Τελευταίος προμηθευτής είδους
+
+Εμφάνιση προμηθευτή από καταχωρισμένη αγορά του επιλεγμένου καταστήματος. [Καταγραφή](CHANGES/2026-11-22-product-card-latest-supplier.md).
