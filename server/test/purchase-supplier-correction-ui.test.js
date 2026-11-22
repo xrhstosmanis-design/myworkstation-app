@@ -17,9 +17,9 @@ function mount({payment=true,officialLookup=false}={}){
 }
 test('mounted supplier correction requires original/reason/payment review, escapes names, cancels with no write and sends exactly one existing-order action',async()=>{
  const f=mount();try{
-  let {m,form}=await f.choose();assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal(form.querySelectorAll('supplier,target').length,0);assert.match(form.textContent,/Old <supplier>/);
+  let {m,form}=await f.choose();assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal(form.querySelectorAll('supplier,target').length,0);assert.match(form.querySelector('[data-save-status]').textContent,/έλεγξες το πρωτότυπο/);assert.match(form.textContent,/Old <supplier>/);
   form.querySelector('[data-po-close]').click();assert.equal(f.calls.filter(c=>c.options.method==='POST').length,0);
-  ({m,form}=await f.choose());form.elements.original.checked=true;form.elements.reason.value='Correct original supplier';form.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));assert.equal(form.querySelector('[type=submit]').disabled,true);
+  ({m,form}=await f.choose());form.elements.original.checked=true;form.elements.reason.value='Correct original supplier';form.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));assert.equal(form.querySelector('[type=submit]').disabled,true);assert.match(form.querySelector('[data-save-status]').textContent,/υπάρχουσας πληρωμής/);
   form.elements.payment.checked=true;form.dispatchEvent(new f.dom.window.Event('change',{bubbles:true}));assert.equal(form.querySelector('[type=submit]').disabled,false);
   form.dispatchEvent(new f.dom.window.Event('submit',{cancelable:true}));form.dispatchEvent(new f.dom.window.Event('submit',{cancelable:true}));assert.equal(f.calls.filter(c=>c.options.method==='POST').length,1);const sent=JSON.parse(f.calls.at(-1).options.body);assert.equal(sent.storeId,'s');assert.equal(sent.supplierId,'target');assert.equal(sent.confirmPaymentSupplier,true);assert.equal(sent.version,f.preview.version);assert.equal(sent.status,undefined);
   f.resolvePost({ok:true});await tick();assert.equal(f.refreshes(),1);assert.equal(m.isConnected,false);
@@ -69,5 +69,30 @@ test('actual FINAL/INVOICED editor exposes the separate correction only to BackO
 });
 
 test('mounted failed correction invalidates its preview and reports the server reason',async()=>{
- const f=mount();try{const {form}=await f.choose();form.elements.original.checked=true;form.elements.payment.checked=true;form.elements.reason.value='Correct original supplier';form.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));form.dispatchEvent(new f.dom.window.Event('submit',{cancelable:true}));f.rejectPost(new Error('Stale original payment'));await tick();assert.equal(form.querySelector('[role=alert]').textContent,'Stale original payment');assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal(f.refreshes(),0);form.dispatchEvent(new f.dom.window.Event('submit',{cancelable:true}));assert.equal(f.calls.filter(c=>c.options.method==='POST').length,1)}finally{f.dom.window.close()}
+ const f=mount();try{const {form}=await f.choose();form.elements.original.checked=true;form.elements.payment.checked=true;form.elements.reason.value='Correct original supplier';form.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));form.dispatchEvent(new f.dom.window.Event('submit',{cancelable:true}));f.rejectPost(new Error('Stale original payment'));await tick();assert.equal(form.querySelector('[role=alert]').textContent,'Stale original payment');assert.equal(f.document.activeElement,form.querySelector('[role=alert]'));assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal(f.refreshes(),0);form.dispatchEvent(new f.dom.window.Event('submit',{cancelable:true}));assert.equal(f.calls.filter(c=>c.options.method==='POST').length,1)}finally{f.dom.window.close()}
+});
+
+test('supplier creation reaches its own handler without opening OCR mutation access',async()=>{
+ const {default:express}=await import('express');
+ const {default:ocr}=await import('../src/routes/purchase-order-ocr-resolution.js');
+ const app=express();
+ app.use((req,res,next)=>{
+  req.user={id:'staff',companyId:'synthetic',storeId:'lab',role:'EMPLOYEE',staffAccess:true};
+  req.staffGrant={capability:'invoices.supplier-create'};
+  next();
+ });
+ app.use('/api/commerce/purchase-orders',ocr);
+ app.post('/api/commerce/purchase-orders/:orderId/issuer-supplier',(req,res)=>res.status(201).json({id:'synthetic-supplier'}));
+ const server=app.listen(0,'127.0.0.1');
+ try{
+  await new Promise(resolve=>server.once('listening',resolve));
+  const base=`http://127.0.0.1:${server.address().port}/api/commerce/purchase-orders/order`;
+  const issuer=await fetch(base+'/issuer-supplier',{method:'POST'});
+  assert.equal(issuer.status,201);
+  assert.deepEqual(await issuer.json(),{id:'synthetic-supplier'});
+  const ocrWrite=await fetch(base+'/ocr-lines/row/create-product',{method:'POST'});
+  assert.equal(ocrWrite.status,403);
+ }finally{
+  await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+ }
 });
