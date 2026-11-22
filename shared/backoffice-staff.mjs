@@ -8,7 +8,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.print','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.advance-allocate','payments.expense','payments.cash','payments.owner-withdrawal','sales.cancel','shifts.read','shifts.export','shifts.print','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','operator-profiles.manage-permissions','schedule.read','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','schedule.approve-exception','attendance.read','attendance.export','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','invoice-ai.photo-preview','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','approvals.expense-confirm','approvals.supplier-recovery','monthly-inventory.read','workforce-roles.read','workforce-rules.read','workforce-rules.manage','shift-templates.read','shift-templates.manage','workforce-audit.read','unsold-products.read','sales-journal.read',...storeReportCapabilities,...finalPassiveStoreActions.map(action=>action.key)]);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.print','products.edit','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','invoices.reopen','invoices.cancel','payments.read','payments.supplier','payments.advance-allocate','payments.expense','payments.cash','payments.owner-withdrawal','sales.cancel','shifts.read','shifts.export','shifts.print','shifts.close','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','employees.edit','operator-profiles.manage-permissions','operator-profiles.manage-pos-access','schedule.read','schedule.export','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','schedule.approve-exception','attendance.read','attendance.clock','attendance.export','attendance.print','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','invoice-ai.photo-preview','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','approvals.expense-confirm','approvals.supplier-recovery','monthly-inventory.read','workforce-roles.read','workforce-rules.read','workforce-rules.manage','shift-templates.read','shift-templates.manage','workforce-audit.read','unsold-products.read','sales-journal.read',...storeReportCapabilities,...finalPassiveStoreActions.map(action=>action.key)]);
 export const staffPermissionSections=Object.freeze([
  {key:'owner-withdrawals',label:'Αναλήψεις ιδιοκτήτη',actions:[{key:'payments.owner-withdrawal',label:'Καταχώριση ανάληψης ιδιοκτήτη',description:'Καταχωρίζει παραλαβή μετρητών από ιδιοκτήτη σε ανοικτή ή κλεισμένη βάρδια του καταστήματος, με προεπισκόπηση και συμβάν.',requires:['payments.read','shifts.read']}]},
  {key:'final-passive',label:'Πρόσθετες παθητικές προβολές',actions:finalPassiveStoreActions.map(({modules,...action})=>action)},
@@ -73,7 +73,7 @@ export const staffPermissionSections=Object.freeze([
   {key:'promotions',label:'Προσφορές',actions:[
     {key:'promotions.read',label:'Προβολή προσφορών και απόδοσης',description:'Βλέπει τις προσφορές και τις πωλήσεις προσφορών του επιλεγμένου καταστήματος.'}
   ]},
-  {key:'operator-profiles',label:'Χειριστές POS',actions:[{key:'operator-profiles.manage-permissions',label:'Αλλαγή δικαιωμάτων χειριστών POS',description:'Αλλάζει τις επιλογές POS υπαλλήλων στο επιλεγμένο κατάστημα.'}]},
+  {key:'operator-profiles',label:'Χειριστές POS',actions:[{key:'operator-profiles.manage-permissions',label:'Αλλαγή δικαιωμάτων χειριστών POS',description:'Αλλάζει τις επιλογές POS υπαλλήλων στο επιλεγμένο κατάστημα.'},{key:'operator-profiles.manage-pos-access',label:'Ενεργοποίηση και απενεργοποίηση πρόσβασης POS',description:'Αλλάζει τη συνολική πρόσβαση στο POS υπαλλήλων του επιλεγμένου καταστήματος.',requires:['operator-profiles.manage-permissions']}]},
   {key:'employees',label:'Προσωπικό',actions:[
     {key:'payroll.read',label:'Προβολή μισθοδοσίας',description:'Βλέπει προεπισκόπηση μισθοδοσίας, περιόδους, ποσά πληρωμών και υπόλοιπα του επιλεγμένου καταστήματος.'},
     {key:'schedule.create',label:'Δημιουργία πρόχειρου προγράμματος βαρδιών',requires:['schedule.read']},
@@ -82,10 +82,13 @@ export const staffPermissionSections=Object.freeze([
     {key:'schedule.approve',label:'Έγκριση προγράμματος',requires:['schedule.read']},
     {key:'schedule.approve-exception',label:'Έγκριση εξαίρεσης προγράμματος βαρδιών',requires:['schedule.read']},
     {key:'schedule.publish',label:'Δημοσίευση προγράμματος βαρδιών',requires:['schedule.read']},
+    {key:'schedule.export',label:'Εξαγωγή εμφανιζόμενου προγράμματος βαρδιών',requires:['schedule.read']},
     {key:'schedule.read',label:'Προβολή προγράμματος',description:'Βλέπει το πρόγραμμα και τις αναθέσεις του επιλεγμένου καταστήματος.'},
+    {key:'attendance.clock',label:'Χειροκίνητη έναρξη και λήξη παρουσίας',requires:['attendance.read']},
     {key:'attendance.correct',label:'Διόρθωση ωρών παρουσίας',requires:['attendance.read']},
     {key:'attendance.approve-review',label:'Έγκριση ελέγχου παρουσίας',requires:['attendance.read']},
     {key:'attendance.approve-overtime',label:'Έγκριση παρουσίας άνω των 8 ωρών',requires:['attendance.read']},
+    {key:'attendance.print',label:'Εκτύπωση εμφανιζόμενων παρουσιών',description:'Εκτυπώνει τις εμφανιζόμενες παρουσίες της επιλεγμένης ημέρας στο επιλεγμένο κατάστημα.',requires:['attendance.read']},
     {key:'attendance.export',label:'Εξαγωγή εμφανιζόμενων παρουσιών σε CSV',description:'Εξάγει τις εμφανιζόμενες παρουσίες της επιλεγμένης ημέρας στο επιλεγμένο κατάστημα.',requires:['attendance.read']},
     {key:'attendance.read',label:'Προβολή παρουσιών',description:'Βλέπει τις ώρες παρουσίας του επιλεγμένου καταστήματος.'},
     {key:'leaves.create',label:'Καταχώριση αίτησης άδειας ή ρεπό',requires:['leaves.read']},
@@ -93,6 +96,7 @@ export const staffPermissionSections=Object.freeze([
     {key:'leaves.reject',label:'Απόρριψη άδειας ή ρεπό',requires:['leaves.read']},
     {key:'leaves.cancel',label:'Ακύρωση εκκρεμούς αίτησης άδειας ή ρεπό',requires:['leaves.read']},
     {key:'leaves.read',label:'Προβολή αδειών και ρεπό',description:'Βλέπει τις αιτήσεις αδειών και ρεπό του επιλεγμένου καταστήματος.'},
+    {key:'employees.edit',label:'Αλλαγή επικοινωνίας και διαθεσιμότητας εργαζομένων',description:'Επεξεργάζεται τα στοιχεία επικοινωνίας και τη διαθεσιμότητα των εργαζομένων του επιλεγμένου καταστήματος.',requires:['employees.read']},
     {key:'employees.read',label:'Προβολή εργαζομένων',description:'Βλέπει τα στοιχεία επικοινωνίας, τους ρόλους και τη διαθεσιμότητα εργαζομένων του επιλεγμένου καταστήματος.'}
   ]},
   {key:'handover',label:'Παράδοση βάρδιας',actions:[
@@ -214,8 +218,10 @@ export function staffRequestCapability(method,path,body={}){
       if(body?.status==='PUBLISHED')return 'schedule.publish';
     }
   }
+  if(method==='PATCH'&&/^\/api\/operator-management\/stores\/[^/]+\/employee-permissions\/[^/]+\/pos-access$/.test(path))return 'operator-profiles.manage-pos-access';
   const operatorPermissions=path.match(/^\/api\/operator-management\/stores\/[^/]+\/employee-permissions(?:\/([^/]+))?$/);
   if(operatorPermissions&&((method==='GET'&&!operatorPermissions[1])||(method==='PATCH'&&operatorPermissions[1])))return 'operator-profiles.manage-permissions';
+  if(method==='POST'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/attendance\/clock$/.test(path))return 'attendance.clock';
   const attendanceAction=method==='POST'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/attendance\/[^/]+\/(correct-hours|approve-review|approve-over-8-hours)$/);
   if(attendanceAction)return {'correct-hours':'attendance.correct','approve-review':'attendance.approve-review','approve-over-8-hours':'attendance.approve-overtime'}[attendanceAction[1]];
   const leaveCollection=path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/leaves(\/eligible-employees)?$/);
@@ -226,6 +232,7 @@ export function staffRequestCapability(method,path,body={}){
   if(workforceSettings)return {roles:'workforce-roles.read',rules:'workforce-rules.read','shift-templates':'shift-templates.read',audit:'workforce-audit.read'}[workforceSettings[1]];
   const workforceRead=method==='GET'&&path.match(/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/(schedules|attendance|leaves)$/);
   if(workforceRead)return {schedules:'schedule.read',attendance:'attendance.read',leaves:'leaves.read'}[workforceRead[1]];
+  if(method==='PATCH'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/employees\/[^/]+\/details$/.test(path))return 'employees.edit';
   if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/employees(?:\/[^/]+)?$/.test(path))return 'employees.read';
   if(method==='GET'&&(path==='/api/commerce/handover'||/^\/api\/commerce\/handover\/[^/]+\/attachment$/.test(path)))return 'handover.read';
   if(method==='GET'&&path==='/api/commerce/sales/advanced-report')return 'analytics.read';
