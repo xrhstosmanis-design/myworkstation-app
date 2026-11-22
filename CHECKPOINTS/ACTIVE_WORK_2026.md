@@ -1,3 +1,5 @@
+- 22/11/2026 · POS · Πλάτος κατηγοριών και γρήγορων πλήκτρων, δεύτερη σελίδα και χρώματα · /root · 22 τοπικοί έλεγχοι, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-22-pos-quick-pages-resize.md).
+
 - 22/11/2026 · Νο 5 · Αλλαγή PIN χειριστή POS · 22 τοπικοί έλεγχοι πέρασαν · [Checkpoint](CHANGES/2026-11-22-no5-operator-pin-reset.md).
 
 ## 22/11/2026 — Κεντρική διόρθωση Margin αποθήκης — AWAITING LAB
@@ -80,6 +82,10 @@ Source #4063/head684e7524 merged964f05bd. Exact PR CI44494855233 και mainCI44
 ## 18/11/2026 — myDATA Epsilon Digital PDF / AWAITING CI AND LAB
 
 PR #4036. Read-only provider check for Diadochou Pavlou invoice 34795 returned HTTP 200 and PDF from /pdf. [Checkpoint](CHANGES/2026-11-18-mydata-epsilon-original-pdf.md). Attachment verification pending.
+
+## 22/11/2026 — Νο 19 · Συνθετική παραγγελία efood στο LAB — CI σε εκκρεμότητα
+
+PR #4156 · Vendor 9344842. Τοπικά πέρασαν 20 δοκιμές και ο έλεγχος συναλλαγής PGlite. Εκκρεμούν πλήρες CI, έλεγχος στο εγκατεστημένο LAB και δοκιμή μέσω Pelican. [Checkpoint](CHANGES/2026-11-22-no19-efood-lab-order-run.md).
 
 ## 18/11/2026 — Νο 15 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ c88b7aad / ΜΕΡΙΚΗ LIVE ΑΠΟΔΟΧΗ / OPEN
 

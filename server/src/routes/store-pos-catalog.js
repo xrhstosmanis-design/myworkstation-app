@@ -267,7 +267,7 @@ router.put("/stores/:storeId/layout",async(req,res,next)=>{
     const layout=req.body?.layout?{...req.body.layout}:null;
     if(layout)delete layout.audienceSettings;
     if(!layout||typeof layout!=="object"||!Array.isArray(layout.quickKeys)||!Array.isArray(layout.categories))return res.status(400).json({error:"Η διάταξη πλήκτρων δεν είναι έγκυρη."});
-    if(layout.quickKeys.length>20||layout.categories.length>20)return res.status(400).json({error:"Επιτρέπονται έως 20 γρήγορα πλήκτρα και 20 κατηγορίες."});
+    if(layout.quickKeys.length>40||layout.categories.length>20)return res.status(400).json({error:"Επιτρέπονται έως 40 γρήγορα πλήκτρα και 20 κατηγορίες."});
     const bytes=Buffer.byteLength(JSON.stringify(layout));
     if(bytes>250000)return res.status(413).json({error:"Η διάταξη είναι υπερβολικά μεγάλη."});
     const rows=await prisma.$queryRaw`
