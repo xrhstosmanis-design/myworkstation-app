@@ -302,6 +302,7 @@ test('invoice-only operator reads the existing inbox and safe original preview w
     await m.act(async()=>button('Τιμολόγια').click());
     await m.act(async()=>new Promise(resolve=>setTimeout(resolve,300)));
     assert.match(document.body.textContent,/Synthetic.pdf/);
+    assert.equal(document.querySelector('.invoice-inbox input[type=file]'),null);
     for(const label of ['Διαγραφή φωτογραφίας','Επανεπεξεργασία γραμμών','Έλεγχος από βοηθό AI','Έλεγχος εγγραφής','Άνοιγμα υπάρχοντος'])assert.equal(button(label),undefined);
     assert.equal(button('Λήψη από myDATA').hidden,true);
     window.open=()=>({document:preview.window.document,opener:window,close(){}});
@@ -310,6 +311,34 @@ test('invoice-only operator reads the existing inbox and safe original preview w
     assert.ok(calls.filter(c=>!c.path.endsWith('/me')).every(c=>c.options.headers['x-backoffice-store-id']==='a1'&&!c.options.method));
     assert.ok(calls.every(c=>!c.path.includes('/mydata/')));
   }finally{preview.window.close();await m.close()}
+});
+test('separately granted inbox upload stores a synthetic original in the selected store only',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','invoices.upload-original']}]};
+    if(options.method==='POST')return {id:'fixture',status:'RECEIVED'};
+    return {items:[],total:0,archiveTotal:0,suppliers:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Τιμολόγια').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,80)));
+    const input=document.querySelector('.invoice-inbox input[type=file]');
+    const file=new window.File(['%PDF-1.7\n'+'synthetic fixture\n'.repeat(8)],'synthetic.pdf',{type:'application/pdf'});
+    Object.defineProperty(input,'files',{value:[file]});
+    await m.act(async()=>{input.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,60));});
+    const posts=calls.filter(c=>c.options.method==='POST');
+    assert.equal(posts.length,1);
+    assert.equal(posts[0].path,'/api/commerce/documents/inbox');
+    assert.equal(posts[0].options.headers['x-backoffice-store-id'],'a1');
+    const body=JSON.parse(posts[0].options.body);
+    assert.equal(body.storeId,'a1');
+    assert.equal(body.file.filename,'synthetic.pdf');
+    assert.match(body.file.dataUrl,/^data:application\/pdf;base64,/);
+    assert.match(document.body.textContent,/Το πρωτότυπο αποθηκεύτηκε στη θυρίδα/);
+  }finally{await m.close()}
 });
 test('owner entry reuses existing POS operator administration only after explicit same-company store selection',async()=>{
   const Admin=await component('BackofficeStaffAdmin'),calls=[];
