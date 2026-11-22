@@ -910,3 +910,5 @@ Owner /root; feat/owner-cash-withdrawal-implementation-20261121. Before-source c
 
 
 INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes this owner to integrate ONLY dedicated responsible-person recovery and same-original assistant promotion. General No5/No04/No02 ownership retained. New exact mapping/default-off action and canonical writer checks are in the existing recovery checkpoint. Before-source expansion; no new runtime or actual transactions.
+
+- 22/11/2026 · Νο 9: [Τιμή προσφοράς στο ανώνυμο καλάθι POS](CHANGES/2026-11-22-no9-pos-anonymous-promotion.md). Draft PR #4152, 12 στοχευμένοι τοπικοί έλεγχοι PASS. Εκκρεμούν πλήρες CI, δοκιμαστική πώληση στο LAB και διασταύρωση Message-ID.
