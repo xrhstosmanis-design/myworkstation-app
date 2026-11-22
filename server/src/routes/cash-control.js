@@ -223,8 +223,9 @@ async function syncOperatorWorkforceAttendance(tx,req,storeId,eventType,cashSess
   if(!legacyEmployeeId)return {status:"SKIPPED",reason:"EMPLOYEE_NOT_IDENTIFIED"};
   const employee=await tx.workforceEmployee.findFirst({where:{companyId:req.user.companyId,legacyEmployeeId,active:true,OR:[{baseStoreId:storeId},{storeAccess:{some:{storeId,active:true}}}]}});
   if(!employee)return {status:"SKIPPED",reason:"WORKFORCE_EMPLOYEE_NOT_LINKED"};
+  await tx.$queryRaw`SELECT "id" FROM "WorkforceEmployee" WHERE "id"=${employee.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
   const now=new Date(),date=workforceDate(now);
-  const open=await tx.workforceAttendanceSession.findFirst({where:{companyId:req.user.companyId,storeId,employeeId:employee.id,status:"OPEN"},orderBy:{startedAt:"desc"}});
+  const [open]=await tx.$queryRaw`SELECT * FROM "WorkforceAttendanceSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "employeeId"=${employee.id} AND "status"='OPEN' ORDER BY "startedAt" DESC LIMIT 1 FOR UPDATE`;
   const resolvedEventType=eventType==="TOGGLE"?(open?"OUT":"IN"):eventType;
   if(resolvedEventType==="IN"&&open)return {status:"ALREADY_OPEN",sessionId:open.id,employeeName:employee.fullName,eventType:"IN"};
   if(resolvedEventType==="OUT"&&!open)return {status:"NO_OPEN_SESSION",employeeName:employee.fullName,eventType:"OUT"};
@@ -510,9 +511,25 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   }
   const expectedOpening=lastClosedRows[0]?money(lastClosedRows[0].nextOpeningTotal):operational,openingVariance=operational-expectedOpening,actorName=req.user.fullName||"Χρήστης";
   const sessionId=crypto.randomUUID();
-  const rows=await prisma.$queryRaw`
+  const insertSession=db=>db.$queryRaw`
     INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
     VALUES (${sessionId},${req.user.companyId},${store.id},${terminalPos},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
+  const rows=await (req.user.tokenType==="STORE_OPERATOR"?prisma.$transaction(async tx=>{
+    // Serialize opening with delegated POS-access revocation on the operator credential.
+    const [credential]=await tx.$queryRaw`
+      SELECT "id" FROM "StoreOperatorCredential"
+      WHERE "id"=${req.user.id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=TRUE
+      FOR UPDATE`;
+    if(!credential)return null;
+    const [access]=await tx.$queryRaw`
+      SELECT COALESCE(p."posAccess",TRUE) AS "posAccess"
+      FROM "StoreOperatorCredential" c
+      JOIN "StoreOperatorSession" os ON os."operatorId"=c."id" AND os."companyId"=c."companyId" AND os."storeId"=c."storeId"
+      LEFT JOIN "StoreOperatorProfile" p ON p."employeeId"=c."employeeId" AND p."storeId"=c."storeId" AND p."companyId"=c."companyId"
+      WHERE c."id"=${credential.id} AND os."id"=${req.user.operatorSessionId} AND os."revokedAt" IS NULL AND os."expiresAt">NOW()`;
+    return access?.posAccess===true?insertSession(tx):null;
+  }):insertSession(prisma));
+  if(!rows)return res.status(403).json({error:"Η πρόσβαση POS του χειριστή δεν είναι πλέον ενεργή.",code:"STORE_OPERATOR_POS_ACCESS_DISABLED"});
 
   let safeChange=null;
   if(Math.abs(safeDelta)>0.009){
