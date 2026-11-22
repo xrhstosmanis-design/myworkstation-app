@@ -9,3 +9,5 @@ Follow-up in the same release candidate: separately delegated POS access with op
 POS entry now rechecks the enabled profile under the same credential lock used by access revocation before either PIN or card issues a session. The isolated PostgreSQL fixture covers both credential types and verifies no session was created while disabled.
 
 Separate opt-in creation of an employee POS operator now provisions an initial hashed PIN, no linked BackOffice account and POS access disabled. Scoped idempotency and audit share the same transaction. Existing operators and Owner-managed PIN resets are outside this path.
+
+Kiosk preview and import reuse the same workbook parser. A short-lived receipt binds the selected store, company, operator, filename and actual file bytes. The delegated import has a dedicated right with live in-transaction revalidation. No live import was performed. Administrative uncounted shift close remains outstanding.
