@@ -1,10 +1,11 @@
+import {requireStaffAction,requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {
-  audit,cleanText,contextFor,employeeInclude,employeeResponse,isSuperAdmin,loadEmployee,serializeEmployee,storesForContext
+  audit,cleanText,contextFor,employeeInclude,employeeResponse,isSuperAdmin,loadEmployee,serializeEmployee,serializeEmployeeRead,employeeReadSelection,storesForContext
 } from "./workforce-v2-access.js";
 import {confirmed,employeeSchema,ensureEmployeeNameAvailable,validateEmployeeReferences} from "./workforce-v2-validation.js";
 import {createLegacyWorkCardCode,createWorkCardCode,workCardHash,workCardLast4} from "../workforce-card-code.js";
@@ -48,7 +49,9 @@ router.get("/",async(req,res,next)=>{
   try{
     const context=await contextFor(req);
     const query=z.object({q:z.string().trim().max(120).optional(),includeInactive:z.enum(["true","false"]).optional().default("false"),scope:z.enum(["STORE","COMPANY"]).optional().default("STORE")}).parse(req.query||{});
-    const stores=await storesForContext(req,context.company.id),storeMap=new Map(stores.map(store=>[store.id,store])),visibleStoreIds=stores.map(item=>item.id);
+    const delegated=req.user?.staffAccess===true;
+    if(delegated&&query.scope!=='STORE')throw staffError();
+    const stores=delegated?[context.store]:await storesForContext(req,context.company.id),storeMap=new Map(stores.map(store=>[store.id,store])),visibleStoreIds=stores.map(item=>item.id);
     const items=await prisma.workforceEmployee.findMany({
       where:{
         companyId:context.company.id,...(query.includeInactive==="true"?{}:{active:true}),
@@ -57,16 +60,21 @@ router.get("/",async(req,res,next)=>{
           ?{OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]}
           :isSuperAdmin(req.user)?{}:{OR:[{baseStoreId:{in:visibleStoreIds}},{storeAccess:{some:{storeId:{in:visibleStoreIds},active:true}}}]})
       },
-      include:employeeInclude,orderBy:[{active:"desc"},{fullName:"asc"}],take:500
+      ...(delegated?{select:employeeReadSelection(context.store.id,context.company.id)}:{include:employeeInclude}),orderBy:[{active:"desc"},{fullName:"asc"}],take:500
     });
-    await prisma.$transaction(async tx=>{for(const item of items)if(item.pinHash)await syncPosCredential(tx,item,item.baseStoreId,item.pinHash,req.user?.id)});
-    res.json({items:items.map(item=>serializeEmployee(item,storeMap)),count:items.length});
+    if(delegated)await requireStaffGrant(prisma,req.user,context.store.id,'employees.read');
+    else await prisma.$transaction(async tx=>{for(const item of items)if(item.pinHash)await syncPosCredential(tx,item,item.baseStoreId,item.pinHash,req.user?.id)});
+    res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),items:items.map(item=>delegated?serializeEmployeeRead(item,context.store):serializeEmployee(item,storeMap)),count:items.length});
   }catch(error){next(error)}
 });
 
 router.get("/:employeeId",async(req,res,next)=>{
   try{
     const context=await contextFor(req),employee=await loadEmployee(req,context,req.params.employeeId);
+    if(req.user?.staffAccess===true){
+      await requireStaffGrant(prisma,req.user,context.store.id,'employees.read');
+      return res.json({companyId:context.company.id,storeId:context.store.id,item:serializeEmployeeRead(employee,context.store)});
+    }
     const stores=await prisma.store.findMany({where:{companyId:context.company.id},select:{id:true,name:true}});
     res.json({item:serializeEmployee(employee,new Map(stores.map(store=>[store.id,store])))});
   }catch(error){next(error)}
@@ -158,6 +166,43 @@ router.put("/:employeeId",async(req,res,next)=>{
       return result;
     });
     res.json({item:serializeEmployee(updated,new Map(refs.stores.map(store=>[store.id,store])))});
+  }catch(error){next(error)}
+});
+
+// Reuse the ordinary employee projection while keeping credential, roles and
+// payroll changes on their existing Owner paths.
+router.patch("/:employeeId/details",async(req,res,next)=>{
+  try{
+    if(req.user?.staffAccess!==true)throw staffError();
+    const context=await contextFor(req),{company,store}=context;
+    const body=z.object({
+      expectedUpdatedAt:z.string().datetime(),
+      phone:z.string().trim().max(60).nullable(),
+      email:z.union([z.string().trim().email().max(180),z.literal(""),z.null()]),
+      worksMorning:z.boolean(),worksAfternoon:z.boolean(),worksNight:z.boolean(),worksWeekend:z.boolean(),
+      confirmed,reason:z.string().trim().min(3).max(500)
+    }).strict().parse(req.body||{});
+    const where={id:req.params.employeeId,companyId:company.id,baseStoreId:store.id,active:true,
+      storeAccess:{none:{active:true,storeId:{not:store.id}}}};
+    const select=employeeReadSelection(store.id,company.id);
+    const details=employee=>({phone:employee.phone,email:employee.email,worksMorning:employee.worksMorning,
+      worksAfternoon:employee.worksAfternoon,worksNight:employee.worksNight,worksWeekend:employee.worksWeekend});
+    const item=await prisma.$transaction(async tx=>{
+      await requireStaffAction(tx,req,store.id,"employees.edit");
+      const existing=await tx.workforceEmployee.findFirst({where,select});
+      if(!existing)throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Δεν βρέθηκε ενεργός εργαζόμενος αποκλειστικά στο κατάστημα.");
+      const updated=await tx.workforceEmployee.updateMany({
+        where:{...where,updatedAt:new Date(body.expectedUpdatedAt)},
+        data:{...details(body),phone:cleanText(body.phone),email:cleanText(body.email)?.toLowerCase()||null}
+      });
+      if(updated.count!==1)throw staffError(409,"STAFF_EMPLOYEE_CHANGED","Η καρτέλα άλλαξε. Ανανέωσε πριν συνεχίσεις.");
+      const employee=await tx.workforceEmployee.findFirst({where,select});
+      if(!employee)throw staffError(409,"STAFF_EMPLOYEE_CHANGED","Η καρτέλα άλλαξε. Ανανέωσε πριν συνεχίσεις.");
+      await audit(tx,req,{companyId:company.id,storeId:store.id,action:"WORKFORCE_EMPLOYEE_UPDATED",
+        entityType:"WORKFORCE_EMPLOYEE",entityId:employee.id,before:details(existing),after:details(employee),reason:body.reason});
+      return serializeEmployeeRead(employee,store);
+    });
+    res.json({companyId:company.id,storeId:store.id,item});
   }catch(error){next(error)}
 });
 

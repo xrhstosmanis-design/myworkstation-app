@@ -1,0 +1,135 @@
+.pos-transfer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: grid;
+  place-items: center;
+  background: #102b29b8;
+  padding: clamp(8px, 2vw, 24px);
+}
+
+.pos-transfer-card {
+  width: min(1280px, 100%);
+  height: min(860px, 94dvh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #f3f8f6;
+  color: #183832;
+  box-shadow: 0 24px 80px #061d2466;
+  font-size: 16px;
+}
+
+.pos-transfer-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px clamp(14px, 3vw, 32px);
+  background: #084c40;
+  color: #fff;
+}
+
+.pos-transfer-card h2 { margin: 0; font-size: clamp(20px, 3vw, 28px); }
+.pos-transfer-header-actions, .pos-transfer-submit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pos-transfer-content {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: clamp(12px, 2vw, 24px);
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.pos-transfer-entry, .pos-transfer-history {
+  min-width: 0;
+  padding: clamp(12px, 2vw, 22px);
+  border: 1px solid #d4e3dc;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.pos-transfer-card label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-weight: 650;
+}
+
+.pos-transfer-card input, .pos-transfer-card select {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 1px solid #a4bcb4;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.pos-transfer-card button, .pos-transfer-resume {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid #a4bcb4;
+  border-radius: 9px;
+  background: #edf7f3;
+  color: #143c32;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pos-transfer-card button:disabled { opacity: .52; cursor: default; }
+.pos-transfer-card button:focus-visible, .pos-transfer-resume:focus-visible {
+  outline: 3px solid #459ad0;
+  outline-offset: 2px;
+}
+
+.pos-transfer-scan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+.pos-transfer-scan label { margin: 0; }
+
+.pos-transfer-items, .pos-transfer-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pos-transfer-card li {
+  overflow-wrap: anywhere;
+  padding: 10px 0;
+  border-bottom: 1px solid #dce9e4;
+}
+
+.pos-transfer-card li button { margin: 6px 0 0 8px; }
+.pos-transfer-empty { padding: 16px 0; color: #48635b; }
+.pos-transfer-totals { margin-top: 18px; }
+.pos-transfer-submit button:last-child, .pos-transfer-resume {
+  background: #086b54;
+  color: #fff;
+  border-color: #086b54;
+}
+
+.pos-transfer-history details { padding: 10px 0; border-bottom: 1px solid #dce9e4; }
+.pos-transfer-history summary { padding: 10px 0; cursor: pointer; font-weight: 700; }
+.pos-transfer-resume { position: fixed; z-index: 1000; right: 16px; bottom: 16px; box-shadow: 0 4px 16px #143c3250; }
+
+@media (max-width: 760px) {
+  .pos-transfer-content { grid-template-columns: minmax(0, 1fr); align-content: start; }
+}
+
+.pos-transfer-card.read-only .pos-transfer-content{grid-template-columns:minmax(0,1fr)}

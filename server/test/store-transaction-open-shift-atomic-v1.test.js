@@ -21,7 +21,7 @@ test("a shift closed before persistence produces a conflict and no notification"
   const notification=createRoute.indexOf("notifyLedgerAlert");
   assert.ok(conflict>createRoute.indexOf('RETURNING *'));
   assert.ok(notification>conflict);
-  assert.match(createRoute,/if\(!rows\[0\]\)return res\.status\(409\)/);
+  assert.match(createRoute,/if\(!rows\[0\]\)return \{error:/);
   assert.match(createRoute,/Η συναλλαγή δεν αποθηκεύτηκε/);
 });
 

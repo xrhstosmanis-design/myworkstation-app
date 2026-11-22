@@ -27,6 +27,7 @@ const statements=[
   "cardOnDeliveryEnabled" BOOLEAN NOT NULL DEFAULT true,
   "autoPrintOnAccept" BOOLEAN NOT NULL DEFAULT true,
   "stockCheckEnabled" BOOLEAN NOT NULL DEFAULT false,
+  "autoStockCatalogEnabled" BOOLEAN NOT NULL DEFAULT false,
   "minimumOrderRetail" DECIMAL(14,4) NOT NULL DEFAULT 0,
   "minimumOrderStaff" DECIMAL(14,4) NOT NULL DEFAULT 0,
   "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0,
@@ -50,6 +51,7 @@ const statements=[
   CONSTRAINT "OnlineOrderingConfig_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "stockCheckEnabled" BOOLEAN NOT NULL DEFAULT false`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "autoStockCatalogEnabled" BOOLEAN NOT NULL DEFAULT false`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderRetail" DECIMAL(14,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,
@@ -302,7 +304,7 @@ async function ensureKatPilotDefaults(){
   if(await lifecycleDemoSeedDisabled(prisma,{companyId:store.companyId,storeId:store.id}))return;
   await prisma.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey","active","notes","createdAt","updatedAt") VALUES (${`online-ordering-${store.companyId}`},${store.companyId},'ONLINE_ORDERING',TRUE,'KAT pilot online ordering',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "active"=TRUE,"notes"='KAT pilot online ordering',"updatedAt"=CURRENT_TIMESTAMP`;
   await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept","stockCheckEnabled","publicSlug") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,'kat') ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"publicSlug"=COALESCE("OnlineOrderingConfig"."publicSlug",'kat'),"updatedAt"=CURRENT_TIMESTAMP`;
-  await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ON CONFLICT ("storeId","productId") DO NOTHING`;
+  await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE AND NOT EXISTS (SELECT 1 FROM "OnlineOrderingConfig" oc WHERE oc."companyId"=${store.companyId} AND oc."storeId"=${store.id} AND oc."autoStockCatalogEnabled"=TRUE) ON CONFLICT ("storeId","productId") DO NOTHING`;
 }
 export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureOnlineMemberSchema(prisma);await ensureKatPilotDefaults();await ensureRecipeIngredientsTracked();await ensureOnlineActorProtection();await reconcileDeliveredOnlineSales();console.log("Online ordering schema/config bootstrap completed.")}
 

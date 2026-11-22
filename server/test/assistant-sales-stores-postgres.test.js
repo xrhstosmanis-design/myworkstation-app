@@ -16,10 +16,14 @@ test("native PostgreSQL named category/store report reuses sale sums, excludes f
    'CREATE TABLE "PriceCatalogPromotion"("id" text primary key,"companyId" text,"active" bool)',
    'CREATE TABLE "Sale"("id" text primary key,"companyId" text,"storeId" text,"status" text,"transactionMode" text,"source" text,"occurredAt" timestamp,"originalSaleId" text)',
    'CREATE TABLE "SaleLine"("id" text primary key,"saleId" text,"productId" text,"description" text,"quantity" numeric,"unitPrice" numeric,"discount" numeric,"vatRate" numeric,"lineTotal" numeric,"promotionId" text,"promotionType" text)',
-   'CREATE TABLE "PurchaseDocumentLine"("purchaseDocumentId" text,"productId" text,"unit" text,"unitCost" numeric,"unitsPerPackage" numeric)',
-   'CREATE TABLE "PurchaseDocument"("id" text,"supplierId" text,"companyId" text,"storeId" text,"status" text,"documentDate" timestamp,"createdAt" timestamp)',
-   'CREATE TABLE "Supplier"("id" text,"name" text)'
+   'CREATE TABLE "PurchaseDocumentLine"("purchaseDocumentId" text,"productId" text,"unit" text,"unitCost" numeric,"unitsPerPackage" numeric,"createdAt" timestamp,"id" text,"quantity" numeric,"netAmount" numeric)',
+   'CREATE TABLE "PurchaseDocument"("id" text,"supplierId" text,"companyId" text,"storeId" text,"status" text,"documentDate" timestamp,"createdAt" timestamp,"sourceType" text,"purchaseOrderId" text,"documentNumber" text)',
+   'CREATE TABLE "PurchaseOrder"("id" text,"companyId" text,"storeId" text,"supplierId" text,"invoiceNumber" text,"status" text)',
+   'CREATE TABLE "PurchaseOrderLine"("orderId" text,"productId" text,"quantity" numeric,"netAmount" numeric,"resolutionStatus" text,"invoiceUnit" text,"stockUnitsPerInvoiceUnit" numeric)',
+   'CREATE TABLE "StockMovement"("id" text,"sourceType" text,"sourceId" text,"storeId" text,"productId" text,"movementType" text,"unitCost" numeric,"createdAt" timestamp)',
+   'CREATE TABLE "Supplier"("id" text,"companyId" text NOT NULL,"name" text)'
   ])await db.$executeRawUnsafe(sql);
+  await db.$executeRaw`INSERT INTO "Supplier"("id","companyId","name") VALUES('canonical-supplier-own','c','Canonical own supplier'),('canonical-supplier-foreign','x','Canonical foreign supplier')`;
   await db.$executeRaw`INSERT INTO "Store" VALUES('s','c','LAB'),('control','c','CONTROL'),('foreign','x','FOREIGN')`;
   await db.$executeRaw`INSERT INTO "ProductCategory" VALUES('cat','c','ΝΕΡΑ')`;
   await db.$executeRaw`INSERT INTO "Product" VALUES('p','c','ΝΕΡΟ 500ML','2269','PIECE','cat',NULL,.09),('l','c','ΝΕΡΟ ΧΥΜΑ','L','LITER','cat',NULL,.1),('foreign','x','ΝΕΡΟ 500ML','F','PIECE',NULL,NULL,1)`;

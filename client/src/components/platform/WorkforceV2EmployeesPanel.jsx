@@ -1,4 +1,4 @@
-import React from "react";
+import React,{useEffect,useRef,useState} from "react";
 import {AlertTriangle,Banknote,Briefcase,Building2,Clock3,Eye,RefreshCw,ShieldCheck,Users} from "lucide-react";
 import WorkforceV2ActionPreview from "./WorkforceV2ActionPreview.jsx";
 import WorkforceV2EmployeeTab from "./WorkforceV2EmployeeTab.jsx";
@@ -14,7 +14,93 @@ import "./workforce-v2-employees.css";
 import "./workforce-v2-rules-shifts.css";
 import "./workforce-v2-payroll.css";
 
-export default function WorkforceV2EmployeesPanel({company,store,request}){
+export default function WorkforceV2EmployeesPanel({company,store,request,readOnly=false,canEditDetails=false}){
+  return readOnly?<WorkforceV2EmployeeReadView company={company} store={store} request={request} canEditDetails={canEditDetails}/>:<EditableWorkforceV2EmployeesPanel company={company} store={store} request={request}/>;
+}
+
+function WorkforceV2EmployeeReadView({company,store,request,canEditDetails}){
+  const [data,setData]=useState(null),[selectedEmployee,setSelectedEmployee]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  const sequence=useRef(0),currentScope=useRef("");
+  const scope=JSON.stringify([company?.id,store?.id]);currentScope.current=scope;
+  const [loadedScope,setLoadedScope]=useState("");
+  const base=`/api/platform/store-modules/companies/${encodeURIComponent(company?.id||"")}/stores/${encodeURIComponent(store?.id||"")}/workforce-v2/employees`;
+  const load=async()=>{
+    const current=++sequence.current,own=scope;
+    setData(null);setSelectedEmployee(null);setLoadedScope("");setError("");
+    if(!company?.id||!store?.id){setBusy(false);return;}
+    setBusy(true);
+    try{
+      const result=await request(base);
+      if(current!==sequence.current||own!==currentScope.current)return;
+      if(result?.companyId!==company.id||result.storeId!==store.id||!Array.isArray(result.items)||result.items.some(employee=>employee.companyId!==company.id))throw Error("Μη έγκυρη απάντηση προσωπικού.");
+      setData({company,employees:result.items});setLoadedScope(own);
+    }catch(e){if(current===sequence.current&&own===currentScope.current)setError(e.message)}
+    finally{if(current===sequence.current&&own===currentScope.current)setBusy(false)}
+  };
+  useEffect(()=>{load();return()=>{sequence.current++}},[company?.id,store?.id,request]);
+  const openEmployee=async employee=>{
+    const current=++sequence.current,own=scope;
+    setSelectedEmployee(null);setError("");setBusy(true);
+    try{
+      const result=await request(`${base}/${encodeURIComponent(employee.id)}`);
+      if(current!==sequence.current||own!==currentScope.current)return;
+      if(result?.companyId!==company.id||result.storeId!==store.id||result.item?.id!==employee.id||result.item.companyId!==company.id)throw Error("Δεν επιβεβαιώθηκε η καρτέλα εργαζομένου.");
+      setSelectedEmployee(result.item);
+    }catch(e){if(current===sequence.current&&own===currentScope.current){setData(null);setLoadedScope("");setError(e.message)}}
+    finally{if(current===sequence.current&&own===currentScope.current)setBusy(false)}
+  };
+  const saveDetails=async fields=>{
+    if(!canEditDetails||busy||!selectedEmployee?.active||selectedEmployee.baseStoreId!==store.id||loadedScope!==scope)return;
+    const current=++sequence.current,own=scope,employee=selectedEmployee;
+    setBusy(true);setError("");
+    try{
+      const result=await request(`${base}/${encodeURIComponent(employee.id)}/details`,{
+        method:"PATCH",body:JSON.stringify({...fields,expectedUpdatedAt:employee.updatedAt,confirmed:true})
+      });
+      if(current!==sequence.current||own!==currentScope.current)return;
+      if(result?.companyId!==company.id||result.storeId!==store.id||result.item?.id!==employee.id||
+        result.item.companyId!==company.id||result.item.baseStoreId!==store.id)throw Error("Δεν επιβεβαιώθηκε η αποθήκευση.");
+      setSelectedEmployee(result.item);
+      setData(previous=>previous?{...previous,employees:previous.employees.map(row=>row.id===employee.id?result.item:row)}:previous);
+    }catch(e){if(current===sequence.current&&own===currentScope.current)setError(e.message)}
+    finally{if(current===sequence.current&&own===currentScope.current)setBusy(false)}
+  };
+  const visible=loadedScope===scope?data:null;
+  return <section className="workforce-manager workforce-personnel-read" aria-label="Προσωπικό καταστήματος">
+    <div className="workforce-manager-head"><h3>Προσωπικό · {store?.name}</h3><button type="button" className="secondary" disabled={busy} onClick={load}><RefreshCw/> Ανανέωση προσωπικού</button></div>
+    {error&&<div className="platform-alert error" role="alert">{error}</div>}
+    {busy&&<p role="status">Φόρτωση προσωπικού…</p>}
+    {visible&&<WorkforceV2EmployeeTab manager={{data:visible,busy}} store={store} readOnly selectedEmployee={selectedEmployee} onSelectEmployee={openEmployee}/>}
+    {visible&&canEditDetails&&selectedEmployee?.active&&selectedEmployee.baseStoreId===store.id&&
+      <StaffEmployeeDetailsForm key={JSON.stringify([selectedEmployee.id,selectedEmployee.updatedAt])}
+        employee={selectedEmployee} busy={busy} onSave={saveDetails}/>}
+  </section>;
+}
+
+const availabilityFields=[
+  ["worksMorning","Πρωί"],["worksAfternoon","Απόγευμα"],["worksNight","Βράδυ"],["worksWeekend","Σαββατοκύριακο"]
+];
+function StaffEmployeeDetailsForm({employee,busy,onSave}){
+  return <form onSubmit={event=>{
+    event.preventDefault();
+    const form=new FormData(event.currentTarget);
+    onSave({phone:form.get("phone"),email:form.get("email"),reason:form.get("reason"),
+      ...Object.fromEntries(availabilityFields.map(([key])=>[key,form.has(key)]))});
+  }}>
+    <fieldset disabled={busy}>
+      <legend>Επικοινωνία και διαθεσιμότητα · {employee.fullName}</legend>
+      <label>Τηλέφωνο<input type="tel" name="phone" maxLength={60} defaultValue={employee.phone||""}/></label>
+      <label>Email<input type="email" name="email" maxLength={180} defaultValue={employee.email||""}/></label>
+      {availabilityFields.map(([key,label])=><label key={key}>
+        <input type="checkbox" name={key} defaultChecked={employee[key]===true}/>{label}
+      </label>)}
+      <label>Αιτιολογία<input name="reason" required minLength={3} maxLength={500}/></label>
+      <button type="submit">Αποθήκευση στοιχείων εργαζομένου</button>
+    </fieldset>
+  </form>;
+}
+
+function EditableWorkforceV2EmployeesPanel({company,store,request}){
   const manager=useWorkforceV2Manager({company,store,request});
   const {tab,setTab,data,busy,error,message,load}=manager;
   if(!data)return <div className="workforce-loading"><RefreshCw/> {busy?"Φόρτωση Workforce v2…":"Δεν φορτώθηκαν τα δεδομένα."}{error&&<span>{error}</span>}{!busy&&<button className="secondary" onClick={load}>Επανάληψη</button>}</div>;

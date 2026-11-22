@@ -1,3 +1,4 @@
+import {reviewedCashAnswer} from '../../../../shared/assistant-reviewed-cash.mjs';
 import {businessReportAnswer} from '../../../../shared/assistant-business-answer.mjs';
 import {formatAssistantEuroText} from "./formatAssistantEuroText.js";
 export const assistantMoney=n=>Number(n).toLocaleString("el-GR",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
@@ -6,6 +7,7 @@ export const assistantUnit=u=>({PIECE:"τεμάχια",KG:"κιλά",LITER:"λί
 const finite=(r,keys)=>keys.every(k=>typeof r[k]==="number"&&Number.isFinite(r[k]));
 export function presentAssistantAnswer(result){
   if(!result)return null;
+  const reviewed=reviewedCashAnswer(result.evidence);if(reviewed)return reviewed;
   const fallback={answer:formatAssistantEuroText(result.answer),highlights:(result.highlights||[]).map(formatAssistantEuroText),limitations:formatAssistantEuroText(result.limitations)};
   const evidence=result.evidence||[];
   if(evidence.length===1&&evidence[0].kind==="business_records")return businessReportAnswer(evidence[0]);

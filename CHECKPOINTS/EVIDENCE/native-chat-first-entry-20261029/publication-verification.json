@@ -1,0 +1,37 @@
+{
+  "verifiedAt": "2026-10-29T21:52:13.104046+00:00",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "69198a7c2d1b41d1d1dd24ddccf9cfb958dee8fa"
+  },
+  "manifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "version": "0.1.11-preview",
+    "versionCode": 12,
+    "minimumAndroid": 8,
+    "videoCaptureMinimumAndroid": 11,
+    "maximumVideoSeconds": 30,
+    "maximumVideoBytes": 12582912,
+    "videoFormat": "MP4 H264/AAC",
+    "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.11-Preview.apk",
+    "sha256": "c796604a87c1fcd2634c7b220e1bd4ea1238048504a8a77b8f552668bcbbc082",
+    "bytes": 3687436,
+    "sourceCommit": "15f72c60f4aab29d67d655e27e976963bbbc2616",
+    "androidSourceTree": "1cd5eeeeff6c5746ba19792a297896286939370c",
+    "ciRun": 40952680821,
+    "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+    "signing": "stable-owner-key",
+    "acceptance": "TECHNICAL CANDIDATE; FIRST ENTRY AND SESSION DEVICE ACCEPTANCE PENDING; prior media acceptance retained"
+  },
+  "publicManifestEqualsRepository": true,
+  "publicApkEqualsSignedArtifact": true,
+  "publicApkSha256": "c796604a87c1fcd2634c7b220e1bd4ea1238048504a8a77b8f552668bcbbc082",
+  "publicApkBytes": 3687436,
+  "renderDeployId": "dep-dbhrtk6gekts73c6api0",
+  "renderLiveAt": "2026-10-29T21:51:07.566359Z",
+  "guardedDeployWorkflow": 40960468909,
+  "distributionPR": 3287,
+  "distributionMainCI": 40959327048,
+  "physicalAcceptance": "NOT TESTED"
+}

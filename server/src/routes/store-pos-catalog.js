@@ -1,3 +1,6 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {packageCatalog} from '../lib/pos-stock-packages.js';
+import {revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
 import {readLifecycleGeneration} from '../services/store-lifecycle-generation.js';
 import {Router} from "express";
 import crypto from "crypto";
@@ -6,6 +9,7 @@ import {advancedOnlineProductSearch} from "../advanced-online-product-search.js"
 import {z} from "zod";
 import {getStoreLabelSettings} from "../services/store-label-settings.js";
 import {registerPermanentPriceRoutes} from "../lib/pos-permanent-price.js";
+import {registerPosNewProductRoutes,posNewProductAllowed} from "../lib/pos-new-product-card.js";
 
 const router=Router();
 
@@ -27,9 +31,9 @@ async function storeFor(req,storeId){
   if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return row;
 }
-const adminAccess={leftKeys:true,editPosButtons:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true,purchaseOrders:true};
+const adminAccess={closeWithoutPrint:true,leftKeys:true,editPosButtons:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true,purchaseOrders:true};
 async function operatorAccess(req,storeId){
-  if(req.user?.tokenType!=="STORE_OPERATOR")return adminAccess;
+  if(req.user?.tokenType!=="STORE_OPERATOR")return {...adminAccess,newProduct:posNewProductAllowed(req.user)};
   const rows=await prisma.$queryRaw`
     SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions",COALESCE(p."backofficeMenu",'{}'::jsonb) AS "backofficeMenu",COALESCE(p."posAccess",TRUE) AS "posAccess"
     FROM "StoreOperatorCredential" c
@@ -39,7 +43,7 @@ async function operatorAccess(req,storeId){
   if(!row||row.posAccess===false){const error=new Error("Ο χειριστής δεν έχει ενεργή πρόσβαση στο POS από το BackOffice.");error.status=403;throw error}
   const p=row.permissions&&typeof row.permissions==="object"?row.permissions:{};
   return {
-    purchaseOrders:row.backofficeMenu?.orders===true,leftKeys:Boolean(p.leftKeys),editPosButtons:Boolean(p.editPosButtons),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),sameShiftPayments:p.sameShiftPayments!==false,centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
+    closeWithoutPrint:p.closeWithoutPrint===true,newProduct:posNewProductAllowed(req.user,row),purchaseOrders:row.backofficeMenu?.orders===true,leftKeys:Boolean(p.leftKeys),editPosButtons:Boolean(p.editPosButtons),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),sameShiftPayments:p.sameShiftPayments!==false,centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
   };
 }
 async function audit(req,store,eventType,details={}){
@@ -88,7 +92,13 @@ function layoutForAccess(rawLayout,access){if(!rawLayout||typeof rawLayout!=="ob
 
 router.use("/stores/:storeId",async(req,res,next)=>{
   try{
+    if(req.user?.staffAccess===true&&req.staffGrant?.capability==='radio.read'){
+      if(req.method!=='GET'||req.path!=='/online-radio'||req.user.storeId!==req.params.storeId)throw staffError();
+      await requireStaffGrant(prisma,req.user,req.params.storeId,'radio.read');
+      req.storeOperatorStore=await storeFor(req,req.params.storeId);req.storeOperatorAccess={};return next();
+    }
     assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);const access=await operatorAccess(req,store.id);req.storeOperatorAccess=access;req.storeOperatorStore=store;
+    if(req.method==="POST"&&/^\/(?:waste|table-orders\/[^/]+\/waste)\/?$/i.test(req.path)&&access.closeWithoutPrint!==true)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Κλείσιμο χωρίς εκτύπωση» από το BackOffice."});
     if(req.method==="POST"&&req.path.endsWith("/checkout")){const methods=requestedPaymentMethods(req.body||{}),needsCash=methods.includes("CASH"),needsCards=methods.includes("CARD")||methods.includes("IRIS");if(needsCash&&!access.cash){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cash",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Μετρητά» από το BackOffice."})}if(needsCards&&!access.cards){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cards",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Κάρτες» από το BackOffice."})}}
     if(req.method==="POST"&&(/\/sales\/[^/]+\/reverse$/.test(req.path)||/\/sales\/[^/]+\/internal-return$/.test(req.path))&&!access.returnItems){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"returnItems",action:"SALE_REVERSE",saleId:req.path.split("/").at(-2)||null});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Επιστροφή ειδών» από το BackOffice."})}
     await persistProductAuditAction(req,store,access);
@@ -97,6 +107,7 @@ router.use("/stores/:storeId",async(req,res,next)=>{
 });
 
 registerPermanentPriceRoutes(router,prisma);
+registerPosNewProductRoutes(router,prisma);
 
 router.get("/stores/:storeId/access",async(req,res)=>{
   const rows=await prisma.$queryRaw`SELECT "settings" FROM "ManagementParameters" WHERE "companyId"=${req.user.companyId} LIMIT 1`.catch(()=>[]);
@@ -156,13 +167,21 @@ function requireStoreManagement(req,res){
   return true;
 }
 
+export async function readBarcodePriceRequests(companyId,store,status="PENDING",{db=prisma}={}){
+    const rows=await db.$queryRaw`SELECT r.*,p."name" AS "productName",p."sku" FROM "ProductBarcodePriceRequest" r JOIN "Product" p ON p."id"=r."productId" AND p."companyId"=r."companyId" WHERE r."companyId"=${companyId} AND r."storeId"=${store.id} AND (${status}='ALL' OR r."status"=${status}) ORDER BY r."createdAt" DESC LIMIT 500`;
+    return({rows:rows.map(row=>({...row,oldPrice:row.oldPrice==null?null:money(row.oldPrice),requestedPrice:money(row.requestedPrice)}))});
+}
+export async function readBarcodeSalesReport(companyId,store,from,to,{db=prisma}={}){
+    const rows=await db.$queryRaw`SELECT p."id" AS "productId",p."name" AS "productName",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') AS barcode,SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS revenue FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId" JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=s."companyId" WHERE s."companyId"=${companyId} AND s."storeId"=${store.id} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to} AND s."source" NOT IN ('WASTE','PRODUCT_DESTRUCTION') GROUP BY p."id",p."name",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') ORDER BY p."name",barcode`;
+    const products=[];for(const row of rows){let product=products.find(item=>item.productId===row.productId);if(!product){product={productId:row.productId,productName:row.productName,sku:row.sku,quantity:0,revenue:0,barcodes:[]};products.push(product)}const detail={barcode:row.barcode,quantity:money(row.quantity),revenue:money(row.revenue)};product.quantity+=detail.quantity;product.revenue+=detail.revenue;product.barcodes.push(detail)}
+    return({store,from,to,products,totals:{quantity:products.reduce((sum,row)=>sum+row.quantity,0),revenue:products.reduce((sum,row)=>sum+row.revenue,0)}});
+}
 router.get("/stores/:storeId/barcode-price-requests",async(req,res,next)=>{
   try{
     if(!requireStoreManagement(req,res))return;
     const store=req.storeOperatorStore;
     const status=z.enum(["PENDING","APPROVED","REJECTED","ALL"]).default("PENDING").parse(String(req.query.status||"PENDING").toUpperCase());
-    const rows=await prisma.$queryRaw`SELECT r.*,p."name" AS "productName",p."sku" FROM "ProductBarcodePriceRequest" r JOIN "Product" p ON p."id"=r."productId" AND p."companyId"=r."companyId" WHERE r."companyId"=${req.user.companyId} AND r."storeId"=${store.id} AND (${status}='ALL' OR r."status"=${status}) ORDER BY r."createdAt" DESC LIMIT 500`;
-    res.json({rows:rows.map(row=>({...row,oldPrice:row.oldPrice==null?null:money(row.oldPrice),requestedPrice:money(row.requestedPrice)}))});
+    res.json(await readBarcodePriceRequests(req.user.companyId,store,status));
   }catch(error){next(error)}
 });
 
@@ -188,14 +207,28 @@ router.get("/stores/:storeId/barcode-sales-report",async(req,res,next)=>{
     if(!requireStoreManagement(req,res))return;
     const store=req.storeOperatorStore,query=z.object({from:z.string().datetime().optional(),to:z.string().datetime().optional()}).parse(req.query),from=query.from?new Date(query.from):new Date(Date.now()-30*86400000),to=query.to?new Date(query.to):new Date();
     if(from>to)return res.status(400).json({error:"Η ημερομηνία έναρξης δεν μπορεί να είναι μετά τη λήξη."});
-    const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name" AS "productName",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') AS barcode,SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS revenue FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId" JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=s."companyId" WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to} AND s."source" NOT IN ('WASTE','PRODUCT_DESTRUCTION') GROUP BY p."id",p."name",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') ORDER BY p."name",barcode`;
-    const products=[];for(const row of rows){let product=products.find(item=>item.productId===row.productId);if(!product){product={productId:row.productId,productName:row.productName,sku:row.sku,quantity:0,revenue:0,barcodes:[]};products.push(product)}const detail={barcode:row.barcode,quantity:money(row.quantity),revenue:money(row.revenue)};product.quantity+=detail.quantity;product.revenue+=detail.revenue;product.barcodes.push(detail)}
-    res.json({store,from,to,products,totals:{quantity:products.reduce((sum,row)=>sum+row.quantity,0),revenue:products.reduce((sum,row)=>sum+row.revenue,0)}});
+    res.json(await readBarcodeSalesReport(req.user.companyId,store,from,to));
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});next(error)}
 });
 
 router.get("/stores/:storeId/online-radio",async(req,res,next)=>{
   try{
+    if(req.user?.staffAccess===true){
+      const store=req.storeOperatorStore,companyId=req.user.companyId,storeId=store.id;
+      const readRadioAccess=async()=>{
+        const modules=await prisma.$queryRaw`SELECT EXISTS(SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW())) AS enabled`;
+        const config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`)[0];
+        if(!modules[0]?.enabled)throw staffError(403,'MODULE_DISABLED','Το πληρωμένο Online Ράδιο δεν είναι ενεργό.');
+        return {moduleActive:true,enabled:Boolean(config?.enabled),allowed:Array.isArray(config?.allowedStationIds)?config.allowedStationIds:[]};
+      };
+      const access=await readRadioAccess(),terminal=String(req.user.terminalPos||'MAIN').trim().toUpperCase();
+      const state=(await prisma.$queryRaw`SELECT "stationId","volume" FROM "PosOnlineRadioState" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "terminalPos"=${terminal} LIMIT 1`)[0];
+      const stations=access.enabled&&access.allowed.length?await prisma.$queryRaw`SELECT "id","name" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${access.allowed}::text[]) ORDER BY "sortOrder","name"`:[];
+      await requireStaffGrant(prisma,req.user,storeId,'radio.read');
+      const current=await readRadioAccess();
+      if(JSON.stringify(current)!==JSON.stringify(access))throw staffError(409,'STAFF_SOURCE_CHANGED','Η ρύθμιση ραδιοφώνου άλλαξε. Κάνε ανανέωση.');
+      return res.json({companyId,storeId,moduleActive:true,enabled:access.enabled,stations:stations.map(({id,name})=>({id,name})),state:{stationId:stations.some(row=>row.id===state?.stationId)?state.stationId:null,volume:state?.volume==null?.7:money(state.volume)},terminalPos:terminal});
+    }
     const store=req.storeOperatorStore,moduleRows=await prisma.$queryRaw`SELECT EXISTS(SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW())) AS enabled`,config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0],terminal=String(req.user.terminalPos||"MAIN").trim().toUpperCase(),state=(await prisma.$queryRaw`SELECT "stationId","volume" FROM "PosOnlineRadioState" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminal} LIMIT 1`)[0];
     const moduleActive=Boolean(moduleRows[0]?.enabled),enabled=moduleActive&&Boolean(config?.enabled),allowed=Array.isArray(config?.allowedStationIds)?config.allowedStationIds:[];
     const stations=enabled&&allowed.length?await prisma.$queryRaw`SELECT "id","name","streamUrl" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${allowed}::text[]) ORDER BY "sortOrder","name"`:[];
@@ -234,7 +267,7 @@ router.put("/stores/:storeId/layout",async(req,res,next)=>{
     const layout=req.body?.layout?{...req.body.layout}:null;
     if(layout)delete layout.audienceSettings;
     if(!layout||typeof layout!=="object"||!Array.isArray(layout.quickKeys)||!Array.isArray(layout.categories))return res.status(400).json({error:"Η διάταξη πλήκτρων δεν είναι έγκυρη."});
-    if(layout.quickKeys.length>20||layout.categories.length>20)return res.status(400).json({error:"Επιτρέπονται έως 20 γρήγορα πλήκτρα και 20 κατηγορίες."});
+    if(layout.quickKeys.length>40||layout.categories.length>20)return res.status(400).json({error:"Επιτρέπονται έως 40 γρήγορα πλήκτρα και 20 κατηγορίες."});
     const bytes=Buffer.byteLength(JSON.stringify(layout));
     if(bytes>250000)return res.status(413).json({error:"Η διάταξη είναι υπερβολικά μεγάλη."});
     const rows=await prisma.$queryRaw`
@@ -277,7 +310,7 @@ router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
         }
       }
     }catch{}finally{clearTimeout(timer)}
-    const advanced=await advancedOnlineProductSearch({companyId:req.user.companyId,storeId:store.id,actorId:req.user.id,barcode:q});
+    const advanced=await advancedOnlineProductSearch({companyId:req.user.companyId,storeId:store.id,actorId:req.user.id,barcode:q,...await customerSearchScope(req,store.id),verifyCostScope:()=>revalidateCostRequest(req,async current=>{await customerSearchScope(current,store.id);if(!(await operatorAccess(current,store.id)).onlineProductSearch)throw Object.assign(new Error('AI_WALLET_SCOPE_DENIED'),{code:'AI_WALLET_SCOPE_DENIED',status:403});})});
     if(advanced.rows?.length){
       await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"GOOGLE_SEARCH",provider:advanced.provider,resultCount:advanced.rows.length,advancedModule:true});
       return res.json({query:q,source:"GOOGLE_SEARCH",rows:advanced.rows,advanced:{enabled:advanced.enabled,configured:advanced.configured,provider:advanced.provider,usage:advanced.usage,limits:advanced.limits}});
@@ -326,30 +359,34 @@ router.get("/stores/:storeId",async(req,res,next)=>{
     const [layoutRows,products]=await Promise.all([
       prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]),
       prisma.$queryRaw`
-        SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",mp."sourceCode" AS "masterCode",
+        SELECT p."id",p."sku",p."name",CASE WHEN sp."vatDepartmentIdOverride" IS NULL THEN p."vatRate" ELSE vd."vatRate" END AS "vatRate",p."masterProductId",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",mp."sourceCode" AS "masterCode",
           COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
-          c."name" AS "categoryName",
+          c."name" AS "categoryName",sc."name" AS "subcategoryName",
           COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",
           COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=p."masterProductId" AND NOT EXISTS (SELECT 1 FROM "ProductBarcode" claimed JOIN "Product" owner ON owner."id"=claimed."productId" WHERE owner."companyId"=p."companyId" AND owner."id"<>p."id" AND claimed."barcode"=mpb."barcode")),'[]') AS "masterBarcodes",
           COALESCE((SELECT json_agg(jsonb_build_object('id',rp."id",'name',rp."name",'sku',rp."sku",'quantity',si."quantity",'salePrice',COALESCE(si."salePrice",rsp."salePrice",rp."salePrice"),'currentStock',COALESCE(rsp."currentStock",0),'freeSalePrice',false,'negativeStockWarning',rp."negativeStockWarning") ORDER BY rp."name") FROM "ProductSetItem" si JOIN "Product" rp ON rp."id"=si."relatedProductId" LEFT JOIN "StoreProduct" rsp ON rsp."productId"=rp."id" AND rsp."storeId"=${store.id} WHERE si."companyId"=${req.user.companyId} AND si."productId"=p."id" AND rp."active"=true AND COALESCE(rsp."active",false)=true),'[]') AS "setItems"
         FROM "StoreProduct" sp
         JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId}
-        LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+        LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId")
+ LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=sp."vatDepartmentIdOverride" AND vd."companyId"=p."companyId"
+ LEFT JOIN "ProductSubcategory" sc ON sc."id"=CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END
         LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId" AND mp."active"=true
         WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true
         ORDER BY c."name" NULLS LAST,p."name"`
     ]);
     const layout=layoutForAccess(layoutRows[0]?.layoutJson||null,access);
-    res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,sourceCode:row.masterCode||row.sku||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
+    res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:(await packageCatalog(prisma,{companyId:req.user.companyId,storeId:store.id},products)).map(row=>({...row,sourceCode:row.masterCode||row.sku||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
   }catch(error){next(error)}
 });
 
 router.get("/stores/:storeId/legacy-full",async(req,res,next)=>{
   try{const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);const layoutRows=await prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]);const layout=layoutForAccess(layoutRows[0]?.layoutJson||null,access);const products=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",resolved_mp."id" AS "resolvedMasterProductId",resolved_mp."sourceCode" AS "masterCode",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",c."name" AS "categoryName",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=resolved_mp."id" AND NOT EXISTS (SELECT 1 FROM "ProductBarcode" claimed JOIN "Product" owner ON owner."id"=claimed."productId" WHERE owner."companyId"=p."companyId" AND owner."id"<>p."id" AND claimed."barcode"=mpb."barcode")),'[]') AS "masterBarcodes"
-      FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId} LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      SELECT p."id",p."sku",p."name",CASE WHEN sp."vatDepartmentIdOverride" IS NULL THEN p."vatRate" ELSE vd."vatRate" END AS "vatRate",p."masterProductId",resolved_mp."id" AS "resolvedMasterProductId",resolved_mp."sourceCode" AS "masterCode",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=resolved_mp."id" AND NOT EXISTS (SELECT 1 FROM "ProductBarcode" claimed JOIN "Product" owner ON owner."id"=claimed."productId" WHERE owner."companyId"=p."companyId" AND owner."id"<>p."id" AND claimed."barcode"=mpb."barcode")),'[]') AS "masterBarcodes"
+      FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId} LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId")
+ LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=sp."vatDepartmentIdOverride" AND vd."companyId"=p."companyId"
+ LEFT JOIN "ProductSubcategory" sc ON sc."id"=CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END
       LEFT JOIN LATERAL (SELECT mp."id",mp."sourceCode" FROM "MasterProduct" mp WHERE mp."active"=true AND (mp."id"=p."masterProductId" OR (p."sku" IS NOT NULL AND mp."sourceCode"=p."sku") OR (p."sku" IS NOT NULL AND EXISTS (SELECT 1 FROM "MasterProductBarcode" z WHERE z."masterProductId"=mp."id" AND z."barcode"=p."sku")) OR EXISTS (SELECT 1 FROM "MasterProductBarcode" mb JOIN "ProductBarcode" pb ON pb."productId"=p."id" AND pb."barcode"=mb."barcode" WHERE mb."masterProductId"=mp."id") OR (p."name" IS NOT NULL AND mp."name" IS NOT NULL AND lower(btrim(mp."name"))=lower(btrim(p."name")))) ORDER BY CASE WHEN mp."id"=p."masterProductId" THEN 0 WHEN p."sku" IS NOT NULL AND mp."sourceCode"=p."sku" THEN 1 ELSE 2 END,mp."id" LIMIT 1) resolved_mp ON true
-      WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,masterProductId:row.resolvedMasterProductId||row.masterProductId||null,sourceCode:row.masterCode||row.sku||null,masterCode:row.masterCode||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))})}catch(error){next(error)}
+      WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:(await packageCatalog(prisma,{companyId:req.user.companyId,storeId:store.id},products)).map(row=>({...row,masterProductId:row.resolvedMasterProductId||row.masterProductId||null,sourceCode:row.masterCode||row.sku||null,masterCode:row.masterCode||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))})}catch(error){next(error)}
 });
 export default router;
 

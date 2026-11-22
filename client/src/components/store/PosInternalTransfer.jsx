@@ -1,0 +1,281 @@
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import "./pos-internal-transfer.css";
+
+const money = new Intl.NumberFormat("el-GR", { style: "currency", currency: "EUR" });
+
+export default function PosInternalTransfer({ api:sendRequest, storeId, scanCatalog, minimized, onMinimize, onRestore, onClose, onDone,companyId,readOnly=false }) {
+  const api=(path,options={})=>{
+    if(readOnly&&String(options.method||'GET').toUpperCase()!=='GET')return Promise.reject(Error('Η πρόσβαση επιτρέπει μόνο προβολή.'));
+    return sendRequest(path,options);
+  };
+  const path = `/api/store-pos/stores/${encodeURIComponent(storeId)}/internal-transfers`;
+  const [selectedCredit, setSelectedCredit] = useState(null);
+  const [bankReference, setBankReference] = useState("");
+  const [storedCashReceipts, setCashReceipts] = useState([]);
+  const [storedExternalHistory, setExternalHistory] = useState([]);
+  const [mailTransferId, setMailTransferId] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [notice, setNotice] = useState("");
+  const [storedCredit, setCredit] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [destination, setDestination] = useState("");
+  const [external, setExternal] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [items, setItems] = useState([]);
+  const [quote, setQuote] = useState(null);
+  const [pending, setPending] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [error, setError] = useState("");
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
+
+  const sequence=useRef(0),currentScope=useRef(''),scope=JSON.stringify([companyId,storeId,readOnly]);currentScope.current=scope;
+  const [loadedScope,setLoadedScope]=useState('');
+  const visible=!readOnly||loadedScope===scope;
+  const credit=visible?storedCredit:[],cashReceipts=visible?storedCashReceipts:[],externalHistory=visible?storedExternalHistory:[];
+  const loadReadOnly=async()=>{
+    const current=++sequence.current,own=scope;setCredit([]);setCashReceipts([]);setExternalHistory([]);setLoadedScope('');setError('');setPending(true);
+    try{
+      const results=await Promise.all(['credit','pending-cash-receipts','external-history'].map(suffix=>api(path+'/'+suffix)));
+      if(current!==sequence.current||own!==currentScope.current)return;
+      for(const result of results)if(result?.companyId!==companyId||result.storeId!==storeId||!Array.isArray(result.items))throw Error('Δεν επιβεβαιώθηκε το κατάστημα των διακινήσεων.');
+      setCredit(results[0].items);setCashReceipts(results[1].items);setExternalHistory(results[2].items);setLoadedScope(own);
+    }catch(failure){if(current===sequence.current&&own===currentScope.current)setError(failure.message)}
+    finally{if(current===sequence.current&&own===currentScope.current)setPending(false)}
+  };
+
+  useEffect(() => {
+    let active = true;
+    if(readOnly){loadReadOnly();return()=>{sequence.current++}};
+    api(path + "/destinations").then(rows => {
+      if (active) setStores(rows);
+    }).catch(error => {
+      if (active) setError(error.message);
+    });
+    api(path + "/credit").then(rows => {
+      if (active) setCredit(rows);
+    }).catch(error => {
+      if (active) setError(error.message);
+    });
+    api(path + "/external-history").then(rows => {
+      if (active) setExternalHistory(rows);
+    }).catch(error => {
+      if (active) setError(error.message);
+    });
+    api(path + "/pending-cash-receipts").then(rows => {
+      if (active) setCashReceipts(rows);
+    }).catch(error => {
+      if (active) setError(error.message);
+    });
+    return () => { active = false; };
+  }, [sendRequest, path,companyId,readOnly]);
+
+  function scan(event) {
+    event.preventDefault();
+    if(readOnly)return;
+    const product = scanCatalog.exact(barcode.trim(), { complete: true });
+    if (!product) return setError("Δεν βρέθηκε προϊόν για αυτό το barcode.");
+    const productId = product.productId || product.id;
+    setItems(rows => rows.some(row => row.productId === productId)
+      ? rows.map(row => row.productId === productId ? { ...row, quantity: row.quantity + 1 } : row)
+      : [...rows, { productId, name: product.name, quantity: 1 }]);
+    setBarcode("");
+    setQuote(null);
+    setError("");
+  }
+
+  async function submit(finalize) {
+    if(readOnly)return;
+    setPending(true);
+    setError("");
+    if (finalize) setSubmitAttempted(true);
+    try {
+      const result = await api(path + (finalize ? "" : "/quote"), {
+        method: "POST",
+        body: JSON.stringify({
+          ...(destination === "external" ? { externalDestinationName: external } : { destinationStoreId: destination }),
+          items: items.map(({ productId, quantity }) => ({ productId, quantity })),
+          idempotencyKey,
+          ...(finalize && { expectedPayable: quote.payable }),
+        }),
+      });
+      if (finalize) {
+        onDone(result);
+      } else {
+        setQuote(result);
+      }
+    } catch (error) {
+      setError(error.message);
+      if (finalize && error.status >= 400 && error.status < 500) {
+        setSubmitAttempted(false);
+        setQuote(null);
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function settle(row, method) {
+    if(readOnly)return;
+    setPending(true);
+    setError("");
+    setNotice("");
+    try {
+      const payment = await api(`${path}/${encodeURIComponent(row.id)}/${method}-settlement`, {
+        method: "POST",
+        body: JSON.stringify(method === "bank" ? { reference: bankReference.trim() } : {}),
+      });
+      setCredit(rows => rows.filter(item => item.id !== row.id));
+      setSelectedCredit(null);
+      setBankReference("");
+      setNotice(`Καταχωρίστηκε εξόφληση ${money.format(payment.amount)}.`);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function receiveCash(row) {
+    if(readOnly)return;
+    setPending(true);
+    setError("");
+    setNotice("");
+    try {
+      await api(`${path}/${encodeURIComponent(row.id)}/cash-receipt`, {
+        method: "POST",
+        body: "{}",
+      });
+      setCashReceipts(rows => rows.filter(item => item.id !== row.id));
+      setNotice(`Καταχωρίστηκε είσπραξη ${money.format(row.amount)} στο ταμείο.`);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function sendTransferEmail(event) {
+    event.preventDefault();
+    if (readOnly||pending || !mailTransferId) return;
+    setPending(true);
+    setError("");
+    setNotice("");
+    try {
+      await api(`${path}/${encodeURIComponent(mailTransferId)}/email`, {
+        method: "POST",
+        body: JSON.stringify({ email: recipient.trim() }),
+      });
+      setNotice("Ο διακομιστής email δέχτηκε την αποστολή του PDF.");
+      setMailTransferId("");
+      setRecipient("");
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const locked = pending || submitAttempted;
+  if (minimized&&!readOnly) return createPortal(
+    <button type="button" className="pos-transfer-resume" onClick={onRestore}>
+      Επαναφορά διακίνησης · {items.length} είδη
+    </button>, document.body
+  );
+
+  return createPortal(<div className="pos-transfer-overlay">
+    <section className={`pos-transfer-card${readOnly?" read-only":""}`} role="dialog" aria-modal="true" aria-labelledby="pos-transfer-title">
+      <header>
+        <h2 id="pos-transfer-title">Εσωτερική διακίνηση</h2>
+        <div className="pos-transfer-header-actions">
+          {!readOnly&&<button type="button" disabled={pending} onClick={onMinimize}>− Ελαχιστοποίηση</button>}
+          <button type="button" disabled={pending} onClick={() => {
+            if (!items.length || window.confirm("Να κλείσει η διακίνηση και να χαθούν τα είδη που σκανάρισες;")) onClose();
+          }}>Κλείσιμο</button>
+        </div>
+      </header>
+      <div className="pos-transfer-content">
+      {!readOnly&&<main className="pos-transfer-entry">
+      <label>Προορισμός
+        <select value={destination} disabled={locked} onChange={event => { setDestination(event.target.value); setQuote(null); }}>
+          <option value="">Επίλεξε κατάστημα</option>
+          {stores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
+          <option value="external">Εξωτερικό κατάστημα</option>
+        </select>
+      </label>
+      {destination === "external" && <label>Όνομα καταστήματος
+        <input value={external} maxLength={200} disabled={locked} onChange={event => { setExternal(event.target.value); setQuote(null); }}/>
+      </label>}
+      <form className="pos-transfer-scan" onSubmit={scan}>
+        <label>Barcode <input autoFocus disabled={locked} value={barcode} onChange={event => setBarcode(event.target.value)}/></label>
+        <button disabled={locked || !barcode.trim()}>Προσθήκη</button>
+      </form>
+      {!items.length && <p className="pos-transfer-empty">Σκάναρε το πρώτο προϊόν για να ξεκινήσεις.</p>}
+      <ul className="pos-transfer-items">{items.map(row => {
+        const priced = quote?.items.find(line => line.productId === row.productId);
+        return <li key={row.productId}>
+          {row.name} × {row.quantity}
+          {priced && <> · {money.format(priced.unitCost)} ανά μονάδα · ΦΠΑ {money.format(priced.vat)}</>}
+          <button type="button" disabled={locked} onClick={() => {
+            setItems(rows => rows.filter(item => item.productId !== row.productId));
+            setQuote(null);
+          }}>Αφαίρεση</button>
+        </li>;
+      })}</ul>
+      {notice && <p role="status">{notice}</p>}
+      {error && <p role="alert">{error}</p>}
+      <div className="pos-transfer-totals">
+      {quote && <p>Καθαρή αξία {money.format(quote.net)} · ΦΠΑ {money.format(quote.vat)} · <strong>Πληρωτέο {money.format(quote.payable)}</strong></p>}
+      <div className="pos-transfer-submit">
+      <button type="button" disabled={locked || !items.length || !destination || (destination === "external" && !external.trim())} onClick={() => submit(false)}>Υπολογισμός αξίας</button>
+      <button type="button" disabled={pending || !quote} onClick={() => submit(true)}>{submitAttempted ? "Επανάληψη καταχώρισης" : "Καταχώριση επί πιστώσει"}</button>
+      </div>
+      </div>
+      </main>}
+      <aside className="pos-transfer-history" aria-label="Ιστορικό διακινήσεων">
+      {readOnly&&<><button type="button" disabled={pending} onClick={loadReadOnly}>Ανανέωση διακινήσεων</button>{pending&&<p role="status">Φόρτωση διακινήσεων…</p>}{error&&<p role="alert">{error}</p>}</>}
+      <details>
+        <summary>Ανεξόφλητες διακινήσεις ({credit.length})</summary>
+        <ul>{credit.map(row => <li key={row.id}>
+          {new Date(row.createdAt).toLocaleDateString("el-GR", { timeZone: "Europe/Athens" })}
+          {" · "}{row.sourceName} → {row.destinationName} · {money.format(row.payable)}
+          {!readOnly&&<button type="button" disabled={locked} onClick={() => {
+            setSelectedCredit(row.id);
+            setBankReference("");
+          }}>Εξόφληση</button>}
+          {!readOnly&&selectedCredit === row.id && <div>
+            {row.canPayCash && <button type="button" disabled={locked} onClick={() => settle(row, "cash")}>Μετρητά</button>}
+            <label>Αριθμός τραπεζικής συναλλαγής
+              <input maxLength={200} value={bankReference} disabled={locked} onChange={event => setBankReference(event.target.value)}/>
+            </label>
+            <button type="button" disabled={locked || !bankReference.trim()} onClick={() => settle(row, "bank")}>Τραπεζική μεταφορά</button>
+          </div>}
+        </li>)}</ul>
+      </details>
+      {cashReceipts.length > 0 && <details>
+        <summary>Εκκρεμείς εισπράξεις μετρητών ({cashReceipts.length})</summary>
+        <ul>{cashReceipts.map(row => <li key={row.id}>
+          {row.destinationName} · {money.format(row.amount)}
+          {!readOnly&&<button type="button" disabled={locked} onClick={() => receiveCash(row)}>Καταχώριση είσπραξης</button>}
+        </li>)}</ul>
+      </details>}
+      <details>
+        <summary>Διακινήσεις προς εξωτερικά καταστήματα</summary>
+        <ul>{externalHistory.map(row => <li key={row.id}>
+          {new Date(row.createdAt).toLocaleString("el-GR", { timeZone: "Europe/Athens", hourCycle: "h23" })} · {row.destinationName}
+          {!readOnly&&<button type="button" disabled={locked} onClick={() => {
+            setMailTransferId(row.id);
+            setRecipient("");
+          }}>Αποστολή PDF</button>}
+          {!readOnly&&mailTransferId === row.id && <form onSubmit={sendTransferEmail}>
+            <label>Email παραλήπτη <input type="email" required maxLength={254} value={recipient}
+              disabled={pending} onChange={event => setRecipient(event.target.value)}/></label>
+            <button disabled={pending}>Αποστολή στο email</button>
+          </form>}
+        </li>)}</ul>
+      </details>
+      </aside>
+      </div>
+    </section>
+  </div>, document.body);
+}

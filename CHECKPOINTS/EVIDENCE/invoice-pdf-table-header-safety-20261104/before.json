@@ -1,0 +1,84 @@
+[
+  {
+    "attachments": {
+      "count": 84,
+      "digest": "b57f520e31785b7cc8072287fbacd175"
+    },
+    "captured_at": "2026-11-04T13:59:12.943382Z",
+    "documents": {
+      "count": 74,
+      "digest": "d54be4be7b8f82610093800369baf21e"
+    },
+    "id": "cmtpopbgo000trhb5ng9ytiru",
+    "inbox": {
+      "count": 66,
+      "digest": "bc81e709f6e583a01eca58babb75c304"
+    },
+    "jobs": {
+      "count": 82,
+      "digest": "e0fa77f791290018ceafa82545647a0b"
+    },
+    "movements": {
+      "count": 95,
+      "digest": "5d2e545fc3b4055f52f70e64dd20cbbf"
+    },
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "orders": {
+      "count": 62,
+      "digest": "c4166cc5d1d5d811400034e534aa0e91"
+    },
+    "shifts": {
+      "count": 44,
+      "digest": "7b517311010c89aee02902de96588434"
+    },
+    "stock": {
+      "count": 110,
+      "digest": "b2eb6b99d4ceebab1177aea70aa15e32"
+    },
+    "transactions": {
+      "count": 135,
+      "digest": "87d20c0542c586a74070118345bfe82f"
+    }
+  },
+  {
+    "attachments": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "captured_at": "2026-11-04T13:59:12.943382Z",
+    "documents": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "id": "cmv2qanca000psigeizep8o9m",
+    "inbox": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "jobs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "movements": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "name": "N40 CONTROL 20261010",
+    "orders": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "shifts": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "stock": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "transactions": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+  }
+]

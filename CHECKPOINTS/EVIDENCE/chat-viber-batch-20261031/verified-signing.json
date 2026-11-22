@@ -1,0 +1,22 @@
+{
+  "sourceSha": "b693a2656ffbcaaed1d96c680182de16692258f7",
+  "package": "gr.myworkstation.chat.preview",
+  "sha256": "9b684af688dde18b129755641df6ef6b1ef9c2f7926c639c4e96f167644b6c02",
+  "bytes": 3687436,
+  "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "status": "TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING",
+  "publicDistributionChanged": false,
+  "artifactZipSha256": "d1bf919d6ec31b7e01fd4b2f458c6766fed12a12c9c97a1e5634af280239ce6e",
+  "independentApkV2CertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "androidSourceTree": "d32799847678d28a1cb6790c7d7c7d0fa776b8b8",
+  "version": "0.1.13-preview",
+  "versionCode": 14,
+  "binaryManifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 14,
+    "versionName": "0.1.13-preview"
+  },
+  "compiledChatInteractionsClassPresent": true,
+  "verifiedAtUtc": "2026-10-31T19:20:26.730553+00:00",
+  "combinedPhoneAcceptance": "NOT TESTED"
+}

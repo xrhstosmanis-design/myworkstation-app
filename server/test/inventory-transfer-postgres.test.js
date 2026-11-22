@@ -23,7 +23,7 @@ test('real transfer route uses SQL-managed Product and balances new destination,
     ])await db.$executeRawUnsafe(sql);
     const handlers=new Map();let guard;
     const Router=()=>({...Object.fromEntries(['get','post','patch','delete','put'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs.at(-1))])),use(fn){guard=fn}});
-    const source=fs.readFileSync(new URL('../src/routes/inventory-archive.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'');
+    const source=fs.readFileSync(new URL('../src/routes/inventory-archive.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'').replace(/^export function /gm,'function ');
     new Function('Router','prisma','crypto','z',source)(Router,db,crypto,z);
     const run=(key,overrides={},user={companyId:'company',id:'owner',role:'OWNER'})=>new Promise((resolve,reject)=>{
       const req={user,body:{sourceStoreId:'source',destinationStoreId:'destination',productId:'product',quantity:1,reason:'N39 isolated transfer',idempotencyKey:key,...overrides}};

@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-02",
+  "status": "USER_APPROVAL_RETAINED_AUTHENTICATION_BLOCK",
+  "runtime": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+  "approvedPhotos": 8,
+  "exactOriginalSet": true,
+  "newUserApproval": true,
+  "automaticActionAttemptedOnce": true,
+  "applicationResult": "SIGN_IN_REQUIRED",
+  "secureAuthPrompt": "REJECTED_BEFORE_CREATION_BY_AUTO_REVIEW",
+  "reason": "Visible device-name field omitted from secure credential request; automation stopped.",
+  "credentialsEntered": false,
+  "paidRequests": 0,
+  "completedReadings": 0,
+  "allFivePrivateFinancialControlSnapshotsUnchanged": true,
+  "noProviderRetry": true,
+  "parent": "OPEN_ASSIGNED",
+  "nextAction": "Manual sign-in in same cloud tab, refresh exact source set and baselines; existing explicit eight-photo/OpenAI approval persists."
+}

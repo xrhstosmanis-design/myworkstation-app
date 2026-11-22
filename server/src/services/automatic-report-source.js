@@ -1,6 +1,7 @@
 import {createHash} from "node:crypto";
 import {dailyCashReportReadiness,reportBusinessPeriod,reportDayOffset,cashPreviewPeriod,summarizeCashVariances,summarizeOpeningOperators} from "./automatic-report-policy.js";
 import {legacyCashControlRule,sameCashRule} from "./cash-control-rules.js";
+import {readReviewedAutomaticCash} from "./cash-reviewed-automatic-source.js";
 
 const error=(status,message)=>Object.assign(new Error(message),{status});
 const sourceLimit=1000;
@@ -78,11 +79,17 @@ export async function readAutomaticCashPreviewInTransaction(tx,{actorId,companyI
     else if(!["FULL","DIFFERENCE_ONLY"].includes(rule.mode))holds.push({code:"CASH_MODE_UNSUPPORTED",mode:rule.mode});
     if(rule&&(typeof rule.deliveryTerminalPattern!=="string"||!rule.deliveryTerminalPattern.trim()))holds.push({code:"DELIVERY_PATTERN_NOT_CONFIGURED"});
     const ready=holds.length===0;
+    // Readiness retains closed predecessors for overlap checks, but only shifts
+    // opened in the requested period own its amounts and reviewed evidence.
+    const ownedIds=new Set(dayReadiness.flatMap(result=>result.sessionIds));
+    const ownedRows=rows.filter(row=>ownedIds.has(row.id));
     // Unknown or partial data is never a zero shortage. Only a complete ready
     // snapshot has totals; original employee amounts always remain unadjusted.
-    const groups=ready?summarizeCashVariances(rows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
+    const groups=ready?summarizeCashVariances(ownedRows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
     const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,frequency,period,configuration,rule,rows})).digest("hex");
-    return {kind:`${frequency}_CASH_PREVIEW`,frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
+    const reviewedCash=configuration.reviewedReconciliation===true?await readReviewedAutomaticCash(tx,{actorId,companyId,storeId,period,rows:ownedRows,groups,rule,sourceFingerprint,ready,includeDailyEvidence:frequency==="DAILY"}):null;
+    return {kind:`${frequency}_CASH_PREVIEW`,frequency,store,period,ready,holds,dayReadiness,sourceCount:ownedRows.length,
+      ...(configuration.reviewedReconciliation===true?{reviewedReconciliation:true,reviewedCash}:{}),
       complete:rows.length<=sourceLimit,groups,...(frequency==="MONTHLY"?{openingOperatorSummary:ready?summarizeOpeningOperators(groups):null}:{}),sourceFingerprint,generatedAt:new Date(now),
       rule:rule?{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled}:null,
       settingsVersion:settingsVersion??null,employeeLiabilityAdjusted:false,deliveryStatus:"PREVIEW_ONLY",

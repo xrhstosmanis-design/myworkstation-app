@@ -1,5 +1,7 @@
 import React,{useEffect,useRef,useState} from "react";
+import {flushSync} from "react-dom";
 import {ArrowLeft,BriefcaseBusiness,Barcode,Copy,KeyRound,RefreshCw,ShieldCheck,Users,WalletCards} from "lucide-react";
+import StoreInvoiceEntry from "./StoreInvoiceEntry.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
@@ -32,7 +34,10 @@ export default function StoreCloudPage(props){
   return <StoreWorkspace key={props.store.id} {...props}/>;
 }
 
-function StoreWorkspace({api,store,onBack,onWorkforce}){
+function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCommerce,navigationLocked=false,primaryView,onPrimaryChange}){
+  const delegated=Array.isArray(capabilities);
+  const can=key=>!delegated||capabilities.includes(key);
+  const salesAllowed=can('sales.read');
   const [version,setVersion]=useState(0);
   const lastSyncValue=useRef(null);
   const lastServerFingerprint=useRef(null);
@@ -44,7 +49,35 @@ function StoreWorkspace({api,store,onBack,onWorkforce}){
   const [pairingCopied,setPairingCopied]=useState(false);
   const [writerState,setWriterState]=useState({loading:true,configured:false,online:false,lastSeenAt:null});
   const [toolOpen,setToolOpen]=useState("");
-  const [primary,setPrimary]=useState("shifts");
+  const [invoiceOpen,setInvoiceOpen]=useState(false);
+  const [invoiceEntryMessage,setInvoiceEntryMessage]=useState("");
+  const invoiceOpenRef=useRef(false),invoiceRegionRef=useRef(null);
+  // Native document-wide installers support one commerce workspace. Refuse a
+  // competing entry rather than discarding the user's current working state.
+  const refuseCompetingCommerce=()=>{
+    if(!invoiceOpenRef.current&&!invoiceRegionRef.current)return false;
+    setInvoiceEntryMessage("Κλείσε πρώτα τη θυρίδα τιμολογίων για να ανοίξεις την Εμπορική λειτουργία.");return true;
+  };
+  useEffect(()=>{
+    const reserve=event=>{if(refuseCompetingCommerce())event.preventDefault()};
+    window.addEventListener("mws:commerce-entry-request",reserve);
+    return()=>window.removeEventListener("mws:commerce-entry-request",reserve);
+  },[]);
+  const openInvoices=()=>{
+    if(navigationLocked||invoiceOpenRef.current)return;
+    if(!window.dispatchEvent(new window.CustomEvent("mws:store-invoice-entry-request",{cancelable:true}))){setInvoiceEntryMessage("Κλείσε πρώτα την ανοικτή Εμπορική λειτουργία για να ανοίξεις τη θυρίδα τιμολογίων.");return}
+    invoiceOpenRef.current=true;setInvoiceEntryMessage("");setInvoiceOpen(true);
+  };
+  const openCommerce=()=>{if(refuseCompetingCommerce())return;onOpenCommerce?onOpenCommerce():window.dispatchEvent(new window.CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))};
+  const closeInvoices=()=>{if(navigationLocked)return;invoiceOpenRef.current=false;setInvoiceEntryMessage("");setInvoiceOpen(false)};
+  const openInvoiceOrder=order=>{
+    if(navigationLocked||!invoiceOpenRef.current||!invoiceRegionRef.current||order.storeId!==store.id)return;
+    flushSync(closeInvoices);
+    window.dispatchEvent(new window.CustomEvent("mws:commerce-open",{detail:{view:"operations",storeId:store.id,invoiceOrder:order}}));
+  };
+  const [primary,setPrimary]=useState(can("sales.read")?"shifts":"payments");
+  const currentPrimary=primaryView??primary;
+  const choosePrimary=value=>{if(navigationLocked)return;onPrimaryChange?onPrimaryChange(value):setPrimary(value)};
 
   const createPairingCode=async()=>{
     if(pairing&&Date.parse(pairing.expiresAt)>Date.now()&&!window.confirm("Θα ακυρωθεί ο προηγούμενος κωδικός, αν δεν έχει ήδη χρησιμοποιηθεί. Να δημιουργηθεί νέος;"))return;
@@ -68,6 +101,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce}){
   };
 
   useEffect(()=>{
+    if(!salesAllowed)return;
     const consumeSyncValue=value=>{
       if(!value||value===lastSyncValue.current)return;
       lastSyncValue.current=value;
@@ -109,9 +143,10 @@ function StoreWorkspace({api,store,onBack,onWorkforce}){
       document.removeEventListener("visibilitychange",refreshOnVisibility);
       window.removeEventListener("pageshow",refreshOnPageShow);
     };
-  },[api,store.id]);
+  },[api,store.id,salesAllowed]);
 
   useEffect(()=>{
+    if(delegated)return;
     let stopped=false;
     const checkWriter=async()=>{
       try{
@@ -124,15 +159,16 @@ function StoreWorkspace({api,store,onBack,onWorkforce}){
     checkWriter();
     const timer=window.setInterval(checkWriter,5000);
     return ()=>{stopped=true;window.clearInterval(timer)};
-  },[api,store.id]);
+  },[api,store.id,delegated]);
 
   return <section className="cloud-page store-operations-front">
     <div className="cloud-titlebar">
-      <button className="cloud-back" onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
+      <button className="cloud-back" disabled={navigationLocked} onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
       <div className="cloud-titlebar-actions">
         <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
-        <button className="cloud-refresh" type="button" onClick={()=>window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
-        <ScreenRecorderWindowLauncher/>
+        {(!delegated||onOpenCommerce)&&<button className="cloud-refresh" type="button" disabled={navigationLocked} onClick={openCommerce}><BriefcaseBusiness/>Εμπορική λειτουργία</button>}
+        {!delegated&&<button className="cloud-refresh" type="button" aria-expanded={invoiceOpen} disabled={navigationLocked} onClick={openInvoices}>Θυρίδα τιμολογίων καταστήματος</button>}
+        {!delegated&&<ScreenRecorderWindowLauncher/>}
       </div>
     </div>
 
@@ -144,19 +180,25 @@ function StoreWorkspace({api,store,onBack,onWorkforce}){
       </div>
     </div>
 
+    {!delegated&&invoiceEntryMessage&&<p role="alert">{invoiceEntryMessage}</p>}
+    {!delegated&&invoiceOpen&&<section ref={invoiceRegionRef} aria-label="Θυρίδα επιλεγμένου καταστήματος">
+      <button className="owner-tool-close" type="button" disabled={navigationLocked} onClick={closeInvoices}>Κλείσιμο θυρίδας τιμολογίων</button>
+      <StoreInvoiceEntry api={api} storeId={store.id} onOpenOrder={openInvoiceOrder}/>
+    </section>}
+
     <nav className="owner-primary-nav" aria-label="Βάρδιες και πληρωμές">
-      <button type="button" aria-pressed={primary==="shifts"} onClick={()=>setPrimary("shifts")}><WalletCards/>Βάρδιες & ταμεία</button>
-      <button type="button" aria-pressed={primary==="payments"} onClick={()=>setPrimary("payments")}><BriefcaseBusiness/>Πληρωμές Ιδιοκτήτη / Διαχειριστή</button>
+      {can("sales.read")&&<button type="button" aria-pressed={currentPrimary==="shifts"} disabled={navigationLocked} onClick={()=>choosePrimary("shifts")}><WalletCards/>Βάρδιες & ταμεία</button>}
+      {can("payments.read")&&<button type="button" aria-pressed={currentPrimary==="payments"} disabled={navigationLocked} onClick={()=>choosePrimary("payments")}><BriefcaseBusiness/>Πληρωμές Ιδιοκτήτη / Διαχειριστή</button>}
     </nav>
-    {primary==="shifts"&&<section aria-label="Βάρδιες και έλεγχος ταμείων">
-      <div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/></div>
-      <details className="owner-cash-details">
+    {currentPrimary==="shifts"&&can("sales.read")&&<section aria-label="Βάρδιες και έλεγχος ταμείων">
+      <div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store} readOnly={delegated}/></div>
+      {!delegated&&<details className="owner-cash-details">
         <summary>Αυτόματος έλεγχος και κλεισμένες βάρδιες</summary>
         <div id="backoffice-cash" className="backoffice-anchor"><CashControlPanel key={`cash-${version}`} api={api} store={store}/></div>
-      </details>
+      </details>}
     </section>}
-    {primary==="payments"&&<div className="store-operations-actions"><OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/></div>}
-    <details className="owner-store-tools">
+    {currentPrimary==="payments"&&can("payments.read")&&<div className="store-operations-actions"><OwnerPaymentQuickActions api={api} store={store} delegatedCapabilities={delegated?capabilities:undefined} onChanged={refresh}/></div>}
+    {!delegated&&<details className="owner-store-tools">
       <summary>Πρόσθετες λειτουργίες</summary>
       <div className="owner-store-tool-grid">
 
@@ -192,7 +234,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce}){
       {pairingError&&<p role="alert" style={{margin:"10px 0 0",color:"#b42318"}}>{pairingError}</p>}
     </section>}
 
-    </details>
+    </details>}
     <style>{`.owner-store-tools{background:#fff;border:1px solid #dce5ef;border-radius:18px;padding:18px;margin:0 0 18px}.owner-store-tools>summary,.owner-cash-details>summary{font-size:18px;font-weight:800;cursor:pointer;padding:12px 0;min-height:44px;box-sizing:border-box}.owner-store-tools[open]>summary{margin-bottom:14px}.owner-cash-details{margin:14px 0 18px;background:#fff;border:1px solid #dce5ef;border-radius:16px;padding:0 18px}.owner-tool-close{min-height:44px;padding:10px 14px;margin:14px 0;border:1px solid #cddae6;border-radius:10px;background:#fff;font-weight:700;cursor:pointer}.store-operations-front .owner-primary-nav{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 18px}.store-operations-front .owner-primary-nav button{flex:1 1 240px;min-width:0;min-height:64px;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:1px solid #cddae6;border-radius:14px;background:#fff;color:#123b5d;font-size:18px;font-weight:800;cursor:pointer}.store-operations-front .owner-primary-nav button[aria-pressed="true"]{background:#123b5d;color:#fff;border-color:#123b5d}.store-operations-front .owner-primary-nav svg{flex-shrink:0;width:24px;height:24px}.store-operations-front .owner-primary-nav button:focus-visible,.owner-store-tools summary:focus-visible,.owner-cash-details summary:focus-visible{outline:3px solid #087eb8;outline-offset:3px}.owner-store-tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.owner-store-tool-grid button{min-height:112px;border:1px solid #cddae6;border-radius:16px;background:#f8fbff;padding:16px;display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto;text-align:left;align-items:center;gap:5px 10px;cursor:pointer}.owner-store-tool-grid button.active{border:2px solid #087eb8;background:#eef8ff}.owner-store-tool-grid svg{grid-row:1/3;width:26px;height:26px}.owner-store-tool-grid b{font-size:18px}.owner-store-tool-grid span{font-size:15px;color:#526276}.store-operations-front .cloud-hero h2{font-size:32px}.store-operations-front .cloud-hero p{font-size:17px;line-height:1.5}.owner-store-secondary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:850px){.owner-store-tool-grid{grid-template-columns:1fr}.owner-store-tool-grid button{min-height:90px}.owner-store-secondary-actions{grid-template-columns:1fr}}`}</style>
   </section>;
 }

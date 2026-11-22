@@ -1,0 +1,177 @@
+{
+  "recordedAt": "2026-10-22T17:48:00Z",
+  "owner": "feat/ai-owner-wallet-20261022",
+  "status": "TECHNICAL_INSTALLATION_VERIFIED_AWAITING_LAB",
+  "combinedMainCI": {
+    "runId": 39821105794,
+    "jobId": 119973999992,
+    "serverPass": 3916,
+    "backupPass": 8,
+    "failures": 0,
+    "skips": 0
+  },
+  "ordinaryDeploy": {
+    "runId": 39822773699,
+    "jobId": 119978211519,
+    "triggeredAt": "2026-10-22T17:28:09Z",
+    "expectedRevisionVerifiedAt": "2026-10-22T17:33:36Z",
+    "revision": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774"
+  },
+  "sourceVerification": {
+    "expected": "7f5afd3c41153b6cdc4315a165880e71db533dd0",
+    "live": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774",
+    "sourceIsAncestor": true,
+    "files": [
+      {
+        "path": "client/src/components/platform/AiOwnerWalletAdmin.jsx",
+        "expected": "442eb127eb819d63382216bbd69af6e82335e150",
+        "live": "442eb127eb819d63382216bbd69af6e82335e150",
+        "match": true
+      },
+      {
+        "path": "client/src/components/platform/PlatformAdminApp.jsx",
+        "expected": "901afbf95765608507b518643986b7d88007de1d",
+        "live": "901afbf95765608507b518643986b7d88007de1d",
+        "match": true
+      },
+      {
+        "path": "client/src/components/voice/AiOwnerWallet.jsx",
+        "expected": "a9170fadb0879b53fd8db18edec2b9516aa20602",
+        "live": "a9170fadb0879b53fd8db18edec2b9516aa20602",
+        "match": true
+      },
+      {
+        "path": "client/src/components/voice/AssistantChatPage.jsx",
+        "expected": "1ddc6b8bca96b310fdb7a2edeb52d142e1423388",
+        "live": "1ddc6b8bca96b310fdb7a2edeb52d142e1423388",
+        "match": true
+      },
+      {
+        "path": "client/src/components/voice/OwnerAssistantPanel.jsx",
+        "expected": "efb21da968592a39fa185afca84bcbb35d089091",
+        "live": "efb21da968592a39fa185afca84bcbb35d089091",
+        "match": true
+      },
+      {
+        "path": "client/src/components/voice/ai-wallet-money.mjs",
+        "expected": "3b8bcfa8cedd6f9d33be8ad34041b07abe816258",
+        "live": "3b8bcfa8cedd6f9d33be8ad34041b07abe816258",
+        "match": true
+      },
+      {
+        "path": "server/src/index.js",
+        "expected": "cb6664ea719644bcb6c36a6ffb9d133de4d8d2fe",
+        "live": "cb6664ea719644bcb6c36a6ffb9d133de4d8d2fe",
+        "match": true
+      },
+      {
+        "path": "server/src/lib/invoice-discount-verifier.js",
+        "expected": "f5ced937f30c7e3bf6ed1b002bf87d273521ee03",
+        "live": "f5ced937f30c7e3bf6ed1b002bf87d273521ee03",
+        "match": true
+      },
+      {
+        "path": "server/src/lib/pos-invoice-assistant-reading.js",
+        "expected": "e99b1ae4c53786bfacfdef2000b774aeaaec6cbb",
+        "live": "e99b1ae4c53786bfacfdef2000b774aeaaec6cbb",
+        "match": true
+      },
+      {
+        "path": "server/src/routes/ai-owner-wallet.js",
+        "expected": "0234bf56f9ad76a092cfab3cd0113c754964137b",
+        "live": "0234bf56f9ad76a092cfab3cd0113c754964137b",
+        "match": true
+      },
+      {
+        "path": "server/src/routes/commerce-azure-invoice-reader.js",
+        "expected": "32ea707e4fd7380bb47d2ed4336c51e1270951b2",
+        "live": "32ea707e4fd7380bb47d2ed4336c51e1270951b2",
+        "match": true
+      },
+      {
+        "path": "server/src/routes/commerce-pos-ai-recheck.js",
+        "expected": "9887374f77a55dd3340ce238a09de626d7ce1660",
+        "live": "9887374f77a55dd3340ce238a09de626d7ce1660",
+        "match": true
+      },
+      {
+        "path": "server/src/routes/commerce-pos-v244.js",
+        "expected": "c07276038ba107155336a3e82219812cde1bdc35",
+        "live": "c07276038ba107155336a3e82219812cde1bdc35",
+        "match": true
+      },
+      {
+        "path": "server/src/routes/invoice-assistant-pos.js",
+        "expected": "ca91056d15c923a62ed18681678e80039954985d",
+        "live": "ca91056d15c923a62ed18681678e80039954985d",
+        "match": true
+      },
+      {
+        "path": "server/src/routes/owner-assistant.js",
+        "expected": "b31f8ba562984d87539a3a6840fb13c4a8c5fdd0",
+        "live": "b31f8ba562984d87539a3a6840fb13c4a8c5fdd0",
+        "match": true
+      },
+      {
+        "path": "server/src/services/ai-owner-wallet-access.js",
+        "expected": "84cfccb940cdc85aa1ad36eb0f3e0b69de1b068b",
+        "live": "84cfccb940cdc85aa1ad36eb0f3e0b69de1b068b",
+        "match": true
+      },
+      {
+        "path": "server/src/services/ai-owner-wallet-contract.js",
+        "expected": "9f4fad7b0c655a236429cec80e5b7596ceea2cf2",
+        "live": "9f4fad7b0c655a236429cec80e5b7596ceea2cf2",
+        "match": true
+      },
+      {
+        "path": "server/src/services/ai-owner-wallet-notifications.js",
+        "expected": "f332ed36aeb1a4ab2feb4962ac83c3e16576f584",
+        "live": "f332ed36aeb1a4ab2feb4962ac83c3e16576f584",
+        "match": true
+      },
+      {
+        "path": "server/src/services/ai-owner-wallet-provider.js",
+        "expected": "9c29f0142e85ec64ed22f1554135d468b7fd8caf",
+        "live": "9c29f0142e85ec64ed22f1554135d468b7fd8caf",
+        "match": true
+      },
+      {
+        "path": "server/src/services/ai-owner-wallet-repository.js",
+        "expected": "e4a4b2a9d8ae631d726bf5986912d3409d3bb7cd",
+        "live": "e4a4b2a9d8ae631d726bf5986912d3409d3bb7cd",
+        "match": true
+      },
+      {
+        "path": "server/src/services/ai-owner-wallet-runtime.js",
+        "expected": "7dc9250dd3472c5b9b77b8f1ad412135a920518b",
+        "live": "7dc9250dd3472c5b9b77b8f1ad412135a920518b",
+        "match": true
+      },
+      {
+        "path": "server/src/services/ai-wallet-invoice-metering.js",
+        "expected": "b3e6c62b1c476c00d5ad3877e00f4888e717c56e",
+        "live": "b3e6c62b1c476c00d5ad3877e00f4888e717c56e",
+        "match": true
+      },
+      {
+        "path": "server/src/services/owner-assistant-handlers.js",
+        "expected": "989f2b30591a00cbba9646b5bf4b97c0b2dc59b1",
+        "live": "989f2b30591a00cbba9646b5bf4b97c0b2dc59b1",
+        "match": true
+      },
+      {
+        "path": "server/src/workers/ai-owner-wallet-notices.js",
+        "expected": "50caad40135c214b6f50b780255edfb7f454c715",
+        "live": "50caad40135c214b6f50b780255edfb7f454c715",
+        "match": true
+      }
+    ]
+  },
+  "runtimeBilling": "DISABLED_OBSERVED_NATIVE_PLATFORM_ADMIN",
+  "productionWrites": [],
+  "hostedLab": "NOT_TESTED",
+  "realInbox": "NOT_TESTED",
+  "pricing": "OWNER_APPROVED_50PERCENT_MARKUP_NOT_APPLIED_TRIAL_BUDGET_PROPOSED",
+  "next": "Verify complete current token-rate contract and actual configured models before trial activation. Retain owner."
+}

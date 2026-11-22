@@ -18,3 +18,10 @@
 .pos-header-menu-controls .mws-screen-recorder .recorder-error{color:#a92323;font-size:14px}
 .pos-header-menu-controls .store-chat-top-button{position:static;inset:auto;min-height:48px;width:auto;margin:0;box-shadow:none;background:#fff;color:#15364f}
 @media(max-width:620px){.pos-header-menu-controls{grid-template-columns:1fr}.pos-store-controls{flex-wrap:wrap}}
+
+.pos-header-menu-panel .pos-consumption-entry{min-height:64px;border:2px solid #176b50;background:#e7f3ee;color:#15364f;box-shadow:0 2px 4px #07152c12}
+.pos-header-menu-panel .pos-consumption-entry:hover{background:#d6eadd;border-color:#0f503b}
+.pos-consumption-entry-label{display:grid;gap:4px;min-width:0;flex:1}
+.pos-consumption-entry-label b{font:inherit}
+.pos-consumption-entry-label small{font:600 calc(11px * var(--pos-text-scale)) Arial,sans-serif;color:#385e50}
+.pos-header-menu-panel .pos-consumption-entry>svg:last-child{margin-left:auto}

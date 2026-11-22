@@ -1,0 +1,145 @@
+{
+  "hasMore": false,
+  "logs": [
+    {
+      "id": "1776e782-99ea-491c-89e1-334bb1fe2148",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-94hpd"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"4bd0b2a6-9711-4886-af44-c86204ee7aba\",\"stage\":\"exact_file_lookup\",\"outcome\":\"ok\",\"elapsedMs\":16.38}",
+      "timestamp": "2026-11-05T17:20:37.992479729Z"
+    },
+    {
+      "id": "916afac2-2e10-4ca7-9847-d8c12d4f5fc4",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-94hpd"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"4bd0b2a6-9711-4886-af44-c86204ee7aba\",\"stage\":\"pdf_header_page_probe\",\"outcome\":\"ok\",\"elapsedMs\":8.105}",
+      "timestamp": "2026-11-05T17:20:38.000661175Z"
+    },
+    {
+      "id": "6e3deecc-7116-4a5a-ae84-e9761b9348ab",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-94hpd"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"4bd0b2a6-9711-4886-af44-c86204ee7aba\",\"stage\":\"openai_attempt\",\"outcome\":\"ok\",\"elapsedMs\":2069.129,\"attempt\":1}",
+      "timestamp": "2026-11-05T17:20:40.069999069Z"
+    },
+    {
+      "id": "573a4a2c-ad93-48d6-91fb-f933b4d7a22a",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-94hpd"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"4bd0b2a6-9711-4886-af44-c86204ee7aba\",\"stage\":\"openai_header\",\"outcome\":\"ok\",\"elapsedMs\":2069.295}",
+      "timestamp": "2026-11-05T17:20:40.070063265Z"
+    },
+    {
+      "id": "d7c298b8-f979-4e5c-aea5-ef8ceaa715f2",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-94hpd"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"4bd0b2a6-9711-4886-af44-c86204ee7aba\",\"stage\":\"openai_supplier_match\",\"outcome\":\"ok\",\"elapsedMs\":1.818}",
+      "timestamp": "2026-11-05T17:20:40.07212459Z"
+    },
+    {
+      "id": "92fa4d6b-9765-473d-8007-cd217322239a",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-94hpd"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"4bd0b2a6-9711-4886-af44-c86204ee7aba\",\"stage\":\"request_total\",\"outcome\":\"finished\",\"elapsedMs\":2100.953}",
+      "timestamp": "2026-11-05T17:20:40.072958177Z"
+    }
+  ],
+  "nextEndTime": "2026-11-05T17:20:44Z",
+  "nextStartTime": "2026-11-05T17:20:40.072958178Z"
+}

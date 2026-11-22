@@ -27,7 +27,7 @@ function fixture(){
 }
 function file(f=fixture()){
   const w=XLSX.utils.book_new();
-  for(const [name,rows] of [[f.riz?"RIZAREIO_IMPORT":f.kat?"ΚΑΤ_IMPORT":"ΠΡΟΪΟΝΤΑ_IMPORT",f.rows],["ΕΛΕΓΧΟΣ",[{SKU:"DO-NOT-IMPORT"}]],["ΕΚΤΟΣ_ΕΙΣΑΓΩΓΗΣ",[{SKU:"EXCLUDED"}]],["ΤΜΗΜΑΤΑ",f.definitions],["BARCODES_IMPORT",f.barcodes],...(f.kat?[["KAT_META",f.meta],["EXISTING_IMPORT",f.existing]]:[]),...(f.riz?[["RIZAREIO_META",f.meta]]:[])])XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(rows),name);
+  for(const [name,rows] of [[f.ach?"ACHARNON_IMPORT":f.riz?"RIZAREIO_IMPORT":f.kat?"ΚΑΤ_IMPORT":"ΠΡΟΪΟΝΤΑ_IMPORT",f.rows],["ΕΛΕΓΧΟΣ",[{SKU:"DO-NOT-IMPORT"}]],["ΕΚΤΟΣ_ΕΙΣΑΓΩΓΗΣ",[{SKU:"EXCLUDED"}]],["ΤΜΗΜΑΤΑ",f.definitions],["BARCODES_IMPORT",f.barcodes],...(f.ach?[["ACHARNON_META",f.meta]]:[]),...(f.kat?[["KAT_META",f.meta],["EXISTING_IMPORT",f.existing]]:[]),...(f.riz?[["RIZAREIO_META",f.meta]]:[])])XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(rows),name);
   return "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"+XLSX.write(w,{type:"buffer",bookType:"xlsx"}).toString("base64");
 }
 function harness(db){
@@ -177,6 +177,41 @@ test('KAT existing identity permits rename only with exact company snapshot and 
   }
 });
 
+const achDefinitions=[
+ [1,'ΚΑΠΝΟΒΙΟΜΗΧ',0,true],[2,'ΕΛΛΗΝΙΚΟΣ ΤΥΠΟΣ',0,true],[3,'ΚΑΡΤΕΣ',0,true],
+ [4,'ΔΙΑΦΟΡΑ 6%',6,true],[5,'ΔΙΑΦΟΡΑ 13%',13,true],[6,'ΔΙΑΦΟΡΑ 24%',24,true],
+ [7,'ΠΑΡΟΧΗ ΥΠΗΡ.',24,false],[8,'ΕΙΣΙΤΗΡΙΑ',0,true],[9,'ΣΚΡΑΤΣ',0,true],
+ [17,'ΠΕΡΙΒΑΛΛ. ΤΕΛΟΣ',24,false],[18,'ΕΙΣΦ.ΠΡΟΣΤ.ΠΕΡΙΒ.',24,false]
+];
+function achSaved(){return achDefinitions.map(([n,description,vatRate,commerce])=>({id:'ach-dept-'+n,cashRegisterDepartment:n,description,legacyVatCode:String(n),vatRate,commerce,active:true,exemptionCode:null,exemptionDescription:null}));}
+function achFixture(company='company',store='store'){
+ const saved=achSaved();
+ const rows=saved.map((d,i)=>({SourceKey:'source-'+i,Περιγραφή:'Synthetic new item '+i,Barcode:i===1?'':`0009000${i}`,Λιανική:2.25,'Αγορά (προ ΦΠΑ)':0.719037,ΦΠΑ:d.vatRate,Απόθεμα:0,'Τμήμα ΦΠΑ':d.description,'Τμήμα ταμειακής':d.cashRegisterDepartment,'ΚΩΔ. ΦΠΑ':d.legacyVatCode,'Μονάδα Kiosk':'TEM',Κατηγορία:'Synthetic',Υποκατηγορία:'Scoped'}));
+ return {ach:true,rows,meta:[{Profile:'ACHARNON_CATALOG_V1',CompanyId:company,StoreId:store}],definitions:saved.map(d=>({'Τμήμα ταμειακής':d.cashRegisterDepartment,'Περιγραφή Kiosk':d.description,'ΚΩΔ ΦΠΑ Kiosk':d.legacyVatCode,ΦΠΑ:d.vatRate,'Εμπορία πηγής':d.commerce?'ΝΑΙ':'ΟΧΙ',DepartmentId:d.id,ExemptionCode:'',ExemptionDescription:''})),barcodes:[...rows.filter(r=>r.Barcode).map(r=>({SourceKey:r.SourceKey,Barcode:r.Barcode,Ρόλος:'ΚΥΡΙΟ'})),{SourceKey:'source-0',Barcode:'000900099',Ρόλος:'ΠΡΟΣΘΕΤΟ'}]};
+}
+test('Acharnon preview binds eleven saved departments and source references without importing old SKU or stock',async()=>{
+ const d=double({savedDepartments:achSaved()}),h=harness(d.db),raw=h.readWorkbook(file(achFixture()));
+ assert.equal(raw.sourceProfile?.name,'ACHARNON_CATALOG_V1');
+ const r=await h.call('/import-preview',{storeId:'store',dataUrl:file(achFixture())});
+ assert.equal(r.statusCode,200);assert.equal(r.body.summary.create,11);assert.equal(r.body.summary.invalid,0);
+ assert.ok(r.body.rows.every(r=>r.sku===''&&r.sourceKey.startsWith('source-')&&r.stock===0));
+ assert.deepEqual(r.body.rows[0].barcodes,['00090000','000900099']);assert.deepEqual(r.body.rows[1].barcodes,[]);
+ assert.equal(r.body.rows[1].vatRate,0);assert.equal(d.writes,0);
+});
+test('Acharnon refuses wrong target, stale departments, altered source keys, duplicate aliases and nonzero stock',async()=>{
+ for(const change of [f=>f.meta[0].CompanyId='foreign',f=>f.meta[0].StoreId='foreign',f=>f.definitions[0].DepartmentId='stale',f=>f.definitions[0].ΦΠΑ=24,f=>f.rows[0].SKU='OLD-123',f=>f.rows[1].SourceKey=f.rows[0].SourceKey,f=>f.barcodes[1].Barcode=f.barcodes[0].Barcode,f=>f.barcodes[0].Barcode=123,f=>f.rows[0].Απόθεμα=1,f=>f.rows[0]['ΚΩΔ. ΦΠΑ']='12',f=>f.rows[0]['Κωδικός ΦΠΑ ταμειακής']=5]){
+  const f=achFixture();change(f);const d=double({savedDepartments:achSaved()}),r=await harness(d.db).call('/import-preview',{storeId:'store',dataUrl:file(f)});
+  assert.ok(r.statusCode>=400||r.body.summary.invalid>0);assert.equal(d.writes,0);
+ }
+ const saved=achSaved();saved[0].exemptionCode='27';
+ const r=await harness(double({savedDepartments:saved}).db).call('/import-preview',{storeId:'store',dataUrl:file(achFixture())});assert.equal(r.statusCode,400);
+});
+test('Acharnon first catalogue refuses delegated staff access on both preview and final routes',async()=>{
+ const d=double({savedDepartments:achSaved()}),h=harness(d.db),body={storeId:'store',dataUrl:file(achFixture())};
+ for(const path of ['/import-preview','/import'])assert.equal((await h.call(path,body,{role:'OWNER',companyId:'company',staffAccess:true})).statusCode,403);
+ assert.equal(d.writes,0);
+});
+
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==="test"&&["localhost","127.0.0.1","postgres"].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test("native PostgreSQL actual import is atomic, preserves controls and rejects concurrent replay",{skip:!isolated()},async()=>{
   const {PrismaClient}=await import("@prisma/client"),admin=new PrismaClient(),schema="source_archive_"+crypto.randomUUID().replaceAll("-","");
@@ -284,5 +319,32 @@ test("native PostgreSQL actual import is atomic, preserves controls and rejects 
     assert.deepEqual(await rizDepartments(),departmentsBefore);assert.deepEqual(await observe(),before);
     assert.equal((await h.call('/import',rb,ru)).statusCode,409);
     assert.equal((await h.call('/import-preview',{...rb,storeId:'store'},ru)).statusCode,404);
+    // Acharnon allocates program SKUs only in the atomic final transaction.
+    await db.$executeRaw`INSERT INTO "Store" VALUES ('ach-store','ach-company','Virtual Acharnon',true)`;
+    for(const d of achSaved())await db.$executeRaw`INSERT INTO "ManagementVatDepartment" VALUES (${d.id},'ach-company',${d.description},${d.vatRate},${d.legacyVatCode},${d.cashRegisterDepartment},${d.commerce},true,NULL,NULL)`;
+    const af=achFixture('ach-company','ach-store'),ab={storeId:'ach-store',dataUrl:file(af)},au={role:'OWNER',companyId:'ach-company'};
+    const ap=await h.call('/import-preview',ab,au);assert.equal(ap.body.summary.create,11);assert.equal(ap.body.summary.invalid,0);assert.ok(ap.body.rows.every(r=>r.sku===''));
+    const achDepartments=()=>db.$queryRaw`SELECT * FROM "ManagementVatDepartment" WHERE "companyId"='ach-company' ORDER BY "id"`;
+    const achBefore=await achDepartments();
+    await db.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD CONSTRAINT ach_injected_failure CHECK ("barcode"<>'000900099')`);
+    assert.ok((await h.call('/import',ab,au)).error);
+    for(const table of ['Product','ProductCategory','ProductSubcategory'])assert.equal((await db.$queryRawUnsafe(`SELECT "id" FROM "${table}" WHERE "companyId"='ach-company'`)).length,0);
+    assert.equal((await db.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"='ach-store'`).length,0);
+    assert.deepEqual(await achDepartments(),achBefore);assert.deepEqual(await observe(),before);
+    await db.$executeRawUnsafe('ALTER TABLE "ProductBarcode" DROP CONSTRAINT ach_injected_failure');
+    const ar=await Promise.all([h.call('/import',ab,au),h.call('/import',ab,au)]);assert.deepEqual(ar.map(r=>r.statusCode).sort(),[201,409]);
+    assert.deepEqual(ar.find(r=>r.statusCode===201).body,{ok:true,created:11,updated:0,barcodes:11,verified:true,applyStock:false});
+    const ai=await db.$queryRaw`SELECT p."sku",p."vatDepartmentId",p."vatRate",p."costPrice",sp."currentStock",c."name" AS category,sc."name" AS subcategory FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "ProductCategory" c ON c."id"=p."categoryId" JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" WHERE p."companyId"='ach-company' ORDER BY p."sku"::bigint`;
+    assert.equal(ai.length,11);ai.forEach((r,i)=>{assert.equal(r.sku,String(10001+i));assert.equal(r.vatDepartmentId,achSaved()[i].id);assert.equal(Number(r.vatRate),achSaved()[i].vatRate);assert.equal(Number(r.costPrice),0.719037);assert.equal(Number(r.currentStock),0);assert.equal(r.category,'Synthetic');assert.equal(r.subcategory,'Scoped');});
+    assert.deepEqual((await db.$queryRaw`SELECT b."barcode" FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId" WHERE p."companyId"='ach-company' ORDER BY b."barcode"`).map(r=>r.barcode),af.barcodes.map(r=>r.Barcode).sort());
+    assert.equal((await h.call('/import',ab,au)).statusCode,409);
+    assert.deepEqual(await achDepartments(),achBefore);assert.deepEqual(await observe(),before);
+    // Two empty stores of the same company share the program sequence. Even
+    // barcode-less catalogues must not reuse numbers or replay successfully.
+    await db.$executeRaw`INSERT INTO "Store" VALUES ('ach-second','ach-company','Second virtual',true),('ach-third','ach-company','Third virtual',true)`;
+    const emptyBodies=['ach-second','ach-third'].map(storeId=>{const f=achFixture('ach-company',storeId);f.rows=[f.rows[1]];f.barcodes=[];return {storeId,dataUrl:file(f)};});
+    const shared=await Promise.all(emptyBodies.map(b=>h.call('/import',b,au)));assert.ok(shared.every(r=>r.statusCode===201));
+    assert.deepEqual((await db.$queryRaw`SELECT "sku" FROM "Product" WHERE "companyId"='ach-company' ORDER BY "sku"::bigint`).map(r=>r.sku),Array.from({length:13},(_,i)=>String(10001+i)));
+    for(const b of emptyBodies)assert.equal((await h.call('/import',b,au)).statusCode,409);
   }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

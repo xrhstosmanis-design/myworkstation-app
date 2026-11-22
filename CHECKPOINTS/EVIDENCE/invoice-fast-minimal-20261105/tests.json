@@ -1,0 +1,23 @@
+{
+  "runtime": "Node20.20.2",
+  "before": {
+    "tests": 281,
+    "pass": 281,
+    "fail": 0,
+    "skip": 0,
+    "tapSha256": "5495996cfa43d45ae69e15f33040920f83f4df7f01ecd8bba6fe82ab4f46284f"
+  },
+  "after": {
+    "tests": 281,
+    "pass": 281,
+    "fail": 0,
+    "skip": 0,
+    "tapSha256": "ecf7ea8bb475b20e129d4a6e91d60c90c24ffce17dae3bb3748820add8cfe791"
+  },
+  "command": "node --test server/test/pos-fast-header-timing.test.js server/test/pos-fast-header-latency.test.js server/test/pos-azure-operation-timing.test.js server/test/pos-fast-header-pdf-total-safety.test.js server/test/pos-invoice-multipage-upload-v1.test.js server/test/ai-wallet-invoice-metering.test.js server/test/pos-fast-handoff-recovery-v1.test.js server/test/invoice-learning-pos-azure-transport-v1.test.js",
+  "sourceSha256": {
+    "server/src/routes/commerce-pos-v244.js": "65f8c2dd0e6abb67b37e12256d538e300c1131a79cdc3737e663f1166b2d9a1d",
+    "server/test/pos-fast-header-latency.test.js": "d2179add44be0a3f6e6d7effe3dafa6a6f4bb19d3d0bc1472405b92946baeee5"
+  },
+  "limits": "I/O simulated. Initial baseline could not resolve3dependency-dependent cases in clean worktree; linked existing installed Node20 workspace dependencies then all281before/after passed. No test threshold/assertion was relaxed. Full CI/hosted OCR NOT TESTED.3new2page samples prepared, none uploaded. Existing key reuse authorized; no secrets accessed."
+}

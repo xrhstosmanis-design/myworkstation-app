@@ -22,7 +22,7 @@ test('permission-gated invoice entry keeps actual POS cart mounted and saves the
  const product={id:'p',name:'CART CONTROL',sku:'CONTROL',salePrice:2,vatRate:24,currentStock:20};
  const order={id:'one',storeId:'A',storeName:'Store A',status:'NEW',sourceType:'POS_OCR_DRAFT',invoiceNumber:'TEST-ONE',supplierId:'sup',supplierName:'Supplier'};
  const line={id:'line',orderId:'one',productId:'p',description:'Invoice row',quantity:3,unitCost:1,discount1:0,discount2:0,discount3:0,vatRate:24,netAmount:3,grossAmount:3.72};
- const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/access'))return {access:{purchaseOrders:allowed}};
+ const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/ftext-cash/capability'))return {storeId:path.split('/')[4],configured:false};if(path.endsWith('/access'))return {access:{purchaseOrders:allowed}};
   if(path.endsWith('/invoice-assistant/source'))return {document:{totalGross:3.72,supplierTaxId:'123456789'},pages:[]};
   if(path.endsWith('/invoice-assistant/preview'))return preview;
   if(path.startsWith('/api/purchase-orders/report?')){return {stores:[{id:'A',name:'Store A'}],suppliers:[{id:'sup',name:'Supplier'}],orders:[order],summary:{count:1}};}

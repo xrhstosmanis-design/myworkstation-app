@@ -1,0 +1,41 @@
+{
+  "scope": "AUTOMATIC-DISPATCH-CANONICAL-PROMOTION-01",
+  "status": "READ ONLY PREFLIGHT NOT PROMOTED",
+  "catalog": {
+    "checkedAt": "2026-10-22T23:58:50.145Z",
+    "expected": 259,
+    "actual": 254,
+    "missing": [
+      "AutomaticReportAutomationGrant",
+      "AutomaticReportDeliverySlot",
+      "AutomaticReportDispatchPolicy",
+      "AutomaticReportPayload",
+      "AutomaticReportRecipient",
+      "AutomaticReportRecipientConsent"
+    ],
+    "extra": [
+      "StoreLifecycleRuntime"
+    ],
+    "drift": [
+      {
+        "table": "OnlineOrderingConfig",
+        "actual": [
+          "autoStockCatalogEnabled",
+          "boolean",
+          true
+        ],
+        "expected": null,
+        "default": "false"
+      }
+    ]
+  },
+  "existingOnlineClassification": {
+    "name": "OnlineOrderingConfig",
+    "owner": {
+      "kind": "DIRECT"
+    },
+    "reset": "REMOVE"
+  },
+  "productionActions": [],
+  "dispatch": "OFF"
+}

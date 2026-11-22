@@ -1,0 +1,9 @@
+{
+  "node": "20.20.2",
+  "command": "npm test -w server",
+  "pass": 4353,
+  "fail": 0,
+  "nativeInfrastructureSkip": 330,
+  "durationMs": 150080.861818,
+  "scope": "local initial administrative candidate; later provenance-label adjustment separately mounted-tested; exact final full native CI required"
+}

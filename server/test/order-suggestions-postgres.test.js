@@ -1,3 +1,4 @@
+import {expectedReceiptRows,expectedReceiptReadiness} from '../src/services/supplier-expected-receipts.js';
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -17,6 +18,8 @@ test("order suggestions HTTP/SQL: quantities, returns, store/license/role bounda
       CompanyModule:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"moduleKey" TEXT,"active" BOOLEAN',
       StorePaidModule:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMP,"endsAt" TIMESTAMP',
       Product:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"sku" TEXT,"unit" TEXT,"active" BOOLEAN,"trackStock" BOOLEAN',
+      PurchaseOrder:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT,"awaitingInvoice" BOOLEAN',
+      PurchaseOrderLine:'"id" TEXT PRIMARY KEY,"orderId" TEXT,"productId" TEXT,"quantity" NUMERIC,"stockUnitsPerInvoiceUnit" NUMERIC',
       StoreProduct:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"currentStock" NUMERIC,"minStock" NUMERIC,"active" BOOLEAN',
       Recipe:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"active" BOOLEAN',
       PreparationRecipeLine:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"automatic" BOOLEAN',
@@ -37,6 +40,8 @@ test("order suggestions HTTP/SQL: quantities, returns, store/license/role bounda
     for(const sale of sales)await tx.$executeRaw`INSERT INTO "Sale" VALUES (${sale[0]},${sale[1]},${sale[2]},${sale[3]},${sale[4]},${sale[5]})`;
     const lines=[['p','pos','p',60],['r','return','p',-15],['ep','exchange','exchange',10],['er','exchange','exchange',-4],['ch','channel','exchange',12],['cancel','cancel','exchange',-3],['k','pos','kg',1],['old','old','p',999],['future','future','p',999],['draft','draft','p',999],['waste','waste','p',999],['self','self','p',999],['sibling','sibling','p',999],['bad-company','bad-company','p',999]];
     for(const line of lines)await tx.$executeRaw`INSERT INTO "SaleLine" VALUES (${line[0]},${line[1]},${line[2]},${line[3]})`;
+    await tx.$executeRawUnsafe(`INSERT INTO "PurchaseOrder" VALUES ('draft-own','a','a1','NEW',false),('pending-own','a','a1','FINAL',true),('posted-own','a','a1','FINAL',false),('cancelled','a','a1','CANCELLED',false),('sibling-order','a','a2','NEW',false),('foreign-order','b','a1','NEW',false)`);
+    await tx.$executeRawUnsafe(`INSERT INTO "PurchaseOrderLine" VALUES ('d1','draft-own','p',2,6),('d2','draft-own','p',3,1),('pending','pending-own','p',4,NULL),('posted','posted-own','p',999,1),('cancelled','cancelled','p',999,1),('sibling','sibling-order','p',999,1),('foreign','foreign-order','p',999,1)`);
     let reads=0;
     const db={$queryRaw:async(strings,...values)=>{if(strings.join("").includes('FROM "StoreProduct"'))reads++;return tx.$queryRaw(strings,...values);},$executeRaw:()=>{throw Error("Proposal attempted a write");},
       store:{findUnique:async({where})=>(await tx.$queryRaw`SELECT * FROM "Store" WHERE "id"=${where.id}`)[0]||null},
@@ -44,7 +49,7 @@ test("order suggestions HTTP/SQL: quantities, returns, store/license/role bounda
     const guardSource=await readFile(new URL("../src/middleware/module-access.js",import.meta.url),"utf8");
     const guard=new Function("prisma","ownerRestrictedModuleKeys",guardSource.replace(/^import .*;\s*$/gm,"").replace(/^export /gm,"")+"\nreturn requireStoreModule;")(db,ownerRestrictedModuleKeys);
     const routeSource=await readFile(new URL("../src/routes/order-suggestions.js",import.meta.url),"utf8");
-    const registrations=[];new Function("Router","z","prisma","requireStoreModule","buildOrderSuggestions",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,buildOrderSuggestions);
+    const registrations=[];new Function("Router","z","prisma","requireStoreModule","expectedReceiptRows","expectedReceiptReadiness","buildOrderSuggestions",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,expectedReceiptRows,expectedReceiptReadiness,buildOrderSuggestions);
     const users={owner:{role:"OWNER",companyId:"a"},sa:{role:"SUPER_ADMIN",companyId:"different"},employee:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a"},permitted:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a",permissions:["MODULE:ORDER_SUGGESTIONS"]},suspended:{role:"OWNER",companyId:"c"}};
     const app=express();app.use((req,res,next)=>{req.user=users[req.get("x-fixture-user")];return req.user?next():res.status(401).end();});app.get("/api/commerce/order-suggestions",...registrations[0].slice(1));app.use((err,req,res,next)=>res.status(500).json({error:err.message}));
     const server=app.listen(0,"127.0.0.1");await once(server,"listening");
@@ -54,6 +59,7 @@ test("order suggestions HTTP/SQL: quantities, returns, store/license/role bounda
       await t.test("real SQL excludes foreign/draft/future/waste and nets returns/exchanges/channel sales",async()=>{
         const result=await request("a1");assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.cache,"no-store");assert.equal(result.body.rows.length,6);
         const find=id=>result.body.rows.find(r=>r.productId===id);assert.equal(find("p").soldQuantity,60);assert.equal(find("p").returnedQuantity,15);assert.equal(find("p").suggestedQuantity,12);
+        assert.deepEqual(find("p").pendingPurchaseReview,[{status:"FINAL",orderCount:1,recordedStockQuantity:null,unconvertedLineCount:1},{status:"NEW",orderCount:1,recordedStockQuantity:15,unconvertedLineCount:0}]);
         assert.equal(find("exchange").soldQuantity,22);assert.equal(find("exchange").returnedQuantity,7);assert.equal(find("exchange").suggestedQuantity,5);
         assert.equal(find("kg").suggestedQuantity,.334);for(const id of ["pack","recipe","prepared"])assert.equal(find(id).suggestedQuantity,null);
       });

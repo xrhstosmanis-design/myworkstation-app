@@ -1,0 +1,233 @@
+{
+  "date": "2026-10-31",
+  "timezone": "Europe/Athens",
+  "result": "LIMITED_READ_ONLY_LAB_PASS",
+  "scope": "Authenticated desktop invoice-audit email preview only",
+  "runtimeRevision": "8b76cad4c16c571239940d8038bb248e3cae2819",
+  "health": {
+    "httpStatus": 200,
+    "ok": true,
+    "httpDate": "Sat, 31 Oct 2026 18:31:19 GMT",
+    "shellExit": 0
+  },
+  "principal": "Existing legitimate SuperAdmin support session; no new credential or access grant",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "storeName": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "terminal": "Cloud Chrome desktop; virtual LAB; no physical terminal or transaction",
+  "before": {
+    "controls": [
+      {
+        "count": 43,
+        "digest": "14814f641d388a4e4f23fdc329affe64",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "CashShiftSession"
+      },
+      {
+        "count": 90,
+        "digest": "dca5a26fa7341126795bdf8a6ad6524d",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "Payment"
+      },
+      {
+        "count": 71,
+        "digest": "3302ab05bc21b6a116ada151db579613",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "PurchaseDocument"
+      },
+      {
+        "count": 713,
+        "digest": "d4e790632d9009b4a4d613dd46be7e2d",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "PurchaseDocumentLine"
+      },
+      {
+        "count": 90,
+        "digest": "7429be79120c9716ec99447f5e344c43",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "Sale"
+      },
+      {
+        "count": 95,
+        "digest": "4c3daa3d0a8d1d8a2fcec56379ad5be8",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "StockMovement"
+      },
+      {
+        "count": 110,
+        "digest": "056f3edb3f8e5d42cb987959383ebf51",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "StoreProduct"
+      },
+      {
+        "count": 134,
+        "digest": "90171612d15b480ea8d0b13f321a6b12",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "StoreTransaction"
+      },
+      {
+        "count": 1,
+        "digest": "32b7831b1eb84d0994d627c7f65b1255",
+        "scope": "cmuk8gxui000ppabfykdxwb1y",
+        "source": "StockMovement"
+      },
+      {
+        "count": 1,
+        "digest": "d828e556838424761a47bf055bf41e83",
+        "scope": "cmuk8gxui000ppabfykdxwb1y",
+        "source": "StoreProduct"
+      },
+      {
+        "count": 110,
+        "digest": "5e43cf95b0fb1217ab4f51e50c5c5bd5",
+        "scope": "COMPANY",
+        "source": "Product-id-updatedAt"
+      }
+    ],
+    "dbReadAt": "2026-10-31T18:26:38.405419Z",
+    "readOnly": "on"
+  },
+  "after": {
+    "controls": [
+      {
+        "count": 43,
+        "digest": "14814f641d388a4e4f23fdc329affe64",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "CashShiftSession"
+      },
+      {
+        "count": 90,
+        "digest": "dca5a26fa7341126795bdf8a6ad6524d",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "Payment"
+      },
+      {
+        "count": 71,
+        "digest": "3302ab05bc21b6a116ada151db579613",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "PurchaseDocument"
+      },
+      {
+        "count": 713,
+        "digest": "d4e790632d9009b4a4d613dd46be7e2d",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "PurchaseDocumentLine"
+      },
+      {
+        "count": 90,
+        "digest": "7429be79120c9716ec99447f5e344c43",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "Sale"
+      },
+      {
+        "count": 95,
+        "digest": "4c3daa3d0a8d1d8a2fcec56379ad5be8",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "StockMovement"
+      },
+      {
+        "count": 110,
+        "digest": "056f3edb3f8e5d42cb987959383ebf51",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "StoreProduct"
+      },
+      {
+        "count": 134,
+        "digest": "90171612d15b480ea8d0b13f321a6b12",
+        "scope": "cmtpopbgo000trhb5ng9ytiru",
+        "source": "StoreTransaction"
+      },
+      {
+        "count": 1,
+        "digest": "32b7831b1eb84d0994d627c7f65b1255",
+        "scope": "cmuk8gxui000ppabfykdxwb1y",
+        "source": "StockMovement"
+      },
+      {
+        "count": 1,
+        "digest": "d828e556838424761a47bf055bf41e83",
+        "scope": "cmuk8gxui000ppabfykdxwb1y",
+        "source": "StoreProduct"
+      },
+      {
+        "count": 110,
+        "digest": "5e43cf95b0fb1217ab4f51e50c5c5bd5",
+        "scope": "COMPANY",
+        "source": "Product-id-updatedAt"
+      }
+    ],
+    "dbReadAt": "2026-10-31T18:32:24.509989Z",
+    "readOnly": "on"
+  },
+  "controlsMatch": true,
+  "controlProjectionNotes": [
+    "StoreTransaction and PurchaseDocument use explicit metadata/financial projections excluding attachment bytes; exact SQL retained.",
+    "Product control is id+updatedAt only, not whole Product row.",
+    "Sale, Payment, PurchaseDocumentLine, StockMovement, CashShiftSession, StoreProduct use complete selected row JSON.",
+    "Sibling label-store StockMovement/StoreProduct retained; empty-table counts or real-store controls are not inferred.",
+    "Authentication/support-access audit and session-last-seen metadata are outside these business controls."
+  ],
+  "controlsSql": "WITH rows AS (\nSELECT \"storeId\" AS scope,'Sale' AS source,to_jsonb(t)::text AS row FROM \"Sale\" t WHERE \"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT s.\"storeId\",'Payment',to_jsonb(p)::text FROM \"Payment\" p JOIN \"Sale\" s ON s.\"id\"=p.\"saleId\" WHERE s.\"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT \"storeId\",'StoreTransaction',jsonb_build_object('id',\"id\",'type',\"type\",'amount',\"amount\",'paymentMethod',\"paymentMethod\",'sessionId',\"sessionId\",'reversedAt',\"reversedAt\",'invoiceDocumentNumber',\"invoiceDocumentNumber\",'attachmentChecksum',\"attachmentChecksum\",'occurredAt',\"occurredAt\")::text FROM \"StoreTransaction\" WHERE \"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT \"storeId\",'PurchaseDocument',jsonb_build_object('id',\"id\",'updatedAt',\"updatedAt\",'status',\"status\",'totalGross',\"totalGross\",'paymentTransactionId',\"paymentTransactionId\",'purchaseOrderId',\"purchaseOrderId\",'documentNumber',\"documentNumber\",'documentType',\"documentType\",'documentDate',\"documentDate\",'sourceType',\"sourceType\",'supplierId',\"supplierId\")::text FROM \"PurchaseDocument\" WHERE \"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT d.\"storeId\",'PurchaseDocumentLine',to_jsonb(l)::text FROM \"PurchaseDocumentLine\" l JOIN \"PurchaseDocument\" d ON d.\"id\"=l.\"purchaseDocumentId\" WHERE d.\"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT t.\"storeId\",'StockMovement',to_jsonb(t)::text FROM \"StockMovement\" t JOIN \"Store\" s ON s.\"id\"=t.\"storeId\" WHERE s.\"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT \"storeId\",'CashShiftSession',to_jsonb(t)::text FROM \"CashShiftSession\" t WHERE \"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT t.\"storeId\",'StoreProduct',to_jsonb(t)::text FROM \"StoreProduct\" t JOIN \"Store\" s ON s.\"id\"=t.\"storeId\" WHERE s.\"companyId\"='cmtpopbgk000prhb5qc60zxus'\nUNION ALL SELECT 'COMPANY','Product-id-updatedAt',jsonb_build_object('id',\"id\",'updatedAt',\"updatedAt\")::text FROM \"Product\" WHERE \"companyId\"='cmtpopbgk000prhb5qc60zxus'\n), grouped AS (SELECT scope,source,count(*) AS count,md5(string_agg(md5(row),'' ORDER BY row)) AS digest FROM rows GROUP BY scope,source)\nSELECT clock_timestamp() AS \"dbReadAt\",current_setting('transaction_read_only') AS \"readOnly\",jsonb_agg(to_jsonb(grouped) ORDER BY scope,source) AS controls FROM grouped",
+  "observations": [
+    {
+      "month": "2026-10",
+      "activation": "Pointer click",
+      "observedAtAthens": "2026-10-31 20:27:26",
+      "nominalScheduledAtAthens": "2026-10-31 23:59",
+      "entries": 14,
+      "unposted": 9,
+      "uploadedForReview": 6,
+      "possibleDuplicates": 0,
+      "identityOrLinkFindings": 11,
+      "credits": 0,
+      "detailRows": 14,
+      "allMonthsPendingOriginals": 0,
+      "verifiedMaskedRecipientCount": 1,
+      "currentMonthlyFrequencyConsentCount": 0,
+      "purposeConsent": "NOT_ASSUMED",
+      "sendingEnabled": false
+    },
+    {
+      "month": "2026-09",
+      "activation": "Real keyboard month ArrowLeft/ArrowDown; Enter on preview button",
+      "observedAtAthens": "2026-10-31 20:31:24",
+      "nominalScheduledAtAthens": "2026-09-30 23:59",
+      "entries": 59,
+      "unposted": 50,
+      "uploadedForReview": 48,
+      "possibleDuplicates": 0,
+      "identityOrLinkFindings": 25,
+      "credits": 1,
+      "detailRows": 50,
+      "truncationVisible": true,
+      "allMonthsPendingOriginals": 0,
+      "verifiedMaskedRecipientCount": 1,
+      "currentMonthlyFrequencyConsentCount": 0,
+      "purposeConsent": "NOT_ASSUMED",
+      "sendingEnabled": false
+    }
+  ],
+  "uiChecks": [
+    "Actual correct selected LAB label and month subject/body.",
+    "Preview explicitly disabled for sending; provisional observation and separate recipient/report timestamps shown.",
+    "Actual native keyboard month change removed previous preview before next explicit read; returning to October removed September preview.",
+    "Closed commerce overlay without saving; original MAIN remained open with 0 transactions/cash/card/IRIS/total.",
+    "After closing the commerce overlay, root used the existing return-to-SuperAdmin action and observed the authenticated canonical /platform-admin page; support entry/exit audit and session metadata are intentionally outside the recorded business controls."
+  ],
+  "automationNotes": [
+    "Playwright fill changed native DOM value but did not commit React month state; Tab restored October. Not treated as an application FAIL. Real ArrowLeft/ArrowDown committed September and cleared old preview.",
+    "Two October screenshot files synchronized and were inspected. One September selection screenshot did not synchronize; no fabricated file/hash or download reliability PASS."
+  ],
+  "noActions": [
+    "No send/invitation/provider/consent/settings/grant/schema/install",
+    "No sale/return/payment/stock posting/approval/finalization or accepted fixture replay"
+  ],
+  "notTested": [
+    "Independent ordinary Owner or staff/foreign role",
+    "Physical/mobile client or native email recipient delivery",
+    "Actual dispatch/provider/database-wide zero email-side-effect audit",
+    "Independent accounting reconciliation/OCR/initial recognition correctness",
+    "All-device/download availability"
+  ],
+  "sourceEvidence": "Five E1 runtime/UI files byte-identical ca58f2fa81261c02871f11c471c9d2552bc2009b to current healthy 8b76cad4c16c571239940d8038bb248e3cae2819; shared index reviewed separately."
+}

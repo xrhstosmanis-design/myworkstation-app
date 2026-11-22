@@ -1,0 +1,40 @@
+{
+  "issuedAt": "2026-11-01T07:30:22.933Z",
+  "notBefore": "2026-11-02T05:00:00.000Z",
+  "activationFingerprint": "65410a1554e3f9ea616aa9abfa0bd2af830237b797231f6d68cf7b1f6d025c63",
+  "enabled": true,
+  "target": "srv-d9isenfavr4c73bdh52g",
+  "replace": false,
+  "stage": "LIVE CONTROL / BOTH REAL RECIPIENTS APPROVED / ALL3 PERSISTED",
+  "deploy": "dep-dbjel48ae00c73e0kqa0",
+  "trigger": "api from MCP env mutation",
+  "ciBeforeDeploy": false,
+  "deviation": "MCP mutation automatically triggered deployment; not save-only, not guarded",
+  "liveAt": "2026-11-01T07:32:43.157090Z",
+  "healthOk": true,
+  "healthRevision": "4c05a9442d03941d35585a1e39a0aceef3dc01a1",
+  "fullCi": 41284858846,
+  "fullCiConclusion": "success",
+  "fullCiCompletedAt": "2026-11-01T07:43:38Z",
+  "nativeTests": {
+    "serverPass": 5050,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "recipientCount": 2,
+  "approvalBasis": "SUPER_ADMIN",
+  "approvedAthens": [
+    "2026-11-01T09:44:23+02:00",
+    "2026-11-01T09:44:59+02:00"
+  ],
+  "frequencies": [
+    "DAILY",
+    "WEEKLY",
+    "MONTHLY"
+  ],
+  "reopenedReadback": true,
+  "invitationSent": false,
+  "actualDelivery": "NOT TESTED; future cutoff; no forced send",
+  "screenshot": "unavailable: capture timeout"
+}

@@ -1,3 +1,4 @@
+import {changePackageStock,packageLock} from '../lib/pos-stock-packages.js';
 import {maybeChangeSameProductStock} from '../store-baking-same-product.js';
 import {Router} from "express";
 import crypto from "crypto";
@@ -74,10 +75,12 @@ router.post("/stores/:storeId/exchange",async(req,res,next)=>{
     const subtotal=round2(items.filter(item=>item.lineTotal>0).reduce((sum,item)=>sum+item.lineTotal,0));
     await ensureAudit();
     await prisma.$transaction(async tx=>{
+      await packageLock(tx,store.id);
       await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","customerId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source") VALUES (${saleId},${req.user.companyId},${store.id},${body.customerId||null},${req.user.employeeId||null},'NON_FISCAL',${subtotal},0,${total},'COMPLETED','EXCHANGE')`;
       for(const item of items){
-        await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.direction==="RETURN"?`ΕΠΙΣΤΡΟΦΗ: ${item.name}`:item.name},${item.quantity},${item.unitPrice},0,${item.vatRate},${item.lineTotal})`;
-        if(!await maybeChangeSameProductStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:item.productId,quantity:item.quantity,kind:Number(item.quantity)<0?'RESTORE':'CONSUME',actorId:req.user.id,actorName:req.user.fullName||'Χειριστής',note:`POS ${saleId}`})) await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${item.quantity} WHERE "storeId"=${store.id} AND "productId"=${item.productId}`;
+        const lineId=crypto.randomUUID();
+        await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${lineId},${saleId},${item.productId},${item.direction==="RETURN"?`ΕΠΙΣΤΡΟΦΗ: ${item.name}`:item.name},${item.quantity},${item.unitPrice},0,${item.vatRate},${item.lineTotal})`;
+        if(!await changePackageStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:item.productId,quantity:Math.abs(item.quantity),saleId,lineId,restore:item.quantity<0})&&!await maybeChangeSameProductStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:item.productId,quantity:item.quantity,kind:Number(item.quantity)<0?'RESTORE':'CONSUME',actorId:req.user.id,actorName:req.user.fullName||'Χειριστής',note:`POS ${saleId}`})) await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${item.quantity} WHERE "storeId"=${store.id} AND "productId"=${item.productId}`;
       }
       for(const payment of payments){
         await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},${payment.method},${money(payment.amount)})`;

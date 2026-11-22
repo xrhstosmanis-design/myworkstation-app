@@ -1,0 +1,91 @@
+{
+  "status": "SCOPED_LAB_PASS",
+  "scope": "one selected-store SuperAdmin assistant call only",
+  "recordedAt": "2026-11-01T19:03:45.643001+00:00",
+  "revision": "201e4c21cd3c2a480a94b194a7b350523633e9f0",
+  "deploy": "dep-dbjmpbuc6qcc73c0arv0",
+  "sourcePr": 3475,
+  "mainCi": 41326081468,
+  "guard": 41327819201,
+  "company": "MYWORKSTATION LAB",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "before": {
+    "availableMicros": 3683091,
+    "reservedMicros": 930033,
+    "grossMicrosDerived": 4613124,
+    "settledMicros": 406876,
+    "calls": 8,
+    "creditsMicros": 5020000,
+    "entries": 13,
+    "postpaidDebtMicros": 0,
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      0,
+      0,
+      0
+    ]
+  },
+  "after": {
+    "availableMicros": 3680499,
+    "reservedMicros": 930033,
+    "grossMicrosDerived": 4610532,
+    "settledMicros": 409468,
+    "calls": 9,
+    "creditsMicros": 5020000,
+    "entries": 14,
+    "postpaidDebtMicros": 0,
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      0,
+      0,
+      0
+    ]
+  },
+  "call": {
+    "submitted": 1,
+    "answer": "Έτοιμος.",
+    "entryId": "f9a25d29-303a-4b83-8b1e-94f804e9c51b",
+    "feature": "PLATFORM_CUSTOMER_ASSISTANT",
+    "provider": "OpenAI",
+    "model": "gpt-5-mini",
+    "createdAt": "2026-11-01T18:59:04Z",
+    "settledAt": "2026-11-01T18:59:10Z",
+    "inputTokens": 4918,
+    "outputTokens": 352,
+    "cachedTokens": 0,
+    "chargeMicros": 2592,
+    "additionalComponentsMicros": [
+      0,
+      0,
+      0
+    ],
+    "requester": "authenticated Platform SuperAdmin",
+    "source": "SuperAdmin assistant",
+    "allStores": false
+  },
+  "control": "Private foreign real-company wallet refreshed after restore; unchanged. No identifying/contact/financial values published.",
+  "initialBlock": "Support-context disabled input, no submit. Native logout/fresh MFA resolved it; no bypass.",
+  "protected": "Historical reserved930033, prior accepted grants/receipts/invoices and peer ownership unchanged. No replay.",
+  "notTested": [
+    "paid external search providers - missing verified tariffs",
+    "staff AI live path - connection/price unavailable",
+    "new invoice search live entry",
+    "shared infrastructure/platform/SMTP allocation",
+    "broader wallet REVIEW/model and other-role coverage",
+    "actual customer activation/funding/financial email"
+  ],
+  "noOutgoingEmail": true,
+  "screenshots": {
+    "ai-cost-lab-charge-20261101.jpg": "241e8d0c1c8c314bac8cc799815f9642e54075af86480d0a9e604c947e13dcb3",
+    "ai-cost-lab-restored-20261101.jpg": "5098fcdd98e603bd44250ab67e8a4892b49e2e63d9ab151fac5b5b9438b96d53",
+    "ai-cost-lab-answer-20261101.jpg": "68c70394dc606b900aaf67338ff7e6b6694e6d7cc44cc920a12d33489d8cbb43"
+  },
+  "noCreditRepaymentOrRealCustomerFinancialAction": true,
+  "paidLabUsageMicros": 2592
+}

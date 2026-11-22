@@ -1,0 +1,78 @@
+{
+  "scope": "CENTRAL-BACKOFFICE-ACCESS-01",
+  "status": "FOUNDATION_INSTALLED; FULL_SCOPE_OPEN",
+  "grantableCapabilities": 18,
+  "candidateFamilies": 55,
+  "candidateActions": 340,
+  "candidateCatalogueIsAuthorization": false,
+  "foundation": {
+    "pr": 3463,
+    "head": "76009ebd4fe6e6d7cd536741e2539c0622827c45",
+    "tree": "cb03f0dfe78d3cedcc233d9af181cb6fab604cba",
+    "prCI": 41313776328,
+    "mainMerge": "0bc40631d355f922d98af5cc99ce3ffb4d3e6e86",
+    "mainCI": 41314926667
+  },
+  "shortcut": {
+    "pr": 3472,
+    "head": "f6734955a87bdbf0a62aca7d3755bf5ce7f4838c",
+    "tree": "058df70a66720a5e0d103db9891c94c15bedee33",
+    "prCI": 41316411845,
+    "mainMerge": "dcd54f8cbe9ce1581f26942690c97887f1be7c97",
+    "pushMainCI": {
+      "id": 41317679429,
+      "conclusion": "cancelled-before-running"
+    }
+  },
+  "combinedFullMainCI": {
+    "id": 41318666982,
+    "job": 124884397102,
+    "revision": "35968eda7b1cef8be50f1d073e648efcb6c32b8e",
+    "event": "workflow_dispatch",
+    "conclusion": "success",
+    "serverPass": 5093,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allJobsSuccessful": 5,
+    "fullBuildBrowserHTTP": true,
+    "dispatchedByThisPage": false
+  },
+  "automaticDeploy": {
+    "id": 41320018519,
+    "deployJob": 124888073249,
+    "deployConclusion": "skipped",
+    "reason": "documentation-only classifier; no physical release"
+  },
+  "guardedManualDeploy": {
+    "id": 41320104728,
+    "job": 124888327884,
+    "revision": "35968eda7b1cef8be50f1d073e648efcb6c32b8e",
+    "status": "success",
+    "exactHealthyAt": "2026-11-01T15:18:30Z",
+    "rollbackArtifactId": 13089530583,
+    "rollbackArtifactSha256": "5a24d1806159edf3e9c224e37156328084af2510ee41cf444ea966e7b1f77838",
+    "previousHealthyRevision": "0bc40631d355f922d98af5cc99ce3ffb4d3e6e86"
+  },
+  "hostedAcceptance": "NOT TESTED / AWAITING USER",
+  "productionBusinessWrites": 0,
+  "grantsOrCredentialsChanged": false,
+  "schemaChanged": false,
+  "remaining": [
+    "Native inventory blind-count/action and ambiguous-write adapter",
+    "Native cash and commerce navigation",
+    "Executable all-functions editor and exact native backend actions",
+    "Explicit company authority with app/worker/recovery compatibility",
+    "Hosted visual and functional acceptance"
+  ],
+  "nextAction": "Native InventoryV2Center / InventoryFastCount adapter under same retained owner",
+  "independentHealth": {
+    "observedAt": "2026-11-01T15:19:41.762058+00:00",
+    "status": 200,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "35968eda7b1cef8be50f1d073e648efcb6c32b8e"
+    }
+  }
+}

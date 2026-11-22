@@ -33,7 +33,8 @@ public class ConversationAppearanceTest {
             assertEquals("GET",method);assertTrue(path.startsWith("/api/store-chat/stores/appearance-fixture/messages"));
             JSONArray rows=new JSONArray();
             for(int i=0;i<2;i++)rows.put(new JSONObject().put("id","appearance-message-"+i).put("senderId","fixture-owner").put("senderName","Δοκιμή εμφάνισης").put("createdAt","2026-10-22T09:00:00Z").put("body","").put("hasAttachment",true).put("attachmentMimeType",i==0?"audio/wav":"video/mp4").put("readByMe",true));
-            return new JSONObject().put("store",store()).put("rows",rows).put("voiceMessagesAvailable",true).put("videoMessagesAvailable",true).put("settings",new JSONObject().put("photosEnabled",true));
+            JSONObject announcement=new JSONObject().put("id","appearance-announcement").put("senderId","fixture-owner").put("senderName","Δοκιμή εμφάνισης").put("body","Δοκιμαστική ανακοίνωση").put("category","ANNOUNCEMENT").put("pinned",true).put("readByMe",true);
+            return new JSONObject().put("store",store()).put("rows",rows).put("interactionsAvailable",true).put("searchForwardAvailable",true).put("pinnedAnnouncements",new JSONArray().put(announcement)).put("permissions",new JSONObject().put("canPin",true).put("canManageSettings",true).put("canForward",true)).put("voiceMessagesAvailable",true).put("videoMessagesAvailable",true).put("settings",new JSONObject().put("photosEnabled",true).put("announcementAcknowledgementRequired",true));
         }
     }
     @SuppressWarnings("deprecation")
@@ -53,11 +54,16 @@ public class ConversationAppearanceTest {
                         View root=(View)get(a,"root");float density=a.getResources().getDisplayMetrics().density;
                         for(int width:new int[]{320,360}){
                             int w=Math.round(width*density),h=Math.round(720*density);root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);
-                            LinearLayout tools=root.findViewWithTag("chat-tools");assertEquals(3,tools.getChildCount());assertTrue(tools.getHeight()<=Math.round(100*density));
-                            for(int i=0;i<3;i++){Button b=(Button)tools.getChildAt(i);assertTrue(b.getWidth()>=Math.round(48*density));assertTrue(b.getHeight()>=Math.round(48*density));assertNotNull(b.getLayout());if(i==0)assertEquals("Ready-reply label should stay whole",1,b.getLineCount());assertTrue("Clipped action caption",b.getLayout().getHeight()<=b.getHeight()-b.getCompoundPaddingTop()-b.getCompoundPaddingBottom());}
-                            assertTrue("Messages lose too much phone height",((View)get(a,"scroll")).getHeight()>=Math.round(280*density));
+                            LinearLayout topics=root.findViewWithTag("chat-topics");assertEquals(3,topics.getChildCount());for(int n=0;n<3;n++){Button topic=(Button)topics.getChildAt(n);assertTrue("Topic touch target",topic.getHeight()>=Math.round(48*density));assertTrue("Topic label fits",topic.getLayout().getEllipsisCount(0)==0);}
+                            LinearLayout tools=root.findViewWithTag("chat-tools");assertEquals(View.GONE,tools.getVisibility());assertEquals(3,tools.getChildCount());
+                            for(String key:new String[]{"categoryButton","announcementSettingsButton","announcementsButton","historySearchButton"}){Button b=(Button)get(a,key);assertEquals(View.VISIBLE,b.getVisibility());assertFalse("Tools must be reachable through overflow, not occupy message height",b.isShown());}
+                            assertTrue("Messages should recover phone height",((View)get(a,"scroll")).getHeight()>=Math.round(400*density));
                             for(String label:new String[]{"attachmentLabel","voiceLabel","videoLabel","notice"})assertEquals(label,View.GONE,((View)get(a,label)).getVisibility());
                         }
+                        // Keyboard-sized viewport still leaves actual conversation and composer visible.
+                        int compactW=Math.round(360*density),compactH=Math.round(420*density);root.measure(View.MeasureSpec.makeMeasureSpec(compactW,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(compactH,View.MeasureSpec.EXACTLY));root.layout(0,0,compactW,compactH);
+                        assertTrue("Keyboard viewport retains conversation space",((View)get(a,"scroll")).getHeight()>=Math.round(100*density));
+                        View composerBar=root.findViewWithTag("chat-composer");assertTrue("Composer remains within keyboard viewport",composerBar.getBottom()<=compactH);assertTrue(composerBar.getHeight()>=Math.round(48*density));
                         Method status=MainActivity.class.getDeclaredMethod("status",String.class);status.setAccessible(true);status.invoke(a,"Δοκιμαστική ενημέρωση");assertEquals(View.VISIBLE,((TextView)get(a,"notice")).getVisibility());status.invoke(a,"");assertEquals(View.GONE,((View)get(a,"notice")).getVisibility());
                         set(a,"voiceDraft",VoiceData.fromPcm(new short[]{1,2},2));call(a,"updateVoiceLabel");assertEquals(View.VISIBLE,((View)get(a,"voiceLabel")).getVisibility());call(a,"clearVoice");call(a,"updateVoiceLabel");assertEquals(View.GONE,((View)get(a,"voiceLabel")).getVisibility());
                         int w=Math.round(360*density),h=Math.round(720*density);root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);

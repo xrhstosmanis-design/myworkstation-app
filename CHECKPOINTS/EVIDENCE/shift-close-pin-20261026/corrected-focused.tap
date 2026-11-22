@@ -1,0 +1,255 @@
+TAP version 13
+# Subtest: automatic cash control aggregates every closed terminal in the Greek business date
+ok 1 - automatic cash control aggregates every closed terminal in the Greek business date
+  ---
+  duration_ms: 1.484695
+  ...
+# Subtest: super admin receives all-store reports by Greek date, POS and shift
+ok 2 - super admin receives all-store reports by Greek date, POS and shift
+  ---
+  duration_ms: 0.847913
+  ...
+# Subtest: super admin exports shortages for a selected date range and optional store
+ok 3 - super admin exports shortages for a selected date range and optional store
+  ---
+  duration_ms: 0.608951
+  ...
+# Subtest: daily control reconciles expenses with their evidence and document totals
+ok 4 - daily control reconciles expenses with their evidence and document totals
+  ---
+  duration_ms: 0.610493
+  ...
+# Subtest: session investigation exhausts transaction and audit evidence without auto-clearing a shortage
+ok 5 - session investigation exhausts transaction and audit evidence without auto-clearing a shortage
+  ---
+  duration_ms: 5.62588
+  ...
+# Subtest: cash control remains an independently licensed commercial module
+ok 6 - cash control remains an independently licensed commercial module
+  ---
+  duration_ms: 0.386524
+  ...
+# Subtest: platform super admin always has every module while customers still require paid entitlements
+ok 7 - platform super admin always has every module while customers still require paid entitlements
+  ---
+  duration_ms: 0.174724
+  ...
+# Subtest: super admin manually previews and emails each store report to its owners
+ok 8 - super admin manually previews and emails each store report to its owners
+  ---
+  duration_ms: 0.460757
+  ...
+# Subtest: automatic report preserves legacy store and delivery continuity rules
+ok 9 - automatic report preserves legacy store and delivery continuity rules
+  ---
+  duration_ms: 0.420076
+  ...
+# Subtest: manager review is audited and only confirmed explanations reduce the unexplained difference
+ok 10 - manager review is audited and only confirmed explanations reduce the unexplained difference
+  ---
+  duration_ms: 0.385353
+  ...
+# Subtest: later expenses, documents or reversals invalidate the old result and require recheck
+ok 11 - later expenses, documents or reversals invalidate the old result and require recheck
+  ---
+  duration_ms: 0.186613
+  ...
+# Subtest: blind shift close follows management parameters instead of initial-cash permission
+ok 12 - blind shift close follows management parameters instead of initial-cash permission
+  ---
+  duration_ms: 1.060565
+  ...
+# Subtest: shortage offers recount or an explicitly confirmed audited close
+ok 13 - shortage offers recount or an explicitly confirmed audited close
+  ---
+  duration_ms: 0.249538
+  ...
+# Subtest: BackOffice remains the runtime authority for Store operator payment and cash permissions
+ok 14 - BackOffice remains the runtime authority for Store operator payment and cash permissions
+  ---
+  duration_ms: 1.384084
+  ...
+# Subtest: AI Reader confirmation remains DRAFT and stock changes only after explicit approval
+ok 15 - AI Reader confirmation remains DRAFT and stock changes only after explicit approval
+  ---
+  duration_ms: 0.31748
+  ...
+# Subtest: supplier payments and other expenses use one StoreTransaction and CashShiftSession contract
+ok 16 - supplier payments and other expenses use one StoreTransaction and CashShiftSession contract
+  ---
+  duration_ms: 0.193573
+  ...
+# Subtest: Store shift transactions UI is active-shift read-only and does not duplicate payment entry
+ok 17 - Store shift transactions UI is active-shift read-only and does not duplicate payment entry
+  ---
+  duration_ms: 0.157929
+  ...
+# Subtest: same-shift payments reduce the same authoritative expected-cash formula used at close
+ok 18 - same-shift payments reduce the same authoritative expected-cash formula used at close
+  ---
+  duration_ms: 0.172731
+  ...
+# Subtest: shift close requires real physical drawer count before the existing close endpoint
+ok 19 - shift close requires real physical drawer count before the existing close endpoint
+  ---
+  duration_ms: 0.117558
+  ...
+# Subtest: My Payments remains limited to the current operator payments and expenses of the active shift
+ok 20 - My Payments remains limited to the current operator payments and expenses of the active shift
+  ---
+  duration_ms: 0.220503
+  ...
+# Subtest: BackOffice owner audit recognizes AI Reader evidence, source, store, actor and shift session
+ok 21 - BackOffice owner audit recognizes AI Reader evidence, source, store, actor and shift session
+  ---
+  duration_ms: 0.20498
+  ...
+# Subtest: the integrated flow keeps reversal and tenant-store isolation in the existing architecture
+ok 22 - the integrated flow keeps reversal and tenant-store isolation in the existing architecture
+  ---
+  duration_ms: 0.217649
+  ...
+# Subtest: mounted close form requires deliberate EFTPOS including zero before either submit
+ok 23 - mounted close form requires deliberate EFTPOS including zero before either submit
+  ---
+  duration_ms: 526.113984
+  ...
+# Subtest: registered opener card accepts scanner normalization
+ok 24 - registered opener card accepts scanner normalization
+  ---
+  duration_ms: 7.998268
+  ...
+# Subtest: missing and other cards fail closed
+ok 25 - missing and other cards fail closed
+  ---
+  duration_ms: 1.429111
+  ...
+# Subtest: another operator, company or store cannot close
+ok 26 - another operator, company or store cannot close
+  ---
+  duration_ms: 1.771971
+  ...
+# Subtest: revoked, missing and corrupt credentials cannot close
+ok 27 - revoked, missing and corrupt credentials cannot close
+  ---
+  duration_ms: 0.406575
+  ...
+# Subtest: existing privileged BackOffice closure does not query operator credentials
+ok 28 - existing privileged BackOffice closure does not query operator credentials
+  ---
+  duration_ms: 0.159892
+  ...
+# Subtest: PIN close native fixture refuses production and URL redirection targets
+ok 29 - PIN close native fixture refuses production and URL redirection targets
+  ---
+  duration_ms: 2.532251
+  ...
+# Subtest: actual retained multi-POS startup patch preserves the PIN close route and parses
+ok 30 - actual retained multi-POS startup patch preserves the PIN close route and parses
+  ---
+  duration_ms: 112.796578
+  ...
+# Subtest: actual registered PIN close commits only failure guards, enforces scope and closes exactly once in PostgreSQL
+ok 31 - actual registered PIN close commits only failure guards, enforces scope and closes exactly once in PostgreSQL # SKIP
+  ---
+  duration_ms: 0.696063
+  ...
+# Subtest: personal PIN closes the actual mounted form without a card and never submits on method selection
+ok 32 - personal PIN closes the actual mounted form without a card and never submits on method selection
+  ---
+  duration_ms: 492.737511
+  ...
+# Subtest: failed PIN clears the immediate secret and switching back to the legacy card cannot reuse it
+ok 33 - failed PIN clears the immediate secret and switching back to the legacy card cannot reuse it
+  ---
+  duration_ms: 303.583816
+  ...
+# Subtest: forced shortage close requires a fresh PIN and preserves deliberate current EFTPOS override
+ok 34 - forced shortage close requires a fresh PIN and preserves deliberate current EFTPOS override
+  ---
+  duration_ms: 218.9813
+  ...
+# Subtest: personal opener PIN authenticates with current bcrypt hash and clears only its guard
+ok 35 - personal opener PIN authenticates with current bcrypt hash and clears only its guard
+  ---
+  duration_ms: 8.810868
+  ...
+# Subtest: five wrong PIN results record a guard and the sixth is locked even for a correct PIN
+ok 36 - five wrong PIN results record a guard and the sixth is locked even for a correct PIN
+  ---
+  duration_ms: 9.726493
+  ...
+# Subtest: expired failure window resets without inheriting an old lock
+ok 37 - expired failure window resets without inheriting an old lock
+  ---
+  duration_ms: 2.835369
+  ...
+# Subtest: foreign opener company store employee and terminal fail before guard writes
+ok 38 - foreign opener company store employee and terminal fail before guard writes
+  ---
+  duration_ms: 1.414901
+  ...
+# Subtest: unavailable revoked or inactive credentials cannot authenticate or create a guard
+ok 39 - unavailable revoked or inactive credentials cannot authenticate or create a guard
+  ---
+  duration_ms: 0.455549
+  ...
+# Subtest: ambiguous or malformed credentials refuse rather than fall back to another method
+ok 40 - ambiguous or malformed credentials refuse rather than fall back to another method
+  ---
+  duration_ms: 0.606087
+  ...
+# Subtest: legacy card and privileged BackOffice paths remain separate from the PIN guard
+ok 41 - legacy card and privileged BackOffice paths remain separate from the PIN guard
+  ---
+  duration_ms: 0.885429
+  ...
+# Subtest: actual close request schema requires an explicit PIN method and rejects mixed credentials before a transaction
+ok 42 - actual close request schema requires an explicit PIN method and rejects mixed credentials before a transaction
+  ---
+  duration_ms: 9.110181
+  ...
+# Subtest: Store Mode runtime permissions come from the current BackOffice operator profile
+ok 43 - Store Mode runtime permissions come from the current BackOffice operator profile
+  ---
+  duration_ms: 1.251503
+  ...
+# Subtest: Store Mode role names do not grant live cash or ledger permissions
+ok 44 - Store Mode role names do not grant live cash or ledger permissions
+  ---
+  duration_ms: 0.187113
+  ...
+# Subtest: Store Mode operator is never treated as an unrestricted BackOffice manager
+ok 45 - Store Mode operator is never treated as an unrestricted BackOffice manager
+  ---
+  duration_ms: 0.24447
+  ...
+# Subtest: existing cash and ledger routes consume live permissions
+ok 46 - existing cash and ledger routes consume live permissions
+  ---
+  duration_ms: 0.125189
+  ...
+# Subtest: BackOffice supplier and same-shift payment permissions are enforced before store transaction creation
+ok 47 - BackOffice supplier and same-shift payment permissions are enforced before store transaction creation
+  ---
+  duration_ms: 0.127963
+  ...
+# Subtest: legacy login token permissions are overwritten by current BackOffice permissions
+ok 48 - legacy login token permissions are overwritten by current BackOffice permissions
+  ---
+  duration_ms: 0.114453
+  ...
+# Subtest: store shift close requires real physical count before close
+ok 49 - store shift close requires real physical count before close
+  ---
+  duration_ms: 1.118772
+  ...
+1..49
+# tests 49
+# suites 0
+# pass 48
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 1406.318359

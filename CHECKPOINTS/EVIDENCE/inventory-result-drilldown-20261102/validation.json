@@ -1,0 +1,26 @@
+{
+  "sourceControls": 36,
+  "changedControls": [],
+  "changedAuxiliary": [],
+  "ui": {
+    "groupButton": true,
+    "initial": -1,
+    "correction": 0,
+    "final": -1,
+    "missingCost": 1,
+    "headingFocus": true,
+    "returnFocus": true,
+    "refreshClearsSelection": true,
+    "refreshClosesMembers": true,
+    "openedMemberCount": 1,
+    "movementRows": 6,
+    "excludedOpeningBaseline": 1,
+    "contributingOutflows": 5,
+    "reviewHistoryRecords": 2,
+    "historyKinds": [
+      "CORRECTION",
+      "REVOKE"
+    ]
+  },
+  "hostedLimits": "single existing TEST1 group, native SuperAdmin desktop; multi-code/cross-store/pending-review behavior isolated native/mounted CI only, not newly hosted tested"
+}

@@ -1,0 +1,128 @@
+{
+  "scope": "CENTRAL-BACKOFFICE-ACCESS-01 owner-controlled BackOffice operators and core capabilities",
+  "status": "INSTALLED_OWNER_FORM_OBSERVED_AWAITING_OWNER_OPERATOR_LAB",
+  "owner": "Retained Rizareio readiness page",
+  "source": [
+    {
+      "pr": 3370,
+      "head": "5a36f3212f68ee02d641df590a7828f90bd592c3",
+      "merged": "afbf419e56bcdb7ab3022dd696de13963f71ddbd",
+      "ci_run": 41228861281,
+      "job": 124618850556,
+      "tests": 4914,
+      "pass": 4914,
+      "fail": 0,
+      "skip": 0,
+      "backup_pass": 8
+    },
+    {
+      "pr": 3400,
+      "head": "21241d32ea4d6f156d0f4bdc073af4e9ed2388dd",
+      "merged": "89ddf196b357f7088f557ab66e24bfa813dffdaa",
+      "ci_run": 41230784884,
+      "job": 124624645231,
+      "tests": 4933,
+      "pass": 4933,
+      "fail": 0,
+      "skip": 0,
+      "backup_pass": 8
+    }
+  ],
+  "earlier_common_main": {
+    "revision": "afbf419e56bcdb7ab3022dd696de13963f71ddbd",
+    "ci_run": 41230000823,
+    "job": 124624669709,
+    "tests": 4932,
+    "pass": 4932,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 8
+  },
+  "engineering_scope": [
+    "Exact default-deny route admission, selected-store and object isolation, current licence/module/lifecycle checks",
+    "Explicit cross-profile capabilities and existing-session revocation after owner policy edit",
+    "Actual production-order import/archive and Owner-product guard HTTP routing; no legacy bootstrap or unrelated writer",
+    "Native PostgreSQL delegated full product creator through actual Owner guard, separate opening-stock rights, replay and User FK",
+    "Native PostgreSQL create/count/finalize: one replayed stocktake and one attributed stock adjustment; other-store stock and sale controls unchanged",
+    "Native invoice file binding to both inbox and attachment store; revoked and disabled-module refusal",
+    "Mounted normal read-only invoice/archive/sales panels and independent role/action matrix; uncertain finalization verifies by GET"
+  ],
+  "hosted_mutations": [],
+  "limits": [
+    "CI is not LAB acceptance",
+    "No existing operator grants automatically expanded",
+    "Advanced invoice/payment/shift mutations remain denied to delegated staff",
+    "No hosted Owner/operator grant-save or writer acceptance claimed"
+  ],
+  "latest_common_release": {
+    "revision": "d6aac017544e993919af9f56ee84c4579ca6f0b1",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "d6aac017544e993919af9f56ee84c4579ca6f0b1"
+    },
+    "deploy_run": 41234431891,
+    "deploy_job": 124635188807,
+    "healthy_at": "2026-10-31T19:32:54Z"
+  },
+  "hosted_read_only_observation": {
+    "at": "2026-10-31T19:35:22Z",
+    "actor": "Existing Super Admin support session, not an ordinary Owner sign-in acceptance",
+    "company": "MYWORKSTATION LAB",
+    "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "store_id": "cmtpopbgo000trhb5ng9ytiru",
+    "surface": "Cloud browser tab4, full BackOffice -> Χειριστές και δικαιώματα -> existing lab31 edit form",
+    "visible_capabilities": 10,
+    "existing_username": "lab31",
+    "existing_profile": "STOCKTAKER",
+    "existing_checked_capabilities": [
+      "inventory.read",
+      "inventory.count"
+    ],
+    "other_stores_selected": false,
+    "credentials_entered": false,
+    "staff_save_submitted": false,
+    "explicit_business_writer_submitted": false,
+    "stock_financial_before_after": "NOT TESTED",
+    "screenshot": "owner-rights-form.jpg",
+    "sha256": "67ea7a22ada194576ca51765c4b0f48d0a38ef7d70383b5a61fa8eaa402f0146",
+    "screenshots": [
+      {
+        "file": "owner-rights-form.jpg",
+        "at": "2026-10-31T19:36:45.031000+00:00",
+        "sha256": "67ea7a22ada194576ca51765c4b0f48d0a38ef7d70383b5a61fa8eaa402f0146"
+      },
+      {
+        "file": "owner-permissions-matrix.jpg",
+        "at": "2026-10-31T19:37:27.685000+00:00",
+        "sha256": "0002c096a2be4649e03a51123f6e45fb670c76bc5088b11526e1139c097f081c"
+      }
+    ]
+  },
+  "latest_common_validation": {
+    "revision": "d6aac017544e993919af9f56ee84c4579ca6f0b1",
+    "ci_run": 41233152725,
+    "event": "workflow_dispatch",
+    "job": 124631582221,
+    "tests": 4939,
+    "pass": 4939,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 8,
+    "all_jobs": "SUCCESS",
+    "native_create_count_finalize_at": "2026-10-31T19:17:40Z",
+    "native_actual_owner_guard_create_at": "2026-10-31T19:22:37Z"
+  },
+  "ordinary_guarded_deploy": {
+    "run": 41234431891,
+    "job": 124635188807,
+    "event": "workflow_dispatch",
+    "revision": "d6aac017544e993919af9f56ee84c4579ca6f0b1",
+    "full_ci_guard": "SUCCESS",
+    "trigger": "SUCCESS",
+    "state": "SUCCESS",
+    "reason": "Documentation-head automatic classifier skipped deployment after full manual CI; normal main deployment workflow retains exact full-CI/freshness/rollback/health safeguards.",
+    "triggered_at": "2026-10-31T19:30:21Z",
+    "healthy_at": "2026-10-31T19:32:54Z"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "sourceSha": "2625a7913ccfa162dfa2342d976de6e172110a8f",
+  "package": "gr.myworkstation.chat.preview",
+  "sha256": "2603a8f385e53178fe35c6bcb2a0d81c3c50c082cb9fda859c641ceeb1a6231b",
+  "bytes": 3703820,
+  "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "status": "TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING",
+  "publicDistributionChanged": false,
+  "artifactZipSha256": "28ccd780bb40bf1060c645d143a5b60854a6f76713edd1b91b5d14bb74f3549f",
+  "independentApkV2CertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "androidSourceTree": "f9bafe0cb663f77edaca2ca818da40e48aa0e2c2",
+  "version": "0.1.15-preview",
+  "versionCode": 16,
+  "binaryManifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 16,
+    "versionName": "0.1.15-preview"
+  },
+  "compiledChatInteractionsClassPresent": true,
+  "compiledHistoryForwardMethodsPresent": true,
+  "compiledCompactPhotoZoomPresent": true,
+  "compiledAttachmentLongPressPresent": true,
+  "verifiedAtUtc": "2026-11-01T14:21:38.864117+00:00",
+  "combinedPhoneAcceptance": "NOT TESTED"
+}

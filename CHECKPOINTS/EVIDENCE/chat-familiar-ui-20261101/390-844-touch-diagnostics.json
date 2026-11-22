@@ -1,0 +1,58 @@
+{
+  "point": {
+    "x": 92.8984375,
+    "y": 478.5,
+    "hitTag": "BUTTON",
+    "hitText": "Προβολή",
+    "hitMedia": true
+  },
+  "held": {
+    "menu": true,
+    "photo": false,
+    "trace": [
+      {
+        "kind": "pointerdown",
+        "target": "BUTTON",
+        "text": "Προβολή",
+        "x": 92.8984375,
+        "y": 478.5,
+        "pointerType": "touch",
+        "time": 934
+      }
+    ]
+  },
+  "released": {
+    "menu": true,
+    "photo": false,
+    "fetches": 0
+  },
+  "trace": [
+    {
+      "kind": "pointerdown",
+      "target": "BUTTON",
+      "text": "Προβολή",
+      "x": 92.8984375,
+      "y": 478.5,
+      "pointerType": "touch",
+      "time": 934
+    },
+    {
+      "kind": "pointerup",
+      "target": "BUTTON",
+      "text": "Προβολή",
+      "x": 92.8984375,
+      "y": 478.5,
+      "pointerType": "touch",
+      "time": 1589
+    },
+    {
+      "kind": "click",
+      "target": "DIV",
+      "text": "Ενέργειες μηνύματος×ΑπάντησηΠροώθησ",
+      "x": 93,
+      "y": 479,
+      "pointerType": "touch",
+      "time": 1591
+    }
+  ]
+}

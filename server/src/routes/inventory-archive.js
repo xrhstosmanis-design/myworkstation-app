@@ -1,14 +1,21 @@
+import {Prisma} from "@prisma/client";
 import {productCardVatOptions} from '../lib/product-card-vat.js';
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {z} from "zod";
 import crypto from "crypto";
+import XLSX from "xlsx";
 
+export function createInventoryArchiveRouter({db=prisma,scope=null}={}){
+const prisma=db;
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(value||0);
 
 function requireAccess(req,res,next){
+  if(scope?.kind==='POS_INVENTORY')return next();
+  if(req.user?.staffAccess===true&&(req.method==='GET'||(req.method==='POST'&&req.path==='/export-xlsx'))&&req.staffGrant?.capability==='products.read')return next();
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Το Αρχείο ειδών είναι διαθέσιμο μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
@@ -42,6 +49,86 @@ router.post("/stock-transfer",async(req,res,next)=>{
   }catch(error){if(error?.statusCode)return res.status(error.statusCode).json({error:error.message});next(error)}
 });
 
+router.post("/export-xlsx",async(req,res,next)=>{
+  try{
+    const request=z.object({
+      storeId:z.string().trim().min(1),
+      productIds:z.array(z.string().min(1).max(100)).min(1).max(20000).optional()
+    }).safeParse(req.body);
+    if(!request.success)return res.status(400).json({error:"Μη έγκυρη επιλογή ειδών για εξαγωγή."});
+    const {storeId,productIds}=request.data;
+    const companyId=req.user.companyId;
+    const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
+    if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,storeId,'products.read');
+    const ids=productIds?[...new Set(productIds)]:null;
+    const rows=await prisma.$queryRaw`
+      SELECT p."sku",p."name",c."name" AS category,
+        COALESCE(sc."name",mp."subcategoryName") AS subcategory,vd."description" AS department,
+        p."vatRate",COALESCE(sp."salePrice",p."salePrice",0) AS price,
+        COALESCE(sp."currentStock",0) AS stock,p."active" AND sp."active" AS active,
+        ARRAY(SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id"
+          ORDER BY pb."createdAt",pb."barcode") AS barcodes
+      FROM "StoreProduct" sp
+      JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
+      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=p."vatDepartmentId" AND vd."companyId"=${companyId}
+      WHERE sp."storeId"=${storeId} AND (${ids}::text[] IS NULL OR p."id"=ANY(${ids}::text[]))
+      ORDER BY p."name",p."id"
+    `;
+    if(ids&&rows.length!==ids.length)return res.status(409).json({error:"Η επιλογή περιέχει είδη που δεν ανήκουν πλέον στο κατάστημα. Ανανέωσε την επιλογή."});
+    const workbook=XLSX.utils.book_new();
+    const sheet=XLSX.utils.aoa_to_sheet([
+      ["Εσωτερικός κωδικός","Barcodes","Περιγραφή","Κατηγορία","Υποκατηγορία","Τμήμα ΦΠΑ","ΦΠΑ %","Λιανική","Απόθεμα","Κατάσταση"],
+      ...rows.map(row=>[String(row.sku??""),row.barcodes.join(", "),row.name,row.category,row.subcategory,
+        row.department,row.vatRate==null?null:n(row.vatRate),n(row.price),n(row.stock),row.active?"Ενεργό":"Ανενεργό"])
+    ]);
+    XLSX.utils.book_append_sheet(workbook,sheet,"Αποθήκη");
+    res.set("Cache-Control","no-store").json({xlsx:XLSX.write(workbook,{type:"base64",bookType:"xlsx",compression:true})});
+  }catch(error){next(error)}
+});
+
+router.get("/duplicates", async (req, res, next) => {
+  try {
+    const companyId = req.user.companyId;
+    const storeId = String(req.query.storeId || "").trim();
+    if (!storeId) return res.status(400).json({error:"Δεν επιλέχθηκε κατάστημα."});
+    if (scope && scope.storeId !== storeId) return res.sendStatus(403);
+    const store = await prisma.store.findFirst({
+      where:{id:storeId,companyId,active:true}, select:{id:true}
+    });
+    if (!store) return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
+
+    const groups = await prisma.$queryRaw`
+      WITH items AS (
+        SELECT p.id, p.name, p.sku, sp."currentStock"
+        FROM "StoreProduct" sp JOIN "Product" p ON p.id = sp."productId"
+        WHERE sp."storeId" = ${storeId} AND p."companyId" = ${companyId}
+          AND p.active = true AND sp.active = true
+      ), keys AS (
+        SELECT DISTINCT i.id, 'BARCODE' AS kind, btrim(b.barcode) AS value
+        FROM items i JOIN "ProductBarcode" b ON b."productId" = i.id
+        UNION ALL
+        SELECT id, 'SKU', upper(btrim(sku)) FROM items
+        UNION ALL
+        SELECT id, 'NAME', lower(regexp_replace(btrim(name), '[[:space:]]+', ' ', 'g')) FROM items
+      )
+      SELECT k.kind, k.value, jsonb_agg(jsonb_build_object(
+        'id', i.id, 'name', i.name, 'sku', i.sku, 'stock', i."currentStock"
+      ) ORDER BY i.name, i.id) AS items
+      FROM keys k JOIN items i ON i.id = k.id
+      WHERE k.value <> ''
+      GROUP BY k.kind, k.value HAVING count(*) > 1
+      ORDER BY k.kind, k.value
+    `;
+    res.json({groups});
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/",async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;
@@ -51,6 +138,7 @@ router.get("/",async(req,res,next)=>{
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
 
     const q=String(req.query.q||"").trim();
+    const productId=String(req.query.productId||"").trim()||null;
     const text=q?`%${q}%`:null;
     const category=String(req.query.category||"").trim()||null;
     const subcategory=String(req.query.subcategory||"").trim()||null;
@@ -59,6 +147,56 @@ router.get("/",async(req,res,next)=>{
     const pageSize=Math.min(200,Math.max(25,Number.parseInt(String(req.query.pageSize||"100"),10)||100));
     const offset=(page-1)*pageSize;
 
+    const vatDepartment=z.string().trim().max(200).optional().parse(req.query.vatDepartment)||null;
+    const marginBound=z.preprocess(value=>typeof value==="string"&&value.trim()===""?undefined:value,z.coerce.number().finite().optional());
+    const bounds=z.object({marginMin:marginBound,marginMax:marginBound}).safeParse(req.query);
+    if(!bounds.success || (bounds.data.marginMin??-Infinity)>(bounds.data.marginMax??Infinity))
+      return res.status(400).json({error:"Συμπλήρωσε έγκυρο εύρος Margin."});
+    const {marginMin,marginMax}=bounds.data;
+    const filterMargin=marginMin!==undefined||marginMax!==undefined;
+    const purchaseUnitCost=Prisma.sql`CASE WHEN d."documentType" IS DISTINCT FROM 'CREDIT_NOTE' THEN COALESCE(
+      (SELECT sm."unitCost" FROM "StockMovement" sm
+       WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d."id"
+         AND sm."storeId"=d."storeId" AND sm."productId"=l."productId"
+         AND sm."movementType"='PURCHASE_PACK_CORRECTION' AND sm."unitCost">0
+       ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1),
+      (SELECT SUM(pl."netAmount"+COALESCE(pl."exciseTotal",0)) /
+              NULLIF(SUM(pl."quantity"*CASE WHEN pl."invoiceUnit"='PACKAGE' THEN pl."stockUnitsPerInvoiceUnit" ELSE 1 END),0)
+       FROM "PurchaseOrderLine" pl JOIN "PurchaseOrder" po ON po."id"=pl."orderId"
+       WHERE d."sourceType"='PURCHASE_ORDER' AND po."id"=d."id"
+         AND po."companyId"=d."companyId" AND po."storeId"=d."storeId" AND pl."productId"=l."productId"
+       HAVING BOOL_OR(pl."invoiceUnit"='PACKAGE')
+         AND BOOL_AND(pl."quantity">0 AND (pl."invoiceUnit" IS DISTINCT FROM 'PACKAGE' OR COALESCE(pl."stockUnitsPerInvoiceUnit",0)>0))),
+      CASE WHEN l."quantity">0 AND l."netAmount">0 AND (l."unit" IS DISTINCT FROM 'PACKAGE' OR l."unitsPerPackage">0)
+        THEN l."netAmount"/(l."quantity"*CASE WHEN l."unit"='PACKAGE' THEN l."unitsPerPackage" ELSE 1 END)
+      END
+    ) END`;
+    const latestCostJoin=Prisma.sql`
+      LEFT JOIN LATERAL (
+        SELECT ${purchaseUnitCost} AS "unitCost",
+               d."documentDate",d."documentNumber",sup."name" AS "supplierName"
+        FROM "PurchaseDocumentLine" l
+        JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+        LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
+        WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
+        ORDER BY d."documentDate" DESC,d."createdAt" DESC,l."id" DESC LIMIT 1
+      ) lp ON true
+    `;
+    const averageCostJoin=Prisma.sql`
+      LEFT JOIN LATERAL (
+        SELECT AVG(NULLIF(${purchaseUnitCost},0)) AS "averagePurchasePrice"
+        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+        WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
+          AND d."documentDate">=NOW()-INTERVAL '180 days'
+      ) ap ON true
+    `;
+    const saleNet=Prisma.sql`COALESCE(sp."salePrice",p."salePrice",0)::numeric / NULLIF(1+COALESCE(p."vatRate",0)::numeric/100,0)`;
+    const cost=Prisma.sql`COALESCE(NULLIF(lp."unitCost",0),NULLIF(ap."averagePurchasePrice",0),NULLIF(p."costPrice",0),0)::numeric`;
+    const margin=Prisma.sql`ROUND(((${saleNet}-${cost}) / NULLIF(${saleNet},0))*100,2)`;
+    const marginFilter=filterMargin?Prisma.sql`AND ${saleNet}>0 AND ${cost}>0
+      AND (${marginMin??null}::numeric IS NULL OR ${margin}>=${marginMin??null})
+      AND (${marginMax??null}::numeric IS NULL OR ${margin}<=${marginMax??null})`:Prisma.empty;
+
     const countRows=await prisma.$queryRaw`
       SELECT COUNT(*)::int AS count
       FROM "StoreProduct" sp
@@ -66,11 +204,16 @@ router.get("/",async(req,res,next)=>{
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      ${filterMargin?latestCostJoin:Prisma.empty}
+      ${filterMargin?averageCostJoin:Prisma.empty}
       WHERE sp."storeId"=${storeId}
+        AND (${productId}::text IS NULL OR p."id"=${productId})
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
         AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${vatDepartment}::text IS NULL OR (${vatDepartment}='__NONE__' AND p."vatDepartmentId" IS NULL) OR p."vatDepartmentId"=${vatDepartment})
+        ${marginFilter}
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
     `;
     const total=Number(countRows[0]?.count||0);
@@ -92,35 +235,14 @@ router.get("/",async(req,res,next)=>{
       LEFT JOIN LATERAL (
         SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1
       ) pb ON true
-      LEFT JOIN LATERAL (
-        SELECT COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
-                         WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d."id"
-                           AND sm."productId"=l."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
-                         ORDER BY sm."createdAt" DESC LIMIT 1),
-                    CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END) AS "unitCost",
-               d."documentDate",d."documentNumber",sup."name" AS "supplierName"
-        FROM "PurchaseDocumentLine" l
-        JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-        LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
-        WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
-        ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
-      ) lp ON true
+      ${latestCostJoin}
       LEFT JOIN LATERAL (
         SELECT sup0."name" FROM "SupplierProductLink" spl
         JOIN "Supplier" sup0 ON sup0."id"=spl."supplierId" AND sup0."companyId"=${companyId}
         WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true
         ORDER BY spl."createdAt",spl."id" LIMIT 1
       ) linkedSupplier ON true
-      LEFT JOIN LATERAL (
-        SELECT AVG(COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
-                             WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d2."id"
-                               AND sm."productId"=l2."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
-                             ORDER BY sm."createdAt" DESC LIMIT 1),
-                            CASE WHEN l2."unit"='PACKAGE' THEN l2."unitCost"/NULLIF(l2."unitsPerPackage",0) ELSE l2."unitCost" END)) AS "averagePurchasePrice"
-        FROM "PurchaseDocumentLine" l2 JOIN "PurchaseDocument" d2 ON d2."id"=l2."purchaseDocumentId"
-        WHERE d2."companyId"=${companyId} AND d2."storeId"=${storeId} AND d2."status"='APPROVED' AND l2."productId"=p."id"
-          AND d2."documentDate">=NOW()-INTERVAL '180 days'
-      ) ap ON true
+      ${averageCostJoin}
       LEFT JOIN LATERAL (
         SELECT COALESCE(SUM(sl."quantity"),0) AS "sales15Qty",MAX(s."occurredAt") AS "lastSaleAt"
         FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId"
@@ -128,10 +250,13 @@ router.get("/",async(req,res,next)=>{
           AND s."occurredAt">=NOW()-INTERVAL '15 days'
       ) sa ON true
       WHERE sp."storeId"=${storeId}
+        AND (${productId}::text IS NULL OR p."id"=${productId})
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
         AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${vatDepartment}::text IS NULL OR (${vatDepartment}='__NONE__' AND p."vatDepartmentId" IS NULL) OR p."vatDepartmentId"=${vatDepartment})
+        ${marginFilter}
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
       ORDER BY p."name",p."sku" NULLS LAST
       LIMIT ${pageSize} OFFSET ${offset}
@@ -170,12 +295,17 @@ router.get("/",async(req,res,next)=>{
       prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`
     ]);
 
+    const vatDepartments=await productCardVatOptions(prisma,companyId);
+    if(req.user?.staffAccess===true)await requireStaffGrant(prisma,req.user,storeId,'products.read');
     res.json({store,page,pageSize,total,pages:Math.max(1,Math.ceil(total/pageSize)),items,
       categories:categories.map(r=>r.name),subcategories:subcategories.map(r=>r.name),
-      vatDepartments:await productCardVatOptions(prisma,companyId),
+      vatDepartments,
       taxonomy:{categories:taxonomyCategories,subcategories:taxonomySubcategories},
       totals:{retailStockValue:items.reduce((a,r)=>a+r.retailStockValue,0),costStockValue:items.reduce((a,r)=>a+r.costStockValue,0),stock:items.reduce((a,r)=>a+r.currentStock,0)}});
   }catch(error){next(error)}
 });
 
+return router;
+}
+const router=createInventoryArchiveRouter();
 export default router;

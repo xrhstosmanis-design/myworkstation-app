@@ -3,17 +3,23 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 const route=await readFile(new URL("../src/routes/owner-payments-import.js",import.meta.url),"utf8");
+const parser=await readFile(new URL("../src/lib/kiosk-payment-workbook.js",import.meta.url),"utf8");
+const preview=await readFile(new URL("../src/routes/owner-payments-import-preview.js",import.meta.url),"utf8");
 const client=await readFile(new URL("../../client/src/components/commerce/installKioskPaymentsImport.js",import.meta.url),"utf8");
 const entry=await readFile(new URL("../../client/src/entry.jsx",import.meta.url),"utf8");
 const server=await readFile(new URL("../src/index.js",import.meta.url),"utf8");
 
 test("kiosk spreadsheet import is controlled",()=>{
-  assert.match(route,/XLSX/);
-  assert.match(route,/xlsx\|xls\|csv/);
-  assert.match(route,/8\*1024\*1024/);
-  assert.match(route,/sheet_to_json/);
-  assert.match(route,/findHeader/);
-  assert.match(route,/Ημερομηνία και Ποσό\/Πληρωμές/);
+  for(const source of [route,preview]){
+    assert.match(source,/from "\.\.\/lib\/kiosk-payment-workbook\.js"/);
+    assert.match(source,/parseKioskPaymentFile\(body\.filename,body\.dataBase64\)/);
+  }
+  assert.match(parser,/XLSX/);
+  assert.match(parser,/xlsx\|xls\|csv/);
+  assert.match(parser,/8\*1024\*1024/);
+  assert.match(parser,/sheet_to_json/);
+  assert.match(parser,/findHeader/);
+  assert.match(parser,/Ημερομηνία και Ποσό\/Πληρωμές/);
 });
 
 test("kiosk import is tenant scoped and duplicate safe",()=>{

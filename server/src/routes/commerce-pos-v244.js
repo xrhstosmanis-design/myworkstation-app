@@ -1,5 +1,11 @@
+import {findCompetingPosDraftReview,findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
+import {walletActivityFromRequest,walletActivityForJob} from "../services/ai-wallet-activity.js";
+import {reviewFastSupplierVat} from "../lib/invoice-fast-vat-role.js";
+import {createFastHeaderTiming} from "../lib/pos-fast-header-timing.js";
+import {invoiceAssistantPageCount} from "../lib/invoice-assistant-page-count.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {findUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
+import {assertExpectedPendingInvoice,pendingIntentForPayment,invoicePageManifest} from '../services/pos-pending-invoices.js';
 import {Prisma} from '@prisma/client';
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation} from '../services/store-lifecycle-generation.js';
@@ -9,7 +15,7 @@ import {ensureInvoiceCommonDraftSchema,assertNoUnresolvedInbound,lockInvoiceStor
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain,allowActiveInvoiceDrainRequest} from "../server-shutdown.js";
 import crypto from "crypto";
-import {findMyDataPurchase,attachMyDataPosReceipt} from "../lib/mydata-pos-receipt.js";
+import {findMyDataPurchase,attachMyDataPosReceipt,hasMyDataPurchaseLines} from "../lib/mydata-pos-receipt.js";
 import {prepareSelectedInbox,queueEmptyInboxRead} from "../lib/pos-inbox-original.js";
 import jwt from "jsonwebtoken";
 import {Router} from "express";
@@ -224,7 +230,7 @@ function scheduleBoundFastBackground({companyId,storeId,jobId,pageJobIds,handoff
           if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;sourceLines=null}
           if(!sourceLines&&handoff.fullReader==="ASSISTANT"){
             operationStage="assistant-read";
-            sourceLines=await readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross:handoff.totalGross});
+            sourceLines=await readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross:handoff.totalGross,documentNumber:handoff.documentNumber,activity:walletActivityForJob({companyId,storeId,purpose:"PAYMENT_INVOICE_READ",jobId,documentNumber:handoff.documentNumber},handoff.walletActivity)});
             requiresCompletePrintedTable=true;
           }
           if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{backgroundScope,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines;requiresCompletePrintedTable=ai?.result?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true}
@@ -326,7 +332,7 @@ function scheduleBoundFastBackground({companyId,storeId,jobId,pageJobIds,handoff
   task.catch(error=>console.error("POS fast invoice worker crashed",{jobId,message:String(error?.message||error)}));
 }
 
-async function ensureFastHandoffSchema(db=prisma){
+async function ensureFastHandoffSchema(db=prisma,{schemaOnly=false}={}){
   await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "MyDataInboundDocument" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"inboxId" TEXT NOT NULL,
     "mark" TEXT NOT NULL,"uid" TEXT,"issuerVat" TEXT,"counterpartVat" TEXT,"series" TEXT,"documentNumber" TEXT,
@@ -341,6 +347,7 @@ async function ensureFastHandoffSchema(db=prisma){
     "leaseToken" TEXT,"leaseOwner" TEXT,"leaseUntil" TIMESTAMPTZ,"publicOrigin" TEXT,"lastError" TEXT,
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"completedAt" TIMESTAMPTZ)`);
   await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PosInvoiceBackgroundTask_dispatch_idx" ON "PosInvoiceBackgroundTask" ("state","availableAt","leaseUntil")`);
+  if(schemaOnly)return;
   return withLifecycleJobBatches(db,async lifecycleFilter=>{
   await db.$executeRaw`UPDATE "PosInvoiceBackgroundTask" t SET "state"='QUEUED',"availableAt"=NOW(),"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"updatedAt"=NOW()
     WHERE "state"='RUNNING' AND ("leaseUntil" IS NULL OR "leaseToken" IS NULL OR "leaseOwner" IS NULL) AND "companyId" NOT ILIKE 'customer-demo-%' AND "storeId" NOT ILIKE 'customer-demo-%'
@@ -523,13 +530,17 @@ function outputText(response){
   return "";
 }
 
-async function callFastOpenAiHeader({prompt,filePart}){
+async function callFastOpenAiHeader({prompt,filePart,timing}){
   let lastError;const deadline=Date.now()+FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS;
   for(let attempt=1;attempt<=FAST_OPENAI_HEADER_ATTEMPTS;attempt++){
+    let finishAttempt;
     try{
       const remainingMs=deadline-Date.now();if(remainingMs<1000)break;
+      finishAttempt=timing?.start("openai_attempt",attempt);
+      const model=process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini";
       const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(remainingMs),body:JSON.stringify({
-        model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
+        model,
+        ...(model==="gpt-5"||model==="gpt-5-2025-08-07"?{reasoning:{effort:"minimal"}}:{}),
         input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
         text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
       })});
@@ -538,8 +549,9 @@ async function callFastOpenAiHeader({prompt,filePart}){
       if(!raw.trim())throw new Error("empty structured response");
       const parsed=JSON.parse(raw);
       if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw new Error("invalid structured response");
+      finishAttempt?.("ok");
       return parsed;
-    }catch(error){throwIfWalletError(error);
+    }catch(error){finishAttempt?.("error");throwIfWalletError(error);
       lastError=error;
       console.warn("FAST OpenAI header attempt failed",{attempt,message:String(error?.message||error)});
     }
@@ -589,6 +601,7 @@ router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>
 });
 
 router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  const timing=createFastHeaderTiming(res);
   try{
     const storeId=String(req.body?.storeId||"");
     const filename=String(req.body?.filename||"invoice.jpg").slice(0,180);
@@ -598,7 +611,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId,activity:walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_HEADER_READ"})},async()=>{
     const isPdf=mimeType==="application/pdf";
     if(!isPdf&&!/^data:image\/(jpeg|png|webp);base64,/i.test(dataUrl))return res.status(400).json({error:"Το PREMIUM FAST υποστηρίζει εικόνα ή PDF."});
     if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
@@ -608,14 +621,14 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // invoice-total arithmetic; otherwise continue through the normal reader.
     const fileBytes=Buffer.from(String(dataUrl).split(",").pop()||"","base64");
     const attachmentChecksum=crypto.createHash("sha256").update(fileBytes).digest("hex");
-    const durableRows=await prisma.$queryRaw`
+    const durableRows=await timing.measure("exact_file_lookup",()=>prisma.$queryRaw`
       SELECT j."resultJson",s."id" AS "supplierId",s."name" AS "supplierName",s."taxId" AS "supplierTaxId"
       FROM "DocumentAttachment" a
       JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId" AND j."storeId"=a."storeId"
       JOIN "Supplier" s ON s."id"=(j."resultJson"->'posHandoff'->>'supplierId') AND s."companyId"=j."companyId" AND s."active"=true
       WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${storeId} AND a."checksum"=${attachmentChecksum}
         AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE')
-      ORDER BY j."updatedAt" DESC LIMIT 5`;
+      ORDER BY j."updatedAt" DESC LIMIT 5`);
     for(const row of durableRows){
       const handoff=row.resultJson?.posHandoff&&typeof row.resultJson.posHandoff==="object"?row.resultJson.posHandoff:{};
       const productLines=finalizeV244ProductLines(Array.isArray(row.resultJson?.productLines)?row.resultJson.productLines:[]);
@@ -625,30 +638,8 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE||!reusableVerifiedPrintedTable(row.resultJson?.productLines,totalGross))continue;
       return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,documentType:row.resultJson?.documentType==="CREDIT_NOTE"||handoff.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",provider:"DURABLE_POS_JOB",productLines});
     }
-    let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
-    if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
-      try{
-        const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
-        azureRawText=String(parsed.rawText||"");
-        azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
-        const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
-        const azureTotalGross=round2(recoverVatSummaryInvoiceTotal(azureRawText)||recoverBalancedInvoicePayable(azureRawText)||parsed.totalGross||0);
-        const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
-        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,documentType:parsed.documentType==="CREDIT_NOTE"||/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(azureRawText)?"CREDIT_NOTE":"INVOICE",provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
-        const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
-        if(azureHasUsefulHeader&&azureProductLines.length)return res.json(azureHeader);
-        if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
-        console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
-        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
-      }catch(error){throwIfWalletError(error);
-        if(String(error?.message||"").includes("δεν επέστρεψε ασφαλή βασικά στοιχεία"))throw error;
-        console.error("FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
-        if(!process.env.OPENAI_API_KEY){const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν είναι προσωρινά διαθέσιμη. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
-      }
-    }
-    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     const filePart=isPdf
-      ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
+      ?{type:"input_file",filename,file_data:dataUrl}
       :{type:"input_image",image_url:dataUrl,detail:"high"};
     const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού, τον πίνακα ειδών και την κάτω περιοχή για τα τελικά σύνολα.
 
@@ -656,17 +647,71 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 0. documentType = CREDIT_NOTE αν γράφει ΠΙΣΤΩΤΙΚΟ ή CREDIT NOTE, αλλιώς INVOICE. Μη θεωρήσεις την πίστωση ως τρόπο πληρωμής ένδειξη πιστωτικού.
 1. supplierName = ο ΕΚΔΟΤΗΣ/ΠΡΟΜΗΘΕΥΤΗΣ του παραστατικού, όχι ο πελάτης/παραλήπτης.
 2. supplierTaxId = το ΑΦΜ του εκδότη/προμηθευτή.
-3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
+3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας. Αγνόησε MARK, ΜΑΡΚ, UID, αριθμούς QR και τιμές της ενότητας ΣΧΕΤΙΚΑ ΠΑΡΑΣΤΑΤΙΚΑ. Κράτησε τη σειρά και τα αρχικά μηδενικά όπως τυπώθηκαν.
 4. documentDate = η ημερομηνία έκδοσης του παραστατικού σε YYYY-MM-DD. Μην χρησιμοποιήσεις σημερινή ημερομηνία αν δεν φαίνεται στο χαρτί.
 5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ του ΤΙΜΟΛΟΓΙΟΥ. Αν παρακάτω υπάρχει ξεχωριστή «ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ» ή PAYMENT RECEIPT, αγνόησε το ποσό της απόδειξης: μπορεί να διαφέρει από το πληρωτέο του τιμολογίου. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal. ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ, ΥΠΟΛΟΙΠΟ ΛΟΓΑΡΙΑΣΜΟΥ, BALANCE ή αξία/υπόλοιπο εγγυοδοσίας. Αν υπάρχει «ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ Φ.Π.Α.», προτίμησε το μικτό ποσό της γραμμής «ΣΥΝΟΛΑ» που αποδεικνύεται από καθαρή αξία + ΦΠΑ.
 
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     let parsed;
-    try{parsed=await callFastOpenAiHeader({prompt,filePart})}
-    catch(error){throwIfWalletError(error);if(azureHeaderFallback)return res.json(azureHeaderFallback);throw error}
+    // An explicit store-form hint may prioritize the mandatory whole-PDF
+    // reader only after the existing server parser proves multiple pages.
+    // Probe failures/legacy clients preserve the original Azure-first path.
+    let pdfHeaderPriority=false,openaiHeaderRead=false,needsAzureMetadata=false;
+    if(isPdf&&req.body?.pdfHeaderPriority===true&&process.env.OPENAI_API_KEY){
+      try{
+        const count=await timing.measure("pdf_header_page_probe",()=>invoiceAssistantPageCount([{contentData:dataUrl,mimeType}]));
+        pdfHeaderPriority=Number.isInteger(count)&&count>=2&&count<=5;
+      }catch(error){throwIfWalletError(error)}
+    }
+    if(pdfHeaderPriority){
+      try{parsed=await timing.measure("openai_header",()=>callFastOpenAiHeader({prompt,filePart,timing}));openaiHeaderRead=true}
+      catch(error){throwIfWalletError(error);throw error}
+      const fullTotal=round2(parsed.totalGross||0);
+      const complete=Boolean((cleanTaxId(parsed.supplierTaxId)||norm(parsed.supplierName).length>=4)&&/\d/.test(String(parsed.documentNumber||""))&&/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))&&Number.isFinite(fullTotal)&&fullTotal>0);
+      // Invalid whole-document money must fail closed, never fall back to a
+      // page subtotal. A positive total may use one later Azure metadata rescue.
+      needsAzureMetadata=Number.isFinite(fullTotal)&&fullTotal>0&&!complete;
+    }
+    let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[],recipientVat="",azureSupplierVat="";
+    // Page arithmetic cannot establish a whole-document PDF amount.
+    // Keep the existing known-one-page rule for every Azure amount reuse.
+    let azureCanVerifyDocumentTotal=!isPdf;
+    if((!pdfHeaderPriority||needsAzureMetadata)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+      try{
+        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS,timing})),{includeRecipientVat:true});
+        recipientVat=parsed.recipientVat;
+        azureSupplierVat=parsed.supplier?.taxId;
+        azureCanVerifyDocumentTotal=!isPdf||(!pdfHeaderPriority&&parsed.azurePageCount===1);
+        azureRawText=String(parsed.rawText||"");
+        azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
+        const supplier=await timing.measure("azure_supplier_match",()=>azureSupplierMatch(req.user.companyId,parsed.supplier));
+        const balancedPayable=recoverBalancedInvoicePayable(azureRawText);
+        const azureTotalGross=round2(recoverVatSummaryInvoiceTotal(azureRawText)||balancedPayable||parsed.totalGross||0);
+        const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
+        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,totalGrossVerified:!isPdf&&balancedPayable>0&&round2(balancedPayable)===azureTotalGross,documentType:parsed.documentType==="CREDIT_NOTE"||/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(azureRawText)?"CREDIT_NOTE":"INVOICE",provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
+        const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
+        // Payment-header readiness does not require the product table, which
+        // remains the existing durable background reader's responsibility.
+        // A reconciled table can still be only a PDF page subtotal. Both
+        // shortcuts require a known single physical page for PDFs; otherwise
+        // continue to the existing configured header fallback.
+        const azureHasCompleteHeader=Boolean((azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4)&&azureHeader.documentNumber&&azureHeader.documentDate&&Number.isFinite(azureHeader.totalGross)&&azureHeader.totalGross>0);
+        if(azureHasUsefulHeader&&azureCanVerifyDocumentTotal&&(azureProductLines.length||azureHasCompleteHeader))return res.json(reviewFastSupplierVat(azureHeader,recipientVat,azureSupplierVat));
+        if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
+        console.warn(pdfHeaderPriority?"FAST Azure metadata rescue incomplete; reusing full-PDF header":"FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
+        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(reviewFastSupplierVat(azureHeaderFallback,recipientVat,azureSupplierVat));const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
+      }catch(error){throwIfWalletError(error);
+        if(String(error?.message||"").includes("δεν επέστρεψε ασφαλή βασικά στοιχεία"))throw error;
+        console.error(pdfHeaderPriority?"FAST Azure metadata rescue failed; reusing full-PDF header":"FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
+        if(!process.env.OPENAI_API_KEY){const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν είναι προσωρινά διαθέσιμη. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
+      }
+    }
+    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
+    try{if(!openaiHeaderRead)parsed=await timing.measure("openai_header",()=>callFastOpenAiHeader({prompt,filePart,timing}))}
+    catch(error){throwIfWalletError(error);if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(reviewFastSupplierVat(azureHeaderFallback,recipientVat,azureSupplierVat));throw error}
     const supplierName=String(parsed.supplierName||azureHeaderFallback?.supplierName||"");
     const supplierTaxId=String(parsed.supplierTaxId||azureHeaderFallback?.supplierTaxId||"");
-    const supplier=await matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId});
+    const supplier=await timing.measure("openai_supplier_match",()=>matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId}));
     const parsedDocumentNumber=String(parsed.documentNumber||"").trim();
     const documentNumber=/\d/.test(parsedDocumentNumber)?parsedDocumentNumber:String(azureHeaderFallback?.documentNumber||"");
     const parsedDocumentDate=String(parsed.documentDate||"");
@@ -677,9 +722,15 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // existing cent-balanced footer proof to every supplier when Azure has
     // actually transcribed it; an absent/unbalanced footer still falls back
     // to the FAST header and leaves the normal review path intact.
-    const verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal(azureRawText);
-    const verifiedPayableTotal=recoverBalancedInvoicePayable(azureRawText);
-    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:verifiedPayableTotal>0?verifiedPayableTotal:parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
+    // A balanced footer may still belong to only one of several PDF pages.
+    // It must neither replace the full-document result nor fill its gaps.
+    const verifiedVatSummaryTotal=azureCanVerifyDocumentTotal?recoverVatSummaryInvoiceTotal(azureRawText):0;
+    const verifiedPayableTotal=azureCanVerifyDocumentTotal?recoverBalancedInvoicePayable(azureRawText):0;
+    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:verifiedPayableTotal>0?verifiedPayableTotal:parsedTotalGross>0?parsedTotalGross:azureCanVerifyDocumentTotal?round2(azureHeaderFallback?.totalGross||0):0;
+    if(isPdf&&!azureCanVerifyDocumentTotal&&!(Number.isFinite(totalGross)&&totalGross>0)){
+      const error=new Error("Δεν επιβεβαιώθηκε το τελικό ποσό όλων των σελίδων του PDF. Ελέγξτε το πρωτότυπο πριν από την πληρωμή.");
+      error.status=502;error.code="FAST_HEADER_PDF_TOTAL_UNVERIFIED";throw error;
+    }
     // FAST rows may bypass the unavailable full-table provider only when the
     // complete table proves itself against the printed/confirmed invoice total.
     // A partial table is discarded and the existing fail-closed background
@@ -691,7 +742,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // a table that already proves itself against the invoice.
     const providerLines=Array.isArray(parsed.productLines)&&parsed.productLines.length?parsed.productLines:azureCandidateProductLines;
     const productLines=reconciledFastProductLines(providerLines,totalGross);
-    res.json({
+    res.json(reviewFastSupplierVat({
       confidence:Number(parsed.confidence||0),
       supplierId:supplier?.id||"",
       supplierName:supplier?.name||supplierName,
@@ -700,8 +751,9 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       documentDate,
       documentType:parsed.documentType==="CREDIT_NOTE"||azureHeaderFallback?.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",
       totalGross:totalGross>0?totalGross:0,
+      totalGrossVerified:!isPdf&&verifiedPayableTotal>0&&round2(verifiedPayableTotal)===totalGross,
       productLines
-    });
+    },recipientVat,parsed.supplierTaxId||azureSupplierVat));
   });
   }catch(error){next(error)}
 });
@@ -718,6 +770,12 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+    if(req.body?.expectedPendingInvoice){
+      const pending=await assertExpectedPendingInvoice(prisma,{companyId,storeId,user:req.user,terminalPos:req.user.terminalPos||"MAIN"},req.body);
+      if(pending.source?.sourceKind==="PLAIN_CAPTURE")return res.status(409).json({error:"Το πρωτότυπο έχει αποθηκευτεί χωρίς AI. Δεν μετατράπηκε σε νέα εργασία.",code:"PENDING_INVOICE_SOURCE_KIND"});
+      invoicePageManifest(req.body.pages);
+      return res.json({ok:true,duplicate:false,paymentReused:true,paymentTransactionId:pending.row.id,canonicalDocumentNumber:pending.row.details.documentNumber,pendingInvoice:true,completed:Boolean(pending.source?.purchaseDocumentId&&pending.source.handoffReady),...(pending.source||{}),stockUpdated:false});
+    }
     const supplierRows=await prisma.$queryRaw`SELECT "id","taxId" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;
     if(!supplierRows[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
     const supplierTaxId=cleanTaxId(supplierRows[0].taxId);
@@ -746,7 +804,7 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
       const existing=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId,documentNumber:myDataPurchase.purchaseNumber});
       if(existing)assertReusableInvoicePayment(existing,{companyId,storeId,supplierId,supplierTaxId,documentNumber:myDataPurchase.purchaseNumber,totalGross:intakeNumber(req.body.totalGross)});
       if((myDataPurchase.paymentTransactionId&&myDataPurchase.paymentTransactionId!==existing?.id)||(myDataPurchase.settlementMode==="PAID"&&!existing))return res.status(409).json({error:"Η υπάρχουσα αγορά έχει πληρωμή που χρειάζεται έλεγχο. Δεν έγινε νέα χρέωση."});
-      return res.json({ok:true,duplicate:false,myDataMatched:true,canonicalDocumentNumber:myDataPurchase.purchaseNumber,purchaseDocumentId:myDataPurchase.documentId,paymentTransactionId:existing?.id||null,paymentReused:Boolean(existing)});
+      return res.json({ok:true,duplicate:false,myDataMatched:true,canonicalDocumentNumber:myDataPurchase.purchaseNumber,purchaseDocumentId:myDataPurchase.documentId,hasProductLines:await hasMyDataPurchaseLines(prisma,myDataPurchase),paymentTransactionId:existing?.id||null,paymentReused:Boolean(existing)});
     }
     const payment=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber});
     if(payment)assertReusableInvoicePayment(payment,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,totalGross:intakeNumber(req.body.totalGross)});
@@ -792,6 +850,11 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY o."updatedAt" DESC LIMIT 1`;
     if(orders[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:orders[0]});
+    // The original myDATA first-payment/reuse branch above stays authoritative.
+    // A conservative review must stop before the client can write money.
+    const competingDraft=await findCompetingPosDraftReview(prisma,identity);
+    const competingPayment=await findExistingInvoicePaymentReview(prisma,identity,{excludePaymentId:payment?.id||null});
+    if(competingDraft||competingPayment)return res.status(409).json({error:"Υπάρχει πιθανό ίδιο τιμολόγιο ή πληρωμή με διαφορετική γραφή αριθμού ή σειράς. Έλεγξε τα πρωτότυπα στο BackOffice πριν συνεχίσεις. Δεν ξεκίνησε νέα πληρωμή.",code:"INVOICE_DUPLICATE_REVIEW_REQUIRED"});
     const unlinked=await findUnlinkedMyDataOriginal(prisma,identity,{paymentTransactionId:payment?.id||null});
     res.json({ok:true,duplicate:false,...resume,...(unlinked?{myDataHeaderMatched:true,canonicalDocumentNumber:unlinked.canonicalDocumentNumber,myDataMark:unlinked.mark}:{}),paymentTransactionId:payment?.id||null,paymentReused:Boolean(payment),
       ...(payment?{settlementMode:"PAID",message:"Η υπάρχουσα πληρωμή διατηρείται. Θα γίνει μόνο νέα ανάγνωση του τιμολογίου."}:{})});
@@ -804,22 +867,66 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
 router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const companyId=req.user.companyId,storeId=String(req.body?.storeId||""),supplierId=String(req.body?.supplierId||"");
-    const documentNumber=String(req.body?.documentNumber||"").trim().slice(0,80),documentDate=normalizeIntakeDate(req.body?.documentDate);
+    let documentNumber=String(req.body?.documentNumber||"").trim().slice(0,80);const documentDate=normalizeIntakeDate(req.body?.documentDate);
     const totalGross=round2(intakeNumber(req.body?.totalGross));
     const documentType=req.body?.documentType;
-    const pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
+    let pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
     if(!["INVOICE","CREDIT_NOTE"].includes(documentType)||documentType==="INVOICE"&&pages.some(page=>page?.documentType==="CREDIT_NOTE"))return res.status(409).json({error:"Ο τύπος παραστατικού δεν συμφωνεί με την ανάγνωση. Δεν έγινε καταχώριση ή πληρωμή.",code:"POS_DOCUMENT_TYPE_CONFLICT"});
     if(documentType==="CREDIT_NOTE"&&(req.body?.settlementMode!=="CREDIT"||req.body?.paymentTransactionId))return res.status(409).json({error:"Το πιστωτικό συμψηφίζεται με το υπόλοιπο του προμηθευτή, χωρίς πληρωμή POS.",code:"POS_CREDIT_NOTE_PAYMENT_FORBIDDEN"});
     let settlementMode=req.body?.settlementMode==="PAID"?"PAID":"CREDIT";
     let paymentTransactionId=req.body?.paymentTransactionId?String(req.body.paymentTransactionId).slice(0,180):null;
-    if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||!pages.length)return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
+    const useExistingMyData = documentType === "INVOICE" && settlementMode === "PAID" && !pages.length && typeof req.body?.existingMyDataDocumentId === "string" && Boolean(req.body.existingMyDataDocumentId) && req.body?.useStoredPaymentAttachment !== true;
+    if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||(!pages.length&&!useExistingMyData&&req.body?.useStoredPaymentAttachment!==true))return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
     const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
     const supplierRows=await prisma.$queryRaw`SELECT "id","taxId" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;
     const supplier=supplierRows[0];if(!supplier)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+    const pendingScope={companyId,storeId,user:req.user,terminalPos:req.user.terminalPos||"MAIN"};
+    if(req.body?.useStoredPaymentAttachment===true){
+      if(pages.length||documentType!=="INVOICE"||settlementMode!=="PAID"||!paymentTransactionId)
+        return res.status(400).json({error:"Επίλεξε υπάρχουσα πληρωμή για χρήση του αποθηκευμένου αρχείου."});
+      const rows=await prisma.$queryRaw`
+        SELECT t."attachmentData",t."attachmentMimeType",t."attachmentFilename"
+        FROM "StoreTransaction" t
+        WHERE t."id"=${paymentTransactionId} AND t."companyId"=${companyId} AND t."storeId"=${storeId}
+          AND t."supplierId"=${supplierId} AND t."type"='SUPPLIER_PAYMENT' AND t."amount">0 AND t."reversedAt" IS NULL
+          AND (${req.user.tokenType!=="STORE_OPERATOR"} OR t."actorId"=${req.user.id})
+        LIMIT 1`;
+      const attachment=rows[0];
+      const mimeType=attachment?.attachmentMimeType;
+      if(!attachment?.attachmentData?.length||!["application/pdf","image/jpeg","image/png","image/webp"].includes(mimeType))
+        return res.status(409).json({error:"Δεν βρέθηκε διαθέσιμο αρχείο στην επιλεγμένη πληρωμή. Ανέβασε φωτογραφία ή PDF."});
+      pages=[{filename:attachment.attachmentFilename||"timologio",mimeType,
+        dataUrl:attachment.attachmentData,documentType}];
+    }
+    if(!useExistingMyData&&!req.body?.expectedPendingInvoice&&documentType==="INVOICE"){
+      const candidate=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber});
+      const expected=candidate?await pendingIntentForPayment(prisma,pendingScope,candidate.id):null;
+      if(expected){if(paymentTransactionId&&paymentTransactionId!==candidate.id)return res.status(409).json({error:"Η επιλεγμένη εκκρεμότητα δεν είναι η αρχική πληρωμή."});req.body.expectedPendingInvoice=expected;req.body.paymentTransactionId=candidate.id;req.body.settlementMode="PAID";}
+    }
+    const queuePendingOnce=async jobId=>{
+      const queued=await prisma.$executeRaw`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt","publicOrigin") VALUES (${jobId},${companyId},${storeId},'QUEUED',CURRENT_TIMESTAMP,${`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`}) ON CONFLICT ("jobId") DO NOTHING`;
+      if(!queued){const matching=await prisma.$queryRaw`SELECT "jobId" FROM "PosInvoiceBackgroundTask" WHERE "jobId"=${jobId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;if(!matching[0])throw Object.assign(new Error("Η αρχική εργασία χρειάζεται έλεγχο απομόνωσης."),{status:409,code:"PENDING_INVOICE_QUEUE_CONFLICT"});}
+      if(queued)setImmediate(runPosInvoiceBackgroundSweep);
+    };
+    let pendingBinding=null;
+    if(req.body?.expectedPendingInvoice){
+      pendingBinding=await assertExpectedPendingInvoice(prisma,pendingScope,req.body);
+      documentNumber=pendingBinding.row.details.documentNumber;
+      invoicePageManifest(pages);
+      if(pendingBinding.source){
+        const source=pendingBinding.source;
+        if(source.sourceKind==="PLAIN_CAPTURE")return res.status(409).json({error:"Το πρωτότυπο έχει αποθηκευτεί χωρίς AI. Δεν δημιουργήθηκε εργασία.",code:"PENDING_INVOICE_SOURCE_KIND"});
+        if(source.purchaseDocumentId&&source.handoffReady)return res.json({ok:true,accepted:true,draftReady:true,reused:true,paymentTransactionId:pendingBinding.row.id,...source,stockUpdated:false});
+        await prisma.$transaction(async tx=>{await assertLifecycleMutation(tx,pendingScope,lifecycleContext()[storeId]??'0');await lockInvoiceStore(tx,companyId,storeId);await assertExpectedPendingInvoice(tx,pendingScope,req.body,{lock:true})});
+        const draft=source.purchaseDocumentId?{documentId:source.purchaseDocumentId}:await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(source.jobId)}/pos-draft`,{authorization:req.get("authorization"),publicOrigin:`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`,method:"POST",body:{documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode:"PAID",paymentTransactionId:pendingBinding.row.id}});
+        await queuePendingOnce(source.jobId);
+        return res.status(200).json({ok:true,accepted:true,draftReady:true,reused:true,paymentTransactionId:pendingBinding.row.id,jobId:source.jobId,purchaseDocumentId:draft.documentId,stockUpdated:false});
+      }
+    }
     await ensureV244IntakeSchema();
-    await ensureFastHandoffSchema();
+    await ensureFastHandoffSchema(prisma,{schemaOnly:Boolean(pendingBinding)});
     const receiptIdentity={companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber,documentDate,totalGross,documentType};
     if(req.body?.myDataInboxId){
       if(pages.length!==1||pages[0]?.mimeType!=="application/pdf")return res.status(400).json({error:"Η επιλογή θυρίδας απαιτεί το συγκεκριμένο πρωτότυπο PDF."});
@@ -828,6 +935,9 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     await ensureInvoiceCommonDraftSchema(prisma);
     await assertNoUnresolvedInbound(prisma,receiptIdentity);
     const myDataPurchase=await findMyDataPurchase(prisma,receiptIdentity);
+    if (useExistingMyData && (myDataPurchase?.documentId !== req.body.existingMyDataDocumentId || !await hasMyDataPurchaseLines(prisma,myDataPurchase))) {
+      return res.status(409).json({error:"Το επιλεγμένο τιμολόγιο myDATA άλλαξε ή δεν έχει είδη. Ανέβασε φωτογραφία ή PDF."});
+    }
     const paymentNumber=myDataPurchase?.purchaseNumber||documentNumber;
     const existingPayment=documentType==="INVOICE"?await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber:paymentNumber}):null;
     if(existingPayment){
@@ -845,9 +955,10 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     });
     if(myDataPurchase){
       const linked=await attachMyDataPosReceipt(prisma,receiptIdentity,normalizedPages,existingPayment,req.user);
+      if(pendingBinding)await assertExpectedPendingInvoice(prisma,pendingScope,req.body);
       let backgroundQueued=false;
       if(!linked.reused){
-        backgroundQueued=await queueEmptyInboxRead(prisma,receiptIdentity,myDataPurchase,existingPayment);
+        backgroundQueued=await queueEmptyInboxRead(prisma,receiptIdentity,myDataPurchase,existingPayment,walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_INVOICE_READ",documentNumber,jobId:myDataPurchase.jobId,documentId:myDataPurchase.documentId}));
         if(backgroundQueued)await enqueueFastBackground({companyId,storeId,jobId:myDataPurchase.jobId,publicOrigin:`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`});
       }
       return res.json({ok:true,accepted:true,draftReady:true,...linked,backgroundQueued,message:backgroundQueued?"Η πληρωμή συνδέθηκε με το ίδιο πρόχειρο. Η ανάγνωση του PDF συνεχίζεται στο παρασκήνιο.":"Η φωτογραφία και η υπάρχουσα πληρωμή POS συνδέθηκαν με την ίδια αγορά myDATA. Οι ελεγμένες γραμμές και η αποθήκη διατηρήθηκαν."});
@@ -909,11 +1020,12 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
       for(const page of normalizedPages)await verifyInvoiceDiscounts({productLines:page.cachedProductLines,apiKey:null});
     }
     const cachedProductLines=hasCompleteCachedProductLines?normalizedPages.flatMap((page,pageIndex)=>finalizeV244ProductLines(page.cachedProductLines).map(line=>({...line,sourceFileIndex:pageIndex}))):[];
-    await ensureFastHandoffSchema();
+    await ensureFastHandoffSchema(prisma,{schemaOnly:Boolean(pendingBinding)});
     const myData=await findUnlinkedMyDataOriginal(prisma,receiptIdentity,{paymentTransactionId:existingPayment?.id||null});
     const result=await prisma.$transaction(async tx=>{
       await assertLifecycleMutation(tx,{companyId,storeId},lifecycleContext()[storeId]??'0');
       await lockInvoiceStore(tx,companyId,storeId);
+      if(pendingBinding){const current=await assertExpectedPendingInvoice(tx,pendingScope,req.body,{lock:true});if(current.source){if(current.source.sourceKind==="PLAIN_CAPTURE")throw Object.assign(new Error("Το πρωτότυπο έχει ήδη αποθηκευτεί χωρίς AI."),{status:409,code:"PENDING_INVOICE_SOURCE_KIND"});return [{id:current.source.jobId,status:current.source.status,pendingInvoiceReused:true}];}}
       await assertNoUnresolvedInbound(tx,receiptIdentity);
       const jobs=[];
       for(const [index,page] of normalizedPages.entries()){
@@ -931,7 +1043,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
         // resume the same draft and payment, never turn into a duplicate file.
         const existingJobs=await tx.$queryRaw`SELECT "id","status" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "attachmentId"=${attachmentId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')) AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED') ORDER BY "createdAt" DESC LIMIT 1`;
         const jobId=existingJobs[0]?.id||id();
-        const handoff={version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+        const handoff={walletActivity:walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_INVOICE_READ",documentNumber}),...(pendingBinding?{sourceKind:"AI_HANDOFF",pendingInvoiceManifest:invoicePageManifest(req.body.pages)}:{}),version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
         if(existingJobs[0])await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff,lifecycleGeneration:handoff.lifecycleGeneration})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
         else await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','POS_QUEUED',0,${JSON.stringify({rawText:"",lines:[],pageCount:normalizedPages.length,posHandoff:handoff,lifecycleGeneration:handoff.lifecycleGeneration})}::jsonb,${req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
         const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${companyId} AND "attachmentId"=${attachmentId} LIMIT 1 FOR UPDATE`;
@@ -942,7 +1054,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
         jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
       }
       const pageJobIds=jobs.map(job=>job.id);
-      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:false,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+      const primaryHandoff={walletActivity:walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_INVOICE_READ",documentNumber}),...(pendingBinding?{sourceKind:"AI_HANDOFF",pendingInvoiceManifest:invoicePageManifest(req.body.pages)}:{}),version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:false,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff,lifecycleGeneration:primaryHandoff.lifecycleGeneration,...(hasCompleteCachedProductLines?{productLines:cachedProductLines}: {})})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
       if(myData?.inboxId)await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${`Συνδέθηκε με παραλαβή POS • ${documentNumber} • ${settlementMode==='PAID'?'Πληρωμένο':'Με πίστωση'}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:''}`},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${myData.inboxId} AND "companyId"=${companyId}`;
       return jobs;
@@ -951,7 +1063,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     const handoff={documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines};
     const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
     const draft=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-draft`,{authorization:req.get("authorization"),publicOrigin,method:"POST",body:{documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,note:`POS πρόχειρο ${documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} • ${result.length} ${result.length===1?"σελίδα":"σελίδες"} • Ανάγνωση από βοηθό`}});
-    await enqueueFastBackground({companyId,storeId,jobId,publicOrigin});
+    if(pendingBinding)await queuePendingOnce(jobId);else await enqueueFastBackground({companyId,storeId,jobId,publicOrigin});
     const handoffMessage=myData
       ?"Το πληρωμένο τιμολόγιο εμφανίστηκε αμέσως στα Πρόχειρα BackOffice και συνδέθηκε με το υπάρχον myDATA. Η πλήρης ανάγνωση συνεχίζεται χωρίς νέα χρέωση."
       :"Το πληρωμένο τιμολόγιο εμφανίστηκε αμέσως στα Πρόχειρα BackOffice. Θα συνδεθεί αυτόματα όταν εμφανιστεί στο myDATA. Η πλήρης ανάγνωση συνεχίζεται χωρίς νέα χρέωση.";

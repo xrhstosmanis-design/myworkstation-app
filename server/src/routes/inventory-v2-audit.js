@@ -1,4 +1,5 @@
-import {inventoryStocktakeScopeAllowed} from "../lib/inventory-stocktake-scope.js";
+import {inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed} from "../lib/inventory-stocktake-scope.js";
+import {createInventoryReconciliationHandler,createInventoryReviewHandler} from "../services/inventory-reconciliation-handler.js";
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import {
@@ -41,6 +42,72 @@ const requireLossDetection = async (req, res, stocktake) => {
   });
   return false;
 };
+router.post("/stocktakes/valuation-report", async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (user?.staffAccess || user?.tokenType === "INVENTORY_COUNTER" ||
+        !(roles.has(user?.role) || user?.isSuperAdmin)) {
+      return res.status(403).json({error:"Δεν έχεις πρόσβαση στην αποτίμηση απογραφών."});
+    }
+    const {storeId, stocktakeIds} = req.body || {};
+    if (typeof storeId !== "string" || !inventoryStoreScopeAllowed(user, storeId) ||
+        !Array.isArray(stocktakeIds) || stocktakeIds.length < 1 || stocktakeIds.length > 200 ||
+        stocktakeIds.some(id => typeof id !== "string" || !id || id.length > 128)) {
+      return res.status(400).json({error:"Επίλεξε κατάστημα και έως 200 απογραφές του."});
+    }
+    const ids = [...new Set(stocktakeIds)];
+    const report = await prisma.$transaction(async tx => {
+      const stocktakes = await tx.$queryRaw`
+        SELECT id, name, status, "startedAt", "finalizedAt" FROM "Stocktake"
+        WHERE "companyId" = ${user.companyId} AND "storeId" = ${storeId}
+          AND "inventoryVersion" = 2 AND status IN ('DRAFT','FINALIZED')
+          AND id = ANY(${ids}::text[])
+        ORDER BY "startedAt", id
+      `;
+      if (stocktakes.length !== ids.length) return null;
+      const items = await tx.$queryRaw`
+        WITH latest AS (
+          SELECT DISTINCT ON (sl."productId")
+            sl."productId", sl."stocktakeId", sl."countedAt", sl."countedQuantity", sl."unitCost"
+          FROM "StocktakeLine" sl JOIN "Stocktake" st ON st.id = sl."stocktakeId"
+          WHERE sl."stocktakeId" = ANY(${ids}::text[]) AND sl."countedQuantity" IS NOT NULL
+          ORDER BY sl."productId", COALESCE(sl."countedAt", st."startedAt") DESC,
+                   st."startedAt" DESC, sl.id DESC
+        ), valued AS (
+          SELECT p.id, p.sku, p.name, l."stocktakeId", l."countedAt",
+                 l."countedQuantity" AS quantity,
+                 COALESCE(sp."salePrice", p."salePrice") AS "salePrice",
+                 CASE WHEN l."unitCost" > 0 THEN l."unitCost" END AS "unitCost"
+          FROM latest l JOIN "Product" p ON p.id = l."productId" AND p."companyId" = ${user.companyId}
+          LEFT JOIN "StoreProduct" sp ON sp."productId" = p.id AND sp."storeId" = ${storeId}
+        )
+        SELECT *, CASE WHEN quantity = 0 THEN 0 ELSE round(quantity * "salePrice", 2) END AS "retailValue",
+                  CASE WHEN quantity = 0 THEN 0 ELSE round(quantity * "unitCost", 2) END AS "costValue"
+        FROM valued ORDER BY name, id
+      `;
+      const store = await tx.store.findFirst({where:{id:storeId,companyId:user.companyId},select:{name:true}});
+      if (!store) return null;
+      const finalized = stocktakes.every(s => s.status === "FINALIZED" && s.finalizedAt);
+      return {
+        storeName:store.name, stocktakes, items,
+        startedAt:stocktakes[0].startedAt,
+        completedAt:finalized ? stocktakes.reduce((latest, s) => s.finalizedAt > latest ? s.finalizedAt : latest, stocktakes[0].finalizedAt) : null,
+        retailTotal:items.reduce((sum, item) => sum + Math.round(n(item.retailValue) * 100), 0) / 100,
+        costTotal:items.reduce((sum, item) => sum + Math.round(n(item.costValue) * 100), 0) / 100,
+        missingRetail:items.filter(item => item.retailValue === null).length,
+        missingCost:items.filter(item => item.costValue === null).length,
+      };
+    }, {isolationLevel:"RepeatableRead"});
+    if (!report) return res.status(404).json({error:"Δεν βρέθηκαν όλες οι επιλεγμένες απογραφές στο κατάστημα."});
+    res.json(report);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Existing count/read grants do not confer cost or loss-investigation access.
+router.get("/stocktakes/:stocktakeId/reconciliation", createInventoryReconciliationHandler({db:prisma,access,requireLossDetection}));
+router.post("/stocktakes/:stocktakeId/reconciliation/reviews",createInventoryReviewHandler({db:prisma,access,requireLossDetection}));
 router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
   try {
     const st = await access(req, req.params.stocktakeId);
@@ -68,16 +135,16 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
       const expected = n(x.expectedQuantity),
         counted = x.countedQuantity === null ? null : n(x.countedQuantity),
         difference = counted === null ? null : counted - expected,
-        unitCost = n(x.unitCost),
+        unitCost = n(x.unitCost)>0?n(x.unitCost):null,
         salePrice = n(x.salePrice);
       return {
         ...x,
         expectedQuantity: expected,
         countedQuantity: counted,
         difference,
-        differenceValue: difference === null ? null : difference * unitCost,
+        differenceValue: difference === null || unitCost===null ? null : difference * unitCost,
         differenceRetailValue: difference === null ? null : difference * salePrice,
-        unitCost,
+        unitCost,costMissing:unitCost===null,
         salePrice,
         events: grouped.get(x.id) || [],
       };
@@ -108,14 +175,15 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
         expectedQuantity: total(counted,"expectedQuantity"),
         countedQuantity: total(counted,"countedQuantity"),
         totalDifference: total(counted,"difference"),
-        totalDifferenceValue: total(counted,"differenceValue"),
+        totalDifferenceValue: counted.every(x=>x.difference===0||x.differenceValue!==null)?total(counted,"differenceValue"):null,
         totalRetailValue: counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.salePrice),0),
-        totalCostValue: counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.unitCost),0),
+        totalCostValue: counted.every(x=>x.countedQuantity===0||x.unitCost!==null)?counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.unitCost),0):null,
         shortageQuantity: Math.abs(total(shortages,"difference")),
-        shortageCostValue: Math.abs(total(shortages,"differenceValue")),
+        shortageCostValue: shortages.every(x=>x.differenceValue!==null)?Math.abs(total(shortages,"differenceValue")):null,
         shortageRetailValue: Math.abs(total(shortages,"differenceRetailValue")),
         surplusQuantity: total(surpluses,"difference"),
-        surplusCostValue: total(surpluses,"differenceValue"),
+        surplusCostValue: surpluses.every(x=>x.differenceValue!==null)?total(surpluses,"differenceValue"):null,
+        missingCostItems:counted.filter(x=>x.costMissing).length,
         surplusRetailValue: total(surpluses,"differenceRetailValue"),
       };})(),
       lines: normalized,
@@ -129,7 +197,7 @@ router.get("/stocktakes/:stocktakeId/audit.csv", async (req, res, next) => {
     const st = await access(req, req.params.stocktakeId);
     if (!st) return res.status(404).json({ error: "Δεν βρέθηκε η απογραφή." });
     const rows =
-      await prisma.$queryRaw`SELECT p."sku",p."name",pb."barcode",COALESCE(z."name",'') AS "zone",sl."expectedQuantity",sl."countedQuantity",(sl."countedQuantity"-sl."expectedQuantity") AS "difference",sl."unitCost",((sl."countedQuantity"-sl."expectedQuantity")*sl."unitCost") AS "differenceValue",COALESCE(u."fullName",'') AS "counter",sl."countSource",sl."countedAt" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" LEFT JOIN "InventoryZone" z ON z."id"=sl."zoneId" LEFT JOIN "User" u ON u."id"=sl."countedByUserId" LEFT JOIN LATERAL(SELECT "barcode" FROM "ProductBarcode" x WHERE x."productId"=p."id" ORDER BY x."createdAt" LIMIT 1)pb ON TRUE WHERE sl."stocktakeId"=${st.id} ORDER BY p."name"`;
+      await prisma.$queryRaw`SELECT p."sku",p."name",pb."barcode",COALESCE(z."name",'') AS "zone",sl."expectedQuantity",sl."countedQuantity",(sl."countedQuantity"-sl."expectedQuantity") AS "difference",CASE WHEN sl."unitCost">0 THEN sl."unitCost" END AS "unitCost",CASE WHEN sl."unitCost">0 THEN ((sl."countedQuantity"-sl."expectedQuantity")*sl."unitCost") END AS "differenceValue",COALESCE(u."fullName",'') AS "counter",sl."countSource",sl."countedAt" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" LEFT JOIN "InventoryZone" z ON z."id"=sl."zoneId" LEFT JOIN "User" u ON u."id"=sl."countedByUserId" LEFT JOIN LATERAL(SELECT "barcode" FROM "ProductBarcode" x WHERE x."productId"=p."id" ORDER BY x."createdAt" LIMIT 1)pb ON TRUE WHERE sl."stocktakeId"=${st.id} ORDER BY p."name"`;
     const quote = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`,
       header = [
         "SKU",

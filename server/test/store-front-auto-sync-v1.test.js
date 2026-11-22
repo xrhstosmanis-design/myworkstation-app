@@ -34,6 +34,6 @@ test("BackOffice checks immediately when the tab becomes visible again",()=>{
 });
 
 test("Automatic operational refresh does not remount owner payment controls",()=>{
-  assert.match(backoffice,/<OwnerPaymentQuickActions api=\{api\} store=\{store\} onChanged=\{refresh\}\/\>/);
-  assert.doesNotMatch(backoffice,/OwnerPaymentQuickActions key=/);
+  assert.match(backoffice,/<OwnerPaymentQuickActions api=\{api\} store=\{store\}[^>]* onChanged=\{refresh\}\/\>/);
+  assert.doesNotMatch(backoffice,/OwnerPaymentQuickActions[^>]*\bkey=/);
 });

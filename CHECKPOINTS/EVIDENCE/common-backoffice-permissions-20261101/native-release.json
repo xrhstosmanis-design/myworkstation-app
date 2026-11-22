@@ -1,0 +1,115 @@
+{
+  "status": "NATIVE_INVENTORY_CASH_PRESENTATION_INSTALLED; FULL_SCOPE_OPEN",
+  "owner": "CENTRAL-BACKOFFICE-ACCESS-01 same retained owner",
+  "existingGrantableCapabilities": 18,
+  "candidateCatalogueGrantsNothing": true,
+  "inventory": {
+    "pr": 3477,
+    "head": "8444d2bb2d942eba44911fef05daa4b329fbc5b2",
+    "tree": "48c8b9384999c764a40de3c4d9474bcb490b253f",
+    "prCI": 41323171784,
+    "prJob": 124898013306,
+    "mainMerge": "5148885b3ef25582bede56fa75565b332a447631",
+    "mainCI": 41324373994,
+    "mainJob": 124901440283,
+    "serverPass": 5096,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allJobsSuccess": 5,
+    "supersededCI": {
+      "id": 41323007915,
+      "conclusion": "cancelled"
+    },
+    "preflightOnlyDeploy": {
+      "run": 41325507171,
+      "job": 124904541369,
+      "physicalDeploy": false,
+      "reason": "newer production source ef9 on main"
+    }
+  },
+  "cash": {
+    "pr": 3478,
+    "head": "e5e216a7930ee1c55d4e23be350e18b8aa7f20bb",
+    "tree": "56f6adb98fbdc1a63fe11be481b779682911e5a6",
+    "prCI": 41324957178,
+    "prJob": 124903176019,
+    "serverPass": 5118,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allJobsSuccess": 5,
+    "mainMerge": "201e4c21cd3c2a480a94b194a7b350523633e9f0"
+  },
+  "combinedMainCI": {
+    "id": 41326081468,
+    "job": 124907694187,
+    "revision": "201e4c21cd3c2a480a94b194a7b350523633e9f0",
+    "branch": "main",
+    "event": "push",
+    "serverPass": 5118,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allJobsSuccess": 5,
+    "fullBuildBrowserHTTP": true
+  },
+  "deploy": {
+    "run": 41327819201,
+    "job": 124911447565,
+    "event": "workflow_run",
+    "conclusion": "success",
+    "exactMainFreshnessGuard": true,
+    "pinnedRevision": "201e4c21cd3c2a480a94b194a7b350523633e9f0",
+    "triggeredAt": "2026-11-01T16:45:35Z",
+    "exactHealthyAt": "2026-11-01T16:47:58Z",
+    "rollbackArtifactId": 13092525292,
+    "rollbackArtifactSha256": "c9ecda6b62028e18cfb5e6f721e9b8d607216ead7b191ff12d7ff9196ad2d16f",
+    "previousHealthyRevision": "35968eda7b1cef8be50f1d073e648efcb6c32b8e"
+  },
+  "independentBeforeHealth": {
+    "observedAt": "2026-11-01T16:30:35.730026+00:00",
+    "status": 200,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "35968eda7b1cef8be50f1d073e648efcb6c32b8e"
+    }
+  },
+  "independentAfterHealth": {
+    "observedAt": "2026-11-01T16:49:09.274764+00:00",
+    "status": 200,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "201e4c21cd3c2a480a94b194a7b350523633e9f0"
+    }
+  },
+  "peerSourcePreserved": {
+    "pr": 3475,
+    "merge": "ef9e0e740a574731e76e2188ea7afdc6d5b6cc66"
+  },
+  "localTests": {
+    "inventory": "38/0/0 and Work build",
+    "cash": "46/0/0 and Work build",
+    "overlap": "do not sum as unique tests"
+  },
+  "hostedPersonalAcceptance": "NOT TESTED / AWAITING USER",
+  "productionBusinessWrites": 0,
+  "hostedGrantsOrCredentialsChanged": false,
+  "schemaChanged": false,
+  "manualOrNumberedPASSClosed": false,
+  "remaining": [
+    "remaining exact per-action Owner editor/native backend integration",
+    "broader common commerce navigation",
+    "explicit company authority and app/worker/recovery compatibility",
+    "hosted personal visual/read/write acceptance"
+  ],
+  "singleNextAction": "Independent native clear-count, selected bulk-zero and draft-delete authority/editor integration, no automatic grants",
+  "peerDocumentationPreserved": {
+    "pr": 3479,
+    "merge": "1467d536db148413d301bca997687d96df927dc9",
+    "changedRuntimeFiles": 0,
+    "functionalLabState": "NOT STARTED / environment unavailable; dedicated owner retained"
+  }
+}

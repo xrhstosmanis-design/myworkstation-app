@@ -9,6 +9,7 @@ const catalog=fs.readFileSync(new URL("../src/services/module-catalog.js",import
 const moduleAccess=fs.readFileSync(new URL("../src/middleware/module-access.js",import.meta.url),"utf8");
 const platform=fs.readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 const platformUi=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
+const emailPreviewUi=fs.readFileSync(new URL("../../client/src/components/platform/CashEmailPreviewDialog.jsx",import.meta.url),"utf8");
 const mail=fs.readFileSync(new URL("../src/services/mail.js",import.meta.url),"utf8");
 
 test("automatic cash control aggregates every closed terminal in the Greek business date",()=>{
@@ -114,7 +115,10 @@ test("super admin manually previews and emails each store report to its owners",
   assert.match(platform,/readyToSend/);
   assert.match(platform,/CASH_CONTROL_RECHECK_REQUIRED/);
   assert.match(platform,/r\."createdAt">=mv\."lastMovementAt"/);
-  assert.match(platformUi,/Κάνε επανέλεγχο πριν την αποστολή/);
+  assert.match(platformUi,/openCashEmailPreview/);
+  assert.match(emailPreviewUi,/Η αναφορά παραμένει προς έλεγχο/);
+  assert.match(emailPreviewUi,/draft\.readyToSend!==true/);
+  assert.match(emailPreviewUi,/disabled=\{!maySend\}/);
 });
 
 test("automatic report preserves legacy store and delivery continuity rules",()=>{

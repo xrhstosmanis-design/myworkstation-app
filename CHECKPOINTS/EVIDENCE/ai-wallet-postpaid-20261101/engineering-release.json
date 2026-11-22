@@ -1,0 +1,55 @@
+{
+  "status": "SCOPED_HOSTED_LAB_PASS_REAL_CUSTOMER_PENDING",
+  "sourcePR": 3453,
+  "claimPR": 3452,
+  "validatedHead": "7ed464b5df90c2655f74f137e5941927e005e20d",
+  "mainMerge": "85d8cec43b5332319eed1151299384bb4265b1c7",
+  "prCI": 41297039666,
+  "recoveryCI": 41297039638,
+  "serverTests": {
+    "pass": 5081,
+    "fail": 0,
+    "skip": 0
+  },
+  "backupTests": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "nativePostpaidCases": 6,
+  "mainCI": 41298260854,
+  "realCustomerWrites": false,
+  "externalMailSent": false,
+  "schemaChanged": false,
+  "recordedAt": "2026-11-01T10:53:17.520487+00:00",
+  "mainCIPass": true,
+  "mainServerTests": {
+    "pass": 5081,
+    "fail": 0,
+    "skip": 0
+  },
+  "mainBackupTests": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "normalDeployRun": 41299372757,
+  "sourceNormalDeployRun": 41299372757,
+  "sourceRenderDeploy": "dep-dbjhkhnlk1mc73996l50",
+  "sourceHealthyAtUTC": "2026-11-01T10:56:11Z",
+  "finalServerRevision": "ad111f6f9c69dee7dcce5713eed39abe72aab122",
+  "finalServerFullCI": 41307061118,
+  "finalServerGuard": 41308575722,
+  "allTenOwnedRuntimePathsUnchanged": true,
+  "receiptBase": "9e4b9f37d4022c7c3973b38b619d2c963570de03",
+  "finalServerServerTests": {
+    "pass": 5084,
+    "fail": 0,
+    "skip": 0
+  },
+  "finalServerBackupTests": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0
+  }
+}

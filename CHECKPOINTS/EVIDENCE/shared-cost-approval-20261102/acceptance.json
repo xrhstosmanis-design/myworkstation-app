@@ -1,0 +1,67 @@
+{
+  "status": "SCOPED_HOSTED_SYNTHETIC_PERSISTENCE_PASS",
+  "revision": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+  "sourcePR": 3523,
+  "fullMainCI": 41483259107,
+  "counts": {
+    "server": 5256,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "guardedDeploy": 41485540793,
+  "beforePublishedCommit": "52dc75ff1cf144988b4a66379fdbb3aaf5407534",
+  "proposalReference": "SYNTHETIC-OWNER-20261102-1901",
+  "mode": "SYNTHETIC",
+  "period": "2026-10",
+  "requestIdObservedInUI": "1bc9276d-850b-4aea-b11b-1c771f04a036",
+  "saveAttempts": 1,
+  "savedAtUTC": "2026-11-02T19:02:48Z",
+  "successObservedAtUTC": "2026-11-02T19:02:57.932Z",
+  "savedVersion": 1,
+  "operator": "native Platform Super Admin via password and2FA",
+  "displayedActor": "Χρήστος Μάνης",
+  "baseCents": "10000",
+  "totalCents": "15000",
+  "approvedCents": "5962",
+  "waivedCents": "5961",
+  "pendingCents": "3077",
+  "reload": "closed wallet, full page reload, reopened wallet with blank financial company selection, explicitly reselected LAB",
+  "historyAfterReload": {
+    "at": "2026-11-02T19:04:02.149Z",
+    "records": 1,
+    "version": 1,
+    "sameReference": true,
+    "sameActorTimeAmountsDecisions": true,
+    "noEditableResult": true,
+    "posted": false
+  },
+  "afterWallet": {
+    "at": "2026-11-02T19:03:42.888Z",
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "entries": 14,
+    "calls": 9,
+    "debtCents": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additiveRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "notices": "only old25Oct disabled-email credit notice"
+  },
+  "measuredWalletUnchanged": true,
+  "notTested": [
+    "hosted uncertain retry/concurrency or stale generation",
+    "real commercial allocation/control",
+    "actual shared-cost posting",
+    "50EUR funding",
+    "financial email"
+  ],
+  "protected": "No paid/provider/financial/SMTP/stock/fiscal/permission/billing action, old REVIEW unchanged. Native retry/role/version/lifecycle/rollback proof is CI only."
+}

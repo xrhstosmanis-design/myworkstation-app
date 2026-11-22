@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
 import {createLifecycleExecutionCore} from './store-lifecycle-executor.js';
 import {createVerifiedRecoveryAdapter,validateRecoveryProof} from './store-lifecycle-recovery-proof.js';
-import {reviewedFreshStoreManifest} from './store-lifecycle-manifest.js';
+import {selectedStoreLifecycleManifest} from './store-lifecycle-manifest.js';
 const q=x=>'"'+String(x).replaceAll('"','""')+'"';
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -20,7 +20,7 @@ export function validatePhysicalLifecycleEvidence({reports,attestation},{scope,o
  }
  return {operationId,observations,attestation:{actualCapFoldersVerified:true,allWritersAndCapStopped:true,allOtherOfflineDevicesAccountedFor:true,noPendingPhysicalOrBankWork:true},acceptedAt:new Date(now).toISOString()};
 }
-export function createLifecycleController(db,{manifest=reviewedFreshStoreManifest(),sourceRevision=process.env.RENDER_GIT_COMMIT,enabled=()=>process.env.STORE_LIFECYCLE_EXECUTION_ENABLED==='true',recoveryAdapter,secret=()=>process.env.BACKUP_MONITOR_SECRET}={}){
+export function createLifecycleController(db,{manifest=selectedStoreLifecycleManifest(),sourceRevision=process.env.RENDER_GIT_COMMIT,enabled=()=>process.env.STORE_LIFECYCLE_EXECUTION_ENABLED==='true',recoveryAdapter,secret=()=>process.env.BACKUP_MONITOR_SECRET}={}){
  const core=createLifecycleExecutionCore(manifest,{sourceRevision,persistAndVerifyRecovery:recoveryAdapter||createVerifiedRecoveryAdapter(db,{secret})});
  const available=async()=>enabled()===true&&typeof secret()==='string'&&secret().length>=24&&await readLifecycleWorkerCapability(db,{secret:secret(),manifestHash:digest(manifest)});
  const authorize=(actor,scope)=>{requireLifecycleAdmin(actor);if(['companyId','storeId'].some(k=>typeof scope?.[k]!=='string'||!scope[k]||scope[k].length>160))fail('Επίλεξε συγκεκριμένο κατάστημα.',400)};

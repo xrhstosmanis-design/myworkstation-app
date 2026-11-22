@@ -1,0 +1,65 @@
+{
+  "status": "INSTALLED_THREE_SYNTHETIC_HEADERS_PASS_GENERAL_SPEED_OPEN",
+  "revision": "2b13a8419c3ec82fb14c67902b6bb06bfef8752b",
+  "sourcePR": 3686,
+  "sourceHead": "1ea2df989eb04e054b44a8c141937fdefb99e4ef",
+  "claimPR": 3685,
+  "sourceCI": {
+    "id": 42067246727,
+    "attempt": 1,
+    "conclusion": "success",
+    "nativeTests": 5861,
+    "pass": 5861,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8
+  },
+  "mainCI": {
+    "id": 42069768057,
+    "attempt": 1,
+    "conclusion": "success",
+    "nativeTests": 5861,
+    "pass": 5861,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8
+  },
+  "deployCI": {
+    "id": 42072372148,
+    "conclusion": "success"
+  },
+  "renderDeploy": {
+    "commit": {
+      "createdAt": "2026-11-05T16:57:13Z",
+      "id": "2b13a8419c3ec82fb14c67902b6bb06bfef8752b",
+      "message": "Merge pull request #3686 from xrhstosmanis-design/feat/invoice-pdf-header-priority-20261105\n\nfeat(invoice): prioritize verified multipage PDF headers without Azure wait"
+    },
+    "createdAt": "2026-11-05T17:13:20.779885Z",
+    "finishedAt": "2026-11-05T17:15:13.995666Z",
+    "id": "dep-dbmbic3m8hqs73f9c5vg",
+    "startedAt": "2026-11-05T17:13:20.74882Z",
+    "status": "live",
+    "trigger": "deploy_hook",
+    "updatedAt": "2026-11-05T17:15:38.071283Z"
+  },
+  "rollbackArtifact": 13437102745,
+  "previousHealthyRevision": "c09981151631b5c35bb92649c667eed3dfccae40",
+  "health": {
+    "ok": true,
+    "revision": "2b13a8419c3ec82fb14c67902b6bb06bfef8752b",
+    "version": "0.22.0+kat-test-pos",
+    "observedAt": "2026-11-05T17:16:28.399Z"
+  },
+  "firstUnacceptedSourceCI": {
+    "id": 42065566043,
+    "head": "98e17af96ca3ba5858c4889ea1250b129c41ae25",
+    "reasons": [
+      "Mounted scanner test stub lacked new helper export; corrected to bundle real helper and assert unchanged JPEG/store/no priority flag.",
+      "Independent Chrome startup Target.createTarget timeout before application."
+    ],
+    "obsoleteHeadNotRetried": true
+  },
+  "review": "Coordinator control-flow/wallet/amount/original-PDF/deadline/durable-boundary review; no independent human approval claimed.",
+  "credentialChange": false,
+  "samplesConsumed": 3
+}

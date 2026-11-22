@@ -1,0 +1,66 @@
+{
+  "scope": "source/CI/provenance ONLY; hosted import NOT TESTED",
+  "sourcePR": 3261,
+  "sourceHead": "48bcaa7e63e66eecf29b0b6d34cf7e95c1c57723",
+  "sourceMain": "dfd518392f501c0aee3257ccd2a8bc7598039b99",
+  "PRCI": {
+    "run": 40719599122,
+    "attempt": 2,
+    "job": 122935825851,
+    "serverPass": 4509,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "mainCI": {
+    "run": 40723862270,
+    "attempt": 2,
+    "job": 122956649792,
+    "serverPass": 4509,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "history": [
+    "PR attempt1:3 unrelated Chromium startup failures; no code/assertion changes in retry",
+    "main attempt1 cancelled before completion"
+  ],
+  "releaseCandidate": "ac5850c0d9c5e5b170500badded0a9cb10537b19",
+  "unchangedCashRuntimeBlobs": {
+    "server/src/routes/cash-reconciliation.js": "f129d40c2347a3d06b8595e8845411d48ad9284b",
+    "server/src/services/cash-reconciliation-repository.js": "7ea366fbf9356983105cb0c441d81c66e3374819",
+    "server/src/services/cash-reconciliation-report.js": "389bcf2738d74a571c66e59834d126799decf7a9",
+    "server/src/services/cash-reviewed-automatic-contract.js": "f1190a0785d4afa13df2315b58960f17d54d975d",
+    "server/src/services/cash-kiosk-xls.js": "9421b54c091a266d3f8feb57b6006806f1951299",
+    "server/src/services/cash-kiosk-imports.js": "dcffa59f980327a30d981ef3a9fda97d2ea0e87d",
+    "client/src/components/shared/CashKioskImportPanel.jsx": "09131eb76e0b8a193c8d14422807957fd68fb363",
+    "client/src/components/shared/CashReconciliationPanel.jsx": "1f31e5925ccaded5d68d8841584987a2b9a3ca6d"
+  },
+  "hostedAcceptance": "NOT TESTED",
+  "financialMutations": 0,
+  "emailsSent": 0,
+  "releaseCandidateCI": {
+    "run": 40729155657,
+    "job": 122962061903,
+    "serverPass": 4539,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "nativeKioskTest": "ok 679, unskipped 2026-10-28T16:52:01.547Z"
+  },
+  "guardedDeployment": {
+    "run": 40731246705,
+    "job": 122968066948,
+    "revision": "ac5850c0d9c5e5b170500badded0a9cb10537b19",
+    "healthyAt": "2026-10-28T17:11:51.511Z",
+    "conclusion": "success"
+  },
+  "obsoleteDeployment": {
+    "run": 40729436750,
+    "job": 122962382410,
+    "target": "dfd518392f501c0aee3257ccd2a8bc7598039b99",
+    "cancelledAt": "2026-10-28T17:05:35Z",
+    "reason": "Superseded by fully validated ac5850c; cancelled in authenticated GitHub UI during fetch, before guard/trigger/production action. Connector has no cancel operation.",
+    "productionTriggered": false
+  }
+}

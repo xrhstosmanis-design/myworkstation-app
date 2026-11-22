@@ -1,0 +1,44 @@
+{
+  "kind": "AUTHOR_EVIDENCE_VERIFICATION_NOT_INDEPENDENT_CODE_REVIEW",
+  "date_athens": "2026-11-05",
+  "pr": 3673,
+  "tested_source_commit": "2853be00dd8b6bb423107cb5520a894351aad09c",
+  "main_sync_head": "44197f601b0047b1a14556aad574bf2b47be1cda",
+  "main_sync_parent": "3b33cc2998dc366cc44f9bd9e65dadf77a343651",
+  "source_validation": {
+    "run_id": 42008331039,
+    "artifact_id": 13406321206,
+    "downloaded_zip_sha256": "76fc2a8a82554095285fe067f5629fb0586d0eaa8056960e891bc1c281ad1849",
+    "runtime": "v20.20.2",
+    "baseline": {"tests":72,"pass":72,"fail":0,"skipped":0,"cancelled":0},
+    "combined": {"tests":119,"pass":119,"fail":0,"skipped":0,"cancelled":0},
+    "actual_chromium_cases_within_combined_suite":16,
+    "normal_production_client_build":"PASS",
+    "all_16_artifact_file_blob_identities_verified":true,
+    "all_nine_runtime_test_files_match_local_candidate":true
+  },
+  "main_synchronization": {
+    "run_id":42008900247,
+    "artifact_id":13405987236,
+    "downloaded_zip_sha256":"5b93589f114153b4745ee6e4e3cb4708ed6d2b36dd44ddddfc950f0074d87f07",
+    "all_three_current_main_registry_suffixes_independently_verified":true,
+    "all_nine_source_test_blob_identities_unchanged":true,
+    "peer_latency_preparation_preserved":true,
+    "helper_workflows_excluded_from_source_tree_and_ancestry":true
+  },
+  "visual_inspection": {
+    "chromium_two_page_1366px":"PASS_NO_CLIPPING_OR_OVERLAP",
+    "chromium_two_page_390px":"PASS_NO_CLIPPING_OR_OVERLAP",
+    "synchronized_tracker_pages_1_and_2":"PASS_NO_CLIPPING_OR_OVERLAP",
+    "remaining_tracker_pages":"NOT_VISUALLY_REVIEWED_UNCHANGED_HISTORY",
+    "observed_count_example":"1 αρχείο · 1 PDF / Αρχείο 1: 2 φυσικές σελίδες PDF"
+  },
+  "full_exact_pr_ci":"PENDING",
+  "independent_code_review":"PENDING",
+  "production_deployment":false,
+  "hosted_ocr_or_page_display_acceptance":false,
+  "provider_charge":false,
+  "business_mutation":false,
+  "general_ocr_completeness":"OPEN",
+  "notes":"This receipt supplements immutable runner receipts whose visual_review was PENDING at generation. It records author inspection, not independent review. Counts are metadata, not OCR or full-row coverage. Existing I/H/G acceptance and unused J remain unchanged."
+}

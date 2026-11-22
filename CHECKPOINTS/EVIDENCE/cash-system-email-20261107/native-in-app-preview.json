@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "task": "CASH-UNIFIED-AUDIT-15",
+  "observationType": "NATIVE_SYSTEM_EMAIL_IN_APP_PREVIEW_CANCEL",
+  "status": "PASS",
+  "acceptanceScope": "FULL_RENDERED_NATIVE_SYSTEM_PREVIEW_AND_CANCEL_ONLY",
+  "recordedAt": "2026-11-07T22:24:54Z",
+  "ownership": {
+    "retainedOwner": "codex/cash-chat-reconciliation-20261026",
+    "coordinator": "/root",
+    "transfer": false
+  },
+  "revision": "ff4665eb8ec4b7b572ac65d792a788e48657a051",
+  "sourceRelease": {
+    "pullRequest": 3711,
+    "pullRequestHead": "b8e53ae3b4bebcde4ffaa0f94ef8a354352a6287",
+    "mergeRevision": "ff4665eb8ec4b7b572ac65d792a788e48657a051",
+    "pullRequestCI": {
+      "runId": 42417280001,
+      "headSha": "b8e53ae3b4bebcde4ffaa0f94ef8a354352a6287",
+      "allFiveJobs": "SUCCESS"
+    },
+    "mainCI": {
+      "runId": 42418343730,
+      "headSha": "ff4665eb8ec4b7b572ac65d792a788e48657a051",
+      "allFiveJobs": "SUCCESS"
+    },
+    "deployment": {
+      "runId": 42419487430,
+      "jobId": 128544666223,
+      "status": "SUCCESS",
+      "completedAt": "2026-11-07T22:14:30Z",
+      "actualHealth": {
+        "at": "2026-11-07T22:14:28.5241665Z",
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "ff4665eb8ec4b7b572ac65d792a788e48657a051",
+        "actualRuntimeConfirmationObserved": true
+      },
+      "privateGuardLogBytes": 561277,
+      "privateGuardLogSha256": "c0c94fab3e14ccacacb61c4ef4f438c553849c8852db813dbbe3abfba0d686be"
+    }
+  },
+  "scope": {
+    "kind": "OWNER_PREVIEW_AND_CANCEL_ONLY",
+    "privateStoreAndDayDetails": "OMITTED",
+    "session": "FRESH_AUTHENTICATED_OWNER_SESSION",
+    "device": "DESKTOP_BROWSER",
+    "displayedPeriodConfirmed": true,
+    "displayedShiftCount": 3,
+    "previewInvocations": 1,
+    "newNoChargeButtonInvocation": false
+  },
+  "timeline": {
+    "timezone": "UTC",
+    "previewActionStartedAt": "2026-11-07T22:20:04.336Z",
+    "dialogObservedAt": "2026-11-07T22:20:38.117Z",
+    "reportEndObservedAt": "2026-11-07T22:20:48.834Z",
+    "cancelledAt": "2026-11-07T22:21:02.568Z"
+  },
+  "observed": {
+    "inAppDialog": true,
+    "javascriptPrompt": false,
+    "renderedReportCharacterCountJS": 15141,
+    "characterCountMethod": "Observed full report DOM text length in JavaScript UTF-16 code units; excludes separate recipient and comment controls.",
+    "renderedReportLineCount": 147,
+    "declaredCharacterCount": 15141,
+    "declaredCountMatches": true,
+    "renderedLengthExceeds10240": true,
+    "reportStartVisible": true,
+    "fullAuditPendingRows": 3,
+    "canonicalSystemFollowUpSentenceVisible": true,
+    "duplicateCandidateSectionVisible": true,
+    "paperSectionVisible": true,
+    "finalConsecutiveShiftSectionVisible": true,
+    "ownerRecipientListVisible": true,
+    "visibleRecipientCount": 2,
+    "recipientsAboveAndOutsideReportBody": true,
+    "optionalCommentFieldEmpty": true,
+    "commentTyped": false,
+    "sendEnabled": true,
+    "cancelEnabled": true,
+    "nativeEndScroll": {
+      "action": "Ctrl+End",
+      "scrollTop": 3632,
+      "scrollHeight": 3980,
+      "clientHeight": 347,
+      "endTolerancePixels": 2,
+      "atEnd": true,
+      "actualFinalLineVisible": true,
+      "endCueVisible": true,
+      "headerRecipientsAndActionsStillVisible": true
+    },
+    "cancelSelected": true,
+    "dialogCountAfterCancel": 0,
+    "nativePreviewButtonRestoredEnabled": true,
+    "operatorSendAction": false,
+    "operatorEmailAction": false,
+    "operatorMonetaryOrApprovalAction": false
+  },
+  "executionNote": {
+    "interruptedActionReply": true,
+    "completionConfirmedByFollowingReadOnlyObservation": true,
+    "previewClickRepeated": false
+  },
+  "historicalEvidence": {
+    "path": "CHECKPOINTS/EVIDENCE/cash-system-email-20261107/native-preview.json",
+    "status": "FAIL",
+    "sha256": "2a5fb28423f179132bbd662515fb50fe09a74ebd94a93fa258596694972857d9",
+    "unchanged": true
+  },
+  "limits": {
+    "rawHttp": "NOT_CAPTURED",
+    "canonicalReportHash": "NOT_CAPTURED",
+    "generation": "NOT_CAPTURED",
+    "httpBodyOrHashParity": "NOT_MEASURED",
+    "independentDatabaseLedgerOrGlobalState": "NOT_MEASURED",
+    "providerCallsOrBilling": "NOT_MEASURED",
+    "smtpInboxOrReadReceipt": "NOT_TESTED",
+    "networkZeroPostProof": "NOT_MEASURED",
+    "mobileOtherDevicesAndRoles": "NOT_TESTED",
+    "broaderInteractionMatrix": "NOT_TESTED"
+  },
+  "outbound": {
+    "status": "NOT_SENT",
+    "basis": "Operator selected Cancel and did not select Send or perform an email action; no independent SMTP/network assertion.",
+    "actualDeliveryAcceptance": "NOT_TESTED",
+    "exactRecipientApproval": "OUTSTANDING",
+    "earlierAutomaticApprovalReviewRejectionStillEffective": true,
+    "deliveryBlockedPendingSeparateExactRecipientApproval": true,
+    "authorizesSend": false
+  },
+  "financialFinality": "OPEN",
+  "parentStatus": "OPEN_ASSIGNED",
+  "privacy": {
+    "rawReportTextPublished": false,
+    "privateStoreOrStaffIdentityPublished": false,
+    "recipientAddressesPublished": false,
+    "financialAmountsPublished": false,
+    "transactionIdentifiersPublished": false,
+    "privateFilenameOrAttachmentContentPublished": false,
+    "screenshotsExportedOrPublished": false
+  },
+  "provenance": {
+    "kind": "Sanitized coordinating-operator native UI observation; no new browser action was performed to author this receipt.",
+    "privateObservationBytes": 2054,
+    "privateObservationSha256": "290aea10cc2a9509eac84d056daa44389012eb3ddb6958132783b3faf14cfd51"
+  }
+}

@@ -6,7 +6,8 @@ export function purchasePrintedRounding(found,input,current={},calculated){
   const unchanged=saved&&printedRoundingFields.every(key=>Number(saved[key])===Number(calculated[key]));
   const requested=input.printedNetAmount!==undefined;
   if(!requested&&!unchanged)return {calculated,rawText:String(current.ocrRawText||"").split("\n").filter(line=>!line.startsWith(marker)).join("\n")||null};
-  if(found.sourceType!=="POS_OCR_DRAFT"||found.status!=="NEW")throw Object.assign(new Error("Η τυπωμένη αξία στρογγυλοποίησης εφαρμόζεται μόνο σε ενεργό πρόχειρο τιμολογίου."),{status:409});
+  const manualDraft=!found.sourceType&&!found.sourceDocumentId&&!found.awaitingInvoice;
+  if(found.status!=="NEW"||!(found.sourceType==="POS_OCR_DRAFT"||manualDraft))throw Object.assign(new Error("Η τυπωμένη αξία στρογγυλοποίησης εφαρμόζεται μόνο σε ενεργό πρόχειρο τιμολογίου."),{status:409});
   const printedNet=requested?Number(input.printedNetAmount):Number(saved.netAmount);
   const basis={...calculated,netAmount:printedNet};
   const rounding=invoicePrintedRounding(basis);

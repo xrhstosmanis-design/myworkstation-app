@@ -1,0 +1,57 @@
+{
+  "node": "20.20.2",
+  "beforeSourceBaseline": {
+    "existingTimingHelper": 6,
+    "existingActualFastHandler": 73,
+    "failed": 0,
+    "skipped": 0
+  },
+  "focusedPhases": {
+    "passed": 104,
+    "failed": 0,
+    "skipped": 0
+  },
+  "regression": {
+    "suites": [
+      "server/test/pos-fast-header-timing.test.js",
+      "server/test/pos-fast-header-latency.test.js",
+      "server/test/pos-azure-operation-timing.test.js",
+      "server/test/pos-fast-header-pdf-total-safety.test.js",
+      "server/test/pos-invoice-multipage-upload-v1.test.js",
+      "server/test/ai-wallet-invoice-metering.test.js",
+      "server/test/pos-fast-handoff-recovery-v1.test.js",
+      "server/test/invoice-learning-pos-azure-transport-v1.test.js"
+    ],
+    "passed": 281,
+    "failed": 0,
+    "skipped": 0,
+    "command": "node --test server/test/pos-fast-header-timing.test.js server/test/pos-fast-header-latency.test.js server/test/pos-azure-operation-timing.test.js server/test/pos-fast-header-pdf-total-safety.test.js server/test/pos-invoice-multipage-upload-v1.test.js server/test/ai-wallet-invoice-metering.test.js server/test/pos-fast-handoff-recovery-v1.test.js server/test/invoice-learning-pos-azure-transport-v1.test.js"
+  },
+  "initialRegression": {
+    "passed": 280,
+    "failed": 1,
+    "skipped": 0,
+    "cause": "Existing exact static callAzure options regex did not allow new optional timing forwarding; aligned to require timing while retaining all20s/70s/client budget and existing original assertions. Actual FAST forwarding is runtime regression-covered."
+  },
+  "tapSha256": {
+    "azure-before.tap": "49e288ec4982a28e353d4f873c114f2de0c3aaead6c499c78b8c9785b0be5805",
+    "azure-phase-targeted.tap": "db9c254019eaa18f4f7c9cf6acfb1ae1b3c98c9ebca526b5f59b003867907cf9",
+    "azure-phase-regression.tap": "ba2706246bf222b561405457516917ea39c948926d9cb5ef92d8b9005400868b",
+    "azure-phase-regression-after.tap": "3d35cfbf8678ce2ae6aea8af38d3e6521d33568d1b4dc0ab793333ec5bc48e96"
+  },
+  "blobsSha256": {
+    "server/src/lib/pos-fast-header-timing.js": "7a6a150a573bfcc509a41f26e53a4fd4e94541149ddaf839709c82f01414ac3a",
+    "server/src/routes/commerce-azure-invoice-reader.js": "63ded6bbd01c2920cc6389a61c10d07036544af877fd2f86db2959112a9a0ed6",
+    "server/src/routes/commerce-pos-v244.js": "92de10f35bbe2ab014f5785de6e2208fb118ff5230f623d9a07292e93d6083f3",
+    "server/test/pos-fast-header-timing.test.js": "0d77b9edcc9b6bd45b4cc0b5cf33ca8c7b062083dbd69d59addf2ad8e4e566b4",
+    "server/test/pos-fast-header-latency.test.js": "d190be617fc3640a29e95168fdfd2c7f906c9ccf23d046a1b08f7e2af2f24673",
+    "server/test/pos-azure-operation-timing.test.js": "fe8bc66c9de369efc7de4a45c2972d5d26ee3c6c2561626e4b7b264ea603571d",
+    "server/test/pos-invoice-multipage-upload-v1.test.js": "d1ff590c1e118afef571b95ac35aa8f28d66cd692fd0cbb0c06f74b6f4c11cf7"
+  },
+  "limits": [
+    "Provider/network/clock/wallet I/O in focused tests are deterministic simulations around actual compiled production functions",
+    "No native PostgreSQL/frontend/HTTP full CI proof from these local runs",
+    "No provider charge, source deployment or new hosted OCR/LAB acceptance",
+    "No speed improvement claimed"
+  ]
+}

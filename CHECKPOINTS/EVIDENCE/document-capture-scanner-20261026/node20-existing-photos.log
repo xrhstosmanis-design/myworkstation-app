@@ -1,0 +1,91 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+TAP version 13
+# Subtest: Inventory 2.0 supports partial scope without touching unrelated products
+ok 1 - Inventory 2.0 supports partial scope without touching unrelated products
+  ---
+  duration_ms: 2.234017
+  ...
+# Subtest: Inventory 2.0 keeps immutable count and recount evidence
+ok 2 - Inventory 2.0 keeps immutable count and recount evidence
+  ---
+  duration_ms: 1.516886
+  ...
+# Subtest: live stocktakes adjust the expected quantity from every stock movement
+ok 3 - live stocktakes adjust the expected quantity from every stock movement
+  ---
+  duration_ms: 1.168094
+  ...
+# Subtest: Inventory mobile access is scoped and expiring
+ok 4 - Inventory mobile access is scoped and expiring
+  ---
+  duration_ms: 0.629623
+  ...
+# Subtest: bulk zero count is draft-only, version checked and auditable
+ok 5 - bulk zero count is draft-only, version checked and auditable
+  ---
+  duration_ms: 0.52568
+  ...
+# Subtest: Inventory mobile scans retail barcodes with the rear camera
+ok 6 - Inventory mobile scans retail barcodes with the rear camera
+  ---
+  duration_ms: 1.273462
+  ...
+# Subtest: mobile five-photo publication is ordered, atomic and safe on identical retry
+ok 7 - mobile five-photo publication is ordered, atomic and safe on identical retry
+  ---
+  duration_ms: 3.310023
+  ...
+# Subtest: mobile rejects sixth, unsupported, oversized, mixed-PDF, stale/token and out-of-order uploads before publication
+ok 8 - mobile rejects sixth, unsupported, oversized, mixed-PDF, stale/token and out-of-order uploads before publication
+  ---
+  duration_ms: 4.136079
+  ...
+# Subtest: mobile legacy single-file clients and one-file remaining capacity keep working
+ok 9 - mobile legacy single-file clients and one-file remaining capacity keep working
+  ---
+  duration_ms: 0.370095
+  ...
+# Subtest: actual mobile page collects camera/gallery photos, reorders/removes and sends all once
+ok 10 - actual mobile page collects camera/gallery photos, reorders/removes and sends all once
+  ---
+  duration_ms: 340.669508
+  ...
+# Subtest: actual mobile page retains photos and reuses the same batch after a dropped response
+ok 11 - actual mobile page retains photos and reuses the same batch after a dropped response
+  ---
+  duration_ms: 140.774312
+  ...
+# Subtest: actual mobile page rejects low decoded resolution without an upload
+ok 12 - actual mobile page rejects low decoded resolution without an upload
+  ---
+  duration_ms: 23.606441
+  ...
+# Subtest: bundled PDF parses as five ordered image pages and rejects invalid selection/oversize before submission
+ok 13 - bundled PDF parses as five ordered image pages and rejects invalid selection/oversize before submission
+  ---
+  duration_ms: 599.125155
+  ...
+# Subtest: actual Basic, Premium and open-payment forms retain/count/order five photos and block the sixth
+ok 14 - actual Basic, Premium and open-payment forms retain/count/order five photos and block the sixth
+  ---
+  duration_ms: 951.837875
+  ...
+# Subtest: phone QR polling appends a whole batch once and ignores cancelled/foreign-store late responses
+ok 15 - phone QR polling appends a whole batch once and ignores cancelled/foreign-store late responses
+  ---
+  duration_ms: 415.545159
+  ...
+# Subtest: five selected photos use one existing supplier payment with all pages retained
+ok 16 - five selected photos use one existing supplier payment with all pages retained
+  ---
+  duration_ms: 421.066071
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6038.892573

@@ -62,7 +62,7 @@ test('malformed expiry cannot grant delivery',async()=>{
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-function registryHarness({configured=true,iosEnabled=false,stores=[store],database,recipients=[],send=async()=>({delivered:true}),allowed=nativeRecipientAllowed}={}) {
+function registryHarness({configured=true,iosEnabled=false,stores=[store],database,recipients=[],muted=new Set(),send=async()=>({delivered:true}),allowed=nativeRecipientAllowed}={}) {
  const calls=[]; const db=database||{
   $executeRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return 1;},
   $queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return sql.startsWith('SELECT * FROM "StoreChatNativePush"')?recipients:[];},
@@ -70,7 +70,7 @@ function registryHarness({configured=true,iosEnabled=false,stores=[store],databa
   store:{findUnique:async()=>({...store,active:true,company:{active:true}})}
  };
  const code=fs.readFileSync(new URL('../src/native-chat-push.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/export /g,'')+'\nthis.api={registerNativePush,revokeNativePush,sendNativeChatPush};';
- const box={createHash,prisma:db,mobileChatStores:async()=>({stores}),chatEnabled:async()=>true,authorizeChatOperator:async()=>true,nativeRecipientAllowed:allowed,assertCustomerDemoOutboundAllowed:()=>{},createNativeFcmProvider:()=>({configured:()=>configured,send}),nativeToken,nativePlatform,nativeIosConfigured:()=>configured&&iosEnabled};
+ const box={createHash,prisma:db,mobileChatStores:async()=>({stores}),chatEnabled:async()=>true,authorizeChatOperator:async()=>true,nativeRecipientAllowed:allowed,assertCustomerDemoOutboundAllowed:()=>{},createNativeFcmProvider:()=>({configured:()=>configured,send}),nativeToken,nativePlatform,mutedChatUsers:async()=>muted,nativeIosConfigured:()=>configured&&iosEnabled};
  vm.runInNewContext(code,box);return {...box.api,calls};
 }
 test('iOS platform registration is explicitly gated and preserves authenticated session ownership',async()=>{
@@ -173,17 +173,22 @@ test('store labels are bounded, stripped of control/spoofing characters and neve
  assert.deepEqual(Object.keys(nativePayload(input).message.data).sort(),['binding','companyId','kind','storeId']);
 });
 
-test('only explicit version 2 registrations receive a server-sourced store label; old clients keep four fields',async()=>{
+test('versioned Android notifications add an opaque reply target while old clients keep their fields',async()=>{
  for(const version of [undefined,1,2,'2',3]){
   const h=registryHarness();await h.registerNativePush({...user,sessionId:'s'},input.token,'bearer',undefined,version);
   const identity=JSON.parse(h.calls.find(x=>x.sql.startsWith('INSERT')).args[5]);
-  assert.equal(identity.notificationVersion,version===2?2:1);
+  assert.equal(identity.notificationVersion,version===2||version===3?version:1);
  }
  const payloads=[];
- const recipients=[{...row,token:input.token,binding:input.binding},{...row,token:input.token,binding:input.binding,identityJson:{...user,notificationVersion:2}}];
- const h=registryHarness({recipients,allowed:async()=>true,send:async value=>{payloads.push(nativePayload(value));return {delivered:true}}});
- const result=await h.sendNativeChatPush({store:{...store,name:'ΚΑΤ'},senderId:'sender'});
- assert.equal(result.delivered,2);
+ const recipients=[1,2,3].map(notificationVersion=>({...row,token:input.token,binding:input.binding,identityJson:{...user,notificationVersion}}));
+ recipients.push({...recipients[2],userId:'muted'});
+ const h=registryHarness({recipients,muted:new Set(['muted']),allowed:async()=>true,send:async value=>{payloads.push(nativePayload(value));return {delivered:true}}});
+ const result=await h.sendNativeChatPush({store:{...store,name:'ΚΑΤ'},senderId:'sender',messageId:'chat-123',topic:'GENERAL'});
+ assert.equal(result.delivered,3);
  assert.equal(Object.keys(payloads[0].message.data).length,4);
  assert.equal(payloads[1].message.data.storeName,'ΚΑΤ');
+ assert.equal(payloads[1].message.data.messageId,undefined);
+ assert.equal(payloads[2].message.data.messageId,'chat-123');
+ assert.throws(()=>nativePayload({...input,messageId:'https://example.test/scope'}));
+ assert.throws(()=>nativePayload({...input,messageId:'chat-123',platform:'ios'}));
 });

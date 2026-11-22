@@ -3,6 +3,7 @@ import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../prisma.js";
+import {enforceBackofficeStaff} from '../services/backoffice-staff-access.js';
 
 const POS_BACKGROUND_TOKEN_ISSUER="myworkstation-pos-background";
 const POS_BACKGROUND_TOKEN_AUDIENCE="commerce-pos-background";
@@ -32,6 +33,7 @@ function storeRuntimePermissions(profile){
   if(rights.editDescription)permissions.push("EDIT_DESCRIPTION");
   if(rights.customersPos)permissions.push("CUSTOMERS_POS");
   if(rights.onlineBarcode)permissions.push("ONLINE_PRODUCT_SEARCH");
+  if(rights.closeWithoutPrint===true)permissions.push("POS_CLOSE_WITHOUT_PRINT");
   return [...new Set(permissions)];
 }
 
@@ -94,6 +96,7 @@ function enforceStorePosPermissions(req,res,permissions){
   if(req.method==="POST"&&(/\/sales\/[^/]+\/(reverse|return-items|internal-return)$/.test(path)||/\/exchange$/.test(path))&&!permissions.includes("RETURN_ITEMS")){
     return deny("Δεν έχεις δικαίωμα «Επιστροφή ειδών» από το BackOffice.");
   }
+  if(req.method==="POST"&&/\/cash-returns(?:\/(?:quote|cancel))?$/.test(path)&&(!permissions.includes("RETURN_ITEMS")||!permissions.includes("POS_CASH")))return deny("Χρειάζονται δικαιώματα επιστροφής ειδών και μετρητών.");
   const customerWrite=req.method==="POST"&&(/\/(customer-balance-payment|customer-receipt-recovery|customer-card\/scan|audience-card\/scan)$/.test(path)||Boolean(req.body?.customerId));
   if(customerWrite&&!permissions.includes("CUSTOMERS_POS"))return deny("Δεν έχεις δικαίωμα «Πελάτες (PoS)» από το BackOffice.");
   if(req.method==="POST"&&/\/customer-balance-payment$/.test(path)){
@@ -110,7 +113,7 @@ function exposeStorePosRuntimeAccess(req,res,rights){
   const path=String(req.originalUrl||"").split("?")[0];
   if(req.method!=="GET"||!/^\/api\/store-pos\/stores\/[^/]+(?:\/access)?$/.test(path))return;
   const send=res.json.bind(res);
-  res.json=body=>send({...body,access:{...(body?.access||{}),...rights}});
+  res.json=body=>send({...body,access:{...(body?.access||{}),...rights,closeWithoutPrint:rights.closeWithoutPrint===true}});
 }
 
 export async function auth(req,res,next){
@@ -265,8 +268,10 @@ export async function auth(req,res,next){
     }
 
     req.user={...payload,mustChangePassword:passwordChangeRequired};
+    if(payload.staffAccess===true)await enforceBackofficeStaff(prisma,req,res);
     next();
   }catch(error){
+    if(error?.code?.startsWith('STAFF_')||error?.code==='MODULE_DISABLED'||error?.code==='LICENSE_INACTIVE')return res.status(error.status||403).json({error:error.message,code:error.code});
     if(error?.code==="CUSTOMER_DEMO_RUNTIME_LOCKED")return res.status(error.status).json({error:error.message,code:error.code});
     console.error("Authentication validation failed",error?.message||error);
     if(error?.name==="TokenExpiredError")return res.status(401).json({error:"Η συνεδρία έληξε.",code:"AUTH_TOKEN_EXPIRED"});

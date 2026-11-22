@@ -1,10 +1,11 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {BarChart3,Boxes,Camera,ChevronRight,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
 import AiReaderPanel from "./AiReaderPanel.jsx";
 import SupplierManagementPanel from "./SupplierManagementPanel.jsx";
 import SupplierPriceComparisonPanel from "./SupplierPriceComparisonPanel.jsx";
 import OrderSuggestionsPanel from "./OrderSuggestionsPanel.jsx";
+import LowValueProductsPanel from "./LowValueProductsPanel.jsx";
 import RecipeManagementPanel from "./RecipeManagementPanel.jsx";
 import AdvancedSalesAnalytics from "./AdvancedSalesAnalytics.jsx";
 import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
@@ -13,6 +14,8 @@ import ConnectorObserverPanel from "./ConnectorObserverPanel.jsx";
 import PendingCenterPanel from "./PendingCenterPanel.jsx";
 import BackofficeVideoAuditPanel from "./BackofficeVideoAuditPanel.jsx";
 import OwnerAssistantPanel from "../voice/OwnerAssistantPanel.jsx";
+import MonthlyInvoiceAuditPanel from "./MonthlyInvoiceAuditPanel.jsx";
+import MonthlyInventoryCapturePanel from "./MonthlyInventoryCapturePanel.jsx";
 import "./commerce-hub.css";
 import "./commerce-external-tabs.css";
 
@@ -21,10 +24,48 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId=""}){
-  const [activeModules,setActiveModules]=useState(readActive);
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled,warehouseOrders,onWarehouseOrdersHandled}){
+  const commerceRoot=useRef(null);
+  useEffect(()=>{
+    if(!initialInvoiceOrder||!commerceRoot.current)return;
+    const hub=commerceRoot.current;
+    const open=()=>{
+      if(!hub.isConnected||!hub.querySelector("[data-purchase-orders-launch]"))return false;
+      hub.dispatchEvent(new CustomEvent("purchase-orders:open",{bubbles:true,detail:{...initialInvoiceOrder,navigationOnly:true}}));
+      onInitialInvoiceOrderHandled?.();
+      return true;
+    };
+    if(open())return;
+    const observer=new MutationObserver(()=>{if(open())observer.disconnect()});
+    observer.observe(hub,{childList:true,subtree:true});
+    return()=>observer.disconnect();
+  },[initialInvoiceOrder,onInitialInvoiceOrderHandled]);
+  useEffect(()=>{
+    if(!warehouseOrders||!commerceRoot.current)return;
+    const hub=commerceRoot.current;
+    const open=()=>{
+      if(!hub.isConnected||hub.dataset.activeStoreId!==warehouseOrders.storeId)return false;
+      const button=hub.querySelector("[data-purchase-orders-launch]");
+      if(!button)return false;
+      if(warehouseOrders.orderId){
+        hub.dispatchEvent(new CustomEvent("purchase-orders:open",{bubbles:true,detail:{...warehouseOrders,navigationOnly:true}}));
+      }else button.click();
+      onWarehouseOrdersHandled?.(true);
+      return true;
+    };
+    if(open())return;
+    const observer=new MutationObserver(()=>{if(open())observer.disconnect()});
+    observer.observe(hub,{childList:true,subtree:true});
+    const timeout=setTimeout(()=>{observer.disconnect();onWarehouseOrdersHandled?.(false)},2500);
+    return()=>{observer.disconnect();clearTimeout(timeout)};
+  },[warehouseOrders,onWarehouseOrdersHandled]);
+  const [cachedActiveModules,setActiveModules]=useState(readActive);
+  // The selected-store entry owns fresh module checks. Events/catalog reads
+  // must not replace that verified scope or remount an in-progress inbox.
+  const activeModules=Array.isArray(verifiedActiveModules)?verifiedActiveModules:cachedActiveModules;
   const [catalog,setCatalog]=useState([]);
-  const [tab,setTab]=useState("modules");
+  const [lowValueAccessStoreId,setLowValueAccessStoreId]=useState("");
+  const [tab,setTab]=useState(()=>initialTab==="documents"?"documents":"modules");
   const [storeId,setStoreId]=useState(stores[0]?.id||"");
   const [assistantStoreId,setAssistantStoreId]=useState(()=>stores.find(s=>s.id===activeStoreId)?.id||"");
   const [overview,setOverview]=useState(null);
@@ -43,6 +84,8 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
   const active=new Set(activeModules);
+  const lowValueCompanyAccess=active.has("LOW_VALUE_PRODUCTS");
+  const canReadLowValue=Boolean(storeId)&&lowValueAccessStoreId===storeId;
 
   useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,activeStoreId]);
   useEffect(()=>{setAssistantStoreId(stores.find(s=>s.id===activeStoreId)?.id||"")},[stores,activeStoreId]);
@@ -83,7 +126,17 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
   const loadAi=async()=>{if(active.has("AI_READER"))setAiStatus(await api("/api/commerce/ai-reader/status"))};
 
-  useEffect(()=>{loadCatalog()},[]);
+  useEffect(()=>{if(initialTab!=="documents")loadCatalog()},[initialTab]);
+  useEffect(()=>{
+    if(initialTab==="documents")return;
+    let current=true;
+    if(storeId){
+      api(`/api/commerce/low-value-products/access?storeId=${encodeURIComponent(storeId)}`)
+        .then(data=>{if(current)setLowValueAccessStoreId(data.storeId===storeId?storeId:"")})
+        .catch(()=>{if(current)setLowValueAccessStoreId("")});
+    }else setLowValueAccessStoreId("");
+    return ()=>{current=false};
+  },[storeId,lowValueCompanyAccess,initialTab]);
   useEffect(()=>{
     setError("");setMessage("");
     if(tab==="inventory")loadInventory().catch(e=>setError(e.message));
@@ -154,16 +207,22 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
   const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
 
-  return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
+  if(initialTab==="documents")return <div className="commerce-hub">{active.has("DOCUMENTS")&&<InvoiceInboxPanel api={api} stores={stores} onOpenOrder={onOpenInvoiceOrder}/>}</div>;
+
+  return <div ref={commerceRoot} data-active-store-id={activeStoreId} className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}${tab==="lowValue"?" low-value-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
     <section className="panel">
       {tab==="orderSuggestions"&&<button type="button" className="order-suggestions-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}
+      {tab==="lowValue"&&<button type="button" className="low-value-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}
       <div className="panel-head"><div><h2>Εμπορική λειτουργία</h2><p>POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.</p></div><button onClick={event=>{if(!event.currentTarget.dispatchEvent(new CustomEvent("purchase-orders:refresh",{bubbles:true,cancelable:true})))return;loadCatalog();if(tab==="inventory")loadInventory();if(tab==="analytics")loadAnalytics();}}><RefreshCw/>Ανανέωση</button></div>
       <div className="commerce-module-strip">
         <button className={tab==="modules"?"active":""} onClick={()=>setTab("modules")}>Modules</button>
         <button type="button" className={tab==="ownerAssistant"?"active":""} onClick={()=>setTab("ownerAssistant")}>Βοηθός Ιδιοκτήτη</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="supplierComparison"?"active":""} onClick={()=>setTab("supplierComparison")}>Σύγκριση Προμηθευτών</button>
+        <button disabled={!active.has("INVENTORY")} className={tab==="invoiceMonthAudit"?"active":""} onClick={()=>setTab("invoiceMonthAudit")}>Έλεγχος τιμολογίων μήνα</button>
+        <button disabled={!active.has("INVENTORY")} className={tab==="monthlyInventoryCapture"?"active":""} onClick={()=>setTab("monthlyInventoryCapture")}>Εξουσιοδότηση μηνιαίας απογραφής</button>
         <button disabled={!active.has("ORDER_SUGGESTIONS")} className={tab==="orderSuggestions"?"active":""} onClick={()=>setTab("orderSuggestions")}>Προτάσεις Παραγγελίας</button>
+        <button disabled={!canReadLowValue} className={tab==="lowValue"?"active":""} onClick={()=>setTab("lowValue")}>Προϊόντα Χαμηλής Απόδοσης</button>
         
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
@@ -175,7 +234,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
         <button disabled={!active.has("VIDEO_EVENTS")} className={`${tab==="video"?"active":""} ${!active.has("VIDEO_EVENTS")?"locked":""}`} onClick={()=>setTab("video")}><Camera/> Κάμερες / Video Audit</button>
       </div>
-      <label>Κατάστημα <select value={tab==="ownerAssistant"?assistantStoreId:storeId} onChange={e=>{setStoreId(e.target.value);setAssistantStoreId(e.target.value)}}>{tab==="ownerAssistant"&&<option value="">Επίλεξε κατάστημα</option>}{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      {tab==="monthlyInventoryCapture"?<p aria-label="Επιλεγμένο κατάστημα εξουσιοδότησης">Κατάστημα: <strong>{stores.find(store=>store.id===activeStoreId)?.name||stores.find(store=>store.id===activeStoreId)?.id||"Καμία έγκυρη επιλογή"}</strong></p>:<label>Κατάστημα <select value={tab==="ownerAssistant"?assistantStoreId:storeId} onChange={e=>{setStoreId(e.target.value);setAssistantStoreId(e.target.value)}}>{tab==="ownerAssistant"&&<option value="">Επίλεξε κατάστημα</option>}{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}
       {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
     </section>
 
@@ -185,6 +244,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}
     {tab==="supplierComparison"&&active.has("INVENTORY")&&<SupplierPriceComparisonPanel key={storeId} api={api} storeId={storeId}/>}
     {tab==="orderSuggestions"&&active.has("ORDER_SUGGESTIONS")&&<OrderSuggestionsPanel key={storeId} api={api} storeId={storeId}/> }
+    {tab==="lowValue"&&canReadLowValue&&<LowValueProductsPanel key={storeId} api={api} storeId={storeId}/> }
 
     {tab==="inventory"&&<>
       <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>
@@ -203,6 +263,8 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     </div></>}
 
     {tab==="analytics"&&<AdvancedSalesAnalytics api={api} stores={stores} initialStoreId={storeId}/>}
+    {tab==="invoiceMonthAudit"&&active.has("INVENTORY")&&<MonthlyInvoiceAuditPanel key={activeStoreId} api={api} storeId={stores.find(store=>store.id===activeStoreId)?.id||""} storeName={stores.find(store=>store.id===activeStoreId)?.name||""} onOpenInvoiceOrder={detail=>{if(!detail?.orderId||!activeStoreId||detail.storeId!==activeStoreId||!stores.some(store=>store.id===activeStoreId))return;const target={...detail,storeId:activeStoreId,navigationOnly:true,readOnly:true,monthlyAudit:true};if(onOpenInvoiceOrder){onOpenInvoiceOrder(target);return}commerceRoot.current?.dispatchEvent(new window.CustomEvent("purchase-orders:open",{bubbles:true,detail:target}))}}/>}
+    {tab==="monthlyInventoryCapture"&&active.has("INVENTORY")&&<MonthlyInventoryCapturePanel api={api} storeId={stores.find(store=>store.id===activeStoreId)?.id||""} storeName={stores.find(store=>store.id===activeStoreId)?.name||""}/>}
 
     {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
 

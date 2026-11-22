@@ -1,0 +1,60 @@
+{
+  "status": "TECHNICAL_SETUP_VERIFIED_FUNCTIONAL_EMAIL_NOT_TESTED",
+  "revision": "83db47fc8cc9bb4a0941d5d3421e0cf821baa4a2",
+  "fullCI": 39882875173,
+  "server": {
+    "pass": 4137,
+    "fail": 0,
+    "skip": 0
+  },
+  "backup": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "guard": 39883727591,
+  "provision": {
+    "mode": "PROVISIONED_SIX_EMPTY_TABLES",
+    "dispatch": "OFF",
+    "catalogSha256": "332ca5228dd5a31c2419cd96c53c226b0c48f5c2f0f0666e2c8bd0314549aaab",
+    "knownTables": 259,
+    "actualTables": 260,
+    "allowedExtra": "StoreLifecycleRuntime",
+    "sixRowCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "paired": {
+    "manifestHash": "599344219baf4dcac8c39144a6e12e383bcac0bb3546979cfff94bcdde293930",
+    "pulseCheckedAt": "2026-10-23T01:30:37.603138Z",
+    "hmacValidatedAt": "2026-10-23T01:31:16.994Z",
+    "validSignedFreshCapability": true,
+    "exactRevision": true,
+    "storagePolicyVerified": true
+  },
+  "offControl": {
+    "claimPR": 3090,
+    "claimCI": 39884423247,
+    "claimMerge": "104470a058e16146aa6ba6b6aff632520468ee59",
+    "configDeploy": "dep-dbdbj4ss728c73bc19gg",
+    "valid": true,
+    "enabled": false,
+    "issuedAt": "2026-10-23T01:34:00.191Z",
+    "notBefore": "2026-10-23T04:00:00.000Z",
+    "fingerprint": "1ae62eed9b15afe75c5324358aecca25c4b849d5ff0c73c1bbc43e270606ea44",
+    "activationFingerprint": "b1847657773dde38ba3f152c7cf1cdab03a084f4305947c04392a625ddeefaf4",
+    "exactExpectedFingerprints": true
+  },
+  "smtp": {
+    "checkedAt": "2026-10-23T01:36:27.911Z",
+    "connectionAndAuthenticationVerified": true,
+    "messageSent": false,
+    "inboxAcceptance": "NOT_TESTED"
+  },
+  "next": "User identifies intended recipient; scoped mailbox verification and separate consent/current SA grant and policy; genuine complete postcutoff period."
+}

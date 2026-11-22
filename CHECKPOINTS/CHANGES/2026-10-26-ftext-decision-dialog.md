@@ -1,0 +1,17 @@
+## 26 October 2026 — engineering release verified; physical acceptance AWAITING LAB
+
+SourcePR3159 fdc15f7b5e6f8dbcada047451eef26a2b37a555e: fullCI40310736557 SUCCESS (all5 jobs;4236server+8backup PASS/0FAIL/0SKIP), native40310736780 SUCCESS. Merged71ca6f15af3036a287b3b90bc880ce44c9cff6cd. Exact MAIN40312135266/job121535998818 SUCCESS, same4236+8/0FAIL/0SKIP and all5 jobs. Ordinary guarded deploy40313441832/job121540111270 SUCCESS. Renderdep-dbfjc72vcj2c738cegd0 deploy_hook LIVE2026-10-26T11:16:29.879891UTC. Independent public /api/health HTTP200/oktrue/exact71ca6f15 verified. No manual Render trigger or guard bypass.
+
+Local Node20 mounted7PASS and production frontend build PASS. No Windows connector/profile/package change. Only next user action: refresh the existing POS and inspect the recovered NO basket/dialog state; do not repeat payment for documentation. Original request1e50a87c remains unresolved REQUIRES_CHECK with NO and saleIdNULL, immutable original result retained. Hiding the modal does not prove fiscal cancellation or release the server pending lock. No new receipt/charge/VOID/Sale/Payment/stock operation executed by this correction. Physical UI/card acceptance NOT TESTED, no manual PASS or whole connector closure. Same owner retained.
+
+## 26/10/2026 — FTEXT operator decision dialog USER FAIL / bounded correction AWAITING LAB
+
+Retained owner codex/rizareio-ftext-bridge-20261022; branch fix/ftext-decision-dialog-20261026. Follow-up claimPR3158 head d2b2f336aa1e69af37d3f821cad53b079d355118, doc CI40308227789 success (source jobs correctly skipped), mergedca8beee180cc9a79debe053de0b96d61e6a91258 before source. SourcePR3157/main688038f8f released: exact mainCI40302670017 success4234server+8backup, ordinary deploy40304089988 Renderdep-dbfiablg1s2s73fucln0 LIVE10:04:02UTC. Normal selected-store UI saved operator card code2/POS1/type1, config9dcc37e8-c3ef-458c-a6bc-57f86d524078; generated66304byte package SHA2561c4ea336ff7b5cecbf6534bd3fd863be444041da4b191d78a4e9eb7a27d98321. User screenshots confirm paired, STATUS delivered, connector connected26Oct12:21local. This records setup observation only, not a card acceptance PASS.
+
+Latest owner USER FAIL: NO left blocking confirmation. Request1e50a87c-e5ed-491b-9e1c-cac73ee2bec9 CARD0.50 has original-cashier NO10:25:28.149UTC, REQUIRES_CHECK, saleIdNULL and unverified physical receipt result. Owner reports register/EFTPOS back at initial screens. No measured financial/stock delta or proved fiscal cancellation inferred; no repeat sale/VOID executed.
+
+Correction hides the blocking dialog after persisted ftext NO and keeps basket/scanner usable, retaining pending identity/polling/key and server pending lock with visible review notice. Successful YES closes immediately on actual SALE_COMMITTED response; error/uncertain stays visible. No automatic resend, cancellation, financial/stock mutation or false success; no profile/Windows/server/lifecycle changes. CASH/RBS and previous limited CASH USER PASS protected. Source is AWAITING CI/LAB; physical retest and resolving original unverified fiscal state remain OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-26-ftext-decision-dialog.md.
+
+Mounted verification covers persisted YES/NO closure, preserved NO basket/scanner, no second checkout, failed decisions keep dialog, and existing RBS continuation. CI-only evidence is not physical PASS. No manual PASS entry is introduced.
+
+Local Node20 mounted suite:7PASS/0FAIL/0SKIP, including RBS CASH continuation. Full CI and exact deployment still pending.

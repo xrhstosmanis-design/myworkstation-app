@@ -1,3 +1,10 @@
+import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
+import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
+import {readStaffWorkforceView} from './services/backoffice-staff-workforce.js';
+import {createInvoiceStockExclusionEmailScheduler} from "./services/invoice-stock-exclusion-email.js";
+import {readStaffCompanyDirectory} from './services/backoffice-staff-company.js';
+import {createAutomaticReportSmtpTransport} from "./services/mail.js";
+import attendedRemoteRoutes from './routes/attended-remote.js';
 import ftextRoutes from './routes/ftext-v1.js';
 import {storeLifecycleErrors} from "./middleware/store-lifecycle-errors.js";
 import storeLifecycleStateRoutes from "./routes/store-lifecycle-state.js";
@@ -12,9 +19,11 @@ import storeBakingRoutes from "./routes/store-baking.js";
 import {ensureStoreBakingSchema} from "./store-baking.js";
 import {blockCustomerDemoRequest} from "./middleware/customer-demo-runtime.js";
 import {createN40ReadTrace} from "./n40-read-trace.js";
+import {createRequestLatencyMonitor} from "./request-latency-monitor.js";
 import {createProductionStoreReadDiagnostic} from "./production-store-read-diagnostic.js";
 import "dotenv/config";
 import express from "express";
+import {onlineStoreDocumentHandler} from "./online-store-document.js";
 import {createServerShutdown} from "./server-shutdown.js";
 import {prisma} from "./prisma.js";
 import cors from "cors";
@@ -24,12 +33,16 @@ import { fileURLToPath } from "url";
 import {storeHtmlWithManifest,storeManifest,validPwaStoreId} from "./store-pwa.js";
 import {clearKatStuckRbsRequest} from "./clear-kat-stuck-rbs-request.js";
 import {startWorkforceAutoOutWorker} from "./workers/workforce-auto-out.js";
-import authRoutes from "./routes/auth.js";
+import authRoutes,{issueSession} from "./routes/auth.js";
+import {createBackofficeStaffRouter} from "./routes/backoffice-staff.js";
+import {ensureBackofficeStaffSchema} from "./backoffice-staff-bootstrap.js";
 import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
 import katOnlineOrderingRoutes from "./routes/kat-online-ordering.js";
 import katOnlineOrderingModifierRoutes from "./routes/kat-online-ordering-modifiers.js";
 import cashControlRoutes,{ensureCashControlSchema} from "./routes/cash-control.js";
+import cashPaperRoutes from "./routes/cash-papers.js";
+import cashReconciliationRoutes from "./routes/cash-reconciliation.js";
 import {ensureAutomaticReportSettingsSchema} from "./services/automatic-report-settings.js";
 import storeOperatorRoutes from "./routes/store-operators.js";
 import operatorManagementV2Routes from "./routes/operator-management-v2.js";
@@ -44,6 +57,7 @@ import managementBusinessUnitsRoutes from "./routes/management-business-units.js
 import managementParametersRoutes from "./routes/management-parameters.js";
 import preparationRecipeRoutes from "./routes/preparation-recipes.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
+import ownerCashWithdrawalRoutes from "./routes/owner-cash-withdrawal.js";
 import ownerPaymentsRoutes from "./routes/owner-payments.js";
 import ownerPaymentsImportRoutes from "./routes/owner-payments-import.js";
 import ownerPaymentsImportPreviewRoutes from "./routes/owner-payments-import-preview.js";
@@ -55,7 +69,7 @@ import {posPurchaseOrderAccess} from "./middleware/pos-purchase-order-access.js"
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderUnresolvedGuardRoutes from "./routes/purchase-order-unresolved-guard.js";
 import purchaseOrderPostingGuardRoutes from "./routes/purchase-order-posting-guard.js";
-import purchaseOrderRoutes,{ensurePurchaseOrderSchema} from "./routes/purchase-orders.js";
+import purchaseOrderRoutes,{ensurePurchaseOrderSchema,purchaseOrderInspectionAdmission,createPurchaseOrderInspectionHandler} from "./routes/purchase-orders.js";
 import purchaseOrderOcrResolutionRoutes from "./routes/purchase-order-ocr-resolution.js";
 import purchaseOrderTotalReconciliationGuardRoutes from "./routes/purchase-order-total-reconciliation-guard.js";
 import purchaseDocumentAdjustmentRoutes from "./routes/purchase-document-adjustments.js";
@@ -80,7 +94,11 @@ import kioskReportsStockV3Routes from "./routes/kiosk-reports-stock-v3.js";
 import kioskReportsSalesV4Routes from "./routes/kiosk-reports-sales-v4.js";
 import kioskReportsDeliveryV5Routes from "./routes/kiosk-reports-delivery-v5.js";
 import kioskReportsRoutes from "./routes/kiosk-reports.js";
+import {createMonthlyInvoiceAuditRouter} from "./routes/monthly-invoice-audit.js";
+import {createMonthlyInventoryCaptureRouter} from "./routes/monthly-inventory-capture.js";
+import {createInvoiceAuditEmailPreviewRouter} from "./routes/invoice-audit-email-preview.js";
 import inventoryArchiveImportRoutes from "./routes/inventory-archive-import.js";
+import posOperatorInventoryRoutes from "./routes/pos-operator-inventory.js";
 import inventoryArchiveRoutes from "./routes/inventory-archive.js";
 import inventoryProductLedgerRoutes from "./routes/inventory-product-ledger.js";
 import inventoryV2ProductRoutes from "./routes/inventory-v2-products.js";
@@ -93,7 +111,9 @@ import storePosRoutes from "./routes/store-pos.js";
 import paymentDeviceAttemptRoutes from "./routes/payment-device-attempts.js";
 import storeTableOrdersRoutes from "./routes/store-table-orders.js";
 import storePreparationRoutes from "./routes/store-preparation.js";
+import productionPrinterRoutes,{productionPrinting} from "./routes/production-printers.js";
 import storePosPilotActionsRoutes from "./routes/store-pos-pilot-actions.js";
+import storePosInternalTransferRoutes from "./routes/store-pos-internal-transfer.js";
 import storePosConsumptionRoutes from "./routes/store-pos-consumption.js";
 import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
 import storePosSaleDisplayRoutes from "./routes/store-pos-sale-display.js";
@@ -108,6 +128,7 @@ import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
 import invoiceAssistantPosRoutes from "./routes/invoice-assistant-pos.js";
 import supplierItemLearningRoutes from "./routes/supplier-item-learning.js";
+import expectedReceiptRoutes from "./routes/supplier-expected-receipts.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import expenseDocumentRoutes from "./routes/expense-documents.js";
 import mobileInvoiceUploadRoutes from "./routes/mobile-invoice-upload.js";
@@ -131,6 +152,17 @@ import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-onlin
 import commerceAdvancedOnlineSearchRoutes from "./routes/commerce-advanced-online-search.js";
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import {createBackofficeCompanyInstallationRouter} from './routes/backoffice-company-installation.js';
+import {createAutomaticReportEventInstallationRouter} from './routes/automatic-report-event-installation.js';
+import {createExpectedReceiptInstallationRouter} from './routes/supplier-expected-receipts-installation.js';
+import {createAutomaticReportDispatchRouter} from './routes/automatic-report-dispatch.js';
+import {createAutomaticReportInvitationRouter} from './routes/automatic-report-invitations.js';
+import {readActivation} from './services/automatic-report-activation.js';
+import {createAutomaticReportDispatcher} from './services/automatic-report-dispatch.js';
+import {createAutomaticReportScheduler} from './services/automatic-report-scheduler.js';
+import {createMonthlyInventoryCaptureJobs} from './services/monthly-inventory-capture-jobs.js';
+import {createMonthlyInventoryCaptureScheduler} from './services/monthly-inventory-capture-scheduler.js';
+import {backgroundDrain} from './server-shutdown.js';
 import backupMonitorRoutes from "./routes/backup-monitor.js";
 import platformSuperAdminAnalyticsDetailsRoutes from "./routes/platform-super-admin-analytics-details.js";
 import platformDeviceOperationsRoutes from "./routes/platform-device-operations.js";
@@ -176,6 +208,7 @@ const app=express();
 const shutdown=createServerShutdown({disconnect:()=>prisma.$disconnect(),allowInternal:allowPosInvoiceDrainRequest});
 app.use(cors());
 app.use(shutdown.middleware);
+app.use(createRequestLatencyMonitor());
 app.use(storeLifecycleRequestContext);
 // Only the bounded video endpoint needs base64 overhead above the existing global limit.
 app.use("/api/store-chat/stores/:storeId/video-messages",express.json({limit:"17mb"}));
@@ -190,9 +223,20 @@ app.use("/api/public/kat",katOnlineOrderingModifierRoutes);
 app.use("/api/public/online",katOnlineOrderingModifierRoutes);
 app.use("/api/public/efood",efoodPelicanWebhookRoutes);
 app.use("/api/auth",authRoutes);
+app.use("/api/backoffice-staff",createBackofficeStaffRouter({db:prisma,authenticate:auth,issueSession}));
 app.use("/api/lifecycle",storeLifecycleStateRoutes);
 app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
 app.use("/api/system/backup-monitor",backupMonitorRoutes);
+// Exact delegated sales reports do not execute legacy journal bootstrap.
+app.get(['/api/commerce/sales/unsold-products','/api/store-pos/sales/journal'],auth,async(req,res,next)=>{
+ if(!req.user?.staffAccess||!['unsold-products.read','sales-journal.read'].includes(req.staffGrant?.capability))return next();
+ try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffSalesExtra(prisma,req))}catch(error){next(error)}
+});
+// Exact delegated workforce settings bypass broad platform/bootstrap middleware.
+app.get('/api/platform/store-modules/companies/:companyId/stores/:storeId/workforce-v2/:view',auth,async(req,res,next)=>{
+ if(!req.user?.staffAccess||!['workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(req.staffGrant?.capability))return next();
+ try{res.setHeader('Cache-Control','private, no-store');res.json(await readStaffWorkforceView(prisma,req))}catch(error){next(error)}
+});
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",blockPreparedDemoMutation);
 app.use("/api/platform/customer-demos",customerDemoRoutes);
@@ -207,15 +251,28 @@ app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformSuperAdminAnalyticsDetailsRoutes);
 app.use("/api/platform/store-modules",platformStoreModulesRoutes);
+app.use('/api/report-invitations',createAutomaticReportInvitationRouter(prisma));
+app.use('/api/platform/backoffice-company-installation',auth,createBackofficeCompanyInstallationRouter(prisma));
+app.use('/api/platform/companies/:companyId/stores/:storeId/report-event-installation',auth,createAutomaticReportEventInstallationRouter(prisma));
+app.use('/api/platform/companies/:companyId/stores/:storeId/expected-receipt-installation',auth,createExpectedReceiptInstallationRouter(prisma));
+app.use('/api/platform/expected-receipt-installation/stores/:storeId',auth,createExpectedReceiptInstallationRouter(prisma));
+app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',auth,createAutomaticReportDispatchRouter(prisma));
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);
 app.use("/api/platform",platformEfoodIntegrationRoutes);
 app.use("/api/platform/device-operations",platformDeviceOperationsRoutes);
+app.use("/api/remote-support",attendedRemoteRoutes);
 app.use("/api/remote-agent",remoteAgentRoutes);
 app.use("/api/platform/mail",mailRoutes);
 app.use("/api/license",licenseRoutes);
 app.use("/api/video-admin",auth,backofficeVideoAdminRoutes);
 app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operatorManagementV2Routes);
+// Exact company reads precede legacy Owner routers. Requests without an
+// authenticated company grant continue through their original middleware.
+app.get(['/api/owner-products/stores','/api/commerce/suppliers','/api/commerce/customers','/api/management/expense-categories','/api/management/customer-categories','/api/management/professions','/api/management/business-units/shipping-methods','/api/management/categories','/api/management/vat-departments','/api/management/product-companies','/api/management/business-units/banks','/api/commerce/products','/api/commerce/purchases','/api/commerce/recipes','/api/commerce/suppliers/:supplierId/detail','/api/reports/price-changes','/api/reports/departments','/api/reports/documents','/api/reports/delivery','/api/reports/delivery/:noteId/lines','/api/reports/deactivations','/api/reports/logins','/api/reports/sale-deletions','/api/reports/pos-sale-actions','/api/reports/destructions','/api/reports/movements','/api/reports/stocktakes','/api/reports/stock-snapshot','/api/reports/item-snapshot','/api/reports/stock-analysis','/api/reports/sales-analysis','/api/reports/recorded-payroll-expenses','/api/reports/stock-analysis/:productId/movements','/api/reports/sales-analysis/:productId','/api/supplier-control/reports/invoices','/api/supplier-control/reports/payments','/api/supplier-control/reports/purchases','/api/customer-control/turnover'],auth,async(req,res,next)=>{
+  if(!req.staffCompanyGrant&&!req.staffGrant?.capability?.startsWith('store-reports-'))return next();
+  try{res.setHeader('Cache-Control','private, no-store');res.json(req.staffCompanyGrant?await readStaffCompanyDirectory(prisma,req):await readStaffStoreReport(prisma,req))}catch(error){next(error)}
+});
 app.use("/api/management/vat-departments",auth,requireCompanyModule("INVENTORY"),managementVatDepartmentsRoutes);
 app.use("/api/management/expense-categories",auth,requireCompanyModule("CASH_CONTROL"),managementExpenseCategoriesRoutes);
 app.use("/api/management/product-companies",auth,requireCompanyModule("INVENTORY"),managementProductCompaniesRoutes);
@@ -227,6 +284,7 @@ app.use("/api/management/business-units",auth,requireCompanyModule("CORE"),manag
 app.use("/api/management/parameters",auth,requireCompanyModule("CORE"),managementParametersRoutes);
 app.use("/api/management",auth,requireCompanyModule("INVENTORY"),managementCategoriesRoutes);
 app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
+app.use("/api/transactions",auth,requireCompanyOrStoreModule("CASH_CONTROL"),ownerCashWithdrawalRoutes);
 app.use("/api/transactions",auth,requireCompanyOrStoreModule("CASH_CONTROL"),storeTransactionRoutes);
 app.use("/api/transactions",auth,expenseDocumentRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportPreviewRoutes);
@@ -236,7 +294,9 @@ app.use("/api/owner-shifts",auth,requireCompanyModule("CASH_CONTROL"),ownerShift
 app.use("/api/owner-assistant",ownerAssistantRoutes);
 app.use('/api/ai-wallet',aiOwnerWalletRoutes);
 startAiOwnerWalletNotices();
+app.get("/api/purchase-orders/:orderId/detail",auth,purchaseOrderInspectionAdmission,requireStoreModule("INVENTORY"),createPurchaseOrderInspectionHandler(prisma));
 app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
+
 app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce",auth,invoiceCommonDraftRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderUnresolvedGuardRoutes);
@@ -260,6 +320,9 @@ app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalog
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogRoutes);
 app.use("/api/reports",auth,kioskReportsPosSaleActionsRoutes);
 app.use("/api/reports",auth,kioskReportsAuditRoutes);
+app.use("/api/reports/invoice-month-audit",auth,requireStoreModule("INVENTORY"),createMonthlyInvoiceAuditRouter(prisma));
+app.use("/api/monthly-inventory-capture",(req,res,next)=>{res.setHeader("Cache-Control","no-store");next()},auth,requireStoreModule("INVENTORY"),createMonthlyInventoryCaptureRouter(prisma));
+app.use("/api/reports/invoice-audit-email-preview",auth,requireStoreModule("INVENTORY"),createInvoiceAuditEmailPreviewRouter(prisma));
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsStockV3Routes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsSalesV4Routes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsDeliveryV5Routes);
@@ -271,12 +334,35 @@ app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Ro
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ProductRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ImportRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2AuditRoutes);
+// Exact delegated table reads reach the native reader before broad POS
+// middleware that prepares schemas or persists operator catalogue state.
+app.use("/api/store-pos",(req,res,next)=>{
+  if(req.method!=="GET"||!/^\/stores\/[^/]+\/table-service(?:\/(?:history|preparation-queue))?$/.test(req.path))return next();
+  auth(req,res,error=>{
+    if(error)return next(error);
+    if(req.user?.staffAccess!==true)return next();
+    requireCompanyModule("STORE_MODE")(req,res,error=>error?next(error):storeTableOrdersRoutes(req,res,next));
+  });
+});
+// Read-only transfer history uses the same native reader before generic POS
+// catalogue/schema preparation. Transfer writers retain their existing chain.
+app.use("/api/store-pos",(req,res,next)=>{
+  if(req.method!=="GET"||!/^\/stores\/[^/]+\/internal-transfers\/(?:credit|pending-cash-receipts|external-history)$/.test(req.path))return next();
+  auth(req,res,error=>{
+    if(error)return next(error);
+    if(req.user?.staffAccess!==true)return next();
+    requireCompanyModule("STORE_MODE")(req,res,error=>error?next(error):storePosInternalTransferRoutes(req,res,next));
+  });
+});
+app.use("/api/store-pos/stores/:storeId/inventory",auth,posOperatorInventoryRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeBakingRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
+app.use("/api/production-printers",productionPrinterRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalogRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosSaleDisplayRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosExchangeRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosInternalTransferRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosConsumptionRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),paymentDeviceAttemptRoutes);
@@ -289,6 +375,8 @@ app.use("/api/ftext/v1",ftextRoutes);
 app.use("/mobile-invoice-upload",mobileInvoiceUploadRoutes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
 app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
+app.use("/api/cash-papers",auth,cashPaperRoutes);
+app.use("/api/cash-reconciliation",auth,cashReconciliationRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPreviewRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
@@ -312,6 +400,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceDraftApprovalRou
 app.use("/api/commerce",auth,commerceTenantGuard,commerceMyDataInboxRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceVatLookupRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
+app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
@@ -322,7 +411,7 @@ app.use("/api/netlink",auth,requireCompanyModule("NETLINK_PREPAID"),netlinkRoute
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 app.use((error,_req,res,next)=>String(error?.code||"").startsWith("AI_WALLET_")?walletHttpError(error,res):next(error));
 app.use(storeLifecycleErrors);
-app.use((err,req,res,next)=>{console.error(err);if(String(err?.meta?.message||err?.meta?.database_error||'').includes('MWS_BAKED_TOTAL_GUARD'))return res.status(409).json({error:'Το συνολικό απόθεμα δεν μπορεί να γίνει μικρότερο από τα ψημένα. Καταγράψτε πρώτα την πραγματική φύρα ή επιστροφή.'});if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
+app.use((err,req,res,next)=>{if(!(err?.status===503&&err?.message==="Το Online κατάστημα είναι προσωρινά κλειστό."))console.error(err);if(String(err?.meta?.message||err?.meta?.database_error||'').includes('MWS_BAKED_TOTAL_GUARD'))return res.status(409).json({error:'Το συνολικό απόθεμα δεν μπορεί να γίνει μικρότερο από τα ψημένα. Καταγράψτε πρώτα την πραγματική φύρα ή επιστροφή.'});if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.get(["/wholesale","/wholesale.html"],(req,res)=>{
@@ -338,23 +427,43 @@ app.get("/store/:storeId",async(req,res,next)=>{
   if(!validPwaStoreId(req.params.storeId))return res.sendStatus(404);
   try{res.set("Cache-Control","no-store").type("html").send(storeHtmlWithManifest(await readFile(path.join(dist,"index.html"),"utf8"),req.params.storeId))}catch(error){next(error)}
 });
-app.get("/online/:publicSlug",(req,res)=>res.sendFile(path.join(dist,"kat/app.html")));
+app.get("/online/:publicSlug",onlineStoreDocumentHandler(dist));
 app.get("/b2b/:publicSlug",(req,res)=>{
   if(req.params.publicSlug.length<3||req.params.publicSlug.length>63||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(req.params.publicSlug))return res.sendStatus(404);
   res.set({"Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"}).sendFile(path.join(dist,"b2b.html"));
 });
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensureCashControlSchema();await ensureAutomaticReportSettingsSchema(prisma);await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureDailyBiteCoffeeBehavior();await ensureStoreBakingSchema(prisma);await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensureCashControlSchema();await ensureAutomaticReportSettingsSchema(prisma);await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await productionPrinting.ensure();await ensureKatPreparationCleanup();await ensureDailyBiteCoffeeBehavior();await ensureStoreBakingSchema(prisma);await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 await ensureStorePaidModulesSchema();
 await ensureStoreChatSchema();
+await ensureBackofficeStaffSchema(prisma);
 await ensurePosInvoiceBackgroundWorkerSchema();
 await clearKatStuckRbsRequest();
+const automaticReportActivationProvider=()=>readActivation(process.env);
+const automaticReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider});
+const automaticReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:automaticReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain});
+const supplierReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'SUPPLIER_COMPARISON'});
+const supplierReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:supplierReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'SUPPLIER_COMPARISON'});
+const promotionReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'PROMOTION_RESULT'});
+const promotionReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:promotionReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'PROMOTION_RESULT'});
+const inventoryResultDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider,reportType:'INVENTORY_RESULT'});
+const inventoryResultScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:inventoryResultDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain,reportType:'INVENTORY_RESULT'});
+const monthlyInventoryCaptureJobs=createMonthlyInventoryCaptureJobs(prisma);
+const monthlyInventoryCaptureScheduler=createMonthlyInventoryCaptureScheduler({jobs:monthlyInventoryCaptureJobs,work:backgroundDrain});
+const invoiceStockEmailScheduler=createInvoiceStockExclusionEmailScheduler({
+  db:prisma,work:backgroundDrain,
+  send:({companyId,storeId,...message})=>createAutomaticReportSmtpTransport({companyId,storeId}).sendMail(message)
+});
 const server=app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
   startWorkforceAutoOutWorker();
+  automaticReportScheduler.start();
+  supplierReportScheduler.start();
+  promotionReportScheduler.start();
+  inventoryResultScheduler.start();
+  invoiceStockEmailScheduler.start();
+  monthlyInventoryCaptureScheduler.start();
 });
 shutdown.install(server);
-
-

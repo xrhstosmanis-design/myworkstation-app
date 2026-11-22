@@ -1,0 +1,114 @@
+{
+  "format": "MWS_MONTHLY_LISTENING_PROCESS_CONFIG_OBSERVATION_V1",
+  "status": "SCOPED_LISTENING_PROCESS_STARTUP_CONFIGURATION_PASS",
+  "checkedAt": "2026-11-02T18:45:51.801349Z",
+  "web": {
+    "serviceId": "srv-d9isenfavr4c73bdh52g",
+    "instance": "kgdmj",
+    "pid": 576,
+    "port": 10000,
+    "actualWebListener": true,
+    "sourceRevision": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+    "lifecycleProfile": "MONTHLY_INVENTORY_CAPTURE_V1",
+    "generalExecutionFlag": "false"
+  },
+  "monthlyControl": {
+    "validAccordingToReviewedCanonicalRules": true,
+    "v": 1,
+    "purpose": "MONTHLY_INVENTORY_CAPTURE",
+    "serviceId": "srv-d9isenfavr4c73bdh52g",
+    "epoch": "303042d6-7d12-4461-9f13-fdb17af48cb8",
+    "issuedAt": "2026-11-01T13:54:29.613Z",
+    "notBefore": "2026-12-01T05:00:00.000Z",
+    "enabled": true,
+    "fingerprint": "9d78d8663b0009d39dab4dcde7e5d6c302d4cc2e3aaf0c96396ad3fc48bae038",
+    "activationFingerprint": "1e0b7a31270043b07a640addc60d9423b89d5d5e36109bbd38298adae638ecc6",
+    "matchesProtectedFingerprint": true,
+    "matchesProtectedActivationFingerprint": true,
+    "matchesFirstSlot": true
+  },
+  "observationMethod": {
+    "actualListeningNodeProcessEnvironment": true,
+    "newShellEnvironmentOnly": false,
+    "allowedNonsecretFieldsOnly": true,
+    "deniedCandidateReads": 0,
+    "appCodeImported": false,
+    "applicationRequestsSent": false,
+    "processEnvironmentMutated": false,
+    "schedulerSweepInvoked": false,
+    "jobOrCaptureCreated": false
+  },
+  "limits": {
+    "procEnvironmentBasis": "Linux proc PID environ observes the actual listening process startup environment, not an in-process process.env/parser/private scheduler closure snapshot.",
+    "nativeAppParserConsumptionVerified": false,
+    "effectiveInMemoryActivationVerified": false,
+    "schedulerPrivateClosureState": "NOT_OBSERVABLE",
+    "futureScheduledExecutionVerified": false,
+    "otherServiceInstancesObserved": false,
+    "workerMacRevalidated": false
+  },
+  "sourceReview": {
+    "main": "18e34642f202c98a277e0902fef10a96293be19e",
+    "sameLiveAndMainBlobs": {
+      "index": "5a982fb8c9bbc8dd398b5b6ab7ecdfd55449b2e9",
+      "activation": "ee143b2d86afed636f96742b9dfbefa6ef7bbe63",
+      "scheduler": "67b0bf13a075191fdcb13da14e220ca991ab7845",
+      "captureManifest": "81c5cfa92cc37d914ce40745c84059d31d17a529"
+    },
+    "grantReadProvesMonthlyControl": false,
+    "capturePreviewProvesMonthlyControl": false
+  },
+  "scopeRead": {
+    "checkedAt": "2026-11-02T18:40:04.221806Z",
+    "grantId": "11711b36-943f-4b63-906a-499dc4cdd6b4",
+    "active": true,
+    "revision": "2",
+    "generation": "0",
+    "activationId": "9560bd7e-f4b3-4d38-95ba-597e40eddb6e",
+    "firstIssueMonth": "2026-11",
+    "firstScheduledFor": "2026-12-01T05:00:00.000Z",
+    "revokedAt": null,
+    "fenceGeneration": "0",
+    "maintenance": false,
+    "retired": false,
+    "planHash": "59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2",
+    "scopedJobs": 0,
+    "scopedSnapshots": 1
+  },
+  "workerMetadata": {
+    "checkedAt": "2026-11-02T18:36:26.462971Z",
+    "heartbeatAt": "2026-11-02T18:35:19.708387Z",
+    "manifestHash": "59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2",
+    "workerRevision": "aa1cbcf8ed8461d4abb565376857508217fd6539",
+    "storagePolicyVerifiedField": true,
+    "macRevalidated": false
+  },
+  "newFunctionalExecutionAcceptance": false,
+  "postProbeScopeRead": {
+    "checkedAt": "2026-11-02T18:51:48.709564Z",
+    "grantId": "11711b36-943f-4b63-906a-499dc4cdd6b4",
+    "active": true,
+    "revision": "2",
+    "generation": "0",
+    "activationId": "9560bd7e-f4b3-4d38-95ba-597e40eddb6e",
+    "firstIssueMonth": "2026-11",
+    "firstScheduledFor": "2026-12-01T05:00:00.000Z",
+    "revokedAt": null,
+    "fenceGeneration": "0",
+    "maintenance": false,
+    "retired": false,
+    "planHash": "59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2",
+    "scopedJobs": 0,
+    "scopedSnapshots": 1,
+    "sameGrantRevisionGenerationActivationAndFirstSlot": true,
+    "wholeFinancialStockInvarianceMeasured": false
+  },
+  "nativeHealthObservation": {
+    "observedWindowStart": "2026-11-02T18:45:51.801349Z",
+    "observedWindowEnd": "2026-11-02T18:51:48.709564Z",
+    "ok": true,
+    "sourceRevision": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+    "preciseReadTimeAndHttpStatusIndependentlyMeasured": false
+  },
+  "privateNativeAxScreenshotRetainedOutsideRepositoryLibrary": true
+}

@@ -1,0 +1,69 @@
+{
+  "claim_main": "f0d45edfd0628557f7a1a545355faa928d631240",
+  "candidate": "ce589169a353c07190bc2dd891a66aba1515dd5f",
+  "registries": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "before_blob": "9f581e26ee876b476fa740dd1274ff007783521f",
+      "old_bytes": 5225810,
+      "after_blob": "875d718d58df13bb71470f68888897ae3f3e66ef",
+      "new_bytes": 5227947,
+      "prefix_bytes": 2137,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "before_blob": "f6286f716c04912e4dc132603070e54b1bc51c0c",
+      "old_bytes": 4051240,
+      "after_blob": "b2cb56dae5cb8c0670802e773b5fe64781b5b35c",
+      "new_bytes": 4053377,
+      "prefix_bytes": 2137,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "before_blob": "eb1fe4f43421422c5fee33a7e24f126eacbbac04",
+      "old_bytes": 3578993,
+      "after_blob": "43d2d04a8b383a489905257f2303894b1c19516d",
+      "new_bytes": 3581130,
+      "prefix_bytes": 2137,
+      "old_suffix_preserved": true
+    }
+  },
+  "node": "v20.20.2",
+  "baseline": {
+    "tests": 108,
+    "pass": 108,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "tap_sha256": "7b64fdac4cec968fa127f3cdc95ad5fac98e1092a249bb1d9c3c19fb3b46dae6"
+  },
+  "after": {
+    "tests": 274,
+    "pass": 274,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "tap_sha256": "cf387ad07a3b42fd64f29605f1921f7a33863b369ef3d233dae3a5fc778b7121"
+  },
+  "workflow_run_id": "41973706310",
+  "scope": "Complete-checkout targeted Node20 tests; provider/database/wallet I/O simulated. Not full native/database/build/browser CI or OCR/LAB acceptance.",
+  "runtime_source_candidate": true,
+  "main_changed": false,
+  "production_deployed": false,
+  "provider_called": false,
+  "lab_performed": false,
+  "independent_review": "PENDING",
+  "source_blobs": {
+    "server/src/routes/commerce-pos-v244.js": "83a1d0862fde32ca82628d9cfa567d9f4bc3cfcf",
+    "server/test/pos-fast-header-latency.test.js": "89e837222b5d5724c39b88123040ca4f6806e9ba",
+    "server/test/pos-fast-handoff-recovery-v1.test.js": "e94fdb08fd2c38061a9e698116c89129bd5e969d",
+    "server/test/pos-fast-header-pdf-total-safety.test.js": "d543c1352f84321867c08d8b01ed0bd6a7f4ce18",
+    "server/test/pos-fast-header-pdf-real-helpers.test.js": "0ed0028f2834e84051455bd5b69350f2212f30fd",
+    "server/test/pos-fast-header-pdf-timing-shared.test.js": "a9a20fe939c5e58f60864c9e3847b133cdafd05b"
+  },
+  "pdf": {
+    "pages": 957,
+    "sha256": "e4acd72a5995325b396b93ae3347bf4cde678238e582d8578b584420c85e8d0d",
+    "two_copies_equal": true,
+    "visual_review": "PENDING"
+  }
+}

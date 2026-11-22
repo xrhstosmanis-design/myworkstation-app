@@ -1,0 +1,113 @@
+{
+  "format": "MWS_C2_READONLY_MONTH_UI_OBSERVATION_V1",
+  "status": "SCOPED_HOSTED_UI_OBSERVATION",
+  "observedDate": "2026-11-02",
+  "actor": {
+    "kind": "genuine personal SuperAdmin via native support issuer",
+    "independentOwnerStaff": false
+  },
+  "device": "Cloud Chrome desktop",
+  "scope": {
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "storeLabel": "MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ"
+  },
+  "runtime": {
+    "nativeHealthObservedAt": "2026-11-02T11:34:57.091Z",
+    "ok": true,
+    "revision": "a351362f3a5c436126bfcce8b2a547496470c036",
+    "reportServiceGitBlob": "765ebccbd6299dde16dc8e23e4818c9fe0c98ab5",
+    "httpStatusSeparatelyMeasured": false
+  },
+  "observations": [
+    {
+      "action": "native Check month",
+      "issueMonth": "2026-11",
+      "uiAsOfUTC": "2026-11-02T11:33:16Z",
+      "uiTimestampPrecision": "second",
+      "summary": {
+        "logicalRecords": 0,
+        "unposted": 0,
+        "uploadedAwaitingReview": 0,
+        "possibleDuplicates": 0,
+        "identityReview": 0,
+        "credits": 0
+      },
+      "pageRows": 0,
+      "pendingOriginalsAllMonths": 0,
+      "noIncompleteCoverageWarning": true
+    },
+    {
+      "action": "native month input Down twice; no report submission",
+      "editedMonth": "2026-09",
+      "loadedMonth": "2026-11",
+      "observedWindowUTC": [
+        "2026-11-02T11:33:16Z",
+        "2026-11-02T11:33:43Z"
+      ],
+      "editedMonthWarningVisible": true,
+      "firstPageRefreshDisabled": true,
+      "resultsExplicitlyLabelPriorMonth": true
+    },
+    {
+      "action": "native Check month",
+      "issueMonth": "2026-09",
+      "uiAsOfUTC": "2026-11-02T11:33:43Z",
+      "uiTimestampPrecision": "second",
+      "summary": {
+        "logicalRecords": 59,
+        "unposted": 50,
+        "uploadedAwaitingReview": 48,
+        "possibleDuplicates": 0,
+        "identityReview": 25,
+        "credits": 1
+      },
+      "pageRows": 50,
+      "nextPageEnabled": true,
+      "pendingOriginalsAllMonths": 0,
+      "noIncompleteCoverageWarning": true
+    },
+    {
+      "action": "native Next page",
+      "issueMonth": "2026-09",
+      "uiAsOfUTC": "2026-11-02T11:34:00Z",
+      "uiTimestampPrecision": "second",
+      "summaryUnchanged": true,
+      "pageRows": 9,
+      "nextPageAbsent": true,
+      "unknownIssueDateRows": 4,
+      "unknownIssueDateRowsRemainReview": true,
+      "unknownIssueDateNotInferredFromArrival": true,
+      "pendingOriginalsAllMonths": 0
+    },
+    {
+      "action": "DOM-only aggregate confirmation of loaded second page; no network request",
+      "observedAtUTC": "2026-11-02T11:36:10.011Z",
+      "visibleChildRecords": 9,
+      "unknownIssueDateRows": 4,
+      "rowsWithIdentityReviewLabel": 7
+    }
+  ],
+  "limits": {
+    "independentRawSourceCounts": "NOT_COLLECTED",
+    "separateFinancialStockInvariance": "NOT_MEASURED",
+    "physicalOriginalOcrAccountingAccuracy": "NOT_TESTED",
+    "independentRolesDevices": "NOT_TESTED",
+    "incompleteCoverageFixture": "NOT_TESTED",
+    "staleCursorAfterConcurrentSourceChange": "NOT_TESTED",
+    "networkLateReplyRace": "NOT_TESTED"
+  },
+  "actionsExcluded": [
+    "invoice upload",
+    "invoice payment",
+    "OCR/AI call",
+    "business edit",
+    "approval/finalization",
+    "stock posting",
+    "email send",
+    "snapshot capture",
+    "grant/role creation"
+  ],
+  "rawInvoiceNamesAmountsAndBodiesPublished": false,
+  "privateAggregateScreenshotRetainedOutsideRepository": true
+}

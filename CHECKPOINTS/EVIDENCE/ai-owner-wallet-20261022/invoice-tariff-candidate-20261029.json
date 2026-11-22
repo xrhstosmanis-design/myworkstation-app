@@ -1,0 +1,88 @@
+{
+  "status": "REFERENCE_CANDIDATE_NOT_APPLIED",
+  "date": "2026-10-29",
+  "markupPercent": 50,
+  "fx": {
+    "date": "2026-10-23",
+    "usdPerEur": "1.1193",
+    "policy": "Fixed dated conversion preserved from accepted Owner schedule; not live FX or an account settlement assertion."
+  },
+  "sources": [
+    "https://developers.openai.com/api/docs/models/gpt-5",
+    "https://developers.openai.com/api/docs/models/gpt-5-mini",
+    "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+    "https://developers.openai.com/api/docs/pricing",
+    "https://prices.azure.com/api/retail/prices?currencyCode=%27EUR%27&%24filter=armRegionName%20eq%20%27northeurope%27%20and%20contains(productName,%20%27Form%20Recognizer%27)"
+  ],
+  "azure": {
+    "region": "northeurope",
+    "sku": "S0",
+    "commitment": "None (pay as you go)",
+    "meterId": "0cc8bf73-0b81-4d12-8f8c-78b5f3592d94",
+    "meterName": "S0 Pre-built Pages",
+    "retailEurPer1000Pages": "8.7997",
+    "accountPriceVerified": false,
+    "retailReferenceOnly": true
+  },
+  "config": {
+    "AI_OWNER_WALLET_INVOICE_TARIFFS": [
+      {
+        "model": "gpt-5",
+        "responseModels": [
+          "gpt-5",
+          "gpt-5-2025-08-07"
+        ],
+        "inputMicrosPerMillion": 1675155,
+        "cachedInputMicrosPerMillion": 167516,
+        "outputMicrosPerMillion": 13401233,
+        "contextTokens": 400000,
+        "maxOutputTokens": 128000
+      },
+      {
+        "model": "gpt-5-mini",
+        "responseModels": [
+          "gpt-5-mini",
+          "gpt-5-mini-2025-08-07"
+        ],
+        "inputMicrosPerMillion": 335031,
+        "cachedInputMicrosPerMillion": 33504,
+        "outputMicrosPerMillion": 2680247,
+        "contextTokens": 400000,
+        "maxOutputTokens": 128000
+      },
+      {
+        "model": "gpt-5.6-sol",
+        "responseModels": [
+          "gpt-5.6-sol"
+        ],
+        "inputMicrosPerMillion": 5360494,
+        "cachedInputMicrosPerMillion": 536050,
+        "outputMicrosPerMillion": 26802466,
+        "cacheWriteMicrosPerMillion": {
+          "ttl30m": 6700617,
+          "ttl12h": 13401233
+        },
+        "contextTokens": 1050000,
+        "maxOutputTokens": 128000,
+        "longContext": {
+          "thresholdTokens": 272000,
+          "inputMicrosPerMillion": 10720987,
+          "cachedInputMicrosPerMillion": 1072099,
+          "outputMicrosPerMillion": 40203699,
+          "cacheWriteMicrosPerMillion": {
+            "ttl30m": 13401233,
+            "ttl12h": 26802466
+          }
+        }
+      }
+    ],
+    "AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS": [
+      {
+        "model": "prebuilt-invoice",
+        "apiVersion": "2024-11-30",
+        "unitMicros": 13200,
+        "maxPages": 5
+      }
+    ]
+  }
+}

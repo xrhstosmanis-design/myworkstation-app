@@ -1,3 +1,4 @@
+import {chatAccessRevoked} from "../chat-access.mjs";
 import {assertPosShiftOwner} from "../lib/pos-shift-owner.js";
 import {issueChatOperatorSession} from "../chat-operator-auth.mjs";
 import { Router } from "express";
@@ -205,7 +206,7 @@ function mobileEmployeeToken(row){
   return jwt.sign({id:row.id,operatorId:row.id,employeeId:row.employeeId,companyId:row.companyId,storeId:row.storeId,role:row.role,fullName:row.displayName,tokenType:"WORKFORCE_MOBILE",permissions:["WORK_CARD_SELF"]},process.env.JWT_SECRET,{expiresIn:"12h"});
 }
 
-async function createOperatorSession(req,row){
+async function createOperatorSession(req,row,expectedPinHash){
   row.terminalPos=String(row.terminalPos||"MAIN").trim().toUpperCase()||"MAIN";
   const sessionId=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+12*60*60*1000);
@@ -215,7 +216,22 @@ async function createOperatorSession(req,row){
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${terminalLock},0))::text AS locked`;
     await assertPosShiftOwner(tx,{companyId:row.companyId,storeId:row.storeId,operatorId:row.id,terminalPos:row.terminalPos});
     // Serialize logins for this operator: two concurrent POS requests must not both pass the check.
-    await tx.$queryRaw`SELECT "id" FROM "StoreOperatorCredential" WHERE "id"=${row.id} FOR UPDATE`;
+    const [credential]=await tx.$queryRaw`
+      SELECT "id","pinHash" FROM "StoreOperatorCredential" WHERE "id"=${row.id}
+        AND "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "active"=TRUE FOR UPDATE`;
+    if(credential&&expectedPinHash!==undefined&&credential.pinHash!==expectedPinHash){
+      const error=new Error("Το PIN άλλαξε. Χρησιμοποίησε το νέο PIN.");
+      error.status=401;
+      error.code="STORE_OPERATOR_PIN_CHANGED";
+      throw error;
+    }
+    const [profile]=credential?await tx.$queryRaw`
+      SELECT "posAccess" FROM "StoreOperatorProfile"
+      WHERE "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "employeeId"=${row.employeeId}`:[];
+    if(!credential||profile?.posAccess===false){
+      const error=new Error("Η πρόσβαση POS του χειριστή δεν είναι ενεργή.");
+      error.status=403;error.code="STORE_OPERATOR_POS_ACCESS_DISABLED";throw error;
+    }
     const other=(await tx.$queryRaw`
       SELECT "terminalPos" FROM "StoreOperatorSession"
       WHERE "operatorId"=${row.id} AND "storeId"=${row.storeId}
@@ -366,7 +382,7 @@ router.post("/login/pin",route(async(req,res)=>{
   await assertOperatorTerminalAvailable(operator);
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
-  const operatorSessionId=await createOperatorSession(req,operator);
+  const operatorSessionId=await createOperatorSession(req,operator,operator.pinHash);
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_PIN",details:{employeeId:operator.employeeId,terminalPos:operator.terminalPos}});
   res.json({
     token:operatorToken(operator,operatorSessionId),
@@ -384,6 +400,9 @@ router.post("/login/chat-pin",route(async(req,res)=>{
   const operator=rows[0];
   if(!operator||!operator.pinHash||!(await bcrypt.compare(body.pin,operator.pinHash))){await recordLoginFailure(body.storeId,subjectKey);return res.status(401).json({error:"Λανθασμένο PIN."});}
   await clearLoginFailures(body.storeId,subjectKey);
+  if(await chatAccessRevoked(prisma,{id:operator.storeId,companyId:operator.companyId},operator.id)){
+    return res.status(403).json({error:"Η πρόσβαση στο Chat αυτού του καταστήματος έχει ανακληθεί.",code:"STORE_CHAT_ACCESS_REVOKED"});
+  }
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"STORE_CHAT_MOBILE_LOGIN",details:{employeeId:operator.employeeId}});
   res.json({token:await issueChatOperatorSession(operator,req),user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:["STORE_CHAT"]},store:{id:operator.storeId,name:operator.storeName},company:{id:operator.companyId,name:operator.companyName}});
 }));

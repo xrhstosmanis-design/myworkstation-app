@@ -23,14 +23,16 @@ export function createPosPurchaseOrderAccess(db=prisma,entitlement=requireStoreM
    const collection=!commerce&&((path==="/report"&&method==="GET")||(path==="/"&&method==="POST"));
    const match=path.match(/^\/([^/]+)(?:\/(.*))?$/);
    const tail=match?.[2]||"",orderId=match?.[1];
-   const orderAction=!commerce&&match&&((!tail&&method==="PATCH")||(tail==="detail"&&method==="GET")||(tail==="reconcile-ocr-total"&&method==="POST")||(tail==="lines"&&method==="POST")||(/^lines\/[^/]+$/.test(tail)&&["PATCH","DELETE"].includes(method)));
+   const orderAction=!commerce&&match&&((!tail&&method==="PATCH")||(tail==="detail"&&method==="GET")||(tail==="reconcile-ocr-total"&&method==="POST")||(["lines","assistant-line-transfer"].includes(tail)&&method==="POST")||(/^lines\/[^/]+$/.test(tail)&&["PATCH","DELETE"].includes(method)));
    const ocrAction=commerce&&match&&((tail==="ocr-lines"&&method==="GET")||(/^ocr-lines\/[^/]+\/(?:search|options|catalog-matches|product-proposal)$/.test(tail)&&method==="GET")||(/^ocr-lines\/[^/]+\/(?:resolve-existing|create-product|confirm-product)$/.test(tail)&&method==="POST")||(/^invoice-assistant\/(?:source|preview)$/.test(tail)&&["GET","POST"].includes(method)));
    if(!collection&&!orderAction&&!ocrAction)return res.status(403).json({error:"Η ενέργεια δεν ανήκει στην καταχώριση τιμολογίου POS.",code:"POS_ORDERS_ACTION_DENIED"});
    if((req.body?.addBarcode||(/\/confirm-product$/.test(tail)&&Boolean(req.body?.barcode))||(/\/create-product$/.test(tail)&&["PROVIDED","GENERATED"].includes(req.body?.barcodeMode)))&&profile.permissions?.addBarcode!==true)
     return res.status(403).json({error:"Δεν έχεις δικαίωμα προσθήκης barcode.",code:"POS_ORDERS_BARCODE_DENIED"});
    if(!collection){
-    const rows=await db.$queryRaw`SELECT "id","storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`;
+    const rows=await db.$queryRaw`SELECT "id","storeId","reopenVersion" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
+    if(Number(rows[0].reopenVersion)>0&&tail!=="detail")
+     return res.status(403).json({error:"Η επαναφερμένη αγορά διορθώνεται από εξουσιοδοτημένο χρήστη στο BackOffice.",code:"POS_ORDERS_REOPEN_DENIED"});
     const lineId=tail.match(/^(?:lines|ocr-lines)\/([^/]+)/)?.[1];
     if(lineId){const lines=await db.$queryRaw`SELECT "id" FROM "PurchaseOrderLine" WHERE "id"=${lineId} AND "orderId"=${orderId} LIMIT 1`;
      if(!lines[0])return res.status(404).json({error:"Δεν βρέθηκε η γραμμή παραγγελίας."});}

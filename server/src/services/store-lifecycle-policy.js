@@ -1,5 +1,8 @@
 // Prospective classification only. This is not a deletion allowlist.
 export const STORE_TABLES=new Set([
+  "MonthlyInventorySnapshot",
+  "BackofficeStaffGrant",
+  "AiOwnerWalletEntry",
   "AdvancedOnlineSearchUsage",
   "AiReaderJob",
   "AttendanceEvent",
@@ -33,6 +36,7 @@ export const STORE_TABLES=new Set([
   "Employee",
   "Expense",
   "FiscalBridgeDryRun",
+  "FtextCashRequest",
   "InternetPriceProposal",
   "InternetPriceProposalAudit",
   "InternetProductSearch",
@@ -82,8 +86,10 @@ export const STORE_TABLES=new Set([
   "StoreBakingEntry",
   "StoreBakingPolicy",
   "StoreChatAcknowledgement",
+  "StoreChatGroup",
   "StoreChatMessage",
   "StoreChatPushSubscription",
+  "StoreChatMutedTopic",
   "StoreChatSettings",
   "StoreChatTask",
   "StoreEftposDevice",
@@ -128,8 +134,9 @@ export const STORE_TABLES=new Set([
   "WorkforceShiftTemplate",
   "WorkforceTimeClockEntry"
 ]);
-export const RESET_KEEP=new Set(["Store", "ShiftType", "StorePaidModule", "StoreInstallationTerminal", "StoreFiscalDevice", "StoreEftposDevice", "StoreRbsInstallationSettings", "StoreIntegrationCredential", "StoreLabelSettings", "StorePosLayout", "CloudDevice", "ConnectorDevice", "OnlineOrderingConfig", "StoreTableServiceConfig", "StoreVideoCamera", "StoreVideoConnection", "AutomaticReportSettings", "StoreOnlineRadioConfig", "StoreChatSettings", "InventoryZone", "StoreBakingPolicy"]);
+export const RESET_KEEP=new Set(["MonthlyInventorySnapshot", "BackofficeStaffGrant", "AiOwnerWalletEntry", "Store", "ShiftType", "StorePaidModule", "StoreInstallationTerminal", "StoreFiscalDevice", "StoreEftposDevice", "StoreRbsInstallationSettings", "StoreIntegrationCredential", "StoreLabelSettings", "StorePosLayout", "CloudDevice", "ConnectorDevice", "OnlineOrderingConfig", "StoreTableServiceConfig", "StoreVideoCamera", "StoreVideoConnection", "AutomaticReportSettings", "StoreOnlineRadioConfig", "StoreChatSettings", "InventoryZone", "StoreBakingPolicy"]);
 // Explicit latest new-start profile. The original prospective RESET remains
 // unchanged for historical callers; this profile removes business configuration
 // such as shifts/zones/baking rules while retaining both register installations.
-export const FRESH_STORE_KEEP=new Set(['Store','StorePaidModule','StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings','StoreLabelSettings','StorePosLayout','CloudDevice','CloudDeviceCursor','ConnectorDevice','NetlinkStoreConfig','PilotStoreProfile']);
+// Only effective in an explicitly reviewed manifest containing this history relation.
+export const FRESH_STORE_KEEP=new Set(['MonthlyInventorySnapshot','BackofficeStaffGrant','AiOwnerWalletEntry','Store','StorePaidModule','StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings','StoreLabelSettings','StorePosLayout','CloudDevice','CloudDeviceCursor','ConnectorDevice','NetlinkStoreConfig','PilotStoreProfile']);

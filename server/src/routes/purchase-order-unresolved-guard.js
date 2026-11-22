@@ -1,3 +1,4 @@
+import {requireStaffOrderAction,requireStaffAction} from '../services/backoffice-staff-access.js';
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -53,11 +54,15 @@ async function ensureSchema(){
   schemaReady=true;
 }
 
-async function applyPackStockCorrection({orderId,companyId,userId,userName,expectedReopenVersion=0}){
+async function applyPackStockCorrection(input){
   await ensureSchema();
-  return prisma.$transaction(async tx=>{
+  return prisma.$transaction(tx=>applyPackStockCorrectionInTransaction(tx,input));
+}
+
+export async function applyPackStockCorrectionInTransaction(tx,{orderId,companyId,userId,userName,expectedReopenVersion=0,req,excludedStockLineIds=new Set()}){
     const scope=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} LIMIT 1`;
     if(!scope[0])throw Object.assign(new Error("Δεν βρέθηκε η αγορά."),{status:404});
+    if(req?.user?.staffAccess===true)await requireStaffAction(tx,req,scope[0].storeId,'invoices.approve');
     await lockInvoiceStore(tx,companyId,scope[0].storeId);
     await tx.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} FOR UPDATE`;
     // Supplier credit notes already post signed return quantities. The
@@ -93,7 +98,7 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName,expec
     }
 
     const lines=await tx.$queryRaw`
-      SELECT "productId","description","quantity","netAmount","exciseTotal","stockUnitsPerInvoiceUnit"
+      SELECT "id","productId","description","quantity","netAmount","exciseTotal","stockUnitsPerInvoiceUnit"
       FROM "PurchaseOrderLine"
       WHERE "orderId"=${orderId} AND "productId" IS NOT NULL
       ORDER BY "createdAt","id"`;
@@ -106,8 +111,11 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName,expec
       const pack=stockPackSize(row.description,row.stockUnitsPerInvoiceUnit);
       const stockQty=financialQty*pack.size;
       const current=byProduct.get(productId)||{postedQty:0,stockQty:0,net:0,excise:0,details:[]};
-      current.postedQty+=financialQty;
-      current.stockQty+=stockQty;
+      if(!excludedStockLineIds.has(row.id)){
+        current.postedQty+=financialQty;
+        current.stockQty+=stockQty;
+      }
+      current.costStockQty=(current.costStockQty||0)+stockQty;
       current.net+=n(row.netAmount);
       current.excise+=n(row.exciseTotal);
       current.details.push(`${row.description}: ${financialQty} ΚΒ × ${pack.size} = ${stockQty} ΤΜΧ (${pack.rule})`);
@@ -117,7 +125,7 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName,expec
     const audit=[];
     for(const [productId,agg] of byProduct){
       const delta=agg.stockQty-agg.postedQty;
-      const pieceCost=agg.stockQty>0?(agg.net+agg.excise)/agg.stockQty:0;
+      const pieceCost=agg.costStockQty>0?(agg.net+agg.excise)/agg.costStockQty:0;
       if(Math.abs(delta)>0.000001){
         await tx.$executeRaw`
           UPDATE "StoreProduct"
@@ -139,7 +147,6 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName,expec
       WHERE "orderId"=${orderId}`;
 
     return {ok:true,idempotent:false,correctedProducts:audit.filter(row=>Math.abs(row.delta)>0.000001).length,audit};
-  });
 }
 
 // Πρώτα ελέγχεται η οικονομική συμφωνία του OCR τιμολογίου. Αν υπάρχει
@@ -153,16 +160,17 @@ router.patch("/:orderId",async(req,res,next)=>{
 
     // Self-heal παλιά OCR flags: αν η γραμμή έχει ήδη συνδεθεί με πραγματικό
     // Product, δεν είναι πλέον άλυτη ανεξάρτητα από το παλιό resolutionStatus.
-    await prisma.$executeRaw`
+    await prisma.$transaction(async tx=>{if(req.user?.staffAccess===true)await requireStaffOrderAction(tx,req,req.params.orderId,'invoices.approve');return tx.$executeRaw`
       UPDATE "PurchaseOrderLine" l
       SET "resolutionStatus"='MATCHED',"updatedAt"=NOW()
       FROM "PurchaseOrder" o
       WHERE o."id"=l."orderId"
         AND o."id"=${req.params.orderId}
         AND o."companyId"=${req.user.companyId}
+        AND o."status"='NEW'
         AND l."productId" IS NOT NULL
         AND (COALESCE(l."invoiceUnit",'PIECE')<>'PACKAGE' OR COALESCE(l."stockUnitsPerInvoiceUnit",0)>0)
-        AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;
+        AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;});
 
     // Μπλοκάρουμε μόνο πραγματικές οικονομικές γραμμές προϊόντων που δεν έχουν
     // ακόμη productId. Πληροφοριακές/OCR βοηθητικές γραμμές δεν εμποδίζουν FINAL.
@@ -187,11 +195,12 @@ router.patch("/:orderId",async(req,res,next)=>{
     let finished=false;
     res.json=body=>{
       if(finished)return originalJson(body);
-      const successfulFinal=res.statusCode<400&&body?.status==="FINAL";
+      const successfulFinal=res.statusCode<400&&body?.status==="FINAL"&&!body.awaitingInvoice;
       if(!successfulFinal){finished=true;return originalJson(body)}
       finished=true;
       applyPackStockCorrection({
         orderId:req.params.orderId,
+        req,
         companyId:req.user.companyId,
         userId:req.user.id,
         userName:req.user.fullName||"Χρήστης",

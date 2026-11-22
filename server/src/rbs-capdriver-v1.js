@@ -40,11 +40,30 @@ const DIADOXOU_VAT_PROFILES=new Map([
   ["63",{department:9,vatRate:0}]
 ]);
 
-export function resolveRbsCapDriverFiscalProfile({companyId,storeId,vatCode,department,vatRate}={}){
-  const profiles=companyId==="cmulmjjoa000oqlbfyi0h53ju"&&storeId==="cmulmjjoc000qqlbf2bn2ifj0"
-    ?DIADOXOU_VAT_PROFILES:RBS_CAP_DRIVER_KIOSK_VAT_PROFILES;
+// Acharnon DNA26017643: catalogue internal VAT codes are the register
+// department numbers. Do not translate them using KAT/Diadoxou mappings.
+const ACHARNON_VAT_PROFILES=new Map([
+  ["1",{department:1,vatRate:0}],
+  ["2",{department:2,vatRate:0}],
+  ["3",{department:3,vatRate:0}],
+  ["4",{department:4,vatRate:6}],
+  ["5",{department:5,vatRate:13}],
+  ["6",{department:6,vatRate:24}],
+  ["7",{department:7,vatRate:24}],
+  ["8",{department:8,vatRate:0}],
+  ["9",{department:9,vatRate:0}],
+  ["17",{department:17,vatRate:24}],
+  ["18",{department:18,vatRate:24}]
+]);
+
+export function resolveRbsCapDriverFiscalProfile({companyId,storeId,storeCompanyId,vatCode,department,vatRate}={}){
+  const acharnon=storeId==="cmw0pwyvo000uokg2jrjm1p0c"
+    &&typeof companyId==="string"&&companyId.length>0&&companyId===storeCompanyId;
+  const profiles=acharnon?ACHARNON_VAT_PROFILES
+    :companyId==="cmulmjjoa000oqlbfyi0h53ju"&&storeId==="cmulmjjoc000qqlbf2bn2ifj0"
+      ?DIADOXOU_VAT_PROFILES:RBS_CAP_DRIVER_KIOSK_VAT_PROFILES;
   const profile=profiles.get(String(vatCode??"").trim());
-  if(!profile||Number(department)!==profile.department||Math.abs(Number(vatRate)-profile.vatRate)>0.001)throw new Error("Kiosk VAT code, register department and VAT rate do not match the confirmed register profile");
+  if(!profile||Number(department)!==profile.department||!Number.isFinite(Number(vatRate))||Math.abs(Number(vatRate)-profile.vatRate)>0.001)throw new Error("Kiosk VAT code, register department and VAT rate do not match the confirmed register profile");
   return profile;
 }
 

@@ -1,0 +1,752 @@
+{
+  "scope": "LAB real Owner-assistant provider metering through normal scoped Super Admin support preview; actual OWNER-session UI is separate",
+  "revision": "30fe4c1088b83a67a8d59760b4387de3374c3046",
+  "sourcePr": 3139,
+  "pricingClaimPr": 3140,
+  "pricingReceiptPr": 3141,
+  "exactMainCi": 40202120937,
+  "sourceGuardedDeploy": 40201415015,
+  "pricingApiDeploy": "dep-dbf11g0ae00c73edhbk0",
+  "freshnessGuard": {
+    "run": 40203174287,
+    "verify": "success",
+    "trigger": "skipped-already-healthy",
+    "wait": "skipped-already-healthy",
+    "notInstallationEvidence": true
+  },
+  "beforeEnable": {
+    "measured_at": "2026-10-25T14:41:05.918915Z",
+    "wallet": {
+      "balanceMicros": 5000000,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+      "emailEnabled": false,
+      "enabled": false,
+      "lastCreditMicros": 5000000,
+      "notificationOwnerId": null,
+      "reservedMicros": 0,
+      "updatedAt": "2026-10-25T13:28:18.199119+00:00",
+      "version": 1
+    },
+    "entries": [
+      {
+        "chargedMicros": 0,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "creditedMicros": 5000000,
+        "feature": "TRIAL_GRANT",
+        "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+        "kind": "CREDIT",
+        "reference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+        "reservedMicros": 0,
+        "resolutionReference": null,
+        "settledAt": null,
+        "status": "CREDITED",
+        "storeId": null,
+        "tariff": null,
+        "usage": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        }
+      }
+    ],
+    "notices": [
+      {
+        "amountMicros": 5000000,
+        "attemptedAt": null,
+        "balanceMicros": 5000000,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+        "emailStatus": "DISABLED",
+        "id": "cf6e133c-48d2-4f97-a2e8-3bf35e32bae4",
+        "kind": "CREDIT",
+        "messageId": null
+      }
+    ],
+    "audits": [
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "detail": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        },
+        "event": "TRIAL_GRANTED",
+        "id": "b1924ebc-213b-419e-9e5e-9c003e063ac2"
+      }
+    ],
+    "globalCounts": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "businessControls": [
+      90,
+      134,
+      95
+    ]
+  },
+  "afterEnable": {
+    "measured_at": "2026-10-25T14:41:46.234741Z",
+    "wallet": {
+      "balanceMicros": 5000000,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+      "emailEnabled": false,
+      "enabled": true,
+      "lastCreditMicros": 5000000,
+      "notificationOwnerId": null,
+      "reservedMicros": 0,
+      "updatedAt": "2026-10-25T14:41:28.227841+00:00",
+      "version": 2
+    },
+    "entries": [
+      {
+        "chargedMicros": 0,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "creditedMicros": 5000000,
+        "feature": "TRIAL_GRANT",
+        "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+        "kind": "CREDIT",
+        "reference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+        "reservedMicros": 0,
+        "resolutionReference": null,
+        "settledAt": null,
+        "status": "CREDITED",
+        "storeId": null,
+        "tariff": null,
+        "usage": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        }
+      }
+    ],
+    "notices": [
+      {
+        "amountMicros": 5000000,
+        "attemptedAt": null,
+        "balanceMicros": 5000000,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+        "emailStatus": "DISABLED",
+        "id": "cf6e133c-48d2-4f97-a2e8-3bf35e32bae4",
+        "kind": "CREDIT",
+        "messageId": null
+      }
+    ],
+    "audits": [
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "detail": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        },
+        "event": "TRIAL_GRANTED",
+        "id": "b1924ebc-213b-419e-9e5e-9c003e063ac2"
+      },
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:41:28.227841+00:00",
+        "detail": {
+          "emailEnabled": false,
+          "enabled": true,
+          "notificationOwnerId": "",
+          "version": 1
+        },
+        "event": "CONFIGURED",
+        "id": "6420dfb4-d984-4d18-85d3-6ff3f4400384"
+      }
+    ],
+    "globalCounts": [
+      2,
+      2,
+      2,
+      3
+    ],
+    "businessControls": [
+      90,
+      134,
+      95
+    ]
+  },
+  "beforeQuestion": {
+    "measured_at": "2026-10-25T14:45:51.239242Z",
+    "wallet": {
+      "balanceMicros": 5000000,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+      "emailEnabled": false,
+      "enabled": true,
+      "lastCreditMicros": 5000000,
+      "notificationOwnerId": null,
+      "reservedMicros": 0,
+      "updatedAt": "2026-10-25T14:41:28.227841+00:00",
+      "version": 2
+    },
+    "entries": [
+      {
+        "chargedMicros": 0,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "creditedMicros": 5000000,
+        "feature": "TRIAL_GRANT",
+        "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+        "kind": "CREDIT",
+        "reference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+        "reservedMicros": 0,
+        "resolutionReference": null,
+        "settledAt": null,
+        "status": "CREDITED",
+        "storeId": null,
+        "tariff": null,
+        "usage": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        }
+      }
+    ],
+    "notices": [
+      {
+        "amountMicros": 5000000,
+        "attemptedAt": null,
+        "balanceMicros": 5000000,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+        "emailStatus": "DISABLED",
+        "id": "cf6e133c-48d2-4f97-a2e8-3bf35e32bae4",
+        "kind": "CREDIT",
+        "messageId": null
+      }
+    ],
+    "audits": [
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "detail": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        },
+        "event": "TRIAL_GRANTED",
+        "id": "b1924ebc-213b-419e-9e5e-9c003e063ac2"
+      },
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:41:28.227841+00:00",
+        "detail": {
+          "emailEnabled": false,
+          "enabled": true,
+          "notificationOwnerId": "",
+          "version": 1
+        },
+        "event": "CONFIGURED",
+        "id": "6420dfb4-d984-4d18-85d3-6ff3f4400384"
+      }
+    ],
+    "globalCounts": [
+      2,
+      2,
+      2,
+      3
+    ],
+    "businessControls": [
+      90,
+      134,
+      95
+    ]
+  },
+  "afterQuestion": {
+    "measured_at": "2026-10-25T14:46:55.733848Z",
+    "wallet": {
+      "balanceMicros": 4995848,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+      "emailEnabled": false,
+      "enabled": true,
+      "lastCreditMicros": 5000000,
+      "notificationOwnerId": null,
+      "reservedMicros": 0,
+      "updatedAt": "2026-10-25T14:46:47.055096+00:00",
+      "version": 4
+    },
+    "entries": [
+      {
+        "chargedMicros": 0,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "creditedMicros": 5000000,
+        "feature": "TRIAL_GRANT",
+        "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+        "kind": "CREDIT",
+        "reference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+        "reservedMicros": 0,
+        "resolutionReference": null,
+        "settledAt": null,
+        "status": "CREDITED",
+        "storeId": null,
+        "tariff": null,
+        "usage": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        }
+      },
+      {
+        "chargedMicros": 4152,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:46:35.942311+00:00",
+        "creditedMicros": 0,
+        "feature": "OWNER_ASSISTANT",
+        "id": "a467fc58-b598-4738-a113-f792f0b9b101",
+        "kind": "USAGE",
+        "reference": "6f9f5f81-a6b2-405e-9b88-d8dfff739b97",
+        "reservedMicros": 477085,
+        "resolutionReference": null,
+        "settledAt": "2026-10-25T14:46:47.055096+00:00",
+        "status": "SETTLED",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "tariff": {
+          "cachedInputMicrosPerMillion": 33504,
+          "contextTokens": 400000,
+          "currency": "EUR",
+          "inputMicrosPerMillion": 335031,
+          "maxOutputTokens": 128000,
+          "model": "gpt-5-mini",
+          "outputMicrosPerMillion": 2680247,
+          "responseModels": [
+            "gpt-5-mini",
+            "gpt-5-mini-2025-08-07"
+          ],
+          "version": "25813fe2eb6dd2b4f87701684218ad27628d4cfc6c27ac0be8f91ff218a7da63"
+        },
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 4032,
+          "model": "gpt-5-mini-2025-08-07",
+          "outputTokens": 1045,
+          "providerResponseId": "resp_060cfe302cdb92bb016ade164ca74087d0b71dc32bbd530c58"
+        }
+      }
+    ],
+    "notices": [
+      {
+        "amountMicros": 5000000,
+        "attemptedAt": null,
+        "balanceMicros": 5000000,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+        "emailStatus": "DISABLED",
+        "id": "cf6e133c-48d2-4f97-a2e8-3bf35e32bae4",
+        "kind": "CREDIT",
+        "messageId": null
+      }
+    ],
+    "audits": [
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "detail": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        },
+        "event": "TRIAL_GRANTED",
+        "id": "b1924ebc-213b-419e-9e5e-9c003e063ac2"
+      },
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:41:28.227841+00:00",
+        "detail": {
+          "emailEnabled": false,
+          "enabled": true,
+          "notificationOwnerId": "",
+          "version": 1
+        },
+        "event": "CONFIGURED",
+        "id": "6420dfb4-d984-4d18-85d3-6ff3f4400384"
+      }
+    ],
+    "globalCounts": [
+      2,
+      3,
+      2,
+      3
+    ],
+    "businessControls": [
+      90,
+      134,
+      95
+    ]
+  },
+  "beforeDisable": {
+    "measured_at": "2026-10-25T14:48:45.718323Z",
+    "wallet": {
+      "balanceMicros": 4995848,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+      "emailEnabled": false,
+      "enabled": true,
+      "lastCreditMicros": 5000000,
+      "notificationOwnerId": null,
+      "reservedMicros": 0,
+      "updatedAt": "2026-10-25T14:46:47.055096+00:00",
+      "version": 4
+    },
+    "entries": [
+      {
+        "chargedMicros": 0,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "creditedMicros": 5000000,
+        "feature": "TRIAL_GRANT",
+        "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+        "kind": "CREDIT",
+        "reference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+        "reservedMicros": 0,
+        "resolutionReference": null,
+        "settledAt": null,
+        "status": "CREDITED",
+        "storeId": null,
+        "tariff": null,
+        "usage": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        }
+      },
+      {
+        "chargedMicros": 4152,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:46:35.942311+00:00",
+        "creditedMicros": 0,
+        "feature": "OWNER_ASSISTANT",
+        "id": "a467fc58-b598-4738-a113-f792f0b9b101",
+        "kind": "USAGE",
+        "reference": "6f9f5f81-a6b2-405e-9b88-d8dfff739b97",
+        "reservedMicros": 477085,
+        "resolutionReference": null,
+        "settledAt": "2026-10-25T14:46:47.055096+00:00",
+        "status": "SETTLED",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "tariff": {
+          "cachedInputMicrosPerMillion": 33504,
+          "contextTokens": 400000,
+          "currency": "EUR",
+          "inputMicrosPerMillion": 335031,
+          "maxOutputTokens": 128000,
+          "model": "gpt-5-mini",
+          "outputMicrosPerMillion": 2680247,
+          "responseModels": [
+            "gpt-5-mini",
+            "gpt-5-mini-2025-08-07"
+          ],
+          "version": "25813fe2eb6dd2b4f87701684218ad27628d4cfc6c27ac0be8f91ff218a7da63"
+        },
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 4032,
+          "model": "gpt-5-mini-2025-08-07",
+          "outputTokens": 1045,
+          "providerResponseId": "resp_060cfe302cdb92bb016ade164ca74087d0b71dc32bbd530c58"
+        }
+      }
+    ],
+    "notices": [
+      {
+        "amountMicros": 5000000,
+        "attemptedAt": null,
+        "balanceMicros": 5000000,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+        "emailStatus": "DISABLED",
+        "id": "cf6e133c-48d2-4f97-a2e8-3bf35e32bae4",
+        "kind": "CREDIT",
+        "messageId": null
+      }
+    ],
+    "audits": [
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "detail": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        },
+        "event": "TRIAL_GRANTED",
+        "id": "b1924ebc-213b-419e-9e5e-9c003e063ac2"
+      },
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:41:28.227841+00:00",
+        "detail": {
+          "emailEnabled": false,
+          "enabled": true,
+          "notificationOwnerId": "",
+          "version": 1
+        },
+        "event": "CONFIGURED",
+        "id": "6420dfb4-d984-4d18-85d3-6ff3f4400384"
+      }
+    ],
+    "globalCounts": [
+      2,
+      3,
+      2,
+      3
+    ],
+    "businessControls": [
+      90,
+      134,
+      95
+    ]
+  },
+  "afterDisable": {
+    "measured_at": "2026-10-25T14:49:42.731575Z",
+    "wallet": {
+      "balanceMicros": 4995848,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+      "emailEnabled": false,
+      "enabled": false,
+      "lastCreditMicros": 5000000,
+      "notificationOwnerId": null,
+      "reservedMicros": 0,
+      "updatedAt": "2026-10-25T14:49:31.208267+00:00",
+      "version": 5
+    },
+    "entries": [
+      {
+        "chargedMicros": 0,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "creditedMicros": 5000000,
+        "feature": "TRIAL_GRANT",
+        "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+        "kind": "CREDIT",
+        "reference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+        "reservedMicros": 0,
+        "resolutionReference": null,
+        "settledAt": null,
+        "status": "CREDITED",
+        "storeId": null,
+        "tariff": null,
+        "usage": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        }
+      },
+      {
+        "chargedMicros": 4152,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:46:35.942311+00:00",
+        "creditedMicros": 0,
+        "feature": "OWNER_ASSISTANT",
+        "id": "a467fc58-b598-4738-a113-f792f0b9b101",
+        "kind": "USAGE",
+        "reference": "6f9f5f81-a6b2-405e-9b88-d8dfff739b97",
+        "reservedMicros": 477085,
+        "resolutionReference": null,
+        "settledAt": "2026-10-25T14:46:47.055096+00:00",
+        "status": "SETTLED",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "tariff": {
+          "cachedInputMicrosPerMillion": 33504,
+          "contextTokens": 400000,
+          "currency": "EUR",
+          "inputMicrosPerMillion": 335031,
+          "maxOutputTokens": 128000,
+          "model": "gpt-5-mini",
+          "outputMicrosPerMillion": 2680247,
+          "responseModels": [
+            "gpt-5-mini",
+            "gpt-5-mini-2025-08-07"
+          ],
+          "version": "25813fe2eb6dd2b4f87701684218ad27628d4cfc6c27ac0be8f91ff218a7da63"
+        },
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 4032,
+          "model": "gpt-5-mini-2025-08-07",
+          "outputTokens": 1045,
+          "providerResponseId": "resp_060cfe302cdb92bb016ade164ca74087d0b71dc32bbd530c58"
+        }
+      }
+    ],
+    "notices": [
+      {
+        "amountMicros": 5000000,
+        "attemptedAt": null,
+        "balanceMicros": 5000000,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+        "emailStatus": "DISABLED",
+        "id": "cf6e133c-48d2-4f97-a2e8-3bf35e32bae4",
+        "kind": "CREDIT",
+        "messageId": null
+      }
+    ],
+    "audits": [
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T13:28:18.199119+00:00",
+        "detail": {
+          "amountMicros": "5000000",
+          "fundingType": "TRIAL_GRANT",
+          "grantReference": "TRIAL/WALLET-LAB-TRIAL-20261025-01",
+          "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e",
+          "reason": "Εσωτερική δοκιμή υπηρεσίας υπολοίπου AI"
+        },
+        "event": "TRIAL_GRANTED",
+        "id": "b1924ebc-213b-419e-9e5e-9c003e063ac2"
+      },
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:41:28.227841+00:00",
+        "detail": {
+          "emailEnabled": false,
+          "enabled": true,
+          "notificationOwnerId": "",
+          "version": 1
+        },
+        "event": "CONFIGURED",
+        "id": "6420dfb4-d984-4d18-85d3-6ff3f4400384"
+      },
+      {
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-25T14:49:31.208267+00:00",
+        "detail": {
+          "emailEnabled": false,
+          "enabled": false,
+          "notificationOwnerId": "",
+          "version": 4
+        },
+        "event": "CONFIGURED",
+        "id": "bac02527-512b-45f2-89bc-821ea917f00e"
+      }
+    ],
+    "globalCounts": [
+      2,
+      3,
+      2,
+      4
+    ],
+    "businessControls": [
+      90,
+      134,
+      95
+    ]
+  },
+  "checks": {
+    "enable": {
+      "enabled": true,
+      "version": true,
+      "balance": true,
+      "entryNotice": true,
+      "audit": true,
+      "foreignWallet": true,
+      "business": true
+    },
+    "usage": {
+      "allSettled": true,
+      "exactDebit": true,
+      "zeroHold": true,
+      "version": true,
+      "noDuplicateResponse": true,
+      "foreignUnchanged": true,
+      "businessUnchanged": true,
+      "noticesUnchanged": true,
+      "auditsUnchanged": true
+    },
+    "disable": {
+      "off": true,
+      "version": true,
+      "balance": true,
+      "entries": true,
+      "notices": true,
+      "audit": true,
+      "foreignUnchanged": true,
+      "business": true
+    }
+  },
+  "independentMath": [
+    {
+      "id": "a467fc58-b598-4738-a113-f792f0b9b101",
+      "expected": "4152",
+      "observed": "4152",
+      "usage": {
+        "cachedInputTokens": 0,
+        "inputTokens": 4032,
+        "model": "gpt-5-mini-2025-08-07",
+        "outputTokens": 1045,
+        "providerResponseId": "resp_060cfe302cdb92bb016ade164ca74087d0b71dc32bbd530c58"
+      },
+      "tariff": {
+        "cachedInputMicrosPerMillion": 33504,
+        "contextTokens": 400000,
+        "currency": "EUR",
+        "inputMicrosPerMillion": 335031,
+        "maxOutputTokens": 128000,
+        "model": "gpt-5-mini",
+        "outputMicrosPerMillion": 2680247,
+        "responseModels": [
+          "gpt-5-mini",
+          "gpt-5-mini-2025-08-07"
+        ],
+        "version": "25813fe2eb6dd2b4f87701684218ad27628d4cfc6c27ac0be8f91ff218a7da63"
+      },
+      "ok": true
+    }
+  ],
+  "providerLog": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"hasMore\":false,\"logs\":[{\"id\":\"3a4e21e0-0d56-43b7-a10e-0bb989163275\",\"labels\":[{\"name\":\"resource\",\"value\":\"srv-d9isenfavr4c73bdh52g\"},{\"name\":\"instance\",\"value\":\"srv-d9isenfavr4c73bdh52g-z5d6m\"},{\"name\":\"level\",\"value\":\"info\"},{\"name\":\"type\",\"value\":\"app\"}],\"message\":\"AI_OWNER_ASSISTANT_USAGE {\\\"feature\\\":\\\"COMMAND_CENTER\\\",\\\"provider\\\":\\\"openai\\\",\\\"model\\\":\\\"gpt-5-mini-2025-08-07\\\",\\\"tokens\\\":{\\\"inputTokens\\\":4032,\\\"outputTokens\\\":1045,\\\"totalTokens\\\":5077},\\\"responseStatus\\\":\\\"completed\\\",\\\"incompleteReason\\\":null,\\\"hasOutputText\\\":true,\\\"toolCallCount\\\":0,\\\"reasoningTokens\\\":128,\\\"status\\\":\\\"response_received\\\"}\",\"timestamp\":\"2026-10-25T14:46:47.054642715Z\"}],\"nextEndTime\":\"2026-10-25T14:48:11.255803123Z\",\"nextStartTime\":\"2026-10-25T14:46:47.054642716Z\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "expectedCustomerChargeMicros": "4152",
+  "offAfterTest": true,
+  "foreignWalletControl": "Exact private before/after unchanged; private data not published",
+  "notTested": [
+    "Actual Owner-session detailed report UI",
+    "Invoice/Azure pricing and billing",
+    "Low/empty notices at threshold",
+    "Email delivery",
+    "Physical/business financial deltas outside the measured unchanged count controls"
+  ]
+}

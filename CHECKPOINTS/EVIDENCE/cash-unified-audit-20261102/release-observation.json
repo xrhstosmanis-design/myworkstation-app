@@ -1,0 +1,43 @@
+{
+  "engineeringRevision": "dbb46c0ca655d139ac6ff76bd7f4d1949cd17c15",
+  "mainCI": {
+    "run": 41448555878,
+    "jobs": "5 SUCCESS",
+    "server": {
+      "pass": 5251,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "guardedDeploy": {
+    "run": 41450771906,
+    "job": 125295221354,
+    "render": "dep-dbk8orrbc2fs73eojhng",
+    "liveAt": "2026-11-02T13:15:16Z",
+    "exactHealthRevisionVerified": true,
+    "rollbackRevision": "6d4937a910be74c3a79092aa3a86c81add296611",
+    "rollbackArtifact": 13144128496
+  },
+  "readonlyObservation": {
+    "labBasicAndFullReturned": true,
+    "requestedStoreBasicAndFullReturned": true,
+    "summerUploadMidnightCorrect": true,
+    "winterEventMidnightCorrect": true,
+    "newHour24": false,
+    "fullFinality": "PENDING",
+    "initialDashboardGenericErrorRecoveredAfterOneRefresh": true,
+    "dashboardRootCause": "UNKNOWN",
+    "physicalOrIndependentFinancialDelta": "NOT TESTED"
+  },
+  "applicationUploadPerformed": false,
+  "providerDispatched": false,
+  "fullProviderHandwritingFinancialAcceptance": "NOT TESTED",
+  "owner": "codex/cash-chat-reconciliation-20261026",
+  "parentStatus": "OPEN/ASSIGNED",
+  "fixtureV2Sha256": "58a1ba5a0071b82341bd4424eb5d6a343605e81b735561e572268dd913d71d8a"
+}

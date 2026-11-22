@@ -1,0 +1,414 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {once} from 'node:events';
+import express from 'express';
+import {classifyInvoiceMonth,invoiceAuditMonth,readMonthlyInvoiceAudit,readMonthlyInvoiceAuditRecord} from '../src/services/monthly-invoice-audit.js';
+import {createMonthlyInvoiceAuditRouter} from '../src/routes/monthly-invoice-audit.js';
+
+const period=invoiceAuditMonth('2026-10'),actor={id:'owner',companyId:'c',role:'OWNER'},now=new Date('2026-10-28T12:00:00Z');
+const empty=()=>({documents:[],orders:[],inbound:[],inbox:[],jobs:[],attachments:[],aliases:[],postings:[],stockPostings:[]});
+const doc=(id,patch={})=>({id,supplierId:'sup',supplierName:'Συνθετικός προμηθευτής',supplierTaxId:'099999999',documentType:'INVOICE',documentNumber:'A '+id,issueDay:'2026-10-02',totalGross:'12.34',status:'DRAFT',sourceType:'MANUAL',purchaseOrderId:null,createdAt:'2026-10-03T10:00:00Z',...patch});
+const attachDraftOrders=(facts,selected=facts.documents.filter(document=>document.status==='DRAFT'))=>{
+ for(const document of selected){document.purchaseOrderId='order-'+document.id;facts.orders.push({id:document.purchaseOrderId,sourceDocumentId:document.id,supplierId:document.supplierId,invoiceNumber:document.documentNumber,status:'NEW',createdAt:document.createdAt})}
+};
+const schema={
+ Supplier:['id','companyId','name','taxId'],
+ PurchaseDocument:['id','companyId','storeId','supplierId','documentType','documentNumber','documentDate','totalGross','status','sourceType','purchaseOrderId','paymentTransactionId','createdAt'],
+ PurchaseDocumentLine:['id','purchaseDocumentId','description','quantity','unit','unitCost','netAmount','vatRate','vatAmount','grossAmount','createdAt'],
+ PurchaseOrder:['id','companyId','storeId','supplierId','status','invoiceNumber','sourceDocumentId','createdAt'],
+ MyDataInboundDocument:['id','companyId','storeId','inboxId','mark','issuerVat','series','documentNumber','issueDate','invoiceType','totalGross','rawPayload','fetchedAt'],
+ DocumentInbox:['id','companyId','storeId','attachmentId','status','receivedAt'],AiReaderJob:['id','companyId','storeId','attachmentId','purchaseDocumentId','status','stage','resultJson'],
+ DocumentAttachment:['id','companyId','storeId','mimeType','checksum','contentData'],
+ InvoiceDraftAlias:['aliasOrderId','aliasDocumentId','companyId','storeId','canonicalOrderId','canonicalDocumentId','inboxId','mark','details'],
+ PurchaseOrderPosting:['orderId','companyId','purchaseDocumentId'],InvoiceStockPosting:['companyId','storeId','orderId','sourceDocumentId','postedDocumentId','path'],
+ StoreTransaction:['id','companyId','storeId','supplierId','supplierName','amount','actorId','actorName','occurredAt','invoiceDocumentNumber','attachmentMimeType','attachmentFilename','attachmentChecksum','attachmentData','paymentMethod','subtractFromShift','sessionId','type','reversedAt'],
+ SupplierPaymentSettlement:['id','companyId','storeId','transactionId','supplierId','status'],
+ SupplierPaymentAllocation:['id','companyId','settlementId','purchaseDocumentId','amount'],
+ StoreOperatorAudit:['id','companyId','storeId','eventType','actorId','details']
+};
+const tables={documents:'PurchaseDocument',orders:'PurchaseOrder',inbound:'MyDataInboundDocument',inbox:'DocumentInbox',jobs:'AiReaderJob',attachments:'DocumentAttachment',aliases:'InvoiceDraftAlias',postings:'PurchaseOrderPosting',stockPostings:'InvoiceStockPosting'};
+function fixture({facts=empty(),missing=[],role='OWNER',currentCompany='c',store=true,companyModule=true,override=null,pending=null,totals={}}={}){
+ const trace=[];
+ const tx={user:{findUnique:async()=>({id:'owner',role,companyId:currentCompany})},store:{findFirst:async({where})=>store&&where.id==='s'&&where.companyId==='c'?{id:'s',companyId:'c',name:'Συνθετικό κατάστημα'}:null},company:{findUnique:async()=>({id:'c',name:'C',active:true,licenseStatus:'ACTIVE',subscriptionEndsAt:null,modules:companyModule?[{moduleKey:'INVENTORY',active:true}]:[]})},
+  async $executeRawUnsafe(sql){trace.push({sql});assert.match(sql,/^(SET TRANSACTION READ ONLY|SET LOCAL statement_timeout)/)},
+  async $queryRawUnsafe(sql,...values){trace.push({sql,values});
+   if(sql.includes('AS "currencyMetadataAvailable"'))return [{currencyMetadataAvailable:!missing.includes('currency')}];
+   if(sql.includes('AS "identityLinksPresent"'))return facts.identityMetadata||facts.inbound.map(row=>({id:row.id,identityLinksPresent:Boolean(row.draftOrderId),deliveryJobLinkPresent:false,draftDocumentId:null,commonDraftDocumentId:null,commonDraftOrderId:null,metadataValid:true,currencyAllowed:true}));
+   if(sql.includes('AS "paymentBefore"'))return facts.canonicalPaymentReceipts||[];
+   if(sql.includes('FROM pg_class'))return Object.entries(schema).flatMap(([table,columns])=>missing.includes(table)?[]:columns.map(column=>({table,column})));
+   if(sql.includes('FROM "StorePaidModule"'))return override?[override]:[];
+   if(sql.includes('FROM "OwnerCompanyAccess"'))return [];
+   if(sql.startsWith('SELECT l."id",l."purchaseDocumentId"'))return (facts.documentLines||[]).filter(row=>values[2].includes(row.purchaseDocumentId));
+   for(const[name,table]of Object.entries(tables))if(sql.startsWith('SELECT source.')&&sql.includes('FROM "'+table+'"'))return facts[name].map(row=>({...row,_sourceCount:String(totals[name]??facts[name].length)}));
+   throw Error('Unexpected metadata query: '+sql);
+  },
+  async $queryRaw(strings,...values){const sql=Array.isArray(strings)?strings.join('?'):strings.sql;trace.push({sql,values:Array.isArray(strings)?values:strings.values});
+   if(sql.startsWith('SELECT a.'))return facts.allocations||[];
+   if(sql.includes('FROM "StoreTransaction" t'))return facts.payments||[];
+   if(sql.includes('WITH required('))return [{full:true,jobs:true,jobTable:true,hasIntents:Boolean(pending)}];
+   if(sql.includes('WITH scoped_audits'))return [{...pending,digest:'unchanged'}];
+   throw Error('Unexpected trusted pending query: '+sql);
+  }
+ };
+ const db={$transaction:async(fn,options)=>{trace.push({transaction:options});return fn(tx)}};
+ return {db,tx,trace};
+}
+const read=(f,input={storeId:'s',month:'2026-10'},user=actor)=>readMonthlyInvoiceAudit(f.db,user,input,{now});
+
+test('document issue month is strict and keeps leap/calendar boundaries',()=>{
+ assert.equal(invoiceAuditMonth('2024-02').toDayExclusive,'2024-03-01');assert.equal(invoiceAuditMonth('2026-12').toDayExclusive,'2027-01-01');
+ for(const value of ['2026-00','2026-13','2026-2','2026-10-01','1999-12',null,[]])assert.throws(()=>invoiceAuditMonth(value));
+});
+
+test('real reader uses one read-only snapshot, full source counters and distinct all-month pending counts',async()=>{
+ const facts=empty();facts.documents=[doc('1')];attachDraftOrders(facts);
+ const pending={count:75,missingCount:60,uploadedCount:10,reviewCount:5,rows:Array.from({length:50},(_,i)=>({id:'pending'+i,supplierName:'Pending',amount:1,documentNumber:'OLD '+i,documentDate:'2025-01-01',status:'AWAITING_INVOICE',fingerprint:'PRIVATE-HASH'}))};
+ const f=fixture({facts,pending}),r=await read(f);
+ assert.deepEqual(f.trace[0].transaction,{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});assert.equal(f.trace[1].sql,'SET TRANSACTION READ ONLY');
+ assert.equal(r.coverage.complete,true);assert.equal(r.summary.logicalRecords,1);assert.equal(r.summary.unposted,1);
+ assert.equal(r.pendingOriginals.period,'ALL_MONTHS');assert.equal(r.pendingOriginals.counts.total,75);assert.equal(r.pendingOriginals.items.length,50);assert.equal(r.pendingOriginals.truncated,true);assert.equal(r.allClear,false);
+ assert.equal(JSON.stringify(r).includes('PRIVATE-HASH'),false);assert.equal(r.immutableSnapshot,false);
+ for(const call of f.trace.filter(t=>t.sql?.startsWith('SELECT source.')&&!t.sql.includes('AS "identityLinksPresent"')&&!t.sql.includes('AS "paymentBefore"')))assert.deepEqual(call.values,['c','s',20001]);
+});
+
+test('missing source and above-cap sources never expose partial findings as exact or an all-clear',async()=>{
+ for(const missing of [['Supplier'],['MyDataInboundDocument'],['InvoiceDraftAlias'],['StoreTransaction']]){
+  const f=fixture({missing}),r=await read(f);assert.equal(r.allClear,false);
+  if(missing[0]!=='StoreTransaction'){assert.equal(r.coverage.complete,false);assert.equal(r.summary,null);assert.deepEqual(r.items,[])}
+  if(['Supplier','StoreTransaction'].includes(missing[0]))assert.equal(r.pendingOriginals.available,false);
+ }
+ const facts=empty();facts.documents=[doc('1')];const r=await read(fixture({facts,totals:{documents:20001}}));
+ assert.deepEqual(r.coverage.limited,['documents']);assert.equal(r.coverage.sourceCounts.documents,20001);assert.equal(r.summary,null);assert.deepEqual(r.items,[]);assert.equal(r.allClear,false);
+});
+
+test('current role, explicit selection, support binding and effective store entitlement are rechecked',async()=>{
+ for(const user of [{...actor,tokenType:'STORE_OPERATOR'},{...actor,tokenType:'STORE_CHAT_OPERATOR'},{...actor,tokenType:'POS_BACKGROUND'},{...actor,id:''},{...actor,storeId:'other'}]){const f=fixture();await assert.rejects(read(f,undefined,user),e=>e.status===403);assert.equal(f.trace.length,0)}
+ for(const input of [{storeId:'',month:'2026-10'},{storeId:'s',month:'2026-10',send:true},{storeId:['s'],month:'2026-10'}])await assert.rejects(read(fixture(),input));
+ await assert.rejects(read(fixture({role:'EMPLOYEE'})),e=>e.status===403);
+ await assert.rejects(read(fixture({store:false})),e=>e.status===404);
+ await assert.rejects(read(fixture({currentCompany:'other'})),e=>e.status===403);
+ await assert.rejects(read(fixture({companyModule:false})),e=>e.status===403);
+ await assert.rejects(read(fixture({override:{active:false}})),e=>e.status===403);
+ const support={...actor,isSuperAdmin:true,platformRole:'SUPER_ADMIN',supportContext:{companyId:'c',storeId:'s'}};
+ assert.equal((await read(fixture({role:'SUPER_ADMIN',currentCompany:'platform'}),undefined,support)).store.id,'s');
+ await assert.rejects(read(fixture({role:'SUPER_ADMIN'}),undefined,{...support,supportContext:{companyId:'c',storeId:'other'}}),e=>e.status===403);
+ await assert.rejects(read(fixture({role:'OWNER'}),undefined,support),e=>e.status===403);
+});
+
+test('source/order/approved projection is one logical invoice and a distinct matching original is only a review candidate',()=>{
+ const f=empty();f.documents=[doc('source',{documentNumber:'A 001',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'order'}),doc('projection',{documentNumber:'A 1',status:'APPROVED',sourceType:'PURCHASE_ORDER',purchaseOrderId:'order'}),doc('other',{documentNumber:'A 1'})];
+ f.orders=[{id:'order',supplierId:'sup',invoiceNumber:'A 1',sourceDocumentId:'source',status:'INVOICED',createdAt:'2026-11-01'}];f.postings=[{orderId:'order',purchaseDocumentId:'projection'}];f.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'projection',path:'PURCHASE_ORDER'}];
+ const r=classifyInvoiceMonth(f,period);assert.equal(r.counts.logicalRecords,2);assert.equal(r.counts.unposted,1);assert.equal(r.counts.possibleDuplicates,2);assert.equal(r.counts.identityReview,0);assert.equal(r.items.find(x=>x.id==='doc:source').sources.length,3);
+});
+
+test('approved order projection without a backlink needs both posting records',()=>{
+ const f=empty();
+ f.documents=[doc('source',{documentNumber:'A 1',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'order'}),doc('order',{documentNumber:'A 1',status:'APPROVED',sourceType:'PURCHASE_ORDER'})];
+ f.orders=[{id:'order',supplierId:'sup',invoiceNumber:'A 1',sourceDocumentId:'source',status:'INVOICED',createdAt:'2026-11-01'}];
+ f.postings=[{orderId:'order',purchaseDocumentId:'order'}];
+ f.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'order',path:'PURCHASE_ORDER'}];
+ const report=classifyInvoiceMonth(f,period);
+ assert.equal(report.counts.logicalRecords,1);
+ assert.equal(report.counts.unposted,0);
+ assert.equal(report.counts.identityReview,0);
+ assert.equal(report.items[0].status,'POSTED');
+ f.stockPostings=[];
+ assert.ok(classifyInvoiceMonth(f,period).counts.identityReview>0);
+});
+
+test('confirmed aliases retain corrected canonical identity; contradictory aliases and source links remain review',()=>{
+ const f=empty();f.documents=[doc('canonical',{documentNumber:'A 1',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'canonical-order'}),doc('old',{documentNumber:'OLD 99',issueDay:'2026-09-01',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'old-order',status:'MERGED'})];
+ f.orders=[{id:'canonical-order',supplierId:'sup',invoiceNumber:'A 1',sourceDocumentId:'canonical',status:'NEW'},{id:'old-order',supplierId:'sup',invoiceNumber:'OLD 99',sourceDocumentId:'old',status:'MERGED'}];
+ f.inbound=[{id:'m',inboxId:'i',mark:'MARK',issuerVat:'099999999',series:'A',documentNumber:'1',issueDay:'2026-10-02',invoiceType:'1.1',totalGross:'12.34',draftOrderId:'canonical-order'}];f.inbox=[{id:'i',attachmentId:'pdf',createdAt:'2026-11-01'}];
+ f.aliases=[{aliasOrderId:'old-order',aliasDocumentId:'old',canonicalOrderId:'canonical-order',canonicalDocumentId:'canonical',inboxId:'i',mark:'MARK',completed:true,auditOrderId:'canonical-order',auditDocumentId:'canonical',auditInboxId:'i',auditMark:'MARK',auditAliasOrderIds:['old-order']}];
+ assert.equal(classifyInvoiceMonth(f,period).counts.logicalRecords,1);assert.equal(classifyInvoiceMonth(f,invoiceAuditMonth('2026-09')).counts.logicalRecords,0);
+ f.aliases[0].completed=false;const broken=classifyInvoiceMonth(f,period);assert.ok(broken.counts.identityReview>0);assert.equal(broken.counts.possibleDuplicates,0);
+});
+
+test('series, issue date, credit and amount boundaries plus missing-VAT warning do not imply automatic merging',()=>{
+ const f=empty();f.documents=[doc('1',{documentNumber:'A 1'}),doc('2',{documentNumber:'B 1'}),doc('3',{documentNumber:'A 1',documentType:'CREDIT_NOTE'}),doc('4',{documentNumber:'A 1',issueDay:'2026-09-30'}),doc('5',{documentNumber:'A 1',totalGross:'99'}),doc('6',{documentNumber:'A 1',supplierTaxId:null})];
+ const r=classifyInvoiceMonth(f,period);assert.equal(r.counts.logicalRecords,5);assert.equal(r.counts.credits,1);assert.equal(r.counts.possibleDuplicates,0);assert.match(r.items.find(x=>x.id==='doc:6').reasons.join(' '),/ΑΦΜ/);assert.equal(r.counts.unposted,5);
+});
+
+test('uploaded original and unknown issue date remain explicit, while source acquisition month cannot replace known issue date',()=>{
+ const f=empty();f.documents=[doc('a',{issueDay:'2026-09-30',createdAt:'2026-10-03'}),doc('b',{issueDay:null}),doc('c')];f.attachments=[{id:'attachment',hasContent:true,checksum:'a'.repeat(64),mimeType:'image/jpeg'}];f.jobs=[{id:'job',purchaseDocumentId:'c',attachmentId:'attachment',status:'AWAITING_APPROVAL'}];
+ const r=classifyInvoiceMonth(f,period);assert.equal(r.counts.logicalRecords,2);assert.equal(r.counts.uploadedAwaitingReview,1);assert.match(r.items.find(x=>x.id==='doc:b').reasons.join(' '),/ημερομηνία έκδοσης/);
+});
+
+test('an incoming record without corroborating supplier VAT cannot disappear into a linked document',()=>{
+ const f=empty();f.documents=[doc('source',{documentNumber:'A 1',purchaseOrderId:'order'})];f.orders=[{id:'order',supplierId:'sup',invoiceNumber:'A 1',sourceDocumentId:'source',status:'NEW'}];
+ f.inbound=[{id:'incoming',issuerVat:null,series:'A',documentNumber:'1',issueDay:'2026-10-02',invoiceType:'1.1',totalGross:'12.34',draftOrderId:'order'}];
+ const r=classifyInvoiceMonth(f,period);assert.equal(r.counts.logicalRecords,2);assert.ok(r.counts.identityReview>0);assert.equal(r.counts.possibleDuplicates,0);
+});
+
+test('complete findings counts survive paging and changed source invalidates the next-page cursor',async()=>{
+ const facts=empty();facts.documents=Array.from({length:120},(_,i)=>doc(String(i).padStart(3,'0')));const f=fixture({facts}),first=await read(f);
+ assert.equal(first.summary.logicalRecords,120);assert.equal(first.items.length,50);assert.ok(first.nextPage);
+ const second=await read(f,{storeId:'s',month:'2026-10',page:first.nextPage});assert.equal(second.summary.logicalRecords,120);assert.equal(second.items.length,50);assert.equal(new Set([...first.items,...second.items].map(x=>x.id)).size,100);
+ facts.documents.push(doc('new'));await assert.rejects(read(f,{storeId:'s',month:'2026-10',page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+ await assert.rejects(read(f,{storeId:'s',month:'2026-11',page:first.nextPage}));
+});
+
+test('counter drill-down pages the entire matching month while keeping global totals and paid workflow distinct',async()=>{
+ const facts=empty();facts.documents=Array.from({length:195},(_,index)=>doc(String(index).padStart(3,'0'),{status:index<174&&index%2===0?'DRAFT':'APPROVED',paymentTransactionId:index<174&&index%2===0?'p'+index:null}));
+ attachDraftOrders(facts);
+ facts.payments=facts.documents.filter(d=>d.paymentTransactionId).map(d=>({id:d.paymentTransactionId,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:d.documentNumber,amount:'12.34',settlementConfirmed:true}));
+ const pending={count:3,missingCount:3,uploadedCount:0,reviewCount:0,rows:[]},f=fixture({facts,pending}),all=await read(f),input={storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'};
+ const first=await read(f,input),second=await read(f,{...input,page:first.nextPage});
+ assert.equal(first.filter,'UNPOSTED_DOCUMENT');assert.equal(first.matchedRecords,87);assert.equal(first.items.length,50);assert.equal(second.items.length,37);assert.equal(second.nextPage,null);
+ const selected=[...first.items,...second.items];assert.equal(new Set(selected.map(x=>x.id)).size,87);assert.ok(selected.every(x=>x.categories.includes('UNPOSTED_DOCUMENT')&&x.payment.status==='PAID'));
+ assert.deepEqual(selected.map(x=>x.id),facts.documents.filter(d=>d.status==='DRAFT').map(d=>'doc:'+d.id));
+ for(const page of [first,second]){assert.deepEqual(page.summary,all.summary);assert.deepEqual(page.financialSummary,all.financialSummary);assert.deepEqual(page.pendingOriginals,all.pendingOriginals);assert.equal(page.allClear,all.allClear)}
+ assert.equal(all.summary.logicalRecords,195);assert.equal(all.summary.unposted,87);assert.equal(all.financialSummary.paid,87);assert.equal(all.filter,'ALL');assert.equal(all.matchedRecords,195);
+ const paid=await read(f,{...input,filter:'PAID'});assert.equal(paid.matchedRecords,87);assert.deepEqual(paid.items,first.items);
+ const explicitAll=await read(f,{storeId:'s',month:'2026-10',filter:'ALL',page:all.nextPage});assert.equal(explicitAll.items.length,50);
+});
+
+test('all supported counter filters select exact full-result predicates with independent payment review and missing links',async()=>{
+ const facts=empty();facts.documents=Array.from({length:12},(_,i)=>doc(String(i),{status:'APPROVED',paymentTransactionId:i<5?'p'+i:null}));
+ facts.documents[5].documentType='CREDIT_NOTE';facts.documents[6].supplierTaxId=null;facts.documents[7].status='DRAFT';facts.documents[8].status='DRAFT';facts.documents[11].status='DRAFT';facts.documents[9].documentNumber=facts.documents[10].documentNumber;attachDraftOrders(facts,[facts.documents[7],facts.documents[8]]);
+ facts.attachments=[{id:'attachment',hasContent:true,checksum:'a'.repeat(64),mimeType:'image/jpeg'}];facts.jobs=[{id:'job',purchaseDocumentId:'8',attachmentId:'attachment',status:'AWAITING_APPROVAL'}];
+ facts.payments=Array.from({length:5},(_,i)=>({id:'p'+i,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A '+i,amount:i===1?'5.00':i===2?'13.00':'12.34',settlementConfirmed:i!==3,reversedAt:i===4?'2026-10-03':null}));
+ const f=fixture({facts}),all=await read(f),predicates={ALL:()=>true,UNPOSTED_DOCUMENT:x=>x.categories.includes('UNPOSTED_DOCUMENT'),UPLOADED_AWAITING_REVIEW:x=>x.categories.includes('UPLOADED_AWAITING_REVIEW'),PURCHASE_LINK_REVIEW:x=>x.categories.includes('PURCHASE_LINK_REVIEW'),POSSIBLE_DUPLICATE:x=>x.categories.includes('POSSIBLE_DUPLICATE'),IDENTITY_OR_LINK_REVIEW:x=>x.categories.includes('IDENTITY_OR_LINK_REVIEW'),CREDIT_NOTE:x=>x.documentType==='CREDIT_NOTE',PAID:x=>x.payment.status==='PAID',FINANCIAL_PENDING:x=>['PARTIALLY_PAID','OVERPAID','REVERSED'].includes(x.payment.status),PAYMENT_REVIEW:x=>['REVIEW_REQUIRED','UNCONFIRMED','UNAVAILABLE'].includes(x.payment.status),PAYMENT_UNLINKED:x=>x.payment.status==='NOT_LINKED'};
+ for(const[filter,predicate]of Object.entries(predicates)){
+  const r=await read(f,{storeId:'s',month:'2026-10',filter}),expected=all.items.filter(predicate);
+  assert.equal(r.filter,filter);assert.equal(r.matchedRecords,expected.length,filter);assert.ok(expected.length>0,filter);assert.deepEqual(r.items,expected,filter);assert.deepEqual(r.summary,all.summary);assert.deepEqual(r.financialSummary,all.financialSummary);
+ }
+ const unavailable=await read(fixture({facts,missing:['SupplierPaymentSettlement']}),{storeId:'s',month:'2026-10',filter:'PAYMENT_REVIEW'});assert.equal(unavailable.matchedRecords,11);assert.ok(unavailable.items.every(x=>x.payment.status==='UNAVAILABLE'));
+});
+
+test('invalid counter filters fail before database access and incomplete coverage never asserts zero matches',async()=>{
+ for(const filter of [null,'','all',' ALL','ALL ','__proto__','PAID\n',[],['ALL'],{},1,true]){
+  const f=fixture();await assert.rejects(read(f,{storeId:'s',month:'2026-10',filter}),e=>e.status===400);assert.equal(f.trace.length,0);
+ }
+ const r=await read(fixture({missing:['PurchaseDocument']}),{storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'});assert.equal(r.filter,'UNPOSTED_DOCUMENT');assert.equal(r.matchedRecords,null);assert.deepEqual(r.items,[]);assert.equal(r.nextPage,null);assert.equal(r.allClear,false);
+ const emptyResult=await read(fixture(),{storeId:'s',month:'2026-10',filter:'CREDIT_NOTE'});assert.equal(emptyResult.matchedRecords,0);assert.deepEqual(emptyResult.items,[]);assert.equal(emptyResult.nextPage,null);
+});
+
+test('counter cursors bind filter, company, store and month and cannot skip using a row outside the subset',async()=>{
+ const facts=empty();facts.documents=Array.from({length:80},(_,i)=>doc(String(i).padStart(3,'0'),{status:i<60?'DRAFT':'APPROVED'}));attachDraftOrders(facts);const f=fixture({facts}),input={storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'},first=await read(f,input);
+ for(const [patch,user]of [[{filter:'ALL'},actor],[{filter:'PAID'},actor],[{storeId:'other'},actor],[{month:'2026-11'},actor],[{}, {...actor,companyId:'foreign'}]]){
+  const blocked=fixture({facts});await assert.rejects(read(blocked,{...input,...patch,page:first.nextPage},user),e=>e.status===400);assert.equal(blocked.trace.length,0);
+ }
+ const cursor=JSON.parse(Buffer.from(first.nextPage,'base64url').toString('utf8'));cursor.after='doc:079';await assert.rejects(read(f,{...input,page:Buffer.from(JSON.stringify(cursor)).toString('base64url')}),e=>e.status===409);
+ facts.documents.push(doc('new'));await assert.rejects(read(f,{...input,page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
+test('filtered financial pages reject a cursor after a payment changes',async()=>{
+ const facts=empty();facts.documents=Array.from({length:55},(_,i)=>doc(String(i),{paymentTransactionId:'p'+i}));facts.payments=facts.documents.map(d=>({id:d.paymentTransactionId,type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:d.documentNumber,amount:'12.34',settlementConfirmed:true}));
+ const f=fixture({facts}),input={storeId:'s',month:'2026-10',filter:'PAID'},first=await read(f,input);assert.equal(first.matchedRecords,55);assert.ok(first.nextPage);
+ facts.payments[0].reversedAt='2026-10-28';await assert.rejects(read(f,{...input,page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
+test('registered route is GET-only, no-store and rejects malformed/scope input through the real reader',async()=>{
+ const f=fixture(),app=express();app.use((req,res,next)=>{req.user=actor;next()});app.use('/api/reports/invoice-month-audit',createMonthlyInvoiceAuditRouter(f.db));
+ const server=app.listen(0,'127.0.0.1');await once(server,'listening');const base='http://127.0.0.1:'+server.address().port+'/api/reports/invoice-month-audit';
+ try{let r=await fetch(base+'?storeId=s&month=2026-10');assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');assert.equal((await r.json()).readOnly,true);r=await fetch(base+'?month=2026-10');assert.equal(r.status,400);r=await fetch(base+'?storeId=s&month=2026-10',{method:'POST'});assert.equal(r.status,404)}finally{await new Promise(resolve=>server.close(resolve))}
+});
+
+test('different valid supplier VAT never becomes a duplicate from matching headers and amount',()=>{
+ const f=empty();f.documents=[doc('one',{documentNumber:'A 1'}),doc('two',{documentNumber:'A 1',supplierId:'other-supplier',supplierTaxId:'088888888'})];
+ assert.equal(classifyInvoiceMonth(f,period).counts.possibleDuplicates,0);
+ f.documents[1].supplierTaxId='099999999';assert.equal(classifyInvoiceMonth(f,period).counts.possibleDuplicates,2);
+ f.documents[1].supplierTaxId=null;const missing=classifyInvoiceMonth(f,period);assert.equal(missing.counts.possibleDuplicates,0);assert.equal(missing.counts.identityReview,1);
+});
+
+
+test('posted order needs its scoped approved target and stock proof; standalone approved stays posted',()=>{
+ const f=empty();f.documents=[doc('source',{status:'APPROVED',documentNumber:'A 1',purchaseOrderId:'order'})];f.orders=[{id:'order',supplierId:'sup',invoiceNumber:'A 1',sourceDocumentId:'source',status:'INVOICED'}];
+ for(const targetId of ['missing-posted-document','foreign-posted-document','wrong']){
+  f.postings=[{orderId:'order',purchaseDocumentId:targetId}];f.documents=f.documents.filter(d=>d.id==='source');
+  if(targetId==='wrong')f.documents.push(doc('wrong',{status:'APPROVED',purchaseOrderId:'other-order',documentNumber:'B 9'}));
+  const r=classifyInvoiceMonth(f,period),source=r.items.find(d=>d.id==='doc:source');assert.equal(source.status,'UNPOSTED');assert.ok(source.categories.includes('IDENTITY_OR_LINK_REVIEW'));assert.ok(r.counts.unposted>0);
+ }
+ f.documents=[doc('source',{status:'APPROVED',documentNumber:'A 1',purchaseOrderId:'order'})];f.postings=[{orderId:'order',purchaseDocumentId:'source'}];
+ assert.equal(classifyInvoiceMonth(f,period).items[0].status,'UNPOSTED');
+ f.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'source',path:'PURCHASE_ORDER'}];assert.equal(classifyInvoiceMonth(f,period).items[0].status,'POSTED');
+ f.orders=[];f.postings=[];f.stockPostings=[];f.documents=[doc('standalone',{status:'APPROVED',documentNumber:'A 1'})];const standalone=classifyInvoiceMonth(f,period);assert.equal(standalone.items[0].status,'POSTED');assert.equal(standalone.counts.identityReview,0);
+});
+
+const opaqueFacts=()=>{
+ const f=empty();f.documents=[doc('opaque',{documentNumber:'ACTIVITY-LAB-20261031-E',issueDay:'2026-10-31',purchaseOrderId:'opaque-order',sourceType:'POS_OCR_DRAFT'})];
+ f.orders=[{id:'opaque-order',supplierId:'sup',invoiceNumber:'ACTIVITY-LAB-20261031-E',sourceDocumentId:'opaque',status:'NEW',createdAt:'2026-10-31'}];return f;
+};
+test('opaque exact bidirectional pairs share only representation and date, never numeric posting authority',()=>{
+ for(const number of ['ACTIVITY-LAB-20261031-E','PRICE-LAB-20261031-D','SOL-LAB-20261031-B','SOL-LAB-20261031-C']){
+  const f=opaqueFacts();f.documents[0].documentNumber=number;f.orders[0].invoiceNumber=number;
+  let r=classifyInvoiceMonth(f,period);assert.equal(r.items.length,1);assert.equal(r.items[0].issueDay,'2026-10-31');assert.equal(r.items[0].sources.length,2);assert.equal(r.items[0].status,'UNPOSTED');assert.ok(r.items[0].categories.includes('IDENTITY_OR_LINK_REVIEW'));
+  f.documents[0].status='APPROVED';f.orders[0].status='INVOICED';f.postings=[{orderId:'opaque-order',purchaseDocumentId:'opaque'}];f.stockPostings=[{orderId:'opaque-order',sourceDocumentId:'opaque',postedDocumentId:'opaque',path:'PURCHASE_ORDER'}];
+  r=classifyInvoiceMonth(f,period);assert.equal(r.items[0].status,'UNPOSTED');
+  f.documents.push(doc('opaque-target',{documentNumber:number,status:'APPROVED',sourceType:'PURCHASE_ORDER',purchaseOrderId:'opaque-order'}));f.postings[0].purchaseDocumentId='opaque-target';f.stockPostings[0].postedDocumentId='opaque-target';
+  r=classifyInvoiceMonth(f,period);assert.equal(r.items.find(x=>x.id==='doc:opaque').status,'UNPOSTED');assert.equal(r.items.find(x=>x.id==='doc:opaque').sources.length,2);assert.ok(r.items.find(x=>x.id==='doc:opaque-target'));
+ }
+});
+test('opaque mismatches, competing links, malformed or inactive originals retain disconnected unknown-date findings',()=>{
+ const cases=[f=>f.documents[0].purchaseOrderId='other',f=>f.orders[0].sourceDocumentId='foreign',f=>f.orders[0].supplierId=null,f=>f.orders[0].supplierId='other',f=>f.orders[0].invoiceNumber+='X',f=>f.orders[0].invoiceNumber=f.orders[0].invoiceNumber.toLowerCase(),f=>f.orders[0].invoiceNumber='A 1',f=>{f.documents[0].documentNumber='X1\u0001Z';f.orders[0].invoiceNumber='X1\u0001Z'},f=>f.documents[0].issueDay=null,f=>f.documents[0].issueDay='2026-02-30',f=>f.documents[0].documentType='UNKNOWN',f=>f.documents[0].sourceType='PURCHASE_ORDER',f=>f.documents[0].status='MERGED',f=>f.documents[0].status='CANCELLED',f=>f.orders.push({...f.orders[0],id:'competing'})];
+ for(const mutate of cases){const f=opaqueFacts();mutate(f);const r=classifyInvoiceMonth(f,period);assert.ok(r.items.some(x=>x.issueDay===null),mutate.toString());assert.ok(r.items.some(x=>x.categories.includes('IDENTITY_OR_LINK_REVIEW')))}
+ const inactive=opaqueFacts();inactive.orders[0].status='REJECTED';const r=classifyInvoiceMonth(inactive,period);assert.equal(r.items.find(x=>x.id==='doc:opaque').sources.length,1);assert.equal(r.counts.inactive,1);
+});
+function pageFacts(date='2026-10-09',received='2026-10-28'){
+ const f=empty();f.documents=[doc('page-source',{documentNumber:'A 4201',issueDay:date,purchaseOrderId:'page-order',sourceType:'POS_OCR_DRAFT'})];f.orders=[{id:'page-order',supplierId:'sup',invoiceNumber:'A 4201',sourceDocumentId:'page-source',status:'NEW'}];
+ f.attachments=[{id:'page0',mimeType:'image/jpeg',checksum:'a'.repeat(64),hasContent:true},{id:'page1',mimeType:'image/jpeg',checksum:'b'.repeat(64),hasContent:true}];
+ const h={version:'POS_FAST_HANDOFF_V1',fullReader:'ASSISTANT',lifecycleGeneration:'0',documentType:'INVOICE',supplierId:'sup',documentNumber:'A 4201',documentDate:date,totalGross:'12.3400',pageCount:2};
+ f.jobs=[{id:'primary',attachmentId:'page0',purchaseDocumentId:'page-source',stage:'POS_BACKGROUND_COMPLETE',status:'AWAITING_APPROVAL',posMetadataAvailable:true,posMetadataPresent:true,posHeader:{...h,pageIndex:0,primaryJobId:'primary',pageJobIds:['primary','secondary'],primaryClaimPresent:true,pageClaimPresent:true},posBackground:{status:'COMPLETED_WITH_REVIEW',reconciliationRequired:true}},{id:'secondary',attachmentId:'page1',purchaseDocumentId:null,stage:'POS_BACKGROUND_FAILED',status:'POS_FAILED',posMetadataAvailable:true,posMetadataPresent:true,posHeader:{...h,pageIndex:1,primaryJobId:null,pageJobIds:null,primaryClaimPresent:false,pageClaimPresent:false},posBackground:{status:'FAILED',reconciliationRequired:null}}];
+ f.inbox=[{id:'page-inbox0',attachmentId:'page0',status:'IN_REVIEW',createdAt:received},{id:'page-inbox1',attachmentId:'page1',status:'IN_REVIEW',createdAt:received}];return f;
+}
+const orphan=(f,p=period)=>classifyInvoiceMonth(f,p).items.find(x=>x.id==='inbox:page-inbox1');
+test('explicit stored multipage header recognizes only operator date and preserves unknown identity/amount/reconciliation',()=>{
+ const f=pageFacts(),before=JSON.stringify(f),row=orphan(f);assert.equal(row.issueDay,'2026-10-09');assert.equal(row.status,'IDENTITY_UNKNOWN');assert.equal(row.totalCents,null);assert.equal(row.documentNumber,null);assert.equal(row.documentType,null);assert.equal(row.supplierTaxId,null);assert.deepEqual(row.categories,['IDENTITY_OR_LINK_REVIEW']);assert.match(row.reasons.join(' '),/κεφαλίδα χειριστή/);assert.match(row.reasons.join(' '),/εκκρεμή έλεγχο/);assert.equal(JSON.stringify(f),before);
+ for(const amount of ['0','-12.3400']){const v=pageFacts();v.documents[0].totalGross=amount;for(const j of v.jobs)j.posHeader.totalGross=amount;assert.equal(orphan(v).issueDay,'2026-10-09')}
+});
+test('stored issue date controls selection before receipt filtering in both month directions; unknown stays receipt-month HOLD',()=>{
+ const september=pageFacts('2026-09-30','2026-10-28');assert.equal(orphan(september),undefined);assert.equal(orphan(september,invoiceAuditMonth('2026-09')).issueDay,'2026-09-30');
+ const october=pageFacts('2026-10-09','2026-11-01');assert.equal(orphan(october).issueDay,'2026-10-09');assert.equal(orphan(october,invoiceAuditMonth('2026-11')),undefined);
+ october.jobs[1].posHeader.documentDate=null;assert.equal(orphan(october),undefined);assert.equal(orphan(october,invoiceAuditMonth('2026-11')).issueDay,null);
+});
+test('untrusted, ambiguous, malformed, foreign and conflicting page metadata fail closed without dropping orphan rows',()=>{
+ const mutations=[f=>f.jobs[0].posMetadataAvailable=false,f=>f.jobs[0].posHeader.version='GENERIC',f=>f.jobs[0].stage='LOCAL',f=>f.jobs[1].stage='LOCAL',f=>f.jobs[0].posHeader.primaryJobId='other',f=>f.jobs[0].posHeader.pageJobIds=['primary','missing'],f=>f.jobs[0].posHeader.pageJobIds=['primary','primary'],f=>f.jobs[0].posHeader.pageJobIds=['primary',{}],f=>f.jobs[0].posHeader.pageCount=6,f=>f.jobs[1].posHeader.pageCount=1,f=>f.jobs[1].posHeader.pageIndex=0,f=>f.jobs[1].posHeader.pageIndex=0.5,f=>f.jobs[1].posHeader.documentDate='2026-10-08',f=>f.jobs[1].posHeader.documentDate='2026-10-09X',f=>f.jobs[1].posHeader.documentNumber='A 4202',f=>f.jobs[1].posHeader.supplierId='foreign',f=>f.jobs[1].posHeader.totalGross='12.34000001',f=>f.jobs[1].posHeader.documentType='CREDIT_NOTE',f=>f.jobs[1].posHeader.lifecycleGeneration='00',f=>f.jobs[1].posHeader.fullReader=null,f=>f.jobs[1].posHeader.documentNumber='é'.repeat(129),f=>f.attachments[1].hasContent=false,f=>f.attachments[1].checksum='invalid',f=>f.attachments[1].checksum=f.attachments[0].checksum,f=>f.jobs[1].posHeader.pageClaimPresent=true,f=>f.jobs[1].posHeader.primaryClaimPresent=true,f=>f.jobs.push({...f.jobs[1],id:'duplicate-attachment'}),f=>f.jobs.push({...structuredClone(f.jobs[0]),id:'competing-primary'}),f=>f.documents[0].purchaseOrderId='missing',f=>f.documents[0].totalGross='12.35',f=>f.jobs[0].posBackground.reconciliationRequired=null];
+ for(const mutate of mutations){const f=pageFacts();mutate(f);const row=orphan(f);assert.ok(row,mutate.toString());assert.equal(row.issueDay,null,mutate.toString());assert.equal(row.totalCents,null);assert.equal(row.status,'IDENTITY_UNKNOWN')}
+});
+test('new projected header and capability facts invalidate report cursors without exposing private metadata',async()=>{
+ const f=pageFacts();for(let i=0;i<55;i++)f.documents.push(doc('paged'+i));const target=fixture({facts:f}),first=await read(target);assert.ok(first.nextPage);
+ f.jobs[1].posHeader.documentDate='2026-10-08';await assert.rejects(read(target,{storeId:'s',month:'2026-10',page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+ assert.equal(JSON.stringify(first.items).includes('POS_FAST_HANDOFF'),false);assert.equal(JSON.stringify(first.items).includes('pageJobIds'),false);
+});
+
+
+test('monthly ordinary report observes payment without changing draft posting or persisted snapshot sources',async()=>{
+ const f=empty();f.documents=[doc('77',{paymentTransactionId:'paid',purchaseOrderId:'order',sourceType:'MYDATA'})];
+ f.orders=[{id:'order',sourceDocumentId:'77',supplierId:'sup',invoiceNumber:'A 77',status:'FINAL',createdAt:'2026-10-03'}];
+ f.payments=[{id:'paid',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 77',amount:'12.34',reversedAt:null,settlementConfirmed:true,attachmentMimeType:null,attachmentFilename:null}];
+ const fix=fixture({facts:f}),r=await read(fix);
+ assert.equal(r.items[0].status,'UNPOSTED');assert.ok(r.items[0].categories.includes('UNPOSTED_DOCUMENT'));
+ assert.equal(r.items[0].payment.status,'PAID');assert.equal(r.financialSummary.paid,1);assert.equal(r.financialSummary.financialPending,0);
+ assert.equal(r.paymentCoverage.available,true);
+ const query=fix.trace.find(x=>x.sql?.includes('FROM "StoreTransaction" t'));
+ assert.match(query.sql, /t\."companyId"=/);assert.match(query.sql,/t\."storeId"=/);assert.match(query.sql,/SUPPLIER_PAYMENT/);assert.match(query.sql,/ss\."status"<>/);
+ assert.ok(query.values.includes('c'));assert.ok(query.values.includes('s'));assert.ok(query.values.some(v=>Array.isArray(v)&&v.includes('paid')));
+ assert.ok(fix.trace.filter(x=>x.sql).every(x=>!/^(INSERT|UPDATE|DELETE|CREATE|ALTER)/.test(x.sql.trim())));
+});
+
+test('ordinary report proves posted projection using original header while retaining raw fingerprint and provenance',async()=>{
+ const facts=empty();facts.documents=[doc('source',{documentNumber:'A 1',sourceType:'POS_OCR_DRAFT',purchaseOrderId:'order',paymentTransactionId:'paid'}),doc('order',{documentNumber:'A 1',sourceType:'PURCHASE_ORDER',status:'APPROVED',issueDay:'2026-10-05',totalGross:'12.3432'})];
+ facts.orders=[{id:'order',sourceDocumentId:'source',supplierId:'sup',invoiceNumber:'A 1',status:'INVOICED',createdAt:'2026-10-05'}];facts.postings=[{orderId:'order',purchaseDocumentId:'order'}];facts.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'order',path:'PURCHASE_ORDER'}];facts.payments=[{id:'paid',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 1',amount:'12.34',settlementConfirmed:true}];
+ const before=JSON.stringify(facts),raw=classifyInvoiceMonth(facts,period),f=fixture({facts}),r=await read(f);
+ assert.equal(raw.counts.logicalRecords,2);assert.equal(raw.counts.unposted,1);assert.equal(r.summary.logicalRecords,1);assert.equal(r.summary.unposted,0);assert.equal(r.items[0].status,'POSTED');assert.equal(r.items[0].payment.status,'PAID');assert.equal(r.items[0].totalCents,1234);
+ assert.deepEqual(r.items[0].postingProjections,[{sourceDocumentId:'source',projectionDocumentId:'order',sourceIssueDay:'2026-10-02',sourceTotalGross:'12.34',recordedIssueDay:'2026-10-05',recordedTotalGross:'12.3432'}]);assert.equal(JSON.stringify(facts),before);assert.deepEqual(classifyInvoiceMonth(facts,period),raw);
+ const unposted=await read(f,{storeId:'s',month:'2026-10',filter:'UNPOSTED_DOCUMENT'});assert.equal(unposted.matchedRecords,0);assert.equal(unposted.financialSummary.paid,1);
+ facts.documents[1].totalGross='12.344';const changed=await read(f);assert.notEqual(changed.fingerprint,r.fingerprint);assert.equal(changed.items[0].totalCents,1234);assert.equal(changed.items[0].postingProjections[0].recordedTotalGross,'12.344');assert.equal(changed.summary.unposted,0);
+});
+
+test('record reader resolves an actual row beyond page50 with saved document lines in one authorized read-only snapshot',async()=>{
+ const facts=empty();facts.documents=Array.from({length:60},(_,i)=>doc(String(i).padStart(3,'0')));facts.documentLines=[{id:'line',purchaseDocumentId:'059',description:'Stored original line',quantity:'2.0000',unit:'PIECE',unitCost:'5.0000',netAmount:'10.0000',vatRate:'24.000',vatAmount:'2.4000',grossAmount:'12.4000'}];
+ const f=fixture({facts}),report=await read(f);assert.equal(report.items.some(row=>row.id==='doc:059'),false);const before=JSON.stringify(facts);
+ const result=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:059',fingerprint:report.fingerprint},{now});
+ assert.equal(result.readOnly,true);assert.equal(result.item.id,'doc:059');assert.equal(result.fingerprint,report.fingerprint);assert.equal(result.item.openTarget.kind,'PREVIEW');assert.equal(result.sources.documents.length,1);assert.equal(result.sources.documents[0].id,'059');assert.deepEqual(result.relatedOrders,[]);assert.deepEqual(result.documentLines,facts.documentLines);assert.deepEqual(result.documentLinesCoverage,{available:true,truncated:false,limit:500,reason:null});assert.equal(JSON.stringify(facts),before);
+ const lines=f.trace.find(row=>row.sql?.startsWith('SELECT l."id",l."purchaseDocumentId"'));assert.deepEqual(lines.values,['c','s',['059']]);assert.match(lines.sql,/d\."companyId"=\$1 AND d\."storeId"=\$2/);assert.ok(f.trace.filter(row=>row.sql).every(row=>!/^(INSERT|UPDATE|DELETE|CREATE|ALTER)/.test(row.sql.trim())));
+});
+
+test('record previews keep unmatched myDATA and merged credit facts honest without creating or selecting a new draft',async()=>{
+ const facts=empty();facts.inbound=[{id:'incoming',inboxId:'inbox',series:'A',documentNumber:'1',issuerVat:'099999999',invoiceType:'1.1',issueDay:'2026-10-02',totalGross:'12.34',createdAt:'2026-10-02'}];facts.inbox=[{id:'inbox',status:'RECEIVED',createdAt:'2026-10-02'}];
+ const f=fixture({facts}),result=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'inbound:incoming'},{now});assert.equal(result.item.purchaseReview.status,'LINK_REVIEW');assert.equal(result.item.openTarget.kind,'PREVIEW');assert.deepEqual(result.sources.documents,[]);assert.deepEqual(result.sources.orders,[]);assert.equal(result.sources.inbound[0].id,'incoming');assert.equal(result.sources.inbox[0].id,'inbox');assert.deepEqual(result.documentLines,[]);assert.equal(result.documentLinesCoverage.reason,'NO_DOCUMENT_SOURCE');
+});
+
+test('record reader strictly rejects malformed scope stale reports missing rows and incomplete sources',async()=>{
+ for(const patch of [{id:''},{id:['doc:1']},{id:'doc:1\n'},{storeId:['s']},{month:'2026-13'},{fingerprint:['a'.repeat(64)]},{filter:'ALL'},{create:true}]){const f=fixture();await assert.rejects(readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:1',...patch},{now}),error=>error.status===400);assert.equal(f.trace.length,0)}
+ const facts=empty();facts.documents=[doc('1')];const f=fixture({facts}),report=await read(f);facts.documents[0].totalGross='13.00';await assert.rejects(readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:1',fingerprint:report.fingerprint},{now}),error=>error.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+ for(const patch of [{id:'doc:foreign'},{month:'2026-11'},{storeId:'other'}])await assert.rejects(readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:1',...patch},{now}),error=>error.status===404);
+ await assert.rejects(readMonthlyInvoiceAuditRecord(fixture({missing:['PurchaseDocument']}).db,actor,{storeId:'s',month:'2026-10',id:'doc:1'},{now}),error=>error.code==='INVOICE_MONTH_AUDIT_SOURCE_INCOMPLETE');
+ await assert.rejects(readMonthlyInvoiceAuditRecord(fixture({facts}).db,{...actor,tokenType:'STORE_OPERATOR'},{storeId:'s',month:'2026-10',id:'doc:1'},{now}),error=>error.status===403);
+});
+
+test('record saved-line coverage distinguishes absent schema and actual bounded line output',async()=>{
+ const facts=empty();facts.documents=[doc('1')];facts.documentLines=Array.from({length:501},(_,i)=>({id:'line'+i,purchaseDocumentId:'1',description:'Stored line'}));
+ const input={storeId:'s',month:'2026-10',id:'doc:1'},limited=await readMonthlyInvoiceAuditRecord(fixture({facts}).db,actor,input,{now});assert.equal(limited.documentLines.length,500);assert.equal(limited.documentLinesCoverage.truncated,true);
+ const missing=await readMonthlyInvoiceAuditRecord(fixture({facts,missing:['PurchaseDocumentLine']}).db,actor,input,{now});assert.deepEqual(missing.documentLines,[]);assert.equal(missing.documentLinesCoverage.available,false);assert.equal(missing.documentLinesCoverage.reason,'SOURCE_UNAVAILABLE');
+});
+
+test('record HTTP route is GET-only no-store and accepts only existing selected-store monthly IDs',async()=>{
+ const facts=empty();facts.documents=[doc('1')];const f=fixture({facts}),app=express();app.use((req,res,next)=>{req.user=actor;next()});app.use('/api/reports/invoice-month-audit',createMonthlyInvoiceAuditRouter(f.db));const server=app.listen(0,'127.0.0.1');await once(server,'listening');const base='http://127.0.0.1:'+server.address().port+'/api/reports/invoice-month-audit/record?storeId=s&month=2026-10&id=doc%3A1';
+ try{const response=await fetch(base);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).item.id,'doc:1');assert.equal((await fetch(base+'&create=true')).status,400);assert.equal((await fetch(base,{method:'POST'})).status,404)}finally{await new Promise(resolve=>server.close(resolve))}
+});
+
+test('payment availability cannot turn a missing schema into zero unpaid balance',async()=>{
+ const f=empty();f.documents=[doc('77',{paymentTransactionId:'paid'})];
+ const fix=fixture({facts:f,missing:['SupplierPaymentSettlement']}),r=await read(fix);
+ assert.equal(r.paymentCoverage.available,false);assert.equal(r.items[0].payment.status,'UNAVAILABLE');
+ assert.equal(r.items[0].payment.remainingCents,null);assert.equal(r.financialSummary.paid,0);
+ assert.equal(fix.trace.some(x=>x.sql?.includes('FROM "StoreTransaction" t')),false);
+});
+
+test('payment change invalidates a monthly pagination cursor',async()=>{
+ const f=empty();f.documents=Array.from({length:55},(_,n)=>doc(String(n+1),{paymentTransactionId:n===0?'paid':null}));
+ f.payments=[{id:'paid',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 1',amount:'12.34',reversedAt:null,settlementConfirmed:true}];
+ const fix=fixture({facts:f}),r=await read(fix);assert.ok(r.nextPage);
+ f.payments[0].reversedAt='2026-10-28T12:00:00Z';
+ await assert.rejects(read(fix,{storeId:'s',month:'2026-10',page:r.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
+test('ordinary reader includes allocation-only payments and assigns each invoice its own amount',async()=>{
+ const f=empty();f.documents=[doc('1',{status:'APPROVED',totalGross:'40.00'}),doc('2',{status:'APPROVED',totalGross:'60.00'})];
+ f.payments=[{id:'split',companyId:'c',storeId:'s',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'Supplier settlement',amount:'100.00',hasSettlement:true,settlementCount:1,settlementScopeValid:true,reversedAt:null,settlementConfirmed:true}];
+ f.allocations=[{id:'a1',transactionId:'split',documentId:'1',amount:'40.00',companyId:'c',storeId:'s',supplierId:'sup',allocationCompanyId:'c',settlementStatus:'CONFIRMED'},{id:'a2',transactionId:'split',documentId:'2',amount:'60.00',companyId:'c',storeId:'s',supplierId:'sup',allocationCompanyId:'c',settlementStatus:'CONFIRMED'}];
+ const fix=fixture({facts:f}),r=await read(fix);
+ assert.equal(r.paymentCoverage.allocationsAvailable,true);assert.equal(r.financialSummary.paid,2);assert.equal(r.financialSummary.financialPending,0);
+ assert.deepEqual(r.items.map(x=>x.payment.paidCents),[4000,6000]);assert.ok(r.items.every(x=>x.payment.paymentCount===1));
+ const allocationQuery=fix.trace.find(x=>x.sql?.startsWith('SELECT a.'));
+ assert.match(allocationQuery.sql,/d\."companyId"=a\."companyId"/);assert.match(allocationQuery.sql,/d\."storeId"=ss\."storeId"/);
+});
+
+test('missing allocation schema never verifies an existing settlement from its whole transaction amount',async()=>{
+ const f=empty();f.documents=[doc('1',{paymentTransactionId:'split'})];
+ f.payments=[{id:'split',type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A 1',amount:'12.34',hasSettlement:true,settlementCount:1,settlementScopeValid:true,settlementConfirmed:true}];
+ const r=await read(fixture({facts:f,missing:['SupplierPaymentAllocation']}));
+ assert.equal(r.paymentCoverage.allocationsAvailable,false);assert.equal(r.items[0].payment.status,'REVIEW_REQUIRED');assert.equal(r.items[0].payment.remainingCents,null);
+});
+
+test('ordinary automatic matching is global before pagination, preserves paid transactions and invalidates changed metadata',async()=>{
+ const facts=empty();
+ for(let i=0;i<65;i++){
+  const id=String(i).padStart(3,'0'),number=String(i+1);
+  facts.documents.push(doc(id,{status:'APPROVED',documentNumber:'S '+number,paymentTransactionId:'pay'+id}));
+  facts.inbound.push({id:'in'+id,inboxId:'box'+id,mark:String(400000000000000+i),issuerVat:'099999999',series:'S',documentNumber:number,invoiceType:'1.1',issueDay:'2026-10-02',totalGross:'12.34',draftOrderId:null});
+  facts.inbox.push({id:'box'+id,status:'RECEIVED',attachmentId:null});
+ }
+ facts.payments=facts.documents.map(d=>({id:d.paymentTransactionId,companyId:'c',storeId:'s',supplierId:'sup',type:'SUPPLIER_PAYMENT',amount:'12.34',invoiceDocumentNumber:d.documentNumber,settlementConfirmed:true}));
+ const f=fixture({facts}),first=await read(f);
+ assert.equal(first.summary.logicalRecords,65);assert.equal(first.items.length,50);assert.equal(first.financialSummary.paid,65);
+ assert.equal(first.items[0].automaticMatches.length,1);
+ const second=await read(f,{storeId:'s',month:'2026-10',page:first.nextPage});assert.equal(second.items.length,15);
+ assert.equal(new Set([...first.items,...second.items].map(row=>row.id)).size,65);
+ facts.identityMetadata=facts.inbound.map(row=>({id:row.id,identityLinksPresent:false,currencyAllowed:true,metadataValid:true}));
+ facts.identityMetadata[0].identityLinksPresent=true;
+ await assert.rejects(read(f,{storeId:'s',month:'2026-10',page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+ const changed=await read(f);assert.equal(changed.summary.logicalRecords,66);
+ facts.identityMetadata[0].identityLinksPresent=false;facts.identityMetadata[0].currencyAllowed=false;
+ const foreign=await read(f);assert.equal(foreign.summary.logicalRecords,66);const exceptions=await read(f,{storeId:'s',month:'2026-10',filter:'PURCHASE_LINK_REVIEW'});assert.ok(exceptions.items.some(row=>row.automaticReview?.some(reason=>reason.code==='UNSUPPORTED_CURRENCY')));
+ assert.equal((await read(fixture({facts,missing:['currency']}))).summary.logicalRecords,130);
+});
+
+test('ordinary five-cent payment policy keeps exact amounts and full paid paging while record and pending filters agree',async()=>{
+ const facts=empty();facts.documents=Array.from({length:67},(_,i)=>doc('tol'+String(i).padStart(3,'0'),{status:'APPROVED',documentNumber:'TOL '+String(i+1).padStart(3,'0'),paymentTransactionId:'tolpay'+i}));
+ facts.payments=facts.documents.map((d,i)=>({id:d.paymentTransactionId,companyId:'c',storeId:'s',supplierId:'sup',type:'SUPPLIER_PAYMENT',invoiceDocumentNumber:d.documentNumber,amount:i<65?'12.31':i===65?'12.28':'12.40',settlementConfirmed:true}));
+ const before=JSON.stringify(facts),f=fixture({facts}),first=await read(f,{storeId:'s',month:'2026-10',filter:'PAID'});
+ assert.equal(first.financialSummary.paid,65);assert.equal(first.financialSummary.financialPending,2);assert.equal(first.matchedRecords,65);assert.equal(first.items.length,50);assert.ok(first.nextPage);
+ const second=await read(f,{storeId:'s',month:'2026-10',filter:'PAID',page:first.nextPage});assert.equal(second.items.length,15);assert.equal(second.nextPage,null);assert.equal(new Set([...first.items,...second.items].map(row=>row.id)).size,65);
+ for(const row of [...first.items,...second.items]){assert.equal(row.payment.status,'PAID');assert.equal(row.payment.paidCents,1231);assert.equal(row.payment.remainingCents,3);assert.equal(row.payment.overpaymentCents,0);assert.equal(row.payment.withinTolerance,true);assert.equal(row.payment.toleranceCents,5);assert.equal(row.payment.paymentDifferenceCents,-3)}
+ const record=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:'doc:tol064',fingerprint:first.fingerprint},{now});assert.deepEqual(record.item.payment,second.items.find(row=>row.id==='doc:tol064').payment);assert.equal(record.fingerprint,first.fingerprint);
+ const pending=await read(f,{storeId:'s',month:'2026-10',filter:'FINANCIAL_PENDING'});assert.equal(pending.matchedRecords,2);assert.deepEqual(pending.items.map(row=>row.payment.status),['PARTIALLY_PAID','OVERPAID']);assert.equal(pending.items[0].payment.remainingCents,6);assert.equal(pending.items[1].payment.overpaymentCents,6);assert.ok(pending.items.every(row=>row.payment.withinTolerance===undefined));assert.equal(JSON.stringify(facts),before);
+ facts.payments[64].amount='12.28';await assert.rejects(read(f,{storeId:'s',month:'2026-10',filter:'PAID',page:first.nextPage}),error=>error.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+});
+
+test('ordinary list and record recognize standalone zero 9.3 without changing raw classification',async()=>{
+ const facts=empty();facts.inbound.push({id:'delivery',inboxId:'delivery-inbox',mark:'12345',issuerVat:'099999999',series:'D',documentNumber:'42',issueDay:'2026-10-02',invoiceType:'9.3',totalGross:'0.000',createdAt:'2026-10-03T10:00:00Z'});facts.inbox.push({id:'delivery-inbox',status:'RECEIVED',createdAt:'2026-10-03T10:00:00Z'});
+ const before=JSON.stringify(facts),raw=classifyInvoiceMonth(facts,period),f=fixture({facts});
+ const list=await read(f);assert.equal(list.items[0].documentType,'DELIVERY_NOTE');assert.equal(list.items[0].payment.status,'NOT_APPLICABLE');assert.equal(list.financialSummary.reviewRequired,0);assert.deepEqual(list.items[0].reasons,[]);assert.deepEqual(list.items[0].categories,[]);assert.equal(list.items[0].purchaseReview.status,'NON_FINANCIAL');assert.equal(list.items[0].status,'UNPOSTED');for(const key of ['unposted','purchaseLinkReview','identityReview'])assert.equal(list.summary[key],0);
+ const record=await readMonthlyInvoiceAuditRecord(f.db,actor,{storeId:'s',month:'2026-10',id:list.items[0].id,fingerprint:list.fingerprint},{now});assert.deepEqual(record.item,list.items[0]);assert.equal(raw.items[0].documentType,null);assert.deepEqual(classifyInvoiceMonth(facts,period),raw);assert.equal(JSON.stringify(facts),before);
+ facts.inbound[0].totalGross='0.004';const changed=await read(f);assert.equal(changed.items[0].payment.status,'REVIEW_REQUIRED');assert.notEqual(changed.fingerprint,list.fingerprint);
+ facts.inbound[0].totalGross='0';
+ const metadata={id:'delivery',metadataValid:true,identityLinksPresent:false,currencyAllowed:true};
+ for(const value of [true,null,undefined]){facts.identityMetadata=[{...metadata,...(value===undefined?{}:{deliveryJobLinkPresent:value})}];assert.equal((await read(f)).items[0].payment.status,'REVIEW_REQUIRED');}
+ facts.identityMetadata=[{...metadata,deliveryJobLinkPresent:false}];assert.equal((await read(f)).items[0].payment.status,'NOT_APPLICABLE');
+ assert.ok(f.trace.some(entry=>entry.sql?.includes("source.\"rawPayload\" ? 'originalJobId'")&&entry.sql.includes('AS "deliveryJobLinkPresent"')));
+ facts.identityMetadata=[{id:'delivery',metadataValid:true,identityLinksPresent:true,currencyAllowed:true}];assert.equal((await read(f)).items[0].payment.status,'REVIEW_REQUIRED');
+});

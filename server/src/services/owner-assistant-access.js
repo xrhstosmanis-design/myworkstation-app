@@ -2,7 +2,7 @@ import {prisma} from "../prisma.js";
 import {companyModuleState,effectiveModuleEnabled} from "../middleware/module-access.js";
 
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
-const moduleLabels={CASH_CONTROL:"Ο Έλεγχος Ταμείων",INVENTORY:"Οι Αναφορές Αποθήκης / Πωλήσεων"};
+const moduleLabels={STORE_CHAT:"Το Chat καταστήματος",AI_READER:"Η Ανάγνωση AI",CASH_CONTROL:"Ο Έλεγχος Ταμείων",INVENTORY:"Οι Αναφορές Αποθήκης / Πωλήσεων"};
 
 // A fresh session/role/company/store/entitlement check runs before every model
 // request, around each canonical read and before an answer leaves the server.

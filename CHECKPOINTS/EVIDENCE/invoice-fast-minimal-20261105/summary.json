@@ -1,0 +1,56 @@
+{
+  "revision": "c255548a17cfa4d21c024a76bfae6148d76bb3cd",
+  "sourcePR": 3680,
+  "sourceCI": 42035492775,
+  "mainCI": 42037512760,
+  "deployCI": 42039640153,
+  "rollbackArtifact": 13419808219,
+  "existingKeyReuseAuthorized": true,
+  "allFieldsPass": true,
+  "allSnapshotsUnchanged": true,
+  "samples": [
+    {
+      "trial": "MIN-P01",
+      "serverMs": 21863.067,
+      "azureMs": 18868.872,
+      "azureOutcome": "error",
+      "openaiMs": 2983.772,
+      "uiMs": 22052,
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "beforeCommit": "adca90e43745bb2c3881ac3401689a5efeda7928"
+    },
+    {
+      "trial": "MIN-P02",
+      "serverMs": 9773.883,
+      "azureMs": 6688.361,
+      "azureOutcome": "ok",
+      "openaiMs": 3067.921,
+      "uiMs": 10036,
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "beforeCommit": "db21f364bbba3c43ea9fdc9b164a0eb58889ec30"
+    },
+    {
+      "trial": "MIN-P03",
+      "serverMs": 10326.47,
+      "azureMs": 8066.456,
+      "azureOutcome": "ok",
+      "openaiMs": 2241.032,
+      "uiMs": 10582,
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "beforeCommit": "6fa07a22f798984bf0a56e35146a257414b5fe40"
+    }
+  ],
+  "medianMs": {
+    "server": 10326.47,
+    "openai": 2983.772,
+    "azure": 8066.456
+  },
+  "historicalLowR01R05": {
+    "count": 5,
+    "openaiMedianMs": 4161.048,
+    "serverMedianMs": 11499.038
+  },
+  "interpretation": "Observed3sample OpenAI median differs from historical5sample low-effort set. Different invoice IDs/layouts and times, no paired replay/causal or SLA proof. End-to-end latency remains variable; P01 existing Azure timeout exhausted and fell back successfully. Broad supplier/line/page/physical POS/general latency remains OPEN.",
+  "consumed": "MIN-P01/P02/P03 once each; never replay earlier consumed originals or peer J",
+  "observedOpenaiMedianReductionPercent": 28.29
+}

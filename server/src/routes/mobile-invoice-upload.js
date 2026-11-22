@@ -2,14 +2,16 @@ import {isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {Router} from "express";
 const router=Router();
 export const mobileUploads=new Map();
-router.get("/:id/:token",(req,res)=>{const session=mobileUploads.get(req.params.id);if(!session||session.token!==req.params.token||session.expires<Date.now()||isCustomerDemoTenant(session))return res.status(404).send("Το QR έληξε.");const maxFiles=session.maxFiles||1;return res.type("html").send(`<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:system-ui;max-width:560px;margin:28px auto;padding:0 16px;color:#123f5b}button{padding:12px 16px;border:0;border-radius:8px;background:#07877b;color:#fff;font-weight:800;font-size:16px}input{width:100%;margin:16px 0}#s{padding:10px;border-radius:8px;background:#eef5f9;white-space:pre-wrap}</style><h2>Ανέβασε τιμολόγιο</h2><p>Φωτογράφισε όλες τις σελίδες του ίδιου παραστατικού με καλό φωτισμό. Έως ${maxFiles} φωτογραφίες ή ένα PDF.</p><label>Λήψη φωτογραφίας<input id=f type=file accept="image/*" capture=environment></label><label>Φωτογραφίες / PDF από αρχεία<input id=gallery type=file accept="image/*,application/pdf" multiple></label><div id=pages></div><button id=send onclick="go()" disabled>Αποστολή όλων</button><p id=s>Επίλεξε φωτογραφία ή PDF.</p><script>
+router.get("/:id/:token",(req,res)=>{const session=mobileUploads.get(req.params.id);if(!session||session.token!==req.params.token||session.expires<Date.now()||isCustomerDemoTenant(session))return res.status(404).send("Το QR έληξε.");const maxFiles=session.maxFiles||1;return res.type("html").send(`<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:system-ui;max-width:560px;margin:28px auto;padding:0 16px;color:#123f5b}button{padding:12px 16px;border:0;border-radius:8px;background:#07877b;color:#fff;font-weight:800;font-size:16px}input{width:100%;margin:16px 0}#s{padding:10px;border-radius:8px;background:#eef5f9;white-space:pre-wrap}</style><h2>Ανέβασε τιμολόγιο</h2><p>Φωτογράφισε όλες τις σελίδες του ίδιου παραστατικού με καλό φωτισμό. Έως ${maxFiles} φωτογραφίες ή ένα PDF. Κράτησε το κινητό παράλληλα στο χαρτί και βάλε όλες τις άκρες στο πλάνο.</p><label>Λήψη φωτογραφίας<input id=f type=file accept="image/*" capture=environment></label><label>Φωτογραφίες / PDF από αρχεία<input id=gallery type=file accept="image/*,application/pdf" multiple></label><div id=pages></div><button id=send onclick="go()" disabled>Αποστολή όλων</button><p id=s>Επίλεξε φωτογραφία ή PDF.</p><script>
 const maxFiles=${maxFiles},files=[];let busy=false,batchId=null,completed=false;
 const status=t=>document.querySelector("#s").textContent=t;
 const read=f=>new Promise((ok,no)=>{const r=new FileReader;r.onload=()=>ok(String(r.result||""));r.onerror=no;r.readAsDataURL(f)});
 async function prepare(file){
-  if(!file.type.startsWith("image/")||file.size<1400000)return file;
+  if(!file.type.startsWith("image/"))return file;
   const src=await read(file),img=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=src});
   const width=img.naturalWidth||img.width,height=img.naturalHeight||img.height;
+  if(Math.max(width,height)<900||Math.min(width,height)<550)throw new Error("Η φωτογραφία έχει χαμηλή ανάλυση. Φωτογράφισε ξανά ολόκληρο το έγγραφο, σταθερά και με καλό φωτισμό.");
+  if(file.size<1400000)return file;
   const scale=Math.min(1,3000/Math.max(width,height));
   const c=document.createElement("canvas");c.width=Math.max(1,Math.round(width*scale));c.height=Math.max(1,Math.round(height*scale));c.getContext("2d").drawImage(img,0,0,c.width,c.height);
   let blob=await new Promise(ok=>c.toBlob(ok,"image/jpeg",.92));

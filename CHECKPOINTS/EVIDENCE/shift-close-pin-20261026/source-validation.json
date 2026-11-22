@@ -1,0 +1,52 @@
+{
+  "status": "SOURCE_PREPARED_NOT_INSTALLED_AWAITING_LAB",
+  "sourceCommit": "9e379dc1b556def5426af79c78de560a90fc3d38",
+  "sourceTree": "b8e8078aab5885ef8cea0392bbbbc24770034428",
+  "claimMain": "771b546b4158e6f31e04698514320826d3b7fcad",
+  "claimPR": 3169,
+  "claimCI": 40368902112,
+  "review": "Root independent exact six-path review CLEAR",
+  "localRuntime": "Node20.20.2",
+  "focused": {
+    "total": 49,
+    "pass": 48,
+    "fail": 0,
+    "skipped": 1,
+    "skipReason": "No isolated local PostgreSQL environment; native execution required unskipped in full CI"
+  },
+  "originalMountedNegative": {
+    "pass": 0,
+    "fail": 1,
+    "filteredSkips": 2
+  },
+  "build": {
+    "status": "PASS",
+    "seconds": 10.85,
+    "tableServiceEntry": "entry-DXZH9Vd9.js"
+  },
+  "nativeQualification": "Always-run retained actual startup patch parse/preservation PASS; real registered close PostgreSQL parent+3 subcases prepared. Workforce OUT callback uses an explicit SQL stand-in, proving invocation once within the close transaction, not full Workforce business acceptance. CI asserts isolated target and native execution.",
+  "sourceSha256": {
+    "client/src/components/store/StoreShiftClosePanel.jsx": "907793451caad5e30cd1052d22a138abd9d49c59fd0604424d9b2cd7ab745c7c",
+    "server/src/routes/cash-control.js": "b21656b743bc2b163b248c50038b1cd1beb421178588007e98f72356600cc7cf",
+    "server/src/services/shift-close-card.js": "e1a1b81cccc13d65469b6cc74b114866c7d74224168558b9b26db6ff83769fa2",
+    "server/test/shift-close-pin-postgres.test.js": "af90a499911586162554997008e90d34d7723657fa7f5753febc1d1f53ff3552",
+    "server/test/shift-close-pin-ui.test.js": "96d7a5f6ea7289c7611134b82a985c7525e2984206da6446beb49813c4c9a6dc",
+    "server/test/shift-close-pin.test.js": "f0693717de6db8336fa65847f66c9f8b36e1d46deb69d377f7d39270fe2460d9"
+  },
+  "noBusinessAction": true,
+  "publicationBase": "c5b79493325095d76938abb5b159e949030022a6",
+  "invoiceAmendment": "Authoritative13paths3172/plain-capture3176; invoicecheckpointunchanged",
+  "priorCandidateCI": {
+    "head": "bbd76760512be9b22c48adf33c6669a9c4b57669",
+    "run": 40373196254,
+    "job": 121749679700,
+    "status": "ALL5_SUCCESS",
+    "serverPass": 4281,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "native": "parent3058 +3 subcases actually unskipped",
+    "qualification": "prior-head proof only; new reconciled head requires full CI"
+  },
+  "publicationKind": "DOCS_ONLY_EVIDENCE_FIRST_NO_RUNTIME_CHANGE"
+}

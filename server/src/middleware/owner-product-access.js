@@ -1,4 +1,10 @@
+import {staffProductBridge} from './backoffice-staff-products.js';
 export function requireOwnerProductAccess(req,res,next){
+  if(req.user?.staffAccess===true){
+    const path=String(req.originalUrl||'').split('?')[0];
+    if(req.method==='GET'&&req.staffGrant?.capability==='stock.read'&&/^\/api\/inventory-ledger\/[^/]+\/movements$/.test(path))return next();
+    return staffProductBridge(req,res,next);
+  }
   const role=String(req.user?.role||"").toUpperCase();
   const platformRole=String(req.user?.platformRole||"").toUpperCase();
   const allowed=req.user?.isSuperAdmin===true||role==="SUPER_ADMIN"||role==="OWNER"||platformRole==="SUPER_ADMIN";

@@ -24,7 +24,7 @@ export function normalizeAadeResult(xml,taxId){
 }
 
 router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
-  const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId),official=req.query.official==="1";
+  const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId),official=req.query.official==="1",localOnly=req.query.localOnly==="1";
   const employee=req.user?.tokenType==="STORE_OPERATOR"||req.user?.role==="EMPLOYEE";
   if(employee&&(!req.user.permissions?.includes("SUPPLIER_PAYMENT")||!storeId||String(req.user.storeId)!==storeId))return res.status(403).json({error:"Δεν έχεις δικαίωμα ελέγχου ΑΦΜ σε αυτό το κατάστημα."});
   if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
@@ -32,7 +32,8 @@ router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const existingRows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
   const existing=existingRows[0]||null;
-  if(existing&&!official)return res.json({valid:true,taxId,name:existing.name,address:"",source:"MYWORKSTATION",existingSupplier:existing,readOnly:true});
+  if(existing&&(!official||localOnly))return res.json({valid:true,taxId,name:existing.name,address:"",source:"MYWORKSTATION",existingSupplier:existing,readOnly:true});
+  if(localOnly)return res.json({valid:false,taxId,source:"MYWORKSTATION",existingSupplier:null,readOnly:true});
   await ensureStoreIntegrationSchema();
   const configured=await prisma.$queryRaw`SELECT "credentialsEnc","enabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='VAT_LOOKUP' LIMIT 1`;
   if(configured[0]?.enabled){

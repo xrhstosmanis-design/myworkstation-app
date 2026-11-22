@@ -1,0 +1,71 @@
+{
+  "sourcePr": 3168,
+  "sourceHead": "de560f16488d58b232b77cfe3b4aaa1c5131214a",
+  "mainRevision": "2b3ac1790c97d6d2a052428586543997beee3c9b",
+  "claimPr": 3166,
+  "claimMerged": "f3a30f49db5e9f3d69b02ac91e8fe96e8dc6c984",
+  "prCi": {
+    "run": 40366419404,
+    "job": 121725702942,
+    "serverPass": 4264,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8,
+    "allFiveJobs": "success"
+  },
+  "mainCi": {
+    "run": 40368093291,
+    "status": "success",
+    "job": 121731516361,
+    "serverPass": 4264,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8,
+    "allFiveJobs": "success"
+  },
+  "localFocused": {
+    "pass": 32,
+    "fail": 0,
+    "skip": 0,
+    "node": "20.20.2"
+  },
+  "localInitialFull": {
+    "pass": 3416,
+    "fail": 81,
+    "skip": 268,
+    "qualification": "Client generation was missing at initial run start; this is not a green full local suite."
+  },
+  "localAffectedRerun": {
+    "pass": 407,
+    "fail": 0,
+    "skip": 8,
+    "qualification": "All initially failed files rerun after local Prisma client generation; native DB skips remain."
+  },
+  "localBuild": "PASS",
+  "sourceSha256": {
+    "server/src/mydata-http-error.js": "0cafe21a0725f154f62623fec8f6523588708fa4f54de729ca1e2d3698f788c9",
+    "server/src/routes/commerce-mydata-inbox.js": "3249ec830edd8714aeaa6a93b9a2829c4d4328c57c645f787e87a379739e6b91",
+    "server/test/mydata-http-error.test.js": "34c7dde2527356cb08168e5f33eab79e598ffc28f9ca656e61cbaadc077a54e8",
+    "server/test/mydata-http-error-routes.test.js": "ddae324dc9742370c2a38cc55b1eb9ada1c249badc4d73d6d8db37c5256301cb"
+  },
+  "productionSyncByThisPage": false,
+  "upstream403Resolved": "NOT TESTED",
+  "functionalAcceptance": "AWAITING USER/LAB",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "2b3ac1790c97d6d2a052428586543997beee3c9b"
+  },
+  "observedAt": "2026-10-26T17:39:42.926141+00:00",
+  "deploy": {
+    "id": "dep-dbfou5942hec73et0io0",
+    "revision": "2b3ac1790c97d6d2a052428586543997beee3c9b",
+    "status": "live",
+    "finishedAt": "2026-10-26T17:38:29.819557Z"
+  },
+  "deployWorkflow": {
+    "run": 40369656989,
+    "job": 121736764106
+  },
+  "reviewedMain": "771b546b4158e6f31e04698514320826d3b7fcad"
+}

@@ -7,6 +7,7 @@ import '../../client/src/pos-payment-minimize-bootstrap.js';
 // This entry is bundled only by ops/pos-ui-lab/build.mjs, never by the product
 // entry. Every record below belongs to a synthetic, isolated visual fixture.
 const STORE_ID='pos-ui-lab-only';
+const quickPages=new URLSearchParams(location.search).get('quickPages')==='2'?2:1;
 const BASE=`/api/store-pos/stores/${STORE_ID}`;
 const TRANSACTIONS=`/api/transactions/stores/${STORE_ID}`;
 const CACHE_KEY=`myworkstation:offline-pos-catalog:${STORE_ID}`;
@@ -27,7 +28,7 @@ const products=Array.from({length:40},(_,i)=>({
 const access={customersPos:true,customerCardOnly:false,changeRetail:true,editPosButtons:true,deleteSaleReason:true,confirmDeleteSale:true,supplierPayment:true,thirdPartyPayment:true,sameShiftPayments:true,onlineBarcode:false,onlineProductSearch:false};
 const catalog={products,access,deliveryEnabled:false,tableServiceEnabled:false,rbsCapDriverV1Active:false,rbsCapDriverV1Configured:false,
   layout:{title:'MYWORKSTATION LAB',showSku:true,buttonFontScale:1,theme:{headerColor:'#033d2f',accentColor:'#087a52'},audienceSettings:{enabled:false},
-    quickKeys:products.slice(0,20).map((p,i)=>({id:`lab-quick-${i}`,label:p.name,productQuery:p.id,price:p.salePrice,color:colors[i%5],visible:true})),
+    quickKeys:products.slice(0,20*quickPages).map((p,i)=>({id:`lab-quick-${i}`,label:p.name,productQuery:p.id,price:p.salePrice,color:colors[i%5],visible:true})),
     categories:labels.map((label,i)=>({id:`lab-category-${i}`,label,categoryName:label,color:colors[i%5],visible:true})),
   },
 };

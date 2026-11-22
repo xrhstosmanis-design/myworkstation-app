@@ -1,0 +1,17 @@
+{
+  "scope": "Read-only original count-line baseline before cost-display release; not a new hosted PASS",
+  "installedBeforeRevision": "3bc8734fc112e96312ad66f65b2ac2bbb4d3cba0",
+  "targetRevision": "2512d6bb379b38306838ee449e494256d1f91aa9",
+  "line": [
+    {
+      "countedAt": "2026-10-10T10:31:23.595Z",
+      "countedQuantity": 4,
+      "expectedQuantity": 5,
+      "id": "faed0cc3-9406-44da-acd5-d5c93f94afd9",
+      "observedAt": "2026-11-02T01:44:35.217775Z",
+      "productId": "b1466a68-c47b-47cc-9139-69e6f9f7f978",
+      "unitCost": 0
+    }
+  ],
+  "interpretation": "Raw historical unitCost0 remains immutable; nonpositive cost is projected unknown/blank, never silently valued at0"
+}

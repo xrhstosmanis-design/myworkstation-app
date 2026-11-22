@@ -1,0 +1,38 @@
+{
+  "base_main": "401f6a1f5dad3a8c5f38b65ab5d7c9115b6cee6f",
+  "recorded_at": "2026-11-05T11:50:25+02:00",
+  "kind": "BEFORE_SOURCE_DOCUMENTATION_ONLY",
+  "registries": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "before_blob": "6c71ce49d31652a8120176d53652d0f74597966b",
+      "after_blob": "6bc44b54e7212d0a2b6c88fa2afdfae6ca531ec6",
+      "prefix_bytes": 2839,
+      "old_bytes": 5239661,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "before_blob": "3c5fdf81b4ba479cbfbeba7296a1872d6828e403",
+      "after_blob": "b32bbefeb12b7fe9ecc1feca3098a1d630cdfa1f",
+      "prefix_bytes": 2839,
+      "old_bytes": 4063735,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "before_blob": "2a129b647371dd056ffadeec3e2d8cf8d4ef298a",
+      "after_blob": "e3e32fbc598d2088834e628421e1cffa66ad2e44",
+      "prefix_bytes": 2839,
+      "old_bytes": 3591488,
+      "old_suffix_preserved": true
+    }
+  },
+  "runtime_changed": false,
+  "provider_called": false,
+  "lab_performed": false,
+  "pdf": {
+    "pages": 960,
+    "sha256": "343c1c0d8ff471de3f221825b33642e09795a7a7d25fb7ff90ffa17e0a0bbdba",
+    "copies_equal": true,
+    "claim_text_present": true,
+    "visual_review": "PENDING"
+  }
+}

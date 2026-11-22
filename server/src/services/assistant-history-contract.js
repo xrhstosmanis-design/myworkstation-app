@@ -8,7 +8,7 @@ const id=z.string().min(1).max(160).refine(v=>v.trim()===v,'Noncanonical archive
 const count=z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER-1);
 // Match the existing exact int64 protocol; Number would merge adjacent epochs.
 const generation=z.string().refine(value=>{try{return normalizeLifecycleGeneration(value)!==null}catch{return false}},'Invalid lifecycle generation');
-const capabilityNames=['cash_details','sales_by_product','sales_by_store','stock_by_product','consumption_details',...Object.keys(businessDomains).map(domain=>'business_records:'+domain)];
+const capabilityNames=['cash_review','cash_details','sales_by_product','sales_by_store','stock_by_product','consumption_details',...Object.keys(businessDomains).map(domain=>'business_records:'+domain)];
 const capabilities=z.array(z.enum(capabilityNames)).max(capabilityNames.length).transform(v=>[...new Set(v)].sort());
 export const historyAccessSchema=z.object({userId:id,mode:z.enum(['owner','platform']),companyId:id,storeId:id,generation,sessionId:id,sessionVersion:count,capabilities}).strict();
 const message=z.object({id:z.string().uuid(),role:z.enum(['user','assistant']),content:z.string().trim().min(1).max(2000),createdAt:z.string().datetime({offset:true}).transform(v=>new Date(v).toISOString()),requiredCapabilities:capabilities}).strict().superRefine((m,c)=>{

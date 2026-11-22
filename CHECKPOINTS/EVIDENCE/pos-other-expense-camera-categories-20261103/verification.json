@@ -1,0 +1,145 @@
+{
+  "item": "POS-OTHER-EXPENSE-CAMERA-CATEGORIES-01",
+  "claim": {
+    "pr": 3562,
+    "head": "cfa4f32b9aa9f8228aa122028050de1637015688",
+    "main": "1edd4677db6f5ce688b15731280f72ed42e71be7",
+    "ci": 41536559473,
+    "applicable": "3SUCCESS+2DOCSKIP"
+  },
+  "source": {
+    "pr": 3564,
+    "head": "f61285c8d41a127bb7c3683a590e74f3b935e165",
+    "prTree": "9c4903cdb6afd014c5a343d7fd5859402a0b459a",
+    "main": "e9314faa7d9457bc3cce95593a76ed2482d3351c",
+    "mainTree": "6e61703f02e2a3c2394c06cc15912d5754d46e11",
+    "mainParent": "5a73d7e757ed716cc399e646cf008f61cf9440f7",
+    "sourceBlobs": {
+      "client/src/components/store/StorePosPaymentsModal.jsx": "bba8fd4394e61d16cfb29bd66ab0b6a7de832d98",
+      "server/src/routes/store-transactions.js": "de9e2e1dfd6729977532b67c8fcb5f9c7c0e3437",
+      "server/test/other-expense-categories-postgres.test.js": "d6bc7b802ba976c240f81843df0e02a6200a61ff",
+      "server/test/pos-other-expense-camera-categories-ui.test.js": "649d16cce2b54761b726fd91620ecda795daf187"
+    }
+  },
+  "validation": {
+    "localUI": {
+      "pass": 27,
+      "fail": 0,
+      "skip": 0,
+      "breakdown": "14new+6completion+7payroll"
+    },
+    "localBackend": {
+      "pass": 5,
+      "fail": 0,
+      "skip": 1
+    },
+    "prCI": {
+      "id": 41540229707,
+      "job": 125603948287,
+      "all5success": true,
+      "serverPass": 5327,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "nativeOk": 2635,
+      "nativeTime": "2026-11-02T23:01:12.6512656Z"
+    },
+    "mainCI": {
+      "id": 41542861415,
+      "job": 125612791410,
+      "all5success": true,
+      "serverPass": 5335,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "nativeOk": 2639,
+      "nativeTime": "2026-11-02T23:17:31.1079428Z",
+      "completedAt": "2026-11-02T23:24:18Z"
+    }
+  },
+  "delivery": {
+    "guard": 41545173954,
+    "job": 125619048361,
+    "allStepsSuccess": true,
+    "ciRunId": 41542861415,
+    "expectedRevision": "e9314faa7d9457bc3cce95593a76ed2482d3351c",
+    "triggeredAt": "2026-11-02T23:25:51.6524605Z",
+    "exactHealthyAt": "2026-11-02T23:31:58.4481081Z",
+    "renderDeploy": "dep-dbkhnvt6e07s73a5bjvg",
+    "renderLiveAt": "2026-11-02T23:31:46.475337Z",
+    "rootHealthRecordedAt": "2026-11-02T23:32:11.439Z",
+    "rootHealthOk": true
+  },
+  "hostedAcceptance": {
+    "status": "SCOPED_READ_ONLY_LAB_PASS",
+    "actor": "genuine SUPER_ADMIN support access, Χρήστος Μάνης",
+    "store": "cmtpopbgo000trhb5ng9ytiru",
+    "company": "MYWORKSTATION LAB",
+    "entry": "Owner/Manager payments > Supplier > All payments > Other expenses; same StorePosPaymentsModal",
+    "independentOrdinaryOwnerOrOperator": false,
+    "windowStart": "2026-11-02T23:32:38.239Z",
+    "windowEnd": "2026-11-02T23:33:19.494Z",
+    "catalogueActiveCount": 0,
+    "selectorVisible": true,
+    "selectorDisabledBecauseEmpty": true,
+    "centralGuidanceVisible": true,
+    "refreshNativeClicks": 1,
+    "refreshResult": "same explicit empty catalogue, no error",
+    "amountBlank": true,
+    "commentsBlank": true,
+    "fileSelected": false,
+    "responsibilityAcknowledged": false,
+    "paymentSubmitted": false,
+    "camera": {
+      "nativeClick": true,
+      "result": "Requested device not found",
+      "recordedAt": "2026-11-02T23:34:05.319Z",
+      "cloudHardwareAvailable": false,
+      "physicalCameraPass": false,
+      "newProductRegressionFailClaimed": false
+    },
+    "post": {
+      "uiRecordedAt": "2026-11-02T23:34:59.885Z",
+      "sameExistingShift": "MAIN, 29Oct19:04, LAB POS2",
+      "transactionCount": 0,
+      "cash": 0,
+      "card": 0,
+      "iris": 0,
+      "expenses": 0,
+      "total": 0,
+      "in": 0,
+      "out": 0,
+      "scope": "UI-only, not raw DB/stock/financial invariance",
+      "healthRecordedAt": "2026-11-02T23:35:03.627Z",
+      "healthOk": true,
+      "revision": "e9314faa7d9457bc3cce95593a76ed2482d3351c"
+    },
+    "remaining": [
+      "physical PC camera/photo/focus/quality",
+      "populated central category choice/refresh",
+      "hosted category-linked expense acceptance under separately authorized fresh before/after/control",
+      "ordinary Owner/operator and other devices"
+    ]
+  },
+  "physicalCameraAcceptance": "NOT_TESTED",
+  "newHostedFinancialSubmission": false,
+  "primaryEvidence": [
+    "category-installed.ax.txt",
+    "camera-no-device.ax.txt",
+    "post-ui.ax.txt",
+    "category-installed.jpg",
+    "baseline-old-modal.ax.txt"
+  ],
+  "primaryScreenshotSha256": "75277251435bbfa05ba4bc5c15aba8beccea7b3328931a6ca1b07df68885d380",
+  "baselineOldModalScope": "Actual saved native pre-release modal observation: empty catalogue selector absent; no reconstructed timestamps or DB financial invariance.",
+  "canonicalPdf": {
+    "pages": 910,
+    "bytes": 3358078,
+    "sha256": "38436adf5dcaddc952de2d85a887f25bdccd0821b0099e2170c47b53e8f6aaa6",
+    "ownedPages": [
+      7,
+      8,
+      9
+    ]
+  }
+}

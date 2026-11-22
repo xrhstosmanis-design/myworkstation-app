@@ -1,0 +1,38 @@
+name: Chat browser interaction probe
+on:
+  pull_request:
+    paths:
+      - 'client/src/components/store/StoreChatPanel.jsx'
+      - 'client/src/components/store/ChatPhotoViewer.jsx'
+      - 'client/src/components/store/store-chat.css'
+      - 'server/e2e/chat-mobile-device-*'
+      - '.github/workflows/chat-interaction-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: chat-browser-probe-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.20.2'
+      - name: Install fixture build dependencies
+        run: npm install --ignore-scripts
+      - name: Verify actual touch gestures and viewport layout with synthetic data only
+        run: node server/e2e/chat-mobile-device-browser-flow.mjs
+      - name: Preserve synthetic touch and layout evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-chat-interaction-probe
+          path: |
+            /tmp/mws-chat-mobile-browser/*.png
+            /tmp/mws-chat-mobile-browser/*.json
+          if-no-files-found: ignore
+          retention-days: 7

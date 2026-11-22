@@ -1,3 +1,5 @@
+import {reviewedCashAnswer} from '../../../shared/assistant-reviewed-cash.mjs';
+import {canonicalCashClarification} from './assistant-reviewed-cash.js';
 import {z} from "zod";
 import {assistantSalesPeriodClarification} from "./assistant-conversation-context.js";
 
@@ -19,6 +21,7 @@ export function mayRetryAssistantResponse(raw){return raw?.status==="incomplete"
 export function assistantAnswerFromResponse(raw,evidence=[],{providerOK=true,requireEvidence=false,question=""}={}){
  const refusal=(Array.isArray(raw?.output)?raw.output:[]).some(item=>(Array.isArray(item?.content)?item.content:[]).some(c=>c?.type==="refusal"));
  if(refusal||raw?.incomplete_details?.reason==="content_filter")fail("Ο βοηθός δεν μπορεί να απαντήσει στο συγκεκριμένο αίτημα. Διατύπωσέ το ως αναζήτηση αναφοράς.","AI_RESPONSE_REFUSED",422);
+ const cashAnswer=reviewedCashAnswer(evidence)||canonicalCashClarification(raw);if(cashAnswer)return cashAnswer;
  // Limited product evidence must never permit model-authored amounts, even
  // when the provider returns a syntactically valid completed answer.
  const limited=evidence.filter(r=>r?.kind==="product_sales"&&r.result==="source_limited");

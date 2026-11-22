@@ -1,0 +1,27 @@
+{
+  "format": "MWS_BACKOFFICE_COMPANY_CURRENT_CAPTURE_PROPOSAL_V1",
+  "executionEnabled": false,
+  "productionActivated": false,
+  "profile": "CURRENT_CAPTURE",
+  "runtimeProfile": "BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1",
+  "purpose": "COMPANY_READ_ONLY",
+  "sourceManifest": "ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json",
+  "sourceReview": "ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json",
+  "sourceFencePlanHash": "59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2",
+  "sourceProfileId": "BACKOFFICE_COMPANY_CURRENT_CAPTURE_SOURCE_V1",
+  "targetProfileId": "BACKOFFICE_COMPANY_CURRENT_CAPTURE_PROPOSED_V1",
+  "operationalDefinition": "ops/backup/lifecycle/report-operational-compatibility.proposed.json",
+  "supplierConsent": "AutomaticReportSupplierComparisonConsent",
+  "supplierLayoutFrom": "AutomaticReportRecipientConsent",
+  "supplierChecksDefinition": "ops/backup/lifecycle/automatic-report-consent-extension.proposed.json",
+  "eventConsentPresent": false,
+  "accountColumn": [
+    "companyCapabilities",
+    "jsonb",
+    true
+  ],
+  "columnDefault": [],
+  "scopedRecovery": false,
+  "workerProtocol": "MWS_BACKOFFICE_COMPANY_READ_CAPABILITY_V1",
+  "columnDefinition": "ops/backup/lifecycle/backoffice-company-current-columns.proposed.json"
+}

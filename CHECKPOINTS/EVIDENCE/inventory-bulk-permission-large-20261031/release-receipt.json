@@ -1,0 +1,31 @@
+{
+  "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+  "sourcePr": 3354,
+  "mainCi": 41199931951,
+  "serverTests": 4862,
+  "backupTests": 8,
+  "fail": 0,
+  "skipped": 0,
+  "guardedDeploy": 41201059265,
+  "deployJob": 124536843141,
+  "renderDeploy": "dep-dbitt4s9v7es738j9bc0",
+  "liveAt": "2026-10-31T12:32:12.885202Z",
+  "healthyAt": "2026-10-31T12:32:24.574336Z",
+  "labScope": "one existing synthetic product, ALL enable and selected-one disable",
+  "auditIds": [
+    "59ef5c83-dd09-4312-a86a-4eb5725f68d6",
+    "dabac37e-a240-445c-ae77-38672c23546e"
+  ],
+  "controlsUnchanged": [
+    "stocks",
+    "other_products",
+    "shifts",
+    "ledger",
+    "sales",
+    "payments",
+    "movements",
+    "price_history"
+  ],
+  "largeRealStoreAcceptance": "OPEN / NOT TESTED; no real-store mass write",
+  "owner": "fix/inventory-bulk-permission-large-20261031"
+}

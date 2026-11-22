@@ -64,7 +64,15 @@ test("Owner dispatcher replays evidence/reasoning, bounds total reads and reject
   calls=0;reads=0;await deny(runOwnerAssistant({prompt:"Fixture",cashTool:ownerCashTool,readSales:async()=>{reads++;return {}},requestProvider:async settings=>{calls++;if(calls===3)assert.equal(settings.tool_choice,"none");return {response:{ok:true},raw:{output:[salesCall]}}}}),502);assert.equal(calls,3);assert.equal(reads,2);
 });
 test("real handler checks sales entitlement around read and rejects late revocation before provider/final",async()=>{
-  for(const boundary of [5,6,7,8]){let auth=0,providers=0,reads=0,out,err;const h=createOwnerAssistantHandlers({authorize:async(request,options)=>{auth++;if(auth===boundary)throw Object.assign(Error("revoked"),{status:403});if(auth>=5)assert.ok(options.requiredModules.includes("INVENTORY"));return scope},requestProvider:async()=>++providers===1?{response:{ok:true},raw:{output:[salesCall]}}:answer(),readSales:async()=>{reads++;return {rows:[]}}});await h.ask({...req,body:{question:"Πωλήσεις TEST1 10/10/2026;"}},{json:value=>out=value,status(){return this}},error=>err=error);assert.equal(out,undefined);assert.equal(err.status,403);if(boundary===5)assert.equal(reads,0)}
+  for(const boundary of [1,2,3,4]){
+    let checks=0,providers=0,reads=0,out,err;
+    const h=createOwnerAssistantHandlers({authorize:async(request,options)=>{
+      if(providers){assert.deepEqual(options.requiredModules,["INVENTORY"]);if(++checks===boundary)throw Object.assign(Error("revoked"),{status:403});}
+      return scope;
+    },requestProvider:async()=>++providers===1?{response:{ok:true},raw:{output:[salesCall]}}:answer(),readSales:async()=>{reads++;return {rows:[]}}});
+    await h.ask({...req,body:{question:"Πωλήσεις TEST1 10/10/2026;"}},{json:value=>out=value,status(){return this}},error=>err=error);
+    assert.equal(out,undefined);assert.equal(err.status,403);assert.equal(checks,boundary);assert.equal(reads,boundary===1?0:1);assert.equal(providers,boundary===4?2:1);
+  }
 });
 test("mounted canonical route uses opt-in Athens exclusive SQL bounds and metadata; legacy remains unchanged",async()=>{
   const original=prisma.$queryRaw,queries=[];prisma.$queryRaw=async(strings,...values)=>{queries.push({sql:strings.join("?"),values});return [{...row(),_hasGroup:true,_totalGroupCount:1,_overallNormalSaleCount:1,_overallReversalCount:0}]};

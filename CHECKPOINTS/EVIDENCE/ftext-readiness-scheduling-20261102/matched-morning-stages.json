@@ -1,0 +1,85 @@
+{
+  "scope": "Rizareio/RIZAREIO-POS-01; existing records only; no diagnostic transaction",
+  "collectorUtc": "2026-11-02T06:16:09.3271935Z",
+  "rows": [
+    {
+      "accepted_at": "2026-11-02T06:12:47.304Z",
+      "createdAt": "2026-11-02T06:12:45.912776Z",
+      "dispatchedAt": "2026-11-02T06:12:46.734923Z",
+      "id": "b62b4acd-4c51-41e1-bac2-fd9982454542",
+      "method": "CASH",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-11-02T06:13:02.510637Z",
+      "pickupSeconds": 0.822147,
+      "serverTotalSeconds": 16.597861,
+      "localFiles": [
+        {
+          "name": "mws-cash-b62b4acd-4c51-41e1-bac2-fd9982454542.intent.json",
+          "bytes": 215,
+          "createdUtc": "2026-11-02T06:12:46.8974177Z",
+          "modifiedUtc": "2026-11-02T06:12:46.8984167Z"
+        },
+        {
+          "name": "mws-cash-b62b4acd-4c51-41e1-bac2-fd9982454542.publish.json",
+          "bytes": 302,
+          "createdUtc": "2026-11-02T06:12:47.5479052Z",
+          "modifiedUtc": "2026-11-02T06:12:47.5479052Z"
+        },
+        {
+          "name": "mws-cash-b62b4acd-4c51-41e1-bac2-fd9982454542.report.json",
+          "bytes": 460,
+          "createdUtc": "2026-11-02T06:13:01.7010853Z",
+          "modifiedUtc": "2026-11-02T06:13:01.7021612Z"
+        },
+        {
+          "name": "mws-cash-b62b4acd-4c51-41e1-bac2-fd9982454542.res",
+          "bytes": 169,
+          "createdUtc": "2026-11-02T06:13:01.6367021Z",
+          "modifiedUtc": "2026-11-02T06:13:01.6377139Z"
+        }
+      ],
+      "localPublishJournalToResultSeconds": 14.088797,
+      "localResultToReportSeconds": 0.064383
+    },
+    {
+      "accepted_at": "2026-11-02T06:11:35.731Z",
+      "createdAt": "2026-11-02T06:11:19.605038Z",
+      "dispatchedAt": "2026-11-02T06:11:35.025646Z",
+      "id": "c2a7313b-4174-4229-baf0-2dd9af1656a7",
+      "method": "CASH",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-11-02T06:11:54.208425Z",
+      "pickupSeconds": 15.420608,
+      "serverTotalSeconds": 34.603387,
+      "localFiles": [
+        {
+          "name": "mws-cash-c2a7313b-4174-4229-baf0-2dd9af1656a7.intent.json",
+          "bytes": 215,
+          "createdUtc": "2026-11-02T06:11:35.3606616Z",
+          "modifiedUtc": "2026-11-02T06:11:35.3606616Z"
+        },
+        {
+          "name": "mws-cash-c2a7313b-4174-4229-baf0-2dd9af1656a7.publish.json",
+          "bytes": 302,
+          "createdUtc": "2026-11-02T06:11:35.8836239Z",
+          "modifiedUtc": "2026-11-02T06:11:35.8836239Z"
+        },
+        {
+          "name": "mws-cash-c2a7313b-4174-4229-baf0-2dd9af1656a7.report.json",
+          "bytes": 459,
+          "createdUtc": "2026-11-02T06:11:53.5571684Z",
+          "modifiedUtc": "2026-11-02T06:11:53.5571684Z"
+        },
+        {
+          "name": "mws-cash-c2a7313b-4174-4229-baf0-2dd9af1656a7.res",
+          "bytes": 168,
+          "createdUtc": "2026-11-02T06:11:53.4905834Z",
+          "modifiedUtc": "2026-11-02T06:11:53.4915956Z"
+        }
+      ],
+      "localPublishJournalToResultSeconds": 17.60696,
+      "localResultToReportSeconds": 0.066585
+    }
+  ],
+  "limits": "Server-only and same-PC-only intervals. No subtraction between host clocks. Metadata is not physical print/card-activation proof; copied/restored file times can mislead. No independent stopwatch-to-request match or new financial/stock acceptance."
+}

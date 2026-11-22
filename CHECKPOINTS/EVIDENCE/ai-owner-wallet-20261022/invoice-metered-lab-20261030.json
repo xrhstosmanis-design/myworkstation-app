@@ -1,0 +1,148 @@
+{
+  "scope": "SCOPED_HOSTED_INVOICE_BILLING_PASS_NOT_OCR_ACCURACY",
+  "revision": "e950d9b16bb20f3f5666d858a1bc59098bf53e9f",
+  "fullMainCI": 41041653691,
+  "guard": 41042881821,
+  "fixture1": {
+    "name": "ai-wallet-lab-20261029-01.png",
+    "sha256": "3aa7688b6426a2744ff266b93fe1a0c39e8498aedeba93cef6a0757503608c94",
+    "job": "0fff508f-b74b-4404-b375-0e4725b7773c",
+    "openaiCalled": false
+  },
+  "fixture2": {
+    "name": "ai-wallet-lab-20261030-02.png",
+    "sha256": "6ba1f86d92b05bf76b9c1c196598af0c4e2eb6f9b30d3976e1d84f22da49fb80",
+    "document": "WALLET-LAB-20261030-02",
+    "purpose": "Independent new synthetic one-page zero-VAT preview; Azure/OpenAI billing only; no payment/stock/approval; do not replay read1",
+    "rows": 1,
+    "quantity": 1,
+    "netEUR": 20,
+    "vatEUR": 0,
+    "totalEUR": 20,
+    "jobId": "79ae7c71-1083-4b6d-94b7-257f8c05e8e1"
+  },
+  "entries": [
+    {
+      "actorId": null,
+      "chargedMicros": 13200,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-30T10:48:45.206722+00:00",
+      "creditedMicros": 0,
+      "feature": "INVOICE_AZURE",
+      "id": "80c904a8-0ef1-43d2-b4a9-b8d92a2c6bc2",
+      "kind": "USAGE",
+      "reference": "8f8e9aa1-69ad-47fd-b6d4-daea13edc2df",
+      "reservedMicros": 13200,
+      "resolutionReference": null,
+      "settledAt": "2026-10-30T10:48:55.102247+00:00",
+      "status": "SETTLED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "tariff": {
+        "apiVersion": "2024-11-30",
+        "billingUnit": "PAGES",
+        "currency": "EUR",
+        "maxPages": 5,
+        "model": "prebuilt-invoice",
+        "unitMicros": 13200,
+        "version": "4d3b3cbba98a6455b6407ebf46d59728223e0998de8e005cea1a33fbbc9068a0"
+      },
+      "usage": {
+        "apiVersion": "2024-11-30",
+        "model": "prebuilt-invoice",
+        "pages": 1
+      }
+    },
+    {
+      "actorId": null,
+      "chargedMicros": 13200,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-30T10:52:23.680735+00:00",
+      "creditedMicros": 0,
+      "feature": "INVOICE_AZURE",
+      "id": "86cc2b4c-7cdf-48e8-93c2-5d5241220582",
+      "kind": "USAGE",
+      "reference": "bb0a8031-e671-4232-be05-1c4539726785",
+      "reservedMicros": 13200,
+      "resolutionReference": null,
+      "settledAt": "2026-10-30T10:52:28.02269+00:00",
+      "status": "SETTLED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "tariff": {
+        "apiVersion": "2024-11-30",
+        "billingUnit": "PAGES",
+        "currency": "EUR",
+        "maxPages": 5,
+        "model": "prebuilt-invoice",
+        "unitMicros": 13200,
+        "version": "4d3b3cbba98a6455b6407ebf46d59728223e0998de8e005cea1a33fbbc9068a0"
+      },
+      "usage": {
+        "apiVersion": "2024-11-30",
+        "model": "prebuilt-invoice",
+        "pages": 1
+      }
+    },
+    {
+      "actorId": null,
+      "chargedMicros": 5416,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-30T10:52:29.155359+00:00",
+      "creditedMicros": 0,
+      "feature": "INVOICE_OPENAI",
+      "id": "83333a4c-dc3f-4b93-8e0c-b11c1ee59ba7",
+      "kind": "USAGE",
+      "reference": "c1296dc1-0ec9-487d-a8ea-7c443f787a46",
+      "reservedMicros": 1717745,
+      "resolutionReference": null,
+      "settledAt": "2026-10-30T10:52:32.652266+00:00",
+      "status": "SETTLED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "tariff": {
+        "cachedInputMicrosPerMillion": 167516,
+        "contextTokens": 400000,
+        "currency": "EUR",
+        "inputMicrosPerMillion": 1675155,
+        "maxOutputTokens": 128000,
+        "model": "gpt-5",
+        "outputMicrosPerMillion": 13401233,
+        "responseModels": [
+          "gpt-5",
+          "gpt-5-2025-08-07"
+        ],
+        "version": "909cd861258592aaae1307c44f67191415766542d21575b64ae14de63beb35a0"
+      },
+      "usage": {
+        "cachedInputTokens": 0,
+        "inputTokens": 1425,
+        "model": "gpt-5-2025-08-07",
+        "outputTokens": 226
+      }
+    }
+  ],
+  "beforeLab": {
+    "balanceMicros": 4995848,
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "emailEnabled": false,
+    "enabled": false,
+    "lastCreditMicros": 5000000,
+    "notificationOwnerId": null,
+    "reservedMicros": 0,
+    "updatedAt": "2026-10-25T19:05:05.196809+00:00",
+    "version": 7
+  },
+  "afterLab": {
+    "balanceMicros": 4964032,
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "emailEnabled": false,
+    "enabled": false,
+    "lastCreditMicros": 5000000,
+    "notificationOwnerId": null,
+    "reservedMicros": 0,
+    "updatedAt": "2026-10-30T10:53:35.145706+00:00",
+    "version": 15
+  },
+  "unchangedLabControls": true,
+  "unchangedForeignWallet": true,
+  "noticesUnchanged": true,
+  "realCompanyActivated": false
+}

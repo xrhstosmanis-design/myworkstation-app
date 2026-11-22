@@ -1,3 +1,4 @@
+import {RemoteInvitationPanel} from "./AttendedRemoteController.jsx";
 import React,{useEffect,useState} from "react";
 import {Activity,MonitorUp,RefreshCw,RotateCcw,X} from "lucide-react";
 import RemoteAgentController from "./RemoteAgentController.jsx";
@@ -40,6 +41,7 @@ export default function DeviceOperationsCenter({manager,request,initialOpen=fals
       <button className="modal-close" onClick={()=>setOpen(false)}><X/></button>
       <header><div><h2>Super Admin Installation Center</h2><p>{manager.company.name} · {manager.store.name}</p></div><button onClick={load}><RefreshCw/>Ανανέωση</button></header>
       {error&&<div className="op-alert error">{error}</div>}
+      <RemoteInvitationPanel key={`remote:${base}`} manager={manager} request={request}/>
       <PosRemoteRecovery key={base} companyId={manager.company.id} storeId={manager.store.id} request={request}/>
       {remote&&<div className="op-alert remote-code"><b>REMOTE · Κωδικός {remote.supportCode}</b><span>Στο laptop συμπληρώνεις μόνο τον εξαψήφιο κωδικό.</span><button onClick={()=>setController(remote)}>Άνοιγμα Windows Remote Assist</button><span>Ισχύει 10 λεπτά. Ο χρήστης συμπληρώνει μόνο τον κωδικό και αποδέχεται στην εφαρμογή MyWorkStation Remote Agent του PC. Η έκδοση Windows απαιτεί πρώτα ενεργοποίηση για δοκιμή.</span></div>}
       <div className="device-health-grid">{(health?.devices||[]).map(device=><article className={String(device.health).toLowerCase()} key={device.id}><Activity/><div><b>{device.terminalPos} · {device.displayName}</b><span>{device.health} · {device.appRevision||"Άγνωστη έκδοση"}</span><small>Τελευταία σύνδεση: {device.lastSeenAt?new Date(device.lastSeenAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"ποτέ"}</small></div></article>)}</div>

@@ -25,7 +25,16 @@ const statements=callers.flatMap(path=>{
   return Array.from(source.matchAll(/`(ALTER TABLE "(?:Product|ProductBarcode|PurchaseDocument)" ADD COLUMN IF NOT EXISTS [^`]+)`/g),match=>match[1]);
 });
 assert.ok(statements.length>40,"Replay all audited initialization definitions, not one synthetic column");
-const tables=["Product","ProductBarcode","PurchaseDocument"];
+const ledgerSource=fs.readFileSync(new URL("../src/routes/store-transactions.js",import.meta.url),"utf8");
+const ledgerStart=ledgerSource.indexOf("const tableStatements=[");
+const ledgerEnd=ledgerSource.indexOf("async function ensureTables()",ledgerStart);
+assert.ok(ledgerStart>=0&&ledgerEnd>ledgerStart,"Locate the actual ledger initialization array");
+const ledgerStatements=Array.from(ledgerSource.slice(ledgerStart,ledgerEnd).matchAll(/\`(ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS [^\`]+)\`/g),match=>match[1]);
+assert.equal(ledgerStatements.length,9,"Exercise all nine actual ledger initialization definitions");
+statements.push(...ledgerStatements);
+
+const tables=["Product","ProductBarcode","PurchaseDocument","StoreTransaction"];
+
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r});return {promise,resolve}};
 const columnDescription=client=>client.$queryRaw`
   SELECT c.relname,a.attname,pg_catalog.format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull,
@@ -68,6 +77,30 @@ try{
       await tx.$executeRawUnsafe("SET LOCAL lock_timeout='400ms'");
       await tx.$executeRawUnsafe(statements[0]);
     }),error=>error?.meta?.code==="55P03","Old redundant ALTER must reproduce the reader lock conflict");
+
+    // Reproduce the incident chain, rather than only a slow ALTER:
+    // held reader -> redundant ledger ALTER -> another ordinary ledger read.
+    const ddlStarted=deferred();
+    const oldLedger=initializer.$transaction(async tx=>{
+      await tx.$executeRawUnsafe("SET LOCAL lock_timeout='2000ms'");
+      const [{pid}]=await tx.$queryRaw`SELECT pg_backend_pid() AS pid`;
+      ddlStarted.resolve(pid);
+      await tx.$executeRawUnsafe('ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoiceDocumentNumber" TEXT');
+    });
+    const oldLedgerRejected=assert.rejects(oldLedger,error=>error?.meta?.code==="55P03");
+    const ddlPid=await ddlStarted.promise;
+    let queued=false;
+    for(let attempt=0;attempt<40;attempt++){
+      const [{waiting}]=await observer.$queryRaw`SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_locks WHERE pid=${ddlPid} AND mode='AccessExclusiveLock' AND NOT granted) AS waiting`;
+      if(waiting){queued=true;break}
+      await new Promise(resolve=>setTimeout(resolve,20));
+    }
+    assert.equal(queued,true,"Old ledger ALTER must visibly queue behind the held reader");
+    await assert.rejects(observer.$transaction(async tx=>{
+      await tx.$executeRawUnsafe("SET LOCAL lock_timeout='200ms'");
+      await tx.$queryRawUnsafe('SELECT "id" FROM "StoreTransaction"');
+    }),error=>error?.meta?.code==="55P03","The queued exclusive lock must block a third ordinary ledger reader");
+    await oldLedgerRejected;
 
     const checked=deferred(),releaseGuard=deferred();
     const guardedDone=guarded.$transaction(async tx=>{

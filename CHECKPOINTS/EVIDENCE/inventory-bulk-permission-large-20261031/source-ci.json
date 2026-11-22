@@ -1,0 +1,25 @@
+{
+  "sourcePr": 3354,
+  "head": "2b37c531aa126070470e146c0d61533233b96557",
+  "ci": 41198064459,
+  "conclusion": "success",
+  "mainMerge": "2d80052bf2e4c09417afd7f4e0b7150114707db6",
+  "native8000": "PASS",
+  "controlledSixSecondDelay": "PASS",
+  "storeProductRowLock": "PASS",
+  "native10000": {
+    "elapsedMs": 204,
+    "changed": 10000
+  },
+  "acceptance": "CI only; real large-store acceptance NOT TESTED",
+  "serverTests": {
+    "pass": 4847,
+    "fail": 0,
+    "skipped": 0
+  },
+  "backupTests": {
+    "pass": 8,
+    "fail": 0,
+    "skipped": 0
+  }
+}

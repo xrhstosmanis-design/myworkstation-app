@@ -1,0 +1,265 @@
+TAP version 13
+# Subtest: actual POS recovers dispatched ftext CASH without RBS continuation, manual confirmation or checkout resend
+ok 1 - actual POS recovers dispatched ftext CASH without RBS continuation, manual confirmation or checkout resend
+  ---
+  duration_ms: 634.557295
+  ...
+# Subtest: actual POS recovers dispatched ftext CARD without RBS continuation, manual confirmation or checkout resend
+ok 2 - actual POS recovers dispatched ftext CARD without RBS continuation, manual confirmation or checkout resend
+  ---
+  duration_ms: 239.064444
+  ...
+# Subtest: actual POS operator card YES uses only its own outcome route and never resends checkout
+ok 3 - actual POS operator card YES uses only its own outcome route and never resends checkout
+  ---
+  duration_ms: 196.725581
+  ...
+# Subtest: actual POS operator card NO uses only its own outcome route and never resends checkout
+ok 4 - actual POS operator card NO uses only its own outcome route and never resends checkout
+  ---
+  duration_ms: 158.683459
+  ...
+# Subtest: actual POS failed YES decision keeps confirmation and original basket
+ok 5 - actual POS failed YES decision keeps confirmation and original basket
+  ---
+  duration_ms: 127.154956
+  ...
+# Subtest: actual POS failed NO decision keeps confirmation and original basket
+ok 6 - actual POS failed NO decision keeps confirmation and original basket
+  ---
+  duration_ms: 222.970416
+  ...
+# Subtest: mounted photo fills barcode and runs once-only scoped lookup; multi-code choice, same code, stale decode/store/error guarded
+ok 7 - mounted photo fills barcode and runs once-only scoped lookup; multi-code choice, same code, stale decode/store/error guarded
+  ---
+  duration_ms: 603.838658
+  ...
+# Subtest: actual Archive New item reuses full card, scoped single save and explicit lookup preview with stale result rejection
+ok 8 - actual Archive New item reuses full card, scoped single save and explicit lookup preview with stale result rejection
+  ---
+  duration_ms: 1060.888432
+  ...
+# Subtest: complete card persists all fields, one selected store, opening movement and identity replay once
+ok 9 - complete card persists all fields, one selected store, opening movement and identity replay once
+  ---
+  duration_ms: 20.27503
+  ...
+# Subtest: new card refuses foreign/inactive store before business writes
+ok 10 - new card refuses foreign/inactive store before business writes
+  ---
+  duration_ms: 0.533838
+  ...
+# Subtest: new card refuses foreign/inactive ProductCategory before business writes
+ok 11 - new card refuses foreign/inactive ProductCategory before business writes
+  ---
+  duration_ms: 0.315978
+  ...
+# Subtest: new card refuses foreign/inactive ProductSubcategory before business writes
+ok 12 - new card refuses foreign/inactive ProductSubcategory before business writes
+  ---
+  duration_ms: 0.532856
+  ...
+# Subtest: new card refuses foreign/inactive ManagementProductCompany before business writes
+ok 13 - new card refuses foreign/inactive ManagementProductCompany before business writes
+  ---
+  duration_ms: 0.673379
+  ...
+# Subtest: new card refuses foreign/inactive Supplier before business writes
+ok 14 - new card refuses foreign/inactive Supplier before business writes
+  ---
+  duration_ms: 0.721932
+  ...
+# Subtest: new card refuses foreign/inactive ManagementVatDepartment before business writes
+ok 15 - new card refuses foreign/inactive ManagementVatDepartment before business writes
+  ---
+  duration_ms: 0.491423
+  ...
+# Subtest: duplicate barcode and store-bound user cannot create
+ok 16 - duplicate barcode and store-bound user cannot create
+  ---
+  duration_ms: 1.903219
+  ...
+# Subtest: late supplier insert failure rolls back product, barcode and stock
+ok 17 - late supplier insert failure rolls back product, barcode and stock
+  ---
+  duration_ms: 0.888784
+  ...
+# Subtest: zero initial stock creates no movement and duplicate input rows fail
+ok 18 - zero initial stock creates no movement and duplicate input rows fail
+  ---
+  duration_ms: 0.918899
+  ...
+# Subtest: native PostgreSQL full creation, replay, readback and failed insert rollback
+ok 19 - native PostgreSQL full creation, replay, readback and failed insert rollback # SKIP
+  ---
+  duration_ms: 0.114403
+  ...
+# Subtest: new full card requires explicit department and refuses changed rate before inserts
+ok 20 - new full card requires explicit department and refuses changed rate before inserts
+  ---
+  duration_ms: 1.589314
+  ...
+# Subtest: owner product schema is additive
+ok 21 - owner product schema is additive
+  ---
+  duration_ms: 1.684568
+  ...
+# Subtest: owner product flow preserves master catalog and store pricing rules
+ok 22 - owner product flow preserves master catalog and store pricing rules
+  ---
+  duration_ms: 0.175936
+  ...
+# Subtest: product quality catalogue never reuses stale supplier data
+ok 23 - product quality catalogue never reuses stale supplier data
+  ---
+  duration_ms: 0.498725
+  ...
+# Subtest: saving the full inventory card refreshes the outer product quality list
+ok 24 - saving the full inventory card refreshes the outer product quality list
+  ---
+  duration_ms: 0.165851
+  ...
+# Subtest: full product card is tenant scoped and keeps commercial history
+ok 25 - full product card is tenant scoped and keeps commercial history
+  ---
+  duration_ms: 0.262527
+  ...
+# Subtest: owner UI exposes the complete central product card
+ok 26 - owner UI exposes the complete central product card
+  ---
+  duration_ms: 0.27109
+  ...
+# Subtest: active catalog reloads every editable product-card switch
+ok 27 - active catalog reloads every editable product-card switch
+  ---
+  duration_ms: 0.232933
+  ...
+# Subtest: owner UI exposes a read-only LAB product quality audit
+ok 28 - owner UI exposes a read-only LAB product quality audit
+  ---
+  duration_ms: 0.375438
+  ...
+# Subtest: store pricing opens the complete warehouse product card
+ok 29 - store pricing opens the complete warehouse product card
+  ---
+  duration_ms: 0.247044
+  ...
+# Subtest: invoice-created products retain their supplier relationship
+ok 30 - invoice-created products retain their supplier relationship
+  ---
+  duration_ms: 0.821613
+  ...
+# Subtest: startup repairs missing supplier links from finalized purchase history
+ok 31 - startup repairs missing supplier links from finalized purchase history
+  ---
+  duration_ms: 0.307135
+  ...
+# Subtest: legacy invoice lines without product id repair by one exact tenant SKU
+ok 32 - legacy invoice lines without product id repair by one exact tenant SKU
+  ---
+  duration_ms: 0.196828
+  ...
+# Subtest: product card persists supplier by finalized purchase id before matching display text
+ok 33 - product card persists supplier by finalized purchase id before matching display text
+  ---
+  duration_ms: 0.563543
+  ...
+# Subtest: product details expose the exact supplier id from the visible purchase row
+ok 34 - product details expose the exact supplier id from the visible purchase row
+  ---
+  duration_ms: 0.17869
+  ...
+# Subtest: POS new-product native guard refuses production URLs, redirection parameters and duplicate authority
+ok 35 - POS new-product native guard refuses production URLs, redirection parameters and duplicate authority
+  ---
+  duration_ms: 2.496056
+  ...
+# Subtest: actual POS routes and shared creator enforce real PostgreSQL permissions, licences, complete atomic creation and User FK identity
+ok 36 - actual POS routes and shared creator enforce real PostgreSQL permissions, licences, complete atomic creation and User FK identity # SKIP
+  ---
+  duration_ms: 0.599897
+  ...
+# Subtest: new product authority is explicit, never inherited from generic POS admin actions
+ok 37 - new product authority is explicit, never inherited from generic POS admin actions
+  ---
+  duration_ms: 1.134556
+  ...
+# Subtest: actual registered POS routes recheck persisted permission, scope, both module gates and online authority
+ok 38 - actual registered POS routes recheck persisted permission, scope, both module gates and online authority
+  ---
+  duration_ms: 113.100664
+  ...
+# Subtest: shared lookup preserves local duplicate priority, Master preview and explicit bounded external fallback
+ok 39 - shared lookup preserves local duplicate priority, Master preview and explicit bounded external fallback
+  ---
+  duration_ms: 1.054956
+  ...
+# Subtest: shared full creator sends every BackOffice field, exact department and row arrays once through its supplied POS endpoint
+ok 40 - shared full creator sends every BackOffice field, exact department and row arrays once through its supplied POS endpoint
+  ---
+  duration_ms: 441.620545
+  ...
+# Subtest: shared creator drops old A-B-A save completion without spending the new save busy state or identity
+ok 41 - shared creator drops old A-B-A save completion without spending the new save busy state or identity
+  ---
+  duration_ms: 105.407727
+  ...
+# Subtest: revoking online lookup discards pending preview and keeps manual full-card fields
+ok 42 - revoking online lookup discards pending preview and keeps manual full-card fields
+  ---
+  duration_ms: 42.919441
+  ...
+# Subtest: retained old render callbacks cannot initiate a write or apply old preview after store change or close
+ok 43 - retained old render callbacks cannot initiate a write or apply old preview after store change or close
+  ---
+  duration_ms: 55.160487
+  ...
+# Subtest: actual POS hides new product without explicit access
+ok 44 - actual POS hides new product without explicit access
+  ---
+  duration_ms: 241.312706
+  ...
+# Subtest: actual POS opens same full creator and retains basket after save
+ok 45 - actual POS opens same full creator and retains basket after save
+  ---
+  duration_ms: 268.8799
+  ...
+# Subtest: existing full card retains exact stored department, selects same-rate alternative and blocks missing mapping
+ok 46 - existing full card retains exact stored department, selects same-rate alternative and blocks missing mapping
+  ---
+  duration_ms: 878.402761
+  ...
+# Subtest: composition route parses and is mounted before generic owner product routes
+ok 47 - composition route parses and is mounted before generic owner product routes
+  ---
+  duration_ms: 70.36466
+  ...
+# Subtest: SET associations are tenant scoped, editable and audited
+ok 48 - SET associations are tenant scoped, editable and audited
+  ---
+  duration_ms: 0.38323
+  ...
+# Subtest: recipe card reuses the KAT PreparationRecipeLine source of truth
+ok 49 - recipe card reuses the KAT PreparationRecipeLine source of truth
+  ---
+  duration_ms: 0.32397
+  ...
+# Subtest: checking SET or recipe opens its functional association tab
+ok 50 - checking SET or recipe opens its functional association tab
+  ---
+  duration_ms: 1.342892
+  ...
+# Subtest: POS catalog exposes SET rows and cart adds them automatically
+ok 51 - POS catalog exposes SET rows and cart adds them automatically
+  ---
+  duration_ms: 11.072669
+  ...
+1..51
+# tests 51
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 2613.380197

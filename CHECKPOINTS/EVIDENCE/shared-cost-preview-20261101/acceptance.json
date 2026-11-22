@@ -1,0 +1,99 @@
+{
+  "status": "SCOPED HOSTED SYNTHETIC PREVIEW PASS",
+  "revision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e",
+  "sourcePR": 3488,
+  "sourceCI": 41346778506,
+  "mainCI": 41348911362,
+  "mainValidation": {
+    "serverPass": 5148,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "guard": 41350280601,
+  "deploy": "dep-dbjqkgu7bikc7389ei10",
+  "testAt": "2026-11-01T21:15:47.901Z",
+  "beforeAt": "2026-11-01T21:14:03.082Z",
+  "afterAt": "2026-11-01T21:16:10.814Z",
+  "operator": "Authenticated Platform SuperAdmin",
+  "surface": "Chrome cloud tab1 / canonical platform-admin",
+  "physicalTerminalShiftSkuQuantityPayment": "N/A - no business transaction",
+  "input": {
+    "syntheticOnly": true,
+    "period": "2026-10",
+    "baseCents": "10000",
+    "days": [
+      31,
+      31,
+      16
+    ],
+    "markupBps": 5000
+  },
+  "observed": {
+    "totalCents": "15000",
+    "markupCents": "5000",
+    "totalDays": 78,
+    "storeCents": [
+      "5962",
+      "5961",
+      "3077"
+    ],
+    "companyCents": [
+      "5962",
+      "5961",
+      "3077"
+    ],
+    "noChargeOrDebtLabel": true
+  },
+  "labBefore": {
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "entries": 14,
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "requests": 9,
+    "debtMicros": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ]
+  },
+  "labAfter": {
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "entries": 14,
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "requests": 9,
+    "debtMicros": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ]
+  },
+  "measuredValuesEqual": true,
+  "notices": "Only pre-existing 25Oct disabled-email credit notice",
+  "privateRealCustomerControl": "NOT TESTED - automatic approval review rejected private extraction; no retry",
+  "hostedNotTested": [
+    "real customer financial invariance",
+    "real enrolled allocations",
+    "actual posting/credit/repayment/email",
+    "new paid provider calls",
+    "input edit/catalogue invalidation (CI coverage only)"
+  ],
+  "remainingOpen": [
+    "external EUR tariffs",
+    "actual shared monthly financial posting",
+    "real customer funding and first detailed email",
+    "general wallet and parent36"
+  ],
+  "screenshot": "result.jpg"
+}

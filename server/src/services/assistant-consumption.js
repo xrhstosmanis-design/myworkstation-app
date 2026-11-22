@@ -1,3 +1,4 @@
+import {reviewedCashQuestion,explicitlyReviewedCashQuestion} from '../../../shared/assistant-reviewed-cash.mjs';
 import {assistantBusinessDomain} from '../../../shared/assistant-business.mjs';
 import {z} from "zod";
 import {salesOnlyQuestion} from "./assistant-question-intent.js";
@@ -24,7 +25,7 @@ export function dailyConsumptionRequest(question,{now=new Date()}={}){
  const parsed=consumptionArguments.safeParse({kind:"SELF_CONSUMPTION",from:date,to:date,product:null});
  return parsed.success?{args:parsed.data}:{clarification:"Γράψε μια έγκυρη ημερομηνία για τη λίστα ιδιοκατανάλωσης, π.χ. 13/10/2026."};
 }
-export function toolsForAssistantQuestion(question,tools){return assistantBusinessDomain(question)?tools.filter(t=>t.name==="business_records"):consumptionQuestion(question)?tools.filter(t=>t.name===consumptionTool.name):salesOnlyQuestion(question)?tools.filter(t=>["sales_by_product","sales_by_store"].includes(t.name)):tools;}
+export function toolsForAssistantQuestion(question,tools){if(reviewedCashQuestion(question)&&(tools.some(t=>t.name==='cash_review')||explicitlyReviewedCashQuestion(question)))return tools.filter(t=>t.name==='cash_review');return assistantBusinessDomain(question)?tools.filter(t=>t.name==="business_records"):consumptionQuestion(question)?tools.filter(t=>t.name===consumptionTool.name):salesOnlyQuestion(question)?tools.filter(t=>["sales_by_product","sales_by_store"].includes(t.name)):tools;}
 export function checkedConsumptionAnswer(question,answer,evidence){
  if(!consumptionQuestion(question))return answer;
  if(evidence.some(r=>r.kind==="consumption"))return {...answer,sources:["Συμβάντα POS · Ιδιοκατανάλωση / Καταστροφή προϊόντων"]};

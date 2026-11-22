@@ -1,5 +1,6 @@
 import {lineEvidenceCandidates,assertNoLineEvidenceDuplicate} from "./invoice-line-evidence.js";
 import crypto from "node:crypto";
+import {assertReusableInvoicePayment} from "./invoice-payment-reuse.js";
 
 const error=(message,code="INVOICE_RECONCILIATION_REQUIRED")=>Object.assign(new Error(message),{status:409,code});
 const tax=value=>String(value||"").replace(/\D/g,"");
@@ -48,6 +49,98 @@ export function sameGroupedNumberReceiptForReview(left,right){
   &&sameSupplierReceiptForReview({...left,documentDate:right.documentDate},right));
 }
 const inboundType=row=>String(row.invoiceType||"1.1").startsWith("5.")?"CREDIT_NOTE":"INVOICE";
+// Read the existing credit application; this path never applies or refunds money.
+// Keep the original document ID and spelling: the cash writer's immutable audit
+// and idempotent retry refer to that exact document, not merely its amount.
+export async function inspectAppliedCreditForMerge(db,row,p){
+ const denied=version=>({verified:false,version:version||null});
+ if(inboundType(row)!=="CREDIT_NOTE"||p.documentType!=="CREDIT_NOTE"||!p.exact
+  ||!p.paymentTransactionId||p.supplierId!==p.documentSupplierId||tax(p.taxId)!==tax(row.issuerVat)
+  ||tax(p.paymentTaxId)!==tax(row.issuerVat))return denied();
+ const tables=await db.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') IS NOT NULL AS "auditExists"`;
+ if(!tables[0]?.auditExists)return denied();
+ const rows=await db.$queryRaw`SELECT row_to_json(t) AS "payment",row_to_json(d) AS "document"
+  FROM "StoreTransaction" t JOIN "PurchaseDocument" d ON d."paymentTransactionId"=t."id" AND d."companyId"=t."companyId" AND d."storeId"=t."storeId"
+  WHERE t."id"=${p.paymentTransactionId} AND t."companyId"=${row.companyId} AND t."storeId"=${row.storeId} AND d."id"=${p.documentId} FOR SHARE OF t,d`;
+ const audits=await db.$queryRaw`SELECT row_to_json(a) AS "audit" FROM "StoreOperatorAudit" a
+  WHERE a."companyId"=${row.companyId} AND a."storeId"=${row.storeId} AND a."eventType"='SUPPLIER_CREDIT_CASH_APPLIED'
+   AND (a."details"->>'creditDocumentId'=${p.documentId} OR a."details"->>'transactionId'=${p.paymentTransactionId})
+  ORDER BY a."id" LIMIT 3 FOR SHARE OF a`;
+ const t=rows[0]?.payment,d=rows[0]?.document,a=audits[0]?.audit,v=a?.details,r=v?.result;
+ let original=[];
+ if(v?.mode==="OFFSET"&&typeof v.invoicePaymentId==="string")original=await db.$queryRaw`SELECT row_to_json(t) AS "payment" FROM "StoreTransaction" t
+  WHERE t."id"=${v.invoicePaymentId} AND t."companyId"=${row.companyId} AND t."storeId"=${row.storeId} FOR SHARE OF t`;
+ const version=crypto.createHash("sha256").update(JSON.stringify({rows,audits,original})).digest("hex");
+ const cents=value=>{if(value==null||value===""||typeof value==="boolean")return null;const n=Number(value);return Number.isFinite(n)&&Math.abs(n)<=999999999&&Math.abs(n*100-Math.round(n*100))<.00001?Math.round(n*100):null};
+ const total=cents(row.totalGross),sameNumber=(left,right)=>{const x=invoiceNumberParts(left),y=invoiceNumberParts(right);return Boolean(x.number&&x.number===y.number&&x.series===y.series)};
+ if(rows.length!==1||audits.length!==1||!(total>0)||!t||!d||!v||!r
+  ||t.type!=="SUPPLIER_PAYMENT"||t.reversedAt||cents(t.amount)!==-total||cents(p.paymentAmount)!==-total
+  ||t.supplierId!==p.supplierId||d.supplierId!==p.supplierId||d.id!==p.documentId||d.purchaseOrderId!==p.orderId
+  ||d.documentType!=="CREDIT_NOTE"||d.status!=="DRAFT"||p.status!=="NEW"||d.settlementMode!=="PAID"||cents(d.totalGross)!==total
+  ||!sameNumber(t.invoiceDocumentNumber,d.documentNumber)||!sameNumber(d.documentNumber,[row.series,row.documentNumber].filter(Boolean).join(" "))
+  ||day(d.documentDate)!==day(row.issueDate)||t.attachmentFilename!==d.id||!t.sessionId||t.subtractFromShift!==true||t.paymentMethod!=="CASH_SHIFT"
+  ||typeof t.actorId!=="string"||!t.actorId||a.actorId!==t.actorId||v.sessionId!==t.sessionId||v.supplierId!==t.supplierId||v.confirmOriginal!==true
+  ||typeof v.idempotencyKey!=="string"||!v.idempotencyKey||typeof v.requestHash!=="string"||!v.requestHash
+  ||v.transactionId!==t.id||v.creditDocumentId!==d.id||v.creditDocumentNumber!==d.documentNumber
+  ||cents(v.creditAmount)!==total||cents(v.negativePaymentAmount)!==-total||!["OFFSET","CASH_RETURN"].includes(v.mode)
+  ||r.ok!==true||r.transactionId!==t.id||r.creditDocumentId!==d.id||r.mode!==v.mode||r.invoicePaymentId!==v.invoicePaymentId
+  ||cents(r.creditAmount)!==total||cents(r.negativePaymentAmount)!==-total)return denied(version);
+ if(v.mode==="OFFSET"){
+  const positive=original[0]?.payment;
+  if(original.length!==1||!positive||positive.type!=="SUPPLIER_PAYMENT"||positive.reversedAt||!(cents(positive.amount)>0)
+   ||positive.supplierId!==t.supplierId||positive.sessionId!==t.sessionId||positive.subtractFromShift!==true||positive.paymentMethod!=="CASH_SHIFT"
+   ||cents(positive.amount)!==cents(v.invoiceGrossPayment)||!sameNumber(positive.invoiceDocumentNumber,v.invoiceDocumentNumber)
+   ||cents(v.previousAppliedAmount)===null||!(cents(v.previousAppliedAmount)>=0)||total+cents(v.previousAppliedAmount)>cents(positive.amount))return denied(version);
+ }else if(v.invoicePaymentId!==null||v.invoiceGrossPayment!==null||original.length)return denied(version);
+ return {verified:true,version};
+}
+// Credit continuation must not inherit the looser near-total/date heuristics
+// used only to discover possible duplicate receipts.
+function exactCreditContinuationHeader(row,candidate){
+ const cents=value=>{if(value==null||value===""||typeof value==="boolean")return null;const n=Number(value);return Number.isFinite(n)&&Math.abs(n)<=999999999&&Math.abs(n*100-Math.round(n*100))<.00001?Math.round(n*100):null};
+ const a=invoiceNumberParts(candidate.documentNumber),b=invoiceNumberParts([row.series,row.documentNumber].filter(Boolean).join(" "));
+ const total=cents(row.totalGross);
+ return Boolean(candidate.documentType==="CREDIT_NOTE"&&a.number&&a.number===b.number&&a.series===b.series
+  &&day(candidate.documentDate)&&day(candidate.documentDate)===day(row.issueDate)&&total>0&&cents(candidate.totalGross)===total);
+}
+// This is an advisory, server-derived capability, never an instruction to write
+// money or correct the paid original. The writer still validates the entire
+// flat family and posting state under its existing store/row locks.
+export function canReviewAdditionalCreditSeries(row,original,extra){
+ const recorded=row?.rawPayload?.commonDraft;
+ const cents=value=>{if(value==null||value===""||typeof value==="boolean")return null;const n=Number(value);return Number.isFinite(n)&&Math.abs(n)<=999999999&&Math.abs(n*100-Math.round(n*100))<.00001?Math.round(n*100):null};
+ const validDay=value=>{if(!value)return "";const d=new Date(value);return Number.isFinite(d.getTime())?d.toISOString().slice(0,10):""};
+ if(!row?.companyId||!row.storeId||inboundType(row)!=="CREDIT_NOTE"||!row.attachmentId||row.mimeType!=="application/pdf"
+  ||recorded?.completed!==true||!original||!extra||original===extra
+  ||original.isMyData!==true||extra.isMyData!==false||original.exact!==true||original.headerReviewRequired||original.supplierReviewRequired
+  ||extra.headerReviewRequired!==true||extra.supplierReviewRequired
+  ||original.status!=="NEW"||original.documentStatus!=="DRAFT"||extra.status!=="NEW"||extra.documentStatus!=="DRAFT"
+  ||original.documentType!=="CREDIT_NOTE"||extra.documentType!=="CREDIT_NOTE"
+  ||[original,extra].some(o=>o.companyId!==row.companyId||o.storeId!==row.storeId)
+  ||original.orderId===extra.orderId||original.documentId===extra.documentId
+  ||original.creditPaymentVerified!==true||!original.creditProofVersion||!original.paymentTransactionId
+  ||original.settlementMode!=="PAID"||original.reversedAt||original.paymentType!=="SUPPLIER_PAYMENT"||original.paymentStoreId!==row.storeId
+  ||extra.paymentTransactionId!=null||extra.paymentAmount!=null||extra.reversedAt
+  ||extra.settlementMode!=null&&extra.settlementMode!=="CREDIT"
+  ||!original.supplierId||[original.documentSupplierId,extra.supplierId,extra.documentSupplierId].some(id=>id!==original.supplierId)
+  ||!tax(row.issuerVat)||[original.taxId,extra.taxId,original.paymentTaxId].some(v=>tax(v)!==tax(row.issuerVat))
+  ||!(Number(original.lineCount)>0)
+  ||recorded.orderId!==original.orderId||recorded.documentId!==original.documentId||recorded.paymentTransactionId!==original.paymentTransactionId
+  ||recorded.inboxId!==row.inboxId||String(recorded.mark)!==String(row.mark)
+  ||row.rawPayload.mydataDraftOrderId!==original.orderId||row.rawPayload.mydataDraftDocumentId!==original.documentId||row.jobDocumentId!==original.documentId
+  ||!Array.isArray(recorded.aliasOrderIds)||!recorded.aliasOrderIds.length
+  ||recorded.aliasOrderIds.some(id=>typeof id!=="string"||!id||id===original.orderId||id===extra.orderId)
+  ||new Set(recorded.aliasOrderIds).size!==recorded.aliasOrderIds.length)return false;
+ const official=invoiceNumberParts([row.series,row.documentNumber].filter(Boolean).join(" "));
+ const root=invoiceNumberParts(original.documentNumber),rootOrder=invoiceNumberParts(original.invoiceNumber);
+ const other=invoiceNumberParts(extra.documentNumber),otherOrder=invoiceNumberParts(extra.invoiceNumber);
+ const total=cents(row.totalGross),issueDay=validDay(row.issueDate);
+ return Boolean(official.number&&root.number===official.number&&root.series===official.series
+  &&rootOrder.number===root.number&&rootOrder.series===root.series
+  &&other.number===official.number&&otherOrder.number===other.number&&otherOrder.series===other.series&&other.series!==official.series
+  &&issueDay&&validDay(original.documentDate)===issueDay&&validDay(extra.documentDate)===issueDay
+  &&total>0&&cents(original.totalGross)===total&&cents(extra.totalGross)===total&&cents(original.paymentAmount)===-total);
+}
 export async function ensureInvoiceCommonDraftSchema(db){
  if(!schemas.has(db))schemas.set(db,(async()=>{
   await db.$executeRawUnsafe(`ALTER TABLE IF EXISTS "PurchaseOrder" ADD COLUMN IF NOT EXISTS "reopenVersion" INTEGER NOT NULL DEFAULT 0`);
@@ -93,7 +186,7 @@ async function inbound(db,{companyId,storeId,inboxId}){
 async function candidateOrders(db,row){
  const numeric=invoiceNumberParts(row.documentNumber).number;
  const lineMatches=await lineEvidenceCandidates(db,row),lineMatchMap=new Map(lineMatches.map(x=>[x.orderId,x]));
- const rows=await db.$queryRaw`SELECT o."id" AS "orderId",o."status",o."sourceDocumentId" AS "documentId",o."createdAt",o."updatedAt",o."invoiceNumber",
+ const rows=await db.$queryRaw`SELECT o."id" AS "orderId",o."status",o."sourceDocumentId" AS "documentId",o."createdAt",o."updatedAt",o."invoiceNumber",o."companyId",o."storeId",d."settlementMode",
   o."supplierId",s."taxId",s."name" AS "supplierName",d."supplierId" AS "documentSupplierId",d."updatedAt" AS "documentUpdatedAt",d."documentDate",d."documentNumber",d."documentType",d."totalGross",d."status" AS "documentStatus",d."paymentTransactionId",
   md5(row_to_json(t)::text) AS "paymentVersion",t."invoiceDocumentNumber" AS "paymentInvoiceNumber",
   t."supplierId" AS "paymentSupplierId",paid."taxId" AS "paymentTaxId",t."amount" AS "paymentAmount",t."reversedAt",t."type" AS "paymentType",t."storeId" AS "paymentStoreId",
@@ -123,7 +216,7 @@ async function candidateOrders(db,row){
        AND REGEXP_REPLACE(UPPER(REGEXP_REPLACE(COALESCE(d."documentNumber",o."invoiceNumber",''),'[0-9]+[^0-9]*$','')),'[^A-ZΑ-Ω0-9]','','g')=${invoiceNumberParts([row.series,row.documentNumber].filter(Boolean).join(" ")).series}))))
   ORDER BY o."createdAt",o."id" LIMIT 21`;
  if(rows.length>20)throw error("Πολλές πιθανές αντιστοιχίσεις· περιόρισε τον έλεγχο των παραστατικών.");
- return rows.map(o=>({...o,lineCount:Number(o.lineCount),totalGross:amount(o.totalGross),paymentAmount:o.paymentAmount==null?null:amount(o.paymentAmount),
+ const mapped=rows.map(o=>({...o,lineCount:Number(o.lineCount),totalGross:amount(o.totalGross),paymentAmount:o.paymentAmount==null?null:amount(o.paymentAmount),
   lineEvidence:lineMatchMap.get(o.orderId)||null,
   headerReviewRequired:Boolean((lineMatchMap.has(o.orderId)&&!sameInvoiceIdentityForReview(o,{documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross}))
    ||(sameGroupedNumberReceiptForReview({...o,supplierTaxId:o.taxId},{supplierTaxId:row.issuerVat,documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross})&&!sameInvoiceIdentityForReview(o,{documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross}))
@@ -131,9 +224,15 @@ async function candidateOrders(db,row){
   supplierReviewRequired:!tax(o.taxId)||tax(o.taxId)!==tax(row.issuerVat),
   exact:Boolean(tax(o.taxId)&&tax(o.taxId)===tax(row.issuerVat)&&o.documentType===inboundType(row)&&sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber)&&day(o.documentDate)===day(row.issueDate)&&Math.abs(amount(o.totalGross)-amount(row.totalGross))<=.050001),
   isMyData:o.orderId===row.rawPayload?.mydataDraftOrderId||o.documentId===row.jobDocumentId}));
+ for(const o of mapped)if(o.paymentTransactionId&&o.paymentAmount<0){const proof=await inspectAppliedCreditForMerge(db,row,o);o.creditPaymentVerified=proof.verified;o.creditProofVersion=proof.version;}
+ const original=mapped.find(o=>o.isMyData);
+ if(inboundType(row)==="CREDIT_NOTE"&&row.rawPayload?.commonDraft?.completed===true&&original?.paymentTransactionId&&original.paymentAmount<0)
+  for(const o of mapped)if(!o.isMyData&&!exactCreditContinuationHeader(row,o))o.headerReviewRequired=true;
+ for(const o of mapped)o.additionalCreditSeriesReviewEligible=canReviewAdditionalCreditSeries(row,original,o);
+ return mapped;
 }
 const version=(row,orders)=>crypto.createHash("sha256").update(JSON.stringify({inboxId:row.inboxId,mark:row.mark,attachmentId:row.attachmentId,issuerVat:row.issuerVat,series:row.series,documentNumber:row.documentNumber,issueDate:row.issueDate,totalGross:row.totalGross,invoiceType:row.invoiceType,
- orderId:row.rawPayload?.mydataDraftOrderId,orders:orders.map(o=>[o.orderId,o.documentId,o.status,o.documentStatus,o.updatedAt,o.documentUpdatedAt,o.lineVersion,o.documentLineVersion,o.supplierId,o.documentSupplierId,o.taxId,o.paymentVersion,o.invoiceNumber,o.documentNumber,o.documentType,o.documentDate,o.totalGross,o.lineCount,o.paymentTransactionId,o.paymentAmount])})).digest("hex");
+ orderId:row.rawPayload?.mydataDraftOrderId,documentId:row.rawPayload?.mydataDraftDocumentId,jobDocumentId:row.jobDocumentId,commonDraft:row.rawPayload?.commonDraft||null,orders:orders.map(o=>[o.orderId,o.documentId,o.status,o.documentStatus,o.updatedAt,o.documentUpdatedAt,o.lineVersion,o.documentLineVersion,o.supplierId,o.documentSupplierId,o.taxId,o.paymentVersion,o.invoiceNumber,o.documentNumber,o.documentType,o.documentDate,o.totalGross,o.lineCount,o.paymentTransactionId,o.paymentAmount,o.creditProofVersion,o.companyId,o.storeId,o.settlementMode,o.additionalCreditSeriesReviewEligible])})).digest("hex");
 export async function previewInvoiceReconciliation(db,scope){
  const row=await inbound(db,scope),orders=await candidateOrders(db,row);
  const verifiedSuppliers=await db.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${scope.companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'[^0-9]','','g')=${tax(row.issuerVat)} ORDER BY "id" LIMIT 21`;
@@ -145,7 +244,7 @@ export async function previewInvoiceReconciliation(db,scope){
   WHERE j."companyId"=${scope.companyId} AND j."storeId"=${scope.storeId}
    AND j."purchaseDocumentId"=ANY(${orders.map(o=>o.documentId)}::text[]) ORDER BY a."id"`:[];
  const registered=orders.find(o=>o.isMyData&&(o.status==="INVOICED"||o.documentStatus==="APPROVED"));
- return {registered:Boolean(registered),registeredOrderId:registered?.orderId||null,inboxId:row.inboxId,mark:row.mark,issuerVat:row.issuerVat,documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),
+ return {appliedCreditReviewSupported:true,additionalCreditSeriesReviewSupported:true,documentType:inboundType(row),additionalDraftReviewSupported:true,registered:Boolean(registered),registeredOrderId:registered?.orderId||null,inboxId:row.inboxId,mark:row.mark,issuerVat:row.issuerVat,documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),
   issueDate:day(row.issueDate),totalGross:amount(row.totalGross),originalAvailable:row.mimeType==="application/pdf",commonDraft:row.rawPayload?.commonDraft||null,version:version(row,orders),orders,files,verifiedSuppliers,lines:lines.map(l=>l.row)};
 }
 async function postedOrders(tx,companyId,orders){
@@ -155,12 +254,75 @@ async function postedOrders(tx,companyId,orders){
  const approved=orders.filter(o=>o.documentStatus==="APPROVED"||o.status!=="NEW");
  return [...new Set([...rows.map(o=>o.orderId),...approved.map(o=>o.orderId),...orders.filter(o=>stock.some(p=>p.sourceDocumentId===o.documentId)).map(o=>o.orderId)])];
 }
+// Existing POS receipt writers may legitimately add the first payment after an
+// unpaid common pair. Verify their two persisted proofs without binding or
+// changing anything here; a bare document/ledger link is not receipt evidence.
+async function verifiedFirstCommonPayment(tx,scope,row,original){
+ const paymentId=original.paymentTransactionId,receipt=row.rawPayload?.mydataPosReceipt;
+ const validReceipt=value=>value&&value.paymentTransactionId===paymentId&&value.requiresHumanReceiptReview===true
+  &&typeof value.receivedAt==="string"&&Number.isFinite(Date.parse(value.receivedAt))
+  &&Array.isArray(value.attachmentIds)&&value.attachmentIds.length>0&&value.attachmentIds.length<=5
+  &&value.attachmentIds.every(id=>typeof id==="string"&&id.length>0)&&new Set(value.attachmentIds).size===value.attachmentIds.length;
+ if(!validReceipt(receipt))return false;
+ const jobs=await tx.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}
+  AND "attachmentId"=${row.attachmentId} AND "purchaseDocumentId"=${original.documentId} ORDER BY "createdAt","id" LIMIT 1 FOR SHARE`;
+ const stored=jobs[0]?.resultJson?.mydataPosReceipt;
+ if(!validReceipt(stored)||stored.receivedAt!==receipt.receivedAt||JSON.stringify([...stored.attachmentIds].sort())!==JSON.stringify([...receipt.attachmentIds].sort()))return false;
+ const attachments=await tx.$queryRaw`SELECT "id","mimeType" FROM "DocumentAttachment" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "id"=ANY(${receipt.attachmentIds}::text[]) FOR SHARE`;
+ if(attachments.length!==receipt.attachmentIds.length||attachments.some(a=>!["application/pdf","image/jpeg","image/png","image/webp"].includes(a.mimeType)))return false;
+ const payments=await tx.$queryRaw`SELECT t.*,s."taxId" AS "supplierTaxId" FROM "StoreTransaction" t
+  JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
+  WHERE t."id"=${paymentId} AND t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} FOR SHARE OF t`;
+ if(inboundType(row)==="CREDIT_NOTE"&&original.creditPaymentVerified===true)return true;
+ try{assertReusableInvoicePayment(payments[0],{companyId:scope.companyId,storeId:scope.storeId,supplierId:original.supplierId,supplierTaxId:row.issuerVat,
+  documentNumber:original.documentNumber,totalGross:row.totalGross});return true}catch{return false}
+}
+// A completed common draft may accept another reviewed member, but its root
+// and all existing aliases must stay flat. Never reinterpret an alias chain or
+// an incomplete/cross-scope family as permission to consolidate more records.
+async function stableCommonFamily(tx,scope,row,original,recorded,pos){
+ const fail=()=>{throw error("Η κοινή αγορά ή οι ιστορικές συνδέσεις της χρειάζονται χωριστό έλεγχο.","INVOICE_COMMON_FAMILY_REVIEW_REQUIRED")};
+ const official=invoiceNumberParts([row.series,row.documentNumber].filter(Boolean).join(" ")),orderNumber=invoiceNumberParts(original?.invoiceNumber);
+ const recordedPayment=recorded.paymentTransactionId??null,currentPayment=original?.paymentTransactionId??null;
+ const validPaymentId=value=>value===null||typeof value==="string"&&value.length>0;
+ if(!official.number||official.number!==orderNumber.number||official.series!==orderNumber.series
+  ||!validPaymentId(recordedPayment)||!validPaymentId(currentPayment)||recordedPayment!==null&&recordedPayment!==currentPayment)fail();
+ if(!original||!original.exact||recorded.orderId!==original.orderId||recorded.documentId!==original.documentId
+  ||recorded.inboxId!==scope.inboxId||String(recorded.mark)!==String(row.mark)
+  ||row.rawPayload?.mydataDraftOrderId!==recorded.orderId||row.rawPayload?.mydataDraftDocumentId!==recorded.documentId
+  ||row.jobDocumentId!==recorded.documentId||tax(original.taxId)!==tax(row.issuerVat)||!tax(original.taxId)
+  ||original.supplierId!==original.documentSupplierId||!Array.isArray(recorded.aliasOrderIds)
+  ||recorded.aliasOrderIds.some(id=>typeof id!=="string"||!id||id===recorded.orderId)
+  ||new Set(recorded.aliasOrderIds).size!==recorded.aliasOrderIds.length)fail();
+ const documents=await tx.$queryRaw`SELECT "id","purchaseOrderId","sourceType" FROM "PurchaseDocument" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "id"=ANY(${[original.documentId,pos.documentId]}::text[])`;
+ if(documents.length!==2||documents.some(d=>d.sourceType!=="POS_OCR_DRAFT"||d.purchaseOrderId!==(d.id===original.documentId?original.orderId:pos.orderId)))fail();
+ const family=await tx.$queryRaw`SELECT a.*,o."status" AS "aliasOrderStatus",o."sourceDocumentId" AS "aliasOrderDocumentId",
+   d."status" AS "aliasDocumentStatus",d."purchaseOrderId" AS "aliasDocumentOrderId",
+   EXISTS(SELECT 1 FROM "PurchaseOrderPosting" p WHERE p."companyId"=a."companyId" AND p."orderId"=a."aliasOrderId") AS "aliasOrderPosted",
+   EXISTS(SELECT 1 FROM "InvoiceStockPosting" p WHERE p."companyId"=a."companyId" AND p."sourceDocumentId"=a."aliasDocumentId") AS "aliasStockPosted"
+  FROM "InvoiceDraftAlias" a
+  LEFT JOIN "PurchaseOrder" o ON o."id"=a."aliasOrderId" AND o."companyId"=a."companyId" AND o."storeId"=a."storeId"
+  LEFT JOIN "PurchaseDocument" d ON d."id"=a."aliasDocumentId" AND d."companyId"=a."companyId" AND d."storeId"=a."storeId"
+  WHERE a."companyId"=${scope.companyId} AND (a."canonicalOrderId"=${recorded.orderId} OR a."canonicalDocumentId"=${recorded.documentId}
+   OR a."aliasOrderId"=ANY(${recorded.aliasOrderIds}::text[]) OR a."aliasOrderId"=${recorded.orderId} OR a."aliasDocumentId"=${recorded.documentId}
+   OR a."canonicalOrderId"=${pos.orderId} OR a."canonicalDocumentId"=${pos.documentId} OR a."aliasDocumentId"=${pos.documentId})
+  ORDER BY a."aliasOrderId" FOR UPDATE OF a`;
+ if(family.length!==recorded.aliasOrderIds.length||family.some(a=>a.storeId!==scope.storeId||a.canonicalOrderId!==recorded.orderId||a.canonicalDocumentId!==recorded.documentId
+  ||a.inboxId!==scope.inboxId||String(a.mark)!==String(row.mark)||!recorded.aliasOrderIds.includes(a.aliasOrderId)
+  ||a.aliasOrderId===recorded.orderId||a.aliasDocumentId===recorded.documentId||a.aliasOrderStatus!=="MERGED"||a.aliasDocumentStatus!=="MERGED"
+  ||a.aliasOrderDocumentId!==a.aliasDocumentId||a.aliasDocumentOrderId!==a.aliasOrderId||a.aliasOrderPosted||a.aliasStockPosted
+  ||a.details?.completed!==true||a.details?.orderId!==recorded.orderId||a.details?.documentId!==recorded.documentId
+  ||a.details?.inboxId!==scope.inboxId||String(a.details?.mark)!==String(row.mark)||!Array.isArray(a.details?.aliasOrderIds)||!a.details.aliasOrderIds.includes(a.aliasOrderId)))fail();
+ if(family.some(a=>{const established=a.details?.paymentTransactionId??null;return !validPaymentId(established)||established!==null&&established!==currentPayment}))fail();
+ if(recordedPayment===null&&currentPayment!==null&&!await verifiedFirstCommonPayment(tx,scope,row,original))fail();
+ return family;
+}
 // Caller holds the store lock. A merge changes references, not money or stock.
 export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersion,confirmSameInvoice=false,confirmMark,confirmPaymentDiscrepancy=false,verifiedSupplierId=null,confirmSupplierCorrection=false,confirmPaymentSupplierCorrection=false,selectedRowsOrderId=null,confirmHeaderCorrection=false,reason="",automatic=false,actorId=null}){
  await lockInvoiceStore(tx,scope.companyId,scope.storeId);
  const row=await inbound(tx,scope);
  const previous=await invoiceAlias(tx,scope.companyId,{orderId:posOrderId});
- if(previous){if(previous.storeId!==scope.storeId||previous.inboxId!==scope.inboxId)throw error("Η παλιά αντιστοίχιση ανήκει σε άλλη εγγραφή.");return {ok:true,reused:true,orderId:previous.canonicalOrderId,documentId:previous.canonicalDocumentId,stockUpdated:false,paymentChanged:false};}
+ if(previous){if(previous.storeId!==scope.storeId||previous.inboxId!==scope.inboxId||(row.rawPayload?.commonDraft?.completed&&(previous.canonicalOrderId!==row.rawPayload.commonDraft.orderId||previous.canonicalDocumentId!==row.rawPayload.commonDraft.documentId)))throw error("Η παλιά αντιστοίχιση ανήκει σε άλλη εγγραφή.");return {ok:true,reused:true,orderId:previous.canonicalOrderId,documentId:previous.canonicalDocumentId,stockUpdated:false,paymentChanged:false};}
  let orders=await candidateOrders(tx,row);
  if((row.rawPayload?.mydataDraftOrderId||row.jobDocumentId)&&!orders.some(o=>o.isMyData))throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
  const pos=orders.find(o=>o.orderId===posOrderId);
@@ -175,6 +337,9 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  // After a completed merge, opening its canonical order is idempotent as well.
  const recorded=row.rawPayload?.commonDraft;
  if(recorded?.orderId===posOrderId&&recorded?.completed===true)return {ok:true,reused:true,orderId:recorded.orderId,documentId:recorded.documentId,stockUpdated:false,paymentChanged:false};
+ const continuing=recorded?.completed===true;
+ if(continuing&&(automatic||!expectedVersion))throw error("Η προσθήκη επιπλέον προχείρου απαιτεί νέα χειροκίνητη προεπισκόπηση.","INVOICE_COMMON_CONTINUATION_REVIEW_REQUIRED");
+ if(continuing&&(pos.status!=="NEW"||pos.documentStatus!=="DRAFT"||original?.status!=="NEW"||original?.documentStatus!=="DRAFT"))throw error("Η προσθήκη επιπλέον προχείρου επιτρέπεται μόνο πριν από οριστικοποίηση ή καταχώρηση.","INVOICE_COMMON_CONTINUATION_POSTED");
  if(pos.isMyData)throw error("Επίλεξε το υπάρχον πρόχειρο POS για αντιστοίχιση.");
  if(expectedVersion&&version(row,orders)!==expectedVersion)throw error("Τα πρόχειρα άλλαξαν. Άνοιξε νέα προεπισκόπηση πριν από την αντιστοίχιση.","INVOICE_RECONCILIATION_STALE");
  if(!automatic&&(!confirmSameInvoice||String(confirmMark)!==String(row.mark)||String(reason).trim().length<5))throw error("Επιβεβαίωσε τα δύο πρωτότυπα, το MARK και την αιτιολογία της αντιστοίχισης.");
@@ -186,7 +351,12 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "companyId"=${scope.companyId} AND "id"=ANY(${pair.map(o=>o.paymentTransactionId).filter(Boolean).sort()}::text[]) ORDER BY "id" FOR UPDATE`;
  const refreshed=await candidateOrders(tx,row);
  if(version(row,refreshed)!==initialVersion)throw error("Τα πρόχειρα άλλαξαν κατά τον έλεγχο. Ανανέωσε την προεπισκόπηση.","INVOICE_RECONCILIATION_STALE");
+ const family=continuing?await stableCommonFamily(tx,scope,row,original,recorded,pos):[];
  const posted=await postedOrders(tx,scope.companyId,pair);
+ if(continuing&&posted.length)throw error("Η κοινή αγορά έχει ήδη οριστικοποιηθεί ή καταχωρηθεί. Δεν έγινε ενοποίηση.","INVOICE_COMMON_CONTINUATION_POSTED");
+ if(continuing&&selectedRowsOrderId&&selectedRowsOrderId!==recorded.orderId)throw error("Διατηρείται ο ήδη ελεγμένος πίνακας της κοινής αγοράς. Δεν επιτρέπεται αλλαγή πηγής γραμμών.","INVOICE_COMMON_CANONICAL_CHANGE");
+ const extraDocumentLines=continuing&&!original.lineCount?await tx.$queryRaw`SELECT "id" FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${pos.documentId} LIMIT 1`:[];
+ if(continuing&&(pos.lineCount>0||extraDocumentLines.length)&&!original.lineCount)throw error("Ο πίνακας της κοινής αγοράς είναι κενός. Απαιτείται χωριστός έλεγχος γραμμών πριν προστεθεί άλλο πρόχειρο.","INVOICE_COMMON_EMPTY_ROWS");
  if((supplierCorrection||selectedRowsOrderId)&&posted.length)throw error("Η διόρθωση προμηθευτή ή επιλογή πίνακα επιτρέπεται μόνο σε δύο μη καταχωρημένα πρόχειρα.");
  let verifiedSupplier=null;
  if(supplierCorrection){
@@ -195,20 +365,27 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   if(!verifiedSupplier||tax(verifiedSupplier.taxId)!==tax(row.issuerVat))throw error("Ο επιλεγμένος ενεργός προμηθευτής πρέπει να έχει το ΑΦΜ myDATA στην ίδια εταιρεία.");
  }
  if(posted.length>1)throw error("Και τα δύο παραστατικά έχουν ήδη καταχώρηση. Απαιτείται χωριστός έλεγχος κινήσεων αποθήκης· δεν έγινε νέα κίνηση.","INVOICE_ALREADY_DOUBLE_POSTED");
+ if(continuing&&pos.paymentTransactionId&&pos.paymentTransactionId!==original.paymentTransactionId)throw error("Το επιπλέον πρόχειρο έχει χωριστή σύνδεση πληρωμής. Η πληρωμή της κοινής αγοράς δεν αλλάζει.","INVOICE_COMMON_CONTINUATION_PAYMENT");
  const payments=pair.filter(o=>o.paymentTransactionId);
  if(new Set(payments.map(o=>o.paymentTransactionId)).size>1)throw error("Υπάρχουν διαφορετικές πληρωμές στα δύο πρόχειρα. Απαιτείται έλεγχος πριν από την ενοποίηση.");
  for(const p of payments){
-  if(p.reversedAt||p.paymentType!=="SUPPLIER_PAYMENT"||p.paymentStoreId!==scope.storeId||!(p.paymentAmount>0))throw error("Η υπάρχουσα πληρωμή χρειάζεται έλεγχο· δεν μεταβλήθηκε.");
+  if(p.reversedAt||p.paymentType!=="SUPPLIER_PAYMENT"||p.paymentStoreId!==scope.storeId||!(inboundType(row)==="CREDIT_NOTE"?p.paymentAmount<0&&p.creditPaymentVerified===true:p.paymentAmount>0))throw error("Η υπάρχουσα πληρωμή χρειάζεται έλεγχο· δεν μεταβλήθηκε.");
   if(tax(p.paymentTaxId)!==tax(row.issuerVat)&&(!supplierCorrection||!confirmPaymentSupplierCorrection||!pair.some(o=>o.supplierId===p.paymentSupplierId)||invoiceNumberParts(p.paymentInvoiceNumber).number!==invoiceNumberParts(pos.invoiceNumber).number||invoiceNumberParts(p.paymentInvoiceNumber).series!==invoiceNumberParts(pos.invoiceNumber).series))throw error("Επιβεβαίωσε χωριστά τη διόρθωση προμηθευτή της ίδιας αρχικής πληρωμής· δεν δημιουργείται νέα πληρωμή.");
  }
- const payment=payments[0]||null,difference=payment?round(payment.paymentAmount-amount(row.totalGross)):0;
+ const payment=payments[0]||null,settledCredit=Boolean(payment&&payment.paymentAmount<0);
+ const reviewedAdditionalCreditSeries=Boolean(continuing&&!automatic&&expectedVersion&&confirmSameInvoice===true&&confirmHeaderCorrection===true
+  &&selectedRowsOrderId===original?.orderId&&refreshed.find(o=>o.orderId===pos.orderId)?.additionalCreditSeriesReviewEligible===true);
+ if(settledCredit&&(automatic||!expectedVersion||supplierCorrection||(pos.headerReviewRequired&&!reviewedAdditionalCreditSeries)||!payment.creditPaymentVerified))throw error("Το ήδη εφαρμοσμένο πιστωτικό απαιτεί χειροκίνητο έλεγχο του αρχικού ιστορικού.","INVOICE_CREDIT_REVIEW_REQUIRED");
+ if(settledCredit&&selectedRowsOrderId&&selectedRowsOrderId!==payment.orderId)throw error("Διατηρείται το αρχικό πιστωτικό και ο πίνακάς του, ώστε να παραμείνει έγκυρος ο υπάρχων συμψηφισμός.","INVOICE_CREDIT_CANONICAL_CHANGE");
+ if(settledCredit&&!payment.lineCount&&pair.some(o=>o.orderId!==payment.orderId&&o.lineCount>0))throw error("Έλεγξε πρώτα τις γραμμές του αρχικού πιστωτικού. Δεν αντικαθίστανται από άλλο πρόχειρο.","INVOICE_CREDIT_EMPTY_ROWS");
+ const difference=payment?round(payment.paymentAmount-(inboundType(row)==="CREDIT_NOTE"?-amount(row.totalGross):amount(row.totalGross))):0;
  if(Math.abs(difference)>.050001&&(automatic||!confirmPaymentDiscrepancy))throw error(`Η υπάρχουσα πληρωμή διαφέρει κατά ${difference.toFixed(2)} €. Επιβεβαίωσε ότι διατηρείται αμετάβλητη για έλεγχο.`);
  // Prefer the posted invoice; otherwise retain the payment's original source ID.
  const populated=pair.filter(o=>o.lineCount>0);
  const selectedRows=selectedRowsOrderId?pair.find(o=>o.orderId===selectedRowsOrderId&&o.lineCount>0):null;
  if(selectedRowsOrderId&&!selectedRows)throw error("Επίλεξε έναν υπάρχοντα πίνακα γραμμών αυτής της αντιστοίχισης.");
  if(populated.length>1&&(automatic||!selectedRows))throw error("Και τα δύο πρόχειρα περιέχουν γραμμές. Επίλεξε τον σωστό πίνακα· ο άλλος διατηρείται στο ιστορικό.","INVOICE_REVIEWED_ROWS_CONFLICT");
- const canonical=selectedRows||pair.find(o=>posted.includes(o.orderId))||payment||pos;
+ const canonical=continuing?original:settledCredit?payment:selectedRows||pair.find(o=>posted.includes(o.orderId))||payment||pos;
  let inheritedSupplier=null;
  if(pos.headerReviewRequired&&!supplierCorrection&&!posted.length&&(!canonical.supplierId||!canonical.documentSupplierId)){
   if(canonical.supplierId&&canonical.supplierId!==pos.supplierId||canonical.documentSupplierId&&canonical.documentSupplierId!==pos.supplierId)throw error("Ο προμηθευτής του επιλεγμένου πίνακα χρειάζεται χωριστή επιβεβαίωση.");
@@ -229,8 +406,9 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   if(pages.length!==photoIds.length||pages.some(p=>!['application/pdf','image/jpeg','image/png','image/webp'].includes(p.mimeType)))throw error("Δεν βρέθηκαν όλα τα πρωτότυπα POS στο ίδιο κατάστημα και εταιρεία.");
  }
  const common={completed:true,orderId:canonical.orderId,documentId:canonical.documentId,inboxId:row.inboxId,mark:row.mark,
-  aliasOrderIds:aliases.map(o=>o.orderId),paymentTransactionId:payment?.paymentTransactionId||null,paymentDifference:difference,requiresPaymentReview:Math.abs(difference)>.050001};
+  aliasOrderIds:continuing?[...new Set([...family.map(a=>a.aliasOrderId),...aliases.map(o=>o.orderId)])].sort():aliases.map(o=>o.orderId),paymentTransactionId:payment?.paymentTransactionId||null,paymentDifference:difference,requiresPaymentReview:Math.abs(difference)>.050001};
  const paymentSupplierCorrection=Boolean(payment&&tax(payment.paymentTaxId)!==tax(row.issuerVat));
+ if(continuing&&paymentSupplierCorrection)throw error("Η αρχική πληρωμή απαιτεί χωριστό έλεγχο προμηθευτή. Δεν μεταβλήθηκε.","INVOICE_COMMON_CONTINUATION_PAYMENT");
  if(paymentSupplierCorrection){
   const settlementTable=await tx.$queryRaw`SELECT to_regclass('"SupplierPaymentSettlement"') IS NOT NULL AS "exists"`;
   if(settlementTable[0]?.exists){const settlements=await tx.$queryRaw`SELECT "id" FROM "SupplierPaymentSettlement" WHERE "companyId"=${scope.companyId} AND "transactionId"=${payment.paymentTransactionId} LIMIT 1`;if(settlements.length)throw error("Η πληρωμή έχει ήδη διακανονισμό ή κατανομή. Απαιτείται χωριστός έλεγχος προμηθευτή· δεν μεταβλήθηκε.");}
@@ -238,17 +416,17 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   if(linked.length)throw error("Η ίδια πληρωμή συνδέεται με άλλο παραστατικό· δεν μεταβλήθηκε.");
  }
  const paymentRows=payment?await tx.$queryRaw`SELECT row_to_json(t) AS "row" FROM "StoreTransaction" t WHERE "id"=${payment.paymentTransactionId} AND "companyId"=${scope.companyId}`:[];
- const details={...common,headerCorrection:Boolean(pos.headerReviewRequired),lineEvidence:pos.lineEvidence||null,inheritedSupplier,reason:automatic?"Exact verified invoice identity":String(reason).trim(),automatic,actorId,before:pair,selectedRowsOrderId:selectedRows?.orderId||null,verifiedSupplier:verifiedSupplier||null,supplierCorrection,paymentSupplierCorrection,paymentBefore:paymentRows[0]?.row||null,photoAttachmentIds:photoIds,pdfAttachmentId:row.attachmentId,stockChanged:false,paymentChanged:false};
- if(inheritedSupplier){
+ const details={...common,headerCorrection:Boolean(pos.headerReviewRequired),...(reviewedAdditionalCreditSeries?{reviewedAdditionalCreditSeries:true}:{}),lineEvidence:pos.lineEvidence||null,inheritedSupplier,reason:automatic?"Exact verified invoice identity":String(reason).trim(),automatic,actorId,before:pair,selectedRowsOrderId:selectedRows?.orderId||null,verifiedSupplier:verifiedSupplier||null,supplierCorrection,paymentSupplierCorrection,paymentBefore:paymentRows[0]?.row||null,photoAttachmentIds:photoIds,pdfAttachmentId:row.attachmentId,stockChanged:false,paymentChanged:false};
+ if(inheritedSupplier&&!continuing){
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=${inheritedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='NEW'`;
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${inheritedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='DRAFT'`;
  }
- if(supplierCorrection){
+ if(supplierCorrection&&!continuing){
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=${verifiedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='NEW'`;
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${verifiedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='DRAFT'`;
   if(paymentSupplierCorrection)await tx.$executeRaw`UPDATE "StoreTransaction" SET "supplierId"=${verifiedSupplier.id} WHERE "id"=${payment.paymentTransactionId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "type"='SUPPLIER_PAYMENT' AND "reversedAt" IS NULL`;
  }
- if(!posted.length){
+ if(!posted.length&&!continuing&&!settledCredit){
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentNumber"=${[row.series,row.documentNumber].filter(Boolean).join(" ")},"documentDate"=${new Date(row.issueDate)},"totalGross"=${amount(row.totalGross)},
    "paymentTransactionId"=COALESCE("paymentTransactionId",${payment?.paymentTransactionId||null}),"settlementMode"=CASE WHEN ${Boolean(payment)} THEN 'PAID' ELSE "settlementMode" END,"updatedAt"=NOW()
    WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "status"='DRAFT'`;
@@ -256,26 +434,44 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "invoiceNumber"=${[row.series,row.documentNumber].filter(Boolean).join(" ")},"description"=COALESCE("description",'')||${` • Κοινό POS/myDATA • MARK ${row.mark}${paymentNote}`},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId}`;
  }
  for(const alias of aliases){
-  if(alias.lineCount>0&&!selectedRows)await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "orderId"=${canonical.orderId} WHERE "orderId"=${alias.orderId}`;
+  if(alias.lineCount>0&&!selectedRows&&!continuing)await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "orderId"=${canonical.orderId} WHERE "orderId"=${alias.orderId}`;
   await tx.$executeRaw`INSERT INTO "InvoiceDraftAlias"("aliasOrderId","aliasDocumentId","companyId","storeId","canonicalOrderId","canonicalDocumentId","inboxId","mark","details","actorId")
    VALUES(${alias.orderId},${alias.documentId},${scope.companyId},${scope.storeId},${canonical.orderId},${canonical.documentId},${row.inboxId},${row.mark},${JSON.stringify(details)}::jsonb,${actorId})`;
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='MERGED',"updatedAt"=NOW() WHERE "id"=${alias.orderId} AND "companyId"=${scope.companyId}`;
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "status"='MERGED',"updatedAt"=NOW() WHERE "id"=${alias.documentId} AND "companyId"=${scope.companyId}`;
  }
- const receipt={attachmentIds:photoIds,paymentTransactionId:payment?.paymentTransactionId||null,receivedAt:jobRows.find(j=>j.resultJson?.posHandoff)?.createdAt||new Date().toISOString(),requiresHumanReceiptReview:true};
- for(const j of jobRows)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${canonical.documentId},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({commonDraft:common,...(j.id===primary.id&&photoIds.length?{mydataPosReceipt:receipt}:{})})}::jsonb,"updatedAt"=NOW() WHERE "id"=${j.id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
+ const paymentId=common.paymentTransactionId;
+ const paymentHandoff=paymentId&&jobRows.find(j=>{
+  const handoff=j.resultJson?.posHandoff;
+  return handoff?.paymentTransactionId===paymentId&&Number(handoff.pageIndex??0)===0;
+ });
+ const existingReceipt=paymentId&&jobRows.some(j=>j.resultJson?.mydataPosReceipt?.paymentTransactionId===paymentId);
+ // The first job displays the POS photos. Preserve the original payment source
+ // so the projected photo receipt does not appear as a second payment binding.
+ const distinctPaymentSource=existingReceipt||(paymentHandoff&&paymentHandoff.id!==primary.id);
+ const receipt=photoIds.length&&!primary.resultJson?.mydataPosReceipt
+  ?{attachmentIds:photoIds,paymentTransactionId:distinctPaymentSource?null:paymentId,receivedAt:jobRows.find(j=>j.resultJson?.posHandoff)?.createdAt||new Date().toISOString(),requiresHumanReceiptReview:true}
+  :null;
+ for(const j of jobRows)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${canonical.documentId},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({commonDraft:common,...(j.id===primary.id&&receipt?{mydataPosReceipt:receipt}:{})})}::jsonb,"updatedAt"=NOW() WHERE "id"=${j.id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=COALESCE("rawPayload",'{}'::jsonb)||${JSON.stringify({mydataDraftOrderId:canonical.orderId,mydataDraftDocumentId:canonical.documentId,commonDraft:common,...(supplierCorrection||selectedRows?{reconciliationAudit:details}:{})})}::jsonb WHERE "inboxId"=${row.inboxId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
- return {ok:true,reused:false,orderId:canonical.orderId,documentId:canonical.documentId,aliasOrderIds:aliases.map(o=>o.orderId),paymentDifference:difference,requiresPaymentReview:common.requiresPaymentReview,supplierCorrection,paymentSupplierCorrection,stockUpdated:false,paymentChanged:false};
+ return {ok:true,reused:false,orderId:canonical.orderId,documentId:canonical.documentId,aliasOrderIds:common.aliasOrderIds,paymentDifference:difference,requiresPaymentReview:common.requiresPaymentReview,supplierCorrection,paymentSupplierCorrection,stockUpdated:false,paymentChanged:false};
 }
 // Called during original acquisition. Exact POS-first headers can reuse its
 // existing draft; uncertain candidates keep the PDF for the review screen.
 export async function attachInboundToExistingDraft(tx,scope,actorId){
  const row=await inbound(tx,scope),orders=await candidateOrders(tx,row),pos=orders.filter(o=>!o.isMyData);
  if((row.rawPayload?.mydataDraftOrderId||row.jobDocumentId)&&!orders.some(o=>o.isMyData))throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
- if(!pos.length)return null;
+ if(!pos.length){
+  const recorded=row.rawPayload?.commonDraft;
+  const canonical=recorded?.completed===true&&orders.find(o=>o.isMyData&&o.orderId===recorded.orderId&&o.documentId===recorded.documentId);
+  return canonical?{ok:true,reused:true,orderId:canonical.orderId,documentId:canonical.documentId,purchaseOrderId:canonical.orderId,downloaded:false,stockUpdated:false,paymentChanged:false}:null;
+ }
  const exact=pos.filter(o=>o.exact);
  if(exact.length!==1||pos.length!==1)return {reconciliationRequired:true,candidateOrderIds:pos.map(o=>o.orderId),downloaded:false};
- try{return {...await reconcileInvoiceDrafts(tx,scope,{posOrderId:exact[0].orderId,automatic:true,actorId}),purchaseOrderId:exact[0].orderId,downloaded:false};}
+ try{
+  const result=await reconcileInvoiceDrafts(tx,scope,{posOrderId:exact[0].orderId,automatic:true,actorId});
+  return {...result,purchaseOrderId:result.orderId,downloaded:false};
+ }
  catch(e){if(e.status===409)return {reconciliationRequired:true,candidateOrderIds:pos.map(o=>o.orderId),downloaded:false};throw e}
 }
 async function inboundTableExists(tx){const rows=await tx.$queryRaw`SELECT to_regclass('"MyDataInboundDocument"') IS NOT NULL AS "exists"`;return rows[0]?.exists===true}
@@ -343,8 +539,11 @@ export async function reuseInboundDraftForPosJob(tx,identity,{jobId,paymentTrans
   JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId"
   WHERE j."companyId"=${identity.companyId} AND j."storeId"=${identity.storeId} AND j."id"=ANY(${ids}::text[]) ORDER BY j."id"`;
  if(pages.length!==ids.length||pages.some(p=>p.purchaseDocumentId&&p.purchaseDocumentId!==row.documentId))throw error("Οι φωτογραφίες ανήκουν σε διαφορετικό πρόχειρο.");
- const receipt={attachmentIds:[...new Set(pages.map(p=>p.attachmentId))],paymentTransactionId,receivedAt:new Date().toISOString(),requiresHumanReceiptReview:true};
- for(const page of pages)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${row.documentId},"updatedAt"=NOW() WHERE "id"=${page.id} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
+ const handoff=jobs[0].resultJson?.posHandoff;
+ const paymentSourceJobId=paymentTransactionId&&handoff?.paymentTransactionId===paymentTransactionId&&String(handoff.pageIndex??0)==='0'?jobId:null;
+ const receipt={attachmentIds:[...new Set(pages.map(p=>p.attachmentId))],paymentTransactionId,receivedAt:new Date().toISOString(),requiresHumanReceiptReview:true,...(paymentSourceJobId?{paymentSourceJobId}:{})};
+ const commonDraft={completed:true,documentId:row.documentId,orderId:row.orderId,inboxId:row.inboxId,mark:row.mark,paymentTransactionId,requiresPaymentReview:false};
+ for(const page of pages)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${row.documentId},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(page.id===paymentSourceJobId?{commonDraft}:{})}::jsonb,"updatedAt"=NOW() WHERE "id"=${page.id} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
  await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({mydataPosReceipt:receipt})}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.originalJobId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
  await tx.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"=COALESCE("paymentTransactionId",${paymentTransactionId}),"settlementMode"=CASE WHEN ${Boolean(paymentTransactionId)} THEN 'PAID' ELSE "settlementMode" END,"updatedAt"=NOW() WHERE "id"=${row.documentId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataPosReceipt:receipt,mydataDraftOrderId:row.orderId,mydataDraftDocumentId:row.documentId})}::jsonb WHERE "inboxId"=${row.inboxId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;

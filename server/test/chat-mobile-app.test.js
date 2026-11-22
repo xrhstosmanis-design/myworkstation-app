@@ -6,13 +6,14 @@ import vm from "node:vm";
 import crypto from "node:crypto";
 import {chatManifest,chatHtmlWithManifest} from "../src/chat-pwa.mjs";
 import {chatWorkerOptions,mobileChatUrl} from "../../client/src/components/store/chat-mobile-install.mjs";
+import {chatAccessRevoked,ensureChatAccess} from "../src/chat-access.mjs";
 function mobile(db){
  const source=fs.readFileSync(new URL("../src/chat-mobile.mjs",import.meta.url),"utf8").replace(/^import .*;\n/gm,"").replace(/^export /gm,"");
- return new Function("prisma","companyModuleState","effectiveModuleEnabled","isPlatformSuperAdmin","assertCustomerDemoOutboundAllowed",source+";return {saveMobilePush,mobilePushRecipients,mobileChatStores,validateMobileSubscription};")(db,async()=>({licenseAllowed:true,activeModules:["STORE_CHAT"]}),(active,row)=>row.configured?row.active:active,u=>u.role==="SUPER_ADMIN",()=>{});
+ return new Function("prisma","companyModuleState","effectiveModuleEnabled","isPlatformSuperAdmin","assertCustomerDemoOutboundAllowed","chatAccessRevoked",source+";return {saveMobilePush,mobilePushRecipients,mobileChatStores,validateMobileSubscription};")(db,async()=>({licenseAllowed:true,activeModules:["STORE_CHAT"]}),(active,row)=>row.configured?row.active:active,u=>u.role==="SUPER_ADMIN",()=>{},chatAccessRevoked);
 }
 function operator(db){
  const source=fs.readFileSync(new URL("../src/chat-operator-auth.mjs",import.meta.url),"utf8").replace(/^import .*;\n/gm,"").replace(/^export /gm,"");
- return new Function("prisma","crypto",source+";return {authorizeChatOperator,chatCredentialStamp};")(db,crypto);
+ return new Function("prisma","crypto","chatEnabled",source+";return {authorizeChatOperator,chatCredentialStamp};")(db,crypto,async()=>true);
 }
 test("all stores install one stable app and root worker, without private manifest data",()=>{
  const manifest=chatManifest("A");assert.deepEqual(chatManifest("B"),manifest);assert.equal(manifest.id,"/chat/");assert.equal(manifest.start_url,"/chat/");assert.equal(manifest.scope,"/chat/");assert.equal(manifest.display,"standalone");
@@ -33,7 +34,7 @@ test("Chat operator token cannot authorize POS, another store or malformed scope
  await assert.rejects(lib.authorizeChatOperator({originalUrl:"/api/store-chat/stores/A/messages"},payload,{db:{$queryRawUnsafe:async()=>{throw new Error("db unavailable")}},secret:"test-secret"}),/db unavailable/);
 });
 test("one owner endpoint derives all authorized stores; transaction retires old identity; client stores ignored",async()=>{
- const calls=[],db={user:{findUnique:async()=>({companyId:"C1"})},store:{findMany:async({where})=>{assert.deepEqual(where.companyId.in,["C1","C2"]);return [{id:"A",name:"A",companyId:"C1",company:{name:"One"}},{id:"B",name:"B",companyId:"C2",company:{name:"Two"}}]}},$queryRawUnsafe:async sql=>sql.includes("OwnerCompanyAccess")?[{companyId:"C2"}]:[],$executeRawUnsafe:async()=>{},$transaction:async fn=>fn({$queryRawUnsafe:async(...a)=>calls.push(a),$executeRawUnsafe:async(...a)=>calls.push(a)})};
+ const calls=[],db={user:{findUnique:async()=>({companyId:"C1"})},store:{findMany:async({where})=>{assert.deepEqual(where.companyId.in,["C1","C2"]);return [{id:"A",name:"A",companyId:"C1",company:{name:"One"}},{id:"B",name:"B",companyId:"C2",company:{name:"Two"}}]}},$queryRaw:async()=>[],$queryRawUnsafe:async sql=>sql.includes("OwnerCompanyAccess")?[{companyId:"C2"}]:[],$executeRawUnsafe:async()=>{},$transaction:async fn=>fn({$queryRawUnsafe:async(...a)=>calls.push(a),$executeRawUnsafe:async(...a)=>calls.push(a)})};
  const lib=mobile(db),user={id:"owner",role:"OWNER",tokenType:"BACKOFFICE_USER",companyId:"C1",sessionId:"session",sessionVersion:1},subscription={endpoint:"https://web.push.apple.com/virtual",keys:{p256dh:"abcdefghijklmnop",auth:"abcdefghijklmnop"},storeIds:["FOREIGN"]};
  assert.deepEqual(await lib.saveMobilePush(user,subscription),{stores:2});assert.match(calls[0][0],/pg_advisory_xact_lock/);assert.match(calls[1][0],/DELETE FROM "StoreChatPushSubscription"/);assert.equal(calls[2][7],'["A","B"]');assert.ok(!calls[2].includes("FOREIGN"));
  await assert.rejects(lib.mobileChatStores({...user,tokenType:"STORE_OPERATOR"}),e=>e.status===403);
@@ -72,6 +73,7 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
    'CREATE TABLE "Employee" ("id" TEXT PRIMARY KEY,"active" BOOLEAN)',
    'CREATE TABLE "StoreOperatorCredential" ("id" TEXT PRIMARY KEY,"employeeId" TEXT,"companyId" TEXT,"storeId" TEXT,"role" TEXT,"displayName" TEXT,"pinHash" TEXT,"cardCodeHash" TEXT,"active" BOOLEAN)'
   ])await db.$executeRawUnsafe(ddl);
+  await ensureChatAccess(db);
   const lib=mobile(db);
   await db.$executeRawUnsafe('INSERT INTO "Company" VALUES ($1,TRUE),($2,TRUE)',"C1","C2");
   await db.$executeRawUnsafe('INSERT INTO "Store" VALUES ($1,$2,TRUE),($3,$4,TRUE)',"A","C1","B","C2");
@@ -112,6 +114,13 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
   await mobile(wrapped).saveMobilePush({id:"owner",companyId:"C1",role:"OWNER",tokenType:"BACKOFFICE_USER",sessionId:"session",sessionVersion:1},{endpoint,storeIds:["FOREIGN"],keys:{p256dh:"abcdefghijklmnop",auth:"abcdefghijklmnop"}});
   assert.equal((await db.$queryRawUnsafe('SELECT * FROM "StoreChatPushSubscription" WHERE "endpoint"=$1',endpoint)).length,0);
   const mapping=(await db.$queryRawUnsafe('SELECT "userId","storeIds" FROM "StoreChatMobilePush" WHERE "endpoint"=$1',endpoint))[0];assert.equal(mapping.userId,"owner");assert.deepEqual(mapping.storeIds,["A"]);
+  const identity={id:"owner",companyId:"C1",role:"OWNER",tokenType:"BACKOFFICE_USER"};
+  const visibleStores=async()=>(await mobile(wrapped).mobileChatStores(identity)).stores.map(store=>store.id);
+  assert.deepEqual(await visibleStores(),["A"]);
+  await db.$executeRaw`INSERT INTO "StoreChatAccessRevocation" ("companyId","storeId","userId") VALUES ('C1','A','owner')`;
+  assert.deepEqual(await visibleStores(),[]);
+  await db.$executeRaw`DELETE FROM "StoreChatAccessRevocation" WHERE "companyId"='C1' AND "storeId"='A' AND "userId"='owner'`;
+  assert.deepEqual(await visibleStores(),["A"]);
   await db.$executeRawUnsafe('INSERT INTO "StorePaidModule" ("storeId","moduleKey","active") VALUES ($1,$2,FALSE)',"A","STORE_CHAT");assert.deepEqual(await recipients("A"),[]);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe('DROP SCHEMA IF EXISTS "'+schema+'" CASCADE');await admin.$disconnect()}
 });

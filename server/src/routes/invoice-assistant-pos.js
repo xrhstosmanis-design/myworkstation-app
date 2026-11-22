@@ -1,5 +1,7 @@
+import {walletActivityFromRequest} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {loadInvoiceAssistantSource} from "../lib/invoice-assistant-source.js";
+import {requireStaffGrant,staffError} from "../services/backoffice-staff-access.js";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -40,14 +42,36 @@ async function readUnnumberedPageEvidence(files,documentNumber,sourcePageCount){
 }
 
 function manager(req,res,next){
+  if(req.user?.staffAccess===true){
+    if(req.method==="POST"&&req.staffGrant?.capability==="invoice-ai.photo-preview"&&
+      req.user.storeId&&req.body?.storeId===req.user.storeId&&Array.isArray(req.body.manualPhotos))return next();
+    return res.status(403).json({error:"Η ανάγνωση απαιτεί φωτογραφίες και δικαίωμα στο επιλεγμένο κατάστημα."});
+  }
   if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!managers.has(req.user?.role)))return res.status(403).json({error:"Ο έλεγχος τιμολογίου είναι διαθέσιμος μόνο σε ιδιοκτήτη ή διαχειριστή."});
   next();
 }
 
 const source=(companyId,orderId,context)=>loadInvoiceAssistantSource(prisma,companyId,orderId,context);
 const sourceContextSchema=z.object({inboxId:z.string().trim().min(1).max(200),storeId:z.string().trim().min(1).max(200)});
+const manualPhotoSchema=z.object({
+  storeId:sourceContextSchema.shape.storeId,
+  manualPhotos:z.array(z.object({
+    filename:z.string().trim().min(1).max(255),
+    mimeType:z.enum(["image/jpeg","image/png","image/webp"]),
+    contentData:z.string().max(10_000_000)
+  }).refine(page=>page.contentData.startsWith(`data:${page.mimeType};base64,`)&&
+    /^[A-Za-z0-9+/]+={0,2}$/.test(page.contentData.split(",")[1]))).min(1).max(5)
+}).refine(input=>input.manualPhotos.reduce((total,page)=>total+page.contentData.length,0)<=10_000_000);
+
 function assistantSourceContext(req,res,next){
   const input=req.method==="GET"?req.query:req.body;
+  if(req.method==="POST"&&input?.manualPhotos!==undefined){
+    if((req.posPurchaseOrderAccess&&req.user?.staffAccess!==true)||req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Οι φωτογραφίες παραγγελίας επιτρέπονται μόνο στο BackOffice."});
+    const parsed=manualPhotoSchema.safeParse(input);
+    if(!parsed.success||input.inboxId!==undefined)return res.status(400).json({error:"Επίλεξε 1–5 φωτογραφίες JPEG, PNG ή WebP, έως 7 MB συνολικά."});
+    req.invoiceAssistantSource=parsed.data;
+    return requireCompanyModule("DOCUMENTS")(req,res,error=>error?next(error):requireCompanyModule("INVENTORY")(req,res,next));
+  }
   if(input?.inboxId===undefined){req.invoiceAssistantSource={};return next()}
   try{req.invoiceAssistantSource=sourceContextSchema.parse(input)}catch(error){return res.status(400).json({error:"Απαιτείται συγκεκριμένη εγγραφή myDATA και επιλεγμένο κατάστημα."})}
   if(req.posPurchaseOrderAccess||req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Ο έλεγχος από myDATA επιτρέπεται μόνο στο BackOffice."});
@@ -71,7 +95,11 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const result=await source(req.user.companyId,req.params.orderId,req.invoiceAssistantSource);
     if(!result)return res.status(404).json({error:"Δεν υπάρχει ενεργό πρόχειρο POS για αυτό το τιμολόγιο."});
     if(!result.pages.length)return res.status(409).json({error:req.invoiceAssistantSource.inboxId?"Δεν βρέθηκε το πρωτότυπο PDF της συγκεκριμένης εγγραφής myDATA στο ίδιο πρόχειρο και κατάστημα.":"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:result.document.storeId},async()=>{
+    if(req.user?.staffAccess===true){
+      if(result.document.storeId!==req.user.storeId)throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,'invoice-ai.photo-preview');
+    }
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:result.document.storeId,invoiceDocumentId:req.invoiceAssistantSource.manualPhotos?undefined:result.document.id,activity:walletActivityFromRequest(req,{storeId:result.document.storeId,purpose:"INVOICE_ASSISTANT",documentId:req.invoiceAssistantSource.manualPhotos?null:result.document.id,documentNumber:result.document.documentNumber})},async()=>{
     const rows=await prisma.$queryRaw`SELECT "id","ocrSequence","supplierCode","description","quantity","unitCost","invoiceUnit","stockUnitsPerInvoiceUnit","discount1","discount2","discount3","exciseTotal","vatRate","netAmount","grossAmount","ocrRawText"
       FROM "PurchaseOrderLine" WHERE "orderId"=${req.params.orderId} ORDER BY COALESCE("ocrSequence",2147483647),"createdAt","id"`;
     const current=rows.map(row=>({...row,quantity:Number(row.quantity||0),unitCost:Number(row.unitCost||0),stockUnitsPerInvoiceUnit:Number(row.stockUnitsPerInvoiceUnit||1),discount1:Number(row.discount1||0),discount2:Number(row.discount2||0),discount3:Number(row.discount3||0),exciseTotal:Number(row.exciseTotal||0),vatRate:Number(row.vatRate||0),netAmount:Number(row.netAmount||0),grossAmount:Number(row.grossAmount||0)}));
@@ -84,7 +112,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     if(!response.ok){const failure=await invoiceAssistantProviderError(response);return res.status(failure.status).json({error:failure.message})}
     const parsed=JSON.parse(responseText(await response.json()));
     let pageVerificationIssue="";
-    if(sourcePageCount>1&&parsed.expectedPageCount===0&&Array.isArray(parsed.visiblePageNumbers)&&parsed.visiblePageNumbers.length===0){
+    if(!req.invoiceAssistantSource.manualPhotos&&sourcePageCount>1&&parsed.expectedPageCount===0&&Array.isArray(parsed.visiblePageNumbers)&&parsed.visiblePageNumbers.length===0){
       const missingEvidence=!Array.isArray(parsed.unnumberedPageEvidence)||parsed.unnumberedPageEvidence.length!==sourcePageCount;
       const missingTotals=![parsed.printedTotal,parsed.printedQuantityTotal,parsed.printedNetTotal].every(value=>String(value??"").trim());
       if(missingEvidence||missingTotals){
@@ -127,3 +155,4 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
 });
 
 export default router;
+

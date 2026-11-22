@@ -1,0 +1,1045 @@
+TAP version 13
+# Subtest: activation is external, immutable and OFF without exact service/control authority
+ok 1 - activation is external, immutable and OFF without exact service/control authority
+  ---
+  duration_ms: 5.121985
+  ...
+# Subtest: advance enrollment survives OFF to ON identity while full fingerprint detects toggle
+ok 2 - advance enrollment survives OFF to ON identity while full fingerprint detects toggle
+  ---
+  duration_ms: 0.560971
+  ...
+# Subtest: restore rotates external epoch and denies archived grants and historical/crossing periods
+ok 3 - restore rotates external epoch and denies archived grants and historical/crossing periods
+  ---
+  duration_ms: 0.621
+  ...
+# Subtest: actual producer DAILY/WEEKLY/MONTHLY snapshots survive wire JSON without dropping original differences or chain isolation
+ok 4 - actual producer DAILY/WEEKLY/MONTHLY snapshots survive wire JSON without dropping original differences or chain isolation
+  ---
+  duration_ms: 1286.806699
+  ...
+# Subtest: actual producer periods preserve Athens DST hours for daily, weekly and monthly payloads
+ok 5 - actual producer periods preserve Athens DST hours for daily, weekly and monthly payloads
+  ---
+  duration_ms: 1627.394638
+  ...
+# Subtest: determinism survives object order, group/row/day/summary permutations and volatile generation time
+ok 6 - determinism survives object order, group/row/day/summary permutations and volatile generation time
+  ---
+  duration_ms: 552.29601
+  ...
+# Subtest: payload is detached and deeply immutable, and changed real source amounts change its fingerprint
+ok 7 - payload is detached and deeply immutable, and changed real source amounts change its fingerprint
+  ---
+  duration_ms: 90.22
+  ...
+# Subtest: actual producer HOLD and incomplete source are refused without inventing zero totals
+ok 8 - actual producer HOLD and incomplete source are refused without inventing zero totals
+  ---
+  duration_ms: 32.925872
+  ...
+# Subtest: explicit scope, version, kind and provisional financial disclosures cannot be forged or omitted
+ok 9 - explicit scope, version, kind and provisional financial disclosures cannot be forged or omitted
+  ---
+  duration_ms: 22.381956
+  ...
+# Subtest: malformed groups, rows, cross-store leakage, duplicate identities and cent totals fail closed
+ok 10 - malformed groups, rows, cross-store leakage, duplicate identities and cent totals fail closed
+  ---
+  duration_ms: 92.576263
+  ...
+# Subtest: per-day readiness identity, completeness and actual period bounds are independently checked
+ok 11 - per-day readiness identity, completeness and actual period bounds are independently checked
+  ---
+  duration_ms: 110.804564
+  ...
+# Subtest: monthly opening-user summary must exactly describe original rows and never certify payroll liability
+ok 12 - monthly opening-user summary must exactly describe original rows and never certify payroll liability
+  ---
+  duration_ms: 1335.284854
+  ...
+# Subtest: complete recorded zero differences remain zero rather than unknown or fabricated shortage
+ok 13 - complete recorded zero differences remain zero rather than unknown or fabricated shortage
+  ---
+  duration_ms: 43.162512
+  ...
+# Subtest: getters, hostile prototypes, control text and unsafe metadata are rejected before evaluation
+ok 14 - getters, hostile prototypes, control text and unsafe metadata are rejected before evaluation
+  ---
+  duration_ms: 44.848417
+  ...
+# Subtest: actual producer missing opening identities survive JSON omission as unattributed sessions, never invented payroll users
+ok 15 - actual producer missing opening identities survive JSON omission as unattributed sessions, never invented payroll users
+  ---
+  duration_ms: 893.225725
+  ...
+# Subtest: payload allowlist omits safe private preview extras and preserves explicit Greek provisional disclosures
+ok 16 - payload allowlist omits safe private preview extras and preserves explicit Greek provisional disclosures
+  ---
+  duration_ms: 23.053703
+  ...
+# Subtest: aggregate UTF-8 values and metadata keys are bounded even when omitted from the output allowlist
+ok 17 - aggregate UTF-8 values and metadata keys are bounded even when omitted from the output allowlist
+  ---
+  duration_ms: 93.835245
+  ...
+# Subtest: dry run validates digest offline with zero API/process/config calls
+ok 18 - dry run validates digest offline with zero API/process/config calls
+  ---
+  duration_ms: 14.362658
+  ...
+# Subtest: actual HTTP boundary OFF/readback/suspend/two proofs precedes exact immutable archive process; never resume
+ok 19 - actual HTTP boundary OFF/readback/suspend/two proofs precedes exact immutable archive process; never resume
+  ---
+  duration_ms: 598.350921
+  ...
+# Subtest: actual isolated child inherits only supplied env, consumes fd, and redacts failure/output overflow/timeout
+ok 20 - actual isolated child inherits only supplied env, consumes fd, and redacts failure/output overflow/timeout
+  ---
+  duration_ms: 512.539271
+  ...
+# Subtest: foreign target, missing OFF readback, live instances and pending deployment all refuse before any process
+ok 21 - foreign target, missing OFF readback, live instances and pending deployment all refuse before any process
+  ---
+  duration_ms: 186.384389
+  ...
+# Subtest: expired receipt/ack mismatch never reaches API; process failure remains suspended OFF
+ok 22 - expired receipt/ack mismatch never reaches API; process failure remains suspended OFF
+  ---
+  duration_ms: 35.574597
+  ...
+# Subtest: real repository start commits before exactly one transport call and accepted completion commits before return
+ok 23 - real repository start commits before exactly one transport call and accepted completion commits before return
+  ---
+  duration_ms: 23.732533
+  ...
+# Subtest: unresolved commit barrier permits zero sends until actual repository transaction resolution
+ok 24 - unresolved commit barrier permits zero sends until actual repository transaction resolution
+  ---
+  duration_ms: 16.820608
+  ...
+# Subtest: transport rejection, exception and contradictory evidence persist terminal UNKNOWN once
+ok 25 - transport rejection, exception and contradictory evidence persist terminal UNKNOWN once
+  ---
+  duration_ms: 33.351705
+  ...
+# Subtest: revocation, gate error and stale version/token/scope refuse transport without changing claimed record
+ok 26 - revocation, gate error and stale version/token/scope refuse transport without changing claimed record
+  ---
+  duration_ms: 28.384425
+  ...
+# Subtest: start rollback and ambiguous committed start never call transport or automatically recover
+ok 27 - start rollback and ambiguous committed start never call transport or automatically recover
+  ---
+  duration_ms: 13.405387
+  ...
+# Subtest: completion rollback and ambiguous commit return redacted uncertainty and a repeated attempt cannot resend
+ok 28 - completion rollback and ambiguous commit return redacted uncertainty and a repeated attempt cannot resend
+  ---
+  duration_ms: 16.839935
+  ...
+# Subtest: two concurrent calls with one version/token have one winner and one transport invocation
+ok 29 - two concurrent calls with one version/token have one winner and one transport invocation
+  ---
+  duration_ms: 11.680895
+  ...
+# Subtest: driver captures caller metadata before async start and never redirects recipient/body or completion scope
+ok 30 - driver captures caller metadata before async start and never redirects recipient/body or completion scope
+  ---
+  duration_ms: 6.759589
+  ...
+# Subtest: malformed metadata and top/nested accessors reject before database or getter evaluation
+ok 31 - malformed metadata and top/nested accessors reject before database or getter evaluation
+  ---
+  duration_ms: 8.899897
+  ...
+# Subtest: lease expires while start commit is delayed: no send, no retry, explicit recovery to UNKNOWN only
+ok 32 - lease expires while start commit is delayed: no send, no retry, explicit recovery to UNKNOWN only
+  ---
+  duration_ms: 7.00173
+  ...
+# Subtest: send accepted after lease expiry leaves ATTEMPTING for UNKNOWN recovery instead of claiming persisted success
+ok 33 - send accepted after lease expiry leaves ATTEMPTING for UNKNOWN recovery instead of claiming persisted success
+  ---
+  duration_ms: 5.83755
+  ...
+# Subtest: backwards or invalid completion clocks never authorize retry or expose clock error
+ok 34 - backwards or invalid completion clocks never authorize retry or expose clock error
+  ---
+  duration_ms: 10.306589
+  ...
+# Subtest: native driver fixture refuses production/nonlocal/non-test database URLs
+ok 35 - native driver fixture refuses production/nonlocal/non-test database URLs
+  ---
+  duration_ms: 0.540218
+  ...
+# Subtest: native PostgreSQL driver proves cross-client committed start, terminal persistence and concurrent no-resend
+ok 36 - native PostgreSQL driver proves cross-client committed start, terminal persistence and concurrent no-resend # SKIP
+  ---
+  duration_ms: 0.281757
+  ...
+# Subtest: stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+ok 37 - stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+  ---
+  duration_ms: 89.49686
+  ...
+# Subtest: recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+ok 38 - recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+  ---
+  duration_ms: 4.276552
+  ...
+# Subtest: creation and transitions preserve input snapshots and prior records without shared mutable aliases
+ok 39 - creation and transitions preserve input snapshots and prior records without shared mutable aliases
+  ---
+  duration_ms: 7.047891
+  ...
+# Subtest: no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+ok 40 - no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+  ---
+  duration_ms: 36.857296
+  ...
+# Subtest: freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+ok 41 - freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+  ---
+  duration_ms: 7.286447
+  ...
+# Subtest: missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+ok 42 - missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+  ---
+  duration_ms: 10.443981
+  ...
+# Subtest: OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+ok 43 - OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+  ---
+  duration_ms: 2.02622
+  ...
+# Subtest: pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+ok 44 - pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+  ---
+  duration_ms: 6.30505
+  ...
+# Subtest: a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+ok 45 - a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+  ---
+  duration_ms: 6.601087
+  ...
+# Subtest: late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+ok 46 - late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+  ---
+  duration_ms: 1.162165
+  ...
+# Subtest: transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+ok 47 - transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+  ---
+  duration_ms: 4.627506
+  ...
+# Subtest: no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+ok 48 - no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+  ---
+  duration_ms: 6.30319
+  ...
+# Subtest: periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+ok 49 - periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+  ---
+  duration_ms: 5.383186
+  ...
+# Subtest: one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+ok 50 - one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+  ---
+  duration_ms: 13.696418
+  ...
+# Subtest: strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+ok 51 - strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+  ---
+  duration_ms: 42.538057
+  ...
+# Subtest: lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+ok 52 - lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+  ---
+  duration_ms: 8.534824
+  ...
+# Subtest: metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+ok 53 - metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+  ---
+  duration_ms: 1.576238
+  ...
+# Subtest: backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+ok 54 - backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+  ---
+  duration_ms: 1.763449
+  ...
+# Subtest: post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+ok 55 - post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+  ---
+  duration_ms: 1.750409
+  ...
+# Subtest: accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+ok 56 - accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+  ---
+  duration_ms: 2.732416
+  ...
+# Subtest: persisted attempt cannot claim a start before creation even when other fields look valid
+ok 57 - persisted attempt cannot claim a start before creation even when other fields look valid
+  ---
+  duration_ms: 1.457856
+  ...
+# Subtest: lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+ok 58 - lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+  ---
+  duration_ms: 10.086137
+  ...
+# Subtest: native fixture boundary refuses production, nonloopback, wrong mode and malformed URLs
+ok 59 - native fixture boundary refuses production, nonloopback, wrong mode and malformed URLs
+  ---
+  duration_ms: 1.776707
+  ...
+# Subtest: repository construction is dormant and validates required capabilities without touching DB
+ok 60 - repository construction is dormant and validates required capabilities without touching DB
+  ---
+  duration_ms: 9.481963
+  ...
+# Subtest: unsafe scope and accessor configuration are refused without queries or getter evaluation
+ok 61 - unsafe scope and accessor configuration are refused without queries or getter evaluation
+  ---
+  duration_ms: 14.407666
+  ...
+# Subtest: native PostgreSQL delivery persistence: independent clients, transactions and client reconnect fences
+ok 62 - native PostgreSQL delivery persistence: independent clients, transactions and client reconnect fences # SKIP
+  ---
+  duration_ms: 0.177325
+  ...
+# Subtest: native delivery start order: two-client dependency locks, post-probe revocation/reclaim/replacement and unchanged control
+ok 63 - native delivery start order: two-client dependency locks, post-probe revocation/reclaim/replacement and unchanged control # SKIP
+  ---
+  duration_ms: 2.760408
+  ...
+# Subtest: start probes canonical stored input before eligibility and takes slot lock only after eligibility, then commits before return
+ok 64 - start probes canonical stored input before eligibility and takes slot lock only after eligibility, then commits before return
+  ---
+  duration_ms: 8.032821
+  ...
+# Subtest: absent, foreign or corrupt probe never invokes eligibility or persistence
+ok 65 - absent, foreign or corrupt probe never invokes eligibility or persistence
+  ---
+  duration_ms: 1.726955
+  ...
+# Subtest: trusted eligibility failure stops before taking the slot lock and never retries
+ok 66 - trusted eligibility failure stops before taking the slot lock and never retries
+  ---
+  duration_ms: 1.248841
+  ...
+# Subtest: revoked eligibility cannot persist ATTEMPTING
+ok 67 - revoked eligibility cannot persist ATTEMPTING
+  ---
+  duration_ms: 2.0372
+  ...
+# Subtest: a recovery/reclaim committed between probe and lock preserves the winner and rejects the stale start
+ok 68 - a recovery/reclaim committed between probe and lock preserves the winner and rejects the stale start
+  ---
+  duration_ms: 1.839745
+  ...
+# Subtest: a canonical replacement snapshot with the same slot/version/token fails immutable recheck before any update
+ok 69 - a canonical replacement snapshot with the same slot/version/token fails immutable recheck before any update
+  ---
+  duration_ms: 1.602686
+  ...
+# Subtest: a row removed after the probe cannot supply a successful start receipt
+ok 70 - a row removed after the probe cannot supply a successful start receipt
+  ---
+  duration_ms: 1.378069
+  ...
+# Subtest: dispatch native isolation guard denies remote/database/URL overrides and is mandatory in CI
+ok 71 - dispatch native isolation guard denies remote/database/URL overrides and is mandatory in CI
+  ---
+  duration_ms: 3.610554
+  ...
+# Subtest: native automatic dispatch six-table authorization, phantoms, finality and no resend
+ok 72 - native automatic dispatch six-table authorization, phantoms, finality and no resend # SKIP
+  ---
+  duration_ms: 0.725576
+  ...
+# Subtest: actual mounted dispatch routes recheck database role, bind URL scope and redact uncertain failures
+ok 73 - actual mounted dispatch routes recheck database role, bind URL scope and redact uncertain failures
+  ---
+  duration_ms: 189.741943
+  ...
+# Subtest: six reviewed tables provision in one transaction, abort without further DDL
+ok 74 - six reviewed tables provision in one transaction, abort without further DDL
+  ---
+  duration_ms: 6.849899
+  ...
+# Subtest: defaults are OFF and slot remains seven-column contract
+ok 75 - defaults are OFF and slot remains seven-column contract
+  ---
+  duration_ms: 0.49722
+  ...
+# Subtest: policy fingerprint binds principal session, revisions, epoch, cutoff, recipient and full int64 generation
+ok 76 - policy fingerprint binds principal session, revisions, epoch, cutoff, recipient and full int64 generation
+  ---
+  duration_ms: 3.800453
+  ...
+# Subtest: immutable persistence verifies exact bytes on repeated insert/load and rejects tampering
+ok 77 - immutable persistence verifies exact bytes on repeated insert/load and rejects tampering
+  ---
+  duration_ms: 7.915072
+  ...
+# Subtest: actual management rejects unknown scope/input and explicit grant is mandatory after fresh actor lock
+ok 78 - actual management rejects unknown scope/input and explicit grant is mandatory after fresh actor lock
+  ---
+  duration_ms: 21.811115
+  ...
+# Subtest: management keeps all-absent readiness, rejects partial schema and uses genuine zero boundary without enrollment DDL
+ok 79 - management keeps all-absent readiness, rejects partial schema and uses genuine zero boundary without enrollment DDL
+  ---
+  duration_ms: 2.237319
+  ...
+# Subtest: mounted dispatch controls separate mailbox verification, consent and grants and discard old-store responses
+ok 80 - mounted dispatch controls separate mailbox verification, consent and grants and discard old-store responses
+  ---
+  duration_ms: 1497.211573
+  ...
+# Subtest: mounted email/save sends one invitation action, reuses confirmed state and discards late old-store success
+ok 81 - mounted email/save sends one invitation action, reuses confirmed state and discards late old-store success
+  ---
+  duration_ms: 195.70457
+  ...
+# Subtest: one ReadCommitted preparation transaction persists exact payload and slot, with no send
+ok 82 - one ReadCommitted preparation transaction persists exact payload and slot, with no send
+  ---
+  duration_ms: 382.803156
+  ...
+# Subtest: actual dispatcher/repository/driver sends only after committed attempt and cannot resend terminal slot
+ok 83 - actual dispatcher/repository/driver sends only after committed attempt and cannot resend terminal slot
+  ---
+  duration_ms: 557.870147
+  ...
+# Subtest: default OFF and source HOLD cannot reach SMTP
+ok 84 - default OFF and source HOLD cannot reach SMTP
+  ---
+  duration_ms: 46.136487
+  ...
+# Subtest: unproven SMTP acceptance persists UNKNOWN and repeated sweep cannot retry
+ok 85 - unproven SMTP acceptance persists UNKNOWN and repeated sweep cannot retry
+  ---
+  duration_ms: 538.751083
+  ...
+# Subtest: actual source/payload preparation fences configuration and binds real principal, consent and period
+ok 86 - actual source/payload preparation fences configuration and binds real principal, consent and period
+  ---
+  duration_ms: 175.894723
+  ...
+# Subtest: authoritative revocation/role/session/license/settings and activation changes cannot authorize
+ok 87 - authoritative revocation/role/session/license/settings and activation changes cannot authorize
+  ---
+  duration_ms: 495.970813
+  ...
+# Subtest: start compares immutable input and exact stored bytes to freshly rebuilt source
+ok 88 - start compares immutable input and exact stored bytes to freshly rebuilt source
+  ---
+  duration_ms: 532.947938
+  ...
+# Subtest: configuration first-insert lock busy fails before source and no fallback/retry
+ok 89 - configuration first-insert lock busy fails before source and no fallback/retry
+  ---
+  duration_ms: 1.335137
+  ...
+# Subtest: partial installer report-table contention refuses before authorization or financial source
+ok 90 - partial installer report-table contention refuses before authorization or financial source
+  ---
+  duration_ms: 8.129156
+  ...
+# Subtest: scope own-data validation never invokes getters or falls back to company
+ok 91 - scope own-data validation never invokes getters or falls back to company
+  ---
+  duration_ms: 2.062651
+  ...
+# Subtest: fresh consent cannot backfill an older period and activation changes during source work fail closed
+ok 92 - fresh consent cannot backfill an older period and activation changes during source work fail closed
+  ---
+  duration_ms: 98.718174
+  ...
+# Subtest: invitation native fixture refuses remote/production/URL override targets
+ok 93 - invitation native fixture refuses remote/production/URL override targets
+  ---
+  duration_ms: 10.92847
+  ...
+# Subtest: native invitation proof, public authority, stale links, rollback and two-client confirmation
+ok 94 - native invitation proof, public authority, stale links, rollback and two-client confirmation # SKIP
+  ---
+  duration_ms: 2.107428
+  ...
+# Subtest: invitation links carry purpose-bound proof in a fragment, never a request query
+ok 95 - invitation links carry purpose-bound proof in a fragment, never a request query
+  ---
+  duration_ms: 12.974985
+  ...
+# Subtest: invitation hash separates legacy proof and binds frequencies and consent revision
+ok 96 - invitation hash separates legacy proof and binds frequencies and consent revision
+  ---
+  duration_ms: 1.307321
+  ...
+# Subtest: one committed invitation replaces two code emails, hash only and no proof in response
+ok 97 - one committed invitation replaces two code emails, hash only and no proof in response
+  ---
+  duration_ms: 11.390065
+  ...
+# Subtest: already verified current consent is reused with zero writes, zero mail and zero invalidation
+ok 98 - already verified current consent is reused with zero writes, zero mail and zero invalidation
+  ---
+  duration_ms: 0.627263
+  ...
+# Subtest: uncertain SMTP is one attempt after commit, never a retry or proof disclosure
+ok 99 - uncertain SMTP is one attempt after commit, never a retry or proof disclosure
+  ---
+  duration_ms: 1.077833
+  ...
+# Subtest: strict invitation input refuses actor injection and stale versions before issuing mail
+ok 100 - strict invitation input refuses actor injection and stale versions before issuing mail
+  ---
+  duration_ms: 0.741249
+  ...
+# Subtest: actual global JSON parser order sanitizes malformed proof and oversized/non-JSON requests
+ok 101 - actual global JSON parser order sanitizes malformed proof and oversized/non-JSON requests
+  ---
+  duration_ms: 206.551586
+  ...
+# Subtest: actual landing script inspects but never auto-consents, strips fragment and requires explicit user action
+ok 102 - actual landing script inspects but never auto-consents, strips fragment and requires explicit user action
+  ---
+  duration_ms: 231.311231
+  ...
+# Subtest: legacy lifecycle native fixture is restricted to isolated CI database
+ok 103 - legacy lifecycle native fixture is restricted to isolated CI database
+  ---
+  duration_ms: 3.019037
+  ...
+# Subtest: native legacy-zero lifecycle boundary excludes enrollment and DDL without provisioning guards
+ok 104 - native legacy-zero lifecycle boundary excludes enrollment and DDL without provisioning guards # SKIP
+  ---
+  duration_ms: 0.798907
+  ...
+# Subtest: dispatch lifecycle fixture is isolated, and native execution is mandatory in CI
+ok 105 - dispatch lifecycle fixture is isolated, and native execution is mandatory in CI
+  ---
+  duration_ms: 5.230931
+  ...
+# Subtest: bounded seven-table native recovery, archive COPY audit, RESET fencing and fresh cutoff
+ok 106 - bounded seven-table native recovery, archive COPY audit, RESET fencing and fresh cutoff # SKIP
+  ---
+  duration_ms: 0.933534
+  ...
+# Subtest: actual DAILY/WEEKLY/MONTHLY producer payload and committed core start bind one recipient and immutable exact body
+ok 107 - actual DAILY/WEEKLY/MONTHLY producer payload and committed core start bind one recipient and immutable exact body
+  ---
+  duration_ms: 1555.897818
+  ...
+# Subtest: transport cannot run until trusted start resolves its post-commit receipt
+ok 108 - transport cannot run until trusted start resolves its post-commit receipt
+  ---
+  duration_ms: 115.891177
+  ...
+# Subtest: refused or failed start has zero transport calls, no retry and no error detail exposure through a fabricated receipt
+ok 109 - refused or failed start has zero transport calls, no retry and no error detail exposure through a fabricated receipt
+  ---
+  duration_ms: 131.360452
+  ...
+# Subtest: malformed scope/body/hash/period/finality inputs reject before start and send
+ok 110 - malformed scope/body/hash/period/finality inputs reject before start and send
+  ---
+  duration_ms: 62.90614
+  ...
+# Subtest: detaches request before awaiting start and never lets a late caller change redirect the send
+ok 111 - detaches request before awaiting start and never lets a late caller change redirect the send
+  ---
+  duration_ms: 170.078588
+  ...
+# Subtest: accessors/hidden metadata reject before start without invoking getters
+ok 112 - accessors/hidden metadata reject before start without invoking getters
+  ---
+  duration_ms: 51.629978
+  ...
+# Subtest: missing/mixed/foreign acceptance and messageId-only evidence always become terminal UNKNOWN
+ok 113 - missing/mixed/foreign acceptance and messageId-only evidence always become terminal UNKNOWN
+  ---
+  duration_ms: 59.391611
+  ...
+# Subtest: transport throws, timeouts and invalid provider getters expose no private detail and never retry
+ok 114 - transport throws, timeouts and invalid provider getters expose no private detail and never retry
+  ---
+  duration_ms: 54.966571
+  ...
+# Subtest: optional transport evidence cannot hide contradictory pending, envelope or SMTP status
+ok 115 - optional transport evidence cannot hide contradictory pending, envelope or SMTP status
+  ---
+  duration_ms: 72.077576
+  ...
+# Subtest: duplicate invocation is stopped by trusted repository start transition, never by process-local invented exactly-once state
+ok 116 - duplicate invocation is stopped by trusted repository start transition, never by process-local invented exactly-once state
+  ---
+  duration_ms: 53.244315
+  ...
+# Subtest: monthly calendar bounds respect leap years, year rollover and Athens business-day DST
+ok 117 - monthly calendar bounds respect leap years, year rollover and Athens business-day DST
+  ---
+  duration_ms: 189.81723
+  ...
+# Subtest: monthly snapshot checks every day and keeps original employee rows separate per day and cash chain
+ok 118 - monthly snapshot checks every day and keeps original employee rows separate per day and cash chain
+  ---
+  duration_ms: 1748.880896
+  ...
+# Subtest: monthly missing, unfinished, carried, invalid or capped source suppresses all totals
+ok 119 - monthly missing, unfinished, carried, invalid or capped source suppresses all totals
+  ---
+  duration_ms: 6179.455254
+  ...
+# Subtest: opening users retain ID aliases, original amounts and source trace without allocating offsets
+ok 120 - opening users retain ID aliases, original amounts and source trace without allocating offsets
+  ---
+  duration_ms: 2.828191
+  ...
+# Subtest: missing opening identities never infer identity from name or merge unrelated sessions
+ok 121 - missing opening identities never infer identity from name or merge unrelated sessions
+  ---
+  duration_ms: 0.399362
+  ...
+# Subtest: invalid duplicate or unsafe source suppresses entire operator aggregate
+ok 122 - invalid duplicate or unsafe source suppresses entire operator aggregate
+  ---
+  duration_ms: 2.12426
+  ...
+# Subtest: same-terminal closed overlap is held with deterministic source IDs without mutating input
+ok 123 - same-terminal closed overlap is held with deterministic source IDs without mutating input
+  ---
+  duration_ms: 23.397369
+  ...
+# Subtest: running maximum catches nested intervals and equal starts while preserving input order
+ok 124 - running maximum catches nested intervals and equal starts while preserving input order
+  ---
+  duration_ms: 29.114522
+  ...
+# Subtest: half-open adjacency, empty intervals and concurrent different terminals remain valid
+ok 125 - half-open adjacency, empty intervals and concurrent different terminals remain valid
+  ---
+  duration_ms: 30.967548
+  ...
+# Subtest: existing invalid, future, open and foreign-source holds are retained without overlap inference
+ok 126 - existing invalid, future, open and foreign-source holds are retained without overlap inference
+  ---
+  duration_ms: 203.962421
+  ...
+# Subtest: actual UTC adjacency across both Athens DST transitions remains valid
+ok 127 - actual UTC adjacency across both Athens DST transitions remains valid
+  ---
+  duration_ms: 37.211032
+  ...
+# Subtest: actual daily, weekly and monthly readers suppress all totals for one overlapped day and keep valid controls
+ok 128 - actual daily, weekly and monthly readers suppress all totals for one overlapped day and keep valid controls
+  ---
+  duration_ms: 1814.202924
+  ...
+# Subtest: persistence native fixture guard rejects remote, production and URL overrides
+ok 129 - persistence native fixture guard rejects remote, production and URL overrides
+  ---
+  duration_ms: 5.746044
+  ...
+# Subtest: native six-table provisioning, mailbox verification/consent, concurrency, invalidation and rollback
+ok 130 - native six-table provisioning, mailbox verification/consent, concurrency, invalidation and rollback # SKIP
+  ---
+  duration_ms: 0.610534
+  ...
+# Subtest: business days use Greek wall time through both DST transitions
+ok 131 - business days use Greek wall time through both DST transitions
+  ---
+  duration_ms: 31.391627
+  ...
+# Subtest: daily/weekly/monthly periods are fully completed and end exclusive
+ok 132 - daily/weekly/monthly periods are fully completed and end exclusive
+  ---
+  duration_ms: 23.640823
+  ...
+# Subtest: daily report waits for actual third closure and completed business day
+ok 133 - daily report waits for actual third closure and completed business day
+  ---
+  duration_ms: 20.431964
+  ...
+# Subtest: three arbitrary closed rows cannot substitute missing shift/terminal evidence
+ok 134 - three arbitrary closed rows cannot substitute missing shift/terminal evidence
+  ---
+  duration_ms: 9.234746
+  ...
+# Subtest: explicit morning-only delivery cannot replace store third shift and must itself be closed
+ok 135 - explicit morning-only delivery cannot replace store third shift and must itself be closed
+  ---
+  duration_ms: 7.807716
+  ...
+# Subtest: foreign, duplicate, future, unknown variance and unconfigured terminal all hold dispatch
+ok 136 - foreign, duplicate, future, unknown variance and unconfigured terminal all hold dispatch
+  ---
+  duration_ms: 35.36179
+  ...
+# Subtest: cash offsets preserve original employee differences and cannot cross day/terminal/delivery
+ok 137 - cash offsets preserve original employee differences and cannot cross day/terminal/delivery
+  ---
+  duration_ms: 21.177421
+  ...
+# Subtest: provision native guard refuses production/remote/URL overrides
+ok 138 - provision native guard refuses production/remote/URL overrides
+  ---
+  duration_ms: 1.753269
+  ...
+# Subtest: native full catalog oracle, collisions, mismatch rollback and operator isolation
+ok 139 - native full catalog oracle, collisions, mismatch rollback and operator isolation # SKIP
+  ---
+  duration_ms: 11.068929
+  ...
+# Subtest: provision rejects connection identity and every unsafe override
+ok 140 - provision rejects connection identity and every unsafe override
+  ---
+  duration_ms: 11.170686
+  ...
+# Subtest: identity, OFF, source, acknowledgment and PG18 oracle gates open no transaction
+ok 141 - identity, OFF, source, acknowledgment and PG18 oracle gates open no transaction
+  ---
+  duration_ms: 60.066592
+  ...
+# Subtest: default preflight is explicitly read-only and never executes DDL
+ok 142 - default preflight is explicitly read-only and never executes DDL
+  ---
+  duration_ms: 7.669618
+  ...
+# Subtest: absence guard rejects relation or type collision of any kind
+ok 143 - absence guard rejects relation or type collision of any kind
+  ---
+  duration_ms: 0.336513
+  ...
+# Subtest: verification commits before email, no token in response, verification alone never creates consent
+ok 144 - verification commits before email, no token in response, verification alone never creates consent
+  ---
+  duration_ms: 8.996057
+  ...
+# Subtest: separate mailbox consent binds frequencies/version/revision and requires explicit action
+ok 145 - separate mailbox consent binds frequencies/version/revision and requires explicit action
+  ---
+  duration_ms: 2.671938
+  ...
+# Subtest: cooldown, expiry and five failures are durable and never trigger automatic sending retries
+ok 146 - cooldown, expiry and five failures are durable and never trigger automatic sending retries
+  ---
+  duration_ms: 4.409205
+  ...
+# Subtest: invalid/ambiguous SMTP receipt is generic failure after one committed challenge
+ok 147 - invalid/ambiguous SMTP receipt is generic failure after one committed challenge
+  ---
+  duration_ms: 2.114583
+  ...
+# Subtest: input snapshots reject getters without execution; invalidation skips equal sets and updates in lock order
+ok 148 - input snapshots reject getters without execution; invalidation skips equal sets and updates in lock order
+  ---
+  duration_ms: 0.725673
+  ...
+# Subtest: revoked email reuses immutable recipient identity with version advance and no inherited authority
+ok 149 - revoked email reuses immutable recipient identity with version advance and no inherited authority
+  ---
+  duration_ms: 2.045288
+  ...
+# Subtest: strict recipient input rejects actor injection and snapshots fields before checkout
+ok 150 - strict recipient input rejects actor injection and snapshots fields before checkout
+  ---
+  duration_ms: 1.597776
+  ...
+# Subtest: construction is inert, explicit start once creates unref timer and OFF makes zero database calls
+ok 151 - construction is inert, explicit start once creates unref timer and OFF makes zero database calls
+  ---
+  duration_ms: 6.94467
+  ...
+# Subtest: bounded sweep runs only three known frequencies and uses keyset on following sweep
+ok 152 - bounded sweep runs only three known frequencies and uses keyset on following sweep
+  ---
+  duration_ms: 2.282796
+  ...
+# Subtest: concurrent sweeps share one tracked task; shutdown stops admission but drains current operation
+ok 153 - concurrent sweeps share one tracked task; shutdown stops admission but drains current operation
+  ---
+  duration_ms: 7.576435
+  ...
+# Subtest: fresh OFF/epoch change mid-sweep prevents additional frequency/store admission
+ok 154 - fresh OFF/epoch change mid-sweep prevents additional frequency/store admission
+  ---
+  duration_ms: 0.411534
+  ...
+# Subtest: invalid bounds or dishonest dispatcher cannot silently exceed batch budget
+ok 155 - invalid bounds or dishonest dispatcher cannot silently exceed batch budget
+  ---
+  duration_ms: 5.560147
+  ...
+# Subtest: native automatic-report settings writer: lifecycle-first store locks, NOWAIT refusal, key-share compatibility and original epoch
+ok 156 - native automatic-report settings writer: lifecycle-first store locks, NOWAIT refusal, key-share compatibility and original epoch # SKIP
+  ---
+  duration_ms: 2.215708
+  ...
+# Subtest: actual settings writer locks original lifecycle epoch before parent Store, rule and first INSERT, then commits
+ok 157 - actual settings writer locks original lifecycle epoch before parent Store, rule and first INSERT, then commits
+  ---
+  duration_ms: 49.172669
+  ...
+# Subtest: enrolled missing/stale request generations refuse before Store lock or settings write
+ok 158 - enrolled missing/stale request generations refuse before Store lock or settings write
+  ---
+  duration_ms: 26.464025
+  ...
+# Subtest: busy, maintenance, retired and foreign lifecycle fences refuse the actual settings writer
+ok 159 - busy, maintenance, retired and foreign lifecycle fences refuse the actual settings writer
+  ---
+  duration_ms: 22.677494
+  ...
+# Subtest: Store NOWAIT conflict becomes explicit409 once, with no rule/readback/write; unrelated DB errors propagate
+ok 160 - Store NOWAIT conflict becomes explicit409 once, with no rule/readback/write; unrelated DB errors propagate
+  ---
+  duration_ms: 23.432006
+  ...
+# Subtest: fresh locked Store name governs the legacy cash rule instead of the preliminary scope read
+ok 161 - fresh locked Store name governs the legacy cash rule instead of the preliminary scope read
+  ---
+  duration_ms: 19.333058
+  ...
+# Subtest: scope and locked-row absence stop before rule/settings work
+ok 162 - scope and locked-row absence stop before rule/settings work
+  ---
+  duration_ms: 18.509129
+  ...
+# Subtest: parent locking preserves first-insert/version CAS conflicts and existing settings
+ok 163 - parent locking preserves first-insert/version CAS conflicts and existing settings
+  ---
+  duration_ms: 29.799999
+  ...
+# Subtest: absent lifecycle fence retains legacy generation zero without enrollment or DDL
+ok 164 - absent lifecycle fence retains legacy generation zero without enrollment or DDL
+  ---
+  duration_ms: 10.502584
+  ...
+# Subtest: mounted report dialog saves explicit store slots, previews saved versions and discards late results after store switch
+ok 165 - mounted report dialog saves explicit store slots, previews saved versions and discards late results after store switch
+  ---
+  duration_ms: 915.005959
+  ...
+# Subtest: platform mounts keyed per-store report settings without changing recipient saving or manual-send guards
+ok 166 - platform mounts keyed per-store report settings without changing recipient saving or manual-send guards
+  ---
+  duration_ms: 24.789208
+  ...
+# Subtest: native settings HTTP persists one optimistic winner, isolates scope and previews saved cash rules without changing sources
+ok 167 - native settings HTTP persists one optimistic winner, isolates scope and previews saved cash rules without changing sources # SKIP
+  ---
+  duration_ms: 2.545003
+  ...
+# Subtest: explicit settings validate slots, terminal identity, ordering, mode and optimistic version without enabling dispatch
+ok 168 - explicit settings validate slots, terminal identity, ordering, mode and optimistic version without enabling dispatch
+  ---
+  duration_ms: 28.249043
+  ...
+# Subtest: shared legacy fallback preserves all three difference-only stores and normal delivery rules
+ok 169 - shared legacy fallback preserves all three difference-only stores and normal delivery rules
+  ---
+  duration_ms: 0.43716
+  ...
+# Subtest: scope rechecks actual role before querying the selected active store
+ok 170 - scope rechecks actual role before querying the selected active store
+  ---
+  duration_ms: 0.934621
+  ...
+# Subtest: confirmed effective legacy rule is explicit and changed rules/settings hold even a complete source
+ok 171 - confirmed effective legacy rule is explicit and changed rules/settings hold even a complete source
+  ---
+  duration_ms: 43.547345
+  ...
+# Subtest: factory is inert, scoped one-recipient envelope/config/timeouts are exact and receipt is actual
+ok 172 - factory is inert, scoped one-recipient envelope/config/timeouts are exact and receipt is actual
+  ---
+  duration_ms: 6.211852
+  ...
+# Subtest: scope and SMTP config captured before caller mutation, request copied before external await
+ok 173 - scope and SMTP config captured before caller mutation, request copied before external await
+  ---
+  duration_ms: 5.156341
+  ...
+# Subtest: real demo company/store guard runs before transport construction and cannot be injected
+ok 174 - real demo company/store guard runs before transport construction and cannot be injected
+  ---
+  duration_ms: 2.933709
+  ...
+# Subtest: invalid own-data scope, recipient, headers and extra message options cause zero SMTP calls/getters
+ok 175 - invalid own-data scope, recipient, headers and extra message options cause zero SMTP calls/getters
+  ---
+  duration_ms: 19.179519
+  ...
+# Subtest: configuration getters are not executed and unrelated legacy test recipient is never read
+ok 176 - configuration getters are not executed and unrelated legacy test recipient is never read
+  ---
+  duration_ms: 0.309036
+  ...
+# Subtest: missing/bad configuration fails before transport construction without leaking secrets
+ok 177 - missing/bad configuration fails before transport construction without leaking secrets
+  ---
+  duration_ms: 0.65181
+  ...
+# Subtest: transport errors propagate exactly once without retry or false receipt
+ok 178 - transport errors propagate exactly once without retry or false receipt
+  ---
+  duration_ms: 0.675789
+  ...
+# Subtest: receipt projection preserves missing/contradictory evidence, omits provider extras and detaches arrays
+ok 179 - receipt projection preserves missing/contradictory evidence, omits provider extras and detaches arrays
+  ---
+  duration_ms: 0.913261
+  ...
+# Subtest: accessor/nonplain/sparse/hidden/oversized actual evidence cannot manufacture acceptance
+ok 180 - accessor/nonplain/sparse/hidden/oversized actual evidence cannot manufacture acceptance
+  ---
+  duration_ms: 28.18456
+  ...
+# Subtest: real driver/repository/adapter commits ATTEMPTING before one SMTP call and stores ACCEPTED
+ok 181 - real driver/repository/adapter commits ATTEMPTING before one SMTP call and stores ACCEPTED
+  ---
+  duration_ms: 39.223493
+  ...
+# Subtest: real driver persists ambiguous/rejected/partial/invalid evidence UNKNOWN without retries or detail leaks
+ok 182 - real driver persists ambiguous/rejected/partial/invalid evidence UNKNOWN without retries or detail leaks
+  ---
+  duration_ms: 106.69507
+  ...
+# Subtest: real start commit failure creates zero SMTP clients or sends
+ok 183 - real start commit failure creates zero SMTP clients or sends
+  ---
+  duration_ms: 2.831278
+  ...
+# Subtest: provider rejectedErrors cannot be projected away into false ACCEPTED, including opaque properties
+ok 184 - provider rejectedErrors cannot be projected away into false ACCEPTED, including opaque properties
+  ---
+  duration_ms: 53.84676
+  ...
+# Subtest: native automatic cash reader uses selected scope, overnight opening boundaries and unchanged original records
+ok 185 - native automatic cash reader uses selected scope, overnight opening boundaries and unchanged original records # SKIP
+  ---
+  duration_ms: 2.018769
+  ...
+# Subtest: native automatic cash source transaction: saved configuration/source snapshot, independent writer, stale version and actual payload
+ok 186 - native automatic cash source transaction: saved configuration/source snapshot, independent writer, stale version and actual payload # SKIP
+  ---
+  duration_ms: 2.099148
+  ...
+# Subtest: existing public source and caller-owned source have exact daily/week/month parity without nested transactions
+ok 187 - existing public source and caller-owned source have exact daily/week/month parity without nested transactions
+  ---
+  duration_ms: 906.436356
+  ...
+# Subtest: public invalid inputs still fail before transaction and internal invalid inputs fail before any query
+ok 188 - public invalid inputs still fail before transaction and internal invalid inputs fail before any query
+  ---
+  duration_ms: 9.692808
+  ...
+# Subtest: saved preview performs all authority/settings/source reads in one read-only repeatable snapshot
+ok 189 - saved preview performs all authority/settings/source reads in one read-only repeatable snapshot
+  ---
+  duration_ms: 23.624418
+  ...
+# Subtest: same-snapshot integration preserves scope/settings refusal before any financial source read
+ok 190 - same-snapshot integration preserves scope/settings refusal before any financial source read
+  ---
+  duration_ms: 3.505486
+  ...
+# Subtest: integrated preview retains actual rule/open-source HOLD and payload refusal
+ok 191 - integrated preview retains actual rule/open-source HOLD and payload refusal
+  ---
+  duration_ms: 25.104201
+  ...
+# Subtest: source failure propagates through owned transaction without fallback or repair
+ok 192 - source failure propagates through owned transaction without fallback or repair
+  ---
+  duration_ms: 5.740756
+  ...
+# Subtest: selected-store repeatable snapshot preserves employee differences and delivery isolation
+ok 193 - selected-store repeatable snapshot preserves employee differences and delivery isolation
+  ---
+  duration_ms: 29.996001
+  ...
+# Subtest: fresh database role and selected active store are required before reading financial source
+ok 194 - fresh database role and selected active store are required before reading financial source
+  ---
+  duration_ms: 57.078656
+  ...
+# Subtest: missing scope or actual terminal configuration never becomes all-store reporting
+ok 195 - missing scope or actual terminal configuration never becomes all-store reporting
+  ---
+  duration_ms: 12.685757
+  ...
+# Subtest: missing explicit rule, unsupported EFTPOS mode and unknown delivery chain hold instead of inventing zero
+ok 196 - missing explicit rule, unsupported EFTPOS mode and unknown delivery chain hold instead of inventing zero
+  ---
+  duration_ms: 85.15701
+  ...
+# Subtest: open third, earlier unresolved shift, foreign source, unknown variance and truncation never produce partial totals
+ok 197 - open third, earlier unresolved shift, foreign source, unknown variance and truncation never produce partial totals
+  ---
+  duration_ms: 284.836152
+  ...
+# Subtest: fresh snapshots change fingerprint on amount, rule or shift update without writing source
+ok 198 - fresh snapshots change fingerprint on amount, rule or shift update without writing source
+  ---
+  duration_ms: 90.544158
+  ...
+# Subtest: source READY and HOLD both retain provisional financial status without treating limitations as missing shifts
+ok 199 - source READY and HOLD both retain provisional financial status without treating limitations as missing shifts
+  ---
+  duration_ms: 79.482387
+  ...
+# Subtest: mounted two-shift form saves null, reopens it and requires third hour only when selected
+ok 200 - mounted two-shift form saves null, reopens it and requires third hour only when selected
+  ---
+  duration_ms: 577.133381
+  ...
+# Subtest: explicit two-shift schema accepts absent third boundary but still validates required third, slot identity and hours
+ok 201 - explicit two-shift schema accepts absent third boundary but still validates required third, slot identity and hours
+  ---
+  duration_ms: 36.914176
+  ...
+# Subtest: two actual closed shifts are ready for variable late closing, never require a fabricated third
+ok 202 - two actual closed shifts are ready for variable late closing, never require a fabricated third
+  ---
+  duration_ms: 9.155537
+  ...
+# Subtest: two-shift reporting retains missing, open, unknown, scope, duplicate, overlap and unfinished-day holds
+ok 203 - two-shift reporting retains missing, open, unknown, scope, duplicate, overlap and unfinished-day holds
+  ---
+  duration_ms: 24.869615
+  ...
+# Subtest: two-shift day boundaries retain Greek DST and original source identities
+ok 204 - two-shift day boundaries retain Greek DST and original source identities
+  ---
+  duration_ms: 7.720135
+  ...
+# Subtest: weekly period anchors Monday through next Monday at each store's 06/07 start, including DST
+ok 205 - weekly period anchors Monday through next Monday at each store's 06/07 start, including DST
+  ---
+  duration_ms: 19.33673
+  ...
+# Subtest: one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes
+ok 206 - one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes
+  ---
+  duration_ms: 81.689504
+  ...
+# Subtest: missing midweek shift, Sunday open/late closure, earlier unresolved, duplicates and foreign data hold the whole week
+ok 207 - missing midweek shift, Sunday open/late closure, earlier unresolved, duplicates and foreign data hold the whole week
+  ---
+  duration_ms: 672.618534
+  ...
+1..207
+# tests 207
+# suites 0
+# pass 194
+# fail 0
+# cancelled 0
+# skipped 13
+# todo 0
+# duration_ms 13022.049224

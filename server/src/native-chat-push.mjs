@@ -1,3 +1,4 @@
+import {mutedChatUsers} from './chat-notification-preferences.js';
 import {nativeRecipientAllowed} from './native-fcm-policy.mjs';
 import {createHash} from 'node:crypto';
 import {prisma} from './prisma.js';
@@ -28,7 +29,7 @@ export async function registerNativePush(user,token,bearer,storeId,notificationV
  nativeToken(token);const stores=await nativeStores(user,storeId);
  if(!stores.length||!(user.chatSessionId||user.sessionId))throw Object.assign(new Error('Συνδέσου ξανά για ειδοποιήσεις.'),{status:403});
  for(const s of stores)assertCustomerDemoOutboundAllowed({companyId:s.companyId,storeId:s.id});
- const identity={platform:target,notificationVersion:notificationVersion===2?2:1,id:user.id,employeeId:user.employeeId,companyId:user.companyId,storeId:user.storeId,role:user.role,platformRole:user.platformRole||user.role,tokenType:user.tokenType,sessionVersion:user.sessionVersion,chatSessionId:user.chatSessionId,credentialStamp:user.chatCredentialStamp,supportContext:Boolean(user.supportContext)};
+ const identity={platform:target,notificationVersion:target==='android'&&notificationVersion===3?3:notificationVersion===2?2:1,id:user.id,employeeId:user.employeeId,companyId:user.companyId,storeId:user.storeId,role:user.role,platformRole:user.platformRole||user.role,tokenType:user.tokenType,sessionVersion:user.sessionVersion,chatSessionId:user.chatSessionId,credentialStamp:user.chatCredentialStamp,supportContext:Boolean(user.supportContext)};
  const hash=nativeBinding(token),binding=nativeBinding(bearer),sessionId=user.chatSessionId||user.sessionId;
  await ensureNativeChatPushSchema();await prisma.$transaction(async tx=>{
   await tx.$queryRawUnsafe('SELECT (pg_advisory_xact_lock(hashtext($1)) IS NULL) AS locked',hash);
@@ -41,17 +42,19 @@ export async function revokeNativePush(user,token){
  await prisma.$executeRawUnsafe('DELETE FROM "StoreChatNativePush" WHERE "tokenHash"=$1 AND "userId"=$2 AND "sessionId"=$3',nativeBinding(token),user.id,user.chatSessionId||user.sessionId||'');
  return {ok:true};
 }
-export async function sendNativeChatPush({store,senderId}){
+export async function sendNativeChatPush({store,senderId,messageId,topic}){
  if(!provider.configured())return {attempted:0,delivered:0};
  assertCustomerDemoOutboundAllowed({companyId:store.companyId,storeId:store.id});await ensureNativeChatPushSchema();
  const rows=await prisma.$queryRawUnsafe(`SELECT * FROM "StoreChatNativePush" WHERE "userId"<>$1 AND "updatedAt">NOW()-INTERVAL '30 days' ORDER BY "updatedAt" DESC LIMIT 2000`,senderId);
+ const muted=await mutedChatUsers(store,topic);
  let attempted=0,delivered=0;
  // Revalidate immediately before each send; never trust stored store lists or role claims.
  for(const row of rows){try{
+  if(muted.has(row.userId))continue;
   const platform=nativePlatform(row.identityJson?.platform);
   if(platform==='ios'&&!nativeIosConfigured())continue;
   if(!await nativeRecipientAllowed(row,store,{db:prisma,storesFor:mobileChatStores,enabled:chatEnabled,authorize:authorizeChatOperator}))continue;
-  attempted++;const result=await provider.send({token:row.token,binding:row.binding,storeId:store.id,companyId:store.companyId,...(platform==='ios'?{platform}:{}),...(row.identityJson?.notificationVersion===2?{storeName:store.name}:{})});
+  attempted++;const result=await provider.send({token:row.token,binding:row.binding,storeId:store.id,companyId:store.companyId,...(platform==='ios'?{platform}:{}),...(row.identityJson?.notificationVersion>=2?{storeName:store.name}:{}),...(row.identityJson?.notificationVersion===3&&platform==='android'&&messageId?{messageId}:{})});
   if(result.delivered)delivered++;
   if(result.unregistered)await prisma.$executeRawUnsafe('DELETE FROM "StoreChatNativePush" WHERE "tokenHash"=$1 AND "binding"=$2',row.tokenHash,row.binding);
  }catch{/* Fail closed without logging credentials, recipients or private data. */}}

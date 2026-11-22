@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-31T09:17:12.609Z",
+  "store": "MYWORKSTATION LAB",
+  "period": "2026-10-27",
+  "bytes": 35275,
+  "sha256": "9726c45db1cf289ea7562dadec0b9f1e54e14efedb828736eb303f3130e596f6",
+  "worksheets": 9,
+  "cash": 0,
+  "card": 0,
+  "automaticRows": 1,
+  "manualReviewWrites": 0,
+  "businessActions": 0,
+  "scope": "completed download and XML content only",
+  "revision": "NOT RECORDED"
+}

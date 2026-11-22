@@ -20,11 +20,15 @@ export async function runSalesHourlyRegression(db,{http=true}={}){
   PriceCatalogPromotion:'"id" text primary key,"companyId" text,"active" bool',
   Sale:'"id" text primary key,"companyId" text,"storeId" text,"status" text,"transactionMode" text,"source" text,"occurredAt" timestamp,"originalSaleId" text',
   SaleLine:'"id" text primary key,"saleId" text,"productId" text,"description" text,"quantity" numeric,"unitPrice" numeric,"discount" numeric,"vatRate" numeric,"lineTotal" numeric,"promotionId" text,"promotionType" text',
-  PurchaseDocumentLine:'"purchaseDocumentId" text,"productId" text,"unit" text,"unitCost" numeric,"unitsPerPackage" numeric',
-  PurchaseDocument:'"id" text,"supplierId" text,"companyId" text,"storeId" text,"status" text,"documentDate" timestamp,"createdAt" timestamp',
-  Supplier:'"id" text,"name" text'
+  PurchaseDocumentLine:'"purchaseDocumentId" text,"productId" text,"unit" text,"unitCost" numeric,"unitsPerPackage" numeric,"createdAt" timestamp,"id" text,"quantity" numeric,"netAmount" numeric',
+  PurchaseDocument:'"id" text,"supplierId" text,"companyId" text,"storeId" text,"status" text,"documentDate" timestamp,"createdAt" timestamp,"sourceType" text,"purchaseOrderId" text,"documentNumber" text',
+  PurchaseOrder:'"id" text,"companyId" text,"storeId" text,"supplierId" text,"invoiceNumber" text,"status" text',
+  PurchaseOrderLine:'"orderId" text,"productId" text,"quantity" numeric,"netAmount" numeric,"resolutionStatus" text,"invoiceUnit" text,"stockUnitsPerInvoiceUnit" numeric',
+  StockMovement:'"id" text,"sourceType" text,"sourceId" text,"storeId" text,"productId" text,"movementType" text,"unitCost" numeric,"createdAt" timestamp',
+  Supplier:'"id" text,"companyId" text NOT NULL,"name" text'
  };
  for(const [name,columns] of Object.entries(definitions))await db.$executeRawUnsafe(`CREATE TABLE "${name}"(${columns})`);
+ await db.$executeRaw`INSERT INTO "Supplier"("id","companyId","name") VALUES('canonical-supplier-own','c','Canonical own supplier'),('canonical-supplier-foreign','x','Canonical foreign supplier')`;
  await db.$executeRaw`INSERT INTO "Store" VALUES('s','c','LAB',true),('control','c','CONTROL',true),('foreign','x','FOREIGN',true),('inactive','c','INACTIVE',false)`;
  for(const [id,unit] of [['p','PIECE'],['kg','KG'],['litre','LITER'],['pack','PACKAGE'],['unknown',null]])await db.$executeRaw`INSERT INTO "Product" VALUES(${id},'c',${id},${id},${unit},NULL,NULL,.25)`;
  await db.$executeRaw`INSERT INTO "PriceCatalogPromotion" VALUES('promo','c',false)`;

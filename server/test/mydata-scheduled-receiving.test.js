@@ -9,9 +9,9 @@ async function fixture({allowed=true,held=false,targetBarrier,targets,lockBarrie
   let tick,interval,locks=0,owners=0,cleared=0;
   const backgroundDrain=createBackgroundDrain();
   const prisma={store:{findFirst:async()=>null},$executeRawUnsafe:async()=>{},$queryRaw:async strings=>{if(strings.join("?").includes('FROM "User"')){owners++;return [{id:'linked-owner'}]}if(targetBarrier)await targetBarrier;return targets||[{companyId:'company',storeId:'store'}]},$transaction:async fn=>{locks++;if(lockBarrier)await lockBarrier;return fn({$queryRaw:async()=>[{held}],$queryRawUnsafe:async sql=>{assert.match(sql,/current_schema/);return [{schema:'public',fence:null}]}})},user:{findFirst:async()=>{owners++;return {id:'owner'}}}};
-  globalThis.__scheduled={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval:()=>cleared++,prisma,Router:()=>({get(){},post(){}}),requireCompanyModule:()=>()=>{},companyModuleState:async()=>({licenseAllowed:allowed,activeModules:['DOCUMENTS']}),ensureStoreIntegrationSchema:async()=>{},setInterval:(fn,ms)=>{tick=fn;interval=ms;return {unref(){}}}};
+  globalThis.__scheduled={providerOriginalRecoveryLinkPattern:({includeExistingImpact}={})=> includeExistingImpact?'with-impact-pattern':'supported-link-pattern',assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval:()=>cleared++,prisma,Router:()=>({get(){},post(){}}),requireCompanyModule:()=>()=>{},companyModuleState:async()=>({licenseAllowed:allowed,activeModules:['DOCUMENTS']}),ensureStoreIntegrationSchema:async()=>{},setInterval:(fn,ms)=>{tick=fn;interval=ms;return {unref(){}}}};
   const source=await readFile(new URL('../src/routes/commerce-mydata-inbox.js',import.meta.url),'utf8');
-  const injected='const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval,prisma,Router,requireCompanyModule,companyModuleState,ensureStoreIntegrationSchema,setInterval}=globalThis.__scheduled;';
+  const injected='const {providerOriginalRecoveryLinkPattern,assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval,prisma,Router,requireCompanyModule,companyModuleState,ensureStoreIntegrationSchema,setInterval}=globalThis.__scheduled;';
   const mod=await import('data:text/javascript;base64,'+Buffer.from(injected+source.replace(/^import .*;\r?\n/gm,'')+`\n//${Math.random()}`).toString('base64'));
   delete globalThis.__scheduled;
   return {mod,backgroundDrain,get cleared(){return cleared},get tick(){return tick},get interval(){return interval},get locks(){return locks},get owners(){return owners}};
@@ -54,4 +54,45 @@ test('delayed receiving rechecks scope after admission before any credentials or
   const f=await fixture({held:true,lockBarrier:barrier});const req={user:{companyId:'company'},body:{storeId:'store'}};
   const pending=f.mod.syncMyDataStore(req);req.body.storeId='customer-demo-store-revoked';release();
   await assert.rejects(pending,error=>error.code==='CUSTOMER_DEMO_OUTBOUND_BLOCKED');assert.equal(f.owners,0);assert.equal(f.locks,1);
+});
+
+test('historical original recovery is explicitly store-scoped, production-only, bounded and attachment-only',async()=>{
+  const {mod}=await fixture();
+  const calls=[];
+  const db={
+    $queryRaw:async(strings,...values)=>{
+      assert.match(strings.join("?"), /i\."attachmentId" IS NULL AND i\."status"='RECEIVED'/);
+      assert.match(strings.join("?"), /"rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM/);
+      assert.match(strings.join("?"), /m\."issueDate">=DATE '2026-11-01' AND m\."issueDate"<DATE '2026-12-01'/);
+      assert.equal(values[5],'with-impact-pattern');
+      assert.equal(values[6],'supported-link-pattern');
+      assert.match(strings.join("?"), /jsonb_array_elements_text/);
+      assert.equal(values[3],'["ordinary-pending","newly-received"]');
+      assert.match(strings.join("?"), /ORDER BY m\."fetchedAt",m\."id" LIMIT 2/);
+      assert.deepEqual(values.slice(0,3), ['company','store','AADE_MYDATA_PRODUCTION']);
+      calls.push('query');
+      return [{inboxId:'downloadable'},{inboxId:'unavailable'}];
+    },
+    $executeRaw:async(strings,...values)=>{
+      assert.match(strings.join("?"), /i\."attachmentId" IS NULL/);
+      assert.match(strings.join("?"), /originalDownloaded' IS DISTINCT FROM 'true'/);
+      assert.deepEqual(values.slice(1,4), ['company','store','unavailable']);
+      assert.equal(values[0],values[4]);
+      calls.push('version-stamped');
+    },
+  };
+  const acquire=async(...args)=>{
+    assert.deepEqual(args.slice(0,3),[db,'company','store']);
+    assert.deepEqual(args.slice(4),['actor',false,undefined,{reconcileExisting:true}]);
+    calls.push(args[3]);
+    if(args[3]==='unavailable')throw new Error('Provider did not return PDF');
+    return {downloaded:true};
+  };
+  const options={db,companyId:'company',storeId:'store',userId:'actor',source:'AADE_MYDATA_PRODUCTION',reconcileExisting:true,excludeInboxIds:['ordinary-pending','newly-received'],acquire};
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:''}),{downloaded:0,failed:0});
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'other'}),{downloaded:0,failed:0});
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'store',source:'AADE_MYDATA_SANDBOX'}),{downloaded:0,failed:0});
+  assert.deepEqual(calls,[]);
+  assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'other, store'}),{downloaded:1,failed:1});
+  assert.deepEqual(calls,['query','downloadable','unavailable','version-stamped']);
 });

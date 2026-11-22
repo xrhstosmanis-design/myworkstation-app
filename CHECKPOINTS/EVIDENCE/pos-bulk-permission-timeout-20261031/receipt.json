@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "scope": "POS-BULK-PERMISSION-TIMEOUT-01",
+  "claim": {
+    "pr": 3348,
+    "merge": "2142d1046d579aa413480a427b8daf4184c102d7"
+  },
+  "source": {
+    "pr": 3350,
+    "head": "2691ea84a9c8ab54eb148516c6840be3611c68a6",
+    "tree": "cfd12b1c3f8b2792e2dc0cbff3c0fb4d0e14c18b",
+    "blobs": {
+      "CHECKPOINTS/CHANGES/2026-10-31-pos-bulk-permission-timeout.md": "b13aeb0997a9bc114698d4b0b81622ca95f345ab",
+      "server/src/lib/inventory-bulk-card.js": "4966f4161aa0223968f6e3ce2df5fa14052a56be",
+      "server/test/fixtures/inventory-bulk-card-before-timeout.mjs": "f63e67ea20b9b4dc4f31969df26c924f732e5c54",
+      "server/test/inventory-bulk-permission-timeout-postgres.test.js": "97e71914d6802358f84149721e73ef1058641638"
+    },
+    "run": 41196421557,
+    "status": "DIAGNOSTIC_RELEASE_VERIFIED_BEHAVIORAL_HANDOFF",
+    "merge": "26af0bf2d8ab270ac1d1db620e0460f98a69e8ad",
+    "prCI": {
+      "run": 41196421557,
+      "job": 124523791408,
+      "serverPass": 4845,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "allFiveJobsSuccess": true
+    },
+    "mainCI": {
+      "run": 41197361941,
+      "job": 124526420650,
+      "serverPass": 4845,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "allFiveJobsSuccess": true
+    },
+    "release": {
+      "run": 41198096845,
+      "job": 124528296944,
+      "pinnedAtUTC": "2026-10-31T11:45:54Z",
+      "healthyAtUTC": "2026-10-31T11:50:50Z",
+      "revision": "26af0bf2d8ab270ac1d1db620e0460f98a69e8ad",
+      "independentHealth": {
+        "ok": true,
+        "revision": "26af0bf2d8ab270ac1d1db620e0460f98a69e8ad"
+      }
+    }
+  },
+  "historicalIncidents": {
+    "revision": "9644e95809ac0f0f1a80b1125dccfbed53aa3bed",
+    "utc": [
+      "2026-10-31T10:27:35.412Z",
+      "2026-10-31T10:28:26.408Z"
+    ],
+    "prismaCode": "P2028",
+    "timeoutMs": 5000,
+    "elapsedMs": [
+      5738,
+      5200
+    ],
+    "boundary": "permission-update",
+    "rootCause": "NOT_ESTABLISHED",
+    "requestPayload": "NOT_AVAILABLE"
+  },
+  "initialNative": {
+    "run": 41194830277,
+    "job": 124519022022,
+    "head": "7a309f4606ea0d95ca40622d43ed912fe361a839",
+    "result": "FAILURE",
+    "tests": {
+      "pass": 4843,
+      "fail": 1,
+      "skip": 0
+    },
+    "failure": "Own assertion expected permission-update; actual row-lock expiry occurred in membership-lock. This does not match the historical boundary.",
+    "largeCase": "NOT_RUN"
+  },
+  "intermediateNative": {
+    "run": 41195857048,
+    "job": 124522001958,
+    "head": "6ff209adbfcb5410c4569515c56f00a8b43b6f1b",
+    "wholeRun": "CANCELLED_SUPERSEDED_NOT_PASS",
+    "completedNativeCase": "PASS",
+    "measurements": [
+      {
+        "fixtureProducts": 110,
+        "code": "P2028",
+        "phases": [
+          {
+            "phase": "other",
+            "ms": 2
+          },
+          {
+            "phase": "other",
+            "ms": 1
+          },
+          {
+            "phase": "membership-lock",
+            "ms": 6010
+          }
+        ],
+        "productionCause": "NOT_ESTABLISHED"
+      },
+      {
+        "version": 1,
+        "code": "P2028",
+        "phase": "permission-update",
+        "totalMs": 5525,
+        "phases": [
+          {
+            "phase": "transaction-start",
+            "ms": 4
+          },
+          {
+            "phase": "advisory-lock",
+            "ms": 3
+          },
+          {
+            "phase": "store-check",
+            "ms": 3
+          },
+          {
+            "phase": "replay-read",
+            "ms": 2
+          },
+          {
+            "phase": "membership-lock",
+            "ms": 5508
+          },
+          {
+            "phase": "permission-update",
+            "ms": 4
+          }
+        ],
+        "allProducts": true,
+        "requestedCount": 0,
+        "selectedCount": 110,
+        "eventLoop": {
+          "activeMs": 5514,
+          "idleMs": 11,
+          "utilization": 0.998
+        }
+      },
+      {
+        "fixtureProducts": 10000,
+        "elapsedMs": 563,
+        "changed": 10000,
+        "productionScaleAcceptance": "NOT_TESTED"
+      }
+    ],
+    "largeTimingScope": "Save plus post-save audit/control readbacks; not a production latency claim."
+  },
+  "productionReadOnly": {
+    "utc": "2026-10-31T10:51Z",
+    "active": 0,
+    "lockWaiters": 0,
+    "labMembershipRows": 110,
+    "oneSampleOnly": true,
+    "nonlockingSelect": {
+      "executionMs": 0.734,
+      "planningMs": 31.338,
+      "sharedHits": 34,
+      "sharedReads": 0,
+      "notHistoricalLockOrClientTiming": true
+    }
+  },
+  "limits": {
+    "hostedMutation": false,
+    "physicalPosAcceptance": false,
+    "capacityAcceptance": false,
+    "productionCause": "NOT_ESTABLISHED",
+    "next": "Retained3354 owner: one fresh measured hosted acceptance; no duplicate implementation or real action replay.",
+    "functionalAcceptanceByThisPage": false
+  },
+  "finalDiagnosticMeasurements": [
+    {
+      "fixtureProducts": 110,
+      "code": "P2028",
+      "phases": [
+        {
+          "phase": "other",
+          "ms": 1
+        },
+        {
+          "phase": "other",
+          "ms": 3
+        },
+        {
+          "phase": "membership-lock",
+          "ms": 6002
+        }
+      ],
+      "productionCause": "NOT_ESTABLISHED"
+    },
+    {
+      "version": 1,
+      "code": "P2028",
+      "phase": "permission-update",
+      "totalMs": 5507,
+      "phases": [
+        {
+          "phase": "transaction-start",
+          "ms": 1
+        },
+        {
+          "phase": "advisory-lock",
+          "ms": 1
+        },
+        {
+          "phase": "store-check",
+          "ms": 1
+        },
+        {
+          "phase": "replay-read",
+          "ms": 2
+        },
+        {
+          "phase": "membership-lock",
+          "ms": 5501
+        },
+        {
+          "phase": "permission-update",
+          "ms": 1
+        }
+      ],
+      "permissionOnly": true,
+      "allProducts": true,
+      "requestedCount": 0,
+      "selectedCount": 110,
+      "eventLoop": {
+        "activeMs": 5504,
+        "idleMs": 3,
+        "utilization": 0.9994
+      }
+    },
+    {
+      "fixtureProducts": 10000,
+      "elapsedMs": 453,
+      "changed": 10000,
+      "productionScaleAcceptance": "NOT_TESTED"
+    }
+  ],
+  "largeTimingScope": "Save plus post-save audit/control readbacks; not isolated save latency or production benchmark.",
+  "handoff": {
+    "claimPR": 3353,
+    "sourcePR": 3354,
+    "owner": "fix/inventory-bulk-permission-large-20261031",
+    "candidate": "2b37c531aa126070470e146c0d61533233b96557",
+    "postIntegrationCI": 41198064459,
+    "preIntegrationQualifiedCI": 41197177245,
+    "behavioralAcceptance": "RETAINED_RECEIVER_NOT_RETESTED_BY_THIS_PAGE",
+    "runtimeFurtherEditsByThisPage": false,
+    "receiverPerformedConflictResolution": true,
+    "integratedPRQualification": {
+      "head": "2b37c531aa126070470e146c0d61533233b96557",
+      "run": 41198064459,
+      "job": 124528429843,
+      "serverPass": 4847,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "allFiveJobsSuccess": true
+    },
+    "merge": "2d80052bf2e4c09417afd7f4e0b7150114707db6",
+    "mergeInitiatedByThisPage": false,
+    "mainCI": 41198824482,
+    "newerCombinedMain": {
+      "qualifiedRuntime": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+      "status": "TECHNICAL_RELEASE_VERIFIED_AWAITING_HOSTED_ACCEPTANCE"
+    },
+    "fixBlobs": {
+      "server/src/lib/inventory-bulk-card.js": "7d15a309a716d1bd84a64de7ae3c05b30bbd1ffa",
+      "server/src/lib/inventory-bulk-permission.js": "d5d860250d847e6630cc519b5fb92377fcde0551",
+      "server/test/inventory-bulk-permission-large-postgres.test.js": "0713aa19e3c1a0fb2c7e697177325d42c86301d2",
+      "server/test/inventory-bulk-permission-timeout-postgres.test.js": "a1a5ca0020d82277f8f37bdb9c673546ee73c763"
+    },
+    "nativeProof": [
+      "2026-10-31T11:48:49.2694492Z # INVENTORY_BULK_PERMISSION_TIMEOUT {\"version\":1,\"code\":\"P2028\",\"phase\":\"transaction-start\",\"totalMs\":1,\"phases\":[{\"phase\":\"transaction-start\",\"ms\":1}],\"permissionOnly\":true,\"allProducts\":true,\"requestedCount\":0,\"selectedCount\":null,\"eventLoop\":{\"activeMs\":1,\"idleMs\":0,\"utilization\":1}}",
+      "2026-10-31T11:48:49.2697367Z ok 1244 - native 8000-product permission update is atomic, leaves StoreProduct unlocked and survives a controlled six-second operation",
+      "2026-10-31T11:48:52.6559929Z # BULK_PERMISSION_TIMEOUT_DIAGNOSTIC {\"fixtureProducts\":110,\"code\":\"P2028\",\"phases\":[{\"phase\":\"other\",\"ms\":1},{\"phase\":\"other\",\"ms\":1},{\"phase\":\"membership-lock\",\"ms\":6004}],\"productionCause\":\"NOT_ESTABLISHED\"}",
+      "2026-10-31T11:48:52.6562817Z # BULK_PERMISSION_CALLBACK_DIAGNOSTIC {\"version\":1,\"code\":\"P2028\",\"phase\":\"permission-update\",\"totalMs\":5507,\"phases\":[{\"phase\":\"transaction-start\",\"ms\":1},{\"phase\":\"advisory-lock\",\"ms\":1},{\"phase\":\"store-check\",\"ms\":1},{\"phase\":\"replay-read\",\"ms\":1},{\"phase\":\"membership-lock\",\"ms\":5503},{\"phase\":\"other-changes\",\"ms\":0},{\"phase\":\"permission-update\",\"ms\":2}],\"permissionOnly\":false,\"allProducts\":false,\"requestedCount\":110,\"selectedCount\":110,\"eventLoop\":{\"activeMs\":5504,\"idleMs\":3,\"utilization\":0.9994}}",
+      "2026-10-31T11:48:52.9135209Z # BULK_PERMISSION_UNCONTENDED_DIAGNOSTIC {\"fixtureProducts\":10000,\"elapsedMs\":204,\"changed\":10000,\"productionScaleAcceptance\":\"NOT_TESTED\"}"
+    ]
+  },
+  "newerScenarioReportedByReceiver": {
+    "store": "Διαδόχου",
+    "totalProducts": 6739,
+    "activeDisplayed": 6731,
+    "enabledAtReceiverRead": 141,
+    "allFailureUTC": "2026-10-31T11:19:36Z",
+    "elapsedMs": 7086,
+    "selected100Success": "USER_CONFIRMED",
+    "noNewRealWriteByThisPage": true
+  },
+  "commonRuntimeQualification": {
+    "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "run": 41199931951,
+    "job": 124534437975,
+    "serverPass": 4862,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allFiveJobsSuccess": true,
+    "proof": [
+      "2026-10-31T12:18:52.9796332Z ok 1259 - native 8000-product permission update is atomic, leaves StoreProduct unlocked and survives a controlled six-second operation",
+      "2026-10-31T12:18:53.9408423Z # BULK_PERMISSION_TIMEOUT_DIAGNOSTIC {\"fixtureProducts\":110,\"code\":\"P2028\",\"phases\":[{\"phase\":\"other\",\"ms\":1},{\"phase\":\"other\",\"ms\":1},{\"phase\":\"membership-lock\",\"ms\":6000}],\"productionCause\":\"NOT_ESTABLISHED\"}",
+      "2026-10-31T12:18:53.9412840Z # BULK_PERMISSION_CALLBACK_DIAGNOSTIC {\"version\":1,\"code\":\"P2028\",\"phase\":\"permission-update\",\"totalMs\":5512,\"phases\":[{\"phase\":\"transaction-start\",\"ms\":1},{\"phase\":\"advisory-lock\",\"ms\":1},{\"phase\":\"store-check\",\"ms\":1},{\"phase\":\"replay-read\",\"ms\":1},{\"phase\":\"membership-lock\",\"ms\":5503},{\"phase\":\"other-changes\",\"ms\":0},{\"phase\":\"permission-update\",\"ms\":5}],\"permissionOnly\":false,\"allProducts\":false,\"requestedCount\":110,\"selectedCount\":110,\"eventLoop\":{\"activeMs\":5508,\"idleMs\":4,\"utilization\":0.9993}}",
+      "2026-10-31T12:18:54.4916442Z # BULK_PERMISSION_UNCONTENDED_DIAGNOSTIC {\"fixtureProducts\":10000,\"elapsedMs\":426,\"changed\":10000,\"productionScaleAcceptance\":\"NOT_TESTED\"}",
+      "2026-10-31T12:23:48.2911671Z # tests 4862",
+      "2026-10-31T12:23:48.2912013Z # pass 4862",
+      "2026-10-31T12:23:48.2912173Z # fail 0",
+      "2026-10-31T12:23:48.2912506Z # skipped 0",
+      "2026-10-31T12:24:37.1082283Z # tests 8",
+      "2026-10-31T12:24:37.1083048Z # pass 8",
+      "2026-10-31T12:24:37.1083393Z # fail 0",
+      "2026-10-31T12:24:37.1084701Z # skipped 0"
+    ]
+  },
+  "commonRelease": {
+    "run": 41201059265,
+    "job": 124536843141,
+    "renderDeployId": "dep-dbitt4s9v7es738j9bc0",
+    "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "pinnedAtUTC": "2026-10-31T12:26:59Z",
+    "renderLiveAtUTC": "2026-10-31T12:32:12Z",
+    "guardHealthyAtUTC": "2026-10-31T12:32:24.5743360Z",
+    "independentHealth": {
+      "observedAt": "2026-10-31T12:33:48.965407+00:00",
+      "httpStatus": 200,
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "optimizedWriterInstalled": true
+  }
+}

@@ -1,3 +1,4 @@
+import {expectedReceiptRows,expectedReceiptReadiness} from '../src/services/supplier-expected-receipts.js';
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -18,6 +19,8 @@ test("supplier grouped order suggestions HTTP/SQL: quantities, returns, store/li
       CompanyModule:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"moduleKey" TEXT,"active" BOOLEAN',
       StorePaidModule:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMP,"endsAt" TIMESTAMP',
       Product:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"sku" TEXT,"unit" TEXT,"active" BOOLEAN,"trackStock" BOOLEAN',
+      PurchaseOrder:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT,"awaitingInvoice" BOOLEAN',
+      PurchaseOrderLine:'"id" TEXT PRIMARY KEY,"orderId" TEXT,"productId" TEXT,"quantity" NUMERIC,"stockUnitsPerInvoiceUnit" NUMERIC',
       StoreProduct:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"currentStock" NUMERIC,"minStock" NUMERIC,"active" BOOLEAN',
       Recipe:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"active" BOOLEAN',
       PreparationRecipeLine:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"automatic" BOOLEAN',
@@ -52,11 +55,17 @@ test("supplier grouped order suggestions HTTP/SQL: quantities, returns, store/li
     const db={$queryRaw:async(strings,...values)=>{if(strings.join("").includes('FROM "StoreProduct"'))reads++;return tx.$queryRaw(strings,...values);},$executeRaw:()=>{throw Error("Proposal attempted a write");},
       store:{findUnique:async({where})=>(await tx.$queryRaw`SELECT * FROM "Store" WHERE "id"=${where.id}`)[0]||null},
       company:{findUnique:async({where})=>{const row=(await tx.$queryRaw`SELECT * FROM "Company" WHERE "id"=${where.id}`)[0];return row?{...row,subscriptionEndsAt:null,modules:(await tx.$queryRaw`SELECT * FROM "CompanyModule" WHERE "companyId"=${where.id}`).map(m=>({...m,startsAt:null,endsAt:null}))}:null;}}};
-    db.$transaction=async(fn,options)=>{assert.deepEqual(options,{isolationLevel:"RepeatableRead"});transactions++;return fn(db);};
+    db.$transaction=async(fn,options)=>{
+      if(options.timeout===30000)assert.deepEqual(options,{isolationLevel:"RepeatableRead",timeout:30000});
+      else assert.deepEqual(options,{isolationLevel:"RepeatableRead"});
+      transactions++;
+      // A real Prisma transaction client cannot open a nested transaction.
+      return fn({...db,$transaction:undefined});
+    };
     const guardSource=await readFile(new URL("../src/middleware/module-access.js",import.meta.url),"utf8");
     const guard=new Function("prisma","ownerRestrictedModuleKeys",guardSource.replace(/^import .*;\s*$/gm,"").replace(/^export /gm,"")+"\nreturn requireStoreModule;")(db,ownerRestrictedModuleKeys);
     const routeSource=await readFile(new URL("../src/routes/order-suggestions.js",import.meta.url),"utf8");
-    const registrations=[];new Function("Router","z","prisma","requireStoreModule","buildOrderSuggestions","buildSupplierOrderGroups","SUPPLIER_EVIDENCE_LIMIT",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,buildOrderSuggestions,buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT);
+    const registrations=[];new Function("Router","z","prisma","requireStoreModule","expectedReceiptRows","expectedReceiptReadiness","buildOrderSuggestions","buildSupplierOrderGroups","SUPPLIER_EVIDENCE_LIMIT",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,expectedReceiptRows,expectedReceiptReadiness,buildOrderSuggestions,buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT);
     const users={owner:{role:"OWNER",companyId:"a"},sa:{role:"SUPER_ADMIN",companyId:"different"},employee:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a"},permitted:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a",permissions:["MODULE:ORDER_SUGGESTIONS"]},suspended:{role:"OWNER",companyId:"c"}};
     const app=express();app.use((req,res,next)=>{req.user=users[req.get("x-fixture-user")];return req.user?next():res.status(401).end();});app.get("/api/commerce/order-suggestions",...registrations[0].slice(1));app.get("/api/commerce/order-suggestions/by-supplier",...registrations[1].slice(1));app.use((err,req,res,next)=>res.status(500).json({error:err.message}));
     const server=app.listen(0,"127.0.0.1");await once(server,"listening");
@@ -64,7 +73,7 @@ test("supplier grouped order suggestions HTTP/SQL: quantities, returns, store/li
     const snapshot=()=>Promise.all(Object.keys(tables).map(async name=>(await tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS count,md5(string_agg(row_to_json(t)::text,',' ORDER BY "id")) AS digest FROM "${name}" t`))[0]));const before=await snapshot();
     try{
       await t.test("real SQL excludes foreign/draft/future/waste and nets returns/exchanges/channel sales",async()=>{
-        const result=await request("a1");assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.cache,"no-store");assert.equal(result.body.rows.length,10);
+        const transactionStart=transactions,result=await request("a1");assert.equal(transactions,transactionStart+1);assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.cache,"no-store");assert.equal(result.body.rows.length,10);
         const find=id=>result.body.rows.find(r=>r.productId===id);assert.equal(find("p").soldQuantity,60);assert.equal(find("p").returnedQuantity,15);assert.equal(find("p").suggestedQuantity,12);
         assert.equal(find("p").candidateSupplierId,"s1");assert.equal(find("p").primarySupplierId,null);assert.equal(find("p").supplierCandidates[0].documentCount,2);assert.equal(find("p").supplierCandidates[1].documentCount,1);
         assert.equal(find("kg").candidateSupplierId,null);assert.equal(find("kg").supplierReviewReason,"DOCUMENT_FREQUENCY_TIE");assert.equal(find("exchange").supplierReviewReason,"NO_APPROVED_DOCUMENT_EVIDENCE");assert.equal(result.body.complete,true);assert.equal(result.body.supplierEvidence.physicalDeliveryFrequencyVerified,false);assert.equal(result.body.automaticTransmission,false);assert.ok(transactions>0);

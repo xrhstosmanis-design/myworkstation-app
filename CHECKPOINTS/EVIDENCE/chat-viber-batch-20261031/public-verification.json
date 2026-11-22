@@ -1,0 +1,62 @@
+{
+  "verifiedAtUtc": "2026-10-31T19:55:20.707804+00:00",
+  "liveRevision": "a71c80c33f7dcd45f78fa2b253d7baab24b5e428",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "a71c80c33f7dcd45f78fa2b253d7baab24b5e428"
+  },
+  "healthOk": true,
+  "manifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "version": "0.1.13-preview",
+    "versionCode": 14,
+    "minimumAndroid": 8,
+    "videoCaptureMinimumAndroid": 11,
+    "maximumVideoSeconds": 30,
+    "maximumVideoBytes": 12582912,
+    "videoFormat": "MP4 H264/AAC",
+    "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.13-Preview.apk",
+    "sha256": "9b684af688dde18b129755641df6ef6b1ef9c2f7926c639c4e96f167644b6c02",
+    "bytes": 3687436,
+    "sourceCommit": "b693a2656ffbcaaed1d96c680182de16692258f7",
+    "androidSourceTree": "d32799847678d28a1cb6790c7d7c7d0fa776b8b8",
+    "ciRun": 41231397456,
+    "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+    "signing": "stable-owner-key",
+    "acceptance": "TECHNICAL CANDIDATE; ONE COMBINED PHONE ACCEPTANCE PENDING: named delivery/read receipts, quoted replies, reactions, pinned announcements and explicit acknowledgement; prior first-entry/reopen/media USER PASS retained with device/hash not independently identified"
+  },
+  "manifestMatchesRepository": true,
+  "manifestBytesMatchRepository": true,
+  "apkMatchesSignedArtifact": true,
+  "apkSha256": "9b684af688dde18b129755641df6ef6b1ef9c2f7926c639c4e96f167644b6c02",
+  "apkBytes": 3687436,
+  "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "binaryManifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 14,
+    "versionName": "0.1.13-preview"
+  },
+  "deployWorkflowRun": 41235884915,
+  "renderDeployId": "dep-dbj4clgae00c73d6m5d0",
+  "distributionPR": 3402,
+  "distributionHead": "2a640b67282abcb69fbc9276dd1dbef095642d8f",
+  "distributionMerge": "a71c80c33f7dcd45f78fa2b253d7baab24b5e428",
+  "distributionPRCI": 41233898095,
+  "distributionMainCI": 41235058707,
+  "signingRun": 41231397456,
+  "signingArtifact": 13054058110,
+  "physicalCombinedAcceptance": "NOT TESTED",
+  "realChatSendReadAckPushEmail": "NOT PERFORMED",
+  "priorLimitedUserPass": "retained; device/hash not independently identified",
+  "browser": {
+    "publicUrl": "https://myworkstation-app.onrender.com/downloads/chat-android/",
+    "displayedVersion": "0.1.13-preview",
+    "downloadHref": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.13-Preview.apk",
+    "combinedInstructionsVisible": true,
+    "syntheticStore": "viber-fixture-20261031",
+    "explicitStoreHandoff": "intent://store/viber-fixture-20261031#Intent;scheme=myworkstation-chat;package=gr.myworkstation.chat.preview;end",
+    "nativeLaunch": "NOT PERFORMED",
+    "screenshot": "public-download-0.1.13.jpg"
+  }
+}

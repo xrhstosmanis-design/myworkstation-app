@@ -1,0 +1,14 @@
+import {auditContextSources,auditContextLineFields,auditContextVideoFields,onlineAuditFields} from '../../../../shared/backoffice-staff-audit-context.mjs';
+import {auditMetadataFields} from '../../../../shared/backoffice-staff-company-owner-reports.mjs';
+import {greeceRangeDate} from '../../../../shared/greece-time.mjs';
+import {exact,shape} from './companyInventoryReportValidation.js';
+import {financialScalarValid} from './ownerFinancialReadValidation.js';
+const root=(d,ctx,keys)=>exact(d,['scope','companyId',...keys])&&d.scope==='COMPANY'&&d.companyId===ctx.companyId;
+const rows=(items,fields,max)=>Array.isArray(items)&&items.length<=max&&items.every(row=>financialScalarValid(row,fields)&&row.id)&&new Set(items.map(row=>row.id)).size===items.length;
+export function companyAuditContextValid(d,ctx){if(ctx.kind==='context'){
+ if(!root(d,ctx,['sourceType','id','event','items','lineCount','storedVideo','window','mediaRequested','rawDetailsIncluded'])||!auditContextSources.includes(d.sourceType)||d.sourceType!==ctx.sourceType||d.id!==ctx.eventId||!financialScalarValid(d.event,auditMetadataFields)||d.event.id!==ctx.eventId||d.event.sourceType!==ctx.sourceType||d.event.storeId!==ctx.storeId||!rows(d.items,auditContextLineFields,10000)||d.lineCount!==d.items.length||!shape(d.window,{lineLimit:'i',videoLimit:'i'})||d.window.lineLimit!==10000||d.window.videoLimit!==1||d.mediaRequested!==false||d.rawDetailsIncluded!==false)return false;
+ if(d.storedVideo===null)return true;if(!exact(d.storedVideo,Object.keys(auditContextVideoFields)))return false;const {timeOffsetSeconds,...video}=d.storedVideo,fields=Object.fromEntries(Object.entries(auditContextVideoFields).filter(([key])=>key!=='timeOffsetSeconds'));return Number.isSafeInteger(timeOffsetSeconds)&&financialScalarValid(video,fields)&&Date.parse(video.clipStartAt)<=Date.parse(video.clipEndAt);
+ }
+ if(ctx.kind==='online')return root(d,ctx,['from','to','q','storeId','stores','items','count','warnings','window','videoAccessAllowed'])&&d.from===ctx.from&&d.to===ctx.to&&d.q===ctx.q&&d.storeId===(ctx.storeId||null)&&rows(d.stores,{id:'text',name:'text'},10000)&&rows(d.items,onlineAuditFields,10000)&&d.count===d.items.length&&d.items.every(row=>d.stores.some(store=>store.id===row.storeId&&store.name===row.storeName)&&(!ctx.storeId||row.storeId===ctx.storeId)&&Date.parse(row.createdAt)>=greeceRangeDate(ctx.from).getTime()&&Date.parse(row.createdAt)<=greeceRangeDate(ctx.to,true).getTime())&&Array.isArray(d.warnings)&&d.warnings.length<=10000&&d.warnings.every(row=>shape(row,{storeId:'s?',storeName:'s?',code:'s',message:'s'})&&(row.storeId===null?row.storeName===null:typeof row.storeName==='string'))&&shape(d.window,{ordersPerStore:'i',eventLimit:'i',kind:'s'})&&d.window.ordersPerStore===300&&d.window.eventLimit===10000&&d.window.kind==='NATIVE_ORDER_WINDOW_THEN_EVENT_CALENDAR'&&d.videoAccessAllowed===false;
+ return false;
+}

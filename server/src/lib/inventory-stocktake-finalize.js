@@ -6,7 +6,7 @@ const conflict=message=>Object.assign(new Error(message),{status:409});
 
 // Call inside a transaction. Stock rows precede line rows, matching ordinary
 // movements (stock update, then the live-stocktake trigger).
-export async function finalizeInventoryStocktake(tx, stocktake, userId, cause) {
+export async function finalizeInventoryStocktake(tx, stocktake, userId, cause, counter=null) {
   const reason=typeof cause==='string'?cause.trim():'';
   if(reason.length<3||reason.length>300)throw Object.assign(new Error('Γράψε αιτιολογία οριστικοποίησης από 3 έως 300 χαρακτήρες.'),{status:400});
   await lockDraftInventoryStocktake(tx, stocktake);
@@ -21,7 +21,7 @@ export async function finalizeInventoryStocktake(tx, stocktake, userId, cause) {
   if(unresolved)throw conflict(`Υπάρχουν ${unresolved} γραμμές χωρίς μέτρηση ή επανακαταμέτρηση.`);
   const stockIds=new Set(stocks.map(stock=>stock.productId));
   if(lines.some(line=>!stockIds.has(line.productId)))throw conflict('Το απόθεμα μίας γραμμής δεν είναι διαθέσιμο. Ανανέωσε πριν οριστικοποιήσεις.');
-  const snapshot=JSON.stringify({finalizedAt:new Date().toISOString(),scopeType,scope:locked?.scopeJson || stocktake.scopeJson,reason,lineCount:lines.length,totalDifference:lines.reduce((sum,line)=>sum+number(line.countedQuantity)-number(line.expectedQuantity),0)});
+  const snapshot=JSON.stringify({finalizedAt:new Date().toISOString(),scopeType,...(counter?{finalizedByCounter:counter}:{}),scope:locked?.scopeJson || stocktake.scopeJson,reason,lineCount:lines.length,totalDifference:lines.reduce((sum,line)=>sum+number(line.countedQuantity)-number(line.expectedQuantity),0)});
   // Close before inserting adjustments: our own movement must not change the
   // expected quantities of this stocktake. Everything still commits atomically.
   await tx.$executeRaw`UPDATE "Stocktake" SET "status"='FINALIZED',"finalizedAt"=NOW(),"finalizedByUserId"=${userId},"snapshotJson"=${snapshot}::jsonb,"updatedAt"=NOW() WHERE "id"=${stocktake.id}`;

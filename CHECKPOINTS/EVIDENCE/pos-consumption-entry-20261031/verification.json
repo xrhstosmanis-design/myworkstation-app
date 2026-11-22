@@ -1,0 +1,59 @@
+{
+  "scope": "Existing consumption/destruction menu launcher appearance only",
+  "claimPr": 3410,
+  "claimHead": "6d45763f1b7666d5f8e1986e5e8e805676283a0c",
+  "claimCi": 41237633802,
+  "claimMerge": "58eb22688b3a97c529508147b03261f028a71802",
+  "sourcePr": 3411,
+  "sourceHead": "78d5ac1e447c01ce385531474555dde335a0b719",
+  "sourceCi": 41237884002,
+  "sourceMerge": "28f64d8faa9bb4ea4f384c978be895a7684e394c",
+  "sourceCiResult": "success",
+  "sourceTests": 4961,
+  "backupTests": 8,
+  "fail": 0,
+  "skipped": 0,
+  "sourceBrowserArtifact": 13056389559,
+  "localFocused": {
+    "pass": 7,
+    "fail": 0,
+    "skip": 0
+  },
+  "workBuild": "PASS/TABLE_SERVICE",
+  "hostedOrPhysicalAcceptance": "NOT TESTED: Store Mode requires fresh personal LAB POS2 PIN; no credential request or bypass, no business operation",
+  "screenshots": "Actual isolated CI Chromium renders, not a hosted/physical USER PASS",
+  "preserved": "Exact original setStoreMenu callback, selected store, consumption/destruction reason and stock/turnover business rules, blank removed-WASTE slot, menu focus/media/permissions and protected decimal keyboard",
+  "mainCi": 41239006235,
+  "mainCiResult": "success",
+  "mainTests": 4961,
+  "mainBackupTests": 8,
+  "guardedDeployment": 41239947674,
+  "deploymentJob": 124651641491,
+  "renderDeploy": "dep-dbj54n4s728c738rrr60",
+  "renderLiveAt": "2026-10-31T20:43:02.638188Z",
+  "independentHealth": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "28f64d8faa9bb4ea4f384c978be895a7684e394c"
+  },
+  "servedAssets": [
+    {
+      "asset": "/assets/entry-C7CkyEHV.js",
+      "label": true,
+      "style": null
+    },
+    {
+      "asset": "/assets/entry-D5TmNrtZ.css",
+      "label": false,
+      "style": " .pos-consumption-entry{min-height:64px;border:2px solid #176b50;background:#e7f3ee;color:#15364f;box-shadow:0 2px 4px #07152c12}.pos-header-menu-panel .pos-consumption-entry:hover{background:#d6eadd;bo"
+    }
+  ],
+  "userConfirmation": {
+    "statement": "ειναι οκ",
+    "recordedAt": "2026-10-31T21:06:17Z",
+    "recordedAthens": "2026-10-31 23:06",
+    "scope": "LIMITED USER VISUAL PASS of explicit menu entry appearance only",
+    "deviceClientRevisionStoreTerminal": "Not independently identified",
+    "businessSubmissionOrDelta": "NOT TESTED; no replay"
+  }
+}

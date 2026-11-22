@@ -1,0 +1,28 @@
+{
+  "confirmationDateEuropeAthens": "2026-11-02",
+  "source": "Visible user reply «ειναι οκ», directly after phone checklist1–4; followed by «ξεκινα»",
+  "classification": "LIMITED USER-REPORTED PASS",
+  "accepted": [
+    "contextual message menu",
+    "plus/overflow and conversation/composer with keyboard",
+    "whole-photo opening/zoom/pan/double-tap/reset",
+    "message search/quoted reply/reaction add-change-remove"
+  ],
+  "requestedReleaseContext": "0.1.15/code16; installed build NOT independently verified",
+  "deviceModel": "NOT IDENTIFIED",
+  "androidVersion": "NOT IDENTIFIED",
+  "selectedStoreAndUsers": "NOT IDENTIFIED",
+  "actualActionTimeAndLiveRevision": "NOT IDENTIFIED",
+  "independentDeviceObservation": false,
+  "remaining": [
+    "identify authorized test store/two distinct existing users",
+    "named delivery/read separately",
+    "one synthetic announcement/pin/explicit acknowledgement",
+    "one reviewed once-confirmed authorized TEST Chat forward",
+    "unconfirmed private-preview lifecycle/rotation cleanup"
+  ],
+  "noReplayOfAcceptedChecks": true,
+  "newProductionActionsByThisReceipt": false,
+  "overallN16": "OPEN",
+  "retainedOwner": "codex/chat-native-readers-20261031"
+}

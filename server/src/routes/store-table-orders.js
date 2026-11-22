@@ -1,3 +1,7 @@
+import {productionPrinting} from "./production-printers.js";
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {tableCashLabEnabled} from "../services/table-cash-payment.js";
+import {resolveModifierInventoryPrices} from "../lib/modifier-inventory-price.js";
 import {lockActiveSaleProducts} from "../lib/inventory-sale-product-lock.js";
 import {maybeChangeSameProductStock} from '../store-baking-same-product.js';
 import crypto from "crypto";
@@ -27,21 +31,25 @@ async function ensureSchema(){
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreTableServiceConfig" ("companyId" TEXT NOT NULL,"storeId" TEXT PRIMARY KEY,"enabled" BOOLEAN NOT NULL DEFAULT FALSE,"updatedBy" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await ensurePreparationBatchTable();
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TableOrder_store_status_idx" ON "TableOrder" ("companyId","storeId","status","createdAt" DESC)`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "TableOrder" ADD COLUMN IF NOT EXISTS "cashParts" JSONB NOT NULL DEFAULT '[]'::jsonb`);
   schemaReady=true;
 }
 function assertStore(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const error=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
-async function storeFor(req,storeId){assertStore(req,storeId);const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}const module=await prisma.companyModule.findFirst({where:{companyId:req.user.companyId,moduleKey:"TABLE_SERVICE",active:true},select:{id:true}}),config=(await prisma.$queryRaw`SELECT "enabled" FROM "StoreTableServiceConfig" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];if(!module||!config?.enabled){const error=new Error("Το module Ασύρματη Παραγγελιοληψία & Τραπέζια δεν είναι ενεργό για αυτό το κατάστημα.");error.status=403;throw error}return store}
-function canConfigure(req){return req.user?.tokenType!=="STORE_OPERATOR"||req.user?.role==="MANAGER"}
+async function storeFor(req,storeId){assertStore(req,storeId);if(req.user?.staffAccess===true){if(req.method!=='GET'||req.staffGrant?.capability!=='table-service.read'||req.user.storeId!==storeId)throw staffError();await requireStaffGrant(prisma,req.user,storeId,'table-service.read');}const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}const module=await prisma.companyModule.findFirst({where:{companyId:req.user.companyId,moduleKey:"TABLE_SERVICE",active:true},select:{id:true}}),config=(await prisma.$queryRaw`SELECT "enabled" FROM "StoreTableServiceConfig" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];if(!module||!config?.enabled){const error=new Error("Το module Ασύρματη Παραγγελιοληψία & Τραπέζια δεν είναι ενεργό για αυτό το κατάστημα.");error.status=403;throw error}return store}
+function canConfigure(req){return req.user?.staffAccess!==true&&(req.user?.tokenType!=="STORE_OPERATOR"||req.user?.role==="MANAGER")}
 
-router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
+router.use(async(req,res,next)=>{try{if(req.user?.staffAccess!==true)await ensureSchema();else if(req.staffGrant?.capability!=='table-service.read'||req.method!=='GET')throw staffError();next()}catch(error){next(error)}});
 
-router.get("/stores/:storeId/table-service/preparation-queue",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId),rows=await prisma.$queryRaw`SELECT b."id",b."tableOrderId",b."productionStation",b."priority",b."note",b."itemsJson",b."status",b."operatorId",b."operatorName",b."createdAt",b."readyAt",t."name" AS "tableName",o."terminalPos" FROM "StorePreparationBatch" b JOIN "TableOrder" o ON o."id"=b."tableOrderId" AND o."companyId"=b."companyId" AND o."storeId"=b."storeId" JOIN "DiningTable" t ON t."id"=o."tableId" WHERE b."companyId"=${req.user.companyId} AND b."storeId"=${store.id} AND b."status" IN ('SENT','READY') ORDER BY CASE WHEN b."status"='SENT' THEN 0 ELSE 1 END,b."createdAt"`;res.json({rows:rows.map(row=>({...row,items:Array.isArray(row.itemsJson)?row.itemsJson:[],itemsJson:undefined}))})}catch(error){next(error)}});
+async function tableReadEnvelope(req,store,payload){if(req.user?.staffAccess!==true)return payload;await storeFor(req,store.id);return {...payload,companyId:req.user.companyId,storeId:store.id}}
+const tableReadOrder=({cashParts,...row})=>row;
+
+router.get("/stores/:storeId/table-service/preparation-queue",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId),rows=await prisma.$queryRaw`SELECT b."id",b."tableOrderId",b."productionStation",b."priority",b."note",b."itemsJson",b."status",b."operatorId",b."operatorName",b."createdAt",b."readyAt",t."name" AS "tableName",o."terminalPos" FROM "StorePreparationBatch" b JOIN "TableOrder" o ON o."id"=b."tableOrderId" AND o."companyId"=b."companyId" AND o."storeId"=b."storeId" JOIN "DiningTable" t ON t."id"=o."tableId" AND t."companyId"=o."companyId" AND t."storeId"=o."storeId" WHERE b."companyId"=${req.user.companyId} AND b."storeId"=${store.id} AND b."status" IN ('SENT','READY') ORDER BY CASE WHEN b."status"='SENT' THEN 0 ELSE 1 END,b."createdAt"`;res.json(await tableReadEnvelope(req,store,{rows:rows.map(row=>({...row,items:Array.isArray(row.itemsJson)?row.itemsJson:[],itemsJson:undefined}))}))}catch(error){next(error)}});
 
 router.patch("/stores/:storeId/table-service/preparation-queue/:batchId/ready",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId),result=await prisma.$transaction(async tx=>{const batches=await tx.$queryRaw`UPDATE "StorePreparationBatch" SET "status"='READY',"readyAt"=NOW() WHERE "id"=${req.params.batchId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='SENT' RETURNING "id","tableOrderId","productionStation","readyAt"`;if(!batches[0])return null;const pending=(await tx.$queryRaw`SELECT COUNT(*)::int AS count FROM "StorePreparationBatch" WHERE "tableOrderId"=${batches[0].tableOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='SENT'`)[0];if(Number(pending?.count||0)===0)await tx.$executeRaw`UPDATE "TableOrder" SET "status"='READY',"updatedAt"=NOW() WHERE "id"=${batches[0].tableOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='SENT'`;await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'TABLE_PREPARATION_READY',${JSON.stringify({batchId:batches[0].id,tableOrderId:batches[0].tableOrderId,productionStation:batches[0].productionStation})}::jsonb)`;return batches[0]});if(!result)return res.status(409).json({error:"Το δελτίο παρασκευής δεν βρέθηκε ή έχει ήδη ολοκληρωθεί."});res.json({ok:true,...result})}catch(error){next(error)}});
 
-router.get("/stores/:storeId/table-service/history",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId);if(req.user?.tokenType==="STORE_OPERATOR"&&req.user?.role!=="MANAGER")return res.status(403).json({error:"Το BackOffice τραπεζιών είναι διαθέσιμο μόνο σε υπεύθυνο, Owner ή Super Admin."});const from=req.query.from?new Date(String(req.query.from)):new Date(Date.now()-30*86400000),to=req.query.to?new Date(String(req.query.to)):new Date();if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});const orders=await prisma.$queryRaw`SELECT o.*,t."name" AS "tableName",s."receiptNumber",COALESCE(json_agg(json_build_object('productId',l."productId",'name',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal",'notes',l."notes",'allergens',l."allergensJson") ORDER BY l."createdAt") FILTER (WHERE l."id" IS NOT NULL),'[]') AS "items" FROM "TableOrder" o JOIN "DiningTable" t ON t."id"=o."tableId" LEFT JOIN "TableOrderLine" l ON l."orderId"=o."id" LEFT JOIN "Sale" s ON s."id"=o."saleId" WHERE o."companyId"=${req.user.companyId} AND o."storeId"=${store.id} AND o."createdAt">=${from} AND o."createdAt"<=${to} GROUP BY o."id",t."name",s."receiptNumber" ORDER BY o."createdAt" DESC LIMIT 3000`;const waste=await prisma.$queryRaw`SELECT a."id",a."saleId",a."reason",a."actorId",a."actorName",a."details",a."createdAt" FROM "PosSaleActionAudit" a WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."actionType"='WASTE' AND (a."details"->>'tableOrderId') IS NOT NULL AND a."createdAt">=${from} AND a."createdAt"<=${to} ORDER BY a."createdAt" DESC LIMIT 3000`;res.json({from,to,orders:orders.map(row=>({...row,total:money(row.total),items:(row.items||[]).map(item=>({...item,quantity:money(item.quantity),unitPrice:money(item.unitPrice),lineTotal:money(item.lineTotal)}))})),waste})}catch(error){next(error)}});
+router.get("/stores/:storeId/table-service/history",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId);if(req.user?.tokenType==="STORE_OPERATOR"&&req.user?.role!=="MANAGER")return res.status(403).json({error:"Το BackOffice τραπεζιών είναι διαθέσιμο μόνο σε υπεύθυνο, Owner ή Super Admin."});const from=req.query.from?new Date(String(req.query.from)):new Date(Date.now()-30*86400000),to=req.query.to?new Date(String(req.query.to)):new Date();if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});const orders=await prisma.$queryRaw`SELECT o.*,t."name" AS "tableName",s."receiptNumber",COALESCE(json_agg(json_build_object('productId',l."productId",'name',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal",'notes',l."notes",'allergens',l."allergensJson") ORDER BY l."createdAt") FILTER (WHERE l."id" IS NOT NULL),'[]') AS "items" FROM "TableOrder" o JOIN "DiningTable" t ON t."id"=o."tableId" AND t."companyId"=o."companyId" AND t."storeId"=o."storeId" LEFT JOIN "TableOrderLine" l ON l."orderId"=o."id" LEFT JOIN "Sale" s ON s."id"=o."saleId" AND s."companyId"=o."companyId" AND s."storeId"=o."storeId" WHERE o."companyId"=${req.user.companyId} AND o."storeId"=${store.id} AND o."createdAt">=${from} AND o."createdAt"<=${to} GROUP BY o."id",t."name",s."receiptNumber" ORDER BY o."createdAt" DESC LIMIT 3000`;const waste=await prisma.$queryRaw`SELECT a."id",a."saleId",a."reason",a."actorId",a."actorName",a."details",a."createdAt" FROM "PosSaleActionAudit" a WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."actionType"='WASTE' AND (a."details"->>'tableOrderId') IS NOT NULL AND a."createdAt">=${from} AND a."createdAt"<=${to} ORDER BY a."createdAt" DESC LIMIT 3000`;res.json(await tableReadEnvelope(req,store,{from,to,orders:orders.map(row=>({...((req.user?.staffAccess===true)?tableReadOrder(row):row),total:money(row.total),items:(row.items||[]).map(item=>({...item,quantity:money(item.quantity),unitPrice:money(item.unitPrice),lineTotal:money(item.lineTotal)}))})),waste:req.user?.staffAccess===true?waste.map(({details,...row})=>row):waste}))}catch(error){next(error)}});
 
-router.get("/stores/:storeId/table-service",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId);const [areas,tables,orders]=await Promise.all([prisma.$queryRaw`SELECT "id","name","sortOrder" FROM "DiningArea" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "sortOrder","name"`,prisma.$queryRaw`SELECT "id","name","areaId","capacity","shape","positionX","positionY","sortOrder" FROM "DiningTable" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "sortOrder","name"`,prisma.$queryRaw`SELECT o.*,t."name" AS "tableName",COALESCE(json_agg(json_build_object('id',l."id",'productId',l."productId",'name',l."description",'quantity',l."quantity",'salePrice',l."unitPrice",'lineTotal',l."lineTotal",'notes',l."notes",'allergens',l."allergensJson",'roundNumber',l."roundNumber") ORDER BY l."createdAt") FILTER (WHERE l."id" IS NOT NULL),'[]') AS "items" FROM "TableOrder" o JOIN "DiningTable" t ON t."id"=o."tableId" LEFT JOIN "TableOrderLine" l ON l."orderId"=o."id" WHERE o."companyId"=${req.user.companyId} AND o."storeId"=${store.id} AND o."status" IN ('OPEN','SENT','READY') GROUP BY o."id",t."name" ORDER BY o."createdAt"`]);res.json({areas,tables,canConfigure:canConfigure(req),orders:orders.map(row=>({...row,total:money(row.total),items:(row.items||[]).map(item=>({...item,quantity:money(item.quantity),salePrice:money(item.salePrice),lineTotal:money(item.lineTotal)}))}))})}catch(error){next(error)}});
+router.get("/stores/:storeId/table-service",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId);const [areas,tables,orders]=await Promise.all([prisma.$queryRaw`SELECT "id","name","sortOrder" FROM "DiningArea" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "sortOrder","name"`,prisma.$queryRaw`SELECT "id","name","areaId","capacity","shape","positionX","positionY","sortOrder" FROM "DiningTable" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "sortOrder","name"`,prisma.$queryRaw`SELECT o.*,t."name" AS "tableName",COALESCE(json_agg(json_build_object('id',l."id",'productId',l."productId",'name',l."description",'quantity',l."quantity",'salePrice',l."unitPrice",'lineTotal',l."lineTotal",'notes',l."notes",'allergens',l."allergensJson",'roundNumber',l."roundNumber") ORDER BY l."createdAt") FILTER (WHERE l."id" IS NOT NULL),'[]') AS "items" FROM "TableOrder" o JOIN "DiningTable" t ON t."id"=o."tableId" AND t."companyId"=o."companyId" AND t."storeId"=o."storeId" LEFT JOIN "TableOrderLine" l ON l."orderId"=o."id" WHERE o."companyId"=${req.user.companyId} AND o."storeId"=${store.id} AND o."status" IN ('OPEN','SENT','READY') GROUP BY o."id",t."name" ORDER BY o."createdAt"`]);res.json(await tableReadEnvelope(req,store,{areas,tables,canConfigure:canConfigure(req),orders:orders.map(({cashParts,...row})=>({...row,partialCashEnabled:tableCashLabEnabled(store.id),tablePaidCents:cashParts.reduce((sum,part)=>sum+part.amountCents,0),total:money(row.total),items:(row.items||[]).map(item=>({...item,quantity:money(item.quantity),salePrice:money(item.salePrice),lineTotal:money(item.lineTotal)}))}))}))}catch(error){next(error)}});
 
 router.post("/stores/:storeId/table-service/areas",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId);if(!canConfigure(req))return res.status(403).json({error:"Μόνο υπεύθυνος, Owner ή Super Admin μπορεί να δημιουργεί σάλες."});const body=z.object({name:z.string().trim().min(1).max(50),sortOrder:z.coerce.number().int().min(0).max(999).optional().default(0)}).parse(req.body||{}),id=crypto.randomUUID();await prisma.$executeRaw`INSERT INTO "DiningArea" ("id","companyId","storeId","name","sortOrder") VALUES (${id},${req.user.companyId},${store.id},${body.name},${body.sortOrder})`;await prisma.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'DINING_AREA_CREATED',${JSON.stringify({areaId:id,name:body.name,actorName:req.user.fullName||req.user.email||"Χειριστής BackOffice",terminalPos:"BACKOFFICE"})}::jsonb)`;res.status(201).json({id,...body})}catch(error){next(error)}});
 
@@ -53,22 +61,165 @@ router.post("/stores/:storeId/table-orders",async(req,res,next)=>{try{
   const store=await storeFor(req,req.params.storeId),body=z.object({idempotencyKey:z.string().uuid().optional(),tableId:z.string().min(1),notes:z.string().trim().max(500).optional().nullable(),items:z.array(z.object({productId:z.string().min(1),quantity:z.coerce.number().positive().max(999),notes:z.string().trim().max(250).optional().nullable(),allergens:z.array(z.string().trim().min(1).max(80)).max(14).optional().default([]),modifiers:z.array(z.object({id:z.string().min(1),description:z.string().trim().max(200).optional().default(""),price:z.coerce.number().min(-9999).max(9999).optional().default(0)})).max(30).optional().default([])})).min(1).max(100)}).parse(req.body||{});
   const actorId=req.user.operatorId||req.user.id,payloadHash=body.idempotencyKey?tableOrderPayloadHash(body):null;
   if(body.idempotencyKey){const previous=(await prisma.$queryRaw`SELECT "actorId","payloadHash","resultJson" FROM "TableOrderRequest" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey} LIMIT 1`)[0];if(previous)return res.json({...tableOrderReplay(previous,actorId,payloadHash),idempotentReplay:true})}
+  await productionPrinting.ensure();
   const table=(await prisma.$queryRaw`SELECT "id","name" FROM "DiningTable" WHERE "id"=${body.tableId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true LIMIT 1`)[0];if(!table)return res.status(404).json({error:"Το τραπέζι δεν βρέθηκε."});
   const ids=body.items.map(item=>item.productId),products=await prisma.$queryRaw`SELECT p."id",p."name",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(ps."preparationEnabled",false) AS "preparationEnabled",COALESCE(NULLIF(ps."productionStation",''),'ΠΑΡΑΓΩΓΗ') AS "productionStation" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} AND sp."active"=true LEFT JOIN "PreparationProductSettings" ps ON ps."companyId"=p."companyId" AND ps."productId"=p."id" WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND p."id"=ANY(${ids}::text[])`,byId=new Map(products.map(row=>[row.id,row]));if(byId.size!==new Set(ids).size)return res.status(400).json({error:"Κάποιο προϊόν δεν είναι διαθέσιμο στο κατάστημα."});
-  let orderId=crypto.randomUUID(),roundNumber=1,finalTotal=0;const lines=body.items.map(item=>{const product=byId.get(item.productId),unitPrice=money(product.salePrice),lineTotal=Number((unitPrice*item.quantity).toFixed(2));return {...item,name:product.name,unitPrice,lineTotal,preparationEnabled:Boolean(product.preparationEnabled),productionStation:product.productionStation}}),addedTotal=Number(lines.reduce((sum,line)=>sum+line.lineTotal,0).toFixed(2)),preparationBatches=[];
+  const requestedModifierIds=[...new Set(body.items.flatMap(item=>item.modifiers.map(modifier=>modifier.id)))];
+  const modifierById=new Map();
+  const allowedModifiersByProduct=new Map();
+  if(requestedModifierIds.length){
+    const eligible=await prisma.$queryRaw`
+      SELECT pg."productId",m."id",m."description",m."price"
+      FROM "PreparationProductModifierGroup" pg
+      JOIN "ManagementModifierGroup" g ON g."id"=pg."groupId" AND g."companyId"=pg."companyId" AND g."active"=TRUE
+      JOIN "ManagementModifier" m ON m."groupId"=g."id" AND m."companyId"=g."companyId" AND m."active"=TRUE
+      WHERE pg."companyId"=${req.user.companyId} AND pg."productId"=ANY(${ids}::text[])
+        AND m."id"=ANY(${requestedModifierIds}::text[])
+    `;
+    for(const modifier of eligible){
+      if(!allowedModifiersByProduct.has(modifier.productId))allowedModifiersByProduct.set(modifier.productId,new Set());
+      allowedModifiersByProduct.get(modifier.productId).add(modifier.id);
+      modifierById.set(modifier.id,{id:modifier.id,description:modifier.description,price:modifier.price});
+    }
+    for(const item of body.items){
+      const selections=item.modifiers.map(modifier=>modifier.id);
+      if(new Set(selections).size!==selections.length||
+        selections.some(id=>!allowedModifiersByProduct.get(item.productId)?.has(id))){
+        return res.status(400).json({error:"Μη διαθέσιμη ή διπλή επιλογή παρασκευής για το προϊόν."});
+      }
+    }
+    const resolved=await resolveModifierInventoryPrices(prisma,req.user.companyId,store.id,[...modifierById.values()]);
+    for(const modifier of resolved)modifierById.set(modifier.id,modifier);
+  }
+
+  const lines=body.items.map(item=>{
+    const product=byId.get(item.productId);
+    const modifiers=item.modifiers.map(selection=>{
+      const modifier=modifierById.get(selection.id);
+      const price=money(modifier.price);
+      if(!Number.isFinite(price)||Math.abs(price-selection.price)>0.009){
+        throw Object.assign(new Error("Η τιμή επιλογής άλλαξε. Άνοιξε ξανά τις επιλογές παρασκευής."),{status:409});
+      }
+      return {id:modifier.id,description:modifier.description,price};
+    });
+    const unitPrice=Number((money(product.salePrice)+modifiers.reduce((sum,modifier)=>sum+modifier.price,0)).toFixed(2));
+    if(unitPrice<0)throw Object.assign(new Error("Η τελική τιμή είδους δεν μπορεί να είναι αρνητική."),{status:400});
+    return {...item,modifiers,name:product.name,unitPrice,lineTotal:Number((unitPrice*item.quantity).toFixed(2)),
+      preparationEnabled:Boolean(product.preparationEnabled),productionStation:product.productionStation};
+  });
+  let orderId=crypto.randomUUID(),roundNumber=1,finalTotal=0;
+  const addedTotal=Number(lines.reduce((sum,line)=>sum+line.lineTotal,0).toFixed(2)),preparationBatches=[];
   const terminalPos=String(req.user?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
   let replayResult=null;await prisma.$transaction(async tx=>{if(body.idempotencyKey){await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:round:${body.idempotencyKey}`})) IS NULL) AS locked`;const previous=(await tx.$queryRaw`SELECT "actorId","payloadHash","resultJson" FROM "TableOrderRequest" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey} LIMIT 1`)[0];if(previous){replayResult=tableOrderReplay(previous,actorId,payloadHash);return}}await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:${table.id}`})) IS NULL) AS locked`;const active=(await tx.$queryRaw`SELECT "id","total" FROM "TableOrder" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableId"=${table.id} AND "status" IN ('OPEN','SENT','READY') ORDER BY "createdAt" LIMIT 1 FOR UPDATE`)[0];if(active){orderId=active.id;const latest=(await tx.$queryRaw`SELECT COALESCE(MAX("roundNumber"),0)::int AS "roundNumber" FROM "TableOrderLine" WHERE "orderId"=${orderId}`)[0];roundNumber=Number(latest?.roundNumber||0)+1;finalTotal=Number((money(active.total)+addedTotal).toFixed(2));await tx.$executeRaw`UPDATE "TableOrder" SET "status"='SENT',"total"=${finalTotal},"updatedAt"=NOW() WHERE "id"=${orderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id}`}else{finalTotal=addedTotal;await tx.$executeRaw`INSERT INTO "TableOrder" ("id","companyId","storeId","tableId","operatorId","operatorName","terminalPos","status","notes","total") VALUES (${orderId},${req.user.companyId},${store.id},${table.id},${req.user.id},${req.user.fullName||"Χειριστής"},${terminalPos},'SENT',${body.notes||null},${finalTotal})`}await lockActiveSaleProducts(tx,{companyId:req.user.companyId,storeId:store.id,productIds:lines.map(line=>line.productId)});
-for(const line of lines)await tx.$executeRaw`INSERT INTO "TableOrderLine" ("id","orderId","productId","description","quantity","unitPrice","lineTotal","notes","allergensJson","roundNumber") VALUES (${crypto.randomUUID()},${orderId},${line.productId},${line.name},${line.quantity},${line.unitPrice},${line.lineTotal},${line.notes||null},${JSON.stringify(line.allergens||[])}::jsonb,${roundNumber})`;
-    const stations=new Map();for(const line of lines.filter(item=>item.preparationEnabled)){const station=line.productionStation||"ΠΑΡΑΓΩΓΗ";if(!stations.has(station))stations.set(station,[]);stations.get(station).push({productId:line.productId,name:line.name,quantity:line.quantity,notes:line.notes||null,allergens:line.allergens||[],modifiers:line.modifiers||[]})}for(const [station,items] of stations){const batchId=crypto.randomUUID();await tx.$executeRaw`INSERT INTO "StorePreparationBatch" ("id","companyId","storeId","operatorId","operatorName","productionStation","priority","note","itemsJson","status","tableOrderId") VALUES (${batchId},${req.user.companyId},${store.id},${req.user.id},${req.user.fullName||"Χειριστής"},${station},'NORMAL',${`Τραπέζι ${table.name} · Γύρος ${roundNumber}${body.notes?` · ${body.notes}`:""}`},${JSON.stringify(items)}::jsonb,'SENT',${orderId})`;preparationBatches.push({id:batchId,productionStation:station,itemCount:items.reduce((sum,item)=>sum+Number(item.quantity),0)})}
+const storedLines=lines.map(line=>({...line,tableLineId:crypto.randomUUID()}));
+for(const line of storedLines)await tx.$executeRaw`INSERT INTO "TableOrderLine" ("id","orderId","productId","description","quantity","unitPrice","lineTotal","notes","allergensJson","roundNumber") VALUES (${line.tableLineId},${orderId},${line.productId},${line.name},${line.quantity},${line.unitPrice},${line.lineTotal},${line.notes||null},${JSON.stringify(line.allergens||[])}::jsonb,${roundNumber})`;
+    const stations=new Map();for(const line of storedLines.filter(item=>item.preparationEnabled)){const station=line.productionStation||"ΠΑΡΑΓΩΓΗ";if(!stations.has(station))stations.set(station,[]);stations.get(station).push({tableLineId:line.tableLineId,productId:line.productId,name:line.name,quantity:line.quantity,notes:line.notes||null,allergens:line.allergens||[],modifiers:line.modifiers||[]})}for(const [station,items] of stations){const batchId=crypto.randomUUID();await tx.$executeRaw`INSERT INTO "StorePreparationBatch" ("id","companyId","storeId","operatorId","operatorName","productionStation","priority","note","itemsJson","status","tableOrderId") VALUES (${batchId},${req.user.companyId},${store.id},${req.user.id},${req.user.fullName||"Χειριστής"},${station},'NORMAL',${`Τραπέζι ${table.name} · Γύρος ${roundNumber}${body.notes?` · ${body.notes}`:""}`},${JSON.stringify(items)}::jsonb,'SENT',${orderId})`;const print=await productionPrinting.enqueueTableBatch(tx,{companyId:req.user.companyId,storeId:store.id,batchId,requestId:body.idempotencyKey,items,products,operatorName:req.user.fullName||"Χειριστής",productionStation:station,tableName:table.name,roundNumber,note:body.notes||null});preparationBatches.push({id:batchId,productionStation:station,itemCount:items.reduce((sum,item)=>sum+Number(item.quantity),0),...print})}
     const eventType=roundNumber===1?"TABLE_ORDER_SENT":"TABLE_ORDER_ROUND_SENT";await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},${eventType},${JSON.stringify({orderId,tableId:table.id,tableName:table.name,terminalPos,roundNumber,addedTotal,total:finalTotal,itemCount:lines.length,preparationBatches})}::jsonb)`;
     if(body.idempotencyKey){const result={id:orderId,tableId:table.id,tableName:table.name,terminalPos,status:"SENT",roundNumber,addedTotal,total:finalTotal,items:lines,preparationBatches};await tx.$executeRaw`INSERT INTO "TableOrderRequest" ("companyId","storeId","idempotencyKey","actorId","payloadHash","resultJson") VALUES (${req.user.companyId},${store.id},${body.idempotencyKey},${actorId},${payloadHash},${JSON.stringify(result)}::jsonb)`}});if(replayResult)return res.json({...replayResult,idempotentReplay:true});res.status(201).json({id:orderId,tableId:table.id,tableName:table.name,terminalPos,status:"SENT",roundNumber,addedTotal,total:finalTotal,items:lines,preparationBatches})
 }catch(error){next(error)}});
 
+router.post("/stores/:storeId/table-orders/:orderId/restructure", async (req,res,next) => {
+  try {
+    const store=await storeFor(req,req.params.storeId);
+    if(!canConfigure(req))return res.status(403).json({error:"Η αλλαγή λογαριασμού απαιτεί υπεύθυνο."});
+    const body=z.object({
+      operation:z.enum(["MOVE","MERGE","SPLIT"]),
+      targetTableId:z.string().min(1),
+      lineIds:z.array(z.string().min(1)).max(200).optional().default([]),
+      idempotencyKey:z.string().uuid()
+    }).parse(req.body||{});
+    body.lineIds=[...new Set(body.lineIds)].sort();
+    const actorId=req.user.operatorId||req.user.id;
+    const payloadHash=crypto.createHash("sha256").update(JSON.stringify({orderId:req.params.orderId,...body})).digest("hex");
+    const conflict=message=>Object.assign(new Error(message),{status:409});
+    const result=await prisma.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:round:${body.idempotencyKey}`})) IS NULL) AS locked`;
+      const previous=(await tx.$queryRaw`SELECT "actorId","payloadHash","resultJson" FROM "TableOrderRequest" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey}`)[0];
+      if(previous)return {...tableOrderReplay(previous,actorId,payloadHash),idempotentReplay:true};
+      const before=(await tx.$queryRaw`SELECT "tableId" FROM "TableOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id}`)[0];
+      if(!before)throw conflict("Ο λογαριασμός δεν βρέθηκε.");
+      if(before.tableId===body.targetTableId)throw conflict("Επίλεξε διαφορετικό τραπέζι.");
+      // Use the same table locks as new rounds, in deterministic order.
+      for(const tableId of [before.tableId,body.targetTableId].sort()){
+        await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`${req.user.companyId}:${store.id}:${tableId}`})) IS NULL) AS locked`;
+      }
+      const tables=await tx.$queryRaw`SELECT "id","name" FROM "DiningTable" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "id"=ANY(${[before.tableId,body.targetTableId]}::text[]) AND "active"=true ORDER BY "id" FOR UPDATE`;
+      if(tables.length!==2)throw conflict("Το τραπέζι δεν είναι διαθέσιμο στο κατάστημα.");
+      const orders=await tx.$queryRaw`SELECT * FROM "TableOrder" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableId"=ANY(${[before.tableId,body.targetTableId]}::text[]) AND "status" IN ('OPEN','SENT','READY') ORDER BY "id" FOR UPDATE`;
+      const source=orders.find(order=>order.id===req.params.orderId);
+      if(!source||source.tableId!==before.tableId)throw conflict("Ο λογαριασμός άλλαξε. Ανανέωσε τα τραπέζια.");
+      const targetOrders=orders.filter(order=>order.tableId===body.targetTableId);
+      const target=targetOrders[0];
+      if(targetOrders.length>1)throw conflict("Το τραπέζι προορισμού έχει πολλούς λογαριασμούς.");
+      if(body.operation==="MERGE"&&!target)throw conflict("Η ένωση απαιτεί ανοικτό λογαριασμό προορισμού.");
+      if(body.operation!=="MERGE"&&target)throw conflict("Η μεταφορά και η διαίρεση απαιτούν ελεύθερο τραπέζι.");
+      if(body.operation!=="MOVE"&&(source.cashParts.length||target?.cashParts.length))throw conflict("Η ένωση ή διαίρεση απαιτεί λογαριασμούς χωρίς μερικές πληρωμές.");
+      let targetOrderId=source.id;
+      if(body.operation==="MOVE"){
+        await tx.$executeRaw`UPDATE "TableOrder" SET "tableId"=${body.targetTableId},"updatedAt"=NOW() WHERE "id"=${source.id}`;
+        await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "note"=COALESCE("note",'')||${` · Μεταφορά στο ${tables.find(table=>table.id===body.targetTableId).name}`} WHERE "tableOrderId"=${source.id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('SENT','READY')`;
+      }else{
+        const lines=await tx.$queryRaw`SELECT * FROM "TableOrderLine" WHERE "orderId"=${source.id} AND "quantity">0 ORDER BY "id" FOR UPDATE`;
+        const sourceLineTotal=Number(lines.reduce((sum,line)=>sum+money(line.lineTotal),0).toFixed(2));
+        if(Math.abs(sourceLineTotal-money(source.total))>.009)throw conflict("Το σύνολο του λογαριασμού δεν συμφωνεί με τις γραμμές.");
+        const selected=body.operation==="MERGE"?lines:lines.filter(line=>body.lineIds.includes(line.id));
+        if(!selected.length||body.operation==="SPLIT"&&(selected.length!==body.lineIds.length||selected.length===lines.length))throw conflict("Επίλεξε ολόκληρες γραμμές και άφησε τουλάχιστον μία στον αρχικό λογαριασμό.");
+        const selectedIds=selected.map(line=>line.id);
+        const batches=await tx.$queryRaw`SELECT * FROM "StorePreparationBatch" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableOrderId"=${source.id} ORDER BY "id" FOR UPDATE`;
+        if(batches.some(batch=>!['SENT','READY'].includes(batch.status)||batch.saleId||batch.consumedAt))throw conflict("Υπάρχει ήδη εκτελεσμένη κίνηση παρασκευής στον λογαριασμό.");
+        const hasUnlinkedPreparation=(tickets,orderLines)=>tickets.some(batch=>
+          !Array.isArray(batch.itemsJson)||batch.itemsJson.some(item=>
+            !item.tableLineId||!orderLines.some(line=>line.id===item.tableLineId&&line.productId===item.productId)));
+        if(hasUnlinkedPreparation(batches,lines))throw conflict("Τα παλιά δελτία παρασκευής πρέπει να παραμείνουν στο υπάρχον τραπέζι. Δεν υποστηρίζουν ασφαλή ένωση ή διαίρεση.");
+        if(target){
+          const targetLines=await tx.$queryRaw`SELECT "id","productId" FROM "TableOrderLine" WHERE "orderId"=${target.id} AND "quantity">0 ORDER BY "id" FOR UPDATE`;
+          const targetBatches=await tx.$queryRaw`SELECT "itemsJson" FROM "StorePreparationBatch" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "tableOrderId"=${target.id} AND "status" IN ('SENT','READY') ORDER BY "id" FOR UPDATE`;
+          if(hasUnlinkedPreparation(targetBatches,targetLines))throw conflict("Τα παλιά δελτία παρασκευής του προορισμού πρέπει να παραμείνουν στο υπάρχον τραπέζι. Επίλεξε άλλο τραπέζι για την ένωση.");
+        }
+        const selectedTotal=Number(selected.reduce((sum,line)=>sum+money(line.lineTotal),0).toFixed(2));
+        targetOrderId=target?.id||crypto.randomUUID();
+        if(!target){
+          await tx.$executeRaw`INSERT INTO "TableOrder" ("id","companyId","storeId","tableId","operatorId","operatorName","terminalPos","status","notes","total") VALUES (${targetOrderId},${req.user.companyId},${store.id},${body.targetTableId},${source.operatorId},${source.operatorName},${source.terminalPos},${source.status},${source.notes},0)`;
+        }
+        // Keep line IDs, snapshots, modifiers and allergens, so checkout matches KDS exactly.
+        const latestRound=target?(await tx.$queryRaw`SELECT COALESCE(MAX("roundNumber"),0)::int AS n FROM "TableOrderLine" WHERE "orderId"=${targetOrderId}`)[0].n:0;
+        await tx.$executeRaw`UPDATE "TableOrderLine" SET "orderId"=${targetOrderId},"roundNumber"="roundNumber"+${latestRound} WHERE "orderId"=${source.id} AND "id"=ANY(${selectedIds}::text[])`;
+        for(const batch of batches){
+          const destinationNote=`${batch.note||''} · ${body.operation==='MERGE'?'Ένωση':'Διαίρεση'} στο ${tables.find(table=>table.id===body.targetTableId).name}`;
+          const moved=body.operation==="MERGE"?batch.itemsJson:batch.itemsJson.filter(item=>selectedIds.includes(item.tableLineId));
+          if(!moved.length)continue;
+          if(moved.length===batch.itemsJson.length){
+            await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "tableOrderId"=${targetOrderId},"note"=${destinationNote} WHERE "id"=${batch.id}`;
+          }else{
+            const retained=batch.itemsJson.filter(item=>!selectedIds.includes(item.tableLineId));
+            await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "itemsJson"=${JSON.stringify(retained)}::jsonb WHERE "id"=${batch.id}`;
+            await tx.$executeRaw`INSERT INTO "StorePreparationBatch" ("id","companyId","storeId","operatorId","operatorName","productionStation","priority","note","itemsJson","status","tableOrderId","createdAt","readyAt") VALUES (${crypto.randomUUID()},${batch.companyId},${batch.storeId},${batch.operatorId},${batch.operatorName},${batch.productionStation},${batch.priority},${destinationNote},${JSON.stringify(moved)}::jsonb,${batch.status},${targetOrderId},${batch.createdAt},${batch.readyAt})`;
+          }
+        }
+        await tx.$executeRaw`UPDATE "TableOrder" SET "total"="total"+${selectedTotal},"updatedAt"=NOW() WHERE "id"=${targetOrderId}`;
+        await tx.$executeRaw`UPDATE "TableOrder" SET "total"="total"-${selectedTotal},"status"=${body.operation==="MERGE"?'CANCELLED':source.status},"updatedAt"=NOW() WHERE "id"=${source.id}`;
+        for(const orderId of [source.id,targetOrderId]){
+          await tx.$executeRaw`UPDATE "TableOrder" SET "status"=CASE WHEN EXISTS (SELECT 1 FROM "StorePreparationBatch" WHERE "tableOrderId"=${orderId} AND "status"='SENT') THEN 'SENT' ELSE 'READY' END WHERE "id"=${orderId} AND "status" IN ('OPEN','SENT','READY')`;
+        }
+      }
+      const response={ok:true,operation:body.operation,sourceOrderId:source.id,targetOrderId,targetTableId:body.targetTableId};
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${actorId},${req.user.id},'TABLE_ORDER_RESTRUCTURED',${JSON.stringify({...response,sourceTableId:source.tableId,sourceTableName:tables.find(table=>table.id===source.tableId).name,targetTableName:tables.find(table=>table.id===body.targetTableId).name,sourceTotalBefore:money(source.total),lineIds:body.lineIds,actorName:req.user.fullName||req.user.email||'Χειριστής'})}::jsonb)`;
+      await tx.$executeRaw`INSERT INTO "TableOrderRequest" ("companyId","storeId","idempotencyKey","actorId","payloadHash","resultJson") VALUES (${req.user.companyId},${store.id},${body.idempotencyKey},${actorId},${payloadHash},${JSON.stringify(response)}::jsonb)`;
+      return response;
+    });
+    res.json(result);
+  }catch(error){
+    if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε ενέργεια, τραπέζι και γραμμές.",details:error.issues});
+    next(error);
+  }
+});
+
 router.post("/stores/:storeId/table-orders/:orderId/waste",async(req,res,next)=>{try{
   const store=await storeFor(req,req.params.storeId),body=z.object({items:z.array(z.object({productId:z.string().min(1),quantity:z.coerce.number().positive().max(999)})).min(1).max(100),note:z.string().trim().min(1).max(500)}).parse(req.body||{}),terminal=String(req.user?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase(),actor=req.user.fullName||"Χειριστής",saleId=crypto.randomUUID();
   const result=await prisma.$transaction(async tx=>{
-    const order=(await tx.$queryRaw`SELECT o."id",o."tableId",t."name" AS "tableName" FROM "TableOrder" o JOIN "DiningTable" t ON t."id"=o."tableId" WHERE o."id"=${req.params.orderId} AND o."companyId"=${req.user.companyId} AND o."storeId"=${store.id} AND o."status" IN ('OPEN','SENT','READY') FOR UPDATE`)[0];if(!order){const error=new Error("Η παραγγελία τραπεζιού δεν βρέθηκε ή έχει κλείσει.");error.status=409;throw error}
+    const order=(await tx.$queryRaw`SELECT o."id",o."tableId",o."cashParts",t."name" AS "tableName" FROM "TableOrder" o JOIN "DiningTable" t ON t."id"=o."tableId" WHERE o."id"=${req.params.orderId} AND o."companyId"=${req.user.companyId} AND o."storeId"=${store.id} AND o."status" IN ('OPEN','SENT','READY') FOR UPDATE`)[0];if(!order){const error=new Error("Η παραγγελία τραπεζιού δεν βρέθηκε ή έχει κλείσει.");error.status=409;throw error}
     const shift=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminal} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];if(!shift){const error=new Error(`Δεν υπάρχει ανοιχτή βάρδια στο ${terminal}.`);error.status=409;throw error}
+    if(order.cashParts.length)throw Object.assign(new Error("Το τραπέζι έχει ήδη μερική πληρωμή."),{status:409});
     const lines=await tx.$queryRaw`SELECT l."id",l."productId",l."description",l."quantity",l."unitPrice",p."vatRate" FROM "TableOrderLine" l JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId} WHERE l."orderId"=${order.id} AND l."quantity">0 FOR UPDATE OF l`,byProduct=new Map(lines.map(line=>[line.productId,line])),items=body.items.map(item=>{const line=byProduct.get(item.productId),quantity=money(item.quantity);if(!line||quantity-money(line.quantity)>.0009){const error=new Error("Η ποσότητα φύρας δεν συμφωνεί με την ανοικτή παραγγελία.");error.status=409;throw error}return {...item,quantity,name:line.description,unitPrice:money(line.unitPrice),vatRate:money(line.vatRate),lineTotal:Number((quantity*money(line.unitPrice)).toFixed(2)),lineId:line.id}});if(items.length!==lines.length||items.some(item=>Math.abs(item.quantity-money(byProduct.get(item.productId)?.quantity))>.0009)){const error=new Error("Η φύρα τραπεζιού πρέπει να περιλαμβάνει ολόκληρη την υπόλοιπη παραγγελία.");error.status=409;throw error}const total=Number(items.reduce((sum,item)=>sum+item.lineTotal,0).toFixed(2));
     await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source") VALUES (${saleId},${req.user.companyId},${store.id},${req.user.employeeId||null},'NON_FISCAL',${total},0,${total},'COMPLETED','WASTE')`;
     for(const item of items){await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice},0,${item.vatRate},${item.lineTotal})`;if(!await maybeChangeSameProductStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:item.productId,quantity:item.quantity,kind:Number(item.quantity)<0?'RESTORE':'CONSUME',actorId:req.user.id,actorName:req.user.fullName||'Χειριστής',note:`POS ${saleId}`})) await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${item.quantity} WHERE "storeId"=${store.id} AND "productId"=${item.productId}`;await tx.$executeRaw`UPDATE "TableOrderLine" SET "quantity"="quantity"-${item.quantity},"lineTotal"=ROUND(("quantity"-${item.quantity})*"unitPrice",2) WHERE "id"=${item.lineId} AND "orderId"=${order.id}`}
@@ -79,6 +230,70 @@ router.post("/stores/:storeId/table-orders/:orderId/waste",async(req,res,next)=>
   });res.status(201).json({ok:true,saleId,fiscalStatus:"NON_FISCAL",receipt:false,...result})
 }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε προϊόντα, ποσότητες και αιτία φύρας.",details:error.issues});next(error)}});
 
-router.patch("/stores/:storeId/table-orders/:orderId/status",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId),body=z.object({status:z.enum(["SENT","CANCELLED"]),reason:z.string().trim().max(500).optional().nullable()}).superRefine((value,ctx)=>{if(value.status==="CANCELLED"&&!String(value.reason||"").trim())ctx.addIssue({code:z.ZodIssueCode.custom,path:["reason"],message:"Η ακύρωση απαιτεί αιτιολογία."})}).parse(req.body||{}),status=body.status;const row=await prisma.$transaction(async tx=>{const rows=await tx.$queryRaw`UPDATE "TableOrder" SET "status"=${status},"updatedAt"=NOW() WHERE "id"=${req.params.orderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('OPEN','SENT','READY') RETURNING "id","tableId","status"`;if(!rows[0])return null;if(status==="CANCELLED")await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "status"='CANCELLED' WHERE "tableOrderId"=${rows[0].id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('SENT','READY')`;await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'TABLE_ORDER_STATUS',${JSON.stringify({orderId:rows[0].id,tableId:rows[0].tableId,status,reason:body.reason||null})}::jsonb)`;return rows[0]});if(!row)return res.status(404).json({error:"Η παραγγελία δεν βρέθηκε ή έχει κλείσει."});res.json(row)}catch(error){next(error)}});
+router.get("/stores/:storeId/table-service/waiters", async (req,res,next) => {
+  try {
+    const store=await storeFor(req,req.params.storeId);
+    if(!canConfigure(req))return res.sendStatus(403);
+    const operators=await prisma.$queryRaw`
+      SELECT c."id",c."displayName" FROM "StoreOperatorCredential" c
+      JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId"
+      WHERE c."companyId"=${req.user.companyId} AND c."storeId"=${store.id}
+        AND c."active"=TRUE AND e."active"=TRUE
+        AND (c."pinHash" IS NOT NULL OR c."cardCodeHash" IS NOT NULL)
+      ORDER BY c."displayName",c."id"
+    `;
+    res.json({operators});
+  } catch(error){next(error)}
+});
+
+router.patch("/stores/:storeId/table-orders/:orderId/waiter", async (req,res,next) => {
+  try {
+    const store=await storeFor(req,req.params.storeId);
+    if(!canConfigure(req))return res.sendStatus(403);
+    const body=z.object({
+      operatorId:z.string().trim().min(1).max(120),
+      expectedOperatorId:z.string().trim().min(1).max(120),
+    }).parse(req.body||{});
+    const companyId=req.user.companyId;
+    const result=await prisma.$transaction(async tx=>{
+      const [order]=await tx.$queryRaw`
+        SELECT o."id",o."tableId",o."operatorId",o."operatorName",t."name" AS "tableName"
+        FROM "TableOrder" o JOIN "DiningTable" t ON t."id"=o."tableId"
+          AND t."companyId"=o."companyId" AND t."storeId"=o."storeId"
+        WHERE o."id"=${req.params.orderId} AND o."companyId"=${companyId} AND o."storeId"=${store.id}
+          AND o."status" IN ('OPEN','SENT','READY')
+        FOR UPDATE OF o
+      `;
+      if(!order)return {status:404,error:"Δεν βρέθηκε ανοιχτός λογαριασμός τραπεζιού."};
+      if(order.operatorId===body.operatorId)return {status:200,order};
+      if(order.operatorId!==body.expectedOperatorId)return {status:409,error:"Ο σερβιτόρος άλλαξε ήδη. Ανανέωσε το τραπέζι."};
+      const [operator]=await tx.$queryRaw`
+        SELECT c."id",c."displayName" FROM "StoreOperatorCredential" c
+        JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId"
+        WHERE c."id"=${body.operatorId} AND c."companyId"=${companyId} AND c."storeId"=${store.id}
+          AND c."active"=TRUE AND e."active"=TRUE
+          AND (c."pinHash" IS NOT NULL OR c."cardCodeHash" IS NOT NULL)
+        FOR SHARE OF c,e
+      `;
+      if(!operator)return {status:400,error:"Επίλεξε ενεργό χειριστή του ίδιου καταστήματος."};
+      await tx.$executeRaw`
+        UPDATE "TableOrder" SET "operatorId"=${operator.id},"operatorName"=${operator.displayName},"updatedAt"=NOW()
+        WHERE "id"=${order.id} AND "companyId"=${companyId} AND "storeId"=${store.id}
+      `;
+      const details={orderId:order.id,tableId:order.tableId,tableName:order.tableName,
+        previousOperatorId:order.operatorId,previousOperatorName:order.operatorName,
+        operatorId:operator.id,operatorName:operator.displayName};
+      await tx.$executeRaw`
+        INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+        VALUES (${crypto.randomUUID()},${companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},
+          'TABLE_ORDER_WAITER_CHANGED',${JSON.stringify(details)}::jsonb)
+      `;
+      return {status:200,order:{...order,operatorId:operator.id,operatorName:operator.displayName}};
+    });
+    return res.status(result.status).json(result.order||{error:result.error});
+  } catch(error){next(error)}
+});
+
+router.patch("/stores/:storeId/table-orders/:orderId/status",async(req,res,next)=>{try{const store=await storeFor(req,req.params.storeId),body=z.object({status:z.enum(["SENT","CANCELLED"]),reason:z.string().trim().max(500).optional().nullable()}).superRefine((value,ctx)=>{if(value.status==="CANCELLED"&&!String(value.reason||"").trim())ctx.addIssue({code:z.ZodIssueCode.custom,path:["reason"],message:"Η ακύρωση απαιτεί αιτιολογία."})}).parse(req.body||{}),status=body.status;const row=await prisma.$transaction(async tx=>{const rows=await tx.$queryRaw`UPDATE "TableOrder" SET "status"=${status},"updatedAt"=NOW() WHERE "id"=${req.params.orderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('OPEN','SENT','READY') AND (${status}<>'CANCELLED' OR jsonb_array_length("cashParts")=0) RETURNING "id","tableId","status"`;if(!rows[0])return null;if(status==="CANCELLED")await tx.$executeRaw`UPDATE "StorePreparationBatch" SET "status"='CANCELLED' WHERE "tableOrderId"=${rows[0].id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('SENT','READY')`;await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'TABLE_ORDER_STATUS',${JSON.stringify({orderId:rows[0].id,tableId:rows[0].tableId,status,reason:body.reason||null})}::jsonb)`;return rows[0]});if(!row)return res.status(404).json({error:"Η παραγγελία δεν βρέθηκε ή έχει κλείσει."});res.json(row)}catch(error){next(error)}});
 
 export default router;

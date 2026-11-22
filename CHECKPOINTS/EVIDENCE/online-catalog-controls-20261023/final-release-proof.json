@@ -1,0 +1,208 @@
+{
+  "observedAt": "2026-10-23T15:05:20.227594+00:00",
+  "expectedRevision": "399c407e8c1bfed9f35c1482480fca01f904d946",
+  "responses": {
+    "/api/health": {
+      "status": 200,
+      "sha256": "1e32cda9e3a1d10becb3060f53f67915eb54b14e635a3b46459ff04a315e2c10",
+      "json": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "399c407e8c1bfed9f35c1482480fca01f904d946"
+      }
+    },
+    "/online/daily-bite?preview=daily-bite-v2": {
+      "status": 200,
+      "sha256": "d55dfc0c584b5fb9c88cb2abbe576ae55eba2bf66c923a90c970780ee6bd0b12",
+      "dailyTitle": true
+    },
+    "/api/public/online/daily-bite/catalog-modifiers": {
+      "status": 500,
+      "sha256": "33a5c3bad4f1566d6b63f4dccbd0cceaf4fd18db9d9663a92eca9b3b51a098c0",
+      "json": {
+        "error": "Παρουσιάστηκε εσωτερικό σφάλμα."
+      }
+    }
+  },
+  "catalogueRecheck": {
+    "observedAt": "2026-10-23T15:06:12.342697+00:00",
+    "status": 503,
+    "json": {
+      "error": "Το Online κατάστημα είναι προσωρινά κλειστό."
+    }
+  },
+  "healthRecheck": {
+    "observedAt": "2026-10-23T15:07:03.661103+00:00",
+    "status": 200,
+    "json": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "399c407e8c1bfed9f35c1482480fca01f904d946"
+    }
+  },
+  "predeployControls": [
+    {
+      "baked_hash": "b38c67e38fbfcb53ded096d48082f910",
+      "config_hash": "e4a19652457f8288122f885fd4645e15",
+      "observed_at": "2026-10-23T14:26:53.833815Z",
+      "orders": 3,
+      "policy_hash": "4b5c8a8c8edc6b24f84721c4c2f0e1df",
+      "stock_price_hash": "1366eeea32d6ac502d00f53de7fb4d82",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "visibility_hash": "e9dfd7d86f0f430834a93943c5fc528b"
+    },
+    {
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "18e29a762ca1c3ea4fe44c2ce297709f",
+      "observed_at": "2026-10-23T14:26:53.833815Z",
+      "orders": 0,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "66eb86d88f787806a7e77f685da5c571",
+      "storeId": "cmv25lf3h000ueegf0kkii3pb",
+      "visibility_hash": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "1b5510c5b6d2c6d86c92b70de296e5c8",
+      "observed_at": "2026-10-23T14:26:53.833815Z",
+      "orders": 14,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "c90aa5ff1f5f3b300746b1972eee9fee",
+      "storeId": "kat-store",
+      "visibility_hash": "8c39eac4d75be88b539cbcaf4e2e3440"
+    }
+  ],
+  "finalControls": [
+    {
+      "always_rules": 0,
+      "autoStockCatalogEnabled": false,
+      "baked_hash": "b38c67e38fbfcb53ded096d48082f910",
+      "config_hash": "e4a19652457f8288122f885fd4645e15",
+      "enabled": true,
+      "observed_at": "2026-10-23T15:05:47.950783Z",
+      "orders": 3,
+      "policy_hash": "4b5c8a8c8edc6b24f84721c4c2f0e1df",
+      "stock_price_hash": "1366eeea32d6ac502d00f53de7fb4d82",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "visibility_hash": "e9dfd7d86f0f430834a93943c5fc528b"
+    },
+    {
+      "always_rules": 0,
+      "autoStockCatalogEnabled": true,
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "18e29a762ca1c3ea4fe44c2ce297709f",
+      "enabled": false,
+      "observed_at": "2026-10-23T15:05:47.950783Z",
+      "orders": 0,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "66eb86d88f787806a7e77f685da5c571",
+      "storeId": "cmv25lf3h000ueegf0kkii3pb",
+      "visibility_hash": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "always_rules": 0,
+      "autoStockCatalogEnabled": false,
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "ec6276eacd1debbd68dcf2491870fdcd",
+      "enabled": true,
+      "observed_at": "2026-10-23T15:05:47.950783Z",
+      "orders": 14,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "a2514ee2c14148218fac2b01d3850c77",
+      "storeId": "kat-store",
+      "visibility_hash": "8c39eac4d75be88b539cbcaf4e2e3440"
+    }
+  ],
+  "databaseRecoveryEvidence": [
+    {
+      "timestamp": "2026-10-23T15:05:31.207317626Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:32.203919454Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:32.206286463Z",
+      "message": "    'Error in connector: Error querying the database: FATAL: the database system is in recovery mode',"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:32.304025175Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:32.304948899Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:32.703904837Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:32.806807742Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:33.106432095Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:33.205874487Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:33.407899295Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:33.708720708Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:33.709535046Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:34.005862254Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:34.107230379Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:34.506526677Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:34.803711406Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:35.103813686Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:35.206485138Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is in recovery mode"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:35.311617764Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is not yet accepting connections"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:35.706924968Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is not yet accepting connections"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:35.807508857Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is not yet accepting connections"
+    },
+    {
+      "timestamp": "2026-10-23T15:05:35.91615728Z",
+      "message": "Error in connector: Error querying the database: FATAL: the database system is not yet accepting connections"
+    }
+  ],
+  "readOnlySqlInitialError": "unexpected EOF; one subsequent read-only retry succeeded",
+  "acceptance": "Technical source/release only; authenticated UI and new-rule LAB NOT TESTED. No actual catalogue/availability configuration save, order or financial test."
+}

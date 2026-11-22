@@ -1,0 +1,87 @@
+{
+  "scope": "CHAT-NATIVE-READERS-01",
+  "owner": "codex/chat-native-readers-20261031",
+  "claim": {
+    "pr": 3361,
+    "merge": "2c6cf047ad8009aeb480bb05977c08e4549459e7",
+    "ciRun": 41200299296
+  },
+  "source": {
+    "pr": 3362,
+    "head": "ab1d0915c98d44744eae7cb24800dc086e562adf",
+    "merge": "0fdc753887821c3050174f284ce700fefc87a990",
+    "androidSourceTree": "3aa4333d7ebe886384076d5fdc9c93f6b43d4b03"
+  },
+  "localUnit": {
+    "java": 17,
+    "passed": 3,
+    "failed": 0
+  },
+  "androidCI": {
+    "run": 41201100715,
+    "result": "success",
+    "instrumentationPassed": 41,
+    "focusedActualMediaCapturePassed": 1
+  },
+  "fullPRCI": {
+    "run": 41201100576,
+    "successfulAttempt": 2,
+    "server": {
+      "passed": 4862,
+      "failed": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "isolatedHttpE2E": "success",
+    "otherJobs": "success",
+    "initialAttempt": {
+      "passed": 4861,
+      "failed": 1,
+      "file": "server/test/wholesale-commercial-offline-ui.test.js:47",
+      "assertion": "JSON.stringify(result).includes(999 substring) must be false",
+      "inference": "Valid paidExpiresAt containing digit sequence 999 triggers the broad substring check although price/private keys are absent. Original failing payload was not logged.",
+      "readOnlyDeterministicProbe": {
+        "paidExpiresAt": 1793449999123,
+        "priceAndPrivateFieldsStripped": true,
+        "substringFalsePositiveInExpiry": true
+      },
+      "wholesaleFilesOrTestsChanged": false,
+      "rerunPolicy": "one bounded failed-job rerun on identical head"
+    }
+  },
+  "physicalNamedReaders": "NOT TESTED",
+  "realChatReadOrSend": "NOT PERFORMED",
+  "previousUserAcceptance": "first entry store link and signed-in app reopen retained; device/hash not independently identified",
+  "unimplementedSeparateScopes": [
+    "device delivery acknowledgement",
+    "quoted replies",
+    "reactions"
+  ],
+  "fullMainCI": {
+    "run": 41202964821,
+    "sha": "0fdc753887821c3050174f284ce700fefc87a990",
+    "result": "success",
+    "server": {
+      "passed": 4864,
+      "failed": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "isolatedHttpE2E": "success",
+    "otherJobs": "success"
+  },
+  "signingPreflight": {
+    "run": 41202991148,
+    "pinnedSourceSha": "0fdc753887821c3050174f284ce700fefc87a990",
+    "attempt1": "Expected exact-main full-CI guard refusal before key access while CI pending",
+    "attempt2": "Requested only after all5 exact main jobs succeeded; original ref/SHA and all guards retained"
+  }
+}

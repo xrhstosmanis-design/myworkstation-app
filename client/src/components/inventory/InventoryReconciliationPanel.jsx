@@ -1,0 +1,116 @@
+import React, {useCallback,useEffect,useId,useMemo,useRef,useState} from 'react';
+import InventoryReviewControls from './InventoryReviewControls.jsx';
+import InventorySourceEvidence from './InventorySourceEvidence.jsx';
+const amount = x => x === null || x === undefined ? 'Άγνωστο' : Number(x).toLocaleString('el-GR',{maximumFractionDigits:4});
+const invoiceDay=x=>x?new Date(x).toLocaleDateString('el-GR',{timeZone:'Europe/Athens'}):'Άγνωστο';
+const date = x => x ? new Date(x).toLocaleString('el-GR') : 'Άγνωστο';
+const labels = {
+  MISSING_PREVIOUS_COUNT:'Λείπει προηγούμενη καταμέτρηση',MISSING_CURRENT_COUNT:'Λείπει νέα καταμέτρηση',
+  INVALID_COUNT_TIME:'Μη έγκυρη χρονική βάση',MISSING_COUNT_EVENT:'Λείπει συμβάν καταμέτρησης',COUNT_EVENT_MISMATCH:'Ασυμφωνία ιστορικού καταμέτρησης',
+  INVALID_MOVEMENT_QUANTITY:'Μη έγκυρη ποσότητα κίνησης',MISSING_MOVEMENT_REFERENCE:'Κίνηση χωρίς σύνδεση',DUPLICATE_POSTING_KEY:'Επανάληψη ταυτότητας κίνησης',
+  LATE_DOCUMENT:'Εκπρόθεσμο παραστατικό',NON_PHYSICAL_ADJUSTMENT:'Διόρθωση συστήματος',MISSING_OR_ZERO_COST:'Άγνωστο ή μηδενικό κόστος',
+  LEDGER_COUNT_EXPECTED_MISMATCH:'Οι κινήσεις δεν συμφωνούν με το θεωρητικό της καταμέτρησης',STALE_REVIEW_CORRECTION:'Άλλαξαν οι πηγές μιας επιβεβαιωμένης διόρθωσης· απαιτείται νέος έλεγχος',
+  TRANSACTION_CROSSES_COUNT_TIME:'Αναδρομική συναλλαγή διασχίζει την ώρα καταμέτρησης',TRANSACTION_WITHOUT_VERIFIED_STOCK_EFFECT:'Δεν επιβεβαιώνεται η επίδραση συναλλαγής στο stock',TRANSACTION_POSTING_QUANTITY_MISMATCH:'Ασυμφωνία ποσότητας συναλλαγής και κίνησης',LATE_DOCUMENT_PHYSICAL_TIME_UNKNOWN:'Εκπρόθεσμο παραστατικό χωρίς πραγματική ώρα παραλαβής',INVOICE_QUANTITY_CHECK_UNRESOLVED:'Ανοιχτός έλεγχος ποσότητας παραστατικού'
+};
+export default function InventoryReconciliationPanel({api,stocktakeId,storeId,onReviewLockChange}) {
+  const [report,setReport]=useState(null),[previous,setPrevious]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const generation=useRef(0),alive=useRef(true);
+  const [reviewLocked,setReviewLocked]=useState(false),reviewLockRef=useRef(false);
+  const [selection,setSelection]=useState(null),detailRefs=useRef(new Map()),resultRefs=useRef(new Map()),detailHeading=useRef(null),navigationId=useId();
+  const selectedGroup=selection?.fingerprint===report?.fingerprint?report?.groups?.find(g=>g.id===selection.groupId):null;
+  const selectedHistory=useMemo(()=>{
+    if(!selectedGroup)return [];
+    const members=new Set(selectedGroup.productIds),history=report.review?.history||[];
+    const ids=new Set(history.filter(r=>r.action.kind==='CORRECTION'?members.has(r.action.productId):r.action.kind==='LINK'&&r.action.productIds.some(id=>members.has(id))).map(r=>r.id));
+    return history.filter(r=>ids.has(r.id)||r.action.kind==='REVOKE'&&ids.has(r.action.actionId));
+  },[selectedGroup,report]);
+  useEffect(()=>{
+    if(!selectedGroup)return;
+    const members=new Set(selectedGroup.productIds);
+    for(const [id,element]of detailRefs.current)element.open=members.has(id);
+    detailHeading.current?.focus({preventScroll:true});
+    detailHeading.current?.scrollIntoView?.({block:'nearest'});
+  },[selectedGroup,selection]);
+  const openResult=group=>{if(busy||reviewLockRef.current)return;setSelection({fingerprint:report.fingerprint,groupId:group.id});};
+  const returnToResult=()=>{
+    if(!selectedGroup)return;
+    const target=resultRefs.current.get(selectedGroup.id);setSelection(null);
+    target?.focus({preventScroll:true});target?.scrollIntoView?.({block:'nearest'});
+  };
+  const codes=useMemo(()=>new Map((report?.rows||[]).map(r=>[r.productId,r.sku])),[report?.rows]);
+  const code=id=>codes.get(id)||id;
+  const actionLabel=action=>action.kind==='LINK'?`Σύνδεση ${action.productIds.map(code).join(' + ')} · κύριος ${code(action.canonicalProductId)}`:action.kind==='CORRECTION'?`Διόρθωση ${code(action.productId)} · ${amount(action.quantity)} τμχ`:'Ανάκληση προηγούμενης επιβεβαίωσης';
+  const reviewLock=useCallback(value=>{reviewLockRef.current=value;setReviewLocked(value);onReviewLockChange?.(value);},[onReviewLockChange]);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;generation.current++;};},[]);
+  useEffect(()=>{generation.current++;setReport(null);setPrevious('');setSelection(null);setError('');setBusy(false);},[stocktakeId,storeId]);
+  const load=async(selected=previous)=>{
+    if(reviewLockRef.current)return;
+    const request=++generation.current;setReport(null);setSelection(null);setBusy(true);setError('');
+    try {
+      const result=await api(`/api/inventory-v2/stocktakes/${encodeURIComponent(stocktakeId)}/reconciliation?reportVersion=2${selected?`&previousStocktakeId=${encodeURIComponent(selected)}`:''}`);
+      if(!alive.current||request!==generation.current)return;
+      if(result.current?.id!==stocktakeId||result.current?.storeId!==storeId||selected&&result.previous?.id!==selected)throw new Error('Η αναφορά δεν αντιστοιχεί στην επιλεγμένη απογραφή.');
+      setPrevious(result.previous.id);setReport(result);
+    } catch(e){if(alive.current&&request===generation.current)setError(e.message);}
+    finally {if(alive.current&&request===generation.current)setBusy(false);}
+  };
+  const download=async(format)=>{
+    if(!report||busy||reviewLockRef.current)return;
+    const request=++generation.current;setBusy(true);setError('');
+    try {
+      const file=await api(`/api/inventory-v2/stocktakes/${encodeURIComponent(stocktakeId)}/reconciliation?reportVersion=2&previousStocktakeId=${encodeURIComponent(report.previous.id)}&format=${format}&expectedFingerprint=${report.fingerprint}`);
+      if(!alive.current||request!==generation.current)return;
+      const bytes=Uint8Array.from(atob(file.base64),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:file.mimeType}));
+      const link=document.createElement('a');link.href=url;link.download=file.filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    } catch(e){if(alive.current&&request===generation.current)setError(e.message);}
+    finally{if(alive.current&&request===generation.current)setBusy(false);}
+  };
+  return <section className="inv2-investigation" aria-label="Συμφωνία δύο απογραφών">
+    <h3>Συμφωνία δύο απογραφών</h3>
+    <button disabled={busy||reviewLocked} onClick={()=>load()}>Έλεγχος προηγούμενης απογραφής</button>
+    {error&&<p role="alert">{error}</p>}
+    {busy&&<p role="status">Υπολογισμός αναφοράς…</p>}
+    {report&&<>
+      <label>Προηγούμενη απογραφή <select value={previous} disabled={busy||reviewLocked} onChange={e=>{if(reviewLockRef.current)return;setPrevious(e.target.value);load(e.target.value);}}>
+        {report.candidates.map(x=><option key={x.id} value={x.id}>{x.name} · {date(x.finalizedAt)}</option>)}
+      </select></label>
+      <p>{report.explanation}</p><p>{report.costMethod}</p>
+      {report.stockScope&&<p>{report.stockScope.explanation}</p>}
+      <p>Περίοδος: {date(report.previous.startedAt)} → {date(report.current.finalizedAt)}. Έναρξη νέας: {date(report.current.startedAt)} · χειριστής {report.current.createdByUserId||'Άγνωστος'} · οριστικοποίηση {report.current.finalizedByUserId||'Άγνωστος'}.</p>
+      <p>Αποθηκευμένη αιτιολογία οριστικοποίησης: {report.current.finalizationReason||'Δεν υπάρχει στην πηγή'}.</p>
+      <p>Ο πλήρης έλεγχος παραστατικών, συμβάντων και πραγματικών χρόνων διακίνησης παραμένει χωριστός από τον υπολογισμό των καταγεγραμμένων κινήσεων.</p>
+      <p>Ελλείμματα προς έλεγχο: <b>{amount(report.summary.shortageQuantity)} τμχ · {amount(report.summary.shortageValue)} €</b> · Πλεονάσματα: <b>{amount(report.summary.surplusQuantity)} τμχ · {amount(report.summary.surplusValue)} €</b> · Καθαρή διαφορά: <b>{amount(report.summary.netQuantity)} τμχ · {amount(report.summary.netValue)} €</b></p>
+      <p>Χωρίς υπολογισμό: {report.summary.uncomputedItems} · Χωρίς κόστος: {report.summary.missingCostItems}</p>
+      <button disabled={busy||reviewLocked} onClick={()=>download('pdf')}>PDF</button> <button disabled={busy||reviewLocked} onClick={()=>download('xlsx')}>Excel</button>
+      {report.groups&&<div style={{overflowX:'auto'}}><h4>Αρχική διαφορά, επιβεβαιωμένες διορθώσεις και τελικό αποτέλεσμα</h4><table><thead><tr><th>Προϊόν / ομάδα</th><th>Αρχική διαφορά</th><th>Διόρθωση</th><th>Τελική διαφορά</th><th>Κόστος</th><th>Τελική αξία</th></tr></thead><tbody>
+        {report.groups.map(g=><tr key={g.id}><td><button type="button" ref={el=>{if(el)resultRefs.current.set(g.id,el);else resultRefs.current.delete(g.id);}} disabled={busy||reviewLocked} aria-expanded={selectedGroup?.id===g.id} aria-controls={g.productIds.map(id=>`${navigationId}-${id}`).join(' ')} onClick={()=>openResult(g)}>Ανάλυση κινήσεων: {g.sku} · {g.name}</button><br/>{g.productIds.map(code).join(', ')}</td><td>{amount(g.initialDifference)}</td><td>{amount(g.correctionQuantity)}</td><td>{amount(g.finalDifference)}</td><td>{amount(g.unitCost)}</td><td>{amount(g.finalValue)} €{g.staleCorrectionIds.length>0&&<p>{labels.STALE_REVIEW_CORRECTION}</p>}</td></tr>)}
+      </tbody></table></div>}
+      {report.review?.canWrite&&<InventoryReviewControls key={`${report.previous.id}:${report.viewerId}:${report.generation}`} api={api} report={report} stocktakeId={stocktakeId} storeId={storeId} onRefresh={()=>load(report.previous.id)} onLockChange={reviewLock}/>}
+      {report.review?.history?.length>0&&<details><summary>Ιστορικό επιβεβαιώσεων και διορθώσεων ({report.review.history.length})</summary>{report.review.history.map(r=><p key={r.id}>{date(r.createdAt)} · {r.actorName} · {actionLabel(r.action)} · {r.action.reason} · {r.action.evidence} · {r.active?'Ενεργή':'Ιστορική'}</p>)}</details>}
+      {report.sourceEvidence&&<InventorySourceEvidence evidence={report.sourceEvidence} rows={report.rows}/>}
+      <h4>Αρχικές καταμετρήσεις και αναλυτικές κινήσεις ανά κωδικό</h4>
+      {selectedGroup&&<section aria-label="Ανάλυση επιλεγμένου αποτελέσματος">
+        <h4 tabIndex={-1} ref={detailHeading}>Ανάλυση αποτελέσματος: {selectedGroup.sku} · {selectedGroup.name}</h4>
+        <p>Αρχική διαφορά {amount(selectedGroup.initialDifference)} + διόρθωση {amount(selectedGroup.correctionQuantity)} = τελική διαφορά {amount(selectedGroup.finalDifference)}. Ανοίχθηκαν οι κινήσεις των κωδικών: {selectedGroup.productIds.map(code).join(', ')}.</p>
+        <button type="button" onClick={returnToResult}>Επιστροφή στο αποτέλεσμα</button>
+        <h5>Ιστορικό διορθώσεων και συνδέσεων αυτού του αποτελέσματος</h5>
+        {selectedHistory.length?selectedHistory.map(r=><p key={r.id}>{date(r.createdAt)} · {r.actorName} · {actionLabel(r.action)} · {r.action.reason} · {r.action.evidence} · {r.active?'Ενεργή':'Ιστορική'}</p>):<p>Δεν υπάρχουν επιβεβαιώσεις για αυτό το αποτέλεσμα.</p>}
+      </section>}
+      {report.rows.map(row=><details key={row.productId} id={`${navigationId}-${row.productId}`} ref={el=>{if(el)detailRefs.current.set(row.productId,el);else detailRefs.current.delete(row.productId);}}>
+        <summary>{row.sku} · {row.name} · Αρχική διαφορά: {amount(row.difference)} · Αρχική αξία: {amount(row.differenceValue)} €</summary>
+        <p>{date(row.from)} → {date(row.to)}</p>
+        <p>Φυσικό: {amount(row.previousCountedQuantity)} + {amount(row.incoming)} − {amount(row.outgoing)} = {amount(row.expectedQuantity)} · Καταμέτρηση {amount(row.countedQuantity)}</p>
+        <p>Χωριστές διορθώσεις συστήματος: {amount(row.systemAdjustments)} · ανακατασκευασμένο λογιστικό υπόλοιπο: {amount(row.recordedExpectedQuantity)} · λογιστική διαφορά: {amount(row.recordedDifference)}. Οι διορθώσεις δεν παρουσιάζονται ως φυσικές παραλαβές.</p>
+        <p>{row.findings.map(x=>labels[x]||x).join(' · ')}</p>
+        <div style={{overflowX:'auto'}}><table><thead><tr><th>Καταχώρηση</th><th>Χρόνος συναλλαγής / φυσικής κίνησης</th><th>Κίνηση</th><th>Ποσότητα</th><th>Φυσικό πριν</th><th>Φυσικό μετά</th><th>Λογιστικό πριν / μετά</th><th>Χειριστής</th><th>Παραστατικό</th></tr></thead>
+          <tbody>{row.movements.map(m=><tr key={m.id}><td>{date(m.postedAt)}</td><td>{date(m.transactionOccurredAt||m.physicalAt)}{m.quantityBasis&&<p>{m.quantityBasis}</p>}</td><td>{m.movementType}{!m.included?' · Βάση απογραφής':''}</td><td>{amount(m.quantity)}</td><td>{amount(m.balanceBefore)}</td><td>{amount(m.balanceAfter)}</td><td>{amount(m.recordedBalanceBefore)} / {amount(m.recordedBalanceAfter)}</td><td>{m.actorName||m.actorId||'—'}</td><td>{m.documentNumber||m.sourceId||'—'}{m.documentDate&&` · ${invoiceDay(m.documentDate)}`}</td></tr>)}</tbody>
+        </table></div>
+        <details><summary>Αρχικό ιστορικό καταμετρήσεων ({row.countHistory?.length||0})</summary>
+          <p>Έως 200 συμβάντα στην οθόνη· ολόκληρο το ιστορικό στο Excel. Οι αρχικές μετρήσεις δεν αντικαθίστανται από τις διορθώσεις της αναφοράς.</p>
+          <div style={{overflowX:'auto'}}><table><thead><tr><th>Ταυτότητα</th><th>Ώρα</th><th>Συμβάν</th><th>Πριν</th><th>Καταμέτρηση</th><th>Θεωρητικό τότε</th><th>Χειριστής</th><th>Πηγή</th></tr></thead><tbody>{(row.countHistory||[]).slice(0,200).map(e=><tr key={e.id}><td>{e.id}</td><td>{date(e.createdAt)}</td><td>{e.eventType}</td><td>{amount(e.previousQuantity)}</td><td>{amount(e.countedQuantity)}</td><td>{amount(e.expectedQuantity)}</td><td>{e.actorName||'Άγνωστος'}</td><td>{e.source}</td></tr>)}</tbody></table></div>
+        </details>
+        {report.sourceEvidence&&<InventorySourceEvidence evidence={report.sourceEvidence} rows={report.rows} productId={row.productId}/>}
+      </details>)}
+    </>}
+  </section>;
+}

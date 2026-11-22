@@ -1,3 +1,4 @@
+import {chatAccessRevoked} from "./chat-access.mjs";
 import {prisma} from "./prisma.js";
 import {companyModuleState,effectiveModuleEnabled,isPlatformSuperAdmin} from "./middleware/module-access.js";
 import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
@@ -26,7 +27,7 @@ export async function mobileChatStores(user){
  }
  const platform=isPlatformSuperAdmin(user)&&!user.supportContext;
  const stores=await prisma.store.findMany({where:{active:true,company:{active:true},...(platform?{}:{companyId:{in:companyIds}})},select:{id:true,name:true,companyId:true,company:{select:{name:true}}},orderBy:[{companyId:"asc"},{name:"asc"}]});
- const enabled=[];for(const store of stores)if(platform||await chatEnabled(store))enabled.push({id:store.id,name:store.name,companyId:store.companyId,companyName:store.company.name});
+ const enabled=[];for(const store of stores)if((platform||await chatEnabled(store))&&!await chatAccessRevoked(prisma,store,user.id))enabled.push({id:store.id,name:store.name,companyId:store.companyId,companyName:store.company.name});
  const ids=enabled.map(s=>s.id);
  const unread=ids.length?await prisma.$queryRawUnsafe('SELECT m."storeId",COUNT(*)::int AS unread FROM "StoreChatMessage" m JOIN "Store" s ON s."id"=m."storeId" AND s."companyId"=m."companyId" LEFT JOIN "StoreChatRead" r ON r."messageId"=m."id" AND r."userId"=$1 WHERE m."storeId"=ANY($2::text[]) AND m."senderId"<>$1 AND r."messageId" IS NULL GROUP BY m."storeId"',user.id,ids):[];
  return {stores:enabled.map(s=>({...s,unread:unread.find(r=>r.storeId===s.id)?.unread||0})),currentCompanyId:user.companyId,canSwitchCompany:user.role==="OWNER"&&!isPlatformSuperAdmin(user)&&!user.supportContext};
@@ -52,7 +53,7 @@ export async function saveMobilePush(user,value){
 }
 export async function mobilePushRecipients(store,senderId){
  await ensureChatMobileSchema();const enabled=await chatEnabled(store);
- return prisma.$queryRawUnsafe('SELECT p."endpoint",p."subscriptionJson" FROM "StoreChatMobilePush" p JOIN "User" u ON u."id"=p."userId" AND u."sessionVersion"=p."sessionVersion" AND u."role"::text=p."role" JOIN "UserSession" ss ON ss."id"=p."sessionId" AND ss."userId"=u."id" AND ss."revokedAt" IS NULL JOIN "Store" st ON st."id"=$1 AND st."companyId"=$2 AND st."active"=TRUE JOIN "Company" c ON c."id"=st."companyId" AND c."active"=TRUE WHERE p."userId"<>$3 AND p."storeIds" @> $4::jsonb AND (p."supportCompanyId" IS NULL OR p."supportCompanyId"=st."companyId") AND (u."role"::text=$5 OR ($6::boolean AND ((u."role"::text=$7 AND (u."companyId"=st."companyId" OR EXISTS(SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=st."companyId"))) OR (u."role"::text IN ($8,$9) AND u."companyId"=st."companyId"))))',store.id,store.companyId,senderId,JSON.stringify([store.id]),"SUPER_ADMIN",enabled,"OWNER","ADMIN","MANAGER");
+ return prisma.$queryRawUnsafe('SELECT p."endpoint",p."subscriptionJson",p."userId" FROM "StoreChatMobilePush" p JOIN "User" u ON u."id"=p."userId" AND u."sessionVersion"=p."sessionVersion" AND u."role"::text=p."role" JOIN "UserSession" ss ON ss."id"=p."sessionId" AND ss."userId"=u."id" AND ss."revokedAt" IS NULL JOIN "Store" st ON st."id"=$1 AND st."companyId"=$2 AND st."active"=TRUE JOIN "Company" c ON c."id"=st."companyId" AND c."active"=TRUE WHERE p."userId"<>$3 AND p."storeIds" @> $4::jsonb AND (p."supportCompanyId" IS NULL OR p."supportCompanyId"=st."companyId") AND (u."role"::text=$5 OR ($6::boolean AND ((u."role"::text=$7 AND (u."companyId"=st."companyId" OR EXISTS(SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=st."companyId"))) OR (u."role"::text IN ($8,$9) AND u."companyId"=st."companyId"))))',store.id,store.companyId,senderId,JSON.stringify([store.id]),"SUPER_ADMIN",enabled,"OWNER","ADMIN","MANAGER");
 }
 export async function removeMobilePushEndpoints(endpoints){if(endpoints.length)await prisma.$executeRawUnsafe('DELETE FROM "StoreChatMobilePush" WHERE "endpoint"=ANY($1::text[])',endpoints)}
 export async function retireMobilePushEndpoint(endpoint,db=prisma){await ensureChatMobileSchema();await db.$executeRawUnsafe('DELETE FROM "StoreChatMobilePush" WHERE "endpoint"=$1',endpoint)}

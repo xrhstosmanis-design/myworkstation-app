@@ -1,0 +1,41 @@
+{
+  "source_parent": "2853be00dd8b6bb423107cb5520a894351aad09c",
+  "main_parent": "3b33cc2998dc366cc44f9bd9e65dadf77a343651",
+  "base_claim": "7851efe9889621553790fe920316c6b0a5bdbfcd",
+  "registries": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "main_blob": "728f320ae4cb1fc445fc23b157ddce65256a1b5c",
+      "merged_blob": "da46db2b685d58f04cafd5547e967cddeb677f13",
+      "prefix_bytes": 2432,
+      "main_suffix_preserved": true,
+      "common_history_preserved": true
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "main_blob": "f23abe0e6e33a5c004841c5e2e56746c48b607d8",
+      "merged_blob": "44b2ee29b7e7c9f5eb4031cf6303f95c95bd2fe0",
+      "prefix_bytes": 2432,
+      "main_suffix_preserved": true,
+      "common_history_preserved": true
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "main_blob": "fa81bac23931066aec1247393c7a171fcd102b02",
+      "merged_blob": "147bc28dc29c19d3bb3cbdc53cb5a0cee09768c5",
+      "prefix_bytes": 2432,
+      "main_suffix_preserved": true,
+      "common_history_preserved": true
+    }
+  },
+  "source_unchanged": {
+    "client/src/components/store/InvoiceFilePageSummary.jsx": "f4d4b8323a04055ad2f52ae23c79ed4601ba2366",
+    "client/src/components/store/StoreSupplierInvoicePremiumFast.jsx": "58b34ffd2aa0e69d965bc4ef39d29e84528fc35d",
+    "client/src/lib/invoice-file-page-count.js": "f201e030c2fff327c5618405ac5da954f5b93333",
+    "client/src/lib/invoice-pdf-count-loader.js": "836fd6987b90b2ca69bfe17096b7e5c62930b6d4",
+    "server/e2e/invoice-file-page-count-flow.mjs": "7b6b40ec4a853ee28f3e481b6a2f721c882c60c8",
+    "server/test/invoice-file-page-count.test.js": "3f502670b5effcf12b33c55517c22a1a0e2303f4",
+    "server/test/invoice-file-page-summary.test.js": "b1ad6d8e7ab19296a7bee51fb6f4e6bcdbd3a12d",
+    "server/test/pos-invoice-multipage-upload-v1.test.js": "f49548ae316c3147a966ee2f624854d84613ce75",
+    "server/test/supplier-five-photos.test.js": "761718263e9f36ac990a2c869d8ebb0eaf8b616d"
+  },
+  "visual_review": "PENDING",
+  "full_combined_ci": "NOT_RUN"
+}

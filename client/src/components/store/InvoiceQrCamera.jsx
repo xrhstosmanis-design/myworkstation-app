@@ -1,3 +1,4 @@
+import {cameraConstraints} from "../../lib/camera-acquisition.js";
 import DocumentCameraFocus from "./DocumentCameraFocus.jsx";
 import React,{useEffect,useRef,useState} from "react";
 import {createInvoiceQrReader} from "../../lib/invoice-qr-reader.js";
@@ -25,8 +26,9 @@ export default function InvoiceQrCamera({api,store,onRead,onClose}){
         callbacks.current.onRead({...data,file:new File([bytes],data.filename,{type:"application/pdf"})});
       }catch(cause){if(alive){setError(cause?.message||"Δεν διαβάστηκε το QR. Χρησιμοποίησε φωτογραφία ή PDF.");setStatus("Κλείσε τη σάρωση για φωτογράφιση ή νέα προσπάθεια.")}}
     };
-    reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false},video,scan).then(next=>{controls=next;if(!alive||scanned){controls.stop();return}setTrack(video?.srcObject?.getVideoTracks?.()[0]||null)}).catch(cause=>{if(alive)setError(cause?.name==="NotAllowedError"?"Δεν δόθηκε άδεια κάμερας. Επίτρεψε την κάμερα στον browser.":"Η κάμερα δεν είναι διαθέσιμη. Κλείσε τη σάρωση και δοκίμασε ξανά.")});
+    reader.decodeFromConstraints(cameraConstraints("qr"),video,scan).then(next=>{controls=next;if(!alive||scanned){controls.stop();return}setTrack(video?.srcObject?.getVideoTracks?.()[0]||null)}).catch(cause=>{if(alive)setError(cause?.name==="NotAllowedError"?"Δεν δόθηκε άδεια κάμερας. Επίτρεψε την κάμερα στον browser.":"Η κάμερα δεν είναι διαθέσιμη. Κλείσε τη σάρωση και δοκίμασε ξανά.")});
     return()=>{alive=false;controls?.stop?.();video?.srcObject?.getTracks?.().forEach(track=>track.stop())};
   },[store.id]);
   return <div className="operator-camera-overlay" role="dialog" aria-modal="true" aria-label="Σάρωση QR τιμολογίου"><section className="operator-camera-modal"><header><div><small>MYWORKSTATION · {store.name}</small><h2>Σάρωση QR τιμολογίου</h2></div><button type="button" onClick={onClose} aria-label="Κλείσιμο σάρωσης QR"><X/></button></header><div className="operator-camera-view"><video ref={videoRef} autoPlay muted playsInline/><div className="operator-camera-target" aria-hidden="true"/></div><DocumentCameraFocus track={track}/><p role="status">{status}</p><p>Τα στοιχεία και το ποσό χρειάζονται επιβεβαίωση. Το QR δεν αποτελεί αποδεικτικό εξόφλησης.</p>{error&&<div className="operator-login-error" role="alert">{error}</div>}<button type="button" className="secondary" onClick={onClose}>Επιστροφή στη φωτογράφιση / Κλείσιμο</button></section></div>;
 }
+

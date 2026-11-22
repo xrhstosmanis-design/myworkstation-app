@@ -1,0 +1,102 @@
+{
+  "parents": {
+    "common": "f0d45edfd0628557f7a1a545355faa928d631240",
+    "ours": "012de5401900c55feb03fffb35ef3bd484768a88",
+    "main": "723b16750f8ad3ccc524267abcd5a25b1c3bd6a4"
+  },
+  "kind": "BRANCH_SYNCHRONIZATION_NOT_RELEASE",
+  "runtime_new_policy": false,
+  "full_ci": "REQUIRED",
+  "independent_review": "PENDING",
+  "lab": "NOT_TESTED",
+  "live_provider_called": false,
+  "conflicts_resolved": [
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md"
+  ],
+  "source_prefix_preserved": true,
+  "entire_main_registry_suffix_preserved": true,
+  "common_registry_suffix_preserved": true,
+  "combined_runtime_sha256": "32e1f56f985603aaa7c819a490c9dc2d846884c0c43dbd7e4f22f8fd9d5653e8",
+  "focused_tests": {
+    "tests": 277,
+    "pass": 277,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "tap_sha256": "28e2f224a364274842f04a7495dcf64036f16c45a6e704567dc042af5f5f88ea",
+  "node": "v20.20.2",
+  "workflow_run_id": "41978470021",
+  "registry_sync": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "merged_old_bytes": 5229303,
+      "new_bytes": 5230918,
+      "new_prefix_bytes": 1615,
+      "merged_old_suffix_preserved": true
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "merged_old_bytes": 4053377,
+      "new_bytes": 4054992,
+      "new_prefix_bytes": 1615,
+      "merged_old_suffix_preserved": true
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "merged_old_bytes": 3581130,
+      "new_bytes": 3582745,
+      "new_prefix_bytes": 1615,
+      "merged_old_suffix_preserved": true
+    }
+  },
+  "files": {
+    "server/src/routes/commerce-pos-v244.js": {
+      "sha256": "32e1f56f985603aaa7c819a490c9dc2d846884c0c43dbd7e4f22f8fd9d5653e8",
+      "bytes": 122094
+    },
+    "server/test/pos-fast-header-latency.test.js": {
+      "sha256": "a78685317ad8e6bd8edcb44a195c48f43f7b0876d1d15c52f12d807cc0b7f3ba",
+      "bytes": 38066
+    },
+    "server/test/pos-fast-header-timing.test.js": {
+      "sha256": "5c972b51bcabf5522d1a59698584385a127e8f7601717a19ecaa8028e678e750",
+      "bytes": 5432
+    },
+    "server/test/pos-fast-handoff-recovery-v1.test.js": {
+      "sha256": "6a488996220266a3b07aef00d3d5bb477adecc9e1254d730ae9b21fbc5a012ed",
+      "bytes": 18919
+    },
+    "server/test/pos-fast-header-pdf-total-safety.test.js": {
+      "sha256": "70184af40ff88ac7476c4c973103a55b70045b4970f7b7e607ec420cc0a77f91",
+      "bytes": 14168
+    },
+    "server/test/pos-fast-header-pdf-real-helpers.test.js": {
+      "sha256": "d23191fb9aede3c78b3b6f1fe13edb2d87babcd5622755450d0c30a6d21f8072",
+      "bytes": 25385
+    },
+    "server/test/pos-fast-header-pdf-timing-shared.test.js": {
+      "sha256": "646b74a188a239d8b0539d4a28024fa223b85f1790409e151f329c630bf7d8d6",
+      "bytes": 10973
+    },
+    "CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md": {
+      "sha256": "ae4c254a354fbc14d0a1f63a621bce696561462c0b9b598d350fdcc716b42ff5",
+      "bytes": 5062
+    },
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "sha256": "ebd5e1a21d5920aa30841508f27171238988449f801f914721aa4f75e5b73a1a",
+      "bytes": 5230918
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "sha256": "35cafea9d36e1eb1b01fca15daa3fa87712d0da8b80b0b7bcfdc20c1d9b0db71",
+      "bytes": 4054992
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "sha256": "7d58b567836208449a1b032077583b10662c7308a4cf0b343c34b9710c9c761a",
+      "bytes": 3582745
+    }
+  },
+  "pdf": {
+    "pages": 957,
+    "sha256": "e1f4d005db9fbac5d4e9193d499c361bd008b9068b613a38615d202eb76c39a3",
+    "two_copies_equal": true,
+    "visual_review": "PENDING"
+  }
+}

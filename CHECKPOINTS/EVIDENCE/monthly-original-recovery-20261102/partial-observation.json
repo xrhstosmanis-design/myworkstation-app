@@ -1,0 +1,71 @@
+{
+  "format": "MWS_MONTHLY_ORIGINAL_RECOVERY_OBSERVATION_V1",
+  "status": "PARTIAL_OBSERVATION_NOT_ACCEPTED",
+  "observedDate": "2026-11-02",
+  "retainedOwner": "codex/central-monthly-capture-today-20261101",
+  "serviceId": "crn-dau2gdbncjis73agfh30",
+  "workerRevision": "aa1cbcf8ed8461d4abb565376857508217fd6539",
+  "archive": {
+    "runId": "20261102T090030Z-9764",
+    "key": "myworkstation/2026/11/02/backup-20261102T090030Z-9764.dump",
+    "versionId": "4_z217a89158062f23bad000f16_f246285cda0e86aee_d20261102_m090211_c003_v0312046_t0042_u01793610131232",
+    "bytes": 369731641,
+    "sha256": "b96f09f447b4777505fbfaf2ebc35400faad43039055097d0c1ba58561ebcb63",
+    "encryption": "AES256",
+    "bucketVersioningObserved": "Enabled",
+    "downloadStartedAt": "2026-11-02T11:24:46.962511Z",
+    "downloadReadbackVerifiedAt": "2026-11-02T11:25:35.980394Z"
+  },
+  "privateRestore": {
+    "startedAt": "2026-11-02T11:25:42.527657Z",
+    "exitZeroObservedAt": "2026-11-02T11:27:44.657625Z",
+    "serverVersionNum": "180006",
+    "database": "postgres",
+    "localSocket": true,
+    "listenAddresses": "",
+    "fullCopyComparison": "NOT_TESTED_NO_RESULT_OBSERVED",
+    "snapshotOriginalRestoredBytes": "NOT_TESTED_NO_RESULT_OBSERVED",
+    "temporaryCleanupVerified": null
+  },
+  "expectedSnapshotId": "fd3523ea-f95b-4f9f-bf3c-4e2de0e0e91c",
+  "interruption": {
+    "observedWindowStart": "2026-11-02T11:27:44.657625Z",
+    "observedWindowEnd": "2026-11-02T11:28:49Z",
+    "observation": "Browser Shell reset before subsequent aggregate results; fresh shell showed only shell processes and current cgroup memory.events zero",
+    "cause": "UNESTABLISHED",
+    "oldInstanceOomExcluded": false,
+    "oldInstanceCleanupEstablished": false,
+    "freshShellReadOnlyReconciliation": {
+      "observedWindow": "2026-11-02 11:29-11:30 UTC",
+      "privateDirectoriesWithOwnedPrefix": [],
+      "currentCgroupMemoryEvents": "all zero",
+      "currentProcesses": "shell only; no Python or PostgreSQL",
+      "sameInstanceAsOriginalEstablished": false,
+      "oldInstanceCleanupEstablished": false
+    }
+  },
+  "productionRestorePerformed": false,
+  "newBackupTriggered": false,
+  "newResourceCreated": false,
+  "sourceAuthenticityVerified": false,
+  "postProductionHealth": {
+    "observedAt": "2026-11-02T11:31:37.018357Z",
+    "inRecovery": false,
+    "connections": 20,
+    "lockWaiters": 0,
+    "wholeDatabaseDataEffectsVerified": false
+  },
+  "cronLogScope": {
+    "start": "2026-11-02T11:24:00Z",
+    "end": "2026-11-02T11:30:00Z",
+    "filteredMatches": 0,
+    "hasMore": false,
+    "filters": [
+      "Killed",
+      "memory",
+      "shell",
+      "evict"
+    ],
+    "diagnosesOldShellInstance": false
+  }
+}

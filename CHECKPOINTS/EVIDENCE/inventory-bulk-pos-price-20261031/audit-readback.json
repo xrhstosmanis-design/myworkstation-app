@@ -1,0 +1,64 @@
+[
+  {
+    "actorId": "cms1k1bje001xhn3xulr0rooz",
+    "createdAt": "2026-10-31T10:15:48.978365Z",
+    "details": {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "allProducts": true,
+      "changed": 1,
+      "changes": [
+        {
+          "after": {
+            "allowPosPriceChange": true
+          },
+          "before": {
+            "active": true,
+            "allowPosPriceChange": false,
+            "categoryId": "a3d2beff-b953-44cc-bf21-f6730f5f0e35",
+            "id": "b1466a68-c47b-47cc-9139-69e6f9f7f978",
+            "isSet": false,
+            "salePrice": "1.2",
+            "subcategoryId": "6da6921b-1acf-4bd3-852a-ec85c5def9bb",
+            "vatDepartmentId": "295ed004-943a-4793-9939-88c695841215",
+            "vatRate": "13"
+          },
+          "productId": "b1466a68-c47b-47cc-9139-69e6f9f7f978"
+        }
+      ],
+      "fingerprint": "24322fde1edd429bea72f3332b2aff3de2e72bee7fbfd8809e8f27c3742a5fee",
+      "requestId": "275dc580-0a89-4acb-890e-28dbfcaac00c"
+    },
+    "id": "44b67e4c-ec58-48eb-bb86-7a85b9976415"
+  },
+  {
+    "actorId": "cms1k1bje001xhn3xulr0rooz",
+    "createdAt": "2026-10-31T10:17:30.115774Z",
+    "details": {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "allProducts": false,
+      "changed": 1,
+      "changes": [
+        {
+          "after": {
+            "allowPosPriceChange": false
+          },
+          "before": {
+            "active": true,
+            "allowPosPriceChange": true,
+            "categoryId": "a3d2beff-b953-44cc-bf21-f6730f5f0e35",
+            "id": "b1466a68-c47b-47cc-9139-69e6f9f7f978",
+            "isSet": false,
+            "salePrice": "1.2",
+            "subcategoryId": "6da6921b-1acf-4bd3-852a-ec85c5def9bb",
+            "vatDepartmentId": "295ed004-943a-4793-9939-88c695841215",
+            "vatRate": "13"
+          },
+          "productId": "b1466a68-c47b-47cc-9139-69e6f9f7f978"
+        }
+      ],
+      "fingerprint": "19c807d323a7ff78d8b4248b3abf3a358c4be46d7a39eed41b591cb8e1af57c5",
+      "requestId": "7000f9db-9c92-4b28-8e63-e820d961bf56"
+    },
+    "id": "7fb173d9-726d-4052-86e9-18ec92369949"
+  }
+]

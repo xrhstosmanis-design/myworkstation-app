@@ -1,0 +1,196 @@
+{
+  "baselinePublication": {
+    "pr": 3405,
+    "head": "7b2c53dc017569163800d4043d18d011a9527a2a",
+    "ci": 41236159703,
+    "jobs": "3SUCCESS/2correct runtimeSKIP",
+    "merge": "e4fb9c0130ac36a38d330b0ef61f58a1e9925ccf"
+  },
+  "actions": [
+    {
+      "phase": "open",
+      "beforeRecordedAt": "2026-10-31T19:53:08.411799+00:00",
+      "beforeSource": "before.xlsx and fresh UI refresh/copy byte-identical",
+      "historyBefore": 4,
+      "targetRepliesBefore": 0,
+      "targetBefore": "OPEN",
+      "otherReplies": 0,
+      "expectedHistoryAfter": 5,
+      "expectedTargetRepliesAfter": 1,
+      "status": "OBSERVED_PERSISTED",
+      "createdAt": "2026-10-31T19:53:13.017Z",
+      "historyAfter": 5,
+      "targetRepliesAfter": 1,
+      "targetAfter": "OPEN",
+      "evidence": "after-open.xlsx; actual UI history read5",
+      "unchanged": {
+        "Βάρδιες": true,
+        "Ανά εργαζόμενο": true,
+        "Ανά ημέρα": true,
+        "Εκκρεμότητες": true,
+        "Απαντήσεις εκκρεμοτήτων": true
+      }
+    },
+    {
+      "phase": "closed",
+      "beforeRecordedAt": "2026-10-31T19:53:51.314755+00:00",
+      "beforeSource": "after-open.xlsx and UI fresh GET",
+      "historyBefore": 5,
+      "targetRepliesBefore": 1,
+      "targetBefore": "OPEN",
+      "otherReplies": 0,
+      "expectedHistoryAfter": 6,
+      "expectedTargetRepliesAfter": 2,
+      "status": "OBSERVED_PERSISTED",
+      "createdAt": "2026-10-31T19:54:05.408Z",
+      "historyAfter": 6,
+      "targetRepliesAfter": 2,
+      "targetAfter": "CLOSED",
+      "freshSelectedStatusDefault": "CLOSED",
+      "unchanged": {
+        "Βάρδιες": true,
+        "Ανά εργαζόμενο": true,
+        "Ανά ημέρα": true,
+        "Εκκρεμότητες": true,
+        "Απαντήσεις εκκρεμοτήτων": true
+      }
+    },
+    {
+      "phase": "reopened",
+      "beforeRecordedAt": "2026-10-31T19:55:08.580071+00:00",
+      "beforeSource": "after-closed.xlsx and UI fresh GET",
+      "historyBefore": 6,
+      "targetRepliesBefore": 2,
+      "targetBefore": "CLOSED",
+      "otherReplies": 0,
+      "expectedHistoryAfter": 7,
+      "expectedTargetRepliesAfter": 3,
+      "status": "OBSERVED_PERSISTED",
+      "createdAt": "2026-10-31T19:55:16.278Z",
+      "historyAfter": 7,
+      "targetRepliesAfter": 3,
+      "targetAfter": "OPEN",
+      "unchanged": {
+        "Βάρδιες": true,
+        "Ανά εργαζόμενο": true,
+        "Ανά ημέρα": true,
+        "Εκκρεμότητες": true,
+        "Απαντήσεις εκκρεμοτήτων": true
+      }
+    }
+  ],
+  "downloadFailures": [
+    {
+      "phase": "closed",
+      "firstReturnedPath": "/home/oai/share/ef9c8895-8851-4ee3-a0dc-4e1923ccd463/715ad842-ae88-4ee0-999c-df92fefc4259",
+      "browserLater": "ENOENT",
+      "hostAfterFiveSeconds": "unavailable",
+      "retry": "one explicit read-only retry50807bytes saved and ZIP verified",
+      "rootCause": "UNESTABLISHED",
+      "stateReplay": false
+    }
+  ],
+  "controlAfter": {
+    "store": "N40 CONTROL20261010",
+    "day": "2026-10-11",
+    "closedRows": 0,
+    "history": 0,
+    "canonicalTextUnchanged": true,
+    "labNotesOrQuestions": false
+  },
+  "protectedContinuationAfter": {
+    "day": "2026-10-27",
+    "canonicalTextUnchanged": true,
+    "resumeDate": "2026-10-28",
+    "acceptedCheckpointReplayed": false
+  },
+  "hostedHandoffActions": 3,
+  "hostedStatus": "LIMITED LAB PASS - SuperAdmin desktop original pair metadata lifecycle only",
+  "rawDBStockIRISPhysicalBalances": "NOT MEASURED",
+  "emailProviderRealStore": "NOT TESTED / NO ACTION",
+  "artifactNote": "after-open UI text file did not synchronize; actual UI history5 was observed in tool result; no fabricated file",
+  "finalHealth": {
+    "ok": true,
+    "revision": "a71c80c33f7dcd45f78fa2b253d7baab24b5e428",
+    "observed": "Independent cloud browser /api/health reload after controls; exact transition time from earlier d6aac not independently measured",
+    "recordedAt": "2026-10-31T19:59:56.255184+00:00",
+    "ownedRuntimeAndTests": "All11blobs independently match d6aac",
+    "exactFullCI": 41235058707,
+    "buildJob": 124637218467,
+    "serverPass": 4939,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "nativeHandoffCase": 833,
+    "jobs": "5SUCCESS",
+    "blobComparison": [
+      {
+        "path": "server/src/services/cash-handoff-issues.js",
+        "d6aac": "072421a5373c2d9c57b6d9643e7f73e87b11606d",
+        "a71c": "072421a5373c2d9c57b6d9643e7f73e87b11606d"
+      },
+      {
+        "path": "server/src/services/cash-reconciliation-contract.js",
+        "d6aac": "b444afd67147c090a4461caf36ffe4548578bcb3",
+        "a71c": "b444afd67147c090a4461caf36ffe4548578bcb3"
+      },
+      {
+        "path": "server/src/services/cash-reconciliation-report.js",
+        "d6aac": "4c013e15ed6a39b086af5d073dde0647d8237a3e",
+        "a71c": "4c013e15ed6a39b086af5d073dde0647d8237a3e"
+      },
+      {
+        "path": "server/src/services/cash-reconciliation-repository.js",
+        "d6aac": "537847befd9c36bc7a6550679830e1c4f67e0a26",
+        "a71c": "537847befd9c36bc7a6550679830e1c4f67e0a26"
+      },
+      {
+        "path": "server/src/services/cash-reviewed-automatic-contract.js",
+        "d6aac": "6ebee9696f8e90c8679d4d7687c97fc17208b0a0",
+        "a71c": "6ebee9696f8e90c8679d4d7687c97fc17208b0a0"
+      },
+      {
+        "path": "server/src/services/cash-reviewed-archive.js",
+        "d6aac": "4a42cd9a6ec4b20b78c29631e91ed893380f1a3b",
+        "a71c": "4a42cd9a6ec4b20b78c29631e91ed893380f1a3b"
+      },
+      {
+        "path": "server/src/routes/cash-reconciliation.js",
+        "d6aac": "5768788f19b03d3c23f78b56246e8cf49cd38b6d",
+        "a71c": "5768788f19b03d3c23f78b56246e8cf49cd38b6d"
+      },
+      {
+        "path": "client/src/components/shared/CashReconciliationPanel.jsx",
+        "d6aac": "f881a8fe1b817fcf8585232711f4520f07f783e5",
+        "a71c": "f881a8fe1b817fcf8585232711f4520f07f783e5"
+      },
+      {
+        "path": "server/test/cash-handoff-issues.test.js",
+        "d6aac": "4e4f93718426479f9fdcb183e30494a5ca46e067",
+        "a71c": "4e4f93718426479f9fdcb183e30494a5ca46e067"
+      },
+      {
+        "path": "server/test/cash-reconciliation-postgres.test.js",
+        "d6aac": "d7040049ad1165d58b49bdc64ebeb0b744122159",
+        "a71c": "d7040049ad1165d58b49bdc64ebeb0b744122159"
+      },
+      {
+        "path": "server/test/cash-reconciliation-ui.test.js",
+        "d6aac": "b738ba418e7d99158c518834be28a7c1bd26aa96",
+        "a71c": "b738ba418e7d99158c518834be28a7c1bd26aa96"
+      }
+    ]
+  },
+  "navigationPersistence": {
+    "returnedFromN40And27Oct": true,
+    "canonicalReportExactlySame": true,
+    "historyTotal": 7,
+    "targetStatus": "OPEN",
+    "targetReplies": 3,
+    "otherStatus": "OPEN",
+    "otherReplies": 0,
+    "noteEmpty": true,
+    "reviewed": false,
+    "submitDisabled": true
+  }
+}

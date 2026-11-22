@@ -20,11 +20,11 @@ export function createAssistantHistoryAccess({db,mode,selection,owner=authorizeO
   const scope=await authorize();if(!scope||scope.supportPreview)fail();
   const allowed=new Set();
   if(mode==='platform'){
-   for(const c of ['cash_details','sales_by_product','sales_by_store','stock_by_product','consumption_details',...Object.keys(businessDomains).map(d=>'business_records:'+d)])allowed.add(c);
+   for(const c of ['cash_review','cash_details','sales_by_product','sales_by_store','stock_by_product','consumption_details',...Object.keys(businessDomains).map(d=>'business_records:'+d)])allowed.add(c);
   }else{
    const enabled=new Set();
    for(const module of ['CASH_CONTROL','INVENTORY'])try{if(!same(scope,await owner(req,{db:storage,now:clock(),requiredModules:[module]})))fail();enabled.add(module)}catch(e){if(e.code!=='MODULE_DISABLED')throw e}
-   if(enabled.has('CASH_CONTROL'))allowed.add('cash_details');
+   if(enabled.has('CASH_CONTROL')){allowed.add('cash_details');try{for(const module of ['STORE_CHAT','AI_READER'])if(!same(scope,await owner(req,{db:storage,now:clock(),requiredModules:[module]})))fail();allowed.add('cash_review')}catch(e){if(e.code!=='MODULE_DISABLED')throw e}}
    if(enabled.has('INVENTORY'))for(const c of ['sales_by_product','sales_by_store','stock_by_product','consumption_details'])allowed.add(c);
    for(const domain of Object.keys(businessDomains))if(enabled.has(businessModule(domain)))allowed.add('business_records:'+domain);
    // Reuse the native package resolver, with a read-only exact-scope query.

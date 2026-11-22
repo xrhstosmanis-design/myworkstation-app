@@ -8,7 +8,7 @@ const rule=cashRuleFields(legacyCashControlRule({name:"LAB"}));
 const configuration=()=>({dayStartHour:7,secondShiftStartHour:15,thirdShiftStartHour:23,terminals:[{terminalPos:"MAIN",requiredSlots:[1,2,3]},{terminalPos:"DELIVERY",requiredSlots:[1]}],cashRule:rule});
 test("explicit settings validate slots, terminal identity, ordering, mode and optimistic version without enabling dispatch",()=>{
  assert.equal(automaticReportSettingsUpdateSchema.parse({expectedVersion:0,configuration:configuration()}).configuration.terminals.length,2);
- for(const change of [{terminals:[]},{terminals:[{terminalPos:"MAIN",requiredSlots:[1,2]}]},{terminals:[{terminalPos:"MAIN",requiredSlots:[1,2,3]},{terminalPos:"MAIN",requiredSlots:[1,2,3]}]},{terminals:[{terminalPos:"MAIN",requiredSlots:[1,3,3]}]},{dayStartHour:3},{secondShiftStartHour:23},{thirdShiftStartHour:15},{enabled:true},{cashRule:{...rule,mode:"UNKNOWN"}}])assert.equal(automaticReportConfigurationSchema.safeParse({...configuration(),...change}).success,false,JSON.stringify(change));
+ for(const change of [{terminals:[]},{thirdShiftStartHour:null},{terminals:[{terminalPos:"MAIN",requiredSlots:[1,2,3]},{terminalPos:"MAIN",requiredSlots:[1,2,3]}]},{terminals:[{terminalPos:"MAIN",requiredSlots:[1,3,3]}]},{dayStartHour:3},{secondShiftStartHour:23},{thirdShiftStartHour:15},{enabled:true},{cashRule:{...rule,mode:"UNKNOWN"}}])assert.equal(automaticReportConfigurationSchema.safeParse({...configuration(),...change}).success,false,JSON.stringify(change));
  for(const extra of [{actorId:"spoof"},{storeId:"foreign"},{enabled:true},{expectedVersion:-1}])assert.equal(automaticReportSettingsUpdateSchema.safeParse({expectedVersion:0,configuration:configuration(),...extra}).success,false);
 });
 test("shared legacy fallback preserves all three difference-only stores and normal delivery rules",()=>{
@@ -30,4 +30,11 @@ test("confirmed effective legacy rule is explicit and changed rules/settings hol
  assert.equal((await readAutomaticDailyCashPreview(db,input)).ready,true);
  version=2;const stale=await readAutomaticDailyCashPreview(db,input);assert.equal(stale.groups,null);assert.ok(stale.holds.some(h=>h.code==="REPORT_SETTINGS_CHANGED"));
  version=1;currentRule=rule;const changed=await readAutomaticDailyCashPreview(db,input);assert.equal(changed.groups,null);assert.ok(changed.holds.some(h=>h.code==="CASH_RULE_CHANGED"));
+});
+
+test('automatic paid paper reading requires the selected store reviewed report mode',()=>{
+  const legacy=automaticReportConfigurationSchema.parse(configuration());
+  assert.equal(legacy.automaticPaperReading,undefined);
+  assert.equal(automaticReportConfigurationSchema.safeParse({...legacy,automaticPaperReading:true}).success,false);
+  assert.equal(automaticReportConfigurationSchema.parse({...legacy,reviewedReconciliation:true,automaticPaperReading:true}).automaticPaperReading,true);
 });

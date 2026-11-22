@@ -16,7 +16,7 @@ test("actual Backoffice and StoreCloudPage stop stale polling, retain renewal, a
   const filename=fileURLToPath(new URL("../../client/src/main.jsx",import.meta.url));
   const source=fs.readFileSync(filename,"utf8").replace('createRoot(document.getElementById("root")).render(<App/>);','export {App};');
   const result=await build({stdin:{contents:source,resolveDir:path.dirname(filename),loader:"jsx"},bundle:true,write:false,platform:"node",format:"cjs",external:["react","react-dom","react-dom/client","react/jsx-runtime"],loader:{".css":"empty"},plugins:[{name:"isolated-child-panels",setup(b){b.onLoad({filter:/\.jsx$/},args=>{
-    if(path.basename(args.path)==="StoreCloudPage.jsx")return;
+    if(["StoreCloudPage.jsx","BackofficeShell.jsx","BackofficeStores.jsx"].includes(path.basename(args.path)))return;
     return {contents:'import React from "react";export default function Panel(){return <div data-fixture-panel="'+path.basename(args.path)+'"/>}',loader:"jsx"};
   })}}]});
   const mod={exports:{}};new Function("require","module","exports",result.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);

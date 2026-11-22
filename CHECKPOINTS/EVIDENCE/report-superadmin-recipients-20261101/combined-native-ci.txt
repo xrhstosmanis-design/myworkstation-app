@@ -1,0 +1,32 @@
+# Subtest: native administrative address/grant/policy are atomic, scoped, revocable and do not verify mailboxes or send invitations
+2026-10-31T23:45:03.1621439Z     # Subtest: actual current database role and strict body prohibit Owner/employee/spoof/foreign scope
+2026-10-31T23:45:03.1622147Z     ok 1 - actual current database role and strict body prohibit Owner/employee/spoof/foreign scope
+2026-10-31T23:45:03.1622340Z       ---
+2026-10-31T23:45:03.1622558Z       duration_ms: 153.990871
+2026-10-31T23:45:03.1622701Z       ...
+2026-10-31T23:45:03.1623592Z     # Subtest: existing unverified address is explicitly approved and atomically activates only selected store policy/grant
+2026-10-31T23:45:03.1624430Z     ok 2 - existing unverified address is explicitly approved and atomically activates only selected store policy/grant
+2026-10-31T23:45:03.1624601Z       ---
+2026-10-31T23:45:03.1624806Z       duration_ms: 153.299225
+2026-10-31T23:45:03.1624982Z       ...
+2026-10-31T23:45:03.1625799Z     # Subtest: second recipient shares one list without rewriting first, cutoffs or duplicating no-op authorization
+2026-10-31T23:45:03.1626597Z     ok 3 - second recipient shares one list without rewriting first, cutoffs or duplicating no-op authorization
+2026-10-31T23:45:03.1626797Z       ---
+2026-10-31T23:45:03.1627009Z       duration_ms: 94.279586
+2026-10-31T23:45:03.1627144Z       ...
+2026-10-31T23:45:03.1628316Z     # Subtest: revoke one approval excludes it while retaining the other, then address changes invalidate all old authorities
+2026-10-31T23:45:03.1629171Z     ok 4 - revoke one approval excludes it while retaining the other, then address changes invalidate all old authorities
+2026-10-31T23:45:03.1629381Z       ---
+2026-10-31T23:45:03.1629619Z       duration_ms: 190.843243
+2026-10-31T23:45:03.1629823Z       ...
+2026-10-31T23:45:03.1630816Z     # Subtest: two clients cannot both authorize stale snapshots; late commit failure rolls back all three writes
+2026-10-31T23:45:03.1631573Z     ok 5 - two clients cannot both authorize stale snapshots; late commit failure rolls back all three writes
+2026-10-31T23:45:03.1631744Z       ---
+2026-10-31T23:45:03.1631913Z       duration_ms: 129.862556
+2026-10-31T23:45:03.1632070Z       ...
+2026-10-31T23:45:03.1632208Z     1..5
+2026-10-31T23:45:03.1633192Z ok 412 - native administrative address/grant/policy are atomic, scoped, revocable and do not verify mailboxes or send invitations
+2026-10-31T23:45:03.1633354Z   ---
+2026-10-31T23:45:03.1633524Z   duration_ms: 1140.753291
+2026-10-31T23:45:03.1633670Z   ...
+2026-10-31T23:45:03.1634663Z

@@ -21,6 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          filter: blob:none
       - name: Detect documentation-only change
         id: scope
         env:
@@ -49,6 +50,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Parse production printer connector with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/windows-production-printer/Connector.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+      - name: Test actual production ticket bytes and feed/cut on Windows PowerShell 5.1
+        shell: powershell
+        run: ./tools/windows-production-printer/Test-NetworkTicket.ps1
       - name: Parse CAP Driver scripts with Windows PowerShell 5.1
         shell: powershell
         run: |
@@ -165,12 +176,12 @@ jobs:
   build-and-test:
     needs: classify-changes
     if: needs.classify-changes.outputs.full_ci == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     services:
       postgres:
         # Docker Official PostgreSQL 16; ECR mirror hit a data limit on 11 Oct.
-        image: postgres:16
+        image: postgres:16@sha256:f9a7b9ebf6f56201f949db745e47bc423c0f0f8294bafe991cc10bf74b029657
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -196,6 +207,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          filter: blob:none
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -210,9 +222,14 @@ jobs:
       - name: Prepare server sources and generate Prisma client
         run: npm run build:server
       - name: Build the actual PostgreSQL 18 recovery image
-        run: docker build --file ops/backup/Dockerfile --tag mws-lifecycle-recovery:ci .
+        # Use the PostgreSQL 18 image verified by the recovery suite on main.
+        run: docker build --build-arg POSTGRES_IMAGE=postgres:18-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b --file ops/backup/Dockerfile --tag mws-lifecycle-recovery:ci .
       - name: Use matching native PostgreSQL 16 recovery tools
         run: |
+          if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ]; then
+            sudo apt-get update -qq
+            sudo apt-get install --yes --no-install-recommends postgresql-client-16
+          fi
           test -x /usr/lib/postgresql/16/bin/pg_dump
           echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
       - name: Run security and licensing tests
@@ -229,6 +246,15 @@ jobs:
           path: /tmp/mws-wholesale-commercial-offline/*
           if-no-files-found: ignore
           retention-days: 14
+      - name: Verify document camera pointer access in Chromium
+        run: node server/e2e/document-camera-browser-flow.mjs
+      - name: Preserve document camera geometry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-document-camera-browser
+          path: /tmp/mws-document-camera-browser/*
+          retention-days: 7
       - name: Render isolated POS header in Chromium
         run: node server/e2e/pos-header-browser-flow.mjs
       - name: Verify report dialog pointer access in Chromium
@@ -323,7 +349,7 @@ jobs:
         run: node server/e2e/diadoxou-archive-import.mjs
       - name: Run real HTTP E2E flows
         run: |
-          MWS_E2E_TERMINAL_OVERRIDE=1 NETLINK_TEST_MODE=true NETLINK_MOCK_PROVIDER=true NETLINK_ENABLE_EXECUTE=true PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
+          TABLE_PARTIAL_PAYMENT_LAB_STORE_ID=kat-store MWS_E2E_TERMINAL_OVERRIDE=1 NETLINK_TEST_MODE=true NETLINK_MOCK_PROVIDER=true NETLINK_ENABLE_EXECUTE=true PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
           SERVER_PID=$!
           cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
           on_error() { status=$?; echo "--- MyWorkStation E2E server log ---"; cat /tmp/myworkstation-e2e-server.log || true; exit "$status"; }
@@ -365,7 +391,7 @@ jobs:
           run_flow server/e2e/kat-final-volume-regression-flow.mjs
           run_flow server/e2e/multi-pos-shift-isolation-flow.mjs
           run_flow server/e2e/kat-online-ordering-flow.mjs
-          run_flow server/e2e/kat-preparation-milk-stock-flow.mjs
+          TABLE_PARTIAL_PAYMENT_LAB_STORE_ID=kat-store run_flow server/e2e/kat-preparation-milk-stock-flow.mjs
           run_flow server/e2e/netlink-prepaid-flow.mjs
           run_flow server/e2e/workforce-v2-employees-roles-preview-flow.mjs
           run_flow server/e2e/workforce-v2-rules-shift-templates-flow.mjs
@@ -374,6 +400,7 @@ jobs:
           run_flow server/e2e/pos-audience-credit-settings-flow.mjs
           run_flow server/e2e/ai-credit-alerts-flow.mjs
           run_flow server/e2e/owner-catalog-read-flow.mjs
+          run_flow server/e2e/chat-interactions-flow.mjs
           run_flow server/e2e/hot-table-schema-lock-flow.mjs
           run_flow server/e2e/server-shutdown-flow.mjs
           MWS_CAPACITY_ISOLATED=1 MWS_CAPACITY_MODE=smoke MWS_CAPACITY_OUTPUT=/tmp/myworkstation-capacity-result run_flow server/e2e/pos-capacity-flow.mjs

@@ -1,0 +1,292 @@
+Browser tab: 25, Title: "MyWorkStation App", URL: "https://myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru".
+1 AXWebArea MyWorkStation App, URL: myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru
+	2 container root
+		3 container
+			4 text MW MyWorkStation MYWORKSTATION LAB
+			5 button Χειριστές και δικαιώματα
+				6 image
+				7 text Χειριστές και δικαιώματα
+			8 button Αρχική
+				9 image
+				10 text Αρχική
+			11 button Προσωπικό & Πρόγραμμα
+				12 image
+				13 text Προσωπικό & Πρόγραμμα
+			14 button Καταστήματα
+				15 image
+				16 text Καταστήματα
+			17 button Chat
+				18 image
+				19 text Chat
+			20 button Επιστροφή στο Super Admin
+				21 image
+				22 text Επιστροφή στο Super Admin
+		23 container
+			24 heading Καταστήματα, Value: 1
+				25 text Καταστήματα
+			26 text ΠΡΟΣΒΑΣΗ SUPER ADMIN · MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ
+			27 button Πίσω στα καταστήματα
+				28 image
+				29 text Πίσω στα καταστήματα
+			30 button Ανανέωση
+				31 image
+				32 text Ανανέωση
+			33 button Εμπορική λειτουργία
+				34 image
+				35 text Εμπορική λειτουργία
+			36 button Εγγραφή οθόνης, Help: Ανοίγει ανεξάρτητο παράθυρο εγγραφής
+				37 image
+				38 text Εγγραφή οθόνης
+			39 text MYWORKSTATION · BACKOFFICE
+			40 heading ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, Value: 2
+				41 text ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ
+			42 text Ενεργή βάρδια, συναλλαγές, έλεγχος ταμείου και πληρωμές Ιδιοκτήτη / Διαχειριστή. Όλα χρησιμοποιούν την υπάρχουσα Εμπορική λειτουργία και την ενιαία βάση.
+			43 container Βάρδιες και πληρωμές
+				44 checkbox Βάρδιες & ταμεία, Value: 1
+					45 image
+					46 text Βάρδιες & ταμεία
+				47 checkbox Πληρωμές Ιδιοκτήτη / Διαχειριστή, Value: 0
+					48 image
+					49 text Πληρωμές Ιδιοκτήτη / Διαχειριστή
+			50 container Βάρδιες και έλεγχος ταμείων
+				51 container
+					52 heading Κέντρο βαρδιών, Value: 3
+						53 image
+						54 text Κέντρο βαρδιών
+					55 text Επίλεξε ταμείο για να δεις το δικό του σύνολο και τις πωλήσεις του. Οι ώρες εμφανίζονται σε ώρα Ελλάδας. Ενημέρωση 03/11, 19:23 · αυτόματα κάθε 30 δευτερόλεπτα
+					56 button Ανανέωση
+						57 image
+						58 text Ανανέωση
+					59 text Διαθέσιμα μετρητά ενεργών ταμείων
+					60 text 0,00 €
+					61 text Έναρξη + εισπράξεις μετρητών + εισροές − πληρωμές μετρητών − εκροές. Χωρίς κάρτες, IRIS και χρηματοκιβώτιο.
+					62 heading Ενεργά ταμεία, Value: 4
+						63 text Ενεργά ταμεία
+					64 text 1 ταμείο
+					65 button ΕΝΕΡΓΗ ΒΑΡΔΙΑ · MAIN Βάρδια ● Ανοιχτή Άνοιγμα: 29/10, 19:04 από LAB POS 2 Υπόλοιπο μετρητών 0,00 € Κάρτες / IRIS 0,00 € Σύνολο 0,00 € Συναλλαγές 0 Τελευταία —
+						66 text ΕΝΕΡΓΗ ΒΑΡΔΙΑ · 
+						67 text MAIN
+						68 text Βάρδια
+						69 text ● Ανοιχτή
+						70 container
+							71 text Άνοιγμα:  29/10, 19:04  από  LAB POS 2
+						72 text Υπόλοιπο μετρητών
+						73 text 0,00 €
+						74 text Κάρτες / IRIS
+						75 text 0,00 €
+						76 text Σύνολο
+						77 text 0,00 €
+						78 text Συναλλαγές
+						79 text 0
+						80 text Τελευταία
+						81 text —
+					82 text Επιλεγμένη βάρδια
+					83 heading Βάρδια · MAIN, Value: 4
+						84 text Βάρδια  ·  MAIN
+					85 text Άνοιγμα  29/10, 19:04
+					86 button Κλείσιμο βάρδιας
+					87 text Τρέχον υπόλοιπο μετρητών ·  MAIN
+					88 text 0,00 €
+					89 text Έναρξη
+					90 text 0,00 €
+					91 text Εισπράξεις μετρητών
+					92 text 0,00 €
+					93 text Πληρωμές μετρητών
+					94 text 0,00 €
+					95 text Εισροές
+					96 text 0,00 €
+					97 text Εκροές
+					98 text 0,00 €
+					99 text Εισπράξεις μετρητών
+					100 text 0,00 €
+					101 text Κάρτες
+					102 text 0,00 €
+					103 text IRIS
+					104 text 0,00 €
+					105 text Έξοδα
+					106 text 0,00 €
+					107 text Σύνολο βάρδιας
+					108 text 0,00 €
+					109 text Μετρητά από Ιδιοκτήτη
+					110 text 0,00 €
+					111 text Μετρητά προς Ιδιοκτήτη
+					112 text 0,00 €
+					113 container
+						114 heading Πωλήσεις ανά κατηγορία, Value: 4
+							115 text Πωλήσεις ανά κατηγορία
+						116 text πάτησε κατηγορία για ανάλυση
+					117 text Δεν υπάρχουν ακόμη πωλήσεις σε κατηγορίες.
+					118 button (collapsed) Κινήσεις βάρδιας 0 κινήσεις, Secondary Actions: Expand
+						119 text Κινήσεις βάρδιας
+						120 container
+							121 text 0  κινήσεις
+						122 image
+					123 text ✓ Η προβολή είναι δεμένη με το επιλεγμένο terminal και δεν αναμειγνύει τη βάρδια του άλλου ταμείου.
+				124 button (collapsed) Αυτόματος έλεγχος και κλεισμένες βάρδιες, Secondary Actions: Expand
+					125 text Αυτόματος έλεγχος και κλεισμένες βάρδιες
+			126 button (collapsed) Πρόσθετες λειτουργίες, Secondary Actions: Expand
+				127 text Πρόσθετες λειτουργίες
+	129 container
+		130 text MyWorkStation Κεντρική Διαχείριση
+		131 button Ελαχιστοποίηση
+			132 image
+		133 button Πλήρης οθόνη / επαναφορά
+			134 image
+		135 button Κλείσιμο
+			136 image
+		137 button Προϊόντα, Τιμές, Προσφορές & Απογραφή
+			138 image
+			139 text Προϊόντα, Τιμές, Προσφορές & Απογραφή
+		140 button Χονδρική B2B
+		141 button Λοιπές εμπορικές λειτουργίες
+		142 button Αναζήτηση προϊόντων στο Internet
+			143 image
+			144 text Αναζήτηση προϊόντων στο Internet
+		199 button Εμπορικές λειτουργίες
+		200 button Online Παραγγελίες
+			201 image
+			202 text Online Παραγγελίες
+		203 button Τραπέζια / Σερβιτόροι
+			204 image
+			205 text Τραπέζια / Σερβιτόροι
+		206 container
+			207 heading Εμπορική λειτουργία, Value: 2
+				208 text Εμπορική λειτουργία
+			209 text POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.
+			210 button Ανανέωση
+				211 image
+				212 text Ανανέωση
+			213 button Modules ›
+				214 text Modules
+				403 text ›
+			216 button ⚙️ Διαχείριση ›, Help: Κατηγορίες ειδών και λοιπή διαχείριση
+				217 text ⚙️ Διαχείριση
+				404 text ›
+			219 button Βοηθός Ιδιοκτήτη ›
+				220 text Βοηθός Ιδιοκτήτη
+				405 text ›
+			222 button Αποθήκη
+				223 image
+				224 text Αποθήκη
+			225 button Σύγκριση Προμηθευτών ›
+				226 text Σύγκριση Προμηθευτών
+				406 text ›
+			228 button Έλεγχος τιμολογίων μήνα ›
+				229 text Έλεγχος τιμολογίων μήνα
+				407 text ›
+			231 button Εξουσιοδότηση μηνιαίας απογραφής ›
+				232 text Εξουσιοδότηση μηνιαίας απογραφής
+				408 text ›
+			234 button Προτάσεις Παραγγελίας ›
+				235 text Προτάσεις Παραγγελίας
+				409 text ›
+			237 button Αναλυτική
+				238 image
+				239 text Αναλυτική
+			240 button Παράδοση
+				241 image
+				242 text Παράδοση
+			243 button Κέντρο Εκκρεμοτήτων
+				244 image
+				245 text Κέντρο Εκκρεμοτήτων
+			246 button Θυρίδα Τιμολογίων
+				247 image
+				248 text Θυρίδα Τιμολογίων
+			249 button Ανάγνωση τιμολογίων
+				250 image
+				251 text Ανάγνωση τιμολογίων
+			252 button Παρουσίες
+				253 image
+				254 text Παρουσίες
+			255 button Δελτία / Πάροχος
+				256 image
+				257 text Δελτία / Πάροχος
+			258 button RBS Observer
+				259 image
+				260 text RBS Observer
+			261 button Κάμερες / Video Audit
+				262 image
+				263 text Κάμερες / Video Audit
+			264 button 💶 Έξοδα & Πληρωμές ›
+				265 text 💶 Έξοδα & Πληρωμές
+				410 text ›
+			267 button 📋 Βάρδιες & Διαφορές ›
+				268 text 📋 Βάρδιες & Διαφορές
+				411 text ›
+			270 button 📊 Αναφορές ›
+				271 text 📊 Αναφορές
+				412 text ›
+			273 button ▤ Παραγγελίες & Αγορές ›
+				274 text ▤ Παραγγελίες & Αγορές
+				413 text ›
+			276 button 🚚 Προμηθευτές ›
+				277 text 🚚 Προμηθευτές
+				414 text ›
+			279 button 👥 Πελάτες ›
+				280 text 👥 Πελάτες
+				415 text ›
+			282 button 💲 Τιμοκατάλογος ›
+				283 text 💲 Τιμοκατάλογος
+				416 text ›
+			285 button 👥 Χειριστές ›, Help: Διαχείριση χειριστών
+				286 text 👥 Χειριστές
+				417 text ›
+			288 text Κατάστημα
+			289 pop up button (collapsed, settable) Κατάστημα, Value: ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, Secondary Actions: Expand
+				290 menu
+					291 (selected) ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ
+		307 container
+			308 text PoS προμήθειες Business Units
+			309 button Κατηγορίες ειδών
+			310 button Τμήματα ΦΠΑ
+			311 button Κατηγορίες εξόδων
+			312 button Εταιρείες
+			313 button Modifiers
+			314 button Κατηγορίες πελατών
+			315 button Επαγγέλματα
+			316 button Τράπεζες
+			317 button Τρόποι αποστολής
+			318 button PoS τερματικά
+			382 text Η κατηγορία απενεργοποιήθηκε χωρίς διαγραφή ιστορικού.
+			334 container
+				364 container Ταξινόμηση: Περιγραφή
+					365 text Περιγραφή
+					366 checkbox Description: Φίλτρο Περιγραφή, Help: Φίλτρο στήλης: Περιγραφή, Value: 0
+				398 button LAB-CATEGORY-20261103-ROOT-01
+					399 image
+					400 text LAB-CATEGORY-20261103-ROOT-01
+				401 button Απενεργοποίηση
+					402 image
+				336 text 1
+			337 button Κλείσιμο
+				338 image
+				339 text Κλείσιμο
+			340 button Ανανέωση
+				341 image
+				342 text Ανανέωση
+			343 button Νέα εγγραφή
+				344 image
+				345 text Νέα εγγραφή
+			346 button Excel / CSV
+				347 image
+				348 text Excel / CSV
+			418 container
+				419 text Διόρθωση κατηγορίας εξόδου
+				420 button
+					421 image
+				422 text Περιγραφή
+				423 text field (settable) Περιγραφή, Value: LAB-CATEGORY-20261103-ROOT-01
+				424 checkbox (settable, integer) Description: Ενεργή, Value: 0
+				425 button Επιστροφή
+					426 image
+					427 text Επιστροφή
+				428 button Καταχώρηση
+					429 image
+					430 text Καταχώρηση
+		197 button Παράμετροι
+			198 image
+	128 button (collapsed) Νο40 · LAB GET trace (80/80), Secondary Actions: Expand
+		433 text Νο40 · LAB GET trace (80/80)
+	432 button Άνοιγμα πληκτρολογίου οθόνης
+
+The focused UI element is 423 text field (settable) Περιγραφή, Value: LAB-CATEGORY-20261103-ROOT-01

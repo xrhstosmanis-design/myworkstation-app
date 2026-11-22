@@ -24,7 +24,7 @@ async function invoke({beginFailure=null,revokeAfterSave=false,extra={}}={}){
  };
  const handlers=createOwnerAssistantHandlers({
   historyTurns,
-  authorize:async()=>{if(!allowed)throw Object.assign(new Error('revoked'),{status:403});return scope},
+  authorize:async(_req,{requiredModules=[]}={})=>{if(!allowed)throw Object.assign(new Error('revoked'),{status:403});if(requiredModules.some(m=>['STORE_CHAT','AI_READER'].includes(m)))throw Object.assign(new Error('legacy cash-only fixture'),{status:403,code:'MODULE_DISABLED'});return scope},
   requestProvider:async settings=>{
    providers++;
    if(providers===1){

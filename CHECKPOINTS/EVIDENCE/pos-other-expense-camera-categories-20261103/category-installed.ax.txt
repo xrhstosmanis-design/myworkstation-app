@@ -1,0 +1,173 @@
+Browser tab: 9, Title: "MyWorkStation App", URL: "https://myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru".
+1 AXWebArea MyWorkStation App, URL: myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru
+	2 container
+		3 container root
+			4 container
+				5 text MW MyWorkStation MYWORKSTATION LAB
+				6 button Χειριστές και δικαιώματα
+					7 image
+					8 text Χειριστές και δικαιώματα
+				9 button Αρχική
+					10 image
+					11 text Αρχική
+				12 button Προσωπικό & Πρόγραμμα
+					13 image
+					14 text Προσωπικό & Πρόγραμμα
+				15 button Καταστήματα
+					16 image
+					17 text Καταστήματα
+				18 button Chat
+					19 image
+					20 text Chat
+				21 button Επιστροφή στο Super Admin
+					22 image
+					23 text Επιστροφή στο Super Admin
+			24 container
+				25 heading Καταστήματα, Value: 1
+					26 text Καταστήματα
+				27 text ΠΡΟΣΒΑΣΗ SUPER ADMIN · MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ
+				28 button Πίσω στα καταστήματα
+					29 image
+					30 text Πίσω στα καταστήματα
+				31 button Ανανέωση
+					32 image
+					33 text Ανανέωση
+				34 button Εμπορική λειτουργία
+					35 image
+					36 text Εμπορική λειτουργία
+				37 button Εγγραφή οθόνης, Help: Ανοίγει ανεξάρτητο παράθυρο εγγραφής
+					38 image
+					39 text Εγγραφή οθόνης
+				40 text MYWORKSTATION · BACKOFFICE
+				41 heading ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, Value: 2
+					42 text ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ
+				43 text Ενεργή βάρδια, συναλλαγές, έλεγχος ταμείου και πληρωμές Ιδιοκτήτη / Διαχειριστή. Όλα χρησιμοποιούν την υπάρχουσα Εμπορική λειτουργία και την ενιαία βάση.
+				44 container Βάρδιες και πληρωμές
+					45 checkbox Βάρδιες & ταμεία, Value: 0
+						46 image
+						47 text Βάρδιες & ταμεία
+					48 checkbox Πληρωμές Ιδιοκτήτη / Διαχειριστή, Value: 1
+						49 image
+						50 text Πληρωμές Ιδιοκτήτη / Διαχειριστή
+				51 container
+					52 heading Πληρωμές Ιδιοκτήτη / Διαχειριστή, Value: 3
+						53 text Πληρωμές Ιδιοκτήτη / Διαχειριστή
+					54 text Όλες οι κατηγορίες καταχωρίζονται στην υπάρχουσα ενιαία βάση και στο BackOffice.
+					55 button Ανανέωση
+						56 image
+						57 text Ανανέωση
+					58 button Εικόνα Επιχειρήσεις Πωλήσεις · αγορές · ΦΠΑ · κέρδος · έξοδα
+						59 image
+						60 text Εικόνα Επιχειρήσεις
+						61 text Πωλήσεις · αγορές · ΦΠΑ · κέρδος · έξοδα
+					62 button Πληρωμή Τιμολογίου Προμηθευτές / παραστατικά
+						63 image
+						64 text Πληρωμή Τιμολογίου
+						65 text Προμηθευτές / παραστατικά
+					66 button Επιταγές Προμηθευτές / παραστατικά
+						67 image
+						68 text Επιταγές
+						69 text Προμηθευτές / παραστατικά
+					70 button Πληρωμή Προμηθευτή Προμηθευτές / παραστατικά
+						71 image
+						72 text Πληρωμή Προμηθευτή
+						73 text Προμηθευτές / παραστατικά
+					74 button Μισθοδοσία Κατηγορία εξόδου
+						75 image
+						76 text Μισθοδοσία
+						77 text Κατηγορία εξόδου
+					78 button Λοιπά Έξοδα Κατηγορία εξόδου
+						79 image
+						80 text Λοιπά Έξοδα
+						81 text Κατηγορία εξόδου
+					82 button Λογαριασμοί ΔΕΚΟ Κατηγορία εξόδου
+						83 image
+						84 text Λογαριασμοί ΔΕΚΟ
+						85 text Κατηγορία εξόδου
+					86 button Ενοίκια Κατηγορία εξόδου
+						87 image
+						88 text Ενοίκια
+						89 text Κατηγορία εξόδου
+					90 button Μεταφορά Ποσού Ιδιοκτήτης → Ταμείο · μετρητά
+						91 image
+						92 text Μεταφορά Ποσού
+						93 text Ιδιοκτήτης → Ταμείο · μετρητά
+					94 button Εισαγωγή αρχείου τράπεζας Excel / CSV · matching προμηθευτή / τιμολογίου
+						95 image
+						96 text Εισαγωγή αρχείου τράπεζας
+						97 text Excel / CSV · matching προμηθευτή / τιμολογίου
+				98 button (collapsed) Πρόσθετες λειτουργίες, Secondary Actions: Expand
+					99 text Πρόσθετες λειτουργίες
+		100 button (collapsed) Νο40 · LAB GET trace (65/80), Secondary Actions: Expand
+			175 text Νο40 · LAB GET trace (65/80)
+		102 container Πληρωμές
+			103 container
+				104 text MYWORKSTATION · ΒΑΣΙΚΟ POS
+				105 heading Πληρωμές, Value: 2
+					106 text Πληρωμές
+				107 button
+					108 image
+				110 button Ελαχιστοποίηση πληρωμής
+				112 button ← Όλες οι πληρωμές
+				113 heading Λοιπά έξοδα, Value: 3
+					114 text Λοιπά έξοδα
+				115 checkbox Καταχώριση εξόδου, Value: 1
+				116 checkbox Κατάθεση Τράπεζας, Value: 0
+				117 container
+					118 checkbox (settable, integer) Value: 0, Description: Επιστροφή χρημάτων / αρνητικό έξοδο Δεν αφορά προμηθευτή. Τα μετρητά μπαίνουν στο συρτάρι και αυξάνουν το αναμενόμενο ταμείο της ενεργής βάρδιας.
+					119 text Επιστροφή χρημάτων / αρνητικό έξοδο Δεν αφορά προμηθευτή. Τα μετρητά μπαίνουν στο συρτάρι και αυξάνουν το αναμενόμενο ταμείο της ενεργής βάρδιας.
+				120 text Τρόπος πληρωμής
+				121 button (disabled) Μετρητά από ενεργή βάρδια
+				122 button Εταιρική κάρτα
+				123 button Τραπεζική μεταφορά
+				124 button Πληρωμή υπαλλήλου προς επιστροφή
+				125 text Το ποσό αφαιρείται από το ταμείο της ενεργής βάρδιας.
+				126 container
+					127 text Κατηγορία εξόδου
+					128 pop up button (disabled, collapsed, settable) Κατηγορία εξόδου, Value: — Επιλογή κατηγορίας —, Secondary Actions: Expand
+						129 menu
+							130 (disabled) — Επιλογή κατηγορίας —
+				131 button Ανανέωση κατηγοριών
+				174 text Δεν υπάρχουν ενεργές κατηγορίες εξόδων. Καταχώρισέ τες κεντρικά από Διαχείριση → Κατηγορίες εξόδων και πάτησε «Ανανέωση κατηγοριών».
+				133 container
+					134 text Ποσό
+					135 text field Ποσό
+				136 button 7
+				137 button 8
+				138 button 9
+				139 button 4
+				140 button 5
+				141 button 6
+				142 button 1
+				143 button 2
+				144 button 3
+				145 button 0
+				146 button ,
+				147 button ⌫
+				148 button ΚΑΘΑΡΙΣΜΟΣ
+				149 container
+					150 text Παρατηρήσεις
+					151 text field (settable) Παρατηρήσεις
+				152 container
+					153 image
+					154 text Ανέβασμα παραστατικού
+				155 container
+					156 image
+					157 text Φωτογραφία από PC
+				158 container
+					159 image
+					160 text PDF από PC
+				161 button Λήψη από κάμερα
+					162 image
+					163 text Λήψη από κάμερα
+				164 text Δεν επιλέχθηκε παραστατικό
+				165 container
+					166 checkbox (settable, integer) Value: 0, Description: Δήλωση ευθύνης χωρίς παραστατικό Δηλώνω υπεύθυνα ότι ανοίγω το συρτάρι, γίνεται η πληρωμή και αναλαμβάνω την ευθύνη της καταχώρισης χωρίς παραστατικό. Η δήλωση καταγράφεται στο Audit.
+					167 text Δήλωση ευθύνης χωρίς παραστατικό Δηλώνω υπεύθυνα ότι ανοίγω το συρτάρι, γίνεται η πληρωμή και αναλαμβάνω την ευθύνη της καταχώρισης χωρίς παραστατικό. Η δήλωση καταγράφεται στο Audit.
+				168 button Σάρωση εγγράφου
+				169 button Εγκατάσταση σαρωτή / εκτυπωτή
+				170 button Καταχώριση εξόδου
+					171 image
+					172 text Καταχώριση εξόδου
+
+The focused UI element is 1 AXWebArea MyWorkStation App, URL: myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru

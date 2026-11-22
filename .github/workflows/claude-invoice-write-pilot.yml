@@ -1,0 +1,106 @@
+name: Claude invoice implementation — isolated PR pilot
+
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: claude-invoice-implementation
+  cancel-in-progress: false
+
+jobs:
+  invoice-pr:
+    if: >-
+      ${{ github.actor == 'xrhstosmanis-design' && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'workflow_dispatch' ||
+           (github.event_name == 'issue_comment' && github.event.issue.number == 3714 &&
+            !github.event.issue.pull_request && github.event.comment.body == '/claude-invoice-28')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Create isolated work branch
+        id: branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="claude/invoice-owner-finalization-${GITHUB_RUN_ID}"
+          git switch -c "$BRANCH"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+      - name: Claude scoped implementation
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Work ONLY on INVOICE-OWNER-FINALIZATION-01 (#28) in MyWorkStation.
+            Follow AGENTS.md and authoritative docs/roadmap/OPEN_WORK_TRACKER.md.
+            Read CHECKPOINTS/ACTIVE_WORK_2026.md and relevant checkpoints.
+            NEXT SPECIFIC SCOPE: owner/authorized-manager cancellation or void
+            of a previously posted purchase invoice, including safe inverse
+            inventory handling, tenant/store permissions, idempotency and audit.
+            Preserve employee finalization, payment evidence and original photos.
+            Do NOT reimplement preview.lineAudit (merged #3731), and do NOT
+            edit client/src/components/commerce/installPurchaseOrdersSuite.js
+            or server/test/purchase-order-reopen-ui.test.js: the BackOffice
+            lineAudit UI is already owned by separate PR #3737.
+            First inspect current code, checkpoints and existing open PR claims.
+            Implement ONE small server-side cancellation step with focused tests,
+            OR a focused native-DB test exposing a missing guard if a correct
+            cancellation implementation is not yet possible. Do not invent PASS.
+            Use an isolated branch. Do not change main, deploy, migrate databases,
+            send emails, process payments or modify live financial records.
+            Update CHECKPOINTS/ACTIVE_WORK_2026.md and add a small checkpoint
+            in CHECKPOINTS/CHANGES/ for any implementation change.
+            Run relevant focused tests and report precisely what passed or failed.
+            Never expose secrets, private data, or dump large files.
+            DO NOT commit, push, create PR, merge, or deploy; the following
+            audited workflow steps handle the commit and PR creation.
+          claude_args: '--allowedTools "Read,Glob,Grep,Edit,Write,Bash" --max-turns 30'
+      - name: Verify branch, diff and required checkpoint
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "${{ steps.branch.outputs.name }}"
+          if git diff --quiet && test -z "$(git ls-files --others --exclude-standard)"; then
+            echo "No code changes produced; no PR created."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git status --short
+          test -f CHECKPOINTS/ACTIVE_WORK_2026.md
+          test -n "$(git status --porcelain -- CHECKPOINTS/CHANGES/)"
+          test -n "$(git status --porcelain -- CHECKPOINTS/ACTIVE_WORK_2026.md)"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+      - name: Commit and open draft PR (never merge)
+        if: ${{ steps.changes.outputs.has_changes == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "draft(invoice): Claude scoped owner finalization step"
+          # Claude Action may leave a Git credential override; use the job token explicitly for this push.
+          AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="$AUTH_HEADER" push --set-upstream origin "$BRANCH"
+          if gh pr create --draft --base main --head "$BRANCH" \
+              --title "draft(invoice): Claude owner-finalization scoped step" \
+              --body "Claude-produced isolated #28 implementation. Requires full CI, review, LAB acceptance and normal protected merge. No production deploy or automatic merge."; then
+            echo "Draft PR created."
+          else
+            echo "::warning::Branch $BRANCH pushed, but GitHub Actions cannot create PR in this repository. Coordinator must create one Draft PR without rerunning Claude."
+          fi

@@ -1,0 +1,459 @@
+TAP version 13
+# Subtest: shared document pipeline rejects blur and prepares an OCR-safe image
+ok 1 - shared document pipeline rejects blur and prepares an OCR-safe image
+  ---
+  duration_ms: 1.462632
+  ...
+# Subtest: invoice and payment evidence share the same preprocessing path
+ok 2 - invoice and payment evidence share the same preprocessing path
+  ---
+  duration_ms: 0.349066
+  ...
+# Subtest: PDF files bypass raster cleanup and keep their original file
+ok 3 - PDF files bypass raster cleanup and keep their original file
+  ---
+  duration_ms: 0.166611
+  ...
+# Subtest: QR camera reads once and ignores late download after close/store change
+ok 4 - QR camera reads once and ignores late download after close/store change
+  ---
+  duration_ms: 278.599713
+  ...
+# Subtest: QR camera preserves fallback on unsupported QR and permission failure
+ok 5 - QR camera preserves fallback on unsupported QR and permission failure
+  ---
+  duration_ms: 33.089252
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: Basic/Premium camera intake fills reviewed fields and original PDF without any payment
+ok 6 - Basic/Premium camera intake fills reviewed fields and original PDF without any payment
+  ---
+  duration_ms: 227.157982
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: scanner in both payment forms reads exact URL once without camera or payment
+ok 7 - scanner in both payment forms reads exact URL once without camera or payment
+  ---
+  duration_ms: 147.963508
+  ...
+# Subtest: scanner rejects unsafe response, retries and discards closed or previous-store results
+ok 8 - scanner rejects unsafe response, retries and discards closed or previous-store results
+  ---
+  duration_ms: 37.197497
+  ...
+# Subtest: scanner preserves native rapid input through rerenders, Greek keys and Tab suffix
+ok 9 - scanner preserves native rapid input through rerenders, Greek keys and Tab suffix
+  ---
+  duration_ms: 28.227163
+  ...
+# Subtest: numeric/truncated scanner input makes no request and explicit clear allows exact pasted URL
+ok 10 - numeric/truncated scanner input makes no request and explicit clear allows exact pasted URL
+  ---
+  duration_ms: 25.878767
+  ...
+# Subtest: Greek physical key recovery is scoped and preserves Latin, paste and modifier shortcuts
+ok 11 - Greek physical key recovery is scoped and preserves Latin, paste and modifier shortcuts
+  ---
+  duration_ms: 1.812558
+  ...
+# Subtest: POS recognizes and registers the invoice before archiving it
+ok 12 - POS recognizes and registers the invoice before archiving it
+  ---
+  duration_ms: 1.498296
+  ...
+# Subtest: archive reuses the AI attachment and records invoice-payment linkage
+ok 13 - archive reuses the AI attachment and records invoice-payment linkage
+  ---
+  duration_ms: 0.325841
+  ...
+# Subtest: manual AI confirmation follows the same post-registration archive order
+ok 14 - manual AI confirmation follows the same post-registration archive order
+  ---
+  duration_ms: 0.31177
+  ...
+# Subtest: POS polling automatically claims one incomplete completed draft for full reread
+ok 15 - POS polling automatically claims one incomplete completed draft for full reread
+  ---
+  duration_ms: 1.493729
+  ...
+# Subtest: POS keeps polling while the mismatch reread is being claimed
+ok 16 - POS keeps polling while the mismatch reread is being claimed
+  ---
+  duration_ms: 0.396026
+  ...
+# Subtest: queued recovery keeps one database lease and cannot reopen a completed draft
+ok 17 - queued recovery keeps one database lease and cannot reopen a completed draft
+  ---
+  duration_ms: 0.261974
+  ...
+# Subtest: uploaded credit reuses the exact signed request after a lost response and holds stale originals
+ok 18 - uploaded credit reuses the exact signed request after a lost response and holds stale originals
+  ---
+  duration_ms: 2.17192
+  ...
+# Subtest: mounted original POS upload shows negative/net before one confirmation, retries no handoff or positive payment
+ok 19 - mounted original POS upload shows negative/net before one confirmation, retries no handoff or positive payment
+  ---
+  duration_ms: 543.54219
+  ...
+# Subtest: actual background persistence uses the guarded cash settlement before updating the same credit draft
+ok 20 - actual background persistence uses the guarded cash settlement before updating the same credit draft
+  ---
+  duration_ms: 0.793204
+  ...
+# Subtest: direct cash return submits a negative credit intent without selecting an invoice payment
+ok 21 - direct cash return submits a negative credit intent without selecting an invoice payment
+  ---
+  duration_ms: 0.394674
+  ...
+# Subtest: actual POS cancel of unpaid-header proposal never calls payment or handoff
+ok 22 - actual POS cancel of unpaid-header proposal never calls payment or handoff
+  ---
+  duration_ms: 4.411101
+  ...
+# Subtest: actual POS confirmed original rechecks exact header before one payment and same-draft handoff
+ok 23 - actual POS confirmed original rechecks exact header before one payment and same-draft handoff
+  ---
+  duration_ms: 1.7603
+  ...
+# Subtest: actual POS stale recheck stops before money or receipt writes
+ok 24 - actual POS stale recheck stops before money or receipt writes
+  ---
+  duration_ms: 1.111413
+  ...
+# Subtest: actual POS payment discovered during recheck is reused without another transaction
+ok 25 - actual POS payment discovered during recheck is reused without another transaction
+  ---
+  duration_ms: 0.953055
+  ...
+# Subtest: actual POS credit confirmation links original without payment
+ok 26 - actual POS credit confirmation links original without payment
+  ---
+  duration_ms: 1.080747
+  ...
+# Subtest: actual precheck returns an unpaid proposal before any financial or handoff path; paid/ambiguous errors remain errors
+ok 27 - actual precheck returns an unpaid proposal before any financial or handoff path; paid/ambiguous errors remain errors
+  ---
+  duration_ms: 2.194734
+  ...
+# Subtest: actual photographed POS handoff queues the existing empty myDATA reader, preserves populated rows and skips receipt replays
+ok 28 - actual photographed POS handoff queues the existing empty myDATA reader, preserves populated rows and skips receipt replays
+  ---
+  duration_ms: 9.305358
+  ...
+# Subtest: actual POS confirms a header without a draft, rechecks it and submits one canonical payment and handoff
+ok 29 - actual POS confirms a header without a draft, rechecks it and submits one canonical payment and handoff
+  ---
+  duration_ms: 1.29556
+  ...
+# Subtest: actual POS refuses an unlinked header whose MARK changed before payment
+ok 30 - actual POS refuses an unlinked header whose MARK changed before payment
+  ---
+  duration_ms: 1.025373
+  ...
+# Subtest: POS persists every invoice page before starting full recognition
+ok 31 - POS persists every invoice page before starting full recognition
+  ---
+  duration_ms: 1.826029
+  ...
+# Subtest: POS closes the invoice modal immediately and only monitors server status
+ok 32 - POS closes the invoice modal immediately and only monitors server status
+  ---
+  duration_ms: 0.278199
+  ...
+# Subtest: POS reports success only after non-empty reconciled background completion
+ok 33 - POS reports success only after non-empty reconciled background completion
+  ---
+  duration_ms: 0.849539
+  ...
+# Subtest: server startup reclaims persisted queued or expired-lease work without POS polling
+ok 34 - server startup reclaims persisted queued or expired-lease work without POS polling
+  ---
+  duration_ms: 0.320443
+  ...
+# Subtest: a live POS worker heartbeats a short lease and an orphan is reclaimed
+ok 35 - a live POS worker heartbeats a short lease and an orphan is reclaimed
+  ---
+  duration_ms: 0.29868
+  ...
+# Subtest: startup reconciles an eligible job whose durable task is terminal or mis-scoped
+ok 36 - startup reconciles an eligible job whose durable task is terminal or mis-scoped
+  ---
+  duration_ms: 0.247092
+  ...
+# Subtest: worker watchdog requeues a stale recovering job without browser polling
+ok 37 - worker watchdog requeues a stale recovering job without browser polling
+  ---
+  duration_ms: 0.257377
+  ...
+# Subtest: startup rereads one recent unapproved mismatched MANTZILAS draft without browser refresh
+ok 38 - startup rereads one recent unapproved mismatched MANTZILAS draft without browser refresh
+  ---
+  duration_ms: 1.395781
+  ...
+# Subtest: handoff distinguishes existing myDATA and not-yet-arrived documents
+ok 39 - handoff distinguishes existing myDATA and not-yet-arrived documents
+  ---
+  duration_ms: 0.348925
+  ...
+# Subtest: LAB handoff records paid or credit intent without posting stock
+ok 40 - LAB handoff records paid or credit intent without posting stock
+  ---
+  duration_ms: 0.42511
+  ...
+# Subtest: a stalled internal background request times out and becomes retryable
+ok 41 - a stalled internal background request times out and becomes retryable
+  ---
+  duration_ms: 0.183296
+  ...
+# Subtest: multi-page header reading continues when one page has no usable header
+ok 42 - multi-page header reading continues when one page has no usable header
+  ---
+  duration_ms: 0.287933
+  ...
+# Subtest: FAST header retries empty or malformed structured AI responses safely
+ok 43 - FAST header retries empty or malformed structured AI responses safely
+  ---
+  duration_ms: 0.185299
+  ...
+# Subtest: FAST header safely reuses the exact durable POS file before provider calls
+ok 44 - FAST header safely reuses the exact durable POS file before provider calls
+  ---
+  duration_ms: 0.334073
+  ...
+# Subtest: POS invoice checks the exact uploaded file before any payment
+ok 45 - POS invoice checks the exact uploaded file before any payment
+  ---
+  duration_ms: 1.805267
+  ...
+# Subtest: an incomplete AI job is resumed without a second upload or payment
+ok 46 - an incomplete AI job is resumed without a second upload or payment
+  ---
+  duration_ms: 0.263086
+  ...
+# Subtest: POS invoice reuses a validated payment when no purchase draft exists
+ok 47 - POS invoice reuses a validated payment when no purchase draft exists
+  ---
+  duration_ms: 0.422666
+  ...
+# Subtest: invoice payment uniqueness is enforced centrally across users, POS and stores
+ok 48 - invoice payment uniqueness is enforced centrally across users, POS and stores
+  ---
+  duration_ms: 0.445341
+  ...
+# Subtest: background intake cannot create a second supplier invoice payment
+ok 49 - background intake cannot create a second supplier invoice payment
+  ---
+  duration_ms: 0.327604
+  ...
+# Subtest: invoice number uniqueness applies across every store in the company
+ok 50 - invoice number uniqueness applies across every store in the company
+  ---
+  duration_ms: 0.221214
+  ...
+# Subtest: prepayment fixtures extract the actual HTTP handler and direct-post transaction closure
+ok 51 - prepayment fixtures extract the actual HTTP handler and direct-post transaction closure
+  ---
+  duration_ms: 2.361395
+  ...
+# Subtest: native actual precheck refuses a competing POS draft before client payment and preserves every source
+ok 52 - native actual precheck refuses a competing POS draft before client payment and preserves every source # SKIP
+  ---
+  duration_ms: 0.13894
+  ...
+# Subtest: native actual precheck and direct-post closure refuse uncertain-number repeat of an existing payment without modifying it
+ok 53 - native actual precheck and direct-post closure refuse uncertain-number repeat of an existing payment without modifying it # SKIP
+  ---
+  duration_ms: 0.124167
+  ...
+# Subtest: native stale prechecks and concurrent direct payment posts with different raw-number keys commit exactly one payment
+ok 54 - native stale prechecks and concurrent direct payment posts with different raw-number keys commit exactly one payment # SKIP
+  ---
+  duration_ms: 0.193741
+  ...
+# Subtest: native first unpaid canonical myDATA keeps its earlier precheck return and is not evidence of an existing payment
+ok 55 - native first unpaid canonical myDATA keeps its earlier precheck return and is not evidence of an existing payment # SKIP
+  ---
+  duration_ms: 0.13302
+  ...
+# Subtest: native actual direct-post closure uses the server-derived legacy description reference before another payment
+ok 56 - native actual direct-post closure uses the server-derived legacy description reference before another payment # SKIP
+  ---
+  duration_ms: 0.08641
+  ...
+# Subtest: actual POS submit stops at precheck review before any transaction or handoff request
+ok 57 - actual POS submit stops at precheck review before any transaction or handoff request
+  ---
+  duration_ms: 2.96268
+  ...
+# Subtest: cancelling paid invoice reread leaves the form and existing payment alone
+ok 58 - cancelling paid invoice reread leaves the form and existing payment alone
+  ---
+  duration_ms: 3.531877
+  ...
+# Subtest: confirmed PAID reread hands off the same payment and releases POS
+ok 59 - confirmed PAID reread hands off the same payment and releases POS
+  ---
+  duration_ms: 2.451691
+  ...
+# Subtest: confirmed CREDIT reread hands off the same payment and releases POS
+ok 60 - confirmed CREDIT reread hands off the same payment and releases POS
+  ---
+  duration_ms: 1.088559
+  ...
+# Subtest: balance-only credit note hands off a draft without duplicate payment or cash movement
+ok 61 - balance-only credit note hands off a draft without duplicate payment or cash movement
+  ---
+  duration_ms: 2.075284
+  ...
+# Subtest: mounted VAT lookup selects known supplier and exact PDF only after explicit choice, without payment/job calls
+ok 62 - mounted VAT lookup selects known supplier and exact PDF only after explicit choice, without payment/job calls
+  ---
+  duration_ms: 213.918602
+  ...
+# Subtest: mounted unknown supplier requires official response and explicit creation before invoice search; missing PDF leaves photos
+ok 63 - mounted unknown supplier requires official response and explicit creation before invoice search; missing PDF leaves photos
+  ---
+  duration_ms: 50.916068
+  ...
+# Subtest: mounted pending lookup is discarded after VAT edit or store change/unmount
+ok 64 - mounted pending lookup is discarded after VAT edit or store change/unmount
+  ---
+  duration_ms: 25.374028
+  ...
+# Subtest: mounted Premium keeps an explicitly created official supplier selected after the inbox PDF fills the payment header
+ok 65 - mounted Premium keeps an explicitly created official supplier selected after the inbox PDF fills the payment header
+  ---
+  duration_ms: 73.403211
+  ...
+# Subtest: mounted StoreSupplierInvoicePremiumFast PAID fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+ok 66 - mounted StoreSupplierInvoicePremiumFast PAID fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+  ---
+  duration_ms: 115.66398
+  ...
+# Subtest: mounted StoreSupplierInvoiceFast PAID fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+ok 67 - mounted StoreSupplierInvoiceFast PAID fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+  ---
+  duration_ms: 90.035089
+  ...
+# Subtest: mounted StoreSupplierInvoicePremiumFast CREDIT fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+ok 68 - mounted StoreSupplierInvoicePremiumFast CREDIT fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+  ---
+  duration_ms: 108.180043
+  ...
+# Subtest: mounted StoreSupplierInvoiceFast CREDIT fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+ok 69 - mounted StoreSupplierInvoiceFast CREDIT fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering
+  ---
+  duration_ms: 75.82352
+  ...
+# Subtest: mobile five-photo publication is ordered, atomic and safe on identical retry
+ok 70 - mobile five-photo publication is ordered, atomic and safe on identical retry
+  ---
+  duration_ms: 2.672263
+  ...
+# Subtest: mobile rejects sixth, unsupported, oversized, mixed-PDF, stale/token and out-of-order uploads before publication
+ok 71 - mobile rejects sixth, unsupported, oversized, mixed-PDF, stale/token and out-of-order uploads before publication
+  ---
+  duration_ms: 2.572302
+  ...
+# Subtest: mobile legacy single-file clients and one-file remaining capacity keep working
+ok 72 - mobile legacy single-file clients and one-file remaining capacity keep working
+  ---
+  duration_ms: 0.242135
+  ...
+# Subtest: actual mobile page collects camera/gallery photos, reorders/removes and sends all once
+ok 73 - actual mobile page collects camera/gallery photos, reorders/removes and sends all once
+  ---
+  duration_ms: 243.344013
+  ...
+# Subtest: actual mobile page retains photos and reuses the same batch after a dropped response
+ok 74 - actual mobile page retains photos and reuses the same batch after a dropped response
+  ---
+  duration_ms: 111.752511
+  ...
+# Subtest: actual mobile page rejects low decoded resolution without an upload
+ok 75 - actual mobile page rejects low decoded resolution without an upload
+  ---
+  duration_ms: 14.06273
+  ...
+# Subtest: bundled PDF parses as five ordered image pages and rejects invalid selection/oversize before submission
+ok 76 - bundled PDF parses as five ordered image pages and rejects invalid selection/oversize before submission
+  ---
+  duration_ms: 133.189083
+  ...
+# Subtest: actual Basic, Premium and open-payment forms retain/count/order five photos and block the sixth
+ok 77 - actual Basic, Premium and open-payment forms retain/count/order five photos and block the sixth
+  ---
+  duration_ms: 588.080384
+  ...
+# Subtest: phone QR polling appends a whole batch once and ignores cancelled/foreign-store late responses
+ok 78 - phone QR polling appends a whole batch once and ignores cancelled/foreign-store late responses
+  ---
+  duration_ms: 270.788389
+  ...
+# Subtest: five selected photos use one existing supplier payment with all pages retained
+ok 79 - five selected photos use one existing supplier payment with all pages retained
+  ---
+  duration_ms: 276.775697
+  ...
+# Subtest: normalizes verified VIES supplier data without writing it
+ok 80 - normalizes verified VIES supplier data without writing it
+  ---
+  duration_ms: 1.390554
+  ...
+# Subtest: keeps the fullest official VIES name when aliases are pipe-separated
+ok 81 - keeps the fullest official VIES name when aliases are pipe-separated
+  ---
+  duration_ms: 0.223757
+  ...
+# Subtest: VAT lookup is read-only and tenant/store scoped
+ok 82 - VAT lookup is read-only and tenant/store scoped
+  ---
+  duration_ms: 0.410989
+  ...
+# Subtest: VAT lookup reads dynamically bootstrapped suppliers through SQL
+ok 83 - VAT lookup reads dynamically bootstrapped suppliers through SQL
+  ---
+  duration_ms: 0.188344
+  ...
+# Subtest: POS requires explicit lookup before supplier creation
+ok 84 - POS requires explicit lookup before supplier creation
+  ---
+  duration_ms: 0.293932
+  ...
+# Subtest: actual fast POS invoice screen exposes explicit VAT lookup
+ok 85 - actual fast POS invoice screen exposes explicit VAT lookup
+  ---
+  duration_ms: 0.263406
+  ...
+# Subtest: normalizes full AADE supplier identity
+ok 86 - normalizes full AADE supplier identity
+  ---
+  duration_ms: 1.22937
+  ...
+# Subtest: official AADE lookup bypasses the local supplier shortcut and distinguishes upstream failure
+ok 87 - official AADE lookup bypasses the local supplier shortcut and distinguishes upstream failure
+  ---
+  duration_ms: 0.344669
+  ...
+# Subtest: AADE request matches the live WSDL SOAP 1.2 binding
+ok 88 - AADE request matches the live WSDL SOAP 1.2 binding
+  ---
+  duration_ms: 0.236095
+  ...
+# Subtest: AADE credentials use the official WS-Security UsernameToken header
+ok 89 - AADE credentials use the official WS-Security UsernameToken header
+  ---
+  duration_ms: 0.251909
+  ...
+1..89
+# tests 89
+# suites 0
+# pass 84
+# fail 0
+# cancelled 0
+# skipped 5
+# todo 0
+# duration_ms 4531.204051

@@ -71,6 +71,21 @@ const statements=[
 `CREATE UNIQUE INDEX IF NOT EXISTS "StoreProduct_storeId_productId_key" ON "StoreProduct"("storeId","productId")`,
 `CREATE INDEX IF NOT EXISTS "StoreProduct_storeId_idx" ON "StoreProduct"("storeId")`,
 `CREATE INDEX IF NOT EXISTS "StoreProduct_productId_idx" ON "StoreProduct"("productId")`,
+`ALTER TABLE "StoreProduct"
+  ADD COLUMN IF NOT EXISTS "costPriceOverride" DECIMAL(12,4) CHECK ("costPriceOverride" >= 0),
+  ADD COLUMN IF NOT EXISTS "vatDepartmentIdOverride" TEXT,
+  ADD COLUMN IF NOT EXISTS "categoryIdOverride" TEXT,
+  ADD COLUMN IF NOT EXISTS "subcategoryIdOverride" TEXT`,
+`CREATE TABLE IF NOT EXISTS "InventoryWarehouseEditAudit" (
+  "id" TEXT PRIMARY KEY,
+  "storeId" TEXT NOT NULL,
+  "productId" TEXT NOT NULL,
+  "stocktakeId" TEXT NOT NULL,
+  "grantId" TEXT NOT NULL,
+  "before" JSONB NOT NULL,
+  "after" JSONB NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)`,
 
 `CREATE TABLE IF NOT EXISTS "Supplier" (
   "id" TEXT NOT NULL,
@@ -349,7 +364,43 @@ const statements=[
   CONSTRAINT "DocumentAttachment_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
 )`,
 `CREATE INDEX IF NOT EXISTS "DocumentAttachment_companyId_idx" ON "DocumentAttachment"("companyId")`,
-`ALTER TABLE "DocumentAttachment" ADD COLUMN IF NOT EXISTS "contentData" TEXT`
+`ALTER TABLE "DocumentAttachment" ADD COLUMN IF NOT EXISTS "contentData" TEXT`,
+
+`CREATE TABLE IF NOT EXISTS "PosInternalTransfer" (
+    "id" TEXT PRIMARY KEY,
+    "companyId" TEXT NOT NULL,
+    "sourceStoreId" TEXT NOT NULL,
+    "destinationStoreId" TEXT,
+    "externalDestinationName" TEXT,
+    "createdByUserId" TEXT NOT NULL,
+    "idempotencyKey" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (num_nonnulls("destinationStoreId", "externalDestinationName") = 1),
+    CHECK ("sourceStoreId" <> "destinationStoreId"),
+    CHECK (length(btrim("externalDestinationName")) > 0),
+    UNIQUE ("companyId", "sourceStoreId", "idempotencyKey")
+)`,
+`CREATE INDEX IF NOT EXISTS "PosInternalTransfer_destination_idx"
+    ON "PosInternalTransfer" ("companyId", "destinationStoreId", "createdAt")`,
+`CREATE TABLE IF NOT EXISTS "PosInternalTransferLine" (
+    "transferId" TEXT NOT NULL REFERENCES "PosInternalTransfer" ("id"),
+    "productId" TEXT NOT NULL,
+    "quantity" NUMERIC(14,4) NOT NULL CHECK ("quantity" > 0),
+    "unitCost" NUMERIC(14,6) NOT NULL CHECK ("unitCost" >= 0),
+    "vatRate" NUMERIC(7,4) NOT NULL CHECK ("vatRate" BETWEEN 0 AND 100),
+    PRIMARY KEY ("transferId", "productId")
+)`,
+`CREATE TABLE IF NOT EXISTS "PosInternalTransferSettlement" (
+    "transferId" TEXT PRIMARY KEY REFERENCES "PosInternalTransfer" ("id"),
+    "method" TEXT NOT NULL CHECK ("method" IN ('CASH', 'BANK_TRANSFER')),
+    "amount" NUMERIC(14,2) NOT NULL CHECK ("amount" >= 0),
+    "bankReference" TEXT,
+    "cashReceiptTransactionId" TEXT UNIQUE,
+    "recordedByUserId" TEXT NOT NULL,
+    "recordedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (("method" = 'BANK_TRANSFER') = ("bankReference" IS NOT NULL)),
+    CHECK (length(btrim("bankReference")) > 0)
+)`
 ];
 
 export async function ensureCommercialSchema(){

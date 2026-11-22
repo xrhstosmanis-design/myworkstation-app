@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "task": "CASH-ADJACENT-COUNT-21",
+  "parent": "CASH-UNIFIED-AUDIT-15",
+  "owner": "retained existing cash owner",
+  "taskStatus": "OPEN_ASSIGNED",
+  "parentStatus": "OPEN",
+  "outcome": "LIMITED_NATIVE_LIVE_UI_PASS",
+  "authority": "owner explicitly redirected approved read-only check to a live store",
+  "storeAlias": "owner-selected-live-store",
+  "selectedClosingDay": "2026-11-06",
+  "runtimeRevision": "5606b18cc591cb6682dbe54f3aa0fb7e01c0cf91",
+  "health": {
+    "observedAt": "2026-11-07T14:35:27.562792Z",
+    "ok": true,
+    "source": "public /api/health",
+    "revision": "5606b18cc591cb6682dbe54f3aa0fb7e01c0cf91"
+  },
+  "surface": {
+    "role": "Platform SuperAdmin",
+    "browser": "desktop Chrome cloud browser",
+    "entry": "/platform-admin → Οικονομικά & Έλεγχοι → Ταμεία"
+  },
+  "action": {
+    "button": "Αυτόματος έλεγχος χωρίς χρέωση",
+    "invocations": 1,
+    "beforeAndInvocationRecordedAt": "2026-11-07T14:34:50.673Z",
+    "completedResultObservedBy": "2026-11-07T14:36:08.152Z",
+    "latencyMeasured": false
+  },
+  "automaticSummary": {
+    "status": "HOLD",
+    "checkedShifts": 3,
+    "pendingShifts": 3,
+    "cashDifferenceRows": 3,
+    "cardDifferenceRows": 0,
+    "numericAllocationProposals": 0,
+    "ambiguousCandidates": 3
+  },
+  "paperCoverage": {
+    "status": "PARTIAL",
+    "unresolvedLines": 51,
+    "unreadAttachments": 48,
+    "pendingReadings": 0,
+    "requiresReview": 1,
+    "scope": "available selected-store collection; not all proven to belong to the selected day"
+  },
+  "visibleComparison": {
+    "cashRows": 3,
+    "cashRowsUnchanged": true,
+    "adjacentAmbiguities": 3,
+    "adjacentAmbiguitiesUnchanged": true,
+    "pendingRepliesUnchanged": true,
+    "reviewHistoryBeforeZero": true,
+    "reviewHistoryAfterZero": true,
+    "statusHold": true,
+    "noChargeCompletionMessage": true
+  },
+  "pendingReplyTextsCompared": 9,
+  "reviewHistory": {
+    "before": 0,
+    "after": 0
+  },
+  "evidence": {
+    "beforeAccessibilitySnapshotSha256": "9ea1af823ddb48f0c02473d07cf46a4d9fefa985e43b5b87e2f200023fac0c6c",
+    "afterAccessibilitySnapshotSha256": "f7a4fb8bc7889fa533a40481ff7260319807a0f9e1eacd6dafc8fb2dee20c9a2",
+    "comparisonSha256": "fcbe9dd9e60a5f6cd81ef649516e509ae80d74dbd0ec47f8c09942c8c581ef2b",
+    "provenance": "private observed accessibility snapshots; these are not canonical reportHash values"
+  },
+  "notMeasured": [
+    "canonical reportHash",
+    "database/ledger invariance",
+    "independent control-state effects",
+    "provider invocation/billing telemetry",
+    "exact response latency"
+  ],
+  "outsideObservedScope": [
+    "other roles/devices/periods",
+    "store/period switch races",
+    "successful manual review summary invalidation",
+    "nonambiguous allocations",
+    "LAB execution after owner redirection"
+  ],
+  "remaining": [
+    "source and handwritten/expense evidence reconciliation",
+    "ambiguous finding clarification",
+    "final financial reconciliation and approval",
+    "broader authorized hosted coverage"
+  ],
+  "operatorActionsNotPerformed": [
+    "paid reader",
+    "manual review or offset",
+    "financial or employee adjustment",
+    "email"
+  ],
+  "privacy": "No real-store or employee names, amounts, business identifiers, raw responses or screenshots included"
+}

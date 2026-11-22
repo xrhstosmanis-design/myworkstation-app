@@ -1,0 +1,89 @@
+import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../src/lib/invoice-line-taxonomy.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {z} from 'zod';
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
+import {installStaffActionPolicy} from './helpers/backoffice-staff-actions-fixture.js';
+import {requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
+import * as common from '../src/lib/invoice-common-draft.js';
+import {lockEditablePurchaseOrder} from "../src/services/purchase-order-reopen.js";
+import {purchasePrintedRounding} from '../src/lib/purchase-printed-rounding.js';
+
+function metadataEditSource(source){
+ const start=source.indexOf('router.patch("/:orderId",'),end=source.indexOf('\nfunction invoiceDisplayMarkup(',start);
+ assert.ok(start>=0&&end>start,'extract exactly the existing metadata handler before detail-only readers');
+ return source.slice(start,end);
+}
+
+test('metadata action harness extracts only its handler when detail readers export additional functions',async()=>{
+ const source=await readFile(new URL('../src/routes/purchase-orders.js',import.meta.url),'utf8');
+ assert.doesNotThrow(()=>new Function('router',metadataEditSource(source)));
+});
+
+test('native delegated invoice metadata and canonical approval preserve one posting, actor, control stock and live withdrawal',{skip:!isolatedInvoiceDb(),timeout:90000},async()=>{
+ const f=await invoiceDbFixture(),db=f.db;
+ try{
+  await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN "active" boolean NOT NULL DEFAULT true');
+  await db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN "active" boolean NOT NULL DEFAULT true');
+  await f.seed({posLines:1});const scope={companyId:'c',storeId:'s',inboxId:'inbox'},preview=await common.previewInvoiceReconciliation(db,scope);
+  await db.$transaction(tx=>common.reconcileInvoiceDrafts(tx,scope,{posOrderId:'pos',expectedVersion:preview.version,confirmSameInvoice:true,confirmMark:preview.mark,confirmPaymentDiscrepancy:true,reason:'Synthetic original comparison',actorId:'owner'}));
+  const user=await installStaffActionPolicy(db,{capabilities:['invoices.read','invoices.edit']});
+  await db.$executeRawUnsafe('ALTER TABLE "StockMovement" ADD CONSTRAINT "staff_actor_fk" FOREIGN KEY ("createdByUserId") REFERENCES "User"("id")');
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "reopenVersion" int DEFAULT 0');
+  const source=await readFile(new URL('../src/routes/purchase-orders.js',import.meta.url),'utf8');
+  let edit;
+  const audit=source.slice(source.indexOf('async function writePurchaseAudit('),source.indexOf('const lineSchema='));
+  const deps={router:{patch:(_path,h)=>edit=h},z,prisma:db,id:()=>crypto.randomUUID(),requireStaffOrderAction,
+   order:async(companyId,orderId)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId}`)[0],
+   editable:()=>{},lockPurchaseSupplierMetadata:async()=>{},supplier:()=>assert.fail('supplier must not change')};
+  new Function(...Object.keys(deps),audit+metadataEditSource(source))(...Object.values(deps));
+  const invoke=async(handler,capability,body)=>{let result,failure,status=200;const req={params:{orderId:'pos',lineId:'line-pos'},body,user,staffGrant:{capability},get:()=> 'POS2'},res={json:value=>{result=value},status:value=>(status=value,res)};await handler(req,res,error=>failure=error);return {result,failure,status}};
+  const before=await f.snapshot();const edited=await invoke(edit,'invoices.edit',{description:'Native reviewed metadata'});assert.ifError(edited.failure);assert.equal(edited.result.ok,true);
+  assert.equal(await f.snapshot(),before);assert.equal((await db.$queryRaw`SELECT "description" FROM "PurchaseOrder" WHERE "id"='pos'`)[0].description,'Native reviewed metadata');
+  assert.equal((await db.$queryRaw`SELECT "actorId" FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_ORDER_DRAFT_UPDATED'`)[0].actorId,'delegated');
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "gift" boolean DEFAULT false,ADD COLUMN IF NOT EXISTS "markupPercent" numeric DEFAULT 0,ADD COLUMN IF NOT EXISTS "updatedAt" timestamptz DEFAULT now(),ADD COLUMN IF NOT EXISTS "resolutionStatus" text DEFAULT \'MATCHED\',ADD COLUMN IF NOT EXISTS "ocrReviewReasons" text');
+  const calc=source.slice(source.indexOf('function calc('),source.indexOf('async function learnConfirmedLineCorrection('));
+  const lineSchema=source.slice(source.indexOf('const lineSchema='),source.indexOf('router.get("/report",'));
+  const auditState=source.slice(source.indexOf('const auditLineState='),source.indexOf('async function writePurchaseAudit('));
+  const lineStart=source.indexOf('router.patch("/:orderId/lines/:lineId",'),lineEnd=source.indexOf('\nrouter.delete("/:orderId/lines/:lineId",',lineStart);let editLine,transferLines;
+  const lineBindings={...deps,invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,router:{patch:(_path,h)=>editLine=h,post:(_path,h)=>transferLines=h},product:async()=>null,n:value=>Number(value||0),purchasePrintedRounding,lockEditablePurchaseOrder,
+   line:async(_company,id)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"=${id}`)[0],
+   learnConfirmedLineCorrection:()=>assert.fail('store-only staff edit must not change company supplier learning'),learnCentralInvoiceCorrection:()=>assert.fail('store-only staff edit must not change cross-company learning')};
+  new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(source.indexOf('function purchaseBatchError('),source.indexOf('router.post("/:orderId/lines",'))+source.slice(lineStart,lineEnd)+source.slice(source.indexOf('const assistantTransferSchema='),source.indexOf('router.patch("/:orderId/lines/:lineId/product-card"')))(...Object.values(lineBindings));
+  const changedLine=await invoke(editLine,'invoices.edit',{description:'Reviewed store-only line',quantity:3});assert.ifError(changedLine.failure);assert.equal(changedLine.result.ok,true);assert.equal(changedLine.result.mappingLearned,false);assert.equal(changedLine.result.centralLearning.learned,false);assert.equal(await f.snapshot(),before);
+  const [draft]=await db.$queryRaw`SELECT "storeId","sourceDocumentId","reopenVersion" FROM "PurchaseOrder" WHERE "id"='pos'`;
+  const rowSnapshot=()=>db.$queryRaw`SELECT "id","description","updatedAt" FROM "PurchaseOrderLine" WHERE "orderId"='pos'`;
+  const linesBefore=await rowSnapshot();
+  const auditCount=async()=>Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreOperatorAudit" WHERE "eventType"='INVOICE_LINE_CORRECTED'`)[0].count);
+  const auditBefore=await auditCount();
+  const payload={...draft,reopenVersion:Number(draft.reopenVersion),snapshot:linesBefore.map(row=>({id:row.id,updatedAt:row.updatedAt.toISOString()})),
+    updates:[{id:'line-pos',patch:{description:'Must roll back'}}],additions:[{productId:'missing-product',description:'Invalid second operation'}],deletions:[]};
+  const failedTransfer=await invoke(transferLines,'invoices.edit',payload);
+  assert.equal(failedTransfer.failure?.status,404);
+  assert.deepEqual(await rowSnapshot(),linesBefore);
+  assert.equal(await auditCount(),auditBefore);
+  const savedTransfer=await invoke(transferLines,'invoices.edit',{...payload,additions:[],updates:[{id:'line-pos',patch:{description:'Reviewed store-only line'}}]});
+  assert.ifError(savedTransfer.failure);
+  assert.equal(savedTransfer.result.count,1);
+  const handlers={},router={use:()=>{},post:()=>{},delete:()=>{},patch:(path,h)=>handlers[path]=h};
+  const posting=(await readFile(new URL('../src/routes/purchase-order-posting-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
+  const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(db,requireStaffAction);
+  const bindings={applyPackStockCorrectionInTransaction,Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
+  const approve=(status='FINAL')=>invoke(handlers['/:orderId'],'invoices.approve',{status});
+  assert.equal((await approve()).failure?.status,403);assert.equal(await f.snapshot(),before);
+  await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["invoices.read","invoices.edit","invoices.approve"]'::jsonb`;
+  assert.equal((await approve()).result.awaitingInvoice,true);
+  assert.equal(await f.snapshot(),before);
+  const results=await Promise.all([approve('INVOICED'),approve('INVOICED')]);for(const r of results){assert.ifError(r.failure);assert.equal(r.result.status,'INVOICED')}
+  assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StockMovement"`)[0].count),1);
+  assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "InvoiceStockPosting"`)[0].count),1);
+  assert.equal((await db.$queryRaw`SELECT "createdByUserId" FROM "StockMovement"`)[0].createdByUserId,'delegated');
+  const stocks=await db.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`;assert.deepEqual(stocks.map(r=>[r.storeId,Number(r.currentStock)]),[['control',20],['s',13]]);
+  assert.equal((await invoke(edit,'invoices.edit',{description:'Forbidden after posting'})).failure?.code,'STAFF_DRAFT_CLOSED');
+  const after=await f.snapshot();await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "active"=false`;
+  assert.equal((await approve()).failure?.status,403);assert.equal(await f.snapshot(),after);
+  assert.equal((await db.$queryRaw`SELECT "role" FROM "User" WHERE "id"='delegated'`)[0].role,'EMPLOYEE');
+ }finally{await f.close()}
+});

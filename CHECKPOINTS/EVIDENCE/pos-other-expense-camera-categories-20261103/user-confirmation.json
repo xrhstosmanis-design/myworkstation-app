@@ -1,0 +1,22 @@
+{
+  "item": "POS-OTHER-EXPENSE-CAMERA-CATEGORIES-01",
+  "confirmationDate": "2026-11-03",
+  "timezone": "Europe/Athens",
+  "userMessage": "ΕΙΝΑΙ ΟΚ",
+  "respondsTo": "Refresh an empty-cart POS, open Payments > Other expenses > Capture from camera, test without submitting a payment.",
+  "status": "LIMITED_USER_PASS_CAMERA_OPENING",
+  "basis": "Owner-reported confirmation; not independently witnessed hardware or financial LAB acceptance.",
+  "lastPreviouslyVerifiedDeliveredRevision": "e9314faa7d9457bc3cce95593a76ed2482d3351c",
+  "userLoadedRevision": null,
+  "device": null,
+  "store": null,
+  "operator": null,
+  "testTime": null,
+  "separatePhotoCaptureFocusQualityAccepted": false,
+  "populatedCategoriesAccepted": false,
+  "hostedCategoryLinkedPaymentAccepted": false,
+  "ordinaryRoleDeviceMatrixAccepted": false,
+  "financialStockFiscalAcceptanceClaimed": false,
+  "actionPerformedForDocumentation": "None; docs-only receipt, no repeated test/payment/upload/provider action.",
+  "historicalCloudNoDeviceObservationPreserved": true
+}

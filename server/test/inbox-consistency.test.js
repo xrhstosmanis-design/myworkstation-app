@@ -5,6 +5,9 @@ import {previewInvoiceReconciliation,reconcileInvoiceDrafts,assertInvoiceStockAv
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
 import {archiveQuery,archiveStatus} from '../src/invoice-archive.js';
 import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {setTimeout as delay} from 'node:timers/promises';
 
 const lines=Array.from({length:13},(_,i)=>({description:'PRINTED ITEM '+i,quantity:1,netAmount:1,grossAmount:1.13}));
 test('line review needs multiple distinct matching physical rows and corroborating totals, never only an equal amount',()=>{
@@ -86,6 +89,33 @@ test('native line review excludes equal amount without matching lines, other VAT
   assert.equal(await f.snapshot(),before);
  }finally{await f.close()}
 });
+test('stored POS photo links one old myDATA invoice on repeated receiving', {skip:!isolatedInvoiceDb()}, async()=>{
+ const {linkStoredPosInvoicePhotos}=await import('../src/lib/pos-unlinked-mydata.js');
+ const f=await invoiceDbFixture();
+ try{
+  await f.seed({mydata:false,posLines:1});
+  const {db}=f;
+  const scope={companyId:'c',storeId:'s'};
+  await db.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=NULL,"status"='RECEIVED' WHERE "id"='inbox'`;
+  await db.$executeRaw`UPDATE "PurchaseOrder" SET "status"='INVOICED' WHERE "id"='pos'`;
+  await db.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","status") VALUES ('duplicate','c','s','RECEIVED')`;
+  await db.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","issuerVat","series","documentNumber","issueDate","totalGross","rawPayload")
+   SELECT 'duplicate','c','s','duplicate','duplicate',"issuerVat","series","documentNumber","issueDate","totalGross",'{}'::jsonb FROM "MyDataInboundDocument" WHERE "id"='m'`;
+  const sync=()=>db.$transaction(tx=>linkStoredPosInvoicePhotos(tx,scope));
+  assert.equal(await sync(),0);
+  await db.$executeRaw`DELETE FROM "MyDataInboundDocument" WHERE "id"='duplicate'`;
+  await db.$executeRaw`DELETE FROM "DocumentInbox" WHERE "id"='duplicate'`;
+  const before=await f.snapshot();
+  assert.equal(await sync(),1);
+  assert.equal(await sync(),0);
+  const [linked]=await db.$queryRaw`SELECT i."attachmentId",m."rawPayload"->>'mydataDraftDocumentId' AS "documentId"
+   FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" WHERE m."id"='m'`;
+  assert.deepEqual(linked,{attachmentId:'photo',documentId:'d-pos'});
+  assert.deepEqual(await db.$queryRaw`SELECT "id","status" FROM "PurchaseOrder"`,[{id:'pos',status:'INVOICED'}]);
+  assert.equal(await f.snapshot(),before);
+ }finally{await f.close()}
+});
+
 test('native inbox business status follows exact scoped order despite stale AI/inbox labels; filters/count/export agree and conflicts never choose a draft',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await invoiceDbFixture();try{
   await f.seed();const {db}=f;
@@ -96,6 +126,48 @@ test('native inbox business status follows exact scoped order despite stale AI/i
   const before=await f.snapshot(),registered=await run('REGISTERED');
   assert.equal(registered.length,1);assert.equal(registered[0].linkedOrderId,'mydata');assert.equal(registered[0].status,'IN_REVIEW');assert.match(archiveStatus(registered[0]),/Τιμολογημένο/);
   assert.equal((await run('PENDING')).length,0);assert.equal((await run('REGISTERED',true))[0].count,1);
+  await db.$executeRawUnsafe(`CREATE TABLE "SupplierPaymentSettlement" ("id" text, "companyId" text, "storeId" text, "transactionId" text)`);
+  await db.$executeRawUnsafe(`CREATE TABLE "SupplierPaymentAllocation" ("companyId" text, "settlementId" text, "purchaseDocumentId" text, "amount" numeric)`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","amount") VALUES ('open-payment','c','s','SUPPLIER_PAYMENT',200)`);
+  await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentSettlement" VALUES ('open-settlement','c','s','open-payment')`);
+  await db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentAllocation" VALUES ('c','open-settlement','d-mydata',153.82)`);
+  const allocatedQuery=archiveQuery('c','s',{processing:'REGISTERED'},false,true);
+  const [allocated]=await db.$queryRawUnsafe(allocatedQuery.sql,...allocatedQuery.values);
+  assert.equal(allocated.paymentCount,1);
+  assert.equal(Number(allocated.paymentAmount),153.82);
+  const clientRequire=createRequire(new URL('../../client/package.json',import.meta.url));
+  const {build}=createRequire(clientRequire.resolve('vite'))('esbuild');
+  const {JSDOM}=clientRequire('jsdom');
+  const bundle=await build({
+   stdin:{
+    contents:`import React from 'react';
+import {createRoot} from 'react-dom/client';
+import InvoiceInboxPanel from './src/components/commerce/InvoiceInboxPanel.jsx';
+createRoot(document.getElementById('root')).render(
+ <InvoiceInboxPanel api={window.readInbox} stores={[{id:'s',name:'LAB'}]} readOnly />
+);`,
+    resolveDir:fileURLToPath(new URL('../../client/',import.meta.url)),
+    loader:'jsx'
+   },
+   bundle:true,
+   write:false,
+   loader:{'.css':'empty'}
+  });
+  const dom=new JSDOM('<div id="root"></div>',{runScripts:'outside-only'});
+  try {
+   dom.window.readInbox=async path=>{
+    assert.match(path,/inbox\/archive/);
+    return {items:JSON.parse(JSON.stringify([allocated])),total:1,archiveTotal:1,suppliers:[]};
+   };
+   dom.window.eval(bundle.outputFiles[0].text);
+   const paymentText=()=>Array.from(dom.window.document.querySelectorAll('small'))
+    .find(node=>node.textContent.includes('Υπάρχουσα πληρωμή'))?.textContent;
+   for(let attempt=0;attempt<100&&!paymentText();attempt++)await delay(20);
+   assert.match(paymentText()||'',/153,82\s*€/);
+  }finally{dom.window.close()}
+
+  await db.$executeRawUnsafe(`DELETE FROM "StoreTransaction" WHERE "id"='open-payment'`);
+
   await db.$executeRawUnsafe(`INSERT INTO "AiReaderJob"("id","companyId","storeId","attachmentId","purchaseDocumentId") VALUES('conflict','c','s','pdf','d-pos')`);
   assert.equal((await run('REGISTERED')).length,0);
   const conflict=(await run('LINK_REVIEW'))[0];assert.equal(conflict.linkedOrderId,null);
@@ -111,7 +183,7 @@ test('registered invoice opening uses only the existing detail GET; ordinary dra
  const line=source.split('\n').find(l=>l.startsWith('async function openOrder('));assert.ok(line);
  const calls=[],shown=[],state={storeId:'s'};
  const api=async(path,options={})=>{calls.push({path,options});return {order:{id:path.includes('/draft/')?'draft':'registered',status:path.includes('/draft/')?'NEW':'INVOICED'}}};
- const open=new Function('api','state','showOrder','notify',line+';return openOrder')(api,state,(...args)=>shown.push(args),e=>{throw Error(String(e))});
+ const open=new Function('api','state','posContext','showOrder','notify',line+';return openOrder')(api,state,null,(...args)=>shown.push(args),e=>{throw Error(String(e))});
  await open({isConnected:true},'registered','',null,false,true);
  assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/purchase-orders/registered/detail');assert.equal(calls[0].options.method,undefined);assert.equal(shown.length,1);
  calls.length=0;await open({isConnected:true},'draft');
@@ -132,5 +204,6 @@ test('registered inbox activation reads the purchase list without background OCR
  assert.equal(calls.length,1);assert.match(calls[0].path,/purchase-orders\/report/);assert.equal(calls[0].options.method,undefined);
  calls.length=0;open(hub,button);await new Promise(resolve=>setImmediate(resolve));
  assert.equal(calls.length,2);assert.equal(calls[1].path,'/api/commerce/ai-reader/fast-recover');assert.equal(calls[1].options.method,'POST');
- assert.match(source,/activate\(hub,button,event\.detail\.readOnly===true\)/);
+ assert.match(source,/const readOnly=event\.detail\.readOnly===true\|\|event\.detail\.navigationOnly===true/);
+ assert.match(source,/activate\(hub,button,readOnly\)/);
 });

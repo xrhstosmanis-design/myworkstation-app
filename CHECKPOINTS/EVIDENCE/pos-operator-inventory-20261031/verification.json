@@ -1,0 +1,136 @@
+{
+  "task": "POS-OPERATOR-INVENTORY-01",
+  "owner": "fix/pos-operator-inventory-20261031",
+  "status": "SCOPED_USER_PASS_DIADOXOU",
+  "sourcePr": 3427,
+  "claimPr": 3421,
+  "claimMerge": "6b34016a48eb181f93050360384a8631bbcfb408",
+  "nativeReceipt": {
+    "head": "bb6463ce5e913c8da55eb3f7e414ba1e5237095f",
+    "workflowRun": 41246986998,
+    "job": 124672617752,
+    "serverTests": {
+      "pass": 4984,
+      "fail": 0,
+      "skip": 0
+    },
+    "overallWorkflow": "FAIL",
+    "failure": "unchanged Chromium inventory SET footer visibility assertion",
+    "nativeBoundary": "PASS in isolated synthetic PostgreSQL; not LAB",
+    "nativeCoverage": [
+      "live credential/profile/session/store authorization",
+      "own-store retail preserves company base and other-store prices",
+      "barcode transfer between linked own-store products",
+      "bulk card and generic zero-stock import",
+      "stock, movement and financial controls unchanged",
+      "foreign-store/object and forged-stock denial",
+      "trigger-induced stock change rollback",
+      "deferred commit failure never sends HTTP success",
+      "concurrent profile revocation denies stale grant",
+      "module and session revocation"
+    ],
+    "stockAndFinancialControls": "fixture-only quantities P=17,Q=8; other-store=22,50; Sale control total=10; no StockMovement rows; exact before/after assertions in native test",
+    "fix": "remove permission fieldset wrappers; disable original controls individually; retain original SET direct-child layout and E2E assertions"
+  },
+  "localFollowup": {
+    "boundaryAndMountedClient": {
+      "pass": 11,
+      "fail": 0,
+      "skip": 0
+    },
+    "originalArchiveCardMounted": {
+      "pass": 4,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeInfrastructure": "unavailable locally; native receipt is from CI",
+    "latestRightsBatch": {
+      "pass": 28,
+      "fail": 0,
+      "skip": 0
+    },
+    "workSafeClientBuild": "PASS"
+  },
+  "realAccountGrants": 0,
+  "realModuleChanges": 0,
+  "hostedBusinessActions": 0,
+  "stockOrFinancialLabActions": 0,
+  "deployment": {
+    "revision": "4c05a9442d03941d35585a1e39a0aceef3dc01a1",
+    "renderId": "dep-dbjel48ae00c73e0kqa0",
+    "status": "live",
+    "finishedAt": "2026-11-01T07:32:43.15709Z",
+    "trigger": "api",
+    "initiatedByThisOwner": false,
+    "observedAt": "2026-11-01T09:44:38+02:00",
+    "health": {
+      "ok": true,
+      "revision": "4c05a9442d03941d35585a1e39a0aceef3dc01a1"
+    },
+    "priorGuardedSourceRelease": {
+      "revision": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b",
+      "ci": 41260513845,
+      "guard": 41261365197,
+      "job": 124715186597,
+      "renderId": "dep-dbj9d2ou01pc73eqp6vg",
+      "finishedAt": "2026-11-01T01:33:45.165289Z",
+      "sourceDiffToLive": "documentation/evidence/PDF only"
+    },
+    "assetProof": {
+      "bootstrap": "main--Q_6fgnJ.js",
+      "entry": "entry-D6nmC0za.js",
+      "permission": "inventoryPos",
+      "overlay": "PosInventoryOverlay-DCurUn_e.js",
+      "boundNamespace": true,
+      "lifecycleHeader": true,
+      "readOnlyStockNote": true
+    }
+  },
+  "operatorLabAcceptance": "OWNER_REPORTED_USER_PASS_NOT_INDEPENDENT_LAB",
+  "physicalTerminalAcceptance": "OWNER_REPORTED_USE; TERMINAL_AND_ACTION_MATRIX_NOT_INDEPENDENTLY_IDENTIFIED",
+  "finalSource": {
+    "head": "fb634f5a7a9363883570256e061bae81d6fee952",
+    "workflowRun": 41252087179,
+    "job": 124687731623,
+    "conclusion": "SUCCESS",
+    "serverPass": 5024,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "merge": "50146f3f094d846f52b2801f1e60de0332aaf1c4"
+  },
+  "previousHealthyRevision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+  "nextAction": "Bounded requirement accepted; no repeat test or business replay. Respond to separately identified new issues.",
+  "historicalCancelledMainCi": {
+    "id": 41253122609,
+    "conclusion": "CANCELLED",
+    "buildAndTestRan": false,
+    "reason": "pending main run replaced by later documentation main in concurrency queue",
+    "retry": "HTTP403 This workflow run cannot be retried"
+  },
+  "mainCi": {
+    "id": 41284858846,
+    "job": 124784210253,
+    "event": "workflow_dispatch",
+    "head": "4c05a9442d03941d35585a1e39a0aceef3dc01a1",
+    "conclusion": "SUCCESS",
+    "serverPass": 5050,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "userAcceptance": {
+    "recordedAt": "2026-11-01T10:56:21+02:00",
+    "source": "current owner conversation",
+    "quote": "ΝΑΙ ΕΙΝΑΙ ΟΚ ΤΟ ΔΟΚΙΜΑΣΑ ΣΤΗΝ ΔΙΑΔΟΧΟΥ",
+    "store": "Διαδόχου Παύλου",
+    "scope": "requested operator warehouse from POS, owner reports tested and OK",
+    "exactOperator": null,
+    "exactTerminal": null,
+    "physicalClientRevision": null,
+    "individualActions": null,
+    "stockAndFinancialBeforeAfter": "NOT_MEASURED",
+    "fullPhysicalPermissionMatrix": "NOT_TESTED",
+    "repeatRequested": false
+  }
+}

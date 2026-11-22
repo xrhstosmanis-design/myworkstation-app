@@ -1,9 +1,13 @@
+import AttendedRemoteController from "./AttendedRemoteController.jsx";
+import CashPaperReadingPanel from "../shared/CashPaperReadingPanel.jsx";
+import CashReconciliationPanel from "../shared/CashReconciliationPanel.jsx";
 import AiOwnerWalletAdmin from "./AiOwnerWalletAdmin.jsx";
 import StoreLifecyclePanel from "./StoreLifecyclePanel.jsx";
 import PlatformCompanyWorkspace from "./PlatformCompanyWorkspace.jsx";
 import CompanyIdentityEditor from "./CompanyIdentityEditor.jsx";
 import TerminalDeleteButton from "./TerminalDeleteButton.jsx";
-import CashReportPeriodFields from "./CashReportPeriodFields.jsx";
+import CashEmailPreviewDialog from "./CashEmailPreviewDialog.jsx";
+import {cashChatEvidenceLines} from "../../lib/cash-chat-evidence.js";
 import {cashReportPeriod,cashReportRowDay} from "../../lib/cash-report-period.js";
 import AutomaticReportSettingsManager from "./AutomaticReportSettingsManager.jsx";
 import ReportRecipientFields from "./ReportRecipientFields.jsx";
@@ -19,6 +23,7 @@ import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
 import OnlineStoreManager from "./OnlineStoreManager.jsx";
 import StoreLabelSettingsManager from "./StoreLabelSettingsManager.jsx";
+import PlatformProductionPrinterManager from "./PlatformProductionPrinterManager.jsx";
 import CustomerDemoCenter from "./CustomerDemoCenter.jsx";
 import VideoConnectionManager from "./VideoConnectionManager.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
@@ -126,7 +131,7 @@ async function request(path,options={}){
   return rawPlatformRequest(path,options);
 }
 async function rawPlatformRequest(path,options={}){
-  const {n40Scope,...fetchOptions}=options;
+  const {n40Scope,remoteStream,downloadBlob,...fetchOptions}=options;
   const trace=n40ReadHeaders(path,n40Scope,options.method||"GET");
   const token=localStorage.getItem("token");
   const response=await fetch(path,{
@@ -134,6 +139,8 @@ async function rawPlatformRequest(path,options={}){
     headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{}),...(trace?.headers||{})}
   });
   if(trace)n40PublishRead(path,n40Scope,trace.traceId,response.status);
+  if(remoteStream===true&&/^\/api\/remote-support\/controller\/[a-f0-9-]{36}\/stream$/.test(path)&&response.ok)return response.body;
+  if(downloadBlob===true&&response.ok)return response.blob();
   const text=await response.text();
   let data={};
   if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}
@@ -142,12 +149,13 @@ async function rawPlatformRequest(path,options={}){
 }
 
 export default function PlatformAdminApp(){
+  const [productionPrinterTarget,setProductionPrinterTarget]=useState(null);
   const [user,setUser]=useState(()=>{
     try{return JSON.parse(localStorage.getItem("platformUser")||"null")}catch{return null}
   });
   const [returnedTwin]=useState(()=>localStorage.getItem("supportContext")?null:readTwinReturn(sessionStorage,user?.id));
   useEffect(()=>{if(!localStorage.getItem("supportContext"))clearTwinReturn(sessionStorage)},[]);
-  const overviewLoadSequence=useRef(0);
+  const overviewLoadSequence=useRef(0), storePanelLoadSequence=useRef(0);
   const [data,setData]=useState(null);
   const [backupMonitor,setBackupMonitor]=useState(null);
   const [owners,setOwners]=useState([]);
@@ -172,8 +180,8 @@ export default function PlatformAdminApp(){
   const [accessMatrix,setAccessMatrix]=useState(null);
   const [recoveryWorkflow,setRecoveryWorkflow]=useState(null);
   const [cashReport,setCashReport]=useState(null);
-  const [cashReportDate,setCashReportDate]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens"}).format(new Date()));
-  const [cashPeriod,setCashPeriod]=useState("DAY");
+  const [cashEmailDraft,setCashEmailDraft]=useState(null);
+  const [cashEmailSending,setCashEmailSending]=useState(false);
   const [cashSessionId,setCashSessionId]=useState("");
   const [cashRangeFrom,setCashRangeFrom]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens"}).format(new Date()));
   const [cashRangeTo,setCashRangeTo]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens"}).format(new Date()));
@@ -191,7 +199,8 @@ export default function PlatformAdminApp(){
   const [terminalActivationNotice,setTerminalActivationNotice]=useState(null);
   const [onlineStoreManager,setOnlineStoreManager]=useState(null);
   const [videoConnectionManager,setVideoConnectionManager]=useState(null);
-  const [cashStoreId,setCashStoreId]=useState("");
+  const [cashStoreIds,setCashStoreIds]=useState([]);
+  const cashStoreId=cashStoreIds.length===1?cashStoreIds[0]:"";
   const [deleteCompany,setDeleteCompany]=useState(null);
   const [fiscalIntegrations,setFiscalIntegrations]=useState(null);
   const [showSupplierSettlementReview,setShowSupplierSettlementReview]=useState(false);
@@ -209,13 +218,13 @@ export default function PlatformAdminApp(){
   const [aiTwinSelection,setAiTwinSelection]=useState(returnedTwin);
   const [aiTwinOrigin,setAiTwinOrigin]=useState(null);
   const [aiTwinNavigationError,setAiTwinNavigationError]=useState("");
-  const aiTwinOriginRef=useRef(null),dataRef=useRef(data),cashLoadSequence=useRef(0);
+  const aiTwinOriginRef=useRef(null),dataRef=useRef(data),cashLoadSequence=useRef(0),cashEmailSendInFlight=useRef(false);
   dataRef.current=data;
   const currentTwinOrigin=origin=>Boolean(origin&&aiTwinOriginRef.current===origin&&resolveTwinContext(dataRef.current?.companies,origin));
   const twinRequest=useMemo(()=>aiTwinOrigin?guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:aiTwinOrigin}),()=>currentTwinOrigin(aiTwinOrigin)):request,[aiTwinOrigin]);
   const scopeFor=destination=>aiTwinOrigin?.destination===destination?aiTwinOrigin:null;
   const requestFor=destination=>scopeFor(destination)?twinRequest:request;
-  const clearTwinOrigin=()=>{aiTwinOriginRef.current=null;setAiTwinOrigin(null);cashLoadSequence.current++};
+  const clearTwinOrigin=()=>{aiTwinOriginRef.current=null;setAiTwinOrigin(null);cashLoadSequence.current++;setCashEmailDraft(null)};
   const returnFromTwin=destination=>{
     if(aiTwinOriginRef.current?.destination!==destination)return;
     clearTwinOrigin();setBusy("");setShowAiCommandCenter(true);
@@ -234,7 +243,7 @@ export default function PlatformAdminApp(){
     setAiTwinNavigationError("Το κατάστημα δεν είναι πλέον διαθέσιμο. Επίλεξε ξανά κατάστημα στο Full Digital Twin.");setShowAiCommandCenter(true);
   },[data,aiTwinOrigin]);
   const routingFormValues=useMemo(()=>deviceRoutingFormValues(terminalManager?.routing,routingTerminalPos),[terminalManager?.routing,routingTerminalPos]);
-  const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName,routingFormValues.storeTransactionMode,routingFormValues.deliveryTransactionMode].join("|");
+  const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName,routingFormValues.storeTransactionMode,routingFormValues.deliveryTransactionMode,routingFormValues.fiscalActive,routingFormValues.storeEftposActive,routingFormValues.deliveryEftposActive].join("|");
 
   useEffect(()=>{
     if(!readiness)return undefined;
@@ -244,7 +253,8 @@ export default function PlatformAdminApp(){
   },[readiness]);
 
   const clearSession=(clearError=true)=>{
-    overviewLoadSequence.current++;setLoading(false);
+    overviewLoadSequence.current++;cancelStorePanelLoad();setLoading(false);
+    setStoreCompany(null);setTerminalManager(null);setDeviceOperationsManager(null);setAccessMatrix(null);setReadiness(null);setShowInstallationCenter(false);
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
     setShowAssistantPage(false);setAssistantAllScope(false);setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);clearTwinOrigin();clearTwinReturn(sessionStorage);setShowAiCommandCenter(false);setCashReport(null);setAnalyticsResult(null);setShowSupplierSettlementReview(false);setShowBankLedgerReview(false);setVideoConnectionManager(null);setWorkforceTarget(null);if(clearError)setError("");
   };
@@ -382,17 +392,32 @@ export default function PlatformAdminApp(){
     }catch(err){if(twinOrigin)throw err;setError(err.message);setBusy("")}
   };
 
-  const checkReadiness=async(company,store)=>{
-    setBusy(`readiness:${store.id}`);setError("");
-    try{setReadiness(await request(`/api/platform/companies/${company.id}/stores/${store.id}/pilot-readiness`));setRecoveryWorkflow(null)}
-    catch(err){setError(err.message)}finally{setBusy("")}
+  const cancelStorePanelLoad=()=>{
+    storePanelLoadSequence.current++;
+    setBusy(value=>/^(terminals|readiness|access-matrix):/.test(value)?"":value);
   };
-
-  const checkAccessMatrix=async(company,store)=>{
-    setBusy(`access-matrix:${store.id}`);setError("");
-    try{setAccessMatrix(await request(`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/access-matrix`))}
-    catch(err){setError(err.message)}finally{setBusy("")}
+  const loadStorePanel=async(kind,company,store,loadPanel,showPanel)=>{
+    const sequence=++storePanelLoadSequence.current;
+    const {key:context}=readBackofficeContext(localStorage);
+    const current=()=>sequence===storePanelLoadSequence.current&&readBackofficeContext(localStorage).key===context;
+    const busyKey=`${kind}:${store.id}`;
+    setBusy(busyKey);setError("");
+    try{
+      const result=await loadPanel();
+      if(!current())return;
+      const currentCompany=dataRef.current?.companies?.find(item=>item.id===company.id);
+      const currentStore=currentCompany?.stores?.find(item=>item.id===store.id);
+      if(currentStore)showPanel(result,currentCompany,currentStore);
+    }catch(err){if(current())setError(err.message)}
+    finally{if(current())setBusy(value=>value===busyKey?"":value)}
   };
+  const checkReadiness=(company,store)=>loadStorePanel("readiness",company,store,
+    ()=>request(`/api/platform/companies/${company.id}/stores/${store.id}/pilot-readiness`),
+    result=>{setReadiness(result);setRecoveryWorkflow(null)}
+  );
+  const checkAccessMatrix=(company,store)=>loadStorePanel("access-matrix",company,store,
+    ()=>request(`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/access-matrix`),setAccessMatrix
+  );
 
   const savePilotProfile=async event=>{
     event.preventDefault();setBusy("pilot-profile");setError("");setMessage("");
@@ -460,11 +485,18 @@ export default function PlatformAdminApp(){
     setMessage(`Η συντόμευση Store Mode για το «${store.name}» δημιουργήθηκε.`);
   };
 
-  const openTerminals=async(company,store,openOperations=false)=>{
-    setBusy(`terminals:${store.id}`);setError("");
-    try{const [result,routing]=await Promise.all([request(`/api/platform/companies/${company.id}/stores/${store.id}/installation-terminals`),request(`/api/platform/companies/${company.id}/stores/${store.id}/device-routing`)]);const manager={company,store,terminals:result.terminals,routing,activationUrl:""};setRoutingTerminalPos("");setOpenDeviceCenter(openOperations);setShowInstallationCenter(false);if(openOperations){setDeviceOperationsManager(manager);setTerminalManager(null)}else{setDeviceOperationsManager(null);setTerminalManager(manager)}}
-    catch(err){setError(err.message)}finally{setBusy("")}
-  };
+  const openTerminals=(company,store,openOperations=false)=>loadStorePanel("terminals",company,store,
+    ()=>Promise.all([
+      request(`/api/platform/companies/${company.id}/stores/${store.id}/installation-terminals`),
+      request(`/api/platform/companies/${company.id}/stores/${store.id}/device-routing`)
+    ]),
+    ([result,routing],currentCompany,currentStore)=>{
+      const manager={company:currentCompany,store:currentStore,terminals:result.terminals,routing,activationUrl:""};
+      setRoutingTerminalPos("");setOpenDeviceCenter(openOperations);setShowInstallationCenter(false);
+      setDeviceOperationsManager(openOperations?manager:null);
+      setTerminalManager(openOperations?null:manager);
+    }
+  );
   const openFiscalIntegrations=async(company,store)=>{
     setBusy(`integrations:${store.id}`);setError("");
     try{const result=await request(`/api/platform/companies/${company.id}/stores/${store.id}/integrations`);setFiscalIntegrations({company,store,integrations:result.integrations||[]})}catch(err){setError(err.message)}finally{setBusy("")}
@@ -475,7 +507,7 @@ export default function PlatformAdminApp(){
   };
   const refreshTerminals=async(current=terminalManager)=>{
     const [result,routing]=await Promise.all([request(`/api/platform/companies/${current.company.id}/stores/${current.store.id}/installation-terminals`),request(`/api/platform/companies/${current.company.id}/stores/${current.store.id}/device-routing`)]);
-    setTerminalManager(value=>({...value,terminals:result.terminals,routing}));
+    setTerminalManager(value=>value?.company.id===current.company.id&&value.store.id===current.store.id?{...value,terminals:result.terminals,routing}:value);
   };
   const createTerminal=async event=>{
     event.preventDefault();setBusy("terminal-create");setError("");
@@ -521,28 +553,28 @@ export default function PlatformAdminApp(){
     return (data?.companies||[]).filter(row=>row.plan==="TRIAL"&&row.trialEndsAt&&new Date(row.trialEndsAt).getTime()-now<=week).length;
   },[data]);
 
-  const loadCashReport=async(date=cashReportDate,twinOrigin=aiTwinOriginRef.current?.destination==="cash"?aiTwinOriginRef.current:null)=>{
+  const loadCashReport=async(date=cashRangeFrom,twinOrigin=aiTwinOriginRef.current?.destination==="cash"?aiTwinOriginRef.current:null)=>{
     const sequence=++cashLoadSequence.current;
     setBusy("cash-report");setError("");
     try{
       const api=twinOrigin?guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:twinOrigin}),()=>currentTwinOrigin(twinOrigin)):request;
-      const range=cashReportPeriod({period:cashPeriod,date,from:cashRangeFrom,to:cashRangeTo});
-      const filters=withTwinScope({...range,...(cashSessionId?{sessionId:cashSessionId}:{}),operator:cashOperator.trim(),date,fromTime:cashFromTime,toTime:cashToTime,...(cashStoreId?{storeId:cashStoreId}:{})},twinOrigin);
+      const range=cashReportPeriod({period:"CUSTOM",date,from:cashRangeFrom,to:cashRangeTo});
+      const filters=withTwinScope({...range,dateBasis:"SHIFT_OPENED_CALENDAR_DAY",...(!twinOrigin&&cashStoreIds.length?{storeIds:cashStoreIds.join(",")} : {}),...(cashSessionId?{sessionId:cashSessionId}:{}),operator:cashOperator.trim(),date,fromTime:cashFromTime,toTime:cashToTime},twinOrigin);
       const result=await api(`/api/platform/cash-control/daily?${new URLSearchParams(filters)}`);
       if(sequence!==cashLoadSequence.current)return false;
       setCashReport(result);return true;
     }catch(err){if(twinOrigin)throw err;if(sequence===cashLoadSequence.current)setError(err.message);return false}
     finally{if(sequence===cashLoadSequence.current)setBusy("")}
   };
-  useEffect(()=>{cashLoadSequence.current++;},[cashPeriod,cashReportDate,cashRangeFrom,cashRangeTo,cashFromTime,cashToTime,cashSessionId,cashOperator]);
+  useEffect(()=>{cashLoadSequence.current++;setCashEmailDraft(null);setBusy(value=>value==="cash-report"?"":value)},[cashStoreIds,cashRangeFrom,cashRangeTo,cashFromTime,cashToTime,cashSessionId,cashOperator]);
   const cashReportMatchesSelection=()=>{
     if(!cashReport)return false;
-    try{const range=cashReportPeriod({period:cashPeriod,date:cashReportDate,from:cashRangeFrom,to:cashRangeTo});
-      return range.from===cashReport.from&&range.to===cashReport.to&&cashReport.fromTime===cashFromTime&&cashReport.toTime===cashToTime&&(cashReport.sessionId||"")===cashSessionId&&(cashReport.operator||"")===cashOperator.trim()&&(cashReport.storeId||"")===(scopeFor("cash")?.storeId||cashStoreId||"");
+    try{const range=cashReportPeriod({period:"CUSTOM",date:cashRangeFrom,from:cashRangeFrom,to:cashRangeTo});
+      return range.from===cashReport.from&&range.to===cashReport.to&&cashReport.fromTime===cashFromTime&&cashReport.toTime===cashToTime&&(cashReport.sessionId||"")===cashSessionId&&(cashReport.operator||"")===cashOperator.trim()&&(cashReport.storeId||"")===(scopeFor("cash")?.storeId||"")&&(cashReport.storeIds||[]).join(",")===(scopeFor("cash")?"":cashStoreIds.join(","));
     }catch{return false;}
   };
-  const refreshCashReport=()=>loadCashReport(cashReportDate).catch(err=>setError(err.message));
-  const closeCashReport=()=>{cashLoadSequence.current++;setCashReport(null);returnFromTwin("cash")};
+  const refreshCashReport=()=>loadCashReport(cashRangeFrom).catch(err=>setError(err.message));
+  const closeCashReport=()=>{cashLoadSequence.current++;setCashEmailDraft(null);setCashReport(null);returnFromTwin("cash")};
   const openTwinDestination=async(destination,selection)=>{
     if(!TWIN_DESTINATIONS.has(destination)||aiTwinOriginRef.current)return;
     const context=resolveTwinContext(dataRef.current?.companies,selection);
@@ -551,7 +583,7 @@ export default function PlatformAdminApp(){
     aiTwinOriginRef.current=origin;setAiTwinOrigin(origin);setAiTwinSelection(selection);setAiTwinNavigationError("");
     const {company,store}=context,api=guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:origin}),()=>currentTwinOrigin(origin));
     try{
-      if(destination==="cash"){if(!await loadCashReport(cashReportDate,origin))return}
+      if(destination==="cash"){if(!await loadCashReport(cashRangeFrom,origin))return}
       else if(destination==="video"){
         setBusy(`video:${store.id}`);
         const result=await api(`/api/platform/companies/${company.id}/stores/${store.id}/video-connection`);
@@ -569,39 +601,56 @@ export default function PlatformAdminApp(){
     }
   };
 
-  const previewAndSendCashReport=async store=>{
-    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
-    if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το υπάρχον email καλύπτει μόνο πλήρη ημερολογιακή ημέρα. Η αποστολή της επιλεγμένης περιόδου εκκρεμεί.");
-    setBusy(`cash-email:${store.storeId}`);setError("");setMessage("");
+  const openCashEmailPreview=async(store,mode)=>{
+    if(cashEmailSendInFlight.current)return;
+    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Αναζήτηση πριν από εξαγωγή ή αποστολή.");
+    if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το email καλύπτει μόνο πλήρη ημερολογιακή ημέρα έναρξης.");
+    const sequence=++cashLoadSequence.current,date=cashReport.from||cashReport.date,api=requestFor("cash"),origin=scopeFor("cash"),context=readBackofficeContext(localStorage).key;
+    const current=()=>sequence===cashLoadSequence.current&&readBackofficeContext(localStorage).key===context&&(origin?currentTwinOrigin(origin):aiTwinOriginRef.current?.destination!=="cash");
+    const key="cash-"+(mode==="owners"?"email":"preview")+":"+store.storeId;
+    setCashEmailDraft(null);setBusy(key);setError("");setMessage("");
     try{
-      const preview=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/email-preview?date=${cashReport.from||cashReport.date}`);
-      if(!preview.rows.length)throw new Error("Δεν υπάρχουν κλεισμένες βάρδιες για αποστολή.");
-      if(!preview.readyToSend)throw new Error("Υπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση. Κάνε επανέλεγχο πριν την αποστολή στους ιδιοκτήτες.");
-      const recipients=preview.recipients.join(", ")||"Δεν έχουν οριστεί παραλήπτες";
-      const comment=window.prompt(`ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΑΝΑΦΟΡΑΣ\n${preview.storeName} · ${preview.date}\nΒάρδιες: ${preview.rows.length}\nΠαραλήπτες: ${recipients}\n\nΓράψε προαιρετικό σχόλιο. Πατώντας OK θα σταλεί το email.`,"");
-      if(comment===null)return;
-      const sent=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/send-email`,{method:"POST",body:JSON.stringify({date:cashReport.from||cashReport.date,comment})});
-      setMessage(`Η αναφορά του ${preview.storeName} στάλθηκε σε: ${sent.recipients.join(", ")}.`);
-    }catch(err){setError(err.message)}finally{setBusy("")}
+      const preview=await api("/api/platform/cash-control/stores/"+store.storeId+"/email-preview?date="+date+"&dateBasis=SHIFT_OPENED_CALENDAR_DAY"+(mode==="self"?"&mode=self":""));
+      if(!current())return;
+      if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/)||!Array.isArray(preview.rows)||!Array.isArray(preview.recipients)||preview.recipients.some(recipient=>typeof recipient!=="string"))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
+      if(mode==="self"&&(typeof preview.personalRecipient!=="string"||!preview.personalRecipient))throw new Error("Δεν βρέθηκε παραλήπτης προσωπικής δοκιμής.");
+      const visibleSessions=new Set(cashReport.rows.filter(row=>row.storeId===store.storeId).map(row=>row.sessionId));
+      if(preview.rows.length!==visibleSessions.size||preview.rows.some(row=>!visibleSessions.has(row.sessionId))){
+        throw new Error("Η αναφορά email περιλαμβάνει διαφορετικές βάρδιες από την αναζήτηση. Ανανέωσε τα αποτελέσματα.");
+      }
+      setCashEmailDraft({...preview,mode,sequence,api,current,report:cashReport});
+    }catch(err){if(current())setError(err.message)}finally{if(current())setBusy(value=>value===key?"":value)}
   };
+  const previewAndSendCashReport=store=>openCashEmailPreview(store,"owners");
+  const sendCashPreviewToMe=store=>openCashEmailPreview(store,"self");
+  const cancelCashEmailPreview=()=>{if(cashEmailSendInFlight.current)return;cashLoadSequence.current++;setCashEmailDraft(null)};
 
-  const sendCashPreviewToMe=async store=>{
-    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
-    if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το υπάρχον email καλύπτει μόνο πλήρη ημερολογιακή ημέρα. Η αποστολή της επιλεγμένης περιόδου εκκρεμεί.");
-    const key=`cash-preview:${store.storeId}`;setBusy(key);setError("");setMessage("");
+  const confirmCashEmail=async comment=>{
+    const draft=cashEmailDraft;
+    if(!draft||cashEmailSendInFlight.current||draft.attempted)return;
+    if(!draft.current()||draft.report!==cashReport||!cashReportMatchesSelection()||!cashReport||cashReport.from!==draft.date||cashReport.to!==draft.date||!(cashReport.stores||[]).some(store=>store.storeId===draft.storeId)){
+      setCashEmailDraft(null);setError("Τα δεδομένα ή τα φίλτρα άλλαξαν. Άνοιξε νέα προεπισκόπηση.");return;
+    }
+    if(draft.mode==="owners"&&(draft.readyToSend!==true||!draft.rows.length||!draft.recipients.length))return;
+    cashEmailSendInFlight.current=true;draft.attempted=true;setCashEmailSending(true);
+    const key="cash-email-send:"+draft.storeId;
+    setBusy(key);setError("");setMessage("");
     try{
-      const comment=window.prompt(`Δοκιμαστική αναφορά στο δικό σου email\n${store.storeName} · ${cashReportDate}\n\nΓράψε προαιρετικό σχόλιο.`,"");if(comment===null)return;
-      const sent=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/send-preview`,{method:"POST",body:JSON.stringify({date:cashReport.from||cashReport.date,comment})});
-      setMessage(`Η δοκιμαστική αναφορά στάλθηκε μόνο στο ${sent.recipients.join(", ")}.`);
-    }catch(err){setError(err.message)}finally{setBusy("")}
+      const route=draft.mode==="owners"?"send-email":"send-preview";
+      const sent=await draft.api("/api/platform/cash-control/stores/"+draft.storeId+"/"+route,{method:"POST",body:JSON.stringify({date:draft.date,dateBasis:"SHIFT_OPENED_CALENDAR_DAY",comment,reportHash:draft.reportHash,generation:draft.generation,expectedRecipient:draft.mode==="self"?draft.personalRecipient:undefined})});
+      if(!draft.current())return;
+      setCashEmailDraft(null);
+      setMessage(draft.mode==="owners"?"Η αναφορά του "+draft.storeName+" στάλθηκε σε: "+sent.recipients.join(", ")+".":"Η δοκιμαστική αναφορά στάλθηκε μόνο στο "+sent.recipients.join(", ")+".");
+    }catch(err){if(draft.current()){setCashEmailDraft(null);setError(err.message)}}
+    finally{cashEmailSendInFlight.current=false;setCashEmailSending(false);setBusy(value=>value===key?"":value)}
   };
 
   const downloadShortages=async store=>{
-    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
+    if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Αναζήτηση πριν από εξαγωγή ή αποστολή.");
     const key=`cash-export:${store?.storeId||"all"}`;setBusy(key);setError("");
     try{
       if(cashReport?.sessionId)throw new Error("Το Excel ελλειμμάτων αφορά ολόκληρη περίοδο, όχι μεμονωμένη βάρδια.");
-      const query=new URLSearchParams({from:cashReport.from||cashReport.date,to:cashReport.to||cashReport.date,fromTime:cashReport.fromTime,toTime:cashReport.toTime,...(scopeFor("cash")?{companyId:scopeFor("cash").companyId,storeId:scopeFor("cash").storeId}:store?{storeId:store.storeId}:cashReport.storeId?{storeId:cashReport.storeId}:{}),...(cashReport.operator?{operator:cashReport.operator}:{})});
+      const query=new URLSearchParams({from:cashReport.from||cashReport.date,to:cashReport.to||cashReport.date,fromTime:cashReport.fromTime,toTime:cashReport.toTime,dateBasis:cashReport.dateBasis,...(scopeFor("cash")?{companyId:scopeFor("cash").companyId,storeId:scopeFor("cash").storeId}:store?{storeId:store.storeId}:cashReport.storeIds?.length?{storeIds:cashReport.storeIds.join(",")}:{}),...(cashReport.operator?{operator:cashReport.operator}:{})});
       const result=await requestFor("cash")(`/api/platform/cash-control/shortages?${query}`);
       const cell=value=>`"${String(value??"").replaceAll('"','""')}"`;
       const lines=[["Ημερομηνία","Άνοιγμα","Κλείσιμο","Εταιρεία","Κατάστημα","POS","Βάρδια","Χειριστής","Έλλειμμα","Διαφορά POS–EFTPOS"],...result.rows.map(row=>[row.date,athensTime(row.openedAt),athensTime(row.closedAt),row.companyName,row.storeName,row.terminalPos||"MAIN",row.shiftLabel,row.openedByName||"—",row.shortage.toFixed(2),row.cardVariance.toFixed(2)])];
@@ -613,6 +662,8 @@ export default function PlatformAdminApp(){
 
   if(!user)return <PlatformSecureLogin onLogin={setUser}/>;
 
+  const remoteSupportId=new URLSearchParams(window.location.search).get("remoteSupport");
+  if(remoteSupportId&&/^[a-f0-9-]{36}$/.test(remoteSupportId))return <AttendedRemoteController id={remoteSupportId} request={request}/>;
   return <div className="platform-shell platform-organized">
     <header className="platform-header">
       <div className="platform-brand"><div className="platform-logo">MW</div><div><b>MyWorkStation Platform Admin</b><span>Κεντρική εμπορική διαχείριση</span></div></div>
@@ -644,7 +695,7 @@ export default function PlatformAdminApp(){
         <article><UsersRound/><div><span>Δοκιμές</span><strong>{data?.stats?.trialCompanies||0}</strong><small>{expiringTrials} λήγουν σύντομα</small></div></article>
         <article className={`backup-monitor-stat ${backupMonitor?.configured?(backupMonitor?.status?.toLowerCase()||"pending"):"pending"}`} data-backup-monitoring="true"><DatabaseBackup/><div><span>Backup ανά 3 ώρες</span><strong>{!backupMonitor?.configured?"ΡΥΘΜΙΣΗ":backupMonitor?.status==="OK"?"OK":backupMonitor?.status==="FAILED"?"FAIL":backupMonitor?.status==="OVERDUE"?"ΑΡΓΕΙ":"—"}</strong><small>{backupMonitor?.lastSuccess?`Τελευταίο ${new Date(backupMonitor.lastSuccess.completedAt||backupMonitor.lastSuccess.startedAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}`:backupMonitor?.configured?"Αναμονή πρώτου cron run":"Απαιτείται εξωτερική ρύθμιση"}</small></div></article>
       </div>
-      <div hidden={homeSection!=="customers"}><PlatformCompanyWorkspace companies={data?.companies||[]} owners={owners} loading={loading} onNewOwnerCompany={setNewOwnerCompany} renderManagement={company=><>
+      <div hidden={homeSection!=="customers"}><PlatformCompanyWorkspace companies={data?.companies||[]} owners={owners} loading={loading} onNewOwnerCompany={setNewOwnerCompany} onCompanySelectionChange={cancelStorePanelLoad} renderManagement={company=><>
             <p className="platform-detail-owner"><b>{company.owner?.fullName||"Δεν έχει οριστεί ιδιοκτήτης"}</b><br/>{company.owner?.email||"—"}<br/><small>{company.city||"Χωρίς πόλη"} · {company.userCount??0} χρήστες · {company.employeeCount??0} εργαζόμενοι<br/>Δημιουργήθηκε {when(company.createdAt)}</small></p>
             <div className="platform-management-primary"><button className="secondary" onClick={()=>setCompanyIdentityEdit(company)}><Building2/>Στοιχεία εταιρείας</button><button className="secondary" onClick={()=>setStoreCompany(company)}><Store/>Καταστήματα</button><button className="secondary" onClick={()=>company.stores.length===1?openTerminals(company,company.stores[0]):setStoreCompany(company)} disabled={Boolean(busy&&company.stores.some(store=>busy===`terminals:${store.id}`))}><Monitor/>Τερματικά</button></div>
             <details className="platform-management-more"><summary>Συνδρομή και πρόσθετες ενέργειες</summary>
@@ -666,21 +717,47 @@ export default function PlatformAdminApp(){
     {cashReport&&<div className="platform-modal"><section className="platform-security-dialog cash-report-dialog">
       <button type="button" className="modal-close" onClick={closeCashReport}><X/></button>
       <h2>Αυτόματος Έλεγχος Ταμείων</h2><p>Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια</p>
-      <div className="cash-report-filters">{scopeFor("cash")?<label>Κατάστημα<select value={scopeFor("cash").storeId} disabled><option value={scopeFor("cash").storeId}>{twinContext?.store.name||"Μη διαθέσιμο κατάστημα"}</option></select></label>:<label>Κατάστημα<select value={cashStoreId} onChange={event=>{cashLoadSequence.current++;setCashStoreId(event.target.value);setCashSessionId("")}}><option value="">Όλα τα καταστήματα</option>{(data?.companies||[]).flatMap(company=>company.stores.map(store=><option key={store.id} value={store.id}>{store.name}</option>))}</select></label>}<CashReportPeriodFields period={cashPeriod} date={cashReportDate} from={cashRangeFrom} to={cashRangeTo} onPeriod={value=>{setCashPeriod(value);setCashSessionId("")}} onDate={value=>{setCashReportDate(value);setCashSessionId("")}} onFrom={setCashRangeFrom} onTo={setCashRangeTo}/><label>Ώρα από<input type="time" value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label><label>Ώρα έως<input type="time" value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label><button onClick={refreshCashReport} disabled={busy==="cash-report"}><RefreshCw/>Εμφάνιση</button><button type="button" className="secondary" disabled={!cashReportMatchesSelection()} onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><label>Βάρδια<select value={cashSessionId} onChange={event=>setCashSessionId(event.target.value)}><option value="">Όλες οι βάρδιες περιόδου</option>{cashReport.rows.map(row=><option key={row.sessionId} value={row.sessionId}>{row.openedByName} · {cashReportRowDay(row.closedAt)} · {row.terminalPos}</option>)}</select></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label><button type="button" className="secondary" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":scopeFor("cash")?"Excel ελλειμμάτων καταστήματος":"Excel ελλειμμάτων όλων"}</button></div>
-      <p role="status">{!cashReportMatchesSelection()&&"Τα φίλτρα άλλαξαν — πάτησε Εμφάνιση. "}Εμφανιζόμενη περίοδος: {cashReport.from||cashReport.date} έως {cashReport.to||cashReport.date} · {cashReport.fromTime}–{cashReport.toTime}. Μετά από αλλαγή φίλτρων πάτησε Εμφάνιση.</p><div className="cash-report-totals"><span>Βάρδιες <b>{cashReport.totals.shifts}</b></span><span>Συνολικό έλλειμμα <b>{cashReport.totals.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b>{cashReport.totals.surplus.toFixed(2)} €</b></span><span>Καθαρή διαφορά <b className={Math.abs(cashReport.totals.variance)>.009?"bad":"ok"}>{cashReport.totals.variance.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{cashReport.totals.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{cashReport.totals.expensesWithoutDocument}</b></span></div>
-      <div className="cash-store-summaries">{(cashReport.stores||[]).map(store=><article key={store.storeId}><small>{store.companyName}</small><h3>{store.storeName}</h3><span>Βάρδιες <b>{store.shifts}</b></span><span>Έλλειμμα <b className="bad">{store.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b className="ok">{store.surplus.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{store.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{store.expensesWithoutDocument}</b></span><button type="button" className="secondary" onClick={()=>sendCashPreviewToMe(store)} disabled={busy===`cash-preview:${store.storeId}`}><Send/>{busy===`cash-preview:${store.storeId}`?"Αποστολή…":"Δοκιμή στο email μου"}</button><button type="button" onClick={()=>previewAndSendCashReport(store)} disabled={busy===`cash-email:${store.storeId}`}><Send/>{busy===`cash-email:${store.storeId}`?"Αποστολή…":"Προεπισκόπηση & email ιδιοκτητών"}</button><button type="button" className="secondary" onClick={()=>downloadShortages(store)} disabled={busy===`cash-export:${store.storeId}`}><Download/>{busy===`cash-export:${store.storeId}`?"Δημιουργία…":"Excel ελλειμμάτων"}</button></article>)}</div>
+      <form className="cash-report-search" onSubmit={event=>{event.preventDefault();refreshCashReport()}}>
+        {scopeFor("cash")?<p>Κατάστημα: {twinContext?.store.name||"Μη διαθέσιμο κατάστημα"}</p>:<details>
+          <summary>{cashStoreIds.length?`Καταστήματα (${cashStoreIds.length})`:"Όλα τα καταστήματα"}</summary>
+          <div className="cash-report-stores">
+            <button type="button" className="secondary" onClick={()=>{setCashStoreIds([]);setCashSessionId("")}}>Όλα τα καταστήματα</button>
+            {(data?.companies||[]).flatMap(company=>company.stores.map(store=><label key={store.id}>
+              <input type="checkbox" checked={cashStoreIds.includes(store.id)} onChange={event=>{
+                const checked=event.target.checked;
+                setCashStoreIds(ids=>checked?[...ids,store.id]:ids.filter(id=>id!==store.id));
+                setCashSessionId("");
+              }}/>{store.name}
+            </label>))}
+          </div>
+        </details>}
+        <div className="cash-report-filters">
+          <label>Ημερομηνία από<input type="date" required value={cashRangeFrom} onChange={event=>{setCashRangeFrom(event.target.value);setCashSessionId("")}}/></label>
+          <label>Ημερομηνία έως<input type="date" required value={cashRangeTo} onChange={event=>{setCashRangeTo(event.target.value);setCashSessionId("")}}/></label>
+          <label>Ώρα από<input type="time" required value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label>
+          <label>Ώρα έως<input type="time" required value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label>
+          <button type="submit" disabled={busy==="cash-report"}><RefreshCw/>Αναζήτηση</button>
+        </div>
+        <details><summary>Περισσότερα φίλτρα</summary><div className="cash-report-filters"><label>Βάρδια<select value={cashSessionId} onChange={event=>setCashSessionId(event.target.value)}><option value="">Όλες οι βάρδιες περιόδου</option>{cashReport.rows.map(row=><option key={row.sessionId} value={row.sessionId}>{row.openedByName} · {cashReportRowDay(row.openedAt)} · {row.terminalPos}</option>)}</select></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label></div></details>
+      </form>
+      <div className="cash-report-filters"><button type="button" className="secondary" disabled={!cashReportMatchesSelection()} onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><button type="button" className="secondary" aria-label="Αρχικά ελλείμματα περιόδου (CSV)" title="Αρχικές διαφορές πριν από τους επανυπολογισμούς (CSV)" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":scopeFor("cash")?"Excel ελλειμμάτων καταστήματος":"Excel ελλειμμάτων όλων"}</button></div>
+      <p role="status">{!cashReportMatchesSelection()&&"Τα φίλτρα άλλαξαν — πάτησε Αναζήτηση. "}Εμφανιζόμενη περίοδος: {cashReport.from||cashReport.date} έως {cashReport.to||cashReport.date} · {cashReport.fromTime}–{cashReport.toTime}. Βάσει έναρξης βάρδιας.</p><div className="cash-report-totals"><span>Βάρδιες <b>{cashReport.totals.shifts}</b></span><span>Συνολικό έλλειμμα <b>{cashReport.totals.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b>{cashReport.totals.surplus.toFixed(2)} €</b></span><span>Καθαρή διαφορά <b className={Math.abs(cashReport.totals.variance)>.009?"bad":"ok"}>{cashReport.totals.variance.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{cashReport.totals.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{cashReport.totals.expensesWithoutDocument}</b></span></div>
+      {(scopeFor("cash")?scopeFor("cash").storeId:cashStoreId)&&<CashPaperReadingPanel api={requestFor("cash")} storeId={scopeFor("cash")?scopeFor("cash").storeId:cashStoreId}/>}
+      {(scopeFor("cash")?scopeFor("cash").storeId:cashStoreId)&&<CashReconciliationPanel api={requestFor("cash")} storeId={scopeFor("cash")?scopeFor("cash").storeId:cashStoreId} from={cashReport.from||cashReport.date} to={cashReport.to||cashReport.date}/>}
+      <div className="cash-store-summaries">{(cashReport.stores||[]).map(store=><article key={store.storeId}><small>{store.companyName}</small><h3>{store.storeName}</h3><span>Βάρδιες <b>{store.shifts}</b></span><span>Έλλειμμα <b className="bad">{store.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b className="ok">{store.surplus.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{store.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{store.expensesWithoutDocument}</b></span><button type="button" className="secondary" onClick={()=>sendCashPreviewToMe(store)} disabled={busy===`cash-preview:${store.storeId}`}><Send/>{busy===`cash-preview:${store.storeId}`?"Αποστολή…":"Δοκιμή στο email μου"}</button><button type="button" onClick={()=>previewAndSendCashReport(store)} disabled={busy===`cash-email:${store.storeId}`}><Send/>{busy===`cash-email:${store.storeId}`?"Αποστολή…":"Προεπισκόπηση & email ιδιοκτητών"}</button><button type="button" className="secondary" aria-label="Αρχικά ελλείμματα καταστήματος (CSV)" title="Αρχικές διαφορές πριν από τους επανυπολογισμούς (CSV)" onClick={()=>downloadShortages(store)} disabled={busy===`cash-export:${store.storeId}`}><Download/>{busy===`cash-export:${store.storeId}`?"Δημιουργία…":"Excel ελλειμμάτων"}</button></article>)}</div>
       {cashReport.rows.length>0&&<section className="site-style-cash-reports">{(cashReport.stores||[]).map(store=>{const rows=cashReport.rows.filter(row=>row.storeId===store.storeId);const suspicious=rows.flatMap(row=>(row.investigation?.findings||[]).map(finding=>({row,finding})));const finalText=store.variance<-.009?`Έλλειμμα ${cashMoney(Math.abs(store.variance))}`:store.variance>.009?`Πλεόνασμα ${cashMoney(store.variance)}`:"Χωρίς διαφορά";return <article className="site-style-store-report" key={`site-report:${store.storeId}`}>
         <div className="site-result-head"><div><span className="result-ok">✓</span><div><h3>{rows.every(row=>row.investigation?.completed===true)?"Ο έλεγχος των βαρδιών ολοκληρώθηκε":"Προσωρινό αποτέλεσμα — εκκρεμούν έλεγχοι"}</h3><p>{store.storeName} · αναλύθηκαν {rows.length} βάρδιες</p></div></div><span className="badge positive">Πραγματική ανάλυση</span></div>
-        <div className="site-shift-table"><table><thead><tr><th>Ημερομηνία</th><th>Όνομα</th><th>Ώρες</th><th>Διαφορά</th><th>POS / EFTPOS</th><th>Αποτέλεσμα</th></tr></thead><tbody>{rows.map(row=>{const report=cashWrittenReport(row);return <tr className={report.alert?"sos-table-row":""} key={`site-row:${row.sessionId}`}><td>{cashReportDateLabel(cashReportRowDay(row.closedAt))}</td><td><strong>{row.openedByName||"Χωρίς όνομα"}</strong></td><td>{athensTime(row.openedAt)}–{athensTime(row.closedAt)}<small>{row.shiftLabel||"Βάρδια"} · {row.terminalPos||"MAIN"}</small></td><td className={row.variance<-.009?"negative":row.variance>.009?"positive":""}>{cashMoney(row.variance)}</td><td>{cashMoney(row.cardVariance)}</td><td>{report.alert&&<span className="sos-badge">SOS</span>}{cashShiftResult(row)}</td></tr>})}</tbody></table></div>
-        <div className="site-written-report"><div className="site-written-head"><div><p>ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΕΛΕΓΧΟΥ</p><h3>Συνολική αναφορά ελέγχου ταμείου</h3></div><button type="button" className="secondary" onClick={()=>navigator.clipboard.writeText([`${store.storeName} — ${cashReport.from||cashReport.date} έως ${cashReport.to||cashReport.date}`,`Βάρδιες: ${rows.length}`,`Συνολικό έλλειμμα: ${cashMoney(store.shortage)}`,`Πλεόνασμα: ${cashMoney(store.surplus)}`,`POS–EFTPOS: ${cashMoney(store.cardVariance)}`,...suspicious.map(({finding})=>cashFindingLabel(finding)),...rows.map(cashReviewBalanceLabel).filter(Boolean),`Προσωρινό καθαρό αποτέλεσμα — εκκρεμεί ολοκληρωμένος έλεγχος: ${finalText}`].join("\n"))}>Αντιγραφή συνολικής αναφοράς</button></div>
+        <div className="site-shift-table"><table><thead><tr><th>Ημερομηνία</th><th>Όνομα</th><th>Ώρες</th><th>Διαφορά</th><th>POS / EFTPOS</th><th>Αποτέλεσμα</th></tr></thead><tbody>{rows.map(row=>{const report=cashWrittenReport(row);return <tr className={report.alert?"sos-table-row":""} key={`site-row:${row.sessionId}`}><td>{cashReportDateLabel(cashReportRowDay(row.openedAt))}</td><td><strong>{row.openedByName||"Χωρίς όνομα"}</strong></td><td>{athensTime(row.openedAt)}–{athensTime(row.closedAt)}<small>{row.shiftLabel||"Βάρδια"} · {row.terminalPos||"MAIN"}</small></td><td className={row.variance<-.009?"negative":row.variance>.009?"positive":""}>{cashMoney(row.variance)}</td><td>{cashMoney(row.cardVariance)}</td><td>{report.alert&&<span className="sos-badge">SOS</span>}{cashShiftResult(row)}</td></tr>})}</tbody></table></div>
+        <div className="site-written-report"><div className="site-written-head"><div><p>ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΕΛΕΓΧΟΥ</p><h3>Συνολική αναφορά ελέγχου ταμείου</h3></div><button type="button" className="secondary" onClick={()=>navigator.clipboard.writeText([`${store.storeName} — ${cashReport.from||cashReport.date} έως ${cashReport.to||cashReport.date}`,`Βάρδιες: ${rows.length}`,`Συνολικό έλλειμμα: ${cashMoney(store.shortage)}`,`Πλεόνασμα: ${cashMoney(store.surplus)}`,`POS–EFTPOS: ${cashMoney(store.cardVariance)}`,...suspicious.map(({finding})=>cashFindingLabel(finding)),...rows.map(cashReviewBalanceLabel).filter(Boolean),...rows.flatMap(row=>cashChatEvidenceLines(row.investigation?.reviewEvidence)),`Προσωρινό καθαρό αποτέλεσμα — εκκρεμεί ολοκληρωμένος έλεγχος: ${finalText}`].join("\n"))}>Αντιγραφή συνολικής αναφοράς</button></div>
           <p className="site-overall-text">{store.storeName} — {cashReport.from||cashReport.date} έως {cashReport.to||cashReport.date}. Φορτώθηκαν {rows.length} βάρδιες και τα διαθέσιμα στοιχεία ελέγχου. Οι αρχικές διαφορές παραμένουν αμετάβλητες. Εκκρεμούν έλεγχος όλων των γραμμών πώλησης, συνέχεια εκτός περιόδου και ταυτοποίηση παραλήπτη ιδιοκτήτη. Συνολικό έλλειμμα {cashMoney(store.shortage)}, πλεόνασμα {cashMoney(store.surplus)} και καθαρή διαφορά {cashMoney(store.variance)}.</p>
           <CashShiftAnalysis reportIdentity={cashReport}>
-          <h4>Ανάλυση ανά βάρδια</h4>{rows.map(row=>{const report=cashWrittenReport(row);return <article className={report.alert?"site-shift-note sos-note":"site-shift-note"} key={`note:${row.sessionId}`}><div><span>{cashReportDateLabel(cashReportRowDay(row.closedAt))}</span><strong>{row.openedByName||"Χωρίς όνομα"}</strong><small>{row.shiftLabel||"Βάρδια"} · {athensTime(row.openedAt)}–{athensTime(row.closedAt)}</small></div><div>{row.investigation?.reviewBalance&&<p>{cashReviewBalanceLabel(row)}</p>}{(row.investigation?.confirmedExplanations||[]).map(review=><p key={`explanation:${review.id}`}>Επιβεβαιωμένη εξήγηση · {cashEventTime(review.createdAt)} · {review.actorName||"—"} · {cashMoney(review.amount)} · {review.note}</p>)}{(row.investigation?.unassignedAuditEvents||[]).length>0&&<details><summary>Συμβάντα χωρίς ασφαλή σύνδεση με τη βάρδια ({row.investigation.unassignedAuditEvents.length})</summary>{row.investigation.unassignedAuditEvents.map((event,index)=><p key={`unassigned:${index}`}>{cashEventTime(event.createdAt)} · {event.actionType||event.eventType||"Συμβάν"} · απόδειξη {event.saleId||event.details?.saleId||"άγνωστη"} · αρχική {event.relatedSaleId||event.details?.originalSaleId||"άγνωστη"} · {event.actorName||"χωρίς όνομα"}. Δεν χρησιμοποιείται ως εξήγηση διαφοράς.</p>)}</details>}{row.investigation?.reviewEvidence&&<><p>Κάλυψη πωλήσεων: {{LINKED_POS_SCOPE:"Έλεγχος συνδεδεμένων πωλήσεων POS",LIMITED:"Ελλιπή στοιχεία ή υπέρβαση ορίου",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.salesStatus]||"Άγνωστη"} · συνδεδεμένες αποδείξεις: {row.investigation.reviewEvidence.checkedSales??"άγνωστο"} · παράθυρο διπλοχτυπήματος 120″. Συνέχεια βαρδιών: {{CONTEXT_AVAILABLE:"Διαθέσιμο πλαίσιο",AWAITING_NEXT_SHIFTS:"Αναμονή επόμενων βαρδιών",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.chainStatus]||"Άγνωστη"}. Ο πλήρης έλεγχος παραμένει προσωρινός.</p>{row.investigation.reviewEvidence.context.filter(c=>c.contextOnly).map(c=><p key={c.sessionId}>Πλαίσιο ίδιας αλυσίδας · {cashEventTime(c.openedAt)}–{cashEventTime(c.closedAt)} · {c.operator||"—"} · {c.terminalPos} · {c.sessionId} · αρχική διαφορά {c.variance==null?"άγνωστη":cashMoney(c.variance)}{!c.closedAt?" · ανοικτή βάρδια":""}</p>)}</>}{report.paragraphs.map((line,index)=><p key={`line:${row.sessionId}:${index}`}>{report.alert&&index===0&&<strong>SOS — </strong>}{line}</p>)}</div></article>})}
+          <h4>Ανάλυση ανά βάρδια</h4>{rows.map(row=>{const report=cashWrittenReport(row);return <article className={report.alert?"site-shift-note sos-note":"site-shift-note"} key={`note:${row.sessionId}`}><div><span>{cashReportDateLabel(cashReportRowDay(row.openedAt))}</span><strong>{row.openedByName||"Χωρίς όνομα"}</strong><small>{row.shiftLabel||"Βάρδια"} · {athensTime(row.openedAt)}–{athensTime(row.closedAt)}</small></div><div>{row.investigation?.reviewBalance&&<p>{cashReviewBalanceLabel(row)}</p>}{(row.investigation?.confirmedExplanations||[]).map(review=><p key={`explanation:${review.id}`}>Επιβεβαιωμένη εξήγηση · {cashEventTime(review.createdAt)} · {review.actorName||"—"} · {cashMoney(review.amount)} · {review.note}</p>)}{(row.investigation?.unassignedAuditEvents||[]).length>0&&<details><summary>Συμβάντα χωρίς ασφαλή σύνδεση με τη βάρδια ({row.investigation.unassignedAuditEvents.length})</summary>{row.investigation.unassignedAuditEvents.map((event,index)=><p key={`unassigned:${index}`}>{cashEventTime(event.createdAt)} · {event.actionType||event.eventType||"Συμβάν"} · απόδειξη {event.saleId||event.details?.saleId||"άγνωστη"} · αρχική {event.relatedSaleId||event.details?.originalSaleId||"άγνωστη"} · {event.actorName||"χωρίς όνομα"}. Δεν χρησιμοποιείται ως εξήγηση διαφοράς.</p>)}</details>}{row.investigation?.reviewEvidence&&<><p>Κάλυψη πωλήσεων: {{LINKED_POS_SCOPE:"Έλεγχος συνδεδεμένων πωλήσεων POS",LIMITED:"Ελλιπή στοιχεία ή υπέρβαση ορίου",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.salesStatus]||"Άγνωστη"} · συνδεδεμένες αποδείξεις: {row.investigation.reviewEvidence.checkedSales??"άγνωστο"} · παράθυρο νέου ελέγχου διαδοχικών πωλήσεων {row.investigation.reviewEvidence.duplicateWindowSeconds??"άγνωστο"}″. Συνέχεια βαρδιών: {{CONTEXT_AVAILABLE:"Διαθέσιμο πλαίσιο",AWAITING_NEXT_SHIFTS:"Αναμονή επόμενων βαρδιών",UNAVAILABLE:"Μη διαθέσιμη πηγή"}[row.investigation.reviewEvidence.chainStatus]||"Άγνωστη"}. Ο πλήρης έλεγχος παραμένει προσωρινός.</p>{row.investigation.reviewEvidence.context.filter(c=>c.contextOnly).map(c=><p key={c.sessionId}>Πλαίσιο ίδιας αλυσίδας · {cashEventTime(c.openedAt)}–{cashEventTime(c.closedAt)} · {c.operator||"—"} · {c.terminalPos} · {c.sessionId} · αρχική διαφορά {c.variance==null?"άγνωστη":cashMoney(c.variance)}{!c.closedAt?" · ανοικτή βάρδια":""}</p>)}</>}{cashChatEvidenceLines(row.investigation?.reviewEvidence).map((line,index)=><p key={`chat-evidence:${row.sessionId}:${index}`}>{line}</p>)}{report.paragraphs.map((line,index)=><p key={`line:${row.sessionId}:${index}`}>{report.alert&&index===0&&<strong>SOS — </strong>}{line}</p>)}</div></article>})}
           </CashShiftAnalysis>
           <div className="site-report-total"><span>Τελικό αποτέλεσμα καταστήματος — προσωρινό έως ολοκλήρωση ελέγχων</span><strong>{finalText}</strong></div>
         </div><p className="site-explanation">Ελλείμματα: {cashMoney(store.shortage)} · Πλεονάσματα: {cashMoney(store.surplus)}. Οι κανονικές κινήσεις δεν εμφανίζονται· εμφανίζονται μόνο τα περίεργα συμβάντα με την ακριβή ώρα.</p>
       </article>})}</section>}
     </section></div>}
+    {cashEmailDraft&&cashReport&&<CashEmailPreviewDialog key={cashEmailDraft.sequence} draft={cashEmailDraft} selfEmail={cashEmailDraft.personalRecipient} stale={!cashEmailDraft.current()||cashEmailDraft.report!==cashReport||!cashReportMatchesSelection()} busy={cashEmailSending} onCancel={cancelCashEmailPreview} onSend={confirmCashEmail}/>}
 
     {newOwnerCompany&&<div className="platform-modal"><form onSubmit={createOwnerCompany}><button type="button" className="modal-close" onClick={()=>setNewOwnerCompany(null)}><X/></button><h2>Νέα εταιρεία για {newOwnerCompany.fullName}</h2><p>Ξεχωριστό ΑΦΜ, κατάστημα και δεδομένα με την υπάρχουσα σύνδεση ιδιοκτήτη.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId" minLength="9" required/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setNewOwnerCompany(null)}>Ακύρωση</button><button disabled={busy==="owner-company-create"}>{busy==="owner-company-create"?"Δημιουργία…":"Δημιουργία εταιρείας"}</button></div></form></div>}
     {companyIdentityEdit&&<CompanyIdentityEditor key={companyIdentityEdit.id} company={companyIdentityEdit} request={request} onClose={()=>setCompanyIdentityEdit(null)} onSaved={()=>{setCompanyIdentityEdit(null);setMessage("Τα στοιχεία της υπάρχουσας εταιρείας αποθηκεύτηκαν.");load()}}/>}
@@ -692,7 +769,7 @@ export default function PlatformAdminApp(){
     {resetCompany&&<div className="platform-modal"><form className="small" onSubmit={resetPassword}><button type="button" className="modal-close" onClick={()=>setResetCompany(null)}><X/></button><h2>Νέος προσωρινός κωδικός</h2><p>{resetCompany.owner?.fullName} · {resetCompany.owner?.email}</p><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required autoFocus/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setResetCompany(null)}>Ακύρωση</button><button disabled={busy==="reset"}>{busy==="reset"?"Αποθήκευση…":"Αλλαγή κωδικού"}</button></div></form></div>}
 
     {storeLifecycle&&<StoreLifecyclePanel key={storeLifecycle.company.id+":"+storeLifecycle.store.id} company={storeLifecycle.company} store={storeLifecycle.store} request={request} onClose={()=>setStoreLifecycle(null)}/>}
-    {storeCompany&&!storeEdit&&!terminalManager&&!storeLifecycle&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setStoreCompany(null)}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"} · Email κλεισίματος: {store.cashCloseEmailEnabled!==false?"ΝΑΙ":"ΟΧΙ"}</small></div><div className="platform-store-actions"><button onClick={()=>openTerminals(storeCompany,store)} disabled={busy===`terminals:${store.id}`}><Monitor/>{busy===`terminals:${store.id}`?"Φόρτωση…":"Εγκαταστάσεις / Τερματικά"}</button><a href={storeModeUrl(store)} target="_blank" rel="noreferrer"><ExternalLink/>Store Mode</a><button className="secondary" onClick={()=>downloadStoreShortcut(store)}><Download/>Απλή συντόμευση</button><button className="secondary" onClick={()=>openLabelSettings(storeCompany,store)} disabled={busy===`labels:${store.id}`}><Printer/>Ρυθμίσεις ετικέτας</button><button onClick={()=>openCustomer(storeCompany,store,"BACKOFFICE")}><LayoutDashboard/>Πλήρες Backoffice</button><button className="secondary" onClick={()=>openOnlineStore(storeCompany,store)} disabled={busy===`online-store:${store.id}`}><ShoppingBag/>{busy===`online-store:${store.id}`?"Φόρτωση…":"Online Store"}</button>{storeCompany.modules?.some(module=>module.key==="TABLE_SERVICE"&&module.active)&&<button className="secondary" onClick={()=>toggleTableService(storeCompany,store)} disabled={busy===`tables:${store.id}`}><UsersRound/>{busy===`tables:${store.id}`?"Έλεγχος…":"TABLE_SERVICE ενεργό/ανενεργό"}</button>}<button className="secondary" onClick={()=>openCustomer(storeCompany,store,"SHIFTS")}><CalendarDays/>Βάρδιες</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"CASH_CONTROL")}><WalletCards/>Έλεγχος Ταμείων</button><button className="secondary" onClick={()=>checkReadiness(storeCompany,store)} disabled={busy===`readiness:${store.id}`}><ShieldCheck/>{busy===`readiness:${store.id}`?"Έλεγχος…":"Ετοιμότητα"}</button><button className="secondary" onClick={()=>checkAccessMatrix(storeCompany,store)} disabled={busy===`access-matrix:${store.id}`}><ShieldCheck/>{busy===`access-matrix:${store.id}`?"Έλεγχος…":"Έλεγχος δικαιωμάτων"}</button><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button><button className="secondary" onClick={()=>setReportSettingsStore({company:storeCompany,store})}>Αναφορές ταμείων</button><button className="danger" onClick={()=>setStoreLifecycle({company:storeCompany,store})}>Νέα έναρξη καταστήματος</button><button className="danger" onClick={()=>archiveStore(storeCompany,store)} disabled={busy===`archive:${store.id}`}><Trash2/>Αφαίρεση κενού καταστήματος</button></div></article>)}</div><form className="terminal-create-form" onSubmit={createStore}><label>Νέο κατάστημα<input name="name" minLength="2" maxLength="160" required placeholder="Όνομα καταστήματος"/></label><label>Πόλη<input name="city" maxLength="100"/></label><button disabled={busy==="store-create"}><Plus/>{busy==="store-create"?"Δημιουργία…":"Δημιουργία καταστήματος"}</button></form></section></div>}
+    {storeCompany&&!storeEdit&&!terminalManager&&!storeLifecycle&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>{cancelStorePanelLoad();setStoreCompany(null)}}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"} · Email κλεισίματος: {store.cashCloseEmailEnabled!==false?"ΝΑΙ":"ΟΧΙ"}</small></div><div className="platform-store-actions"><button onClick={()=>openTerminals(storeCompany,store)} disabled={busy===`terminals:${store.id}`}><Monitor/>{busy===`terminals:${store.id}`?"Φόρτωση…":"Εγκαταστάσεις / Τερματικά"}</button><a href={storeModeUrl(store)} target="_blank" rel="noreferrer"><ExternalLink/>Store Mode</a><button className="secondary" onClick={()=>downloadStoreShortcut(store)}><Download/>Απλή συντόμευση</button><button className="secondary" onClick={()=>openLabelSettings(storeCompany,store)} disabled={busy===`labels:${store.id}`}><Printer/>Ρυθμίσεις ετικέτας</button><button className="secondary" onClick={()=>setProductionPrinterTarget({company:storeCompany,store})}><Printer/>Εκτυπωτής παραγωγής</button><button onClick={()=>openCustomer(storeCompany,store,"BACKOFFICE")}><LayoutDashboard/>Πλήρες Backoffice</button><button className="secondary" onClick={()=>openOnlineStore(storeCompany,store)} disabled={busy===`online-store:${store.id}`}><ShoppingBag/>{busy===`online-store:${store.id}`?"Φόρτωση…":"Online Store"}</button>{storeCompany.modules?.some(module=>module.key==="TABLE_SERVICE"&&module.active)&&<button className="secondary" onClick={()=>toggleTableService(storeCompany,store)} disabled={busy===`tables:${store.id}`}><UsersRound/>{busy===`tables:${store.id}`?"Έλεγχος…":"TABLE_SERVICE ενεργό/ανενεργό"}</button>}<button className="secondary" onClick={()=>openCustomer(storeCompany,store,"SHIFTS")}><CalendarDays/>Βάρδιες</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"CASH_CONTROL")}><WalletCards/>Έλεγχος Ταμείων</button><button className="secondary" onClick={()=>checkReadiness(storeCompany,store)} disabled={busy===`readiness:${store.id}`}><ShieldCheck/>{busy===`readiness:${store.id}`?"Έλεγχος…":"Ετοιμότητα"}</button><button className="secondary" onClick={()=>checkAccessMatrix(storeCompany,store)} disabled={busy===`access-matrix:${store.id}`}><ShieldCheck/>{busy===`access-matrix:${store.id}`?"Έλεγχος…":"Έλεγχος δικαιωμάτων"}</button><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button><button className="secondary" onClick={()=>setReportSettingsStore({company:storeCompany,store})}>Αναφορές ταμείων</button><button className="danger" onClick={()=>setStoreLifecycle({company:storeCompany,store})}>Νέα έναρξη καταστήματος</button><button className="danger" onClick={()=>archiveStore(storeCompany,store)} disabled={busy===`archive:${store.id}`}><Trash2/>Αφαίρεση κενού καταστήματος</button></div></article>)}</div><form className="terminal-create-form" onSubmit={createStore}><label>Νέο κατάστημα<input name="name" minLength="2" maxLength="160" required placeholder="Όνομα καταστήματος"/></label><label>Πόλη<input name="city" maxLength="100"/></label><button disabled={busy==="store-create"}><Plus/>{busy==="store-create"?"Δημιουργία…":"Δημιουργία καταστήματος"}</button></form></section></div>}
 
     {accessMatrix&&<div className="platform-modal"><section className="platform-security-dialog access-matrix-dialog"><button type="button" className="modal-close" onClick={()=>setAccessMatrix(null)}><X/></button><h2>Έλεγχος δικαιωμάτων modules</h2><p>{accessMatrix.company.name} · {accessMatrix.store.name}</p><div className={`access-license-state ${accessMatrix.licenseAllowed?"ok":"blocked"}`}><ShieldCheck/><div><b>{accessMatrix.licenseAllowed?"ΕΝΕΡΓΗ ΑΔΕΙΑ ΠΕΛΑΤΗ":"ΑΝΕΝΕΡΓΗ Ή ΛΗΓΜΕΝΗ ΑΔΕΙΑ"}</b><span>Μόνιμη πρόσβαση Super Admin · {accessMatrix.summary.ownerAllowed} modules ιδιοκτήτη · {accessMatrix.summary.employeeRestricted} περιορισμένα για εργαζόμενο</span></div></div><div className="access-matrix-table"><div className="head"><span>Module</span><span>Πηγή</span><span>Super Admin</span><span>Ιδιοκτήτης</span><span>Εργαζόμενος</span><span>Με ειδικό δικαίωμα</span></div>{accessMatrix.rows.map(row=><div className={`row ${row.effectiveActive?"active":"inactive"}`} key={row.key}><span><b>{row.name}</b><small>{row.key}</small></span><span>{row.source==="STORE_OVERRIDE"?"Ρύθμιση καταστήματος":"Άδεια εταιρείας"}</span><strong className="allowed">ΠΑΝΤΑ</strong><strong className={row.owner.allowed?"allowed":"denied"}>{row.owner.allowed?"ΝΑΙ":"ΟΧΙ"}</strong><strong className={row.employee.allowed?"allowed":"denied"}>{row.employee.allowed?"ΝΑΙ":"ΟΧΙ"}</strong><strong className={row.employeeWithPermission.allowed?"allowed":"denied"}>{row.employeeWithPermission.allowed?"ΝΑΙ":"ΟΧΙ"}</strong></div>)}</div><p className="readiness-note">Ο έλεγχος είναι μόνο ανάγνωσης. Δεν ενεργοποιεί module, δεν αλλάζει άδεια και δεν μεταβάλλει δικαιώματα χρηστών.</p></section></div>}
 
@@ -700,6 +777,7 @@ export default function PlatformAdminApp(){
 
     {readiness&&<div className="platform-modal"><section className="platform-security-dialog readiness-dialog"><button type="button" className="modal-close" onClick={()=>setReadiness(null)}><X/></button><h2>Έλεγχος ετοιμότητας καταστήματος</h2><p>{readiness.company.name} · {readiness.store.name}</p><form className="pilot-profile-form" onSubmit={savePilotProfile}><h3>Κλείδωμα πιλοτικής εγκατάστασης</h3><div><label>Όνομα PC<input name="pcName" defaultValue={readiness.profile?.pcName||"Windows PC ΚΑΤ"} required/></label><label>Ωράριο λειτουργίας<input name="operatingHours" defaultValue={readiness.profile?.operatingHours||"24ωρη λειτουργία"} required/></label><label>Υπεύθυνος εγκατάστασης<input name="responsibleName" defaultValue={readiness.profile?.responsibleName||"Χρήστος Μάνης"} required/></label><label>Σημειώσεις<input name="notes" defaultValue={readiness.profile?.notes||""}/></label></div><div className="pilot-freeze-checks"><label><input type="checkbox" checked={Boolean(readiness.profile?.backupConfirmedAt)} readOnly disabled/> Ασφαλές backup {readiness.profile?.backupConfirmedAt?"ολοκληρώθηκε":"εκκρεμεί"}</label><button type="button" className="secondary" onClick={downloadPilotBackup} disabled={busy==="pilot-backup"}><Download/>{busy==="pilot-backup"?"Δημιουργία…":"Λήψη ασφαλούς backup"}</button><label className="secondary" style={{cursor:"pointer"}}><ShieldCheck/>{busy==="pilot-backup-verify"?"Έλεγχος…":"Έλεγχος αρχείου backup"}<input type="file" accept="application/json,.json" onChange={verifyPilotBackup} disabled={busy==="pilot-backup-verify"} style={{display:"none"}}/></label><label><input type="checkbox" name="designFrozen" defaultChecked={Boolean(readiness.profile?.designFrozenAt)}/> Κλείδωμα υπάρχοντος design</label><label><input type="checkbox" name="databaseFrozen" defaultChecked={Boolean(readiness.profile?.databaseFrozenAt)}/> Κλείδωμα δομής βάσης</label></div>{recoveryWorkflow&&<div className="readiness-summary ready" data-recovery-workflow-center="true"><ShieldCheck/><div><b>RECOVERY WORKFLOW · DRY-RUN PASSED</b><span>Run {recoveryWorkflow.recoveryReport?.workflowRunId} · SHA-256 {String(recoveryWorkflow.checksum||"").slice(0,16)} · πραγματικό restore ΚΛΕΙΔΩΜΕΝΟ</span><small>Δεν άλλαξε η βάση, δεν επανήλθαν secrets και δεν έγινε κλήση σε RBS/EFTPOS/fiscal provider.</small></div></div>}<h3 className="pilot-smoke-title">Πραγματικές δοκιμές καταστήματος</h3><div className="pilot-freeze-checks pilot-smoke-checks"><label><input type="checkbox" name="loginTested" defaultChecked={Boolean(readiness.profile?.loginTestedAt)}/> Είσοδος με PIN/κάρτα</label><label><input type="checkbox" name="shiftOpenTested" defaultChecked={Boolean(readiness.profile?.shiftOpenTestedAt)}/> Άνοιγμα βάρδιας</label><label><input type="checkbox" name="shiftCloseTested" defaultChecked={Boolean(readiness.profile?.shiftCloseTestedAt)}/> Κλείσιμο βάρδιας</label><label><input type="checkbox" name="kioskUnaffected" defaultChecked={Boolean(readiness.profile?.kioskUnaffectedAt)}/> Kiosk Manager ανεπηρέαστο</label></div><p className="pilot-smoke-note">Τσεκάρεται μόνο μετά από πραγματική δοκιμή. Το MyWorkStation δεν στέλνει εντολές σε RBS ή ταμειακή.</p><button disabled={busy==="pilot-profile"}>{busy==="pilot-profile"?"Αποθήκευση…":"Αποθήκευση και επανέλεγχος"}</button></form><div className={`readiness-summary ${readiness.ready?"ready":"blocked"}`}>{readiness.ready?<CheckCircle2/>:<AlertTriangle/>}<div><b>{readiness.ready?"ΕΤΟΙΜΟ ΓΙΑ ΠΑΡΑΛΛΗΛΗ ΠΙΛΟΤΙΚΗ ΛΕΙΤΟΥΡΓΙΑ":`${readiness.blockers} ΥΠΟΧΡΕΩΤΙΚΕΣ ΕΚΚΡΕΜΟΤΗΤΕΣ`}</b><span>Έλεγχος: {new Date(readiness.checkedAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}</span></div></div><div className="readiness-list">{readiness.checks.map(check=><article className={check.ok?"ok":"missing"} key={check.key}>{check.ok?<CheckCircle2/>:<AlertTriangle/>}<div><b>{check.label}</b><span>{check.detail}</span></div><em>{check.ok?"OK":check.blocking?"ΥΠΟΧΡΕΩΤΙΚΟ":"ΠΡΟΑΙΡΕΤΙΚΟ"}</em></article>)}</div><p className="readiness-note">Ο έλεγχος είναι μόνο ανάγνωσης. Δεν ανοίγει βάρδια, δεν δημιουργεί συναλλαγές και δεν επικοινωνεί με RBS/ταμειακή.</p></section></div>}
 
+    {productionPrinterTarget&&<PlatformProductionPrinterManager key={`${productionPrinterTarget.company.id}:${productionPrinterTarget.store.id}`} {...productionPrinterTarget} request={request} onClose={()=>setProductionPrinterTarget(null)}/>}
     {labelSettingsTarget&&<StoreLabelSettingsManager {...labelSettingsTarget} request={request} onClose={()=>setLabelSettingsTarget(null)} onSaved={()=>setMessage(`Αποθηκεύτηκαν οι διαστάσεις ετικέτας για ${labelSettingsTarget.store.name}.`)}/>}
     {reportSettingsStore&&<AutomaticReportSettingsManager key={`${reportSettingsStore.company.id}:${reportSettingsStore.store.id}`} company={reportSettingsStore.company} store={reportSettingsStore.store} request={request} onClose={()=>setReportSettingsStore(null)}/>}
     {storeCompany&&storeEdit&&<div className="platform-modal"><form className="small" onSubmit={saveStore}><button type="button" className="modal-close" onClick={()=>setStoreEdit(null)}><X/></button><h2>Επεξεργασία καταστήματος</h2><p>{storeCompany.name}</p><label>Όνομα καταστήματος<input name="name" defaultValue={storeEdit.name} required autoFocus/></label><label>Πόλη<input name="city" defaultValue={storeEdit.city||""}/></label><label>Διεύθυνση<input name="address" maxLength="220" defaultValue={storeEdit.address||""}/></label><ReportRecipientFields key={`${storeCompany.id}:${storeEdit.id}`} defaultValue={storeEdit.responsibleEmail||""} disabled={busy==="store"}/><p>Οι αναφορές στέλνονται μόνο όταν ο Super Admin πατήσει την αποστολή μετά τον ολοκληρωμένο έλεγχο.</p><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setStoreEdit(null)}>Πίσω</button><button disabled={busy==="store"}>{busy==="store"?"Αποθήκευση…":"Αποθήκευση καταστήματος"}</button></div></form></div>}
@@ -712,17 +790,21 @@ export default function PlatformAdminApp(){
         <option value="" disabled>Επίλεξε terminal</option>
         {terminalManager.terminals.filter(row=>row.active).map(row=><option key={row.id} value={row.terminalPos}>{row.terminalPos} · {row.displayName}</option>)}
       </select>
+      <label>Κατάσταση ταμειακής<select name="fiscalActive" defaultValue={String(routingFormValues.fiscalActive)} disabled={!routingTerminalPos}><option value="true">Ενεργή</option><option value="false">Ανενεργή</option></select></label>
       <input name="fiscalDeviceCode" defaultValue={routingFormValues.fiscalDeviceCode} placeholder="π.χ. KAT-FISCAL-02" pattern="[A-Za-z0-9_-]+" required disabled={!routingTerminalPos}/>
       <input name="fiscalDisplayName" defaultValue={routingFormValues.fiscalDisplayName} placeholder="π.χ. Ταμειακή 2" required disabled={!routingTerminalPos}/>
       <input name="storeEftposCode" defaultValue={routingFormValues.storeEftposCode} placeholder="π.χ. KAT-EFTPOS-02A" pattern="[A-Za-z0-9_-]+" required disabled={!routingTerminalPos}/>
       <input name="storeEftposName" defaultValue={routingFormValues.storeEftposName} placeholder="EFTPOS καταστήματος" required disabled={!routingTerminalPos}/>
       <input name="deliveryEftposCode" defaultValue={routingFormValues.deliveryEftposCode} placeholder="Προαιρετικό: κωδικός δεύτερου EFTPOS" pattern="[A-Za-z0-9_-]+" disabled={!routingTerminalPos}/>
       <input name="deliveryEftposName" defaultValue={routingFormValues.deliveryEftposName} placeholder="Προαιρετικό: όνομα δεύτερου EFTPOS" disabled={!routingTerminalPos}/>
+      <label>Κατάσταση πρώτου EFTPOS<select name="storeEftposActive" defaultValue={String(routingFormValues.storeEftposActive)} disabled={!routingTerminalPos}><option value="true">Ενεργό</option><option value="false">Ανενεργό</option></select></label>
+      <label>Κατάσταση δεύτερου EFTPOS<select name="deliveryEftposActive" defaultValue={String(routingFormValues.deliveryEftposActive)} disabled={!routingTerminalPos}><option value="true">Ενεργό</option><option value="false">Ανενεργό</option></select></label>
       <label>Συναλλαγή πρώτου EFTPOS<select name="storeTransactionMode" defaultValue={routingFormValues.storeTransactionMode} disabled={!routingTerminalPos}><option value="IMMEDIATE">Άμεση</option><option value="DEFERRED">Ετεροχρονισμένη</option></select></label>
       <label>Συναλλαγή δεύτερου EFTPOS<select name="deliveryTransactionMode" defaultValue={routingFormValues.deliveryTransactionMode} disabled={!routingTerminalPos}><option value="IMMEDIATE">Άμεση</option><option value="DEFERRED">Ετεροχρονισμένη</option></select></label>
       <small>Η επιλογή περιγράφει τη ρυθμισμένη λειτουργία της RBS. Επιβεβαίωσε τον αντίστοιχο κωδικό πληρωμής στον οδηγό εγκατάστασης.</small>
       <button disabled={!routingTerminalPos||busy==="device-routing"}>{busy==="device-routing"?"Αποθήκευση…":"Αποθήκευση mapping"}</button>
       <small>{!routingTerminalPos?"Επίλεξε πρώτα terminal.":routingFormValues.complete?`Φορτώθηκε το αποθηκευμένο mapping του ${routingTerminalPos}.`:`Δεν υπάρχει αποθηκευμένο mapping για ${routingTerminalPos}.`}</small>
+      <small>Η απενεργοποίηση διατηρεί τους κωδικούς και την αντιστοίχιση για επαναφορά. Δεν απενεργοποιεί αυτόματα άλλες συσκευές ή διασυνδέσεις του καταστήματος.</small>
       <small>Fail-closed: δεν γίνεται αυτόματη επιλογή άλλου EFTPOS.</small>
     </form>}
     {onlineStoreManager&&<OnlineStoreManager key={`${onlineStoreManager.company.id}:${onlineStoreManager.store.id}`} manager={onlineStoreManager} setManager={setOnlineStoreManager} request={request} onClose={()=>setOnlineStoreManager(null)} setBusy={setBusy} busy={busy} setError={setError} setMessage={setMessage}/>}
@@ -748,7 +830,7 @@ export default function PlatformAdminApp(){
       onOpenVideo={(companyId,storeId)=>{const company=(data?.companies||[]).find(item=>item.id===companyId),store=company?.stores?.find(item=>item.id===storeId);if(company&&store){setShowAiCommandCenter(false);openVideoConnection(company,store)}}}
     />}
     {storeCompany&&!storeLifecycle&&!videoConnectionManager&&storeCompany.modules?.some(module=>module.key==="VIDEO_EVENTS"&&module.active)&&<div style={{position:"fixed",left:32,bottom:32,zIndex:1002,display:"grid",gap:8}}>{storeCompany.stores.map(store=><button key={store.id} onClick={()=>openVideoConnection(storeCompany,store)} disabled={busy===`video:${store.id}`}><Camera/>{busy===`video:${store.id}`?"Φόρτωση…":`Video Events · ${store.name}`}</button>)}</div>}
-    {storeCompany&&!storeLifecycle&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`myDATA / ΑΦΜ · ${store.name}`}</button>)}</div>}
+    {storeCompany&&!storeLifecycle&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`Διασυνδέσεις · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={requestFor("video")} onClose={()=>{setVideoConnectionManager(null);returnFromTwin("video")}} setError={setError} setMessage={setMessage}/>}
     {fiscalIntegrations&&<StoreFiscalIntegrations manager={fiscalIntegrations} request={request} onClose={()=>setFiscalIntegrations(null)} onChanged={refreshFiscalIntegrations}/>}
     {scopeFor("checks")?analyticsResult?.page&&<SuperAdminChecksAnalytics key={twinScopeKey(aiTwinOrigin)} entryScope={scopeFor("checks")} embedded companies={twinCompanies} request={requestFor("checks")} onClose={()=>{setAnalyticsResult(null);returnFromTwin("checks")}} setMessage={setMessage}/>:analyticsResult?.page&&<SuperAdminChecksAnalytics embedded companies={data?.companies||[]} request={request} onClose={()=>setAnalyticsResult(null)} setMessage={setMessage}/>}
@@ -757,7 +839,7 @@ export default function PlatformAdminApp(){
     {showBankLedgerReview&&<BankLedgerReviewCenter key={scopeFor("bank")?twinScopeKey(aiTwinOrigin):"central"} entryScope={scopeFor("bank")} request={requestFor("bank")} onClose={()=>{setShowBankLedgerReview(false);returnFromTwin("bank")}} setMessage={setMessage} companies={data?.companies||[]} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name})))} />}
     {showEventsCenter&&<SuperAdminEventsCenter request={request} companies={data?.companies||[]} onClose={()=>setShowEventsCenter(false)}/>}
     {showFiscalDryRun&&<FiscalBridgeDryRunCenter companies={data?.companies||[]} onClose={()=>setShowFiscalDryRun(false)}/>}
-    {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
+    {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>{cancelStorePanelLoad();setShowInstallationCenter(false)}}/>}
     {showOnlineRadioCenter&&<SuperAdminOnlineRadioCenter companies={data?.companies||[]} request={request} onClose={()=>setShowOnlineRadioCenter(false)}/>}
     {workforceTarget&&!scopeFor("workforce")&&<SuperAdminStaffScheduler {...workforceTarget} companies={data?.companies||[]} request={request} onClose={()=>setWorkforceTarget(null)}/>}
     {workforceTarget&&scopeFor("workforce")&&<SuperAdminStaffScheduler {...workforceTarget} companies={twinCompanies} request={requestFor("workforce")} onClose={()=>{setWorkforceTarget(null);returnFromTwin("workforce")}}/>}

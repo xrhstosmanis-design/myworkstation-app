@@ -1,12 +1,13 @@
-import {randomUUID} from "node:crypto";
-import {ensureInvoiceCommonDraftSchema} from "../../src/lib/invoice-common-draft.js";
+import crypto,{randomUUID} from "node:crypto";
+import {readFile} from "node:fs/promises";
+import {ensureInvoiceCommonDraftSchema,lockInvoiceStore} from "../../src/lib/invoice-common-draft.js";
 export const isolatedInvoiceDb=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==="test"&&["localhost","127.0.0.1","postgres"].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 export async function invoiceDbFixture(){
  const {PrismaClient}=await import("@prisma/client"),admin=new PrismaClient(),schema="invoice_common_"+randomUUID().replaceAll("-","");
  const url=new URL(process.env.DATABASE_URL);url.searchParams.set("schema",schema);const db=new PrismaClient({datasourceUrl:url.toString()});
  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
  const definitions={
-  PurchaseOrder:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"status" text,"invoiceNumber" text,"description" text,"sourceType" text,"sourceDocumentId" text,"createdAt" timestamptz DEFAULT NOW(),"updatedAt" timestamptz DEFAULT NOW(),"finalizedAt" timestamptz,"invoicedAt" timestamptz,"createdByUserId" text,"createdByName" text,"updatedByName" text',
+  PurchaseOrder:'"id" text PRIMARY KEY,"awaitingInvoice" boolean NOT NULL DEFAULT false,"companyId" text,"storeId" text,"supplierId" text,"status" text,"invoiceNumber" text,"description" text,"sourceType" text,"sourceDocumentId" text,"createdAt" timestamptz DEFAULT NOW(),"updatedAt" timestamptz DEFAULT NOW(),"finalizedAt" timestamptz,"invoicedAt" timestamptz,"createdByUserId" text,"createdByName" text,"updatedByName" text',
   PurchaseDocument:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"documentType" text,"documentNumber" text,"documentDate" timestamptz,"totalNet" numeric DEFAULT 0,"totalVat" numeric DEFAULT 0,"totalGross" numeric,"status" text,"sourceType" text,"purchaseOrderId" text,"paymentTransactionId" text,"settlementMode" text,"createdByUserId" text,"updatedAt" timestamptz DEFAULT NOW()',
   PurchaseOrderLine:'"id" text PRIMARY KEY,"orderId" text,"productId" text,"supplierCode" text,"description" text,"quantity" numeric,"unitCost" numeric,"netAmount" numeric,"exciseTotal" numeric DEFAULT 0,"vatRate" numeric,"vatAmount" numeric,"grossAmount" numeric,"proposedSalePrice" numeric DEFAULT 0,"invoiceUnit" text DEFAULT \'PIECE\',"stockUnitsPerInvoiceUnit" numeric DEFAULT 1,"discount1" numeric DEFAULT 0,"discount2" numeric DEFAULT 0,"discount3" numeric DEFAULT 0,"ocrSequence" int,"ocrRawText" text,"createdAt" timestamptz DEFAULT NOW()',
   PurchaseDocumentLine:'"id" text PRIMARY KEY,"purchaseDocumentId" text,"productId" text,"supplierItemCode" text,"supplierBarcode" text,"description" text,"quantity" numeric,"unit" text,"unitsPerPackage" numeric DEFAULT 1,"unitCost" numeric,"netAmount" numeric,"vatRate" numeric,"vatAmount" numeric,"grossAmount" numeric',
@@ -48,4 +49,14 @@ export async function invoiceDbFixture(){
   const data={};for(const table of ['StoreProduct','StoreTransaction','StockMovement'])data[table]=await db.$queryRawUnsafe(`SELECT row_to_json(t) AS row FROM "${table}" t ORDER BY t."id"`);return JSON.stringify(data);
  };
  return {db,seed,snapshot,close:async()=>{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect()}};
+}
+
+export async function invoicePackPostingFixture(db,staffCheck){
+ const source=(await readFile(new URL("../../src/routes/purchase-order-unresolved-guard.js",import.meta.url),"utf8"))
+  .replace(/^import .*;\n/gm,"").replaceAll("export async function ","async function ")
+  .replace("export default router;","return {ensureSchema,applyPackStockCorrection,applyPackStockCorrectionInTransaction};");
+ const route=new Function("Router","prisma","crypto","purchaseOrderTotalReconciliationGuard","lockInvoiceStore","requireStaffAction",source)(
+  ()=>({use(){},patch(){}}),db,crypto,()=>{},lockInvoiceStore,staffCheck);
+ await route.ensureSchema();
+ return route;
 }

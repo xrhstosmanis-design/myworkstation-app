@@ -1,3 +1,5 @@
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {expectedReceiptRows,expectedReceiptReadiness} from '../services/supplier-expected-receipts.js';
 import {Router} from "express";
 import {z} from "zod";
 import {requireStoreModule} from "../middleware/module-access.js";
@@ -7,11 +9,13 @@ import {buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT} from "../lib/supplier-
 
 const optionsSchema=z.object({historyDays:z.coerce.number().int().min(7).max(90).default(30),coverageDays:z.coerce.number().int().min(1).max(60).default(7),leadDays:z.coerce.number().int().min(0).max(30).default(3)});
 export async function readOrderSuggestions(db,{storeId,companyId,options,now=new Date()}){
+  if(db.$transaction)return db.$transaction(tx=>readOrderSuggestions(tx,{storeId,companyId,options,now}),{isolationLevel:"RepeatableRead",timeout:30000});
   const from=new Date(now.getTime()-options.historyDays*86400000);
   const rows=await db.$queryRaw`
     SELECT p."id" AS "productId",p."name",p."sku",p."unit",sp."currentStock",sp."minStock",
       EXISTS(SELECT 1 FROM "Recipe" r WHERE r."companyId"=${companyId} AND r."productId"=p."id" AND r."active"=TRUE)
         OR EXISTS(SELECT 1 FROM "PreparationRecipeLine" r WHERE r."companyId"=${companyId} AND r."productId"=p."id" AND r."automatic"=TRUE) AS "hasRecipe",
+      COALESCE(pending."review",'[]'::jsonb) AS "pendingPurchaseReview",
       COALESCE(sales."soldQuantity",0) AS "soldQuantity",COALESCE(sales."returnedQuantity",0) AS "returnedQuantity"
     FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
     LEFT JOIN LATERAL (
@@ -22,9 +26,36 @@ export async function readOrderSuggestions(db,{storeId,companyId,options,now=new
       WHERE l."productId"=p."id" AND s."companyId"=${companyId} AND s."storeId"=${storeId}
         AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${now}
     ) sales ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(jsonb_build_object('status',review."status",'orderCount',review."orderCount",
+        'recordedStockQuantity',CASE WHEN review."unconvertedLineCount"=0 THEN review."quantity" ELSE NULL END,
+        'unconvertedLineCount',review."unconvertedLineCount") ORDER BY review."status") AS "review"
+      FROM (
+        SELECT o."status",COUNT(DISTINCT o."id")::int AS "orderCount",
+          SUM(l."quantity"*l."stockUnitsPerInvoiceUnit") AS "quantity",
+          COUNT(*) FILTER (WHERE l."quantity" IS NULL OR l."quantity"<=0 OR l."stockUnitsPerInvoiceUnit" IS NULL
+            OR l."stockUnitsPerInvoiceUnit"<=0 OR l."quantity"::text IN ('NaN','Infinity','-Infinity')
+            OR l."stockUnitsPerInvoiceUnit"::text IN ('NaN','Infinity','-Infinity'))::int AS "unconvertedLineCount"
+        FROM "PurchaseOrder" o JOIN "PurchaseOrderLine" l ON l."orderId"=o."id" AND l."productId"=p."id"
+        WHERE o."companyId"=${companyId} AND o."storeId"=${storeId}
+          AND (o."status"='NEW' OR (o."status"='FINAL' AND o."awaitingInvoice"=TRUE))
+        GROUP BY o."status"
+      ) review
+    ) pending ON TRUE
     WHERE sp."storeId"=${storeId} AND sp."active"=TRUE AND p."active"=TRUE AND p."trackStock"=TRUE
     ORDER BY p."name",p."id"`;
-  return {storeId,generatedAt:now.toISOString(),from:from.toISOString(),to:now.toISOString(),options,rows:buildOrderSuggestions(rows,options)};
+  const expectedReceipts=await expectedReceiptReadiness(db);
+  const expected=expectedReceipts.available?await expectedReceiptRows(db,{storeId,companyId}):[];
+  for(const row of rows){
+    const pending=expected.filter(item=>item.productId===row.productId);
+    row.expectedReceiptsAvailable=expectedReceipts.available;
+    row.expectedReceiptsAvailabilityReason=expectedReceipts.reason;
+    row.expectedReceiptReviewReasons=[...new Set(pending.filter(item=>Number(item.remainingQuantity)!==0).flatMap(item=>[item.reviewReason,item.postedPurchaseReviewReason]).filter(Boolean))];
+    const total=pending.filter(item=>!item.reviewReason).reduce((sum,item)=>sum+Number(item.remainingQuantity),0);
+    row.confirmedPendingStockQuantity=Number.isFinite(total)&&total<=Number.MAX_SAFE_INTEGER?total:null;
+    if(row.confirmedPendingStockQuantity===null)row.expectedReceiptReviewReasons.push("Η αναμενόμενη ποσότητα χρειάζεται αριθμητικό έλεγχο.");
+  }
+  return {storeId,generatedAt:now.toISOString(),from:from.toISOString(),to:now.toISOString(),options,expectedReceipts,rows:buildOrderSuggestions(rows,options)};
 }
 
 export async function readSupplierOrderSuggestions(db,scope){
@@ -49,13 +80,23 @@ export async function readSupplierOrderSuggestions(db,scope){
   },{isolationLevel:"RepeatableRead"});
 }
 
+async function requireOrderSuggestionsRead(req){
+  if(req.user?.staffAccess!==true)return;
+  const {id:storeId,companyId}=req.targetStore;
+  if(req.user.storeId!==storeId||req.user.companyId!==companyId||req.staffGrant?.capability!=='order-suggestions.read')throw staffError();
+  await requireStaffGrant(prisma,req.user,storeId,'order-suggestions.read');
+}
+
 const router=Router();
 router.get("/order-suggestions",requireStoreModule("ORDER_SUGGESTIONS"),async(req,res,next)=>{
   try{
     const parsed=optionsSchema.safeParse(req.query);
     if(!parsed.success)return res.status(400).json({error:"Έλεγξε τις ημέρες ιστορικού (7–90), κάλυψης (1–60) και παράδοσης (0–30)."});
     res.set("Cache-Control","no-store");
-    res.json(await readOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data}));
+    await requireOrderSuggestionsRead(req);
+    const result=await readOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data});
+    await requireOrderSuggestionsRead(req);
+    res.json(result);
   }catch(error){next(error);}
 });
 router.get("/order-suggestions/by-supplier",requireStoreModule("ORDER_SUGGESTIONS"),async(req,res,next)=>{
@@ -63,7 +104,10 @@ router.get("/order-suggestions/by-supplier",requireStoreModule("ORDER_SUGGESTION
     const parsed=optionsSchema.safeParse(req.query);
     if(!parsed.success)return res.status(400).json({error:"Έλεγξε τις ημέρες ιστορικού (7–90), κάλυψης (1–60) και παράδοσης (0–30)."});
     res.set("Cache-Control","no-store");
-    res.json(await readSupplierOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data}));
+    await requireOrderSuggestionsRead(req);
+    const result=await readSupplierOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options:parsed.data});
+    await requireOrderSuggestionsRead(req);
+    res.json(result);
   }catch(error){next(error);}
 });
 export default router;

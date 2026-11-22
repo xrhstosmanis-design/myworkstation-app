@@ -1,0 +1,58 @@
+{
+  "status": "ENGINEERING PUBLICATION AND INDEPENDENT BYTE VERIFICATION COMPLETE; ONE EXPANDED PHYSICAL ACCEPTANCE PENDING",
+  "claimPR": 3433,
+  "claimMerge": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+  "sourcePR": 3434,
+  "sourceHead": "84f84dfd099e2b61b413a8205a89f41907c8b6c2",
+  "sourcePRCI": 41256750055,
+  "androidPRCI": 41256750041,
+  "ftextRecoveryCI": 41256750049,
+  "ftextRecoveryTests": 50,
+  "walletRecoveryCI": 41256750053,
+  "walletRecoveryTests": 8,
+  "physicalCombinedAcceptance": "NOT TESTED",
+  "realChatSendReadAckPushEmail": "NOT PERFORMED",
+  "sourceServerTests": 5050,
+  "sourceBackupTests": 8,
+  "androidInstrumentationTests": 52,
+  "actualCaptureTests": 1,
+  "sourceMerge": "063579c975dc9133890d2974fad8cf9016322cd8",
+  "sourceMainCI": 41257899411,
+  "signingRun": 41257953318,
+  "androidSourceTree": "1a2fc7bcde0e4d643ed6e2a3c6e64b0e2ea11c41",
+  "signingFirstAttempt": "REFUSED before key access until exact main full CI SUCCESS; pinned source retained",
+  "browserArtifact": 13063893078,
+  "browserArtifactZipSha256": "5b6a535d6dc6b8b4d8db611d0ed70afa1d86e02127f0f3b70151ecc6bef2bec4",
+  "browserSyntheticViewports": [
+    [
+      390,
+      844
+    ],
+    [
+      360,
+      740
+    ],
+    [
+      390,
+      420
+    ]
+  ],
+  "browserToolsWrites": 0,
+  "sourceMainServerTests": 5050,
+  "sourceMainBackupTests": 8,
+  "signingArtifact": 13064516297,
+  "signingArtifactZipSha256": "9eddc6aa94abce4ee966df12ddb34e75e44e6597f086ab6e8ceb347119895af6",
+  "signingAttempt": 2,
+  "distributionPR": 3442,
+  "distributionHead": "71f1461180596c5af2faf5063334e48febf2f8f4",
+  "distributionPRCI": 41259646527,
+  "distributionMerge": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b",
+  "distributionServerTests": 5050,
+  "distributionBackupTests": 8,
+  "distributionMainCI": 41260513845,
+  "distributionMainServerTests": 5050,
+  "distributionMainBackupTests": 8,
+  "deployWorkflowRun": 41261365197,
+  "renderDeployId": "dep-dbj9d2ou01pc73eqp6vg",
+  "liveRevision": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b"
+}

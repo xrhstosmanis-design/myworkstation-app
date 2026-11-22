@@ -1,5 +1,6 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
+Import-Module (Join-Path $PSScriptRoot 'Ftext.psm1') -Force
 function Get-FtextCloudConfig([string]$Path) {
     $c=Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach($key in @('companyId','storeId','terminalPos','serialNumber','workFolder','settingsHash','apiBase','fiscalDeviceCode','protocol','configurationId','lifecycleGeneration')) {
@@ -25,12 +26,264 @@ function Read-FtextDeviceToken($Config) {
 function Confirm-FtextCloudIdentity($Config,$Response) {
     foreach($key in @('companyId','storeId','terminalPos','settingsHash')) { if([string]$Response.$key -cne [string]$Config.$key) { throw 'Cloud identity does not match this installation.' } }
     foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode','serialNumber','workFolder','protocol','configurationId','lifecycleGeneration')) { if([string]$Response.settings.$key -cne [string]$Config.$key) { throw 'Local settings do not match the signed cloud installation.' } }
-    if($Response.fiscalCheckoutEnabled -ne $false) { throw 'This package supports communication checks only.' }
+    if($Response.fiscalCheckoutEnabled -ne $false) { throw 'Unsupported fiscal protocol capability.' }
+    $localCash=$Config.PSObject.Properties['cashEnabled'] -and $Config.cashEnabled -eq $true
+    $cloudCash=$Response.settings.PSObject.Properties['cashEnabled'] -and $Response.settings.cashEnabled -eq $true
+    if([bool]$localCash -ne [bool]$cloudCash) { throw 'Cash capability changed. Download and pair the current package.' }
+    $localCard=$Config.PSObject.Properties['cardEnabled'] -and $Config.cardEnabled -eq $true
+    $cloudCard=$Response.settings.PSObject.Properties['cardEnabled'] -and $Response.settings.cardEnabled -eq $true
+    if([bool]$localCard -ne [bool]$cloudCard) {throw 'Card capability changed. Download and pair the current package.'}
+    if($localCard) {foreach($field in @('code','posTerminalId','transactionType','resultFormat','confirmed')) {if([string]$Config.cardPayment.$field -cne [string]$Response.settings.cardPayment.$field) {throw 'Card profile changed. Download and pair the current package.'}}}
+
 }
 function Invoke-FtextCloudPing($Config) {
     $token=Read-FtextDeviceToken $Config
-    $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/ping') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body '{}'
+    $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/ping') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body '{"readinessVersion":1}' -TimeoutSec 15
     Confirm-FtextCloudIdentity $Config $response
     return $response
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing
+function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false,[ValidateRange(0,1)][int]$UnpublishedStopVersion=0) {
+    $token=Read-FtextDeviceToken $Config
+    $settings=[ordered]@{}
+    foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode','serialNumber','workFolder','protocol','configurationId','lifecycleGeneration','cashEnabled','cashDepartments','cardEnabled','cardPayment')) {
+        if($Config.PSObject.Properties[$key]) {$settings[$key]=$Config.$key}
+    }
+    $payload=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings;handoffVersion=1}
+    if($UnpublishedStopVersion -eq 1) {$payload.handoffStopVersion=1}
+    $body=$payload | ConvertTo-Json -Depth 12 -Compress
+    $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/work-poll') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body $body -TimeoutSec 15
+    Confirm-FtextCloudIdentity $Config $response
+    foreach($key in @('request','lateReceipt','errorEvidence')) {if(-not $response.PSObject.Properties[$key]) {throw 'Incomplete scoped work response.'}}
+    if($Recovering -and ($response.request -or $response.lateReceipt -or $response.errorEvidence)) {throw 'Cloud returned new work during original-result recovery.'}
+    return $response
+}
+# A scheduling hint only. Server readiness and first-publication checks remain authoritative.
+$script:FtextReadinessRefreshAt=[DateTime]::MinValue
+function Get-FtextCloudReadinessRefreshAt {return $script:FtextReadinessRefreshAt}
+function Get-FtextReadinessRefreshAt([DateTime]$CheckedAt,[DateTime]$PostStarted,[DateTime]$Now,[double]$ElapsedSeconds) {
+    if([double]::IsNaN($ElapsedSeconds) -or [double]::IsInfinity($ElapsedSeconds) -or $ElapsedSeconds -lt 0 -or $CheckedAt -gt $Now.AddSeconds(2) -or $PostStarted -gt $Now) {return $Now}
+    # Reserve the observed complete round trip plus two seconds for poll/join and
+    # network variation. A slow sample consumes its budget, never extends proof.
+    $reserve=[Math]::Max(2,$ElapsedSeconds+2)
+    $expiry=if($CheckedAt -lt $PostStarted){$CheckedAt.AddSeconds(20)}else{$PostStarted.AddSeconds(20)}
+    $refresh=$expiry.AddSeconds(-$reserve)
+    if($refresh -le $Now){return $Now}
+    # Bound idle work opportunity even when the preceding sample was very fast.
+    if($refresh -gt $Now.AddSeconds(10)){return $Now.AddSeconds(10)}
+    return $refresh
+}
+function Invoke-FtextCloudReadiness([string]$ConfigPath,[ValidateRange(1,30)][int]$TimeoutSeconds=5) {
+    $script:FtextReadinessRefreshAt=[DateTime]::MinValue
+    $roundTrip=[Diagnostics.Stopwatch]::StartNew()
+    $config=Get-FtextCloudConfig $ConfigPath
+    # Authenticate current installation before the nonfiscal STATUS command.
+    Invoke-FtextCloudPing $config | Out-Null
+    $pendingPath=Join-Path $config.workFolder '.mws-ftext-status.json';$started=$null
+    if(Test-Path -LiteralPath $pendingPath) {
+        $marker=Get-Content -LiteralPath $pendingPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $started=[DateTime]::Parse([string]$marker.createdAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
+    }
+    $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds $TimeoutSeconds
+    if($null -ne $started) {
+        $age=([DateTime]::UtcNow-$started).TotalSeconds
+        if($age -ge 20 -or $age -lt -2) {
+            # A recovered old STATUS proves history only. Consume it durably, then require a new round trip.
+            $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds $TimeoutSeconds;$started=$null
+        }
+    }
+    $result=$evidence.result
+    $checkedAt=if($null -ne $started){$started.ToString('o')}else{$evidence.checkedAt}
+    $report=[ordered]@{requestId=$evidence.requestId;checkedAt=$checkedAt;ok=$result.ok;code=$result.code;fiscalExecution=$false}
+    foreach($key in @('serialNumber','deviceTime','description')) {if($result.PSObject.Properties[$key]) {$report[$key]=$result.$key}}
+    $token=Read-FtextDeviceToken $config
+    # Local STATUS evidence is durable. An undelivered/stale readiness sample never authorizes checkout.
+    $postStarted=[DateTime]::UtcNow
+    $ack=Invoke-RestMethod -Method Post -Uri ($config.apiBase+'/api/ftext/v1/device/status-result') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($report | ConvertTo-Json -Compress) -TimeoutSec 15
+    $roundTrip.Stop()
+    if($result.ok -and $ack.ok -eq $true -and $ack.PSObject.Properties['idempotentReplay'] -and $ack.idempotentReplay -eq $false) {
+        $checked=[DateTime]::Parse([string]$checkedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
+        $script:FtextReadinessRefreshAt=Get-FtextReadinessRefreshAt $checked $postStarted ([DateTime]::UtcNow) $roundTrip.Elapsed.TotalSeconds
+    }
+    if(-not $result.ok) {Write-Host ('Register STATUS code: '+[int]$result.code+'. No payment was sent.')}
+    if($config.PSObject.Properties['outputVersion'] -and $config.outputVersion -eq 1 -and $result.ok -and $ack.ok -eq $true) {
+        try {Invoke-FtextOutputArchive -Config $config -Kind STATUS -Proof ([pscustomobject]@{requestId=[string]$evidence.requestId}) | Out-Null} catch {Write-Host 'Completed STATUS retained; OUTPUT will retry without changing readiness.'}
+    }
+    return $result.ok
+}
+# One owned runspace waits for STATUS while the main loop renews the scoped
+# heartbeat. The caller suppresses all new claims until this worker is joined.
+function Start-FtextCloudReadiness([string]$ConfigPath) {
+    $pipeline=[System.Management.Automation.PowerShell]::Create()
+    try {
+        $null=$pipeline.AddScript({
+            param($ModulePath,$Path)
+            $ErrorActionPreference='Stop'
+            Import-Module -Name $ModulePath -Force
+            $ready=Invoke-FtextCloudReadiness -ConfigPath $Path -TimeoutSeconds 30
+            [pscustomobject]@{ready=$ready;refreshAt=(Get-FtextCloudReadinessRefreshAt)}
+        }).AddArgument((Join-Path $PSScriptRoot 'Cloud-Tools.psm1')).AddArgument($ConfigPath)
+        $async=$pipeline.BeginInvoke()
+        return [pscustomobject]@{Pipeline=$pipeline;Async=$async}
+    } catch { $pipeline.Dispose();throw }
+}
+function Receive-FtextCloudReadiness($Worker) {
+    if(-not $Worker.Async.IsCompleted) {throw 'Readiness worker is still running.'}
+    try {
+        $result=$Worker.Pipeline.EndInvoke($Worker.Async)
+        if($Worker.Pipeline.HadErrors -or $result.Count -ne 1 -or $result[0].ready -isnot [bool] -or $result[0].refreshAt -isnot [DateTime]) {throw 'Readiness worker did not return verified readiness.'}
+        $Worker | Add-Member -NotePropertyName RefreshAt -NotePropertyValue $result[0].refreshAt -Force
+        return [bool]$result[0].ready
+    } finally { $Worker.Pipeline.Dispose() }
+}
+function Stop-FtextCloudReadiness($Worker) {
+    if($null -eq $Worker) {return}
+    try { $Worker.Pipeline.Stop() } finally { $Worker.Pipeline.Dispose() }
+}
+function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
+    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result','cash-handoff-accept')) {throw 'Unsupported cash API action.'}
+    $token=Read-FtextDeviceToken $Config
+    return Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/'+$Action) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 30
+}
+function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandHash) {
+    $config=Get-FtextCloudConfig $ConfigPath
+    $assertOriginal={
+        $prefix=Join-Path $config.workFolder ('mws-cash-'+$Request.id)
+        if(Test-Path -LiteralPath ($prefix+'.publish.json')) {throw 'Publication journal exists. Authorization cannot publish again.'}
+        if(Test-Path -LiteralPath ($prefix+'.stop.json')) {throw 'Terminal stop journal exists. Authorization cannot publish again.'}
+        $intent=Get-Content -LiteralPath ($prefix+'.intent.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $active=Get-Content -LiteralPath (Join-Path $config.workFolder '.mws-ftext-cash.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if([string]$intent.requestId -cne [string]$Request.id -or [string]$intent.commandHash -cne $CommandHash -or [string]$intent.settingsHash -cne [string]$config.settingsHash -or [string]$active.request.id -cne [string]$Request.id -or [string]$active.request.handoff.nonce -cne [string]$Request.handoff.nonce -or [string]$active.request.handoff.commandHash -cne $CommandHash) {throw 'Original local handoff evidence is missing or changed.'}
+        foreach($key in @('companyId','storeId','terminalPos','serialNumber','settingsHash')) {if([string]$active.$key -cne [string]$config.$key) {throw 'Original active handoff belongs to another installation.'}}
+        foreach($suffix in @('.pending','.txt','.res','.report.json')) {if(Test-Path -LiteralPath ($prefix+$suffix)) {throw 'Original fiscal evidence exists. Authorization cannot publish again.'}}
+    }
+    for($attempt=0;$attempt -lt 2;$attempt++) {
+        & $assertOriginal
+        $clear=-not (Test-Path -LiteralPath (Join-Path $config.workFolder '.mws-ftext-status.json')) -and @(Get-ChildItem -LiteralPath $config.workFolder -Filter '*.txt' -File).Count -eq 0
+        $body=@{requestId=[string]$Request.id;settingsHash=[string]$config.settingsHash;nonce=[string]$Request.handoff.nonce;commandHash=$CommandHash;readyForExecution=[bool]$clear}
+        $ack=Invoke-FtextCashApi $config 'cash-handoff-accept' $body
+        if($ack.ok -ne $true -or $ack.version -ne 1 -or [string]$ack.requestId -cne [string]$Request.id -or [string]$ack.settingsHash -cne [string]$config.settingsHash -or [string]$ack.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.commandHash -cne $CommandHash -or $ack.requiresReadiness -isnot [bool]) {throw 'Invalid original handoff acknowledgement.'}
+        if([string]$ack.state -ceq 'STOPPED') {
+            if(-not $Request.handoff.PSObject.Properties['stopVersion'] -or $Request.handoff.stopVersion -ne 1 -or $ack.authorization -ne $null -or $ack.requiresReadiness -ne $false -or $ack.allowResend -ne $false -or $ack.stop.version -ne 1 -or [string]$ack.stop.id -notmatch '^[a-f0-9]{64}$' -or [string]$ack.stop.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.stop.commandHash -cne $CommandHash -or [string]::IsNullOrWhiteSpace([string]$ack.stop.at)) {throw 'Invalid original terminal stop acknowledgement.'}
+            [void][DateTimeOffset]::Parse([string]$ack.stop.at,[Globalization.CultureInfo]::InvariantCulture)
+            return [pscustomobject]@{requestId=$ack.requestId;settingsHash=$ack.settingsHash;nonce=$ack.nonce;commandHash=$ack.commandHash;stopped=$true;stopId=$ack.stop.id;stoppedAt=$ack.stop.at}
+        }
+        if([string]$ack.state -ceq 'ACCEPTED') {
+            if($null -eq $ack.authorization -or [string]$ack.authorization.id -cne [string]$Request.handoff.nonce -or [string]::IsNullOrWhiteSpace([string]$ack.authorization.acceptedAt)) {throw 'Invalid immutable original authorization.'}
+            [void][DateTimeOffset]::Parse([string]$ack.authorization.acceptedAt,[Globalization.CultureInfo]::InvariantCulture)
+            if($ack.requiresReadiness -eq $false) {
+                if(-not $clear) {throw 'Local input is not clear for first publication.'}
+                & $assertOriginal
+                return [pscustomobject]@{requestId=$ack.requestId;settingsHash=$ack.settingsHash;nonce=$ack.nonce;commandHash=$ack.commandHash;acceptedAt=$ack.authorization.acceptedAt}
+            }
+        } elseif([string]$ack.state -cne 'OFFERED' -or $null -ne $ack.authorization -or $ack.requiresReadiness -ne $true) {throw 'Original handoff is not eligible for first publication.'}
+        # Only the durable original evidence with NO publication journal allows
+        # nonfiscal readiness refresh before the first possible publication.
+        & $assertOriginal
+        Invoke-FtextCloudReadiness $ConfigPath | Out-Null
+    }
+    throw 'Fresh readiness was not acknowledged before first publication. Original files retained.'
+}
+function Invoke-FtextStatusMaintenance {
+    param([Parameter(Mandatory=$true)][string]$ConfigPath,[ValidateSet('Plan','Apply','Restore')][string]$Mode='Plan')
+    $c=Get-FtextCloudConfig $ConfigPath
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {$hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','')} finally {$sha.Dispose()}
+    $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$hash));$held=$false
+    try {
+        try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+        if(-not $held) {throw 'Close the connector before STATUS history maintenance. No file was moved.'}
+        # Rollback uses the original local journal and hashes, even when cloud is unavailable.
+        if($Mode -ceq 'Restore') {return Invoke-FtextStatusArchive -ConfigPath $ConfigPath -Mode Restore}
+        $plan=Invoke-FtextStatusArchive -ConfigPath $ConfigPath -Mode Plan
+        $approved=New-Object 'Collections.Generic.List[string]'
+        for($offset=0;$offset -lt $plan.candidateIds.Count;$offset+=100) {
+            $batch=@($plan.candidateIds | Select-Object -Skip $offset -First 100)
+            $token=Read-FtextDeviceToken $c
+            $ack=Invoke-RestMethod -Method Post -Uri ($c.apiBase+'/api/ftext/v1/device/status-history') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body (@{requestIds=$batch} | ConvertTo-Json -Compress) -TimeoutSec 15
+            Confirm-FtextCloudIdentity $c $ack
+            foreach($key in @('companyId','storeId','terminalPos','settingsHash','serialNumber','configurationId','lifecycleGeneration')) {if([string]$ack.$key -cne [string]$c.$key) {throw 'STATUS history acknowledgement belongs to another installation.'}}
+            if($ack.version -ne 1 -or $ack.fiscalExecution -isnot [bool] -or $ack.fiscalExecution -ne $false -or $ack.readinessVerified -isnot [bool] -or $ack.readinessVerified -ne $false -or -not $ack.PSObject.Properties['acknowledgedIds']) {throw 'Invalid STATUS history acknowledgement.'}
+            foreach($id in @($ack.acknowledgedIds)) {if([string]$id -notmatch '^[a-f0-9]{32}$' -or [string]$id -cnotin $batch -or $approved.Contains([string]$id)) {throw 'Unexpected STATUS history identity.'};$approved.Add([string]$id)}
+        }
+        return Invoke-FtextStatusArchive -ConfigPath $ConfigPath -Mode $Mode -AcknowledgedIds $approved.ToArray()
+    } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+function Invoke-FtextOutputDiscovery([string]$ConfigPath,[string]$CashCursor='',[string]$StatusCursor='') {
+    $c=Get-FtextCloudConfig $ConfigPath
+    if(-not $c.PSObject.Properties['outputVersion'] -or $c.outputVersion -ne 1) {return [pscustomobject]@{entries=@();cashCursor=$CashCursor;statusCursor=$StatusCursor}}
+    # This worker reads metadata only. It neither takes the fiscal folder mutex
+    # nor suppresses heartbeat/claims while HTTP or directory enumeration waits.
+    $pending=Get-FtextOutputPending $c
+    $pick={param($pattern,$regex,$cursor,$limit)
+        $names=@([IO.Directory]::EnumerateFiles($c.workFolder,$pattern) | ForEach-Object {[IO.Path]::GetFileName($_)} | Where-Object {$_ -cmatch $regex} | Sort-Object)
+        $after=@($names | Where-Object {$_ -cgt $cursor} | Select-Object -First $limit)
+        if($after.Count -eq 0) {$after=@($names | Select-Object -First $limit)}
+        return $after
+    }
+    $cash=@(& $pick 'mws-cash-*.report.json' '^mws-cash-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.report\.json$' $CashCursor 19)
+    $status=@(& $pick 'mws-status-*.json' '^mws-status-[a-f0-9]{32}\.json$' $StatusCursor 99)
+    $cashIds=@($cash | ForEach-Object {$_.Substring(9,36)});$statusIds=@($status | ForEach-Object {$_.Substring(11,32)})
+    if($pending) {if($pending.kind -ceq 'CASH') {$cashIds=@([string]$pending.requestId)+$cashIds} else {$statusIds=@([string]$pending.requestId)+$statusIds}}
+    $cashIds=@($cashIds | Select-Object -Unique);$statusIds=@($statusIds | Select-Object -Unique)
+    $entries=New-Object 'Collections.Generic.List[object]'
+    $token=Read-FtextDeviceToken $c
+    foreach($kind in @('CASH','STATUS')) {
+        $ids=if($kind -ceq 'CASH') {$cashIds} else {$statusIds}
+        if(@($ids).Count -eq 0) {continue}
+        $endpoint=if($kind -ceq 'CASH') {'output-history'} else {'status-history'}
+        $ack=Invoke-RestMethod -Method Post -Uri ($c.apiBase+'/api/ftext/v1/device/'+$endpoint) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body (@{requestIds=@($ids)} | ConvertTo-Json -Compress) -TimeoutSec 15
+        foreach($key in @('companyId','storeId','terminalPos','settingsHash','serialNumber','configurationId','lifecycleGeneration')) {if([string]$ack.$key -cne [string]$c.$key) {throw 'Output history belongs to another installation.'}}
+        if($ack.version -ne 1 -or $ack.fiscalExecution -isnot [bool] -or $ack.fiscalExecution -ne $false -or $ack.readinessVerified -isnot [bool] -or $ack.readinessVerified -ne $false) {throw 'Invalid historical OUTPUT proof.'}
+        $seen=@{}
+        if($kind -ceq 'CASH') {
+            foreach($p in @($ack.completed)) {if([string]$p.requestId -cnotin $ids -or $seen.ContainsKey([string]$p.requestId)) {throw 'Unexpected fiscal OUTPUT identity.'};$seen[[string]$p.requestId]=$true;$entries.Add([pscustomobject]@{kind=$kind;proof=$p})}
+        } else {
+            foreach($id in @($ack.acknowledgedIds)) {if([string]$id -cnotin $ids -or $seen.ContainsKey([string]$id)) {throw 'Unexpected STATUS OUTPUT identity.'};$seen[[string]$id]=$true;$entries.Add([pscustomobject]@{kind=$kind;proof=[pscustomobject]@{requestId=[string]$id}})}
+        }
+    }
+    # Resume the single pinned partial group before any new group.
+    $ordered=@($entries.ToArray() | Sort-Object @{Expression={if($pending -and $_.kind -ceq $pending.kind -and $_.proof.requestId -ceq $pending.requestId){0}else{1}}})
+    return [pscustomobject]@{entries=$ordered;cashCursor=$(if($cash.Count){$cash[-1]}else{$CashCursor});statusCursor=$(if($status.Count){$status[-1]}else{$StatusCursor})}
+}
+function Start-FtextOutputDiscovery([string]$ConfigPath,[string]$CashCursor='',[string]$StatusCursor='') {
+    $pipeline=[System.Management.Automation.PowerShell]::Create()
+    try {
+        $null=$pipeline.AddScript({param($ModulePath,$Path,$CashCursor,$StatusCursor);$ErrorActionPreference='Stop';Import-Module $ModulePath -Force;Invoke-FtextOutputDiscovery $Path $CashCursor $StatusCursor}).AddArgument((Join-Path $PSScriptRoot 'Cloud-Tools.psm1')).AddArgument($ConfigPath).AddArgument($CashCursor).AddArgument($StatusCursor)
+        return [pscustomobject]@{Pipeline=$pipeline;Async=$pipeline.BeginInvoke()}
+    } catch {$pipeline.Dispose();throw}
+}
+function Receive-FtextOutputDiscovery($Worker) {
+    if(-not $Worker.Async.IsCompleted) {throw 'Output metadata is still being checked.'}
+    try {$r=$Worker.Pipeline.EndInvoke($Worker.Async);if($Worker.Pipeline.HadErrors -or $r.Count -ne 1) {throw 'Output history unavailable; original files retained.'};return $r[0]} finally {$Worker.Pipeline.Dispose()}
+}
+function Invoke-FtextCloudOutputArchive($Config,[string]$Kind,$Proof) {return Invoke-FtextOutputArchive -Config $Config -Kind $Kind -Proof $Proof}
+function Invoke-FtextOutputPreparation([string]$ConfigPath,[ValidateRange(1,200)][int]$MaxBatches=200) {
+    $c=Get-FtextCloudConfig $ConfigPath
+    if(-not $c.PSObject.Properties['outputVersion'] -or $c.outputVersion -ne 1) {throw 'Install the current OUTPUT package first.'}
+    if(@(Get-Process -Name FTextPlus -ErrorAction SilentlyContinue).Count -gt 0) {throw 'Close FTEXT+ before preparing existing OUTPUT history.'}
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {$hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','')} finally {$sha.Dispose()}
+    $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$hash));$held=$false
+    try {
+        try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+        if(-not $held) {throw 'Close the connector before preparing OUTPUT.'}
+        Assert-FtextOutputIdle $c
+        $cashCursor='';$statusCursor='';$seen=New-Object 'Collections.Generic.HashSet[string]';$moved=0;$retained=0;$batches=0
+        Write-Host 'Preparing verified OUTPUT history. FTEXT+ and connector must stay closed. No fiscal command is sent.'
+        for($i=0;$i -lt $MaxBatches;$i++) {
+            if(@(Get-Process -Name FTextPlus -ErrorAction SilentlyContinue).Count -gt 0) {throw 'FTEXT+ started. Preparation stopped with evidence preserved.'}
+            $found=Invoke-FtextOutputDiscovery $ConfigPath $cashCursor $statusCursor
+            $cashCursor=[string]$found.cashCursor;$statusCursor=[string]$found.statusCursor
+            if(-not $seen.Add($cashCursor+'|'+$statusCursor)) {break}
+            $batches++
+            foreach($entry in @($found.entries)) {
+                try {$r=Invoke-FtextOutputArchive -Config $c -Kind ([string]$entry.kind) -Proof $entry.proof;$moved+=$r.movedFiles}
+                catch {$retained++;if($null -ne (Get-FtextOutputPending $c)) {throw};Write-Host 'One original group retained: its local evidence did not verify.'}
+            }
+            Write-Host ('OUTPUT progress: '+$moved+' files preserved; '+$batches+' batches checked.')
+            if([string]::IsNullOrEmpty($cashCursor) -and [string]::IsNullOrEmpty($statusCursor)) {break}
+        }
+        return [pscustomobject]@{movedFiles=$moved;retainedGroups=$retained;batches=$batches;outputRoot=(Get-FtextOutputRoot $c);fiscalExecution=$false}
+    } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+Export-ModuleMember -Function Get-FtextCloudReadinessRefreshAt,Get-FtextReadinessRefreshAt,Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff,Invoke-FtextStatusMaintenance,Start-FtextOutputDiscovery,Receive-FtextOutputDiscovery,Invoke-FtextOutputDiscovery,Invoke-FtextCloudOutputArchive,Invoke-FtextOutputPreparation

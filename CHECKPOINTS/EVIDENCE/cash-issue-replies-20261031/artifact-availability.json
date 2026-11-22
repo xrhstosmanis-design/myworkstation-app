@@ -1,0 +1,18 @@
+{
+  "scope": "Cloud-browser download to evidence-host artifact availability; not established as a product failure",
+  "firstPathsUnavailable": [
+    "e06d8822-60ea-48fd-b467-286e7e1d6726",
+    "d73ce487-5c7d-4213-bf77-f74865013df1",
+    "f2644a3f-3e35-45f6-8ce3-6f279ff73453"
+  ],
+  "reopenedFirstBrowserStatBytes": 44753,
+  "successfulReadOnlyRetriesBytes": [
+    44717,
+    44574,
+    44753
+  ],
+  "allRetrievedWorkbooksParseAndMatchCopy": true,
+  "issueActionsReplayed": 0,
+  "cause": "UNESTABLISHED",
+  "nextAction": "Read-only controlled browser/download-transfer diagnosis on the current stored report; claim any source extension before code; no financial or issue replay."
+}

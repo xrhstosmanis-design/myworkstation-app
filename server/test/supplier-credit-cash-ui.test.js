@@ -37,7 +37,8 @@ test('mounted POS credit form shows signed net, requires original confirmation, 
 test('registered POS credit endpoints keep tenant/store/terminal scope and explicit permission gate',async()=>{
  const source=fs.readFileSync(new URL('../src/routes/store-transactions.js',import.meta.url),'utf8');
  const gates=source.slice(source.indexOf('function requireLedgerAccess('),source.indexOf('async function virtualBankAccount('));
- const {requireLedgerAccess}=new Function(gates+';return {requireLedgerAccess};')();
+ const approvalsHelper=source.slice(source.indexOf('const approvalsPaths='),source.indexOf('async function requireApprovalsRead('));
+ const {requireLedgerAccess}=new Function(approvalsHelper+'\n'+gates+';return {requireLedgerAccess};')();
  const user={tokenType:'STORE_OPERATOR',storeId:'s',companyId:'c',id:'actor',permissions:['SUPPLIER_PAYMENT','SAME_SHIFT_PAYMENTS']};
  let status,next=0;const res={status:v=>{status=v;return res},json:()=>res};
  requireLedgerAccess({method:'GET',originalUrl:'/api/transactions/stores/s/supplier-credit-cash?supplierId=sup',user},res,()=>next++);assert.equal(next,1);

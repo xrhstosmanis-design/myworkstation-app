@@ -2,9 +2,27 @@ const api=async(path,options={})=>{const token=localStorage.getItem("token");con
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function close(){document.getElementById("mws-invoice-advanced-overlay")?.remove()}
+function chooseSearchStore(stores){
+  close();return new Promise(resolve=>{
+    const overlay=document.createElement('div');overlay.id='mws-invoice-advanced-overlay';
+    overlay.innerHTML=`<section class="mws-invoice-advanced-modal"><div class="body"><h2>Κατάστημα αναζήτησης</h2><p>Επίλεξε το κατάστημα για το οποίο γίνεται η αναζήτηση προϊόντος.</p><label>Κατάστημα<select aria-label="Κατάστημα αναζήτησης"><option value="">— Επιλογή —</option>${stores.map(store=>`<option value="${esc(store.id)}">${esc(store.name)}</option>`).join('')}</select></label></div><footer><button data-cancel>Ακύρωση</button><button data-continue class="primary" disabled>Αναζήτηση</button></footer></section>`;
+    const select=overlay.querySelector('select'),button=overlay.querySelector('[data-continue]');
+    select.onchange=()=>{button.disabled=!select.value;};
+    overlay.querySelector('[data-cancel]').onclick=()=>{overlay.remove();resolve(null);};
+    button.onclick=()=>{const id=select.value;if(!stores.some(store=>store.id===id))return;overlay.remove();resolve(id);};
+    document.body.appendChild(overlay);
+  });
+}
 async function openAdvanced(host){
   const input=host.querySelector("[data-product-q]"),barcode=String(input?.value||"").trim();if(!/^\d{6,18}$/.test(barcode)){alert("Για Advanced Online Search γράψε ή σκάναρε barcode 6–18 ψηφίων.");return}
-  let options,result;try{[options,result]=await Promise.all([api("/api/commerce/advanced-online-search/options"),api(`/api/commerce/advanced-online-search/search?q=${encodeURIComponent(barcode)}`)])}catch(e){alert(e.message);return}
+  let options,result;try{
+    const orderId=host.closest('[data-invoice-search-order-id]')?.dataset.invoiceSearchOrderId||'';
+    options=await api(`/api/commerce/advanced-online-search/options${orderId?`?orderId=${encodeURIComponent(orderId)}`:''}`);
+    // The persisted invoice owns its store. Only unbound company-level
+    // searches need a chooser; never choose the first active store.
+    const storeId=options.searchStoreId||await chooseSearchStore(options.stores||[]);if(!storeId)return;
+    result=await api(`/api/commerce/advanced-online-search/search?q=${encodeURIComponent(barcode)}&storeId=${encodeURIComponent(storeId)}${orderId?`&orderId=${encodeURIComponent(orderId)}`:''}`);
+  }catch(e){alert(e.message);return}
   const row=(result.rows||[])[0];
   if(result.source==="MYWORKSTATION"&&row){input.value=row.sku||barcode;input.dispatchEvent(new Event("input",{bubbles:true}));host.querySelector("[data-product-search]")?.click();return}
   if(!row){const reason=result.advanced?.reason;alert(reason==="LIMIT_REACHED"?"Έχει συμπληρωθεί το όριο Advanced Online Product Search.":reason==="PROVIDER_NOT_CONFIGURED"?"Το Advanced Online Product Search είναι ενεργό αλλά δεν έχει ρυθμιστεί provider.":"Δεν βρέθηκε αξιόπιστη online αντιστοίχιση για αυτό το barcode.");return}

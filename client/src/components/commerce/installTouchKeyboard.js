@@ -1,8 +1,10 @@
 import {installBackofficeColumnFilters} from "../../backoffice-column-filters.js";
+import {editNumericKeyboardDraft,numericKeyboardValue} from "../../utils/numeric-keyboard-draft.js";
 
 const TEXT_TYPES=new Set(["text","search","email","tel","password","url"]);
 const NUMERIC_TYPES=new Set(["number"]);
 let activeInput=null,lang="EL",shift=false,activeButton=null,dialogPosition=null;
+let numericDraft=null,numericPublished="",writingNumeric=false;
 
 const editable=el=>{if(!(el instanceof HTMLElement)||el.disabled||el.readOnly||el.dataset?.keyboard==="off")return false;if(el.matches("textarea,[contenteditable='true']"))return true;if(!(el instanceof HTMLInputElement))return false;const type=(el.type||"text").toLowerCase();return TEXT_TYPES.has(type)||NUMERIC_TYPES.has(type)};
 const isNumeric=input=>input instanceof HTMLInputElement&&(NUMERIC_TYPES.has((input.type||"").toLowerCase())||input.dataset.mwsNumeric==="1");
@@ -56,11 +58,18 @@ function bindKeys(root){
     button.addEventListener("pointerdown",run,{passive:false});
   });
 }
-function finishRender(root){bindKeys(root);bindDrag(root);applyDialogPosition(root)}
+function syncNumericPreview(root=ensure()){
+  const output=root.querySelector('[data-numeric-draft]');if(!output)return;
+  output.textContent=String(numericDraft??activeInput?.value??'').replace('.',',');
+  const invalid=numericDraft!==null&&numericKeyboardValue(numericDraft)===null;
+  output.setAttribute('aria-invalid',String(invalid));
+  const enter=root.querySelector('[data-key="ENTER"]');if(enter)enter.disabled=invalid;
+}
+function finishRender(root){bindKeys(root);bindDrag(root);applyDialogPosition(root);syncNumericPreview(root)}
 function render(){
   const root=ensure();if(!activeInput){root.hidden=true;return}root.hidden=false;
   if(isNumeric(activeInput)){
-    root.innerHTML=`<section class="mws-touch-dialog"><header><div><small>MYWORKSTATION BACKOFFICE</small><h2>Αριθμητικό πληκτρολόγιο</h2></div><span class="mws-touch-drag-hint">Σύρε για μετακίνηση</span><button type="button" data-key="CLOSE" aria-label="Κλείσιμο">✕</button></header><main><div class="mws-touch-numeric">${["7","8","9","4","5","6","1","2","3",",","0","BACK"].map(k=>`<button type="button" data-key="${k}">${k==="BACK"?"⌫":k}</button>`).join("")}</div><div class="mws-touch-actions"><button type="button" data-key="MINUS">−</button><button type="button" data-key="CLEAR">Καθαρισμός</button><button type="button" class="enter" data-key="ENTER">Enter ↵</button></div></main></section>`;
+    root.innerHTML=`<section class="mws-touch-dialog"><header><div><small>MYWORKSTATION BACKOFFICE</small><h2>Αριθμητικό πληκτρολόγιο</h2></div><span class="mws-touch-drag-hint">Σύρε για μετακίνηση</span><button type="button" data-key="CLOSE" aria-label="Κλείσιμο">✕</button></header><main><output class="mws-touch-numeric-draft" data-numeric-draft aria-label="Τιμή πληκτρολογίου"></output><div class="mws-touch-numeric">${["7","8","9","4","5","6","1","2","3",",","0","BACK"].map(k=>`<button type="button" data-key="${k}">${k==="BACK"?"⌫":k}</button>`).join("")}</div><div class="mws-touch-actions"><button type="button" data-key="MINUS">−</button><button type="button" data-key="CLEAR">Καθαρισμός</button><button type="button" class="enter" data-key="ENTER">Enter ↵</button></div></main></section>`;
     finishRender(root);return;
   }
   const chars=labels[lang],sizes=rows[lang];let cursor=0;
@@ -75,9 +84,21 @@ function insertText(text){
   const value=input.value||"",start=input.selectionStart??value.length,end=input.selectionEnd??start,nextValue=value.slice(0,start)+text+value.slice(end),next=start+text.length;
   setDomValue(input,nextValue);try{input.focus({preventScroll:true});input.setSelectionRange(next,next)}catch{}
 }
+function handleNumeric(key){
+  const input=activeInput;
+  // A controlled field may format 1.20 as 1.2; do not lose the operator's draft.
+  // A genuinely changed external value, however, replaces the old draft.
+  if(input.value!==numericPublished&&Number(input.value)!==Number(numericPublished))numericDraft=input.value;
+  const next=editNumericKeyboardDraft(numericDraft,key);if(next===numericDraft)return;
+  numericDraft=next;const value=numericKeyboardValue(next);
+  if(value!==null){writingNumeric=true;try{setDomValue(input,value)}finally{writingNumeric=false}numericPublished=input.value}
+  syncNumericPreview();try{input.focus({preventScroll:true})}catch{}
+}
 function handle(key){
   if(key==="CLOSE"){close();return}
   if(!activeInput)return;
+  if(!activeInput.isConnected||!editable(activeInput)){close();return}
+  if(numericDraft!==null&&(["CLEAR","BACK","MINUS",",","."].includes(key)||/^\d$/.test(key))){handleNumeric(key);return}
   if(key==="LANG"){lang=lang==="EL"?"EN":"EL";shift=false;render();return}
   if(key==="SHIFT"){shift=!shift;render();return}
   if(key==="SPACE"){insertText(" ");return}
@@ -90,16 +111,16 @@ function handle(key){
     else if(start>0){setDomValue(input,value.slice(0,start-1)+value.slice(end));try{input.focus({preventScroll:true});input.setSelectionRange(start-1,start-1)}catch{}}
     return;
   }
-  if(key==="ENTER"){const input=activeInput;input.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",code:"Enter",bubbles:true}));input.dispatchEvent(new KeyboardEvent("keyup",{key:"Enter",code:"Enter",bubbles:true}));if(input.tagName!=="TEXTAREA")close();return}
+  if(key==="ENTER"){if(numericDraft!==null&&numericKeyboardValue(numericDraft)===null)return;const input=activeInput;input.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",code:"Enter",bubbles:true}));input.dispatchEvent(new KeyboardEvent("keyup",{key:"Enter",code:"Enter",bubbles:true}));if(input.tagName!=="TEXTAREA")close();return}
   let text=key;if(isNumeric(activeInput)&&key===",")text=".";else if(shift)text=key.toLocaleUpperCase(lang==="EL"?"el-GR":"en-US");insertText(text);if(shift){shift=false;render()}
 }
 function prepareInput(input){if(!(input instanceof HTMLInputElement))return;const type=(input.type||"text").toLowerCase();if(NUMERIC_TYPES.has(type))input.dataset.mwsNumeric="1";if(!input.dataset.mwsOriginalInputmode)input.dataset.mwsOriginalInputmode=input.getAttribute("inputmode")??"__none__";input.setAttribute("inputmode","none")}
 function removeButton(){if(activeButton){activeButton.remove();activeButton=null}document.querySelectorAll('.mws-touch-field-trigger').forEach(b=>b.remove())}
 function makeButton(input){removeButton();const button=document.createElement("button");button.type="button";button.className="mws-touch-field-trigger";button.title="Άνοιγμα πληκτρολογίου οθόνης";button.setAttribute("aria-label","Άνοιγμα πληκτρολογίου οθόνης");button.textContent="⌨";button.addEventListener("pointerdown",event=>{event.preventDefault();event.stopPropagation();open(input)},{passive:false});document.body.appendChild(button);activeButton=button;positionButton(input,button);return button}
 function positionButton(input,button=activeButton){if(!button||!editable(input)||!input.isConnected){removeButton();return}const rect=input.getBoundingClientRect();const hidden=rect.width<=0||rect.height<=0||rect.bottom<0||rect.top>window.innerHeight||rect.right<0||rect.left>window.innerWidth;button.hidden=hidden;if(hidden)return;const size=Math.max(28,Math.min(34,rect.height-6));const left=Math.max(rect.left+2,rect.right-size-4),top=Math.max(3,Math.min(window.innerHeight-size-3,rect.top+(rect.height-size)/2));button.style.left=`${left}px`;button.style.top=`${top}px`;button.style.width=`${size}px`;button.style.height=`${size}px`}
-function syncButton(){const focused=editable(document.activeElement)?document.activeElement:null;if(!focused){removeButton();return}if(!activeButton)makeButton(focused);else positionButton(focused,activeButton)}
-function open(input){if(!editable(input))return;activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);try{input.focus({preventScroll:true})}catch{}render();if(!activeButton)makeButton(input)}
-function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;dialogPosition=null;ensure().hidden=true;removeButton()}
+function syncButton(){if(activeInput&&(!activeInput.isConnected||!editable(activeInput))){close();return}const focused=editable(document.activeElement)?document.activeElement:null;if(!focused){removeButton();return}if(!activeButton)makeButton(focused);else positionButton(focused,activeButton)}
+function open(input){if(!editable(input))return;if(activeInput!==input||numericDraft===null){numericDraft=input.type==="number"?input.value:null;numericPublished=input.value??""}activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);try{input.focus({preventScroll:true})}catch{}render();if(!activeButton)makeButton(input)}
+function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;numericDraft=null;numericPublished="";shift=false;dialogPosition=null;ensure().hidden=true;syncNumericPreview();removeButton()}
 function scheduleSync(){requestAnimationFrame(syncButton)}
 export function installTouchKeyboard(){
   installBackofficeColumnFilters();ensure();removeButton();
@@ -120,6 +141,9 @@ export function installTouchKeyboard(){
     const el=event.target;
     if(!editable(el)){removeButton();return}
     makeButton(el);
+  },true);
+  document.addEventListener("input",event=>{
+    if(event.target===activeInput&&numericDraft!==null&&!writingNumeric){numericDraft=activeInput.value;numericPublished=activeInput.value;syncNumericPreview()}
   },true);
   document.addEventListener("focusout",()=>setTimeout(syncButton,0),true);
   window.addEventListener("resize",()=>{dialogPosition=null;scheduleSync()});

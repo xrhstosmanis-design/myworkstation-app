@@ -1,0 +1,55 @@
+{
+  "status": "TEST_COMPATIBILITY_CORRECTED_AWAITING_FULL_CI_REVIEW_LAB",
+  "base": "d6046198273018a2f14b1a65890ef6b2a3c7345d",
+  "recorded_at": "2026-11-05T12:59:21+02:00",
+  "runtime": "v20.20.2",
+  "original_full_ci": {
+    "run": 42009262448,
+    "tests": 5835,
+    "pass": 5832,
+    "fail": 3,
+    "skip": 0,
+    "raw_log_sha256": "738ac499dee72b45b64ba1bcd7b0b722237553b3c765e8e2722b0511552d3a32"
+  },
+  "targeted_before": {
+    "tests": 15,
+    "pass": 12,
+    "fail": 3,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "targeted_after": {
+    "tests": 137,
+    "pass": 137,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "actual_chromium_cases": 16,
+  "normal_client_build": "PASS",
+  "unchanged_runtime_files": 1330,
+  "original_assertions_preserved": true,
+  "registries": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "before_blob": "da46db2b685d58f04cafd5547e967cddeb677f13",
+      "after_blob": "e70c7ec0d45aab55ff588ff91b1e45665062beeb",
+      "prefix_bytes": 2484,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "before_blob": "44b2ee29b7e7c9f5eb4031cf6303f95c95bd2fe0",
+      "after_blob": "4f465d599c33a8aa7e67f0c03f08583ba696a738",
+      "prefix_bytes": 2484,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "before_blob": "147bc28dc29c19d3bb3cbdc53cb5a0cee09768c5",
+      "after_blob": "98e3c89ac237ad461c98b751c5373205d179b9b1",
+      "prefix_bytes": 2484,
+      "old_suffix_preserved": true
+    }
+  },
+  "deployed": false,
+  "hosted_test": false,
+  "business_mutation": false
+}

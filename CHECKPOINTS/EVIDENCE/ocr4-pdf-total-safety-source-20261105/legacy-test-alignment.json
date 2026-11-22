@@ -1,0 +1,56 @@
+{
+  "base": "2b1b18c2bd30b74ac490fe781636de05dc95ee36",
+  "runtime_sha256": "32e1f56f985603aaa7c819a490c9dc2d846884c0c43dbd7e4f22f8fd9d5653e8",
+  "test_before_blob": "7bd1c5f087f7d74762db88ce37ac196d8aaaef41",
+  "scope": "Existing static expectation alignment only; runtime unchanged; not release or OCR acceptance. Standard Prisma client generation is required for the imported verifier; no database is contacted.",
+  "results": {
+    "before": {
+      "tests": 325,
+      "pass": 324,
+      "fail": 1,
+      "skipped": 0,
+      "cancelled": 0,
+      "sha256": "413e091f64b903cb3457cb64b83941a19f6661f8800adaecdf123314f0981dce"
+    },
+    "after": {
+      "tests": 325,
+      "pass": 325,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "sha256": "274828411f97b9e0d3f5196a99a6c571b62fc4d521a299d8de9b15f02236bfc5"
+    }
+  },
+  "node": "v20.20.2",
+  "workflow_run": "41979469525",
+  "runtime_changed": false,
+  "full_ci": "PENDING",
+  "independent_review": "PENDING",
+  "lab": "NOT_TESTED",
+  "provider_called": false,
+  "production_deployed": false,
+  "publication": "STAGING_BRANCH_ONLY_UNTIL_AUTHORIZED_FAST_FORWARD",
+  "registries": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "old_suffix_preserved": true,
+      "old_bytes": 5230918,
+      "new_bytes": 5233016
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "old_suffix_preserved": true,
+      "old_bytes": 4054992,
+      "new_bytes": 4057090
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "old_suffix_preserved": true,
+      "old_bytes": 3582745,
+      "new_bytes": 3584843
+    }
+  },
+  "pdf": {
+    "pages": 958,
+    "sha256": "c6f23e869166cbc912817936a33c85b859f77f118bf65c2df3acb00415422cbd",
+    "two_copies_equal": true,
+    "visual_review": "PENDING"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "sourcePr": 3655,
+  "sourceHead": "593bde47efc3a6bdd5824946157931e1c807afcd",
+  "mergedRevision": "0aef945fdff1b1f3808e9b1a28c1e6fdaba6750d",
+  "prCi": {
+    "runId": 41926958070,
+    "conclusion": "success",
+    "jobsPassed": 5,
+    "serverPassed": 5562,
+    "backupPassed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "mainCi": {
+    "runId": 41929092324,
+    "conclusion": "success",
+    "jobsPassed": 5,
+    "serverPassed": 5562,
+    "backupPassed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "completedAt": "2026-11-04T23:06:48Z"
+  },
+  "release": {
+    "runId": 41931055526,
+    "jobId": 126927825674,
+    "workflowMetadataHead": "ee3551474e169f5d4d24b450f804163b04b653a4",
+    "pinnedRevision": "0aef945fdff1b1f3808e9b1a28c1e6fdaba6750d",
+    "deployId": "dep-dblrla6417fc73bbqutg",
+    "status": "LIVE",
+    "conclusion": "success",
+    "finishedAt": "2026-11-04T23:13:39.051136Z",
+    "workflowCompletedAt": "2026-11-04T23:14:01Z"
+  },
+  "rollback": {
+    "artifactId": 13372226008,
+    "name": "render-rollback-checkpoint-0aef945fdff1b1f3808e9b1a28c1e6fdaba6750d",
+    "sha256": "2d3f53718ab7f7c0652a4f5c1632059a16a9bcb72431d71f23e97f32a18a0cc6",
+    "capturedAt": "2026-11-04T23:07:19.227Z",
+    "revision": "8f558f094776fb4e2b0d1bfc7616bf48b0a7af53"
+  },
+  "acceptance": "H_MEASURED_CORRECT_FOUR_FIELDS_LATENCY_OPEN",
+  "hEvidence": "header-H-observation.json"
+}

@@ -34,4 +34,15 @@ public class PushEnvelopeTest {
         }
         assertEquals("MyWorkStation Chat",PushEnvelope.title(data()));
     }
+    @Test public void replyTargetAllowsOnlyAnOpaqueMessageId() {
+        Map<String,String> m=data();
+        m.put("storeName","ΚΑΤ");
+        m.put("messageId","chat-123");
+        assertTrue(PushEnvelope.allowed(m,binding,true,"A","C"));
+        m.put("body","PRIVATE");
+        assertFalse(PushEnvelope.allowed(m,binding,true,"A","C"));
+        m.remove("body");
+        m.put("messageId","https://example.test/scope");
+        assertFalse(PushEnvelope.allowed(m,binding,true,"A","C"));
+    }
 }

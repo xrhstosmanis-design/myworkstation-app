@@ -1,0 +1,15 @@
+{
+  "verifiedAtUtc": "2026-11-01T15:05:59.341469+00:00",
+  "signedSource": "2625a7913ccfa162dfa2342d976de6e172110a8f",
+  "distributionMerge": "9d7ebe588ca46742de0ab6f8ace5117ad98afb70",
+  "combinedRevision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e",
+  "androidSourceTree": "f9bafe0cb663f77edaca2ca818da40e48aa0e2c2",
+  "chatSourceUnchanged": true,
+  "downloadAssetsUnchanged": true,
+  "guardDeferredDistributionRun": 41318518424,
+  "combinedFullCI": 41348911362,
+  "combinedFullCIStatus": "SUCCESS; all5jobs,5148server+8backup/0FAIL/0SKIP",
+  "physicalAcceptance": "NOT TESTED",
+  "ordinaryGuardedDeploy": 41350280601,
+  "renderDeployId": "dep-dbjqkgu7bikc7389ei10"
+}

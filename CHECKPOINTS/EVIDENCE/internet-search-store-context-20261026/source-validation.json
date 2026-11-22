@@ -1,0 +1,30 @@
+{
+  "baseline": "5229591653e6b9f4730173f8fc0491283eb7dd6c",
+  "claimPR": 3155,
+  "claimHead": "19621ddd30fafe557ca25ffb61af1fb198783210",
+  "claimCI": 40278653100,
+  "claimCIConclusion": "success",
+  "localRuntime": "Node24.22.1",
+  "localOriginalUI": {
+    "pass": 0,
+    "fail": 2,
+    "skip": 0
+  },
+  "localCorrectedFocused": {
+    "pass": 41,
+    "fail": 0,
+    "skip": 1,
+    "nativePostgresActuallyExecuted": false
+  },
+  "frontendBuild": "PASS 8.50s; TABLE_SERVICE verified",
+  "rawTestReporter": "Node spec reporter text, not TAP despite earlier scratch .tap suffix",
+  "runtimeSHA256": {
+    "client/src/components/commerce/InternetProductSearchPanel.jsx": "3a801201a8730e7fb0c1a78f84f9ac476bc11e888557ea591506832dcf24d6e4",
+    "server/src/routes/commerce-advanced-online-search.js": "5ff6d9be48e27b53f4890fa7b48dfcf37fac12a5b163f5f5ef42d9373c4181f9",
+    "server/test/internet-search-store-context-ui.test.js": "6ddeb5d086b0b8a3a258c01bf0e147b76a6902a1950c4aa6cb886f29e52021b6",
+    "server/test/internet-search-store-context-postgres.test.js": "67fe0e8ef5a0f8fded7b697f467a58d6252fe6aeef3e92a84a8e8269ed779c7c"
+  },
+  "status": "SOURCE_PREPARED_NOT_INSTALLED_AWAITING_NATIVE_CI_AND_GROUPED_READONLY_ACCEPTANCE",
+  "productionActions": [],
+  "sameTrackerPrefixInThreeRegistries": true
+}

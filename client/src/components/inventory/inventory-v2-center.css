@@ -98,6 +98,8 @@
   display: grid;
   gap: 6px;
 }
+.inv2-list-pages{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.inv2-list-pages small{flex-basis:100%}
 .inv2-history-row{display:grid;grid-template-columns:1fr auto;gap:5px}.inv2-history-open {
   text-align: left;
   display: flex;

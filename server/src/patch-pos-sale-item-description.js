@@ -8,8 +8,7 @@ if(src.includes(marker)){
   process.exit(0);
 }
 
-const cashNeedle='if(cashAmount>0)await tx.$executeRaw`INSERT INTO "StoreTransaction"';
-const cashIndex=src.indexOf(cashNeedle);
+const cashIndex=src.search(/if\((?:cashAmount|cashThisShift)>0\)await tx\.\$executeRaw\x60INSERT INTO "StoreTransaction"/);
 if(cashIndex<0){
   console.error("POS cash StoreTransaction anchor not found; refusing unsafe partial patch.");
   process.exit(1);

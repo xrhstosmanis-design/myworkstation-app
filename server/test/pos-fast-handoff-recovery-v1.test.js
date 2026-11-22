@@ -44,15 +44,17 @@ test("Azure may forward a reconciled complete table while OpenAI FAST remains he
   assert.match(route,/const azureProductLines=reconciledFastProductLines\(parsed\.productLines,azureTotalGross\)/);
 });
 
-test("a useful Azure header with an incomplete table continues through FAST OpenAI",()=>{
+test("a partial Azure header without a reconciled table retains FAST OpenAI fallback",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-header"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-duplicate-check"',start));
   assert.match(body,/let azureHeaderFallback=null/);
   assert.match(body,/const azureProductLines=reconciledFastProductLines\(parsed\.productLines,azureTotalGross\)/);
-  assert.match(body,/if\(azureHasUsefulHeader&&azureProductLines\.length\)return res\.json\(azureHeader\)/);
+  assert.match(body,/if\(azureHasUsefulHeader&&azureCanVerifyDocumentTotal&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(reviewFastSupplierVat\(azureHeader,recipientVat,azureSupplierVat\)\)/);
   assert.match(body,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
-  assert.ok(body.indexOf("azureHeaderFallback=azureHeader")<body.indexOf("callFastOpenAiHeader({prompt,filePart})"));
-  assert.match(body,/catch\(error\)\{throwIfWalletError\(error\);if\(azureHeaderFallback\)return res\.json\(azureHeaderFallback\);throw error\}/);
+  assert.ok(body.indexOf("azureHeaderFallback=azureHeader")<body.lastIndexOf("callFastOpenAiHeader({prompt,filePart,timing})"));
+  assert.match(body,/catch\(error\)\{throwIfWalletError\(error\);if\(azureHeaderFallback&&azureCanVerifyDocumentTotal\)return res\.json\(reviewFastSupplierVat\(azureHeaderFallback,recipientVat,azureSupplierVat\)\);throw error\}/);
+  assert.match(body,/let azureCanVerifyDocumentTotal=!isPdf/);
+  assert.match(body,/azureCanVerifyDocumentTotal=!isPdf\|\|\(!pdfHeaderPriority&&parsed\.azurePageCount===1\)/);
 });
 
 test("fast handoff hydrates an empty newest job from the matching exact-file durable table",()=>{

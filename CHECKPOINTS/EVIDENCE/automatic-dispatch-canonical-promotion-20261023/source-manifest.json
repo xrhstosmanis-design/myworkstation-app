@@ -1,0 +1,53 @@
+{
+  "status": "DRAFT_SOURCE_ONLY_AWAITING_ACTUAL_PROVISION",
+  "claimPR": 3088,
+  "base": "619a20d35713d145be13d14d48a8162c6d2c2d4e",
+  "sourceEntries": [
+    {
+      "path": "ops/backup/lifecycle/manifest.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b58a17b444cabd2a506e812596c3ebf564709ec8"
+    },
+    {
+      "path": "ops/backup/lifecycle/column-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f886af6a5b90b966cfff4cc85593dcee7315e2f"
+    },
+    {
+      "path": "ops/backup/lifecycle/automatic-report-manifest.proposed.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b58a17b444cabd2a506e812596c3ebf564709ec8"
+    },
+    {
+      "path": "ops/backup/lifecycle/automatic-report-column-review.proposed.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f886af6a5b90b966cfff4cc85593dcee7315e2f"
+    },
+    {
+      "path": "server/test/store-lifecycle-manifest.test.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0f4cfda56eac9185d5dbb2818deac1a04cef5195"
+    }
+  ],
+  "local": {
+    "pass": 10,
+    "fail": 0,
+    "nativeSkipped": 34
+  },
+  "independentManifest": {
+    "pass": 1,
+    "fail": 0
+  },
+  "reviews": [
+    "pos_stores CLEAR",
+    "automatic_reports CLEAR"
+  ],
+  "productionDDL": false,
+  "SMTP": false,
+  "promotionMergeAuthorizedOnlyAfter": "Joint installed #3084+#3085; one OFF provision; full actual oracle and catalogue match; no lifecycle activity; full PR CI"
+}

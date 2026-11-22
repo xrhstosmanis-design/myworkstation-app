@@ -1,0 +1,16 @@
+{
+  "observedAtUtc": "2026-10-28T11:26:16.902552+00:00",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "79b251496211f00830f16f2ef95703111e408405"
+  },
+  "bootstrap": "/assets/main-B61V_k4F.js",
+  "lazyEntry": {
+    "url": "https://myworkstation-app.onrender.com/assets/entry-DGYHCTGV.js",
+    "sha256": "4fa6594cfa667bf47e391556d89cc448ada0ec0a99ce5649cc48029266942975",
+    "size": 2764143,
+    "hasPreview": true
+  },
+  "scope": "public technical release only; real preview image quality remains AWAITING USER"
+}

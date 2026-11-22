@@ -1,15 +1,21 @@
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
+import {lookupInventoryProductBarcode} from '../lib/inventory-product-barcode-lookup.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
-import {requireCompanyModule} from "../middleware/module-access.js";
+import {requireCompanyModule as defaultRequireCompanyModule} from "../middleware/module-access.js";
 
+export function createOwnerProductSmartEntryRouter({db=prisma,scope=null}={}){
+const prisma=db;
+const scopedStoreId=scope?.storeId||null;
+const requireCompanyModule=key=>scope?.kind==='POS_INVENTORY'?(_req,_res,next)=>next():defaultRequireCompanyModule(key);
 const router=Router();
 const uid=()=>crypto.randomUUID();
 let schemaReady=null;
 
 async function ensureSchema(){
+  if(scope?.schemaReady===true)return;
   if(schemaReady)return schemaReady;
   schemaReady=(async()=>{
     await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
@@ -39,11 +45,13 @@ async function nextSku(companyId,tx=prisma){
 
 router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
-    const companyId=req.user.companyId,q=String(req.query.q||"").trim(),like=`%${q}%`;await ensureSchema();
+    const companyId=req.user.companyId,q=String(req.query.q||"").trim(),like=`%${q}%`;
+    const productId=typeof req.query.productId==="string"?req.query.productId.trim():"";
+    await ensureSchema();
     const rows=await prisma.$queryRaw`
       WITH candidates AS MATERIALIZED (
         SELECT p.* FROM "Product" p
-        WHERE p."companyId"=${companyId} AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${like}))
+        WHERE p."companyId"=${companyId} AND (${productId===""} OR p."id"=${productId}) AND (${scopedStoreId}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" bound WHERE bound."productId"=p."id" AND bound."storeId"=${scopedStoreId})) AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${like}))
         ORDER BY p."name" LIMIT 500
       ), suppliers AS MATERIALIZED (
         SELECT DISTINCT ON (history."productId") history."productId",history."supplierName" FROM (
@@ -57,12 +65,12 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
           UNION ALL
           SELECT line."productId",sup."name" AS "supplierName",2 AS priority,doc."createdAt" AS at
           FROM candidates cp JOIN "PurchaseDocumentLine" line ON line."productId"=cp."id"
-          JOIN "PurchaseDocument" doc ON doc."id"=line."purchaseDocumentId" AND doc."companyId"=${companyId} AND doc."status"='APPROVED'
+          JOIN "PurchaseDocument" doc ON doc."id"=line."purchaseDocumentId" AND doc."companyId"=${companyId} AND (${scopedStoreId}::text IS NULL OR doc."storeId"=${scopedStoreId}) AND doc."status"='APPROVED'
           LEFT JOIN "Supplier" sup ON sup."id"=doc."supplierId"
           UNION ALL
           SELECT line."productId",sup."name" AS "supplierName",3 AS priority,ord."createdAt" AS at
           FROM candidates cp JOIN "PurchaseOrderLine" line ON line."productId"=cp."id"
-          JOIN "PurchaseOrder" ord ON ord."id"=line."orderId" AND ord."companyId"=${companyId} AND ord."status" IN ('FINAL','INVOICED')
+          JOIN "PurchaseOrder" ord ON ord."id"=line."orderId" AND ord."companyId"=${companyId} AND (${scopedStoreId}::text IS NULL OR ord."storeId"=${scopedStoreId}) AND ord."status" IN ('FINAL','INVOICED') AND NOT ord."awaitingInvoice"
           LEFT JOIN "Supplier" sup ON sup."id"=ord."supplierId"
         ) history WHERE history."supplierName" IS NOT NULL
         ORDER BY history."productId",history.priority,history.at DESC
@@ -73,7 +81,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
              (lp."supplierName" IS NOT NULL) AS "hasSupplier",
              COALESCE((SELECT json_agg(jsonb_build_object('id',pb."id",'barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier",'salePrice',pb."salePrice",'name',pb."name",'updatedAt',pb."updatedAt") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
              COALESCE((SELECT json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock",'minStock',sp."minStock")) FILTER (WHERE s."id" IS NOT NULL)
-               FROM "StoreProduct" sp LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${companyId} WHERE sp."productId"=p."id"),'[]') AS stores
+               FROM "StoreProduct" sp LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${companyId} WHERE sp."productId"=p."id" AND (${scopedStoreId}::text IS NULL OR sp."storeId"=${scopedStoreId})),'[]') AS stores
       FROM candidates p
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" AND sc."companyId"=${companyId}
@@ -108,17 +116,7 @@ router.get("/smart-entry/barcode/:barcode",requireCompanyModule("INVENTORY"),asy
     const companyId=req.user.companyId,barcode=String(req.params.barcode||"").trim();
     const selectedStore=String(req.query.storeId||"");
     if(selectedStore){if(req.user.storeId&&req.user.storeId!==selectedStore)return res.status(403).json({error:"Μη έγκυρο κατάστημα."});if(!await prisma.store.findFirst({where:{id:selectedStore,companyId,active:true},select:{id:true}}))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."})}
-    if(!/^\d{6,18}$/.test(barcode))return res.status(400).json({error:"Μη έγκυρο barcode."});
-    const local=await prisma.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",c."name" AS "categoryName",sc."name" AS "subcategoryName" FROM "Product" p JOIN "ProductBarcode" pb ON pb."productId"=p."id" LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" WHERE p."companyId"=${companyId} AND pb."barcode"=${barcode} LIMIT 1`;
-    if(local[0])return res.json({found:true,source:"MYWORKSTATION",product:{...local[0],vatRate:Number(local[0].vatRate||0)}});
-    const master=await prisma.$queryRaw`SELECT mp."sourceCode" AS "sku",mp."name",mp."categoryName",mp."subcategoryName",mp."vatRate" FROM "MasterProduct" mp JOIN "MasterProductBarcode" mb ON mb."masterProductId"=mp."id" WHERE mb."barcode"=${barcode} AND mp."active"=true LIMIT 1`;
-    if(master[0])return res.json({found:true,source:"MASTER_CATALOG",product:{...master[0],vatRate:Number(master[0].vatRate||0)}});
-    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),4500);
-    try{
-      const response=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}?fields=code,product_name,product_name_el,brands,categories,categories_tags`,{headers:{"User-Agent":"MyWorkStation/1.0 (https://myworkstation.gr)"},signal:controller.signal});
-      if(response.ok){const data=await response.json();const p=data?.product;if(p&&data?.status!==0){return res.json({found:true,source:"OPEN_FOOD_FACTS",product:{name:p.product_name_el||p.product_name||"",brandName:p.brands||"",categoryName:Array.isArray(p.categories_tags)&&p.categories_tags.length?String(p.categories_tags[0]).replace(/^..:/,""):p.categories||"",subcategoryName:"",vatRate:null}})}}
-    }catch{}finally{clearTimeout(timer)}
-    res.json({found:false,source:null,product:null});
+    res.json(await lookupInventoryProductBarcode(prisma,companyId,barcode,{storeId:scopedStoreId}));
   }catch(error){next(error)}
 });
 
@@ -144,4 +142,8 @@ router.post("/smart-entry",requireCompanyModule("INVENTORY"),async(req,res,next)
   }catch(error){next(error)}
 });
 
+router.prepare=ensureSchema;
+return router;
+}
+const router=createOwnerProductSmartEntryRouter();
 export default router;

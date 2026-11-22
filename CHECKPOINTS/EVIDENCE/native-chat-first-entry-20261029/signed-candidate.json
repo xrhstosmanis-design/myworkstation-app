@@ -1,0 +1,18 @@
+{
+  "sourceSha": "15f72c60f4aab29d67d655e27e976963bbbc2616",
+  "package": "gr.myworkstation.chat.preview",
+  "sha256": "c796604a87c1fcd2634c7b220e1bd4ea1238048504a8a77b8f552668bcbbc082",
+  "bytes": 3687436,
+  "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "status": "TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING",
+  "publicDistributionChanged": false,
+  "artifactId": 12932399536,
+  "artifactArchiveSha256": "10d551f7eae4a52c643153c685693c051ca8d6a308cd1362d55fed4ce3374b4b",
+  "signedRun": 40952680821,
+  "signedRunAttempt": 2,
+  "exactSourceFullCi": 40952526260,
+  "independentApkV2CertificateMatched": true,
+  "independentBytesAndSha256Matched": true,
+  "androidSourceTree": "1cd5eeeeff6c5746ba19792a297896286939370c",
+  "physicalAcceptance": "NOT TESTED"
+}

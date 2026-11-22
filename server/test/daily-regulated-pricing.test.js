@@ -41,14 +41,16 @@ test('company/store/identity boundaries preserve all legacy and unrelated prices
 test('actual public and admin catalogue projections use selected scope and DB identity',()=>{
   const fixture={...product,name:'FREDDO ESPRESSO',storePrice:2.25,vatRate:13,currentStock:0,trackStock:false};
   const common={store,config,rows:[fixture],products:[fixture],money,onlineUnitPrice,onlineSurchargeAmount,policyAvailable:()=>null,stockCheckEnabled:false,req:{params:{companyId}},res:{json:value=>{common.result=value;}}};
-  const simple=read('../src/routes/kat-online-ordering.js').split('\n').find(l=>l.includes('products:rows.filter(row=>policyAvailable'));
+  const simple=read('../src/routes/kat-online-ordering.js').split('\n').find(l=>l.includes('products:rows.filter('));
+  assert.ok(simple,"Public catalogue projection must be found");
   vm.runInNewContext(simple,common);
   assert.equal(common.result.products[0].onlinePrice,1.65);
   const admin=read('../src/routes/platform-admin.js').split('\n').find(l=>l.includes('products:products.map(row=>({...row,storePrice:'));
   vm.runInNewContext(admin,common);
   assert.equal(common.result.products[0].onlinePrice,1.65);
-  const modified=read('../src/routes/kat-online-ordering-modifiers.js').split('\n').find(l=>l.includes('products:products.filter(p=>policyAvailable'));
+  const modified=read('../src/routes/kat-online-ordering-modifiers.js').split('\n').find(l=>l.includes('products:products.filter('));
   Object.assign(common,{member:{memberType:'DOCTOR'},memberDiscount:()=>10,specialPrice:(p)=>money(p*.9),groups:[],onlineStoreOpen:()=>true,onlineProductAvailable:()=>true,groupsForProduct:()=>[]});
+  assert.ok(modified,"Modifier catalogue projection must be found");
   vm.runInNewContext(modified,common);
   assert.equal(common.result.products[0].onlinePrice,1.49);
 });

@@ -92,7 +92,7 @@
 .platform-organized .platform-title-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:none;gap:12px;margin-bottom:18px}
 .platform-organized .platform-title-actions button{min-height:64px;padding:14px;font-size:17px;line-height:1.3;border-radius:12px;display:flex;justify-content:center;align-items:center;gap:10px}
 .platform-organized .platform-title-actions button svg{width:24px;height:24px}
-.platform-organized button:focus-visible,.platform-organized a:focus-visible,.platform-organized input:focus-visible{outline:3px solid #2196f3;outline-offset:3px}
+.platform-organized button:focus-visible,.platform-organized a:focus-visible,.platform-organized input:focus-visible,.platform-company-cards:focus-visible,.platform-company-detail:focus-visible{outline:3px solid #2196f3;outline-offset:3px}
 .platform-organized [hidden]{display:none!important}
 .platform-home-launchers{padding:18px;background:white;border:1px solid #d9e3ef;border-radius:16px;margin-bottom:18px}.platform-home-launchers h2{margin:0 0 14px}.platform-organized .platform-home-launchers .platform-action-group{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));border:0;padding:0;gap:12px}.platform-organized .platform-home-launchers button,.platform-home-launchers a{min-height:56px;padding:12px;font-size:16px;text-align:left;display:flex;align-items:center;justify-content:flex-start;gap:10px;border-radius:10px}.platform-home-launchers a{background:#eef4fc;text-decoration:none;color:#163b73;box-sizing:border-box}
 .platform-organized .platform-stats{display:flex;flex-wrap:wrap;gap:0;margin:16px 0;padding:12px 0;border-block:1px solid #dbe4f0}.platform-organized .platform-stats article{flex:1 1 170px;min-height:0;padding:10px 14px;border:0;border-radius:0;box-shadow:none;background:transparent;gap:10px}.platform-organized .platform-stats article>svg{width:23px;height:23px}.platform-organized .platform-stats article>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}.platform-organized .platform-stats strong{font-size:23px}.platform-organized .platform-stats small{font-size:12px}.platform-organized .platform-stats span{font-size:14px}
@@ -101,7 +101,7 @@
 .platform-workspace-columns{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,1fr);gap:18px;align-items:start}.platform-company-cards{display:grid;gap:14px;max-height:66vh;overflow:auto;padding:3px 5px 5px 3px;scrollbar-gutter:stable}.platform-company-card{background:white;border:1px solid #d5e2f1;border-radius:16px;padding:20px;min-width:0}.platform-company-card.selected{border:2px solid #1475ed;padding:19px;background:#f3f8ff}.platform-card-heading{display:flex;align-items:flex-start;gap:12px}.platform-card-heading>svg{width:32px;height:32px;color:#1475ed;flex-shrink:0}.platform-card-heading>div{min-width:0}.platform-card-heading h3{font-size:21px;line-height:1.3;margin:0;overflow-wrap:anywhere}.platform-card-heading p{font-size:15px;color:#61718a;margin:8px 0}.platform-card-heading .company-status{margin-left:auto;white-space:nowrap;font-size:12px;flex-shrink:0}.platform-card-owner{display:flex;gap:8px;align-items:center;color:#526583;font-size:16px;overflow-wrap:anywhere}.platform-card-owner svg{width:18px;flex-shrink:0}.platform-card-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #e3ebf5;padding-top:12px}.platform-card-footer>span{display:flex;align-items:center;gap:7px;color:#526583;font-size:15px}.platform-card-footer>span svg{width:20px}.platform-company-detail{background:white;border:1px solid #d5e2f1;border-radius:16px;padding:22px;min-width:0}.platform-company-detail header{display:block;padding:0 0 16px;background:transparent;border-bottom:1px solid #e3ebf5;color:#17223b}.platform-company-detail header h2{margin:6px 0;overflow-wrap:anywhere;font-size:23px}.platform-company-detail header small,.platform-company-detail header p{color:#60718a;font-size:15px}.platform-company-detail .platform-company-plan{margin:18px 0}.platform-company-detail select{width:100%;font-size:16px;padding:12px}.platform-company-detail .platform-management-actions{display:grid;grid-template-columns:1fr;gap:10px}.platform-company-detail button{width:100%;justify-content:flex-start;white-space:normal;text-align:left}.platform-detail-empty{padding:40px 12px;text-align:center;color:#60718a}.platform-detail-empty>svg{width:48px;height:48px;color:#1475ed}.platform-owner-picker{display:flex;flex-wrap:wrap;gap:10px;background:white;padding:16px;border:1px solid #c9d9ee;border-radius:14px;margin-bottom:16px}.platform-owner-picker h3{width:100%;margin:0 0 8px}.platform-owner-picker button{display:grid;text-align:left}.platform-owner-picker small{font-size:13px;overflow-wrap:anywhere}
 @media(min-width:1700px){.platform-workspace-columns{grid-template-columns:minmax(0,1.6fr) minmax(380px,1fr)}}
 @media(max-width:1100px){.platform-organized .platform-main{margin-left:194px;padding:20px}.platform-sidebar{width:184px}.platform-sidebar button{font-size:15px}.platform-workspace-columns{grid-template-columns:minmax(0,1fr) minmax(290px,1fr)}.platform-card-heading{flex-wrap:wrap}.platform-card-heading .company-status{margin-left:0}.platform-organized .platform-title-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:800px){.platform-organized .platform-header{flex-wrap:wrap;align-items:center;padding:14px}.platform-organized .platform-user{justify-content:flex-start;gap:8px}.platform-organized .platform-main{margin-left:0;padding:16px}.platform-sidebar{position:static;width:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:14px;margin-bottom:18px}.platform-sidebar button{font-size:16px;min-height:52px}.platform-workspace-columns{grid-template-columns:1fr}.platform-company-cards{max-height:52vh}.platform-workspace-heading{align-items:flex-start;flex-direction:column}.platform-organized .platform-title{align-items:flex-start}.platform-organized .platform-title h1{font-size:23px}.platform-organized .platform-title-actions button{font-size:16px;min-height:60px}.platform-company-detail{padding:16px}.platform-organized .platform-brand b{font-size:17px}.platform-card-footer{flex-wrap:wrap}}
+@media(max-width:800px){.platform-organized .platform-header{flex-wrap:wrap;align-items:center;padding:14px}.platform-organized .platform-user{justify-content:flex-start;gap:8px}.platform-organized .platform-main{margin-left:0;padding:16px}.platform-sidebar{position:static;width:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:14px;margin-bottom:18px}.platform-sidebar button{font-size:16px;min-height:52px}.platform-workspace-columns{grid-template-columns:1fr}.platform-company-cards{max-height:none;overflow:visible;scrollbar-gutter:auto}.platform-workspace-heading{align-items:flex-start;flex-direction:column}.platform-organized .platform-title{align-items:flex-start}.platform-organized .platform-title h1{font-size:23px}.platform-organized .platform-title-actions button{font-size:16px;min-height:60px}.platform-company-detail{padding:16px}.platform-organized .platform-brand b{font-size:17px}.platform-card-footer{flex-wrap:wrap}}
 /* Fill the available browser viewport; only the working panes scroll on desktop. */
 @media(min-width:801px){
  .platform-organized{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
@@ -146,3 +146,47 @@
 
 /* Keep each owner at its intrinsic height; the working list owns scrolling. */
 .platform-company-cards{grid-auto-rows:max-content}
+
+/* Full, untruncated in-app preview for system-generated cash reports. */
+.cash-email-preview-overlay{z-index:75}
+.cash-email-preview-dialog{position:relative;box-sizing:border-box;width:min(980px,96vw);max-height:94vh;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:24px;border-radius:20px;background:#fff;box-shadow:0 28px 80px rgba(0,0,0,.3)}
+.cash-email-preview-dialog h2{padding-right:46px;margin:0}
+.cash-email-preview-dialog p{margin:0}
+.cash-email-preview-dialog .cash-email-preview-description{font-size:13px;color:#475569}
+.cash-email-preview-content{box-sizing:border-box;flex:1 1 auto;min-height:120px;max-height:56vh;overflow:auto;margin:0;padding:16px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;color:#14243b;font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
+.cash-email-preview-end{font-size:12px;font-weight:800;color:#475569}
+.cash-email-preview-comment{display:grid;gap:6px}
+.cash-email-preview-comment textarea{box-sizing:border-box;resize:vertical;min-height:62px;max-height:100px;width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}
+.cash-email-preview-actions{margin-top:2px;flex-shrink:0}
+@media(max-width:800px){.cash-email-preview-dialog{width:96vw;max-height:94vh;padding:16px}.cash-email-preview-content{max-height:48vh}}
+
+/* Give the customer workspace more room on desktop. */
+@media (min-width: 801px) {
+  .platform-organized .platform-header { height: 64px; }
+  .platform-home-content { padding-block: 12px; }
+  .platform-organized .platform-title h1 { font-size: 24px; margin-block: 4px; }
+  .platform-organized .platform-title-actions { gap: 8px; margin-bottom: 8px; }
+  .platform-organized .platform-title-actions button,
+  .platform-organized .platform-action-utility button {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  .platform-organized .platform-stats { margin-block: 4px; }
+  .platform-workspace-heading { margin-block: 8px; }
+  .platform-workspace-heading > button { min-height: 40px; padding: 8px 12px; }
+  .platform-workspace-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 12px;
+  }
+  .platform-owner-toggle { min-height: 64px; padding: 8px 12px !important; }
+  .platform-owner-toggle > span { gap: 2px; }
+  .platform-owner-toggle strong { font-size: 16px; }
+  .platform-owner-toggle small { font-size: 13px; }
+}
+
+.cash-report-search summary{cursor:pointer;font-weight:600}
+.cash-report-stores{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;max-height:12rem;overflow:auto;padding-block:8px}
+.cash-report-stores label{display:flex;align-items:center;gap:6px}
+.cash-report-stores input[type="checkbox"]{width:auto;min-height:0}
+@media print{.cash-report-search{display:none!important}}

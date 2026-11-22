@@ -1,0 +1,7 @@
+# MyWorkStation device setup — AWAITING WINDOWS AND USER ACCEPTANCE
+
+Generic per-user Windows helper. The operator downloads one executable, opens it and explicitly chooses scanner installation or Windows printer settings. Scanner payload is the existing tested connector: no driver download, scan, pairing reset, upload or payment. Pairing stays in its existing DPAPI CurrentUser location. A validated version folder and per-user Startup shortcut are installed; an already open connector must be closed first. Failure restores the prior shortcut/version. No administrator or execution-policy bypass.
+
+Printer setup opens Microsoft's `ms-settings:printers` page, where the operator adds the actual printer/official driver. Windows may require the usual permissions for a driver. Existing selected-store label dimensions and normal browser print destination remain authoritative; no print or application settings save is automatic. Hardware/driver compatibility and physical label output need actual acceptance.
+
+Windows CI embeds the tested scanner ZIP and a bounded per-file SHA256 manifest, compiles the .NET Framework native helper, and runs `--self-test` only in a temporary fixture. It does not write actual Startup or open printer settings during CI. Generic distribution contains no token, pairing record or store data. Public binary is pinned by manifest/hash/size and may be split into bounded static parts; the app verifies and assembles one executable download. No ZIP extraction is required from the operator.

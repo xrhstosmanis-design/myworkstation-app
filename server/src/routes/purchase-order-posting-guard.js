@@ -1,3 +1,5 @@
+import {applyPackStockCorrectionInTransaction} from "./purchase-order-unresolved-guard.js";
+import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {assertReopenedIdentity,reuseReopenedPurchaseDocument} from "../services/purchase-order-reopen.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertInvoiceStockAvailable,recordInvoiceStockPosting} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
@@ -27,6 +29,12 @@ async function ensureSchema(){
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrderPosting_company_idx" ON "PurchaseOrderPosting" ("companyId","postedAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PurchaseOrderPosting_fingerprint_key" ON "PurchaseOrderPosting" ("companyId","documentFingerprint") WHERE "documentFingerprint" IS NOT NULL`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceStockExclusionEmail" (
+        "companyId" TEXT NOT NULL, "storeId" TEXT NOT NULL, "orderId" TEXT NOT NULL,
+        "reopenVersion" INTEGER NOT NULL, "payload" JSONB NOT NULL,
+        "attempts" INTEGER NOT NULL DEFAULT 0, "nextAttemptAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "sentAt" TIMESTAMPTZ, PRIMARY KEY ("companyId","storeId","orderId","reopenVersion")
+      )`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" (
         "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,
@@ -78,7 +86,7 @@ router.use(async(req,res,next)=>{try{await ensureSchema();await ensureInvoiceCom
 
 router.post("/",async(req,res,next)=>{
   try{
-    if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return next();
+    if(!(req.user?.staffAccess===true&&req.staffGrant?.capability==='invoices.approve')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return next();
     const supplierId=req.body?.supplierId||null;
     const invoiceNumber=req.body?.invoiceNumber||null;
     if(!supplierId||!normalizeDocumentNumber(invoiceNumber))return next();
@@ -165,14 +173,19 @@ router.delete("/:orderId",async(req,res,next)=>{
 router.patch("/:orderId",async(req,res,next)=>{
   try{
     const requestedStatus=req.body?.status;
-    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED")return next();
-    if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Δεν έχεις δικαίωμα οριστικοποίησης αγορών."});
+    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED"&&!(requestedStatus==="NEW"&&req.body.returnForCorrection===true))return next();
+    if(requestedStatus==="NEW"||requestedStatus==="INVOICED"){
+      if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Η διόρθωση και η τελική τιμολόγηση γίνονται από εξουσιοδοτημένο χρήστη στο BackOffice."});
+    }
+    if(!(req.user?.staffAccess===true&&req.staffGrant?.capability==='invoices.approve')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Δεν έχεις δικαίωμα οριστικοποίησης αγορών."});
 
     const companyId=req.user.companyId;
     const actor=req.user.fullName||"Χρήστης";
     const result=await prisma.$transaction(async tx=>{
       const scopes=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} LIMIT 1`;
       if(!scopes[0])throw Object.assign(new Error("Δεν βρέθηκε η παραγγελία."),{status:404});
+      if(req.user?.storeId&&String(req.user.storeId)!==scopes[0].storeId)throw Object.assign(new Error("Η αγορά ανήκει σε άλλο κατάστημα."),{status:403});
+      if(req.user?.staffAccess===true)await requireStaffAction(tx,req,scopes[0].storeId,'invoices.approve');
       await lockInvoiceStore(tx,companyId,scopes[0].storeId);
       const rows=await tx.$queryRaw`
         SELECT o.* FROM "PurchaseOrder" o
@@ -180,11 +193,20 @@ router.patch("/:orderId",async(req,res,next)=>{
         FOR UPDATE`;
       const found=rows[0];
       if(!found){const error=new Error("Δεν βρέθηκε η παραγγελία.");error.status=404;throw error}
+      if(found.status==="CANCELLED")throw Object.assign(new Error("Η ακυρωμένη αγορά παραμένει κλειδωμένη και δεν μπορεί να οριστικοποιηθεί ξανά."),{status:409});
       if(n(found.reopenVersion)>0){if(req.body?.expectedReopenVersion!==n(found.reopenVersion))throw Object.assign(new Error("Η αγορά έχει επαναφερθεί για διόρθωση. Ανανέωσε πριν την οριστικοποίηση."),{status:409});assertReopenedIdentity(found,req.body||{});}
+      if(requestedStatus==="NEW"){
+        if(found.status==="NEW")return {ok:true,idempotent:true,status:"NEW"};
+        if(found.status!=="FINAL"||!found.awaitingInvoice)throw Object.assign(new Error("Χρησιμοποίησε την ελεγχόμενη επαναφορά καταχωρισμένης αγοράς."),{status:409});
+        await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='NEW',"awaitingInvoice"=FALSE,"finalizedAt"=NULL,"updatedByName"=${actor},"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+        return {ok:true,status:"NEW"};
+      }
       if(found.status==="INVOICED")return {ok:true,idempotent:true,status:"INVOICED"};
       if(requestedStatus==="INVOICED"&&found.status!=="FINAL"){
         const error=new Error("Η παραγγελία πρέπει πρώτα να οριστικοποιηθεί.");error.status=409;throw error;
       }
+      if(requestedStatus==="FINAL"&&found.awaitingInvoice)return {ok:true,idempotent:true,status:"FINAL",awaitingInvoice:true};
+
       // The approved document is necessarily visible to duplicateDetails.
       // A repeat FINAL for its own posting is idempotent, not a second invoice.
       if(requestedStatus==="FINAL"&&found.status==="FINAL"){
@@ -219,7 +241,19 @@ router.patch("/:orderId",async(req,res,next)=>{
         return {ok:true,idempotent:true,status:"FINAL",purchaseDocumentId:existingPosting.purchaseDocumentId};
       }
 
-      if(requestedStatus==="FINAL"&&!existingPosting){
+      const deferredPosting=requestedStatus==="INVOICED"&&found.awaitingInvoice===true;
+      const linkedDraft=found.sourceType==="POS_OCR_DRAFT"&&found.sourceDocumentId
+        ? (await tx.$queryRaw`SELECT "id","documentType","status","totalGross" FROM "PurchaseDocument"
+          WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "storeId"=${found.storeId}
+            AND "purchaseOrderId"=${found.id} FOR UPDATE`)[0]
+        : null;
+      if(requestedStatus==="FINAL"&&found.status==="NEW"&&found.sourceType==="POS_OCR_DRAFT"&&
+          (!linkedDraft||linkedDraft.status!=="DRAFT"))
+        throw Object.assign(new Error("Δεν επιβεβαιώθηκε το ενεργό πρωτότυπο τιμολογίου."),{status:409});
+      const awaitingInvoice=requestedStatus==="FINAL"&&found.status==="NEW"&&!existingPosting&&linkedDraft?.documentType==="INVOICE"&&linkedDraft.status==="DRAFT";
+      if(deferredPosting&&(existingPosting||linkedDraft?.documentType!=="INVOICE"||linkedDraft.status!=="DRAFT"))
+        throw Object.assign(new Error("Η πηγή ή η καταχώριση του τιμολογίου άλλαξε. Ανανέωσε τον έλεγχο."),{status:409});
+      if(awaitingInvoice||(requestedStatus==="FINAL"&&!existingPosting)||deferredPosting){
         const commonSource=found.sourceDocumentId||found.id;
         await assertInvoiceStockAvailable(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,allowReopenedOrder:true});
         const lines=await tx.$queryRaw`
@@ -227,6 +261,25 @@ router.patch("/:orderId",async(req,res,next)=>{
           WHERE l."orderId"=${found.id}
           ORDER BY l."createdAt",l."id"`;
         if(!lines.length){const error=new Error("Δεν μπορεί να οριστικοποιηθεί αγορά χωρίς είδη.");error.status=409;throw error}
+
+        if(lines.some(line=>line.invoiceUnit==="PACKAGE"&&line.stockUnitsPerInvoiceUnit!=null&&n(line.stockUnitsPerInvoiceUnit)===0))
+          throw Object.assign(new Error("Επιβεβαίωσε τα τεμάχια ανά κιβώτιο πριν την οριστικοποίηση ή την τιμολόγηση."),{status:409});
+
+        if(awaitingInvoice){
+          await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL',"awaitingInvoice"=TRUE,
+            "supplierId"=${effectiveSupplierId},"invoiceNumber"=${effectiveInvoiceNumber},"description"=${effectiveDescription},
+            "updatedByName"=${actor},"finalizedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+          return {ok:true,status:"FINAL",awaitingInvoice:true};
+        }
+        if(deferredPosting){
+          if(lines.some(line=>!line.productId&&n(line.quantity)>0&&(n(line.unitCost)>0||n(line.grossAmount)>0)||line.invoiceUnit==="PACKAGE"&&n(line.stockUnitsPerInvoiceUnit)<=0))
+            throw Object.assign(new Error("Ολοκλήρωσε την αντιστοίχιση ειδών και συσκευασιών πριν την Τιμολόγηση."),{status:409});
+          const gross=Math.round((lines.reduce((sum,line)=>sum+n(line.grossAmount),0)+Number.EPSILON)*100)/100;
+          const printedTotal=Math.round((n(linkedDraft.totalGross)+Number.EPSILON)*100)/100;
+          if(printedTotal>0&&Math.abs(Math.round((gross-printedTotal)*100))>5&&
+              (req.totalMismatchOverride?.linesTotal!==gross||req.totalMismatchOverride?.invoiceTotal!==printedTotal))
+            throw Object.assign(new Error("Το σύνολο του τιμολογίου άλλαξε. Ανανέωσε και έλεγξε ξανά."),{status:409,code:"INVOICE_TOTAL_MISMATCH"});
+        }
 
         const linkedCredit=found.sourceDocumentId?await tx.$queryRaw`SELECT "id","documentType","status","totalGross" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "purchaseOrderId"=${found.id} FOR UPDATE`:[];
         if(linkedCredit[0]?.documentType==="CREDIT_NOTE"){
@@ -252,7 +305,7 @@ router.patch("/:orderId",async(req,res,next)=>{
           return {ok:true,status:"FINAL",documentType:"CREDIT_NOTE",purchaseDocumentId:credit.id,postedProducts:lines.length,supplierBalanceChange:-gross,cashMovement:false};
         }
 
-        const totalNet=lines.reduce((sum,row)=>sum+n(row.netAmount),0);
+        const totalNet=lines.reduce((sum,row)=>sum+n(row.netAmount)+n(row.exciseTotal),0);
         const totalVat=lines.reduce((sum,row)=>sum+n(row.vatAmount),0);
         const totalGross=lines.reduce((sum,row)=>sum+n(row.grossAmount),0);
         const purchaseDocumentId=found.id;
@@ -265,14 +318,29 @@ router.patch("/:orderId",async(req,res,next)=>{
         for(const row of lines){
           await tx.$executeRaw`
             INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount")
-            VALUES (${id()},${purchaseDocumentId},${row.productId},${row.description},${n(row.quantity)},'PIECE',${n(row.unitCost)},${n(row.netAmount)},${n(row.vatRate)},${n(row.vatAmount)},${n(row.grossAmount)})`;
+            VALUES (${id()},${purchaseDocumentId},${row.productId},${row.description},${n(row.quantity)},'PIECE',${n(row.unitCost)},${n(row.netAmount)+n(row.exciseTotal)},${n(row.vatRate)},${n(row.vatAmount)},${n(row.grossAmount)})`;
         }
 
+        const excludedStockLines=req.body?.excludeStockLineIds;
+        if(excludedStockLines!==undefined&&(!deferredPosting||!Array.isArray(excludedStockLines)||excludedStockLines.some(lineId=>typeof lineId!=="string"||!lines.some(line=>line.id===lineId&&line.productId)))){
+          throw Object.assign(new Error("Η επιλογή αποθήκης περιέχει μη έγκυρες γραμμές τιμολογίου."),{status:400});
+        }
+        const excludedStockLineIds=new Set(excludedStockLines);
         const stockByProduct=new Map();
         for(const row of lines){
           if(!row.productId)continue;
-          const current=stockByProduct.get(row.productId)||{quantity:0,net:0,excise:0,supplierCode:null,proposedSalePrice:0};
-          current.quantity+=n(row.quantity);
+          const current=stockByProduct.get(row.productId)||{quantity:0,net:0,excise:0,stockQuantity:0,stockNet:0,stockExcise:0,supplierCode:null,proposedSalePrice:0};
+          const stockUnits = row.invoiceUnit === "PACKAGE" ? n(row.stockUnitsPerInvoiceUnit) : 1;
+          if (!Number.isInteger(stockUnits) || stockUnits < 1)
+            throw Object.assign(new Error("Έλεγξε τα τεμάχια ανά συσκευασία."), {status:409});
+          const invoiceQuantity=n(row.quantity);
+          current.quantity+=invoiceQuantity*stockUnits;
+          if(!excludedStockLineIds.has(row.id)){
+            // The pack correction posts only the difference from invoice units.
+            current.stockQuantity+=invoiceQuantity;
+            current.stockNet+=n(row.netAmount);
+            current.stockExcise+=n(row.exciseTotal);
+          }
           current.net+=n(row.netAmount);
           current.excise+=n(row.exciseTotal);
           if(row.supplierCode)current.supplierCode=row.supplierCode;
@@ -282,16 +350,16 @@ router.patch("/:orderId",async(req,res,next)=>{
 
         for(const [productId,agg] of stockByProduct){
           const landedUnitCost=agg.quantity>0?(agg.net+agg.excise)/agg.quantity:0;
-          await tx.$executeRaw`
+          if(agg.stockQuantity!==0||agg.proposedSalePrice>0)await tx.$executeRaw`
             INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock")
-            VALUES (${id()},${found.storeId},${productId},${agg.proposedSalePrice>0?agg.proposedSalePrice:null},${agg.quantity})
+            VALUES (${id()},${found.storeId},${productId},${agg.proposedSalePrice>0?agg.proposedSalePrice:null},${agg.stockQuantity})
             ON CONFLICT ("storeId","productId") DO UPDATE SET
               "currentStock"="StoreProduct"."currentStock"+EXCLUDED."currentStock",
               "salePrice"=COALESCE(EXCLUDED."salePrice","StoreProduct"."salePrice"),
               "updatedAt"=NOW()`;
-          await tx.$executeRaw`
+          if(agg.stockQuantity!==0)await tx.$executeRaw`
             INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId")
-            VALUES (${id()},${found.storeId},${productId},'PURCHASE',${agg.quantity},${landedUnitCost},'PURCHASE_ORDER',${found.id},${`Οριστικοποίηση αγοράς ${effectiveInvoiceNumber||found.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
+            VALUES (${id()},${found.storeId},${productId},'PURCHASE',${agg.stockQuantity},${(agg.stockNet+agg.stockExcise)/agg.stockQuantity},'PURCHASE_ORDER',${found.id},${`Οριστικοποίηση αγοράς ${effectiveInvoiceNumber||found.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
           await tx.$executeRaw`
             UPDATE "Product" SET
               "costPrice"=${landedUnitCost},
@@ -326,6 +394,32 @@ router.patch("/:orderId",async(req,res,next)=>{
             "status"='FINAL',"updatedByName"=${actor},"finalizedAt"=COALESCE("finalizedAt",NOW()),"updatedAt"=NOW()
           WHERE "id"=${found.id} AND "companyId"=${companyId}`;
         await recordInvoiceStockPosting(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,postedDocumentId:purchaseDocumentId,path:"PURCHASE_ORDER"});
+        if(deferredPosting){
+          if(excludedStockLineIds.size){
+            const [store]=await tx.$queryRaw`SELECT "name" FROM "Store" WHERE "id"=${found.storeId} AND "companyId"=${companyId}`;
+            const [supplier]=await tx.$queryRaw`SELECT "name" FROM "Supplier" WHERE "id"=${effectiveSupplierId} AND "companyId"=${companyId}`;
+            const excludedLines=lines.filter(line=>excludedStockLineIds.has(line.id)).map(line=>({
+              code:line.supplierCode||line.productId,description:line.description,
+              quantity:n(line.quantity),unit:line.invoiceUnit==="PACKAGE"?"ΚΙΒ":"ΤΜΧ"
+            }));
+            const payload={
+              orderId:found.id,invoiceNumber:effectiveInvoiceNumber,storeName:store?.name||found.storeId,
+              supplierName:supplier?.name,actorName:actor,postedAt:new Date().toISOString(),
+              stockLineCount:lines.filter(line=>line.productId&&!excludedStockLineIds.has(line.id)).length,excludedLines
+            };
+            await tx.$executeRaw`INSERT INTO "InvoiceStockExclusionEmail" ("companyId","storeId","orderId","reopenVersion","payload")
+              VALUES (${companyId},${found.storeId},${found.id},${n(found.reopenVersion)},${JSON.stringify(payload)}::jsonb)
+              ON CONFLICT ("companyId","storeId","orderId","reopenVersion") DO NOTHING`;
+            await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+              VALUES (${id()},${companyId},${found.storeId},${req.user.operatorId||null},${req.user.id},'INVOICE_STOCK_LINES_EXCLUDED',${JSON.stringify({orderId:found.id,purchaseDocumentId,reopenVersion:n(found.reopenVersion),excludedStockLineIds:[...excludedStockLineIds]})}::jsonb)`;
+          }
+          const packStockCorrection=await applyPackStockCorrectionInTransaction(tx,{
+            orderId:found.id,companyId,userId:req.user.id,userName:actor,expectedReopenVersion:n(found.reopenVersion),req,excludedStockLineIds
+          });
+          await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='INVOICED',"awaitingInvoice"=FALSE,
+            "invoicedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+          return {ok:true,status:"INVOICED",purchaseDocumentId,postedProducts:stockByProduct.size,packStockCorrection};
+        }
         return {ok:true,status:"FINAL",purchaseDocumentId,postedProducts:stockByProduct.size};
       }
 

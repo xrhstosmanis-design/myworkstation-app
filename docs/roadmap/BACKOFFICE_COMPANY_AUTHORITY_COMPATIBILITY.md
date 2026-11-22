@@ -1,0 +1,67 @@
+> 18/11/2026: the follow-on branch now contains an explicit inactive-by-default installation candidate, signed full-backup/restore protocol and initial stores/suppliers/customers company grants. This document remains the authority/compatibility design; production still uses the original eight-column schema. Implementation/verification status is recorded in CHECKPOINTS/CHANGES/2026-11-18-no5-company-authority-candidate.md. No source candidate alone authorizes activation.
+
+## Current store-action delivery — company authority remains a proposal
+
+01/11/2026: independent inventory clear/selected-zero/draft-delete source installed in exacte1fcbe04 after full5136+8/0/0 CI and guarded41343627981. These three store rights use the existing JSON grant/audit structures; no column, schema/manifest/profile/worker change or company grant is installed. Current store catalogue21, no automatic new right. The proposed company contract below is still NOT IMPLEMENTED/NOT AUTHORITY. Preserve the separately owned monthly source/capability and all recovery/RESET boundaries. Full all-functions ownership remains CENTRAL-BACKOFFICE-ACCESS-01; hosted functional acceptance remains NOT TESTED.
+
+# Company authority: compatibility packet before implementation
+
+Status: PROPOSAL / NOT INSTALLED / NOT A GRANT. Retained CENTRAL-BACKOFFICE-ACCESS-01 owner. This packet supports the requested complete function coverage; it does not add an executable permission or modify production schema, actors, profiles or workers.
+
+The current personal access model stores explicit per-store capabilities in BackofficeStaffGrant. Parameters, master data, bank settings and security configuration can affect the entire company. An assigned store, a role label, all store rights or a catalogue entry must never imply company authority. Actual personal identities remain EMPLOYEE; native authorization must not impersonate OWNER or SUPER_ADMIN.
+
+## Proposed explicit contract
+
+Keep the existing store grant structure. Add a separate, Owner-selected companyCapabilities array for the account's own company, containing only individually integrated and tested company operation keys. Omission by an older client preserves existing policy; a new account starts with none. Unknown, wildcard, unimplemented, foreign-company and platform-operation keys are refused. Company selection follows the account's existing company binding; this is not cross-company membership.
+
+Proposed persistence is a companyCapabilities JSONB NOT NULL DEFAULT '[]' field on the company/security-owned BackofficeStaffAccount. This is a design proposal, not an instruction to run ALTER TABLE or startup migration. Do not encode company rights in a hidden store grant, audit event, role label or ordinary user preferences.
+
+Account revision fencing, live Owner authority, target account/company checks, session-version increment, session revocation and immutable before/after security audit remain in the native account transaction. No account gains rights through deployment or default role presets. A delegated permission administrator additionally needs an explicit delegation boundary and cannot promote its own authority or create Owner/platform identities.
+
+## Current recovery evidence and required coordination
+
+Read-only review at the shared UI foundation:
+
+| Reviewed source | SHA-256 of source file | Current staff account columns |
+|---|---|---|
+| ops/backup/lifecycle/manifest.json | ebcf6739449cca8049dae3e74e8ab8842e51b92447a7e31b42f303c7dae3f9db | 8 |
+| ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json | 363d168d3cdaad93eb350da616a764f73ac3556b92d37d09bd47ecd453fece03 | 8 |
+
+Both reviewed knownColumns lists currently contain userId, companyId, username, pinHash, active, revision, createdAt and updatedAt. Adding the proposed field changes the approved schema shape. Preserve the independently owned monthly FULL-profile transition, signed worker capability and reset/restore semantics. These source hashes are historical review evidence, not permission to install them or a substitute for a fresh actual runtime preflight.
+
+Before schema activation, prepare and review the exact app/worker/profile pair, explicit new column ownership, backup/restore treatment, before/after schema and guard hashes, nonfinal-operation drain and a concrete rollback plan. Do not silently rewrite an installed manifest or allow an unknown column. Changing only the application must not strand the existing recovery worker. Optional feature flags alone do not establish schema compatibility.
+
+## Native enforcement and acceptance
+
+Every integrated company endpoint must resolve the live personal account and current session, exact company capability and company/module licence. Revalidate in the canonical writer transaction before replay lookup or mutation, retaining native actor/audit/idempotency and business/fiscal/finalization rules. An HTTP method or URL prefix is never an allowlist. Company rights do not authorize platform administration or bypass selected-store/object guards in store functions.
+
+Isolated acceptance must cover empty defaults, unchanged legacy accounts, unknown/wildcard refusal, read without write, explicit company authority versus store-only grants, foreign company/object/body/header attacks, revocation between read and write, stale policy revision, native rollback/replay and unchanged controls. Test old/new app-worker schema compatibility and fail-closed mismatches separately. Hosted financial/stock testing still requires fresh before/after and control evidence.
+
+Single next integration action in the visual scope is the actual InventoryV2Center / InventoryFastCount adapter, preserving blind-count redaction, per-action controls and ambiguous-write verification. CashControlPanel and CommerceLauncher follow. Company schema activation remains a separate reviewed compatibility step, not a shortcut for those store-scoped integrations. The entire all-functions request stays OPEN until applicable operations have native enforcement, common UI and recorded acceptance.
+
+
+## Native inventory adapter review before the next source batch
+
+Current InventoryV2Center owns the ordinary Owner layout and embeds InventoryFastCount. Its initial list, zones, audit/export, access-grant, free-conversion, deletion, product-add, count-clear and bulk-zero calls are not admitted by the existing personal inventory.read/count/create/finalize keys. Do not mount it with a transparent unrestricted API or implement a broad inventory URL-prefix bridge.
+
+The personal detail endpoint currently returns only id/name/status/finalizedAt/storeId and redacted lines. It exposes expectedQuantity only with a fresh inventory.finalize grant and never supplies unitCost or salePrice. FastCount currently renders missing costs as zero and derives differences from missing expected quantity; that presentation would be false for a blind counter. The next adapter must suppress those columns, selected-item fields and footer totals when the corresponding data is absent, without synthesizing zero or fetching the unredacted Owner detail. Barcode arrays require explicit display/search normalization; they are not a single owner barcode field.
+
+Reuse the native components through explicit delegated inputs and callbacks, keeping Owner defaults intact. Guard each create/count/finalize control and deny unintegrated zone/grant/free/delete/clear/bulk/export/product events. Preserve the personal orchestration's exact selected-store/object checks, late-result fence, request identity, countVersion and clientEventId, failed-write verification and navigation locks. An ambiguous count must retain the identical operation for verification before any further count; an ambiguous finalization uses read verification. Counter/read-only sessions must never acquire finalize authority because the shared component renders.
+
+Required mounted comparison: real Owner and personal components, read-only versus count/finalize separately, blind fields absent rather than zero, multiple barcode lookup, stale response/store switch, live revocation, repeated/ambiguous count and unchanged Owner controls. Then full exact PR/main CI and guarded release; no stock or finalization PASS follows from isolated UI tests. No adapter source is included in this compatibility packet.
+
+Delivery update1Nov2026: the native inventory/cash presentation adapters were delivered by3477/3478 and installed in201e4c21 after full combined CI and guarded41327819201, with hosted acceptance still NOT TESTED. Their earlier next-step review above is historical. Company authority/schema proposal remains NOT INSTALLED and no company permission was granted. Next bounded store action integration is documented in BACKOFFICE_INVENTORY_ACTION_AUTHORITY.md; shared commerce navigation, other action families and app/worker/company compatibility remain OPEN.
+
+## Current continuation — 18 November 2026, No5
+
+The earlier next-step paragraphs above are historical. PR4007 now integrates85 store capabilities and106 explicit company capabilities. Published f6d8c740 passed6654 tests without failures, actual native BASE/CAPTURE private backup/restore/install and all106 company reads, actual production backup Docker and8HTTP E2E. This proves those legacy catalogues only; it does not prove production installation.
+
+Actual read-only schema observation has291 tables and an eight-column account without companyCapabilities. CURRENT_CAPTURE independently binds that source catalogue, preserving ten operational/consent tables, six existing runtime columns,240 canonical foreign keys and388 guards. Fourteen canonical CREATE statements independently bind168 source default/identity/generated definitions. SOURCE and TARGET use separate reviewed manifests; only the account's companyCapabilities column is added at installation. The source fence authority is retained separately. Original BASE/CAPTURE target/review identities remain unchanged.
+
+The paired Company read worker publishes a distinct revision-bound signed SOURCE/TARGET capability. It cannot advertise scoped recovery or consume recovery commands. Current scoped reset/delete/restore is refused. No staff grant, paid module or Owner role is inferred from selecting a runtime profile.
+
+The operational bridge lives in the existing SuperAdmin Installation Center, once globally rather than per store. It accepts a genuine personal Platform SuperAdmin session, rechecks the live database session and wraps the existing verified Company installation service. Inspection never installs. Installation needs the explicit server gate, current inspected packet, signed full-backup/private-restore receipts and explicit authorization. Runtime tool/configuration prerequisites are checked read-only and expose only bounded readiness flags. See `docs/manual/backoffice-company-installation-runtime.md`.
+
+Exact Current source publication fb7cc753 has actual native PostgreSQL/Docker CI44389809351 in progress. Local integrated checks187PASS/0FAIL/5explicit actual-native/image/browser skips and client build PASS are preparation evidence. The subsequent operational bridge has separate real HTTP and mounted UI checks; it still requires publication and fresh CI. Production profile selection, full production backup/private restore/installation and the single shared human LAB session remain NOT TESTED. No5 remains OPEN.
+
+Coordination with report V2: merging report-column validation does not compose its global schema transition with Company Current. Both independently expect the legacy CAPTURE fence authority59ca6571. A report installation that creates EventConsent or changes that fence will correctly invalidate the Company source291 catalogue; a Company target fence similarly cannot be treated as the report installer's legacy source. Before any production transition, the central coordinator must select a reviewed jointly compatible path. This merge grants neither profile authority over the other's new source/target, and no production eligibility is inferred from their coexistence in source.

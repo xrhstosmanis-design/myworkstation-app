@@ -22,7 +22,7 @@ export const STORE_INTEGRATION_KIND_CONSTRAINT_SQL=`DO $constraint$
     END LOOP;
     ALTER TABLE "StoreIntegrationCredential"
       ADD CONSTRAINT "StoreIntegrationCredential_kind_check"
-      CHECK ("kind" IN ('MYDATA','VAT_LOOKUP','EFOOD'));
+      CHECK ("kind" IN ('MYDATA','VAT_LOOKUP','EFOOD','NETLINK'));
   END $constraint$`;
 
 export async function ensureStoreIntegrationSchema(){

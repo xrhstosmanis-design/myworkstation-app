@@ -1,0 +1,61 @@
+{
+  "scope": "Hosted native LAB direct-owner email configuration ON/OFF only",
+  "date": "2026-10-25",
+  "source": "f5da1510fda6ad657fa54fc70ebf761a6dc1b7be",
+  "sourcePR": 3149,
+  "fullPR": 40222473360,
+  "nativeCI": {
+    "run": 40222473374,
+    "pass": 7,
+    "fail": 0,
+    "skip": 0
+  },
+  "mainCI": 40223139833,
+  "sourceRelease": 40223731004,
+  "configurationDeploy": "dep-dbf54a8m7kps73fq2ns0",
+  "lab": {
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "balanceMicros": "4995848",
+    "reservedMicros": "0",
+    "versions": [
+      5,
+      6,
+      7
+    ],
+    "emailStates": [
+      false,
+      true,
+      false
+    ],
+    "finalRecipient": null,
+    "customerCharging": false,
+    "sales": 90,
+    "transactions": 134,
+    "movements": 95
+  },
+  "globalCounts": {
+    "before": [
+      2,
+      3,
+      2,
+      5
+    ],
+    "after": [
+      2,
+      3,
+      2,
+      7
+    ],
+    "order": [
+      "wallets",
+      "entries",
+      "notices",
+      "audits"
+    ]
+  },
+  "foreignAndBusinessControlsUnchanged": true,
+  "smtpEventCreated": false,
+  "inboxDelivery": "NOT TESTED",
+  "pilotOptIn": "PENDING AFTER GREEN MAIN RECEIPT"
+}

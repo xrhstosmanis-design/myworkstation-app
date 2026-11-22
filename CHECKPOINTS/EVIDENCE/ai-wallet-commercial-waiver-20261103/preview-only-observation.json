@@ -1,0 +1,197 @@
+{
+  "revision": "3a7101767d9205a4e6bbf1238f9a80c3cece5ca4",
+  "action": "Native preview only; acknowledgement unchecked; no submit",
+  "expectedCount": 1,
+  "previewMicros": "930033",
+  "before": [
+    {
+      "audits": {
+        "count": 27,
+        "digest": "20ebbf5eeebdd465d053672fa53a5378"
+      },
+      "controls": [
+        {
+          "movements": {
+            "count": 95,
+            "digest": "4c3daa3d0a8d1d8a2fcec56379ad5be8"
+          },
+          "sales": {
+            "count": 90,
+            "digest": "7429be79120c9716ec99447f5e344c43"
+          },
+          "shifts": {
+            "count": 43,
+            "digest": "14814f641d388a4e4f23fdc329affe64"
+          },
+          "stock": {
+            "count": 110,
+            "digest": "056f3edb3f8e5d42cb987959383ebf51"
+          },
+          "storeId": "cmtpopbgo000trhb5ng9ytiru",
+          "transactions": {
+            "count": 134,
+            "digest": "9eca820a9633516b11da02fe637c0b28"
+          }
+        },
+        {
+          "movements": {
+            "count": 1,
+            "digest": "32b7831b1eb84d0994d627c7f65b1255"
+          },
+          "sales": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "shifts": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "stock": {
+            "count": 1,
+            "digest": "d828e556838424761a47bf055bf41e83"
+          },
+          "storeId": "cmuk8gxui000ppabfykdxwb1y",
+          "transactions": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          }
+        },
+        {
+          "movements": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "sales": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "shifts": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "stock": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "storeId": "cmv2qanca000psigeizep8o9m",
+          "transactions": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          }
+        }
+      ],
+      "entries": {
+        "count": 14,
+        "digest": "034f796c7a85b2876782d801490a3194"
+      },
+      "notices": {
+        "count": 1,
+        "digest": "b398a1cf8ed8bc99977edaaf1d1993f9"
+      },
+      "observedAt": "2026-11-02T23:12:44.136003Z",
+      "wallet": {
+        "balanceMicros": "4610532",
+        "emailEnabled": false,
+        "enabled": false,
+        "reservedMicros": "930033",
+        "version": 45
+      }
+    }
+  ],
+  "after": [
+    {
+      "audits": {
+        "count": 27,
+        "digest": "20ebbf5eeebdd465d053672fa53a5378"
+      },
+      "controls": [
+        {
+          "movements": {
+            "count": 95,
+            "digest": "4c3daa3d0a8d1d8a2fcec56379ad5be8"
+          },
+          "sales": {
+            "count": 90,
+            "digest": "7429be79120c9716ec99447f5e344c43"
+          },
+          "shifts": {
+            "count": 43,
+            "digest": "14814f641d388a4e4f23fdc329affe64"
+          },
+          "stock": {
+            "count": 110,
+            "digest": "056f3edb3f8e5d42cb987959383ebf51"
+          },
+          "storeId": "cmtpopbgo000trhb5ng9ytiru",
+          "transactions": {
+            "count": 134,
+            "digest": "9eca820a9633516b11da02fe637c0b28"
+          }
+        },
+        {
+          "movements": {
+            "count": 1,
+            "digest": "32b7831b1eb84d0994d627c7f65b1255"
+          },
+          "sales": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "shifts": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "stock": {
+            "count": 1,
+            "digest": "d828e556838424761a47bf055bf41e83"
+          },
+          "storeId": "cmuk8gxui000ppabfykdxwb1y",
+          "transactions": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          }
+        },
+        {
+          "movements": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "sales": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "shifts": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "stock": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          },
+          "storeId": "cmv2qanca000psigeizep8o9m",
+          "transactions": {
+            "count": 0,
+            "digest": "d41d8cd98f00b204e9800998ecf8427e"
+          }
+        }
+      ],
+      "entries": {
+        "count": 14,
+        "digest": "034f796c7a85b2876782d801490a3194"
+      },
+      "notices": {
+        "count": 1,
+        "digest": "b398a1cf8ed8bc99977edaaf1d1993f9"
+      },
+      "observedAt": "2026-11-02T23:14:20.233614Z",
+      "wallet": {
+        "balanceMicros": "4610532",
+        "emailEnabled": false,
+        "enabled": false,
+        "reservedMicros": "930033",
+        "version": 45
+      }
+    }
+  ],
+  "unchanged": true
+}

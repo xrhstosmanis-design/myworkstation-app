@@ -29,3 +29,34 @@ test("a missing column delegates its full original definition and errors",async(
   const client={$queryRaw:async()=>[{present:false}],$executeRawUnsafe:async sql=>{assert.equal(sql,statement);throw error}};
   await assert.rejects(executeHotTableBootstrap(client,statement),e=>e===error);
 });
+
+test("audited StoreTransaction columns skip redundant DDL only when present",async()=>{
+  const definitions={attachmentData:"TEXT",attachmentMimeType:"TEXT",attachmentFilename:"TEXT",attachmentChecksum:"TEXT",paymentMethod:"TEXT",subtractFromShift:"BOOLEAN NOT NULL DEFAULT false",supplierId:"TEXT",invoiceDocumentNumber:"TEXT",invoicePaymentKey:"TEXT"};
+  for(const [name,definition] of Object.entries(definitions)){
+    const statement=`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "${name}" ${definition}`;
+    let present=true,probes=0,executions=0;
+    const client={$queryRaw:async(strings,...values)=>{probes++;assert.deepEqual(values,['"StoreTransaction"',name]);return [{present}]},$executeRawUnsafe:async sql=>{executions++;assert.equal(sql,statement);return 0}};
+    assert.equal(await executeHotTableBootstrap(client,statement),0);
+    assert.equal(executions,0);
+    present=false;
+    await executeHotTableBootstrap(client,statement);
+    assert.equal(executions,1);
+    present=true;
+    await executeHotTableBootstrap(client,statement);
+    assert.equal(executions,1);
+    assert.equal(probes,3,"Every call uses its current client; no readiness cache");
+  }
+});
+
+test("unknown ledger columns, changed definitions and multi-action DDL remain untouched",async()=>{
+  const statements=[
+    'ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "unknownField" TEXT',
+    'ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoiceDocumentNumber" INTEGER',
+    'ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT true',
+    'ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoiceDocumentNumber" TEXT, ADD COLUMN "other" TEXT'
+  ];
+  for(const statement of statements){
+    const client={$queryRaw:()=>assert.fail("Non-audited ledger definitions must pass through"),$executeRawUnsafe:async sql=>{assert.equal(sql,statement);return 9}};
+    assert.equal(await executeHotTableBootstrap(client,statement),9);
+  }
+});

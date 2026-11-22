@@ -1,3 +1,4 @@
+import { buildEfoodPromotionWorkbook } from "../efood-promotion-workbook.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -36,7 +37,12 @@ router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){ne
 router.get("/targets",async(req,res,next)=>{
   try{
     const companies=await prisma.company.findMany({where:{active:true},select:{id:true,name:true,stores:{where:{active:true},select:{id:true,name:true,city:true},orderBy:{name:"asc"}}},orderBy:{name:"asc"}});
-    res.json({companies});
+    const efoodStores = await prisma.$queryRaw`SELECT DISTINCT sp."storeId" FROM "StoreProduct" sp
+      JOIN "Store" s ON s.id = sp."storeId"
+      JOIN "Company" c ON c.id = s."companyId"
+      JOIN "Product" p ON p.id = sp."productId" AND p."companyId" = s."companyId"
+      WHERE s.active AND c.active AND sp.active AND p.active AND p."efoodEnabled" AND p."efoodPrice" > 0`;
+    res.json({companies, efoodStoreIds: efoodStores.map(row => row.storeId)});
   }catch(error){next(error)}
 });
 
@@ -83,6 +89,25 @@ async function ensureVat(tx,companyId,rate){
 async function ensureTenantProduct(tx,companyId,master,targetStores){
   const existing=await tx.$queryRaw`SELECT "id","salePrice" FROM "Product" WHERE "companyId"=${companyId} AND "masterProductId"=${master.id} LIMIT 1`;
   let productId=existing[0]?.id,createdProduct=false,activatedMappings=0;
+  if (!productId) {
+    const [sameSku] = await tx.$queryRaw`
+      SELECT p."id", p."masterProductId", EXISTS (
+        SELECT 1 FROM "ProductBarcode" pb
+        JOIN "MasterProductBarcode" mb ON mb."barcode" = pb."barcode"
+        WHERE pb."productId" = p."id" AND mb."masterProductId" = ${master.id}
+          AND mb."scanEnabled" = true
+      ) AS "matchingBarcode"
+      FROM "Product" p WHERE p."companyId" = ${companyId} AND p."sku" = ${master.sourceCode}
+    `;
+    if (sameSku) {
+      if (sameSku.masterProductId !== null || !sameSku.matchingBarcode) {
+        const error = new Error(`Ο κωδικός «${master.sourceCode}» χρησιμοποιείται ήδη από διαφορετικό είδος.`);
+        error.status = 409;
+        throw error;
+      }
+      productId = sameSku.id;
+    }
+  }
   if(!productId){
     const categoryId=await ensureCategory(tx,companyId,master.categoryName),subcategoryId=await ensureSubcategory(tx,companyId,categoryId,master.subcategoryName),vatDepartmentId=await ensureVat(tx,companyId,master.vatRate);
     productId=uid();const salePrice=Number(master.defaultRetailPrice||0),costPrice=Number(master.defaultCostPrice||0),vatRate=Number(master.vatRate||0),verified=master.vatVerified===true;
@@ -139,6 +164,26 @@ const promotionSchema=z.object({
   if(body.promotionType==="GIFT"&&!body.giftMasterProductIds.length)ctx.addIssue({code:z.ZodIssueCode.custom,path:["giftMasterProductIds"],message:"Επίλεξε τουλάχιστον ένα επιτρεπόμενο προϊόν δώρου."});
 });
 const asDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?null:d};
+
+router.get("/promotions/efood-xlsx", async (req, res, next) => {
+  try {
+    const storeId = typeof req.query.storeId === "string" ? req.query.storeId : "";
+    const store = await prisma.store.findFirst({
+      where: { id: storeId, active: true, company: { active: true } },
+      select: { companyId: true },
+    });
+    if (!store) return res.status(404).json({error: "Δεν βρέθηκε ενεργό κατάστημα."});
+    const eligibleStores = await prisma.$queryRaw`SELECT DISTINCT sp."storeId" FROM "StoreProduct" sp
+      JOIN "Store" s ON s.id = sp."storeId"
+      JOIN "Company" c ON c.id = s."companyId"
+      JOIN "Product" p ON p.id = sp."productId" AND p."companyId" = s."companyId"
+      WHERE s.active AND c.active AND sp.active AND p.active AND p."efoodEnabled" AND p."efoodPrice" > 0 AND s.id = ${storeId}`;
+    if (!eligibleStores.length) return res.status(422).json({error: "Το κατάστημα δεν έχει ενεργά είδη με τιμή efood."});
+    res.set("Cache-Control", "no-store").json(await buildEfoodPromotionWorkbook(store.companyId, storeId));
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/promotions",async(req,res,next)=>{
   try{

@@ -1,0 +1,47 @@
+{
+  "at": "2026-11-02T19:01:51.125Z",
+  "revision": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+  "mode": "SYNTHETIC",
+  "period": "2026-10",
+  "proposalReference": "SYNTHETIC-OWNER-20261102-1901",
+  "historyRecords": 0,
+  "serverNextVersion": 1,
+  "baseCents": "10000",
+  "totalCents": "15000",
+  "approvedCents": "5962",
+  "waivedCents": "5961",
+  "pendingCents": "3077",
+  "decisions": [
+    "APPROVED_DRAFT",
+    "WAIVED",
+    "PENDING"
+  ],
+  "wallet": {
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "entries": 14,
+    "calls": 9,
+    "debtCents": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additiveRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "notices": "only old25Oct disabled-email credit notice"
+  },
+  "operator": "native Platform Super Admin authenticated with password and2FA",
+  "terminal": "central Chrome tab, no POS terminal",
+  "shift": "N/A",
+  "sku": "N/A",
+  "quantity": "N/A",
+  "paymentMethod": "N/A",
+  "stock": "N/A",
+  "action": "exactly one explicit SYNTHETIC review save, then read-only reopen; no financial/provider/email action",
+  "protected": "Do not replay old paid/provider/financial tests or read real customer finance."
+}

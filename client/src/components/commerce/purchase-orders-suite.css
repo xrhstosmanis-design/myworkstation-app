@@ -26,3 +26,15 @@
 .po-line-match .po-match-retail strong{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
 .po-line-match [data-product-pick]{min-height:44px;padding:8px 14px;font-weight:800}
 .po-line-form [name="proposedSalePrice"]{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.purchase-orders-suite .po-order-views {
+  margin: 8px 0;
+}
+.purchase-orders-suite .po-order-views button {
+  white-space: normal;
+}
+@media (min-width: 1101px) {
+  .purchase-orders-suite .po-filter-grid-central {
+    grid-template-columns: 1.1fr 1fr 1.5fr .75fr .75fr 52px;
+  }
+}

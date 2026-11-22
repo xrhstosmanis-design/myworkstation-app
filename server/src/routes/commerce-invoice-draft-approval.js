@@ -222,12 +222,18 @@ router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),a
     const result=await prisma.$transaction(async tx=>{
       const scopes=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseDocument" WHERE "id"=${req.params.documentId} AND "companyId"=${req.user.companyId} LIMIT 1`;
       if(!scopes[0])throw Object.assign(new Error("Δεν βρέθηκε το παραστατικό."),{status:404});
+      if(req.body?.expectedStoreId!==undefined&&req.body.expectedStoreId!==scopes[0].storeId)
+        throw Object.assign(new Error("Το παραστατικό ανήκει σε άλλο κατάστημα."),{status:404});
       await lockInvoiceStore(tx,req.user.companyId,scopes[0].storeId);
       const docs=await tx.$queryRaw`SELECT * FROM "PurchaseDocument" WHERE "id"=${req.params.documentId} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       const doc=docs[0];
       if(!doc){const error=new Error("Δεν βρέθηκε το παραστατικό.");error.status=404;throw error}
       if(doc.status==="APPROVED")return {alreadyApproved:true,id:doc.id};
       if(doc.status!=="DRAFT"){const error=new Error("Το παραστατικό δεν είναι σε κατάσταση πρόχειρου ελέγχου.");error.status=409;throw error}
+      if(doc.purchaseOrderId){
+        const orders=await tx.$queryRaw`SELECT "awaitingInvoice" FROM "PurchaseOrder" WHERE "id"=${doc.purchaseOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${doc.storeId}`;
+        if(orders[0]?.awaitingInvoice)throw Object.assign(new Error("Η αγορά είναι προς έλεγχο. Χρησιμοποίησε την Τιμολόγηση στην ίδια αγορά."),{status:409,code:"INVOICE_AWAITING_OWNER_POSTING"});
+      }
       await assertInvoiceStockAvailable(tx,{companyId:req.user.companyId,storeId:doc.storeId,sourceDocumentId:doc.id,orderId:doc.purchaseOrderId||null});
       const creditNote=doc.documentType==="CREDIT_NOTE",stockSign=creditNote?-1:1;
       const lines=await tx.$queryRaw`SELECT l.*,p."trackStock" FROM "PurchaseDocumentLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId} WHERE l."purchaseDocumentId"=${doc.id} ORDER BY l."id"`;

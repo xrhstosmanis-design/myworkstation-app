@@ -1,0 +1,14 @@
+{
+  "kind": "Actual AVAssetWriter H264 and H264/AAC memory segments remuxed in iOS simulator; unchanged server validator",
+  "proofs": [
+    {
+      "file": "synthetic-memory-video.mp4",
+      "durationMs": 1000
+    },
+    {
+      "file": "synthetic-memory-video-aac.mp4",
+      "durationMs": 1092
+    }
+  ],
+  "physicalAcceptance": false
+}

@@ -1,0 +1,5 @@
+# 09/11/2026 — Owner cash report readable evidence
+
+CASH-UNIFIED-AUDIT-15, retained cash owner, within the #3744 owner email scope. The owner supplied the final Acropolis stocktake report as the quality benchmark. This increment separates coverage and per-shift evidence, translates known audit events, groups idempotent POS retries, and describes possible repeated sales using available timestamps, amounts and receipt numbers. Internal event and sale identifiers remain available in structured evidence. Unknown event meanings remain explicitly unconfirmed. Both text and HTML inherit the presentation changes. Financial logic, amounts, send gates and HOLD remain unchanged.
+
+Validation: syntax and diff checks passed on the local event changes. The local integration environment lacks installed server dependencies, so exact-head CI and a live owner preview remain required. This increment is not yet acceptance of the full Acropolis-level report. Remaining scope includes confirming all source coverage and verifying that material findings and follow-up evidence are useful in the production preview.

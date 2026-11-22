@@ -1,0 +1,277 @@
+import {Boxes, ChartNoAxesCombined, ChevronDown, ClipboardList, Headset, ReceiptText, ShoppingCart, UsersRound} from "lucide-react";
+import CompanyAuthorityReadiness,{companyAuthoritySupported} from './backoffice/CompanyAuthorityReadiness.jsx';
+import StoreFinalPassiveReadView from './backoffice/StoreFinalPassiveReadView.jsx';
+import {finalPassiveStoreActions} from '../../../shared/backoffice-staff-final-passive.mjs';
+import ScreenRecorderWindowLauncher from './commerce/ScreenRecorderWindowLauncher.jsx';
+import StoreReportsReadView from './backoffice/StoreReportsReadView.jsx';
+import {storeReportKinds} from './backoffice/reportReadScope.js';
+import StoreSalesExtraReadView from './backoffice/StoreSalesExtraReadView.jsx';
+import StoreWorkforceReadView from './backoffice/StoreWorkforceReadView.jsx';
+import CompanyDirectoryView from './backoffice/CompanyDirectoryView.jsx';
+import {staffCompanyCapabilities,staffCompanyPermissionSections,validStaffCompanyCapabilities} from '../../../shared/backoffice-staff-company.mjs';
+const MonthlyInventoryCapturePanel=React.lazy(()=>import('./commerce/MonthlyInventoryCapturePanel.jsx'));
+const StoreChatPanel=React.lazy(()=>import('./store/StoreChatPanel.jsx'));
+const PosOnlineRadioPlayer=React.lazy(()=>import('./store/PosOnlineRadioPlayer.jsx'));
+const OwnerExpenseRecoveryPanel=React.lazy(()=>import('./cloud/OwnerExpenseRecoveryPanel.jsx'));
+const OwnerPendingApprovals=React.lazy(()=>import('./cloud/OwnerPendingApprovals.jsx'));
+const WholesaleB2BPanel=React.lazy(()=>import('./commerce/WholesaleB2BPanel.jsx'));
+const BackofficeVideoAuditPanel=React.lazy(()=>import('./commerce/BackofficeVideoAuditPanel.jsx'));
+const ProductionPrinterStatusPanel=React.lazy(()=>import('./store/ProductionPrinterStatusPanel.jsx'));
+const PosInternalTransfer=React.lazy(()=>import('./store/PosInternalTransfer.jsx'));
+const AiReaderPanel=React.lazy(()=>import('./commerce/AiReaderPanel.jsx'));
+const OnlineOrdersBackofficePanel=React.lazy(()=>import('./commerce/OnlineOrdersBackofficePanel.jsx'));
+const TableServiceBackofficePanel=React.lazy(()=>import('./commerce/TableServiceBackofficePanel.jsx'));
+const StoreBakingModal=React.lazy(()=>import('./store/StoreBakingModal.jsx'));
+const MonthlyInvoiceAuditPanel=React.lazy(()=>import('./commerce/MonthlyInvoiceAuditPanel.jsx'));
+const PendingCenterPanel=React.lazy(()=>import('./commerce/PendingCenterPanel.jsx'));
+const StaffPromotionsPanel=React.lazy(()=>import('./commerce/StaffPromotionsPanel.jsx'));
+import React,{useCallback,useEffect,useRef,useState} from 'react';
+const OrderSuggestionsPanel=React.lazy(()=>import('./commerce/OrderSuggestionsPanel.jsx'));
+const InvoiceInboxPanel=React.lazy(()=>import('./commerce/InvoiceInboxPanel.jsx'));
+const StaffInvoicePurchases=React.lazy(()=>import('./commerce/StaffInvoicePurchases.jsx'));
+const PosSaleActionsPanel=React.lazy(()=>import('./commerce/PosSaleActionsPanel.jsx'));
+const StoreShiftClosePanel=React.lazy(()=>import('./store/StoreShiftClosePanel.jsx'));
+const StaffOperatorPermissions=React.lazy(()=>import('./backoffice/StaffOperatorPermissions.jsx'));
+const StaffKioskPaymentsImport=React.lazy(()=>import('./backoffice/StaffKioskPaymentsImport.jsx'));
+const StaffShiftReport=React.lazy(()=>import('./cloud/StaffShiftReport.jsx'));
+const SupplierPriceComparisonPanel=React.lazy(()=>import('./commerce/SupplierPriceComparisonPanel.jsx'));
+const LowValueProductsPanel=React.lazy(()=>import('./commerce/LowValueProductsPanel.jsx'));
+const AdvancedSalesAnalytics=React.lazy(()=>import('./commerce/AdvancedSalesAnalytics.jsx'));
+const StoreHandoverPanel=React.lazy(()=>import('./store/StoreHandoverPanel.jsx'));
+const WorkforceV2EmployeesPanel=React.lazy(()=>import('./platform/WorkforceV2EmployeesPanel.jsx'));
+const WorkforceV2ScheduleTab=React.lazy(()=>import('./platform/WorkforceV2ScheduleTab.jsx'));
+const WorkforceV2AttendanceTab=React.lazy(()=>import('./platform/WorkforceV2AttendanceTab.jsx'));
+const WorkforceV2PayrollTab=React.lazy(()=>import('./platform/WorkforceV2PayrollTab.jsx'));
+const InventoryV2Center=React.lazy(()=>import('./inventory/InventoryV2Center.jsx'));
+const CashControlPanel=React.lazy(()=>import('./cloud/CashControlPanel.jsx'));
+const StoreCloudPage=React.lazy(()=>import('./cloud/StoreCloudPage.jsx'));
+const InventoryArchivePanel=React.lazy(()=>import('./commerce/InventoryArchivePanel.jsx'));
+const InventoryNewProductCard=React.lazy(()=>import('./commerce/InventoryNewProductCard.jsx'));
+import {greeceDateInput} from '../../../shared/greece-time.mjs';
+import {targetStocktakeForSavedProduct,shouldRefreshStocktakeAfterAttach} from '../../../shared/inventory-stocktake-product-origin.mjs';
+import BackofficeStores from './backoffice/BackofficeStores.jsx';
+import BackofficeShell from './backoffice/BackofficeShell.jsx';
+import {Building2,LayoutDashboard,LogOut} from 'lucide-react';
+import {staffStoreMenu} from "./backoffice/staff-store-menu.mjs";
+import {staffProfiles} from '../../../shared/backoffice-staff.mjs';
+import './backoffice-staff.css';
+const storeMenuIcons = {
+  cash: ChartNoAxesCombined, stock: Boxes, invoices: ReceiptText,
+  orders: ShoppingCart, people: UsersRound, support: Headset, reports: ClipboardList,
+};
+export default function BackofficeStaffWorkspace({api,user,onLogout}){
+  const [recoveryStoreId,setRecoveryStoreId]=useState('');
+  const [recoveryNotice,setRecoveryNotice]=useState('');
+  const [page,setPage]=useState('stores');
+  const [identity,setIdentity]=useState(null),[storeId,setStoreId]=useState(''),[view,setView]=useState(''),[data,setData]=useState(null),[detail,setDetail]=useState(null),[from,setFrom]=useState(()=>greeceDateInput(new Date())),[to,setTo]=useState(()=>greeceDateInput(new Date())),[error,setError]=useState(''),[busy,setBusy]=useState(false),[pending,setPending]=useState(null);
+  useEffect(()=>{setRecoveryStoreId('');setRecoveryNotice('')},[storeId,view]);
+  const [terminalPos,setTerminalPos]=useState(''),[terminals,setTerminals]=useState([]),[invoicePage,setInvoicePage]=useState('archive'),[closeOpen,setCloseOpen]=useState(false);
+  const moduleWriting=useRef(false);
+  const sequence=useRef(0),scope=useRef(''),sending=useRef(false),selectedStocktakeId=useRef(null);scope.current=JSON.stringify([storeId,view,from,to,terminalPos]);
+  const [newProduct,setNewProduct]=useState(false),[inventoryNewOrigin,setInventoryNewOrigin]=useState(null),[productBusy,setProductBusy]=useState(false),[catalogVersion,setCatalogVersion]=useState(0);
+  const [stocktakeOperation,setStocktakeOperation]=useState(null),[stocktakeMessage,setStocktakeMessage]=useState('');
+  const [inventoryPages,setInventoryPages]=useState([]);
+  const [detailPages,setDetailPages]=useState([]);
+  const selected=identity?.stores.find(s=>s.id===storeId),capabilities=selected?.capabilities||[];
+  const identitySource=useRef(null);
+  const companySupported=identitySource.current?.api===api&&identitySource.current?.user===user&&companyAuthoritySupported(identity?.companyAuthority);
+  const companyCapabilities=companySupported&&Number.isInteger(identity.revision)&&identity.revision>0&&validStaffCompanyCapabilities(identity.companyCapabilities)?identity.companyCapabilities.filter(key=>staffCompanyCapabilities.includes(key)):[];
+  const companyActions=staffCompanyPermissionSections.flatMap(section=>section.actions).filter(action=>companyCapabilities.includes(action.key));
+  const [companyNavSearch,setCompanyNavSearch]=useState('');const visibleCompanyActions=companyActions.filter(action=>action.label.toLocaleLowerCase('el-GR').includes(companyNavSearch.trim().toLocaleLowerCase('el-GR')));
+  const commerceView=['products','invoices','inventory','cash'].find(key=>capabilities.includes(`${key}.read`));
+  const openCommerce=commerceView?()=>setView(commerceView):undefined;
+  useEffect(()=>{let live=true;setIdentity(null);api('/api/backoffice-staff/me').then(d=>{if(live){identitySource.current={api,user};setIdentity(d)}}).catch(e=>{if(live)setError(e.message)});return()=>{live=false;sequence.current++}},[api,user]);
+  useEffect(()=>{sequence.current++;selectedStocktakeId.current=null;setData(null);setDetail(null);setInventoryPages([]);setError('');setBusy(false);setNewProduct(false);setInventoryNewOrigin(null);setStocktakeMessage('');if(view==='inventory'&&storeId&&capabilities.includes('inventory.read'))void load()},[storeId,view,from,to]);
+  const scoped=useCallback(async(path,options={})=>{
+    const own=scope.current;
+    const writing=String(options.method||'GET').toUpperCase()!=='GET';
+    if(writing&&moduleWriting.current)throw Error('Περίμενε να ολοκληρωθεί η καταχώριση.');
+    if(writing){moduleWriting.current=true;setProductBusy(true);}
+    try{const result=await api(path,{...options,headers:{...options.headers,'x-backoffice-store-id':storeId,...(terminalPos?{'x-mws-terminal-pos':terminalPos}:{})}});
+    if(own!==scope.current)throw Error('Άλλαξε η προβολή. Άνοιξε ξανά τη λειτουργία στο επιλεγμένο κατάστημα.');
+    return result;}finally{if(writing){moduleWriting.current=false;setProductBusy(false);}}
+  },[api,storeId,terminalPos]);
+  useEffect(()=>{let live=true;setTerminals([]);setTerminalPos('');setCloseOpen(false);if(!storeId||!capabilities.some(c=>c==='sales.read'||c==='shifts.close'))return;api(`/api/backoffice-staff/${capabilities.includes('sales.read')?'sales':'shifts'}/stores/${encodeURIComponent(storeId)}/terminals`,{headers:{'x-backoffice-store-id':storeId}}).then(result=>{if(live&&result.storeId===storeId)setTerminals(result.terminals||[])}).catch(e=>{if(live)setError(e.message)});return()=>{live=false}},[api,storeId,identity]);
+  const load=async(pages=[])=>{
+    if(!storeId||!view||sending.current)return;selectedStocktakeId.current=null;setInventoryNewOrigin(null);const n=++sequence.current,own=scope.current;setBusy(true);setError('');setData(null);setDetail(null);
+    const after=pages.at(-1),query=after?`?after=${encodeURIComponent(after)}`:'';
+    try{const result=await scoped(`/api/backoffice-staff/inventory/stores/${encodeURIComponent(storeId)}/stocktakes${query}`);if(n!==sequence.current||own!==scope.current)return;if(result.storeId!==storeId)throw Error('Δεν επιβεβαιώθηκε το κατάστημα.');setInventoryPages(pages);setData(result)}catch(e){if(n===sequence.current&&own===scope.current){setInventoryPages([]);setError(e.message)}}finally{if(n===sequence.current&&own===scope.current)setBusy(false)}
+  };
+  const open=async (stocktakeId,pages=[])=>{
+    selectedStocktakeId.current=stocktakeId;setInventoryNewOrigin(null);const n=++sequence.current,own=scope.current;setBusy(true);setError('');setDetail(null);
+    const query=new URLSearchParams({paged:'1'});
+    if(pages.length)query.set('after',pages.at(-1));
+    try{
+      const result=await scoped(`/api/backoffice-staff/inventory/stores/${encodeURIComponent(storeId)}/stocktakes/${encodeURIComponent(stocktakeId)}?${query}`);
+      if(n!==sequence.current||own!==scope.current)return;
+      if(result.storeId!==storeId||result.id!==stocktakeId||!Array.isArray(result.lines))throw Error('Δεν επιβεβαιώθηκε η απογραφή.');
+      setDetailPages(pages);setDetail(result);return result;
+    }catch(e){if(n===sequence.current&&own===scope.current)setError(e.message)}
+    finally{if(n===sequence.current&&own===scope.current)setBusy(false)}
+  };
+  const lookupInventoryLine=async (stocktakeId, code)=>{
+    const own=scope.current,n=sequence.current;
+    const query=new URLSearchParams({paged:'1',code});
+    const result=await scoped(`/api/backoffice-staff/inventory/stores/${encodeURIComponent(storeId)}/stocktakes/${encodeURIComponent(stocktakeId)}?${query}`);
+    if(own!==scope.current||n!==sequence.current||selectedStocktakeId.current!==stocktakeId)return null;
+    if(result.storeId!==storeId||result.id!==stocktakeId||!Array.isArray(result.lines))throw Error('Δεν επιβεβαιώθηκε η αναζήτηση.');
+    return result.lines;
+  };
+
+  const attachCreatedInventoryProduct=async(result,origin)=>{
+    const own=origin?.scope;
+    if(own!==scope.current||origin?.storeId!==storeId)return;
+    const stocktakeId=targetStocktakeForSavedProduct(origin,{storeId,scope:scope.current,savedStoreId:result?.storeId,selectedStocktakeId:selectedStocktakeId.current});
+    if(!result?.id||!stocktakeId||sending.current){
+      setStocktakeMessage('Το είδος δημιουργήθηκε, αλλά δεν επιβεβαιώθηκε σύνδεση με την αρχική απογραφή. Έλεγξε τη γραμμή πριν επαναλάβεις.');
+      return;
+    }
+    sending.current=true;setBusy(true);setStocktakeMessage('Το νέο είδος αποθηκεύτηκε. Ελέγχεται η ασφαλής σύνδεση στην αρχική απογραφή…');
+    try{
+      const attached=await scoped(`/api/inventory-v2/stocktakes/${encodeURIComponent(stocktakeId)}/lines`,{method:'POST',body:JSON.stringify({productId:result.id})});
+      if(own!==scope.current)return;
+      if(attached?.ok!==true||!attached.lineId)throw Error('Δεν επιβεβαιώθηκε η γραμμή απογραφής.');
+      if(shouldRefreshStocktakeAfterAttach(stocktakeId,selectedStocktakeId.current))await open(stocktakeId);
+      if(own===scope.current)setStocktakeMessage(attached.existing?'Το είδος υπάρχει ήδη στην αρχική απογραφή· δεν προστέθηκε δεύτερη γραμμή.':'Το νέο είδος συνδέθηκε με την αρχική απογραφή χωρίς καταμετρημένη ποσότητα.');
+    }catch(e){
+      if(own===scope.current)setStocktakeMessage('Το είδος δημιουργήθηκε, αλλά η σύνδεση με την αρχική απογραφή δεν επιβεβαιώθηκε: '+(e.message||'άγνωστο σφάλμα')+'. Έλεγξε την απογραφή πριν επαναλάβεις.');
+    }finally{sending.current=false;if(own===scope.current)setBusy(false)}
+  };
+  const mutateStocktake=async request=>{
+    if(sending.current)return;sending.current=true;setBusy(true);setError('');setStocktakeMessage('');setStocktakeOperation(request);
+    const own=scope.current;
+    try{
+      const extra=['CLEAR','BULK_ZERO','DELETE'].includes(request.kind);
+      const base=`/api/inventory-v2/stocktakes/${encodeURIComponent(request.stocktakeId)}`;
+      const path=extra?(request.kind==='DELETE'?base:request.kind==='CLEAR'?`${base}/count/${encodeURIComponent(request.lineId)}`:`${base}/count/bulk-zero`):request.kind==='CREATE'?'/api/inventory-v2/stocktakes':`/api/inventory-v2/stocktakes/${encodeURIComponent(request.stocktakeId)}/finalize`;
+      const result=await scoped(path,{method:['CLEAR','DELETE'].includes(request.kind)?'DELETE':'POST',body:JSON.stringify(request.body)});
+      if(own!==scope.current)return;
+      if((request.kind==='CREATE'&&typeof result?.id!=='string')||(request.kind==='FINALIZE'&&result?.ok!==true))throw Error('Δεν επιβεβαιώθηκε η ενέργεια.');
+      if(extra&&(result?.ok!==true||result.stocktakeId!==request.stocktakeId||(request.kind==='DELETE'?result.deleted!==true:result.updated!==(request.kind==='CLEAR'?1:request.body.lines.length))))throw Error('Δεν επιβεβαιώθηκε η ενέργεια.');
+      setStocktakeOperation(null);sending.current=false;
+      if(request.kind==='CREATE'){setStocktakeMessage(result.status==='FINALIZED'?'Η ίδια απογραφή έχει ήδη δημιουργηθεί και οριστικοποιηθεί.':'Η απογραφή δημιουργήθηκε.');await load()}
+      else if(extra){setStocktakeMessage('Η ενέργεια επιβεβαιώθηκε.');if(request.kind==='DELETE')await load();else await open(request.stocktakeId)}
+      else{setStocktakeMessage('Η απογραφή οριστικοποιήθηκε.');await open(request.stocktakeId)}
+      return true;
+    }catch(e){if(own===scope.current){
+      if(['CLEAR','BULK_ZERO','DELETE'].includes(request.kind)&&[400,403,404,409].includes(e.status)){
+        setStocktakeOperation(null);sending.current=false;await load();
+        if(own===scope.current)setError(e.message||'Η ενέργεια απορρίφθηκε.');
+      }else setError((e.message||'Δεν επιβεβαιώθηκε η ενέργεια.')+' Χρησιμοποίησε την επαλήθευση πριν από νέα ενέργεια.');
+    }}finally{sending.current=false;if(own===scope.current)setBusy(false)}
+  };
+  const verifyFinalization=async()=>{
+    if(sending.current||stocktakeOperation?.kind!=='FINALIZE')return;
+    sending.current=true;const own=scope.current;
+    try{const result=await open(stocktakeOperation.stocktakeId);if(own!==scope.current||!result)return;setStocktakeOperation(null);setStocktakeMessage(result.status==='FINALIZED'?'Η απογραφή εμφανίζεται οριστικοποιημένη.':'Η απογραφή παραμένει ανοιχτή. Έλεγξε τις μετρήσεις πριν την οριστικοποίηση.')}finally{sending.current=false}
+  };
+  const count=async request=>{
+    if(sending.current)return;sending.current=true;setBusy(true);setError('');setPending(request);
+    const own=scope.current,n=++sequence.current;
+    try{
+      const result=await scoped(`/api/inventory-v2/stocktakes/${encodeURIComponent(request.stocktakeId)}/count`,{method:'POST',body:JSON.stringify(request.body)});
+      if(n!==sequence.current||own!==scope.current)return;
+      if(result.ok!==true&&result.replayed!==true)throw Error('Δεν επιβεβαιώθηκε η καταμέτρηση.');
+      setPending(null);sending.current=false;await open(request.stocktakeId);return true;
+    }catch(e){if(n===sequence.current&&own===scope.current)setError((e.message||'Δεν επιβεβαιώθηκε η καταμέτρηση.')+' Χρησιμοποίησε «Επαλήθευση ίδιας καταχώρισης» πριν νέα μέτρηση.')}finally{sending.current=false;if(own===scope.current)setBusy(false)}
+  };
+  const createInventoryForm=capabilities.includes('inventory.create')&&<form className="op-form" onSubmit={e=>{e.preventDefault();const name=String(new FormData(e.currentTarget).get('name')||'').trim();if(!name||name.length>180)return setError('Γράψε όνομα απογραφής έως 180 χαρακτήρες.');mutateStocktake({kind:'CREATE',body:{storeId,name,scopeType:'FULL',clientEventId:crypto.randomUUID()}})}}><label>Όνομα νέας απογραφής<input name="name" required maxLength={180} disabled={busy||Boolean(pending||stocktakeOperation)}/></label><button disabled={busy||Boolean(pending||stocktakeOperation)}>Νέα απογραφή</button></form>;
+  const finalizeInventoryForm=<>{detail?.status==='FINALIZED'&&<p role="status">Οριστικοποιημένη απογραφή — οι μετρήσεις δεν αλλάζουν.</p>}{detail?.status==='DRAFT'&&capabilities.includes('inventory.finalize')&&<form className="op-form inv2-finalization" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget),reason=String(f.get('reason')||'').trim();if(f.get('confirm')!=='on'||reason.length<3||reason.length>300)return setError('Συμπλήρωσε αιτιολογία και επιβεβαίωσε την ενημέρωση αποθέματος.');mutateStocktake({kind:'FINALIZE',stocktakeId:detail.id,body:{reason}})}}><h3>Οριστικοποίηση απογραφής</h3><p>Η οριστικοποίηση ενημερώνει τα αποθέματα με βάση τις ελεγμένες μετρήσεις.</p><label>Αιτιολογία<input name="reason" required minLength={3} maxLength={300} disabled={busy||Boolean(pending||stocktakeOperation)}/></label><label className="staff-check"><input name="confirm" type="checkbox" required disabled={busy||Boolean(pending||stocktakeOperation)}/>Έλεγξα τις μετρήσεις και επιβεβαιώνω την ενημέρωση αποθέματος.</label><button disabled={busy||Boolean(pending||stocktakeOperation)}>Οριστικοποίηση και ενημέρωση αποθέματος</button></form>}</>;
+  const [openStoreGroup,setOpenStoreGroup]=useState(null);
+  useEffect(()=>setOpenStoreGroup(null),[storeId,user,api]);
+  const storeMenu=staffStoreMenu(capabilities);
+  const expandedGroup=openStoreGroup ?? storeMenu.find(group=>group.items.some(item=>item.view===view))?.key;
+  return <BackofficeShell className="staff-backoffice" companyName={identity?.companyName||user.company?.name||'MyWorkStation'} title={page==='dashboard'?'Αρχική':page==='company'?(companyActions.find(action=>action.key===view)?.label||'Εταιρικές προβολές'):'Καταστήματα'} subtitle={`Καλώς ήρθες, ${identity?.fullName||user.fullName}`} navigation={<nav aria-label="Πλοήγηση προσωπικού BackOffice"><button className={page==='dashboard'?'active':''} disabled={busy||productBusy||Boolean(pending||stocktakeOperation)} onClick={()=>{sequence.current++;setStoreId('');setView('');setPage('dashboard')}}><LayoutDashboard/>Αρχική</button><button className={page==='stores'?'active':''} disabled={busy||productBusy||Boolean(pending||stocktakeOperation)} onClick={()=>{sequence.current++;setStoreId('');setView('');setPage('stores')}}><Building2/>Καταστήματα</button>{companyActions.length>0&&<label className="staff-company-nav-search">Εταιρικές προβολές<input type="search" aria-label="Αναζήτηση εταιρικών προβολών" value={companyNavSearch} onChange={e=>setCompanyNavSearch(e.target.value)}/></label>}{visibleCompanyActions.map(action=><button key={action.key} className={page==='company'&&view===action.key?'active':''} disabled={busy||productBusy||Boolean(pending||stocktakeOperation)} onClick={()=>{sequence.current++;setStoreId('');setData(null);setDetail(null);setView(action.key);setPage('company')}}>Εταιρεία: {action.label}</button>)}</nav>} footer={<><ScreenRecorderWindowLauncher/><button className="logout" disabled={busy||productBusy||Boolean(pending||stocktakeOperation)} onClick={onLogout}><LogOut/>Έξοδος</button></>}>
+    {identitySource.current?.api===api&&identitySource.current?.user===user&&identity&&<CompanyAuthorityReadiness authority={identity.companyAuthority}/>}
+    {page!=='company'&&!selected&&identity&&<BackofficeStores rows={identity.stores} disabled={busy||productBusy||Boolean(pending||stocktakeOperation)} onOpen={store=>{sequence.current++;setStoreId(store.id);setView('');setPage('stores')}}/>}
+    {page==='company'&&companyCapabilities.includes(view)&&<CompanyDirectoryView key={view} api={api} companyId={identity.companyId} capability={view} companyCapabilities={companyCapabilities} authorityKey={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,companyCapabilities])}/>}
+    <section hidden={page==='company'} className="panel staff-panel staff-store-panel"><div className="staff-store-heading"><label>Κατάστημα<select aria-label="Κατάστημα" value={storeId} disabled={busy||productBusy||Boolean(pending||stocktakeOperation)} onChange={e=>{sequence.current++;setData(null);setDetail(null);setView('');setPage('stores');setStoreId(e.target.value)}}><option value="">Επίλεξε κατάστημα</option>{identity?.stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      {identity&&!identity.stores.length&&<p>Δεν υπάρχει ενεργή ανάθεση καταστήματος. Επικοινώνησε με τον ιδιοκτήτη.</p>}
+      {selected&&<><h2>{selected.name}</h2><p>{staffProfiles[selected.profile]?.label||'Προσωπική πρόσβαση'}</p>{!view&&<p>Επίλεξε λειτουργία από το μενού. Εμφανίζονται όσα σου έχει επιτρέψει ο ιδιοκτήτης.</p>}</>}
+      </div>
+      {selected&&identitySource.current?.api===api&&identitySource.current?.user===user&&
+        <nav className="staff-store-menu" aria-label="Λειτουργίες BackOffice">
+          <div className="staff-menu-groups">
+            {storeMenu.map(group=>{const Icon=storeMenuIcons[group.key];return <button key={group.key} type="button"
+              aria-expanded={expandedGroup===group.key} aria-controls="staff-store-menu-options"
+              onClick={()=>setOpenStoreGroup(expandedGroup===group.key?"":group.key)}>
+              <Icon size={18} aria-hidden="true"/>
+              <span>{group.label}</span>
+              <ChevronDown size={15} aria-hidden="true" className="staff-menu-chevron"/>
+            </button>})}
+          </div>
+          <div id="staff-store-menu-options">
+            {storeMenu.map(group=><div key={group.key} className="staff-store-nav"
+              aria-label={group.label} hidden={expandedGroup!==group.key}>
+              {group.items.map(item=><button type="button" key={item.key}
+                disabled={productBusy||Boolean(pending||stocktakeOperation)}
+                aria-current={view===item.view?"page":undefined}
+                className={view===item.view?"active":""} onClick={()=>setView(item.view)}>
+                {item.label}
+              </button>)}
+            </div>)}
+          </div>
+        </nav>}
+    </section>
+    <section className="backoffice-module-workspace staff-module-presentation">
+      {selected&&identitySource.current?.api===api&&identitySource.current?.user===user&&finalPassiveStoreActions.some(action=>action.key===view)&&capabilities.includes(view)&&<StoreFinalPassiveReadView key={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,view,capabilities])} api={scoped} companyId={identity.companyId} storeId={storeId} storeName={selected.name} capability={view} capabilities={capabilities} authorityKey={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,capabilities])} onOpenSource={source=>{const target={INVOICE:['invoices.read','invoices'],PAYMENT:['approvals.read','approvals'],STOCK:['products.read','products']}[source];if(target&&capabilities.includes(target[0]))setView(target[1])}}/>}
+
+      {selected&&identitySource.current?.api===api&&identitySource.current?.user===user&&storeReportKinds.some(kind=>view==='store-reports-'+kind+'.read')&&capabilities.includes(view)&&<StoreReportsReadView key={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,view,capabilities])} api={scoped} companyId={identity.companyId} store={selected} capability={view} authorityKey={JSON.stringify([identity.userId||user.id,identity.companyId,identity.revision,storeId,capabilities])}/>}
+
+      {view==='monthly-inventory'&&selected&&capabilities.includes('monthly-inventory.read')&&<React.Suspense fallback={<p role="status">Φόρτωση κατάστασης μηνιαίας παρατήρησης…</p>}><MonthlyInventoryCapturePanel key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} storeName={selected.name} readOnly/></React.Suspense>}
+      {view==='chat'&&selected&&capabilities.includes('chat.read')&&<React.Suspense fallback={<p role="status">Φόρτωση Chat…</p>}><StoreChatPanel key={storeId} api={scoped} companyId={identity.companyId} store={{...selected,companyId:identity.companyId}} readOnly onClose={()=>setView('')}/></React.Suspense>}
+      {view==='radio'&&selected&&capabilities.includes('radio.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ραδιοφώνου…</p>}><PosOnlineRadioPlayer key={storeId} api={scoped} companyId={identity.companyId} store={selected} readOnly onClose={()=>setView('')}/></React.Suspense>}
+      {view==='approvals'&&selected&&capabilities.includes('approvals.supplier-recovery')&&<React.Suspense fallback={<p role="status">Φόρτωση…</p>}>
+        <button type="button" onClick={()=>{setRecoveryNotice('');setRecoveryStoreId(storeId)}}>Σύνδεση εξόδου ως έναντι προμηθευτή</button>
+        {recoveryNotice&&<p role="status">{recoveryNotice}</p>}
+        {recoveryStoreId===storeId&&<OwnerExpenseRecoveryPanel key={storeId} api={scoped} store={selected} onClose={()=>setRecoveryStoreId('')} setMessage={setRecoveryNotice}/>}
+      </React.Suspense>}
+      {view==='approvals'&&selected&&capabilities.includes('approvals.read')&&<React.Suspense fallback={<p role="status">Φόρτωση επιβεβαιώσεων…</p>}><OwnerPendingApprovals key={storeId} api={scoped} companyId={identity.companyId} store={selected} readOnly canConfirmExpense={capabilities.includes("approvals.expense-confirm")}/></React.Suspense>}
+      {view==='wholesale'&&selected&&capabilities.includes('wholesale.read')&&<React.Suspense fallback={<p role="status">Φόρτωση χονδρικής…</p>}><WholesaleB2BPanel key={storeId} api={scoped} companyId={identity.companyId} stores={[selected]} activeStoreId={storeId} readOnly/></React.Suspense>}
+      {view==='video'&&selected&&capabilities.includes('video.read')&&<React.Suspense fallback={<p role="status">Φόρτωση καμερών…</p>}><BackofficeVideoAuditPanel key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} readOnly/></React.Suspense>}
+      {view==='printers'&&selected&&capabilities.includes('printers.read')&&<React.Suspense fallback={<p role="status">Φόρτωση εκτυπώσεων…</p>}><ProductionPrinterStatusPanel key={storeId} api={scoped} companyId={identity.companyId} store={selected} onClose={()=>setView('')}/></React.Suspense>}
+      {view==='stock-transfers'&&selected&&capabilities.includes('stock-transfers.read')&&<React.Suspense fallback={<p role="status">Φόρτωση διακινήσεων…</p>}><PosInternalTransfer key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} readOnly onClose={()=>setView('')}/></React.Suspense>}
+      {view==='invoice-ai'&&selected&&capabilities.includes('invoice-ai.read')&&<React.Suspense fallback={<p role="status">Φόρτωση αναγνώσεων…</p>}><AiReaderPanel key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} readOnly/></React.Suspense>}
+      {view==='online-orders'&&selected&&capabilities.includes('online-orders.read')&&<React.Suspense fallback={<p role="status">Φόρτωση Online Παραγγελιών…</p>}><OnlineOrdersBackofficePanel key={storeId} api={scoped} companyId={identity.companyId} stores={[selected]} activeStoreId={storeId} readOnly/></React.Suspense>}
+      {view==='table-service'&&selected&&capabilities.includes('table-service.read')&&<React.Suspense fallback={<p role="status">Φόρτωση τραπεζιών…</p>}><TableServiceBackofficePanel key={storeId} api={scoped} companyId={identity.companyId} stores={[selected]} activeStoreId={storeId} readOnly/></React.Suspense>}
+      {view==='baking'&&selected&&capabilities.includes('baking.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ψησιμάτων…</p>}><StoreBakingModal key={storeId} api={scoped} companyId={identity.companyId} store={selected} readOnly onClose={()=>setView('')}/></React.Suspense>}
+      {view==='monthly-invoice-audit'&&selected&&capabilities.includes('monthly-invoice-audit.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ελέγχου τιμολογίων…</p>}><MonthlyInvoiceAuditPanel key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} storeName={selected.name} delegated/></React.Suspense>}
+      {view==='pending'&&selected&&capabilities.includes('pending.read')&&<React.Suspense fallback={<p role="status">Φόρτωση εκκρεμοτήτων…</p>}><PendingCenterPanel key={storeId} api={scoped} stores={[selected]} scopeStoreId={storeId} companyId={identity.companyId} readOnly/></React.Suspense>}
+      {view==='promotions'&&selected&&capabilities.includes('promotions.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προσφορών…</p>}><StaffPromotionsPanel key={storeId} api={scoped} companyId={identity.companyId} store={selected}/></React.Suspense>}
+      {['workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read'].includes(view)&&selected&&identity?.companyId&&capabilities.includes(view)&&<StoreWorkforceReadView key={`${identity.companyId}:${storeId}:${view}`} api={scoped} companyId={identity.companyId} storeId={storeId} storeName={selected.name} capability={view} canManage={['workforce-rules.read','shift-templates.read'].includes(view)&&capabilities.includes(view.replace('.read','.manage'))} mutationBusy={productBusy} canReadEmployees={capabilities.includes('employees.read')} canReadRoles={capabilities.includes('workforce-roles.read')}/>}
+      {['unsold-products.read','sales-journal.read'].includes(view)&&selected&&identity?.companyId&&capabilities.includes(view)&&<StoreSalesExtraReadView key={`${identity.companyId}:${storeId}:${view}`} api={scoped} companyId={identity.companyId} storeId={storeId} storeName={selected.name} capability={view}/>}
+      {view==='payroll'&&selected&&identity?.companyId&&capabilities.includes('payroll.read')&&<React.Suspense fallback={<p role="status">Φόρτωση μισθοδοσίας…</p>}><WorkforceV2PayrollTab key={`${identity.companyId}:${storeId}`} company={{id:identity.companyId}} store={selected} request={scoped} readOnly/></React.Suspense>}
+      {view==='stock'&&selected&&identity?.companyId&&capabilities.includes('stock.read')&&capabilities.includes('products.read')&&<React.Suspense fallback={<p role="status">Φόρτωση κινήσεων αποθήκης…</p>}><InventoryArchivePanel key={storeId} api={scoped} companyId={identity.companyId} storeId={storeId} stores={[selected]} readOnly staffPrint={capabilities.includes("products.print")} stockMovementRead onClose={()=>setView('')}/></React.Suspense>}
+      {view==='schedule'&&selected&&identity?.companyId&&capabilities.includes('schedule.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προγράμματος…</p>}><WorkforceV2ScheduleTab key={`${identity.companyId}:${storeId}:schedule`} company={{id:identity.companyId}} store={selected} request={scoped} readOnly canCreateSchedule={capabilities.includes("schedule.create")} canExportSchedule={capabilities.includes("schedule.export")} canPrintSchedule={capabilities.includes("schedule.print")} canEditSchedule={capabilities.includes("schedule.edit")} canPreviewSchedule={capabilities.includes("schedule.preview")} canApproveSchedule={capabilities.includes("schedule.approve")} canPublishSchedule={capabilities.includes("schedule.publish")} canApproveScheduleException={capabilities.includes("schedule.approve-exception")}/></React.Suspense>}
+      {view==='leaves'&&selected&&identity?.companyId&&capabilities.includes('leaves.read')&&<React.Suspense fallback={<p role="status">Φόρτωση αδειών και ρεπό…</p>}><WorkforceV2ScheduleTab key={`${identity.companyId}:${storeId}:leaves`} company={{id:identity.companyId}} store={selected} request={scoped} readOnly readOnlySection="LEAVE" canCreateLeave={capabilities.includes("leaves.create")} canApproveLeave={capabilities.includes("leaves.approve")} canRejectLeave={capabilities.includes("leaves.reject")} canCancelLeave={capabilities.includes("leaves.cancel")}/></React.Suspense>}
+      {view==='attendance'&&selected&&identity?.companyId&&capabilities.includes('attendance.read')&&<React.Suspense fallback={<p role="status">Φόρτωση παρουσιών…</p>}><WorkforceV2AttendanceTab key={`${identity.companyId}:${storeId}`} company={{id:identity.companyId}} store={selected} request={scoped} readOnly canExport={capabilities.includes("attendance.export")} canPrint={capabilities.includes("attendance.print")} canClock={capabilities.includes("attendance.clock")} canCorrect={capabilities.includes("attendance.correct")} canApproveReview={capabilities.includes("attendance.approve-review")} canApproveOvertime={capabilities.includes("attendance.approve-overtime")}/></React.Suspense>}
+      {view==='employees'&&selected&&identity?.companyId&&capabilities.includes('employees.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προσωπικού…</p>}><WorkforceV2EmployeesPanel key={`${identity.companyId}:${storeId}`} company={{id:identity.companyId}} store={selected} request={scoped} readOnly canEditDetails={capabilities.includes("employees.edit")}/></React.Suspense>}
+      {view==='handover'&&selected&&capabilities.includes('handover.read')&&<React.Suspense fallback={<p role="status">Φόρτωση παραδόσεων βάρδιας…</p>}><StoreHandoverPanel key={storeId} api={scoped} store={selected} readOnly/></React.Suspense>}
+      {view==='analytics'&&selected&&capabilities.includes('analytics.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ανάλυσης πωλήσεων…</p>}><AdvancedSalesAnalytics key={storeId} api={scoped} stores={[selected]} initialStoreId={storeId}/></React.Suspense>}
+      {view==='order-suggestions'&&selected&&capabilities.includes('order-suggestions.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προτάσεων παραγγελίας…</p>}><OrderSuggestionsPanel key={storeId} api={scoped} storeId={storeId}/></React.Suspense>}
+      {view==='low-value-products'&&selected&&capabilities.includes('low-value-products.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προϊόντων χαμηλής απόδοσης…</p>}><LowValueProductsPanel key={storeId} api={scoped} storeId={storeId}/></React.Suspense>}
+      {view==='supplier-comparison'&&selected&&capabilities.includes('supplier-price-comparison.read')&&<React.Suspense fallback={<p role="status">Φόρτωση σύγκρισης προμηθευτών…</p>}><SupplierPriceComparisonPanel key={storeId} api={scoped} storeId={storeId}/></React.Suspense>}
+      {view==='invoices'&&selected&&capabilities.includes('invoices.read')&&<React.Suspense fallback={<p role="status">Φόρτωση τιμολογίων…</p>}><div className="staff-actions"><button type="button" disabled={productBusy} onClick={()=>setInvoicePage('archive')}>Θυρίδα και πρωτότυπα</button><button type="button" disabled={productBusy} onClick={()=>setInvoicePage('purchases')}>Αγορές και πρόχειρα τιμολογίων</button></div>{invoicePage==='archive'?<InvoiceInboxPanel key={storeId} api={scoped} stores={[selected]} readOnly/>:<StaffInvoicePurchases key={storeId} api={scoped} store={selected} capabilities={capabilities}/>}</React.Suspense>}
+      {view==='operator-permissions'&&selected&&capabilities.includes('operator-profiles.manage-permissions')&&<React.Suspense fallback={<p role="status">Φόρτωση δικαιωμάτων χειριστών…</p>}><StaffOperatorPermissions key={JSON.stringify([identity.companyId,identity.userId,storeId])} api={scoped} companyId={identity.companyId} storeId={storeId} canManagePosAccess={capabilities.includes('operator-profiles.manage-pos-access')} canProvision={capabilities.includes('operator-profiles.create-employee')} canResetPin={capabilities.includes('operator-profiles.reset-pin')} canCopyPermissions={capabilities.includes('operator-profiles.copy-permissions')}/></React.Suspense>}
+      {view==='shift-report'&&selected&&capabilities.includes('shifts.read')&&<React.Suspense fallback={<p role="status">Φόρτωση αναφοράς βαρδιών…</p>}><StaffShiftReport key={storeId} api={scoped} storeId={storeId} canExport={capabilities.includes("shifts.export")} canPrint={capabilities.includes("shifts.print")}/></React.Suspense>}
+      {view==='close'&&selected&&terminalPos&&capabilities.includes('shifts.close')&&<React.Suspense fallback={<p>Φόρτωση…</p>}><StoreShiftClosePanel key={`close-only:${storeId}:${terminalPos}`} api={scoped} store={selected} backoffice closeOnly/></React.Suspense>}
+      {['sales','payments','close'].includes(view)&&selected&&(capabilities.includes('sales.read')||view==='close'&&capabilities.includes('shifts.close'))&&<label>Ταμείο<select aria-label="Ταμείο" value={terminalPos} disabled={productBusy} onChange={e=>{setCloseOpen(false);setTerminalPos(e.target.value)}}><option value="">Επίλεξε ταμείο</option>{terminals.map(terminal=><option key={terminal} value={terminal}>{terminal}</option>)}</select></label>}
+      {view==='sales'&&selected&&terminalPos&&capabilities.includes('sales.read')&&<React.Suspense fallback={<p role="status">Φόρτωση πωλήσεων…</p>}><StoreCloudPage key={`${storeId}:${terminalPos}`} api={scoped} store={selected} capabilities={capabilities} primaryView="shifts" onPrimaryChange={value=>setView(value==='payments'?'payments':'sales')} navigationLocked={busy||productBusy||Boolean(pending||stocktakeOperation)} onBack={()=>{setStoreId('');setView('')}} onOpenCommerce={openCommerce}/>{capabilities.includes('sales.cancel')&&<PosSaleActionsPanel key={`cancel:${storeId}:${terminalPos}`} api={scoped} storeId={storeId} delegatedCapabilities={capabilities}/>}{capabilities.includes('shifts.close')&&<><button type="button" disabled={productBusy} onClick={()=>setCloseOpen(value=>!value)}>{closeOpen?'Κλείσιμο φόρμας':'Κλείσιμο βάρδιας με καταμέτρηση'}</button>{closeOpen&&<StoreShiftClosePanel key={`close:${storeId}:${terminalPos}`} api={scoped} store={selected} backoffice/>}</>}</React.Suspense>}
+      {view==='kiosk-import'&&selected&&capabilities.includes('payments.import-kiosk')&&<React.Suspense fallback={<p role="status">Φόρτωση εισαγωγής Kiosk…</p>}><StaffKioskPaymentsImport key={storeId} api={scoped} storeId={storeId}/></React.Suspense>}
+      {view==='payments'&&selected&&capabilities.includes('payments.read')&&<React.Suspense fallback={<p role="status">Φόρτωση πληρωμών…</p>}><StoreCloudPage key={`payments:${storeId}:${terminalPos}`} api={scoped} store={selected} capabilities={terminalPos?capabilities:capabilities.filter(capability=>capability!=='payments.cash')} primaryView="payments" onOpenCommerce={openCommerce} onPrimaryChange={value=>setView(value==='payments'?'payments':'sales')} navigationLocked={busy||productBusy||Boolean(pending||stocktakeOperation)} onBack={()=>{setStoreId('');setView('')}}/></React.Suspense>}
+      {view==='products'&&selected&&capabilities.includes('products.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ειδών…</p>}>{capabilities.includes('products.create')&&<button className="staff-module-primary" type="button" disabled={productBusy} onClick={()=>setNewProduct(true)}>Νέο είδος · Πλήρης καρτέλα</button>}<InventoryArchivePanel key={`${storeId}:${catalogVersion}`} api={scoped} storeId={storeId} stores={[selected]} readOnly staffPrint={capabilities.includes("products.print")} stockMovementRead={capabilities.includes("stock.read")} companyId={identity.companyId} staffCardEdit={capabilities.includes("products.edit")} onClose={()=>setView('')}/>{newProduct&&<InventoryNewProductCard key={storeId} api={scoped} storeId={storeId} lookupAllowed={false} allowOpeningStock={capabilities.includes('products.opening-stock')} onBusyChange={setProductBusy} onClose={()=>setNewProduct(false)} onSaved={()=>{setNewProduct(false);setCatalogVersion(v=>v+1)}}/>}</React.Suspense>}
+      {view==='inventory'&&selected&&capabilities.includes('inventory.read')&&<React.Suspense fallback={<p role="status">Φόρτωση απογραφής…</p>}><InventoryV2Center key={storeId} api={scoped} stores={[selected]} delegated={{storeId,storeName:selected.name,stocktakes:data?.stocktakes||[],listLoaded:data!==null,pagination:data?{page:inventoryPages.length+1,hasPrevious:inventoryPages.length>0,hasNext:Boolean(data.nextCursor),onPrevious:()=>load(inventoryPages.slice(0,-1)),onNext:()=>data.nextCursor&&load([...inventoryPages,data.nextCursor])}:null,current:detail,detailPagination:detail?{
+        page:detailPages.length+1,
+        hasPrevious:detailPages.length>0,
+        hasNext:Boolean(detail.nextCursor),
+        onPrevious:()=>open(detail.id,detailPages.slice(0,-1)),
+        onNext:()=>detail.nextCursor&&open(detail.id,[...detailPages,detail.nextCursor])
+      }:null,onLookup:lookupInventoryLine,canCreate:capabilities.includes('inventory.create'),canCount:capabilities.includes('inventory.count'),canCreateProduct:capabilities.includes('products.create')&&capabilities.includes('inventory.count'),onCreateProduct:barcode=>{const trimmed=String(barcode||'').trim();if(trimmed&&detail?.id&&detail.status==='DRAFT'&&selectedStocktakeId.current===detail.id&&!busy&&!productBusy&&!moduleWriting.current&&!sending.current&&!pending&&!stocktakeOperation&&inventoryNewOrigin===null&&capabilities.includes('products.create')&&capabilities.includes('inventory.count')){setInventoryNewOrigin(Object.freeze({barcode:trimmed,stocktakeId:detail.id,storeId,scope:scope.current}))}},canFinalize:capabilities.includes('inventory.finalize'),canSeeExpected:capabilities.includes('inventory.expected.read'),canExport:capabilities.includes('inventory.export'),canClear:capabilities.includes('inventory.clear'),canBulkZero:capabilities.includes('inventory.bulk-zero'),canDelete:capabilities.includes('inventory.delete'),onClear:request=>mutateStocktake({...request,kind:'CLEAR'}),onBulkZero:request=>mutateStocktake({...request,kind:'BULK_ZERO'}),onDelete:stocktakeId=>mutateStocktake({kind:'DELETE',stocktakeId,body:{clientEventId:crypto.randomUUID(),confirmed:true}}),locked:busy||productBusy||inventoryNewOrigin!==null||Boolean(pending||stocktakeOperation),onLoad:load,onOpen:open,onNew:()=>{selectedStocktakeId.current=null;setInventoryNewOrigin(null);setDetail(null);setError('')},onCount:count,setError,createForm:createInventoryForm,finalizationForm:finalizeInventoryForm}}/></React.Suspense>}
+      {view==='inventory'&&selected&&inventoryNewOrigin&&detail?.status==='DRAFT'&&detail.id===inventoryNewOrigin.stocktakeId&&inventoryNewOrigin.storeId===storeId&&inventoryNewOrigin.scope===scope.current&&capabilities.includes('products.create')&&capabilities.includes('inventory.count')&&<React.Suspense fallback={<p role="status">Φόρτωση καρτέλας νέου είδους…</p>}><InventoryNewProductCard key={storeId+':'+inventoryNewOrigin.stocktakeId+':'+inventoryNewOrigin.barcode} api={scoped} storeId={storeId} initialBarcode={inventoryNewOrigin.barcode} lookupAllowed={false} allowOpeningStock={false} onBusyChange={setProductBusy} onClose={()=>setInventoryNewOrigin(null)} onSaved={result=>{const origin=inventoryNewOrigin;setInventoryNewOrigin(null);setCatalogVersion(v=>v+1);void attachCreatedInventoryProduct(result,origin)}}/></React.Suspense>}
+      {view==='cash'&&selected&&capabilities.includes('cash.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ελέγχου ταμείων…</p>}><CashControlPanel key={storeId} api={scoped} store={selected} readOnly from={from} to={to} onFrom={setFrom} onTo={setTo}/></React.Suspense>}{busy&&<p role="status">Φόρτωση…</p>}{error&&<p role="alert">{error}</p>}{stocktakeMessage&&<p role="status">{stocktakeMessage}</p>}
+      {['CLEAR','BULK_ZERO','DELETE'].includes(stocktakeOperation?.kind)&&<button type="button" disabled={busy} onClick={()=>mutateStocktake(stocktakeOperation)}>Επαλήθευση ίδιας ενέργειας</button>}
+      {stocktakeOperation?.kind==='CREATE'&&<button type="button" disabled={busy} onClick={()=>mutateStocktake(stocktakeOperation)}>Επαλήθευση ίδιας δημιουργίας</button>}
+      {stocktakeOperation?.kind==='FINALIZE'&&<button type="button" disabled={busy} onClick={verifyFinalization}>Έλεγχος αποτελέσματος οριστικοποίησης</button>}
+      {pending&&<button type="button" disabled={busy} onClick={()=>count(pending)}>Επαλήθευση ίδιας καταχώρισης</button>}
+    </section></BackofficeShell>;
+}

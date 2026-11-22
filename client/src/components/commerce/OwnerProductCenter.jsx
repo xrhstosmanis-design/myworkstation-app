@@ -1,3 +1,4 @@
+import NativePromotionList from "./NativePromotionList.jsx";
 import {greeceDateTimeInput,greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -556,6 +557,32 @@ export default function OwnerProductCenter({
       setBusy(false);
     }
   };
+
+  const [efoodExportStore, setEfoodExportStore] = useState("");
+  async function exportEfoodPromotions(event) {
+    event.preventDefault();
+    clearStatus();
+    setBusy(true);
+    try {
+      const {xlsx, exported, skipped} = await api(
+        `/api/owner-products/promotions/efood-xlsx?storeId=${encodeURIComponent(efoodExportStore)}`
+      );
+      const bytes = Uint8Array.from(atob(xlsx), character => character.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], {
+        type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "prosfores-efood.xlsx";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage(`Εξήχθησαν ${exported} προσφορές efood.${skipped ? ` Προς έλεγχο: ${skipped}.` : ""}`);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const loadPromotions = async () => {
     clearStatus();
@@ -2173,39 +2200,16 @@ export default function OwnerProductCenter({
           </section>
           <section className="op-box">
             <h3>Προσφορές</h3>
-            <div className="promo-list">
-              {promotions.map((p) => (
-                <article key={p.id}>
-                  <div>
-                    <b>{p.productName}</b>{p.name && <small>{p.name}</small>}
-                    <small>
-                      {p.promotionType === "GIFT"
-                        ? `Αγορά ${Number(p.saleQuantity)} + ${Number(p.bonusQuantity)} δωρεάν`
-                        : p.offerMode === "DISCOUNT_PERCENT"
-                          ? `-${Number(p.discountPercent)}%`
-                          : p.offerMode === "DISCOUNT_AMOUNT"
-                            ? `-${money(p.discountAmount)}`
-                            : `Τιμή ${money(p.offerPrice)}`}
-                    </small>
-                    <small>
-                      {new Date(p.validFrom).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})} →{" "}
-                      {p.validUntil
-                        ? new Date(p.validUntil).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})
-                        : "χωρίς λήξη"}
-                    </small>
-                    <small>
-                      {(p.stores || []).map((s) => s.name).join(", ")}
-                    </small>
-                  </div>
-                  <button
-                    className={p.active ? "danger" : "secondary"}
-                    onClick={() => togglePromotion(p)}
-                  >
-                    {p.active ? "Παύση" : "Ενεργοποίηση"}
-                  </button>
-                </article>
-              ))}
-            </div>
+            <form className="op-form" onSubmit={exportEfoodPromotions}>
+              <label>Κατάστημα για Excel efood
+                <select value={efoodExportStore} onChange={event => setEfoodExportStore(event.target.value)} required>
+                  <option value="">Επίλεξε κατάστημα</option>
+                  {activeStores.map(store => <option key={store.id} value={store.id}>{store.name}</option>)}
+                </select>
+              </label>
+              <button disabled={busy || !efoodExportStore}>Excel ενεργών προσφορών efood</button>
+            </form>
+            <NativePromotionList items={promotions} onToggle={togglePromotion}/>
           </section>
         </div>
       )}

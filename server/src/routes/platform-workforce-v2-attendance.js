@@ -1,3 +1,4 @@
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -28,35 +29,54 @@ function serializeSession(session){
   const hourlyRate=session.hourlyRate===null||session.hourlyRate===undefined?null:Number(session.hourlyRate),workedAmount=hourlyRate===null?null:Number((workedMinutes/60*hourlyRate).toFixed(2));
   return {id:session.id,employee:{id:session.employee.id,fullName:session.employee.fullName,paymentType:session.employee.paymentType},startedAt:session.startedAt,endedAt:session.endedAt,workedMinutes,scheduledMinutes,varianceMinutes:scheduledMinutes===null?null:workedMinutes-scheduledMinutes,hourlyRate,workedAmount,lateMinutes:minutes(session.lateMinutes),earlyLeaveMinutes:minutes(session.earlyLeaveMinutes),overtimeMinutes:minutes(session.overtimeMinutes),status:session.status,issues:Array.isArray(session.issueJson?.issues)?session.issueJson.issues:[],assignment};
 }
-async function publishedAssignment(context,employeeId,date){
+async function publishedAssignment(db,context,employeeId,date){
   const at=dayStart(date);
-  return prisma.workforceScheduleAssignment.findFirst({where:{employeeId,date:at,schedule:{companyId:context.company.id,storeId:context.store.id,status:"PUBLISHED"}},include:assignmentInclude,orderBy:{createdAt:"desc"}});
+  return db.workforceScheduleAssignment.findFirst({where:{employeeId,date:at,schedule:{companyId:context.company.id,storeId:context.store.id,status:"PUBLISHED"}},include:assignmentInclude,orderBy:{createdAt:"desc"}});
 }
 
 router.get("/",async(req,res,next)=>{try{
-  const context=await contextFor(req),query=z.object({date:dateText}).parse(req.query||{}),start=dayStart(query.date),end=new Date(start.getTime()+86400000);
-  const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:start,lt:end}},include:{employee:true},orderBy:[{startedAt:"asc"}]});
-  const sessionIds=sessions.map(item=>item.scheduledAssignmentId).filter(Boolean),assignments=sessionIds.length?await prisma.workforceScheduleAssignment.findMany({where:{id:{in:sessionIds}},include:assignmentInclude}):[];
+  const context=await contextFor(req),delegated=req.user?.staffAccess===true,query=z.object({date:dateText}).parse(req.query||{}),start=dayStart(query.date),end=new Date(start.getTime()+86400000);
+  const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:start,lt:end},...(delegated?{employee:{companyId:context.company.id}}:{})},
+    ...(delegated?{select:{id:true,employeeId:true,scheduledAssignmentId:true,startedAt:true,endedAt:true,workedMinutes:true,lateMinutes:true,earlyLeaveMinutes:true,overtimeMinutes:true,status:true,updatedAt:true,employee:{select:{id:true,fullName:true}}}}:{include:{employee:true}}),orderBy:[{startedAt:"asc"}]});
+  const sessionIds=sessions.map(item=>item.scheduledAssignmentId).filter(Boolean),assignments=sessionIds.length?await prisma.workforceScheduleAssignment.findMany({where:{id:{in:sessionIds},...(delegated?{schedule:{companyId:context.company.id,storeId:context.store.id},shiftTemplate:{companyId:context.company.id,storeId:context.store.id}}:{})},
+    ...(delegated?{select:{id:true,date:true,shiftTemplate:{select:{id:true,name:true,startTime:true,endTime:true}}}}:{include:assignmentInclude})}):[];
   const map=new Map(assignments.map(item=>[item.id,item]));
   const employeeIds=[...new Set(sessions.map(item=>item.employeeId))];
-  const rates=employeeIds.length?await prisma.workforceHourlyRate.findMany({where:{employeeId:{in:employeeIds},validFrom:{lt:end},OR:[{validTo:null},{validTo:{gte:start}}]},orderBy:{validFrom:"desc"}}):[];
+  const rates=!delegated&&employeeIds.length?await prisma.workforceHourlyRate.findMany({where:{employeeId:{in:employeeIds},validFrom:{lt:end},OR:[{validTo:null},{validTo:{gte:start}}]},orderBy:{validFrom:"desc"}}):[];
   const rateMap=new Map();
   for(const rate of rates)if(!rateMap.has(rate.employeeId))rateMap.set(rate.employeeId,rate);
-  const rows=sessions.map(item=>serializeSession({...item,assignment:map.get(item.scheduledAssignmentId)||null,hourlyRate:rateMap.has(item.employeeId)?rateMap.get(item.employeeId).hourlyRate:null}));
+  const rows=sessions.map(item=>{
+    const row=serializeSession({...item,assignment:map.get(item.scheduledAssignmentId)||null,hourlyRate:rateMap.has(item.employeeId)?rateMap.get(item.employeeId).hourlyRate:null});
+    if(!delegated)return row;
+    const {hourlyRate,workedAmount,employee,...attendance}=row;
+    return {...attendance,updatedAt:item.updatedAt,employee:{id:employee.id,fullName:employee.fullName}};
+  });
   const employees=await prisma.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},select:{id:true,fullName:true},orderBy:{fullName:"asc"}});
   const scheduledRows=rows.filter(row=>row.scheduledMinutes!==null);
-  res.json({date:query.date,employees,items:rows,canApprove:isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),workedAmount:Number(rows.reduce((total,row)=>total+(row.workedAmount??0),0).toFixed(2)),scheduledMinutes:scheduledRows.reduce((total,row)=>total+row.scheduledMinutes,0),varianceMinutes:scheduledRows.reduce((total,row)=>total+row.varianceMinutes,0),scheduledSessions:scheduledRows.length,review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
+  if(delegated)await requireStaffGrant(prisma,req.user,context.store.id,'attendance.read');
+  res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),date:query.date,employees,items:rows,canApprove:!delegated&&isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),...(!delegated?{workedAmount:Number(rows.reduce((total,row)=>total+(row.workedAmount??0),0).toFixed(2))}:{}),scheduledMinutes:scheduledRows.reduce((total,row)=>total+row.scheduledMinutes,0),varianceMinutes:scheduledRows.reduce((total,row)=>total+row.varianceMinutes,0),scheduledSessions:scheduledRows.length,review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
 }catch(error){next(error)}});
 
-const clockBody=z.object({employeeId:z.string().min(1),eventType:z.enum(["IN","OUT"]),note:z.string().trim().max(500).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)});
+const clockBody=z.object({employeeId:z.string().min(1),eventType:z.enum(["IN","OUT"]),note:z.string().trim().max(500).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500),expectedSessionId:z.string().min(1).optional()});
 router.post("/clock",async(req,res,next)=>{try{
-  if(!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης καταχωρίζει χειροκίνητα κάρτα παρουσίας."),{status:403});
-  const context=await contextFor(req),body=clockBody.parse(req.body||{}),employee=await loadEmployee(req,context,body.employeeId),now=new Date(),date=iso(now);
-  const open=await prisma.workforceAttendanceSession.findFirst({where:{companyId:context.company.id,storeId:context.store.id,employeeId:employee.id,status:"OPEN"},orderBy:{startedAt:"desc"}});
-  if(body.eventType==="IN"&&open)throw Object.assign(new Error("Υπάρχει ήδη ανοιχτή παρουσία για τον εργαζόμενο."),{status:409});
-  if(body.eventType==="OUT"&&!open)throw Object.assign(new Error("Δεν υπάρχει ανοιχτή παρουσία για λήξη."),{status:409});
-  const assignment=body.eventType==="IN"?await publishedAssignment(context,employee.id,date):null;
-  const result=await prisma.$transaction(async tx=>{
+  const delegated=req.user?.staffAccess===true;
+  if(!delegated&&!isApprovalUser(req.user))throw Object.assign(new Error("Απαιτείται δικαίωμα για τη χειροκίνητη κάρτα παρουσίας."),{status:403});
+  const context=await contextFor(req),body=clockBody.parse(req.body||{});
+  const companyId=context.company.id,storeId=context.store.id;
+  const ownerEmployee=delegated?null:await loadEmployee(req,context,body.employeeId);
+  const {result,employee,assignment}=await prisma.$transaction(async tx=>{
+    if(delegated)await requireStaffGrant(tx,req.user,storeId,'attendance.clock');
+    await tx.$queryRaw`SELECT "id" FROM "WorkforceEmployee" WHERE "id"=${body.employeeId} AND "companyId"=${companyId} FOR UPDATE`;
+    const employee=delegated?await tx.workforceEmployee.findFirst({
+      where:{id:body.employeeId,companyId,active:true,OR:[{baseStoreId:storeId},{storeAccess:{some:{storeId,active:true}}}]},
+      select:{id:true,fullName:true}
+    }):ownerEmployee;
+    if(!employee)throw Object.assign(new Error("Δεν βρέθηκε ενεργός εργαζόμενος στο κατάστημα."),{status:404});
+    const [open]=await tx.$queryRaw`SELECT * FROM "WorkforceAttendanceSession" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employee.id} AND "status"='OPEN' ORDER BY "startedAt" DESC LIMIT 1 FOR UPDATE`;
+    if(body.eventType==="IN"&&open)throw Object.assign(new Error("Υπάρχει ήδη ανοιχτή παρουσία για τον εργαζόμενο."),{status:409});
+    if(body.eventType==="OUT"&&(!open||(delegated&&open.id!==body.expectedSessionId)))throw Object.assign(new Error("Η ανοιχτή παρουσία άλλαξε. Ανανέωσε πριν συνεχίσεις."),{status:409});
+    const now=new Date(),date=iso(now);
+    const assignment=body.eventType==="IN"?await publishedAssignment(tx,context,employee.id,date):null;
     const entry=await tx.workforceTimeClockEntry.create({data:{companyId:context.company.id,storeId:context.store.id,employeeId:employee.id,eventType:body.eventType,method:"SUPERVISOR",occurredAt:now,sourceShiftId:assignment?.id||open?.scheduledAssignmentId||null,note:body.note||null,createdByUserId:req.user.id}});
     let session;
     if(body.eventType==="IN"){
@@ -69,20 +89,37 @@ router.post("/clock",async(req,res,next)=>{try{
       session=await tx.workforceAttendanceSession.update({where:{id:open.id},data:{clockOutEntryId:entry.id,endedAt:now,workedMinutes:worked,earlyLeaveMinutes:early,overtimeMinutes:over,status:worked>480?"NEEDS_APPROVAL":(open.lateMinutes||early||over)?"NEEDS_REVIEW":"CLOSED",issueJson:issueSummary(draft,source)}});
     }
     await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:body.eventType==="IN"?"WORKFORCE_CLOCK_IN":"WORKFORCE_CLOCK_OUT",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:session.id,after:{employeeId:employee.id,date,shiftTemplateId:assignment?.shiftTemplateId||null,eventType:body.eventType,workedMinutes:session.workedMinutes},reason:body.reason});
-    return session;
+    return {result:session,employee,assignment};
   });
-  res.status(201).json({item:serializeSession({...result,employee,assignment})});
+  res.status(201).json({item:delegated?{id:result.id,companyId,storeId,status:result.status}:serializeSession({...result,employee,assignment})});
 }catch(error){next(error)}});
 
-const approvalBody=z.object({confirmed,reason:z.string().trim().min(3).max(500)});
+const approvalBody=z.object({confirmed,expectedUpdatedAt:z.string().datetime().optional(),reason:z.string().trim().min(3).max(500)});
 const correctionBody=approvalBody.extend({workedMinutes:z.number().int().min(1).max(1440)});
+async function lockAttendanceForDecision(tx,req,context,capability,expectedUpdatedAt){
+  const delegated=req.user?.staffAccess===true;
+  if(delegated)await requireStaffGrant(tx,req.user,context.store.id,capability);
+  const where={id:String(req.params.sessionId),companyId:context.company.id,storeId:context.store.id};
+  await tx.$queryRaw`SELECT "id" FROM "WorkforceAttendanceSession" WHERE "id"=${where.id} AND "companyId"=${where.companyId} AND "storeId"=${where.storeId} FOR UPDATE`;
+  const session=await tx.workforceAttendanceSession.findFirst({
+    where:{...where,...(delegated?{employee:{companyId:context.company.id}}:{})},
+    include:{employee:{select:{id:true,fullName:true,paymentType:!delegated}}}
+  });
+  if(!session)throw Object.assign(new Error("Δεν βρέθηκε παρουσία Workforce v2."),{status:404});
+  if(delegated&&session.updatedAt.toISOString()!==expectedUpdatedAt)throw Object.assign(
+    new Error("Η παρουσία άλλαξε. Ανανέωσε τις παρουσίες πριν συνεχίσεις."),{status:409}
+  );
+  return session;
+}
+function attendanceDecisionResult(req,item){
+  if(req.user?.staffAccess===true)return {id:item.id,companyId:item.companyId,storeId:item.storeId,status:item.status};
+  return serializeSession({...item,assignment:null});
+}
 router.post("/:sessionId/correct-hours",async(req,res,next)=>{try{
-  if(!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης διορθώνει ώρες παρουσίας."),{status:403});
+  if(req.user?.staffAccess!==true&&!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης διορθώνει ώρες παρουσίας."),{status:403});
   const context=await contextFor(req),body=correctionBody.parse(req.body||{});
   const updated=await prisma.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT "id" FROM "WorkforceAttendanceSession" WHERE "id"=${String(req.params.sessionId)} AND "companyId"=${context.company.id} AND "storeId"=${context.store.id} FOR UPDATE`;
-    const session=await tx.workforceAttendanceSession.findFirst({where:{id:String(req.params.sessionId),companyId:context.company.id,storeId:context.store.id},include:{employee:true}});
-    if(!session)throw Object.assign(new Error("Δεν βρέθηκε παρουσία Workforce v2."),{status:404});
+    const session=await lockAttendanceForDecision(tx,req,context,"attendance.correct",body.expectedUpdatedAt);
     if(!["OPEN","NEEDS_REVIEW","NEEDS_APPROVAL"].includes(session.status))throw Object.assign(new Error("Η παρουσία δεν είναι εκκρεμής για διόρθωση."),{status:409});
     const locked=await tx.workforcePayrollPeriod.findFirst({where:{companyId:context.company.id,storeId:context.store.id,status:"CLOSED",periodStart:{lte:session.startedAt},periodEnd:{gt:session.startedAt}},select:{id:true}});
     if(locked)throw Object.assign(new Error("Η περίοδος μισθοδοσίας έχει κλειδώσει."),{status:409});
@@ -93,15 +130,13 @@ router.post("/:sessionId/correct-hours",async(req,res,next)=>{try{
     await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_ATTENDANCE_HOURS_CORRECTED",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:item.id,before,after:{endedAt:item.endedAt,workedMinutes:item.workedMinutes,status:item.status},reason:body.reason});
     return {...item,employee:session.employee};
   });
-  res.json({item:serializeSession({...updated,assignment:null})});
+  res.json({item:attendanceDecisionResult(req,updated)});
 }catch(error){next(error)}});
 router.post("/:sessionId/approve-review",async(req,res,next)=>{try{
-  if(!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει παρουσία."),{status:403});
+  if(req.user?.staffAccess!==true&&!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει παρουσία."),{status:403});
   const context=await contextFor(req),body=approvalBody.parse(req.body||{});
   const updated=await prisma.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT "id" FROM "WorkforceAttendanceSession" WHERE "id"=${String(req.params.sessionId)} AND "companyId"=${context.company.id} AND "storeId"=${context.store.id} FOR UPDATE`;
-    const session=await tx.workforceAttendanceSession.findFirst({where:{id:String(req.params.sessionId),companyId:context.company.id,storeId:context.store.id},include:{employee:true}});
-    if(!session)throw Object.assign(new Error("Δεν βρέθηκε παρουσία Workforce v2."),{status:404});
+    const session=await lockAttendanceForDecision(tx,req,context,"attendance.approve-review",body.expectedUpdatedAt);
     if(session.status!=="NEEDS_REVIEW"||!session.endedAt||session.workedMinutes>480)throw Object.assign(new Error("Η παρουσία δεν είναι έτοιμη για έγκριση ελέγχου."),{status:409});
     const locked=await tx.workforcePayrollPeriod.findFirst({where:{companyId:context.company.id,storeId:context.store.id,status:"CLOSED",periodStart:{lte:session.startedAt},periodEnd:{gt:session.startedAt}},select:{id:true}});
     if(locked)throw Object.assign(new Error("Η περίοδος μισθοδοσίας έχει κλειδώσει."),{status:409});
@@ -109,21 +144,21 @@ router.post("/:sessionId/approve-review",async(req,res,next)=>{try{
     await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_ATTENDANCE_REVIEW_APPROVED",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:item.id,before:{workedMinutes:session.workedMinutes,status:session.status},after:{workedMinutes:item.workedMinutes,status:item.status},reason:body.reason});
     return {...item,employee:session.employee};
   });
-  res.json({item:serializeSession({...updated,assignment:null})});
+  res.json({item:attendanceDecisionResult(req,updated)});
 }catch(error){next(error)}});
 router.post("/:sessionId/approve-over-8-hours",async(req,res,next)=>{try{
-  if(!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει υπέρβαση 8 ωρών."),{status:403});
-  const context=await contextFor(req),body=approvalBody.parse(req.body||{}),session=await prisma.workforceAttendanceSession.findFirst({where:{id:String(req.params.sessionId),companyId:context.company.id,storeId:context.store.id},include:{employee:true}});
-  if(!session)throw Object.assign(new Error("Δεν βρέθηκε παρουσία Workforce v2."),{status:404});
-  if(session.status!=="NEEDS_APPROVAL"||Number(session.workedMinutes)<=480)throw Object.assign(new Error("Η παρουσία δεν έχει εκκρεμή υπέρβαση 8 ωρών προς έγκριση."),{status:409});
+  if(req.user?.staffAccess!==true&&!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει υπέρβαση 8 ωρών."),{status:403});
+  const context=await contextFor(req),body=approvalBody.parse(req.body||{});
   const updated=await prisma.$transaction(async tx=>{
+    const session=await lockAttendanceForDecision(tx,req,context,"attendance.approve-overtime",body.expectedUpdatedAt);
+    if(session.status!=="NEEDS_APPROVAL"||Number(session.workedMinutes)<=480)throw Object.assign(new Error("Η παρουσία δεν έχει εκκρεμή υπέρβαση 8 ωρών προς έγκριση."),{status:409});
     const locked=await tx.workforcePayrollPeriod.findFirst({where:{companyId:context.company.id,storeId:context.store.id,status:"CLOSED",periodStart:{lte:session.startedAt},periodEnd:{gt:session.startedAt}},select:{id:true}});
     if(locked)throw Object.assign(new Error("Η περίοδος μισθοδοσίας έχει κλειδώσει."),{status:409});
     const item=await tx.workforceAttendanceSession.update({where:{id:session.id},data:{status:"APPROVED",issueJson:{...(session.issueJson||{}),approvedBy:req.user.id,approvedAt:new Date().toISOString(),approvalReason:body.reason}}});
     await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_OVER_8_HOURS_APPROVED",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:item.id,before:{employeeId:session.employeeId,workedMinutes:session.workedMinutes,status:session.status},after:{employeeId:session.employeeId,workedMinutes:item.workedMinutes,status:item.status},reason:body.reason});
-    return item;
+    return {...item,employee:session.employee};
   });
-  res.json({item:serializeSession({...updated,employee:session.employee,assignment:null})});
+  res.json({item:attendanceDecisionResult(req,updated)});
 }catch(error){next(error)}});
 
 export default router;

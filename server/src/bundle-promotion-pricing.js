@@ -50,3 +50,24 @@ export function calculateBundlePromotion({promotion,cartItems,selectedGiftQuanti
   }
   return {eligible:true,bundles,giftLimit,selectedGiftQuantity:selectedTotal,remainingGiftQuantity:giftLimit-selectedTotal,adjustments};
 }
+
+export function efoodLeafletPrices({storePrice, efoodPrice, offerMode, offerPrice, discountPercent, discountAmount}) {
+  const store = Number(storePrice);
+  const channel = Number(efoodPrice);
+  if (!Number.isFinite(store) || store <= 0 || !Number.isFinite(channel) || channel <= 0) return null;
+
+  let offer;
+  if (offerMode === "DISCOUNT_PERCENT") {
+    offer = storePercentageOfferPrice(store, discountPercent);
+  } else if (offerMode === "DISCOUNT_AMOUNT") {
+    offer = storeAmountOfferPrice(store, discountAmount);
+  } else if (offerMode === "FIXED_PRICE" && offerPrice != null) {
+    offer = Number(offerPrice);
+  }
+  if (!Number.isFinite(offer) || offer < 0) return null;
+
+  const discount = round2(store - offer);
+  const finalPrice = round2(channel - discount);
+  if (discount <= 0 || finalPrice <= 0) return null;
+  return {storeOffer:round2(offer), discount, finalPrice};
+}

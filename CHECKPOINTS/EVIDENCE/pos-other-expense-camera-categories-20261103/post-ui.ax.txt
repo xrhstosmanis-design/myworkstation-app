@@ -1,0 +1,133 @@
+Browser tab: 9, Title: "MyWorkStation App", URL: "https://myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru".
+1 AXWebArea MyWorkStation App, URL: myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru
+	2 container
+		3 container root
+			4 container
+				5 text MW MyWorkStation MYWORKSTATION LAB
+				6 button Χειριστές και δικαιώματα
+					7 image
+					8 text Χειριστές και δικαιώματα
+				9 button Αρχική
+					10 image
+					11 text Αρχική
+				12 button Προσωπικό & Πρόγραμμα
+					13 image
+					14 text Προσωπικό & Πρόγραμμα
+				15 button Καταστήματα
+					16 image
+					17 text Καταστήματα
+				18 button Chat
+					19 image
+					20 text Chat
+				21 button Επιστροφή στο Super Admin
+					22 image
+					23 text Επιστροφή στο Super Admin
+			24 container
+				25 heading Καταστήματα, Value: 1
+					26 text Καταστήματα
+				27 text ΠΡΟΣΒΑΣΗ SUPER ADMIN · MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ
+				28 button Πίσω στα καταστήματα
+					29 image
+					30 text Πίσω στα καταστήματα
+				31 button Ανανέωση
+					32 image
+					33 text Ανανέωση
+				34 button Εμπορική λειτουργία
+					35 image
+					36 text Εμπορική λειτουργία
+				37 button Εγγραφή οθόνης, Help: Ανοίγει ανεξάρτητο παράθυρο εγγραφής
+					38 image
+					39 text Εγγραφή οθόνης
+				40 text MYWORKSTATION · BACKOFFICE
+				41 heading ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, Value: 2
+					42 text ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ
+				43 text Ενεργή βάρδια, συναλλαγές, έλεγχος ταμείου και πληρωμές Ιδιοκτήτη / Διαχειριστή. Όλα χρησιμοποιούν την υπάρχουσα Εμπορική λειτουργία και την ενιαία βάση.
+				44 container Βάρδιες και πληρωμές
+					45 checkbox Βάρδιες & ταμεία, Value: 1
+						46 image
+						47 text Βάρδιες & ταμεία
+					48 checkbox Πληρωμές Ιδιοκτήτη / Διαχειριστή, Value: 0
+						49 image
+						50 text Πληρωμές Ιδιοκτήτη / Διαχειριστή
+				101 container Βάρδιες και έλεγχος ταμείων
+					102 container
+						103 heading Κέντρο βαρδιών, Value: 3
+							104 image
+							105 text Κέντρο βαρδιών
+						106 text Επίλεξε ταμείο για να δεις το δικό του σύνολο και τις πωλήσεις του. Οι ώρες εμφανίζονται σε ώρα Ελλάδας. Ενημέρωση 03/11, 01:34 · αυτόματα κάθε 30 δευτερόλεπτα
+						107 button Ανανέωση
+							108 image
+							109 text Ανανέωση
+						113 text Διαθέσιμα μετρητά ενεργών ταμείων
+						114 text 0,00 €
+						115 text Έναρξη + εισπράξεις μετρητών + εισροές − πληρωμές μετρητών − εκροές. Χωρίς κάρτες, IRIS και χρηματοκιβώτιο.
+						116 heading Ενεργά ταμεία, Value: 4
+							117 text Ενεργά ταμεία
+						118 text 1 ταμείο
+						119 button ΕΝΕΡΓΗ ΒΑΡΔΙΑ · MAIN Βάρδια ● Ανοιχτή Άνοιγμα: 29/10, 19:04 από LAB POS 2 Υπόλοιπο μετρητών 0,00 € Κάρτες / IRIS 0,00 € Σύνολο 0,00 € Συναλλαγές 0 Τελευταία —
+							120 text ΕΝΕΡΓΗ ΒΑΡΔΙΑ · 
+							121 text MAIN
+							122 text Βάρδια
+							123 text ● Ανοιχτή
+							124 container
+								125 text Άνοιγμα:  29/10, 19:04  από  LAB POS 2
+							126 text Υπόλοιπο μετρητών
+							127 text 0,00 €
+							128 text Κάρτες / IRIS
+							129 text 0,00 €
+							130 text Σύνολο
+							131 text 0,00 €
+							132 text Συναλλαγές
+							133 text 0
+							134 text Τελευταία
+							135 text —
+						136 text Επιλεγμένη βάρδια
+						137 heading Βάρδια · MAIN, Value: 4
+							138 text Βάρδια  ·  MAIN
+						139 text Άνοιγμα  29/10, 19:04
+						140 button Κλείσιμο βάρδιας
+						141 text Τρέχον υπόλοιπο μετρητών ·  MAIN
+						142 text 0,00 €
+						143 text Έναρξη
+						144 text 0,00 €
+						145 text Εισπράξεις μετρητών
+						146 text 0,00 €
+						147 text Πληρωμές μετρητών
+						148 text 0,00 €
+						149 text Εισροές
+						150 text 0,00 €
+						151 text Εκροές
+						152 text 0,00 €
+						153 text Εισπράξεις μετρητών
+						154 text 0,00 €
+						155 text Κάρτες
+						156 text 0,00 €
+						157 text IRIS
+						158 text 0,00 €
+						159 text Έξοδα
+						160 text 0,00 €
+						161 text Σύνολο βάρδιας
+						162 text 0,00 €
+						163 text Μετρητά από Ιδιοκτήτη
+						164 text 0,00 €
+						165 text Μετρητά προς Ιδιοκτήτη
+						166 text 0,00 €
+						167 container
+							168 heading Πωλήσεις ανά κατηγορία, Value: 4
+								169 text Πωλήσεις ανά κατηγορία
+							170 text πάτησε κατηγορία για ανάλυση
+						171 text Δεν υπάρχουν ακόμη πωλήσεις σε κατηγορίες.
+						172 button (collapsed) Κινήσεις βάρδιας 0 κινήσεις, Secondary Actions: Expand
+							173 text Κινήσεις βάρδιας
+							174 container
+								175 text 0  κινήσεις
+							176 image
+						177 text ✓ Η προβολή είναι δεμένη με το επιλεγμένο terminal και δεν αναμειγνύει τη βάρδια του άλλου ταμείου.
+					111 button (collapsed) Αυτόματος έλεγχος και κλεισμένες βάρδιες, Secondary Actions: Expand
+						112 text Αυτόματος έλεγχος και κλεισμένες βάρδιες
+				98 button (collapsed) Πρόσθετες λειτουργίες, Secondary Actions: Expand
+					99 text Πρόσθετες λειτουργίες
+		100 button (collapsed) Νο40 · LAB GET trace (80/80), Secondary Actions: Expand
+			178 text Νο40 · LAB GET trace (80/80)
+
+The focused UI element is 45 checkbox Βάρδιες & ταμεία, Value: 1

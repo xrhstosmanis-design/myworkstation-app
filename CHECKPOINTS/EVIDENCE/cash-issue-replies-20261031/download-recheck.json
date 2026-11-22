@@ -1,0 +1,43 @@
+{
+  "observation": "Actual prior-turn read-only export, recorded now without replay after workspace maintenance",
+  "readAt": "2026-10-31T13:35:58.631Z",
+  "browser": "authenticated Platform SuperAdmin / cloud Chrome desktop",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "period": [
+    "2026-10-11",
+    "2026-10-11"
+  ],
+  "downloadId": "71541e07-a819-4e8c-8fdd-65e3ef75844f",
+  "bytes": 44753,
+  "browserCompleted": true,
+  "hostAvailable": true,
+  "zipIntegrityError": null,
+  "zipEntries": 16,
+  "worksheetCount": 7,
+  "unchangedSheets": [
+    "Βάρδιες",
+    "Ανά εργαζόμενο",
+    "Ανά ημέρα",
+    "Απαντήσεις εκκρεμοτήτων",
+    "Εκκρεμότητες",
+    "Αναφορά"
+  ],
+  "metadata": {
+    "reportHash": "8d7d04e68dca97c76e08ca57bfba161487d50a9be37217dd3349926d9f085338",
+    "previewHash": "5ec95d7cc4f2a7a2904a9caca9298905f403aab7c559ded4b423d2a34f52204e",
+    "headHash": "54a5c83fce4727bf599283626ad43c40bf2e6db2ba7854da5b80c11ce3e441e8",
+    "generation": 0
+  },
+  "historyTotalObserved": 4,
+  "issueRepliesObserved": 3,
+  "laterBrowserStatBytes": 44753,
+  "laterHostStatBytes": 44753,
+  "runtimeRevisionAtRecheck": "NOT INDEPENDENTLY RECORDED",
+  "financialActions": 0,
+  "issueActions": 0,
+  "runtimeChanges": 0,
+  "rootCause": "UNESTABLISHED",
+  "universalFirstDownloadReliability": "NOT PROVEN",
+  "originalWorkbookIncluded": false,
+  "originalWorkbookLimit": "Earlier scratch/shared bytes were removed by workspace maintenance; do not fabricate workbook/hash or replay a business action for documentation."
+}

@@ -1,3 +1,4 @@
+import {reviewedCashTool,reviewedCashArguments,reviewedCashRequest,canonicalReviewedCashResult,reviewedCashClarificationResult} from './assistant-reviewed-cash.js';
 import {businessTool,businessArguments,businessQuestionPeriod,businessQuestionClarification,directTransferRequest,explicitOperatorTransferRequest,assistantBusinessDomain} from './assistant-business-reports.js';
 import {businessReportAnswer} from '../../../shared/assistant-business-answer.mjs';
 import {z} from "zod";
@@ -69,9 +70,11 @@ export function productSalesEvidence(report,args,scope){
 export const assistantProductTools=[ownerSalesTool,ownerStockTool];
 
 // Shared dispatcher. The old export remains compatible with existing Owner clients.
-export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,readBusiness,cashTool,tools=[cashTool,ownerSalesTool],now=new Date()}){
+export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,readBusiness,readReviewedCash,cashTool,tools=[cashTool,ownerSalesTool],now=new Date()}){
   const help=assistantCapabilityHelp(question,tools);
   if(help)return {response:{ok:true},raw:{status:"completed",output_text:JSON.stringify(help)},evidence:[],reads:[]};
+  const reviewed=tools.some(t=>t?.name===reviewedCashTool.name)&&reviewedCashRequest(question,{now});
+  if(reviewed){if(reviewed.clarification)return reviewedCashClarificationResult(reviewed.clarification);return canonicalReviewedCashResult(await readReviewedCash(reviewed.args),reviewed.args);}
   const total=tools.some(t=>t?.name===salesStoresTool.name)&&plainTotalSalesRequest(question,{now});
   if(total){
     const report=await readSalesStores(total);
@@ -104,14 +107,15 @@ export async function runOwnerAssistant({prompt,question="",requestProvider,read
     if(!provider.response.ok||["incomplete","failed","cancelled"].includes(provider.raw?.status))return {...provider,evidence,reads};
     const toolCalls=(provider.raw.output||[]).filter(item=>item.type==="function_call");if(!toolCalls.length)return {...provider,evidence,reads};
     if(round===2||toolCalls.length!==1||calls>=2)fail("Ο βοηθός έφτασε το όριο ανάγνωσης. Ζήτησε ένα συγκεκριμένο είδος και διάστημα.");
-    const call=toolCalls[0],business=call.name===businessTool.name,sales=call.name===ownerSalesTool.name,stock=call.name===ownerStockTool.name,cash=call.name===cashTool.name,list=call.name===salesStoresTool.name,consumption=call.name===consumptionTool.name;
-    if(!(business||sales||stock||cash||list||consumption)||!tools.some(tool=>tool.name===call.name)||typeof call.call_id!=="string"||!call.call_id||typeof call.arguments!=="string"||call.arguments.length>(list||business?3000:600))fail("Μη επιτρεπόμενη αναζήτηση από τον βοηθό.");
-    let args;try{args=(business?businessArguments:consumption?consumptionArguments:list?salesStoresArguments:sales?salesToolArguments:stock?stockToolArguments:cashToolArguments).parse(JSON.parse(call.arguments))}catch{fail("Διευκρίνισε την ονομασία και τις έγκυρες ημερομηνίες της αναζήτησης.",422)}
+    const call=toolCalls[0],reviewedCash=call.name===reviewedCashTool.name,business=call.name===businessTool.name,sales=call.name===ownerSalesTool.name,stock=call.name===ownerStockTool.name,cash=call.name===cashTool.name,list=call.name===salesStoresTool.name,consumption=call.name===consumptionTool.name;
+    if(!(reviewedCash||business||sales||stock||cash||list||consumption)||!tools.some(tool=>tool.name===call.name)||typeof call.call_id!=="string"||!call.call_id||typeof call.arguments!=="string"||call.arguments.length>(list||business?3000:600))fail("Μη επιτρεπόμενη αναζήτηση από τον βοηθό.");
+    let args;try{args=(reviewedCash?reviewedCashArguments:business?businessArguments:consumption?consumptionArguments:list?salesStoresArguments:sales?salesToolArguments:stock?stockToolArguments:cashToolArguments).parse(JSON.parse(call.arguments))}catch{fail("Διευκρίνισε την ονομασία και τις έγκυρες ημερομηνίες της αναζήτησης.",422)}
     // all is internal to the exact deterministic request above. The provider
     // tool schema intentionally cannot ask for it, nor drop a requested filter.
     if(list&&args.mode==="all")fail("Η συνολική αναφορά απαιτεί σαφές αίτημα χωρίς πρόσθετα φίλτρα.",422);
     if(exportPeriod&&(!(sales||list)||args.from!==exportPeriod.from||args.to!==exportPeriod.to))fail("Η εξαγωγή πρέπει να διαβάσει τις πωλήσεις της ίδιας περιόδου.",422);
     if(business&&expectedDomain){const period=businessQuestionPeriod(question,{now});if(args.domain!==expectedDomain||period&&(args.from!==period.from||args.to!==period.to))fail("Η αναφορά πρέπει να ακολουθεί το ζητούμενο είδος και διάστημα.",422);}
+    if(reviewedCash){const requested=reviewedCashRequest(question,{now});if(!requested?.args||requested.args.from!==args.from||requested.args.to!==args.to)fail('Διευκρίνισε την περίοδο και τα φίλτρα του ελέγχου ταμείων.',422);return canonicalReviewedCashResult(await readReviewedCash(args),args);}
     calls++;const report=await(business?readBusiness(args):consumption?readConsumption(args):list?readSalesStores(args):sales?readSales(args):stock?readStock(args):readCash(args.date));evidence.push(report);reads.push({name:call.name,args});
     const providerReport=list||consumption||business?{...report,rows:report.rows.slice(0,50),detailRowCount:report.rows.length,detailRowsLimited:report.rows.length>50,detailsShownInReport:true}:report;
     input.push(...provider.raw.output,{type:"function_call_output",call_id:call.call_id,output:JSON.stringify(providerReport)});

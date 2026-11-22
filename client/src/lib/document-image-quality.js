@@ -52,11 +52,16 @@ function estimateSkew(sample){
 }
 
 function rotateAndCrop(source,sample,angle,maxSide){
-  const sourceWidth=source.width||source.naturalWidth,sourceHeight=source.height||source.naturalHeight,bounds=detectPaperBounds(sample),sx=sourceWidth/sample.width,sy=sourceHeight/sample.height;
+  // A bright rectangle is not proof of a page boundary (white desk, faded
+  // edges, handwriting). Keep the entire original frame instead of silently
+  // cropping away invoice rows. Rotation uses an expanded canvas as well.
+  const sourceWidth=source.width||source.naturalWidth,sourceHeight=source.height||source.naturalHeight,bounds=null,sx=sourceWidth/sample.width,sy=sourceHeight/sample.height;
   const crop=bounds?{x:Math.round(bounds.left*sx),y:Math.round(bounds.top*sy),width:Math.round((bounds.right-bounds.left+1)*sx),height:Math.round((bounds.bottom-bounds.top+1)*sy)}:{x:0,y:0,width:sourceWidth,height:sourceHeight};
   const scale=Math.min(1,maxSide/Math.max(crop.width,crop.height)),w=Math.max(1,Math.round(crop.width*scale)),h=Math.max(1,Math.round(crop.height*scale));
-  const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;const ctx=canvas.getContext("2d",{willReadFrequently:true});
-  ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.translate(w/2,h/2);ctx.rotate(angle*Math.PI/180);ctx.drawImage(source,crop.x,crop.y,crop.width,crop.height,-w/2,-h/2,w,h);
+  const radians=angle*Math.PI/180,canvas=document.createElement("canvas");
+  canvas.width=Math.ceil(Math.abs(w*Math.cos(radians))+Math.abs(h*Math.sin(radians)));canvas.height=Math.ceil(Math.abs(h*Math.cos(radians))+Math.abs(w*Math.sin(radians)));
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(radians);ctx.drawImage(source,crop.x,crop.y,crop.width,crop.height,-w/2,-h/2,w,h);
   return {canvas,cropped:Boolean(bounds),deskewed:Boolean(angle)};
 }
 
@@ -71,13 +76,14 @@ function normalizeShadows(canvas){
 export async function prepareDocumentImage(file,{strict=true,maxSide=3000,enhance=true}={}){
   if(!file||!IMAGE_TYPES.test(file.type||""))return {file,quality:null,changed:false};
   const image=await decode(file),width=image.width||image.naturalWidth,height=image.height||image.naturalHeight;
-  if(width<900||height<550)throw new DocumentImageQualityError("Η ανάλυση είναι χαμηλή. Φωτογράφισε ολόκληρο το παραστατικό από πιο κοντά.","LOW_RESOLUTION");
+  try{
+  if(Math.max(width,height)<900||Math.min(width,height)<550)throw new DocumentImageQualityError("Η ανάλυση είναι χαμηλή. Φωτογράφισε ολόκληρο το παραστατικό από πιο κοντά.","LOW_RESOLUTION");
   const sample=sampleGray(image),sharpness=measureDocumentSharpness(sample);
   if(strict&&sharpness<42)throw new DocumentImageQualityError("Η φωτογραφία είναι θολή και δεν θα σταλεί. Κράτησε σταθερά την κάμερα και φωτογράφισε ξανά.","BLURRY");
   const angle=estimateSkew(sample),prepared=rotateAndCrop(image,sample,angle,maxSide);if(enhance)normalizeShadows(prepared.canvas);
   const blob=await canvasBlob(prepared.canvas,"image/jpeg",.94),name=(file.name||"parastatiko").replace(/\.[^.]+$/,"")+"-clean.jpg";
-  image.close?.();
-  return {file:new File([blob],name,{type:"image/jpeg",lastModified:Date.now()}),quality:{sharpness:Math.round(sharpness),cropped:prepared.cropped,deskewed:prepared.deskewed,enhanced:enhance},changed:true};
+  return {file:new File([blob],name,{type:"image/jpeg",lastModified:Date.now()}),originalFile:file,quality:{sharpness:Math.round(sharpness),cropped:prepared.cropped,deskewed:prepared.deskewed,enhanced:enhance},changed:true};
+  }finally{image.close?.()}
 }
 
 export async function prepareDocumentFile(file,options){return file?.type?.startsWith("image/")?prepareDocumentImage(file,options):{file,quality:null,changed:false}}

@@ -1,0 +1,121 @@
+{
+  "sampleCount": 5,
+  "fieldsCorrect": 5,
+  "stateInvariantTrials": 5,
+  "failures": 0,
+  "serverMs": {
+    "min": 8123.174,
+    "median": 11499.038,
+    "max": 18342.919
+  },
+  "azureMs": {
+    "min": 3942.635,
+    "median": 8108.414,
+    "max": 13558.454
+  },
+  "openaiMs": {
+    "min": 3322.069,
+    "median": 4161.048,
+    "max": 4767.567
+  },
+  "uiObservedMs": {
+    "min": 8273,
+    "median": 12481,
+    "max": 18565
+  },
+  "status": "LIMITED_LAB_PASS_FOUR_FIELDS_AND_MEASURED_INVARIANCE; GENERAL_LATENCY_OPEN",
+  "revision": "b7c75d4ec908919acaa21d967ae81f29b4d6aadf",
+  "claimPr": 3671,
+  "claimMerge": "3b33cc2998dc366cc44f9bd9e65dadf77a343651",
+  "claimPrCi": 42006859313,
+  "claimMainCi": 42007066766,
+  "configuration": {
+    "generalInvoiceModel": "gpt-5",
+    "fastOverrideDisplay": "application default",
+    "effectiveModel": "inferred gpt-5 from displayed configuration and source precedence; provider-returned model not captured",
+    "azureModel": "prebuilt-invoice",
+    "azureApiVersion": "2024-11-30",
+    "walletEnabled": false,
+    "invoiceBillingEnabled": false,
+    "configurationChanged": false,
+    "revision": "b7c75d4ec908919acaa21d967ae81f29b4d6aadf",
+    "observedVia": "Super Admin / AI customer balances / MYWORKSTATION LAB; read-only UI and scoped SQL"
+  },
+  "trials": [
+    {
+      "trial": "R01",
+      "startedAt": "2026-11-05T10:02:39.317Z",
+      "readyObservedAt": "2026-11-05T10:02:51.798Z",
+      "uiObservedMs": 12481,
+      "serverMs": 11499.038,
+      "azureMs": 8038.047,
+      "openaiMs": 3432.122,
+      "attempts": 1,
+      "correlationId": "90263e98-df9e-41ff-8c0a-eb8ad759156e",
+      "fieldsCorrect": true,
+      "stateInvariant": true
+    },
+    {
+      "trial": "R02",
+      "startedAt": "2026-11-05T10:05:38.933Z",
+      "readyObservedAt": "2026-11-05T10:05:57.498Z",
+      "uiObservedMs": 18565,
+      "serverMs": 18342.919,
+      "azureMs": 13558.454,
+      "openaiMs": 4767.567,
+      "attempts": 1,
+      "correlationId": "da20fad9-a58c-4566-932b-7ce3d308e9fb",
+      "fieldsCorrect": true,
+      "stateInvariant": true
+    },
+    {
+      "trial": "R03",
+      "startedAt": "2026-11-05T10:10:22.077Z",
+      "readyObservedAt": "2026-11-05T10:10:33.683Z",
+      "uiObservedMs": 11606,
+      "serverMs": 11451.57,
+      "azureMs": 8108.414,
+      "openaiMs": 3322.069,
+      "attempts": 1,
+      "correlationId": "cb16cc68-0b17-416b-8619-38a3ae6c1f9b",
+      "fieldsCorrect": true,
+      "stateInvariant": true
+    },
+    {
+      "trial": "R04",
+      "startedAt": "2026-11-05T10:11:20.037Z",
+      "readyObservedAt": "2026-11-05T10:11:28.310Z",
+      "uiObservedMs": 8273,
+      "serverMs": 8123.174,
+      "azureMs": 3942.635,
+      "openaiMs": 4161.048,
+      "attempts": 1,
+      "correlationId": "85619086-5d2d-457d-a0f4-66197165adf0",
+      "fieldsCorrect": true,
+      "stateInvariant": true
+    },
+    {
+      "trial": "R05",
+      "startedAt": "2026-11-05T10:12:16.662Z",
+      "readyObservedAt": "2026-11-05T10:12:30.996Z",
+      "uiObservedMs": 14334,
+      "serverMs": 14083.341,
+      "azureMs": 9439.686,
+      "openaiMs": 4625.224,
+      "attempts": 1,
+      "correlationId": "1ed5057d-ec11-4706-890e-fa8349224057",
+      "fieldsCorrect": true,
+      "stateInvariant": true
+    }
+  ],
+  "limitations": [
+    "One synthetic supplier/layout; five fresh identities, not five supplier types",
+    "No tail percentile, SLA or universal speed acceptance",
+    "No causal attribution to reasoning low; upstream Azure varied substantially",
+    "Provider-returned model/cost/reasoning tokens not captured with LAB invoice billing disabled",
+    "R01 UI observed elapsed includes scheduling gap and is an upper bound; use exact correlated server times for comparison",
+    "No full product-row/page coverage acceptance or physical POS test",
+    "No invoice submission, payment, new draft, stock or fiscal operation"
+  ],
+  "screenshot": "R05-ready.jpg"
+}

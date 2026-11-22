@@ -1,0 +1,116 @@
+{
+  "scope": "New synthetic D additive pricing and native restore only",
+  "before": "2026-10-31T14:26:07.716599+00:00",
+  "afterRestore": "2026-10-31T14:55:17.036657+00:00",
+  "finalReadback": "2026-10-31T17:26:41.243219+00:00",
+  "walletBefore": {
+    "balanceMicros": 4883059,
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+    "emailEnabled": false,
+    "enabled": false,
+    "lastCreditMicros": 5000000,
+    "notificationOwnerId": null,
+    "reservedMicros": 930033,
+    "updatedAt": "2026-10-31T12:44:45.514481+00:00",
+    "version": 24
+  },
+  "walletAfter": {
+    "balanceMicros": 4675987,
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "cycleId": "728a022e-b516-413d-9d90-d204fa9cffe2",
+    "emailEnabled": false,
+    "enabled": false,
+    "lastCreditMicros": 5000000,
+    "notificationOwnerId": null,
+    "reservedMicros": 930033,
+    "updatedAt": "2026-10-31T14:55:07.363642+00:00",
+    "version": 32
+  },
+  "newAuditEvents": [
+    {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-31T14:55:07.363642+00:00",
+      "detail": {
+        "invoiceFeeScope": "FIRST_ASSISTANT_DOCUMENT",
+        "policy": {
+          "additionalMarkupBps": 0,
+          "callFeeMicros": "0",
+          "invoiceFeeMicros": "0"
+        },
+        "version": 32
+      },
+      "event": "PRICING_CONFIGURED",
+      "id": "24edf430-f334-4037-9e88-3a13cfd780cc"
+    },
+    {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-31T14:28:49.703294+00:00",
+      "detail": {
+        "emailEnabled": false,
+        "enabled": true,
+        "invoiceEnabled": true,
+        "notificationOwnerId": "",
+        "version": 25
+      },
+      "event": "CONFIGURED",
+      "id": "324a2c49-d8f6-4a2a-955b-0b84d9395e10"
+    },
+    {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-31T14:27:10.742895+00:00",
+      "detail": {
+        "invoiceFeeScope": "FIRST_ASSISTANT_DOCUMENT",
+        "policy": {
+          "additionalMarkupBps": 2500,
+          "callFeeMicros": "1000",
+          "invoiceFeeMicros": "10000"
+        },
+        "version": 25
+      },
+      "event": "PRICING_CONFIGURED",
+      "id": "54d12266-4336-49ab-8623-1e85b9c72014"
+    },
+    {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-31T14:54:22.053162+00:00",
+      "detail": {
+        "emailEnabled": false,
+        "enabled": false,
+        "invoiceEnabled": false,
+        "notificationOwnerId": "",
+        "version": 30
+      },
+      "event": "CONFIGURED",
+      "id": "eded45fe-edab-40b8-813a-362ffef97210"
+    }
+  ],
+  "expectedDebitMicros": 207072,
+  "newProviderEntries": 2,
+  "invoiceFlatFeeChargedCount": 1,
+  "checks": {
+    "nativeRestoreFlagsAndZeroPrices": "PASS",
+    "appendOnlyHistoricalHoldPreserved": "PASS",
+    "noOtherWalletHistoryDelta": "PASS",
+    "oneUnapprovedCreditDraftOnly": "PASS",
+    "noStockProductSalePaymentShiftDelta": "PASS",
+    "finalReadbackUnchanged": {
+      "wallets": true,
+      "entries": true,
+      "audits": true,
+      "notices": true,
+      "labControls": true,
+      "labStoreControls": true
+    }
+  },
+  "limits": [
+    "Initial ai-recheck image route is unmetered and remains OPEN",
+    "Printed SYN-D1 misread SYN-01; OCR accuracy is not PASS",
+    "Real customer pricing/funding/activation and Owner email acceptance NOT TESTED; no real customer write",
+    "Cloud browser resumed signed out; authenticated final-screen handoff requires user sign-in"
+  ]
+}

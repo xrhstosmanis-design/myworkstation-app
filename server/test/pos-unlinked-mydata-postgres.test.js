@@ -1,3 +1,4 @@
+import {findCompetingPosDraftReview} from "../src/lib/pos-invoice-duplicate-review.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,7 +29,7 @@ function actualDraftRoute(db){
  const a=source.indexOf('router.post("/ai-reader/jobs/:jobId/pos-draft"'),b=source.indexOf('\n});',a)+4;
  const body=source.slice(a,b),handler=body.slice(body.indexOf('async(req,res,next)=>'),-2).trim();
  const d=source.indexOf('async function duplicateInvoice('),e=source.indexOf('\nasync function productsForLines',d);
- const duplicateInvoice=new Function('normalizeDocumentNumber',source.slice(d,e)+';return duplicateInvoice;')(value=>String(value).trim().toUpperCase().replace(/\s+/g,''));
+ const duplicateInvoice=new Function('findCompetingPosDraftReview','normalizeDocumentNumber',source.slice(d,e)+';return duplicateInvoice;')(findCompetingPosDraftReview,value=>String(value).trim().toUpperCase().replace(/\s+/g,''));
  const deps={z,prisma:db,id:randomUUID,ensureInvoiceCommonDraftSchema:async()=>{},lockInvoiceStore,assertNoUnresolvedInbound,findInvoicePayment,assertReusableInvoicePayment,reuseInboundDraftForPosJob,findUnlinkedMyDataOriginal,bindUnlinkedMyDataOriginal,duplicateInvoice};
  const route=new Function(...Object.keys(deps),'return '+handler)(...Object.values(deps));
  return async(jobId='j-pos')=>{

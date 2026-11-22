@@ -1,0 +1,67 @@
+{
+  "stage": "ENGINEERING_RELEASED_PHYSICAL_ACCEPTANCE_OPEN",
+  "sourcePr": 3540,
+  "sourceHead": "c8139e39ce555a4054001e8caeaf2c51b8bc239e",
+  "sourceMerge": "8cd55db49e1329c0e697e9a92840729818162afa",
+  "sourcePRCI": {
+    "run": 41507937853,
+    "job": 125492665669,
+    "serverPass": 5256,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "completeHttpE2E": true
+  },
+  "sourceWindowsCI": {
+    "run": 41507937761,
+    "status": "SUCCESS"
+  },
+  "mainCI": {
+    "run": 41510835496,
+    "status": "SUCCESS",
+    "job": 125502510582,
+    "serverPass": 5256,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allFiveJobsSuccess": true,
+    "completeHttpE2E": true
+  },
+  "deployment": {
+    "status": "SUCCESS",
+    "run": 41513282882,
+    "job": 125510407720,
+    "guardedExactRevision": true,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "8cd55db49e1329c0e697e9a92840729818162afa"
+    },
+    "healthObservedAt": "2026-11-02T19:52:19.573269+00:00"
+  },
+  "package": {
+    "status": "AVAILABLE_OPERATOR_INSTALLATION_PENDING",
+    "bytes": 152300,
+    "sha256": "38f7a49b2c2ae90dc1f712fd0457ae648a4ed03f6ac9ddbd07571a58fd8aa505",
+    "modules": {
+      "Ftext.psm1": "4110dde7af86f34d4cc03d14569c290a59a0bb1faef594ab900f247e1fc58610",
+      "Cloud-Tools.psm1": "83b99298981a3fe4ab6a9dc8e10380f56b81cd3aa5d482da3478adfe0f1b19f3",
+      "Pair.ps1": "c9ae79e2f7557171334c958ded0c710470b3209d6e5fe730aac4f9146f28be2f",
+      "Cloud-Test.ps1": "6d4d55184a1abed6337d10d3a76c499d58a45931c525b1a82e0929e686eb50a4",
+      "Cloud-Connector.ps1": "e87bc605e4fcf9b0264a35d3e8c44187884677bdf5a4715ffc92d74940ca473d",
+      "Setup.ps1": "15b820fac46560f0560a0721486beb6a46fdb0fff57ee1647e9fab1dabadbbbd",
+      "Cash.psm1": "5b75ce63b3a4f6fdbdaa5b0582c3bd3f9e9006ddc4fbdedc5286572260e33750"
+    },
+    "configurationBytesUnchanged": true,
+    "unaffectedModuleCount": 5,
+    "credentialsIncluded": false,
+    "libraryVersion": 9
+  },
+  "physicalPerformance": "NOT_ACCEPTED_OPEN",
+  "installedOnPC": "NOT_TESTED",
+  "mainWindowsCI": {
+    "run": 41510835630,
+    "job": 125501946259,
+    "status": "SUCCESS"
+  }
+}

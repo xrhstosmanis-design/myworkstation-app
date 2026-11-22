@@ -1,0 +1,49 @@
+{
+  "status": "FROZEN_SOURCE_REVIEWED_NOT_INSTALLED_AWAITING_FULL_CI_LAB",
+  "sourceCommit": "dae2ecef9e9d1393b2a424fbc5502cd88be1a069",
+  "sourceTree": "d66b0d9ad33014fd50d713012ebcb1d9a3434609",
+  "claimMain": "771b546b4158e6f31e04698514320826d3b7fcad",
+  "claimPR": 3169,
+  "claimCI": 40368902112,
+  "publicationBase": "683f46addd05c86b8d855965c81fe2c91054c09f",
+  "publicationKind": "DOCS_ONLY_EVIDENCE_FIRST_NO_RUNTIME_CHANGE",
+  "review": "Root shared UI and independent backend/native review CLEAR",
+  "localRuntime": "Node20.20.2",
+  "focused": {
+    "total": 51,
+    "pass": 49,
+    "fail": 0,
+    "skipped": 2,
+    "qualification": "Two explicit isolated PostgreSQL environment skips; native execution required unskipped in exact full CI"
+  },
+  "retainedCallbackNegativeControl": {
+    "pass": 0,
+    "fail": 1,
+    "nameFilteredSkips": 5,
+    "qualification": "Targeted retained-callback negative control, not a new production/LAB failure"
+  },
+  "build": {
+    "status": "PASS",
+    "seconds": 10.07,
+    "tableServiceEntry": "entry-xijXEUj-.js"
+  },
+  "nativeQualification": "Prepared actual registered POS handlers/shared core on isolated PostgreSQL, real StockMovement User FK; parent+4 subcases required unskipped with CI guard. Existing BackOffice native regression retained; no local native execution claimed.",
+  "sourceSha256": {
+    "client/src/components/commerce/InventoryArchivePanel.jsx": "cb1b16cd08f7ea4cd970adb4c7db8c0aba4f0b468986da6852ce55feddb81b1c",
+    "client/src/components/commerce/InventoryBarcodeLookup.jsx": "099425339780ed0e9f425a5d9d7e41821e1e1e6cea0ba64effe2685516d8d746",
+    "client/src/components/commerce/InventoryNewProductCard.jsx": "f5df1db34d13c71f221f212e1e9883d8487e6d3f4f2c32f1afd46f5db0a4f062",
+    "client/src/components/commerce/OperatorManagementPanel.jsx": "e4c4bd7665e1783e67298b42d4dcdd38d4d526466ddfb0bab5475bfe7a33eac9",
+    "client/src/components/store/StorePosPanel.jsx": "d1ee76bc679e2f08f03b1390d349284f0821a0a1c8a9a201d8e16424f407c19c",
+    "server/src/lib/inventory-new-card-options.js": "0f4ecb6e8f44fc1c7337e526224e54f5083505dba42b24949255e50a3fffd8ba",
+    "server/src/lib/inventory-new-card.js": "33e4e2b49e1da087d1a1b95bb55fa80582f865663e1e44e13d0cc99b3daa5c59",
+    "server/src/lib/inventory-product-barcode-lookup.js": "406dab688d9885b68d92309c55c9c69e706e82bf1916867c3ed44df629fd55e7",
+    "server/src/lib/pos-new-product-card.js": "3a6633d1b55c4008afd8b6b3fed3f50fc4ef951c4911ee8b1f2d1aea7d89d1aa",
+    "server/src/routes/owner-product-actions.js": "298531eb6df34e0e07ab4de636f1a3fd80e483b00662f1409a694e4bcfdbc527",
+    "server/src/routes/owner-product-smart-entry.js": "0ec0843726f743d584064b5122e1b1b7ed40844c26a1661cbcc1fd52f70cb297",
+    "server/src/routes/store-pos-catalog.js": "a9307697fc05f8f18d3657debe7761fc911510a9f049ffec73cb3719bbc93e8a",
+    "server/test/pos-new-product-card-postgres.test.js": "8a9fdcc368d4e12814c45782bd1b9ac4d02085dfe6bb89175a9b2a454f8382b6",
+    "server/test/pos-new-product-card-routes.test.js": "702eceacd7c15241919074adeaf5e5ec3bdec2e51ae008a0c9f19a2c82f779a5",
+    "server/test/pos-new-product-card-ui.test.js": "410641366577db6475a4857a69eeb86ebfd76ea1474c2f0859e6a39d14fddf8a"
+  },
+  "noBusinessAction": true
+}

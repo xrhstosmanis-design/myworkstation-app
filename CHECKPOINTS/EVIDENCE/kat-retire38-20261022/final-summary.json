@@ -1,0 +1,495 @@
+[
+  {
+    "activeMissingDepartment": 0,
+    "audit": [
+      {
+        "changed": 3,
+        "createdAt": "2026-10-22T20:36:30.822297+00:00",
+        "event": "INVENTORY_BULK_CARD",
+        "id": "7c184683-8bf3-4646-bfc8-46a2a5585ae9",
+        "productIds": [
+          "38d881bb-2960-422b-9bd7-6ef45dee7322",
+          "3aabf51c-97e0-4f58-b609-01c678800e94",
+          "5b4bb880-ec80-4aba-a2d5-015ba07991c0"
+        ]
+      },
+      {
+        "changed": 9,
+        "createdAt": "2026-10-22T20:35:27.030019+00:00",
+        "event": "INVENTORY_BULK_CARD",
+        "id": "16359ae7-fa1f-4b55-9b7e-120c6db438bd",
+        "productIds": [
+          "3d0c4cc5-a8eb-4f93-9d2b-9b5aa2995cac",
+          "52001ae4-3fe4-4e61-be36-4ae76d0d7d29",
+          "574f8d52-5402-44ab-beb9-d5ff0e35c2f2",
+          "7ca087cc-4e48-429a-81f5-23c80c7bb021",
+          "a9ffe392-c9ee-46e8-b272-951388037431",
+          "cca194e2-fb44-444f-a7d1-ddf70758900f",
+          "cdc09417-5226-45a7-888c-a8a0e039a326",
+          "d817fa8b-ef4e-40ec-88fd-7c7bf39ef7ef",
+          "f11811c1-5c91-4b30-8fe9-9e2a628f0aae"
+        ]
+      },
+      {
+        "changed": 26,
+        "createdAt": "2026-10-22T20:33:35.161062+00:00",
+        "event": "INVENTORY_BULK_CARD",
+        "id": "002bcd7b-16f2-4a14-b504-09416f71123e",
+        "productIds": [
+          "0ca6a935-39d9-406b-a073-a1b1648ccd1a",
+          "0e58a130-6bed-4fe1-b45c-8e2d178097fb",
+          "261d24f5-e059-485a-9a70-f01d9ab0409d",
+          "2b9c69e0-3f6c-4d4a-bf50-26bb7ab6995f",
+          "38c46167-00d9-4f3b-a3ea-d293d674716c",
+          "3fec3acb-2d80-4ccd-ab6d-a53eed1a01da",
+          "46d91306-2be3-4d91-a761-328097f98aea",
+          "478979d2-74f6-493b-a44c-861d8fd31ace",
+          "56633e20-3e31-4019-adea-a67202f61536",
+          "707c0291-2dc2-4d38-967a-0b77034aebae",
+          "78fa8ea4-b19f-474f-9bdd-b5d34b92b839",
+          "814554ee-a6e1-40ee-8a56-8f125d53789f",
+          "8a8c5b44-791c-462a-97d5-6b8996b021e9",
+          "8a8d6982-ef8a-4957-a1d2-7af581c7418a",
+          "935526b3-f310-438b-94d1-41677930f56e",
+          "94410ff6-0545-4c6e-8e38-7f2385c4473e",
+          "a043a43d-4947-48bd-b5e4-d0b9605c01e5",
+          "ac91bf04-32bb-40b1-bc30-57208f125f3d",
+          "ade966ad-74e6-400d-92d3-2116d1d6734e",
+          "bb5bb293-9c1f-4cac-8ec6-ac28ea319f5f",
+          "bd07f8b0-f6f0-4a62-a54a-3ba99aaf4c29",
+          "c5817a2d-949e-4789-9516-66b0b70ab367",
+          "dede16c7-45f5-453c-8683-0f1f3cdcf3d9",
+          "f6a62aca-3f01-4e22-bfe6-8dfcf0182a96",
+          "f939b15a-c1f7-4075-a1a2-51aa4d97b0c1",
+          "ff643ed1-2adb-4419-b396-564e57beb951"
+        ]
+      }
+    ],
+    "fee": {
+      "bad": 0,
+      "embeddedNonzero": 0,
+      "parents": 57
+    },
+    "observedAt": "2026-10-22T20:37:20.428292Z",
+    "retired": [
+      {
+        "department": null,
+        "id": "0ca6a935-39d9-406b-a073-a1b1648ccd1a",
+        "name": "NO SUGAR PRO PLUS BANANA 80g",
+        "price": 2.2,
+        "productActive": true,
+        "sku": "5201263890700",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "0e58a130-6bed-4fe1-b45c-8e2d178097fb",
+        "name": "MMMILK ΟΙΚΟΓΕΝΕΙΑΚΟ ΠΛ 1L EU",
+        "price": 2.5,
+        "productActive": true,
+        "sku": "5201263890715",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "261d24f5-e059-485a-9a70-f01d9ab0409d",
+        "name": "LE COQ RID MARGARITA 0.33L",
+        "price": 2.7,
+        "productActive": true,
+        "sku": "5201263890709",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "2b9c69e0-3f6c-4d4a-bf50-26bb7ab6995f",
+        "name": "FLAPJACK Strawberry 90gr",
+        "price": 1.6,
+        "productActive": true,
+        "sku": "5201263890703",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "38c46167-00d9-4f3b-a3ea-d293d674716c",
+        "name": "ΔΕΛΤΑ ΤΟΥ ΤΟΠΟΥ ΜΑΣ ΠΛΗΡΕΣ 1ΛΤ EL21. 1251",
+        "price": 2.5,
+        "productActive": true,
+        "sku": "5201263890719",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "38d881bb-2960-422b-9bd7-6ef45dee7322",
+        "name": "Netlink Cosmote 15€",
+        "price": 15,
+        "productActive": true,
+        "sku": "NETLINK-COSMOTE-15-TEST",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "3aabf51c-97e0-4f58-b609-01c678800e94",
+        "name": "TEST SUPER ADMIN",
+        "price": 1.5,
+        "productActive": true,
+        "sku": "999001",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "3d0c4cc5-a8eb-4f93-9d2b-9b5aa2995cac",
+        "name": "ΝΕΡΟ ΖΑΓΟΡΙ ΠΙΠΙΛΑ 12x 0.75LT",
+        "price": 0,
+        "productActive": true,
+        "sku": "100029548",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "3fec3acb-2d80-4ccd-ab6d-a53eed1a01da",
+        "name": "TEREA YELLOW S50 PRI 20 SLI",
+        "price": 4,
+        "productActive": true,
+        "sku": "5201263890706",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 0
+      },
+      {
+        "department": null,
+        "id": "46d91306-2be3-4d91-a761-328097f98aea",
+        "name": "Panini",
+        "price": 0,
+        "productActive": true,
+        "sku": "5201263890699",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "478979d2-74f6-493b-a44c-861d8fd31ace",
+        "name": "HBH GO RED 250CC 3-9PACK",
+        "price": 1,
+        "productActive": true,
+        "sku": "5201263890710",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "52001ae4-3fe4-4e61-be36-4ae76d0d7d29",
+        "name": "CAMEL 20s ORIGINAL LEGEND BOX",
+        "price": 4,
+        "productActive": true,
+        "sku": "100029554",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 0
+      },
+      {
+        "department": null,
+        "id": "56633e20-3e31-4019-adea-a67202f61536",
+        "name": "FLAPJACK Banana 90gr",
+        "price": 1.6,
+        "productActive": true,
+        "sku": "5201263890701",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "574f8d52-5402-44ab-beb9-d5ff0e35c2f2",
+        "name": "ΤΑΧΙ ΣΠΑΝΑΚΟΠΙΤΑ 7 ΤΕΜ",
+        "price": 2,
+        "productActive": true,
+        "sku": "100029551",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "5b4bb880-ec80-4aba-a2d5-015ba07991c0",
+        "name": "Παροχή υπηρεσίας Netlink",
+        "price": 0.5,
+        "productActive": true,
+        "sku": "NETLINK-SERVICE-FEE-TEST",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "707c0291-2dc2-4d38-967a-0b77034aebae",
+        "name": "KAISER 200/500ML R",
+        "price": 2.4,
+        "productActive": true,
+        "sku": "5201263890713",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "78fa8ea4-b19f-474f-9bdd-b5d34b92b839",
+        "name": "TEREA TURQUOISE S50 PRI 20's SLI",
+        "price": 4,
+        "productActive": true,
+        "sku": "5201263890708",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 0
+      },
+      {
+        "department": null,
+        "id": "7ca087cc-4e48-429a-81f5-23c80c7bb021",
+        "name": "ΝΕΡΟ ΘΕΩΝΗ 1.5L 6PACK",
+        "price": 0,
+        "productActive": true,
+        "sku": "100029547",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "814554ee-a6e1-40ee-8a56-8f125d53789f",
+        "name": "ΔΕΛΤΑΤΟΥΤΟΠΟΥ ΜΑΣ ΕΛ 1ΛΤ EL-21. 1252",
+        "price": 2.5,
+        "productActive": true,
+        "sku": "5201263890720",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "8a8c5b44-791c-462a-97d5-6b8996b021e9",
+        "name": "LIFE TSAI PAOYAA 500ML",
+        "price": 2,
+        "productActive": true,
+        "sku": "5201263890725",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "8a8d6982-ef8a-4957-a1d2-7af581c7418a",
+        "name": "ΤΟΥ ΤΟΠΟΥ ΜΑΣ ΕΛΑΦΡΥ (3X200ΓΡ)",
+        "price": 2.1,
+        "productActive": true,
+        "sku": "5201263890726",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "935526b3-f310-438b-94d1-41677930f56e",
+        "name": "VITALINE PUDDING LOKOMATA 200MP",
+        "price": 2.5,
+        "productActive": true,
+        "sku": "5201263890727",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "94410ff6-0545-4c6e-8e38-7f2385c4473e",
+        "name": "ΒΛΑΧΑΣ ΕΒΑΠΟΡΕ ΠΛΗΡΕΣ 7,5% 410ΓΡ",
+        "price": 1.5,
+        "productActive": true,
+        "sku": "5201263890729",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "a043a43d-4947-48bd-b5e4-d0b9605c01e5",
+        "name": "ΔΕΛΤΑ ΒΙΓΛΑ ΚΕΦΑΛΟΤΥΡΙ ΤΡΙΜΜ. 150ΓΡ",
+        "price": 3.1,
+        "productActive": true,
+        "sku": "5201263890728",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "a9ffe392-c9ee-46e8-b272-951388037431",
+        "name": "ΤΑΧΙ ΤΥΡΟΠΙΤΑ 7 ΤΕΜ",
+        "price": 2.5,
+        "productActive": true,
+        "sku": "100029550",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "ac91bf04-32bb-40b1-bc30-57208f125f3d",
+        "name": "CARLSBERG 200/500ML O/W",
+        "price": 2.3,
+        "productActive": true,
+        "sku": "5201263890712",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "ade966ad-74e6-400d-92d3-2116d1d6734e",
+        "name": "TEREA TEAK S50 PRI 20's SLI",
+        "price": 4,
+        "productActive": true,
+        "sku": "5201263890705",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 0
+      },
+      {
+        "department": null,
+        "id": "bb5bb293-9c1f-4cac-8ec6-ac28ea319f5f",
+        "name": "LIFE ΚΡΑΝΜΠ-ΡΑΣΜΠ-ΜΠΛΟΥΜΠΕΡΙ ΜΠΟΥΚ. 400ML",
+        "price": 1.9,
+        "productActive": true,
+        "sku": "5201263890723",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "bd07f8b0-f6f0-4a62-a54a-3ba99aaf4c29",
+        "name": "MMMILK ΟΙΚΟΓΕΝΕΙΑΚΟ ΠΛ 1,5L EU",
+        "price": 3.5,
+        "productActive": true,
+        "sku": "5201263890716",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "c5817a2d-949e-4789-9516-66b0b70ab367",
+        "name": "ΚΑΘΗΜΕΡΙΝΑ ΦΡΕΣΚΟ ΓΑΛΑ ΠΛΗΡΕΣ 1ΛΤ",
+        "price": 2.3005,
+        "productActive": true,
+        "sku": "5201263890714",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "cca194e2-fb44-444f-a7d1-ddf70758900f",
+        "name": "ΚΟΚΑ ΚΟΛΑ 1.5LT (1X6PACK)",
+        "price": 0,
+        "productActive": true,
+        "sku": "100029543",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "cdc09417-5226-45a7-888c-a8a0e039a326",
+        "name": "LA CHOUFFE",
+        "price": 0,
+        "productActive": true,
+        "sku": "100029542",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "d817fa8b-ef4e-40ec-88fd-7c7bf39ef7ef",
+        "name": "ΤΑΧΙ ΚΙΜΑΔΟΠΙΤΑ 7 ΤΕΜ",
+        "price": 0,
+        "productActive": true,
+        "sku": "100029552",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "dede16c7-45f5-453c-8683-0f1f3cdcf3d9",
+        "name": "COOKIE PROT.29% SOFT CHOCOLATE 70g",
+        "price": 2.2,
+        "productActive": true,
+        "sku": "5201263890702",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 13
+      },
+      {
+        "department": null,
+        "id": "f11811c1-5c91-4b30-8fe9-9e2a628f0aae",
+        "name": "SPRITE 1.5LT",
+        "price": 0,
+        "productActive": true,
+        "sku": "100029545",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      },
+      {
+        "department": null,
+        "id": "f6a62aca-3f01-4e22-bfe6-8dfcf0182a96",
+        "name": "TEREA SIENNA S50 PRI 20 SLI",
+        "price": 4,
+        "productActive": true,
+        "sku": "5201263890707",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 0
+      },
+      {
+        "department": null,
+        "id": "f939b15a-c1f7-4075-a1a2-51aa4d97b0c1",
+        "name": "MARLBORO GOLD 3.5 KS SOF 20 STD",
+        "price": 4.8,
+        "productActive": true,
+        "sku": "5201263890704",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 0
+      },
+      {
+        "department": null,
+        "id": "ff643ed1-2adb-4419-b396-564e57beb951",
+        "name": "KAISER 500ML KOYTL'6*(3+1)",
+        "price": 2,
+        "productActive": true,
+        "sku": "5201263890711",
+        "stock": 0,
+        "storeActive": false,
+        "vatRate": 24
+      }
+    ]
+  }
+]

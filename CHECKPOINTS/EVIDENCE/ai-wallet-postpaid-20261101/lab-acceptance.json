@@ -1,0 +1,173 @@
+{
+  "status": "SCOPED_LAB_PASS",
+  "revision": "85d8cec43b5332319eed1151299384bb4265b1c7",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "company": "MYWORKSTATION LAB",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "operator": "Platform Super Admin",
+  "terminal": "Browser Platform Admin; no physical POS transaction",
+  "posShift": "N/A—wallet bookkeeping only",
+  "stock": "N/A—no SKU/quantity/stock action",
+  "reference": "LAB-POSTPAID-20261101-A",
+  "sendNotifications": false,
+  "grantMicros": "20000",
+  "before": {
+    "availableMicros": "3663091",
+    "reservedMicros": "930033",
+    "grossBalanceMicros": "4593124",
+    "outstandingMicros": "0",
+    "historyCount": 10,
+    "chargedMicros": "406876",
+    "usageCalls": 8,
+    "creditTotalMicros": "5000000",
+    "billingEnabled": false,
+    "invoiceBillingEnabled": false,
+    "emailEnabled": false,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "noticeCount": 1,
+    "oldNotice": "CREDIT/2026-10-25T15:28:18Athens/emailOFF"
+  },
+  "actions": [
+    {
+      "type": "GRANT",
+      "reference": "LAB-POSTPAID-20261101-A",
+      "amountMicros": "20000",
+      "atAthens": "2026-11-01T12:59:19+02:00",
+      "result": "OBSERVED_MATCH_PENDING_FULL_ACCEPTANCE",
+      "after": {
+        "availableMicros": "3683091",
+        "reservedMicros": "930033",
+        "grossBalanceMicros": "4613124",
+        "outstandingMicros": "20000",
+        "historyCount": 11,
+        "creditTotalMicros": "5020000",
+        "chargedMicros": "406876",
+        "usageCalls": 8,
+        "noticeCount": 1,
+        "billingFlags": [
+          false,
+          false,
+          false
+        ],
+        "rates": [
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "notice": "Explicit success without email; historical notice unchanged"
+    },
+    {
+      "type": "PARTIAL_PAYMENT",
+      "reference": "LAB-POSTPAID-20261101-A-P1",
+      "amountMicros": "10000",
+      "atAthens": "2026-11-01T13:00:45+02:00",
+      "after": {
+        "availableMicros": "3683091",
+        "reservedMicros": "930033",
+        "grossBalanceMicros": "4613124",
+        "outstandingMicros": "10000",
+        "historyCount": 12,
+        "creditTotalMicros": "5020000",
+        "chargedMicros": "406876",
+        "usageCalls": 8,
+        "noticeCount": 1,
+        "billingFlags": [
+          false,
+          false,
+          false
+        ],
+        "rates": [
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "statusLabel": "Μερική εξόφληση"
+    },
+    {
+      "type": "FINAL_PAYMENT",
+      "reference": "LAB-POSTPAID-20261101-A-P2",
+      "amountMicros": "10000",
+      "atAthens": "2026-11-01T15:33:44+02:00",
+      "after": {
+        "availableMicros": "3683091",
+        "reservedMicros": "930033",
+        "grossBalanceMicros": "4613124",
+        "outstandingMicros": "0",
+        "historyCount": 13,
+        "creditTotalMicros": "5020000",
+        "chargedMicros": "406876",
+        "usageCalls": 8,
+        "noticeCount": 1,
+        "billingFlags": [
+          false,
+          false,
+          false
+        ],
+        "rates": [
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "statusLabel": "Εξοφλημένη"
+    }
+  ],
+  "creditEntryId": "54ca6aaa-b2d2-4fce-9916-c870b86224f1",
+  "reopened": true,
+  "final": {
+    "availableMicros": "3683091",
+    "reservedMicros": "930033",
+    "grossBalanceMicros": "4613124",
+    "outstandingMicros": "0",
+    "historyCount": 13,
+    "creditTotalMicros": "5020000",
+    "chargedMicros": "406876",
+    "usageCalls": 8,
+    "noticeCount": 1,
+    "billingFlags": [
+      false,
+      false,
+      false
+    ],
+    "rates": [
+      "0",
+      "0",
+      "0"
+    ]
+  },
+  "finalServerRevision": "ad111f6f9c69dee7dcce5713eed39abe72aab122",
+  "runtimeParity": "All ten owned runtime paths byte-identical from85d8cec43 toad111f6f; verified git diff after final action. Client stayed85; server advanced during user pause. Final server revision observed after submission, not a fresh pre-submit service read.",
+  "recipientPreview": {
+    "store": "Rizareio",
+    "approvedCount": 2,
+    "mode": "READ_ONLY",
+    "actualCredit": "NOT_EXECUTED_AMOUNT_UNSPECIFIED",
+    "availableMicros": "0",
+    "reservedMicros": "0",
+    "historyCount": 0,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "billingFlags": [
+      false,
+      false,
+      false
+    ]
+  },
+  "screenshot": "NOT AVAILABLE: one cropped capture attempt timed out; no artifact invented",
+  "remaining": [
+    "Actual customer amount/funding/billing enablement",
+    "Actual SMTP/inbox acceptance",
+    "Independent hosted Owner/session/mobile acceptance",
+    "Broader retained wallet REVIEW/unmetered-reader/model scope"
+  ]
+}

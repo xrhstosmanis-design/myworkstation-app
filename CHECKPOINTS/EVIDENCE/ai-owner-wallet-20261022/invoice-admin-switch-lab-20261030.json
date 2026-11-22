@@ -1,0 +1,106 @@
+{
+  "scope": "SCOPED HOSTED LAB PASS; configuration-only invoice switch",
+  "date": "2026-10-30",
+  "revision": "c029c4ecd6f59f59c0987eb53d9135fc6dfd7d19",
+  "sourcePR": 3310,
+  "sourceCI": 41053366088,
+  "recoveryCI": 41053366539,
+  "mainCI": 41054814131,
+  "guardedDeploy": 41055982865,
+  "renderDeploy": "dep-dbi8sr6i0phs73d69elg",
+  "independentHealth": {
+    "capturedAt": "2026-10-30T12:35:12Z",
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "c029c4ecd6f59f59c0987eb53d9135fc6dfd7d19"
+  },
+  "operator": "Existing authenticated SuperAdmin",
+  "terminal": "Cloud Chrome /platform-admin",
+  "store": "MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "shift": null,
+  "sku": null,
+  "quantity": null,
+  "payment": null,
+  "actions": [
+    {
+      "action": "One native master+invoice ON save",
+      "before": "2026-10-30T12:36:20.6326+00:00",
+      "after": "2026-10-30T12:36:52.937906+00:00",
+      "versionBefore": 15,
+      "versionAfter": 16,
+      "checks": {
+        "enabled": true,
+        "version": true,
+        "funds": true,
+        "otherWalletFields": true,
+        "entries": true,
+        "notices": true,
+        "foreignWallet": true,
+        "foreignAudits": true,
+        "labBusiness": true,
+        "exactConfig": true
+      },
+      "readback": "Both checked; invoice active after deselect/reselect"
+    },
+    {
+      "action": "One native master+invoice OFF restoration",
+      "before": "2026-10-30T12:37:11.537875+00:00",
+      "after": "2026-10-30T12:37:36.934365+00:00",
+      "versionBefore": 16,
+      "versionAfter": 17,
+      "checks": {
+        "enabled": true,
+        "version": true,
+        "funds": true,
+        "otherWalletFields": true,
+        "entries": true,
+        "notices": true,
+        "foreignWallet": true,
+        "foreignAudits": true,
+        "labBusiness": true,
+        "exactConfig": true
+      },
+      "readback": "Both unchecked; invoice inactive after deselect/reselect"
+    }
+  ],
+  "labBalanceMicros": 4964032,
+  "labReservedMicros": 0,
+  "labControls": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 56,
+      "sales": 90,
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactions": 0
+    }
+  ],
+  "foreignWalletAndAuditUnchanged": true,
+  "originalRealCompanyReadOnlyActivationRetained": true,
+  "providerCalls": 0,
+  "credits": 0,
+  "invoiceUploads": 0,
+  "businessActions": 0,
+  "emailActions": 0,
+  "privateEvidenceSHA256": "417a08f0c37e5699101195c375c0d5cf0c36a1b4dafe8864c2370bcf2da7f82d",
+  "limitations": [
+    "No new provider/model/tier/OCR accuracy/actual OWNER-session/email-delivery acceptance",
+    "Screenshot capture protocol timeout; native DOM and independent SQL retained"
+  ]
+}

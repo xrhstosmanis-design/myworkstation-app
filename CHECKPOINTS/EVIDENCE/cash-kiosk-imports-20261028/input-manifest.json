@@ -1,0 +1,22 @@
+{
+  "syntheticOnly": true,
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "period": "2026-10-27",
+  "operator": "LAB_KIOSK_28OCT",
+  "shift": "LAB-436",
+  "product": "LAB KIOSK IMPORT 20261028",
+  "transactionId": "865001",
+  "expectedFinancialAdjustmentCents": 0,
+  "files": [
+    {
+      "name": "lab-kiosk-events-20261028.xls",
+      "bytes": 4096,
+      "sha256": "bf7ddb2438ffedad737832d5caa83ef421953f36cf4b84be216486a903382bfa"
+    },
+    {
+      "name": "lab-kiosk-journal-20261028.xls",
+      "bytes": 4608,
+      "sha256": "0a957efb3c82755776daeb50a52b214bf4f9777e99ef30b73134f2351ae248f0"
+    }
+  ]
+}

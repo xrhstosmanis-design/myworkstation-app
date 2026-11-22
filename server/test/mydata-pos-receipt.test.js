@@ -59,9 +59,9 @@ test("real POS precheck accepts only first myDATA arrival and blocks second befo
   const handlerSource=source.slice(start,end).slice(source.slice(start,end).indexOf('async(req,res,next)=>'),-3).trim();
   let arrivals=false,paymentLookups=0,result,status=200,failure;
   const prisma={store:{findFirst:async()=>({id:"store"})},$queryRaw:async()=>[{id:"supplier",taxId:"099999999"}]};
-  const deps={prisma,ensureInvoiceCommonDraftSchema:async()=>{},assertNoUnresolvedInbound:async()=>{},findMyDataPurchase:async()=>({...base,resultJson:arrivals?{mydataPosReceipt:{receivedAt:"2026-09-30"}}:{}}),findInvoicePayment:async()=>{paymentLookups++;return null},assertReusableInvoicePayment:()=>{},cleanTaxId:value=>value,normalizeDocumentNumber:value=>String(value),norm:value=>String(value),normalizeIntakeDate:value=>value,intakeNumber:Number,ensureV244IntakeSchema:async()=>{},ensureFastHandoffSchema:async()=>{},crypto:{}};
+  const deps={prisma,hasMyDataPurchaseLines:async()=>true,ensureInvoiceCommonDraftSchema:async()=>{},assertNoUnresolvedInbound:async()=>{},findMyDataPurchase:async()=>({...base,resultJson:arrivals?{mydataPosReceipt:{receivedAt:"2026-09-30"}}:{}}),findInvoicePayment:async()=>{paymentLookups++;return null},assertReusableInvoicePayment:()=>{},cleanTaxId:value=>value,normalizeDocumentNumber:value=>String(value),norm:value=>String(value),normalizeIntakeDate:value=>value,intakeNumber:Number,ensureV244IntakeSchema:async()=>{},ensureFastHandoffSchema:async()=>{},crypto:{}};
   const handler=new Function(...Object.keys(deps),`return ${handlerSource}`)(...Object.values(deps));
   const req={body:{...identity,dataUrl:""},user:{companyId:"company",role:"OWNER"}},res={json:value=>{result=value;return res},status:value=>{status=value;return res}};
-  await handler(req,res,error=>{failure=error});assert.ifError(failure);assert.equal(status,200);assert.equal(result.canonicalDocumentNumber,"A 42");assert.equal(paymentLookups,1);
+  await handler(req,res,error=>{failure=error});assert.ifError(failure);assert.equal(status,200);assert.equal(result.canonicalDocumentNumber,"A 42");assert.equal(result.hasProductLines,true);assert.equal(paymentLookups,1);
   arrivals=true;await handler(req,res,error=>{failure=error});assert.ifError(failure);assert.equal(status,409);assert.equal(result.code,"DUPLICATE_INVOICE");assert.equal(paymentLookups,1);
 });

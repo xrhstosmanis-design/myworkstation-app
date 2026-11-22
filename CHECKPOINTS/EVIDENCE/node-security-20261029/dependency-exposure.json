@@ -1,0 +1,23 @@
+{
+  "localResolvedVersions": {
+    "nodemailer": "7.0.13",
+    "pdfjs-dist": "5.7.284",
+    "sharp": "0.34.5",
+    "prisma": "6.19.3",
+    "@prisma/config": "6.19.3",
+    "deepmerge-ts": "7.1.5",
+    "xlsx": "0.18.5",
+    "zod": "3.25.76"
+  },
+  "serverPdfjs": "4.10.38",
+  "identityScope": "Fresh local installation only; no production lockfile/runtime dependency inventory available.",
+  "upstreamRanges": "See dependency-audit.json on source PR3293;8HIGH package entries, not8 proven application exploits.",
+  "reviewedExposure": {
+    "sharp": "Invoice image views and cash paper provider process supplied images; guards differ by route. No exploit attempt performed.",
+    "pdfjs-dist": "Client StoreSupplierInvoiceV244/V3 calls getDocument on selected files; server page counter uses its separately pinned4.10.38. Do not attribute a client5.x advisory to server4.x.",
+    "nodemailer": "mail service uses configured SMTP host/port/secure/auth and timeouts; individual upstream attack preconditions remain unverified.",
+    "xlsx": "Spreadsheet input path exists; no patched replacement is installed by the Node upgrade.",
+    "zod_and_prisma_chain": "Resolved versions match audit entries; exact hostile-input reachability and runtime/tooling separation need causal review."
+  },
+  "changesByThisWork": "No dependency version changes or audit fix. Node runtime patch does not close these findings."
+}

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {assertReusableInvoicePayment,paymentInvoiceNumber,findInvoicePayment} from "../src/lib/invoice-payment-reuse.js";
+import {assertReusableInvoicePayment,paymentInvoiceNumber,findInvoicePayment,invoiceToken} from "../src/lib/invoice-payment-reuse.js";
 
 const invoice={storeId:"a",supplierId:"supplier",documentNumber:"2612188",totalGross:2369.99};
 const payment={id:"original",storeId:"a",supplierId:"supplier",type:"SUPPLIER_PAYMENT",amount:2369.99,invoiceDocumentNumber:"2612188",actorId:"old-operator",sessionId:"closed-shift",reversedAt:null,subtractFromShift:false};
@@ -41,4 +41,14 @@ test("same-company supplier aliases use verified VAT while tenant/store/amount s
     assert.throws(()=>assertReusableInvoicePayment({...alias,...change},target),{status:409});
   }
   assert.throws(()=>assertReusableInvoicePayment(payment,{...invoice,totalGross:0}),/ποσό.*δεν εστάλη/);
+});
+
+
+test("accented and decomposed Greek invoice numbers retain their letters during reuse",()=>{
+ for(const number of ["ΆνευΧ-12345","Α\u0301νευΧ-12345","ΑΝΕΥΧ 12345"]){
+  assert.equal(invoiceToken(number),"ΑΝΕΥΧ12345");
+  const original={...payment,invoiceDocumentNumber:"ΆνευΧ-12345"};
+  assert.equal(assertReusableInvoicePayment(original,{...invoice,documentNumber:number}),original);
+  assert.throws(()=>assertReusableInvoicePayment(original,{...invoice,documentNumber:"ΝΕΥΧ12345"}),{status:409});
+ }
 });

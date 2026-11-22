@@ -1,3 +1,4 @@
+import {lockEditablePurchaseOrder} from "../services/purchase-order-reopen.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -152,7 +153,7 @@ async function ownedOrder(companyId,orderId){
 }
 async function ownedLine(companyId,orderId,lineId){
   const rows=await prisma.$queryRaw`
-    SELECT l.*,o."storeId",o."status",o."sourceType"
+    SELECT l.*,o."storeId",o."status",o."sourceType",o."reopenVersion"
     FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId"
     WHERE l."id"=${lineId} AND l."orderId"=${orderId} AND o."companyId"=${companyId} LIMIT 1`;
   return rows[0]||null;
@@ -254,7 +255,7 @@ router.post("/purchase-orders/:orderId/ocr-lines/:lineId/resolve-existing",requi
     const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});if(line.status!=="NEW")return res.status(409).json({error:"Αλλαγές αντιστοίχισης επιτρέπονται μόνο σε Νέα παραγγελία."});
     const products=await prisma.$queryRaw`SELECT "id","name","vatRate","salePrice","costPrice" FROM "Product" WHERE "id"=${body.productId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;const product=products[0];if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
     const barcode=String(body.barcode||line.detectedBarcode||"").trim();
-    await prisma.$transaction(async tx=>{
+    await prisma.$transaction(async tx=>{await lockEditablePurchaseOrder(tx,{id:line.orderId,companyId:req.user.companyId,storeId:line.storeId,reopenVersion:line.reopenVersion});
       if(body.addBarcode&&barcode){const duplicate=await tx.$queryRaw`SELECT p."id",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${req.user.companyId} AND pb."barcode"=${barcode} LIMIT 1`;if(duplicate[0]&&duplicate[0].id!==product.id){const error=new Error(`Το barcode ${barcode} ανήκει ήδη στο προϊόν «${duplicate[0].name}».`);error.status=409;throw error;}if(!duplicate[0])await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${id()},${product.id},${barcode},1)`;}
       const quantity=Math.max(0.0001,Number(line.quantity||1)),unitCost=Math.max(0,Number(line.unitCost||0)),vatRate=Number(product.vatRate||0),net=quantity*unitCost,vat=net*vatRate/100;
       await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=${product.id},"vatRate"=${vatRate},"netAmount"=${net},"vatAmount"=${vat},"grossAmount"=${net+vat},"proposedSalePrice"=${Number(product.salePrice||0)},"resolutionStatus"='MATCHED',"updatedAt"=NOW() WHERE "id"=${line.id}`;
@@ -269,7 +270,7 @@ router.post("/purchase-orders/:orderId/ocr-lines/:lineId/create-product",require
     const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});if(line.status!=="NEW")return res.status(409).json({error:"Νέο προϊόν από τιμολόγιο δημιουργείται μόνο πριν την Οριστικοποίηση."});
     const barcode=String(body.barcode||line.detectedBarcode||"").trim();if(barcode){const d=await prisma.$queryRaw`SELECT p."id",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${req.user.companyId} AND pb."barcode"=${barcode} LIMIT 1`;if(d[0])return res.status(409).json({error:`Το barcode υπάρχει ήδη στο «${d[0].name}». Χρησιμοποίησε Συγχώνευση/Αντιστοίχιση.`});}
     const productId=id();
-    await prisma.$transaction(async tx=>{
+    await prisma.$transaction(async tx=>{await lockEditablePurchaseOrder(tx,{id:line.orderId,companyId:req.user.companyId,storeId:line.storeId,reopenVersion:line.reopenVersion});
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${req.user.companyId+':product-sku'}))`;
       const nextSkuRows=await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS "next" FROM "Product" WHERE "companyId"=${req.user.companyId}`;const sku=String(nextSkuRows[0]?.next||10001);
       await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${req.user.companyId},${body.categoryId||null},${sku},${body.name},'PIECE',${body.vatRate},true,${body.salePrice},${Number(line.unitCost||0)},true,true)`;

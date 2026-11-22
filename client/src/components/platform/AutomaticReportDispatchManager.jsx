@@ -1,0 +1,146 @@
+import React,{useEffect,useRef,useState} from 'react';
+import ReportEventInstallationManager from './ReportEventInstallationManager.jsx';
+
+const frequencies=[['DAILY','Ημερήσια'],['WEEKLY','Εβδομαδιαία'],['MONTHLY','Μηνιαία']];
+const stamp=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false}):'—';
+
+const deliveryStatus={
+ ACCEPTED:'Αποδεκτό από τον διακομιστή email', PENDING:'Σε αναμονή',
+ CLAIMED:'Σε αναμονή', ATTEMPTING:'Αποστολή σε εξέλιξη',
+ UNKNOWN:'Αβέβαιο αποτέλεσμα', RETRY_PENDING:'Αναμονή επόμενης προσπάθειας'
+};
+const deliveryFailure={
+ RECIPIENT_UNAVAILABLE:'Δεν βρέθηκε μοναδικός παραλήπτης',
+ RECIPIENT_LOOKUP_ERROR:'Αποτυχία αναζήτησης παραλήπτη',
+ SMTP_ERROR:'Σφάλμα αποστολής email',
+ SMTP_UNCONFIRMED:'Ο διακομιστής email δεν επιβεβαίωσε αποδοχή'
+};
+
+function DeliveryHistory({history}){
+ return <>
+  <h4>Ιστορικό αυτόματων email</h4>
+  <p>Η αποδοχή από τον διακομιστή email καταγράφεται εδώ. Η παράδοση στο γραμματοκιβώτιο παραμένει ανεπιβεβαίωτη.</p>
+  {history.length===0?<p>Δεν υπάρχουν καταγεγραμμένες αποστολές για αυτό το κατάστημα.</p>:
+   <div style={{overflowX:'auto'}}><table>
+    <thead><tr><th scope="col">Ώρα</th><th scope="col">Τύπος email</th><th scope="col">Κατάσταση</th><th scope="col">Αναγνωριστικό email</th></tr></thead>
+    <tbody>{history.map(row=><tr key={row.type+':'+row.id}>
+     <td>{stamp(row.at)}</td>
+     <td>{row.type==='INVOICE_STOCK_EXCLUSION'
+      ? ['Είδη τιμολογίου εκτός αποθήκης',row.invoiceNumber].filter(Boolean).join(' · ')
+      : row.type==='INVENTORY_RESULT' ? ['Αποτελέσματα απογραφής',row.eventId].filter(Boolean).join(' · ')
+      : row.type==='PROMOTION_RESULT' ? ['Αποτελέσματα προσφοράς',row.eventId].filter(Boolean).join(' · ')
+      : row.type==='SUPPLIER_COMPARISON' ? 'Μηνιαία σύγκριση προμηθευτών'
+      : [frequencies.find(([value])=>value===row.frequency)?.[1],'αναφορά ταμείου'].filter(Boolean).join(' ')}</td>
+     <td>{deliveryStatus[row.status]||'Άγνωστη κατάσταση'}{deliveryFailure[row.failure]&&<div>{deliveryFailure[row.failure]}</div>}</td>
+     <td style={{overflowWrap:'anywhere'}}>{row.messageId||'—'}</td>
+    </tr>)}</tbody>
+   </table></div>}
+ </>;
+}
+
+export default function AutomaticReportDispatchManager(props){
+ const {company,store}=props;
+ return <ReportDispatchManager key={company.id+':'+store.id} {...props}/>;
+}
+
+function ReportDispatchManager(props){
+ const [type,setType]=useState('CASH');
+ const supplier=type==='SUPPLIER_COMPARISON';
+ return <>
+  <div role="group" aria-label="Τύπος αυτόματης αναφοράς">
+   <button type="button" aria-pressed={type==='CASH'} onClick={()=>setType('CASH')}>Αναφορές ταμείου</button>
+   {props.company.name==='MYWORKSTATION LAB'&&props.store.name==='ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ'&&<button type="button" aria-pressed={supplier} onClick={()=>setType('SUPPLIER_COMPARISON')}>Μηνιαία σύγκριση προμηθευτών</button>}
+   <button type="button" aria-pressed={type==='PROMOTION_RESULT'} onClick={()=>setType('PROMOTION_RESULT')}>Αποτελέσματα προσφορών</button>
+   <button type="button" aria-pressed={type==='INVENTORY_RESULT'} onClick={()=>setType('INVENTORY_RESULT')}>Αποτελέσματα απογραφής</button>
+  </div>
+  <ReportEventInstallationManager {...props}/>
+  <ReportDispatchSettings key={type} supplier={supplier} event={['PROMOTION_RESULT','INVENTORY_RESULT'].includes(type)} inventory={type==='INVENTORY_RESULT'} {...props}/>
+ </>;
+}
+
+function ReportDispatchSettings({company,store,request,supplier=false,event=false,inventory=false}){
+ const scoped=supplier||event;
+ const initialFrequencies=event?['EVENT']:supplier?['MONTHLY']:['DAILY'];
+ const scope=`${company.id}:${store.id}`,current=useRef(scope),sequence=useRef(0);
+ current.current=scope;
+ const [data,setData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [email,setEmail]=useState(''),[selected,setSelected]=useState(initialFrequencies),[tokens,setTokens]=useState({}),[ack,setAck]=useState(false);
+ const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/report-dispatch${inventory?'/inventory-result':event?'/promotion-results':supplier?'/supplier-comparison':''}`;
+ const load=async()=>{
+  const id=++sequence.current,captured=scope;setBusy(true);setError('');
+  try{const result=await request(path);if(id===sequence.current&&captured===current.current){setData({scope:captured,result});if(result.policy?.allowedFrequencies?.length)setSelected(result.policy.allowedFrequencies)}}
+  catch(e){if(id===sequence.current&&captured===current.current)setError(e.message)}
+  finally{if(id===sequence.current&&captured===current.current)setBusy(false)}
+ };
+ useEffect(()=>{setData(null);setEmail('');setTokens({});setAck(false);setMessage('');setSelected(initialFrequencies);load();return()=>{sequence.current++}},[scope]);
+ const mutate=async(suffix,body,success,method='POST')=>{
+  const captured=scope,id=++sequence.current;setBusy(true);setError('');setMessage('');
+  try{const result=await request(path+suffix,{method,body:JSON.stringify(body)});if(id!==sequence.current||captured!==current.current)return;setTokens({});setMessage(typeof success==='function'?success(result):success);await load()}
+  catch(e){if(id===sequence.current&&captured===current.current)setError(e.message)}
+  finally{if(captured===current.current)setBusy(false)}
+ };
+ const token=(id,kind)=>tokens[`${id}:${kind}`]||'';
+ const setToken=(id,kind,value)=>setTokens(old=>({...old,[`${id}:${kind}`]:value}));
+ const storeData=data?.scope===scope?data.result:null;
+ const policy=storeData?.policy,grant=storeData?.grant;
+ const authorize=(address,entry)=>mutate('/recipients/authorize',{
+  email:address,...(entry?{recipientId:entry.recipient.recipientId}:{}),expectedRecipientVersion:entry?.recipient.version||0,
+  expectedAuthorizationRevision:entry?.consent?.revision||0,expectedGrantRevision:grant?.revision||0,expectedPolicyRevision:policy?.revision||0,
+  allowedFrequencies:selected,explicitAuthorization:true
+ },r=>r.externalActivationEnabled?'Ο παραλήπτης εγκρίθηκε. Η αυτόματη αποστολή ενεργοποιήθηκε για επιλέξιμες περιόδους. Δεν στάλθηκε πρόσκληση.':'Η έγκριση και οι περίοδοι αποθηκεύτηκαν. Η κεντρική αποστολή είναι κλειστή. Δεν στάλθηκε πρόσκληση.');
+ return <section className="report-settings-dispatch" aria-label="Αυτόματες αποστολές αναφορών" style={{borderTop:'1px solid #cbd5e1',marginTop:20,paddingTop:16}}>
+  <h3>{inventory?'Αποτελέσματα απογραφής':event?'Αποτελέσματα προσφορών':supplier?'Μηνιαία σύγκριση προμηθευτών LAB':'Αυτόματες αποστολές'}</h3>
+  <p>Κατάστημα: <strong>{store.name}</strong>. Οι αναφορές είναι προσωρινές· δεν αποτελούν οικονομική πιστοποίηση ή χρέωση εργαζομένου.</p>
+  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
+  {!storeData&&!error&&<p>Ανάγνωση κατάστασης αποστολών…</p>}
+  {storeData?.schemaReady===false&&<p>Η προετοιμασία αυτόματων αποστολών δεν έχει ολοκληρωθεί. Οι χειροκίνητες αποστολές παραμένουν διαθέσιμες.</p>}
+  {storeData?.schemaReady===true&&<>
+   <p><strong>{storeData.activation?.enabled&&policy?.dispatchEnabled&&grant?.active&&grant.activationEpoch===storeData.activation.epoch?'Η αποστολή έχει ενεργοποιηθεί για επιλέξιμες περιόδους.':'Η αυτόματη αποστολή είναι κλειστή ή αναμένει ενεργοποίηση.'}</strong></p>
+   <p>Δεν αποστέλλονται παλιές ή ελλιπείς περίοδοι. Έναρξη επιτρεπόμενης περιόδου από {stamp(grant?.notBefore||storeData.activation?.notBefore)}. Οι αβέβαιες αποστολές δεν επαναλαμβάνονται αυτόματα.</p>
+   <fieldset disabled={busy}>
+    <legend>Περίοδοι και άδεια αποστολής</legend>
+    {scoped?<p>{inventory?'Αυτόματη αποστολή αποτελεσμάτων μετά από κάθε επιλέξιμη οριστικοποιημένη απογραφή.':event?'Αυτόματη αποστολή μετά τη λήξη κάθε επιλέξιμης προσφοράς.':'Μηνιαία αποστολή για το Εργαστήριο Δοκιμών.'}</p>:<>
+    {frequencies.map(([value,label])=><label key={value} style={{display:'inline-block',marginRight:16}}><input type="checkbox" checked={selected.includes(value)} onChange={e=>setSelected(old=>e.target.checked?[...old,value]:old.filter(x=>x!==value))}/>{label}</label>)}
+    <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/>Εξουσιοδοτώ την αυτόματη αποστολή προσωρινών αναφορών μόνο για αυτό το κατάστημα και τις επιλεγμένες περιόδους.</label>
+    <button type="button" disabled={!ack||!selected.length} onClick={()=>mutate('/grant',{expectedRevision:grant?.revision||0,active:true,allowedFrequencies:selected,explicitAuthorization:true},'Η εξουσιοδότηση αποθηκεύτηκε. Απαιτείται και εγκεκριμένος παραλήπτης.','PUT')}>Αποθήκευση εξουσιοδότησης</button>{' '}
+    <button type="button" disabled={!ack||!selected.length||!grant?.active} onClick={()=>mutate('/policy',{expectedRevision:policy?.revision||0,dispatchEnabled:true,allowsProvisional:true,allowedFrequencies:selected},'Οι ρυθμίσεις αποθηκεύτηκαν. Η αποστολή γίνεται μόνο όταν πληρούνται όλοι οι έλεγχοι.','PUT')}>Ενεργοποίηση επιλεγμένων περιόδων</button>{' '}</>}
+    <button type="button" onClick={()=>mutate('/policy',{expectedRevision:policy?.revision||0,dispatchEnabled:false,allowsProvisional:policy?.allowsProvisional||false,allowedFrequencies:policy?.allowedFrequencies||[]},'Οι αυτόματες αποστολές του καταστήματος έκλεισαν.','PUT')}>Κλείσιμο αυτόματων αποστολών</button>
+   </fieldset>
+   <fieldset disabled={busy} style={{marginTop:16}}>
+    <legend>Παραλήπτες αυτόματων αναφορών</legend>
+    <p>Ως Super Admin καταχώρισε το email και πάτησε «Αποθήκευση και ενεργοποίηση». Με αυτή την ενέργεια εγκρίνεις την αποστολή των αναφορών αυτού του καταστήματος στον συγκεκριμένο παραλήπτη, για τις επιλεγμένες περιόδους. Δεν απαιτείται πρόσκληση ή κωδικός. Οι αυτόματες αναφορές χρησιμοποιούν την ίδια αποθηκευμένη λίστα παραληπτών.</p>
+    <label>Νέο email<input aria-label="Νέο email αυτόματων αναφορών" type="email" maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label>
+    <button type="button" disabled={!email||!selected.length} onClick={()=>authorize(email,storeData.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase()))}>Αποθήκευση και ενεργοποίηση</button>
+    {!scoped&&<details><summary>Προαιρετική πρόσκληση παραλήπτη</summary>
+    <button type="button" disabled={!email||!selected.length} onClick={()=>{const existing=storeData.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase())?.recipient;mutate('/invitations',{email,expectedVersion:existing?.version||0,...(existing?{recipientId:existing.recipientId}:{}),allowedFrequencies:selected},r=>r.alreadyConfirmed?'Η υπάρχουσα έγκριση του παραλήπτη διατηρήθηκε. Δεν στάλθηκε νέα πρόσκληση.':'Η πρόσκληση στάλθηκε. Ο παραλήπτης επιβεβαιώνει από το email του.')}}>Αποθήκευση email</button>
+    <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
+    <button type="button" disabled={!email||storeData.recipients?.filter(x=>!x.recipient.revokedAt).length>=5} onClick={()=>mutate('/recipients',{email,expectedVersion:0},'Ο παραλήπτης προστέθηκε χωρίς επιβεβαίωση.','PUT')}>Προσθήκη παραλήπτη</button>
+    </details>
+    </details>}
+    {(storeData.recipients||[]).map(({recipient:r,consent,authorization,authorizationBasis})=><div key={r.recipientId} style={{padding:'14px 0',borderTop:'1px solid #e2e8f0'}}>
+     <strong>{r.email}</strong> · {r.revokedAt?'Ανακλημένος':authorizationBasis==='SUPER_ADMIN'||authorization?.basis==='SUPER_ADMIN'?(authorization?.basis==='SUPER_ADMIN'?<>Εγκεκριμένο από Super Admin · {stamp(authorization.authorizedAt)}</>:<>Χωρίς ενεργή έγκριση από Super Admin</>):<>{r.verifiedAt?'Επιβεβαιωμένο email':'Μη επιβεβαιωμένο email'} · {consent?.active?'Ενεργή συγκατάθεση':'Χωρίς ενεργή συγκατάθεση'}</>}
+     {!r.revokedAt&&<>
+      <button type="button" disabled={!selected.length} onClick={()=>authorize(r.email,{recipient:r,consent})}>Έγκριση και ενεργοποίηση</button>
+      {!scoped&&<><details><summary>Προαιρετική επιβεβαίωση παραλήπτη</summary>
+      {(!r.verifiedAt||!consent?.active||selected.some(f=>!consent.allowedFrequencies?.includes(f)))&&<button type="button" disabled={!selected.length} onClick={()=>mutate('/invitations',{email:r.email,recipientId:r.recipientId,expectedVersion:r.version,allowedFrequencies:selected},'Η πρόσκληση στάλθηκε. Επιβεβαίωσε από τον σύνδεσμο του email.')}>Αποστολή πρόσκλησης</button>}
+      <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
+      <div><button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/verification`,{expectedVersion:r.version},'Στάλθηκε αίτημα επιβεβαίωσης. Ο κωδικός ισχύει για 10 λεπτά.')}>Αποστολή κωδικού email</button>{' '}
+       <label>Κωδικός email<input aria-label={`Κωδικός email ${r.email}`} autoComplete="off" maxLength={32} value={token(r.recipientId,'verify')} onChange={e=>setToken(r.recipientId,'verify',e.target.value)}/></label>{' '}
+       <button type="button" disabled={!/^[a-f0-9]{32}$/.test(token(r.recipientId,'verify'))} onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/verification/confirm`,{expectedVersion:r.version,token:token(r.recipientId,'verify')},'Η διεύθυνση επιβεβαιώθηκε. Δεν έχει δοθεί ακόμη συγκατάθεση.')}>Επιβεβαίωση email</button>
+      </div>
+      <div><button type="button" disabled={!r.verifiedAt||!selected.length} onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/consent/request`,{expectedVersion:r.version,allowedFrequencies:selected},'Στάλθηκε χωριστό αίτημα συγκατάθεσης για τις επιλεγμένες περιόδους.')}>Αίτημα συγκατάθεσης παραλήπτη</button>{' '}
+       <label>Κωδικός συγκατάθεσης<input aria-label={`Κωδικός συγκατάθεσης ${r.email}`} autoComplete="off" maxLength={32} value={token(r.recipientId,'consent')} onChange={e=>setToken(r.recipientId,'consent',e.target.value)}/></label>{' '}
+       <button type="button" disabled={!r.verifiedAt||!ack||!/^[a-f0-9]{32}$/.test(token(r.recipientId,'consent'))} onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/consent/confirm`,{expectedVersion:r.version,expectedRevision:consent?.revision||0,token:token(r.recipientId,'consent'),explicitConsent:true},'Η συγκατάθεση καταγράφηκε για τις περιόδους που ενέκρινε ο παραλήπτης.')}>Καταγραφή συγκατάθεσης με κωδικό</button>
+      </div>
+      </details>
+      </details>
+      <button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/consent`,{expectedRecipientVersion:r.version,expectedRevision:consent?.revision||0,active:false,allowedFrequencies:[],explicitConsent:false},'Η έγκριση αποστολής ανακλήθηκε.','PUT')}>{authorizationBasis==='SUPER_ADMIN'||authorization?.basis==='SUPER_ADMIN'?'Ανάκληση έγκρισης':'Ανάκληση συγκατάθεσης'}</button>{' '}
+      <button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}`,{expectedVersion:r.version},'Ο παραλήπτης ανακλήθηκε.','DELETE')}>Ανάκληση παραλήπτη</button></>}
+     </>}
+    </div>)}
+   </fieldset>
+  </>}
+  {storeData&&<DeliveryHistory history={storeData.history||[]}/>}
+  <button type="button" disabled={busy} onClick={load}>Ανανέωση κατάστασης αποστολών</button>
+ </section>;
+}

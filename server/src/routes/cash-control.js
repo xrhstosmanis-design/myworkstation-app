@@ -1,4 +1,7 @@
 import {readCashExpenseEvidence,cashExpenseFindings} from "../services/cash-expense-evidence.js";
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
+import {readCashReviewEvidence} from "../services/cash-review-evidence.js";
+import {effectiveModuleEnabled} from "../middleware/module-access.js";
 import {declaredEftpos} from "../../../shared/declared-eftpos.mjs";
 import {confirmedExplanationBalance,readCashReviewSnapshot,sameCashReviewSnapshot} from "../services/cash-review-balance.js";
 import {partitionCashAuditEvents} from "../services/cash-audit-association.js";
@@ -12,7 +15,9 @@ import { auth } from "../middleware/auth.js";
 import { sendEmail } from "../services/mail.js";
 import {ensurePosSaleSafetySchema} from "../pos-sale-safety.js";
 import {buildKatShiftReconciliation} from "../kat-shift-reconciliation.js";
-import {verifyShiftCloseCard} from "../services/shift-close-card.js";
+import {readPendingInvoices,checkClosePendingInvoices,recordClosePendingInvoices} from "../services/pos-pending-invoices.js";
+import {verifyShiftCloseCredential} from "../services/shift-close-card.js";
+import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {normalizeWorkCard} from "../workforce-card-code.js";
 import {legacyCashControlRule as legacyStoreRule} from "../services/cash-control-rules.js";
 
@@ -104,6 +109,13 @@ async function ensureTables(){
 export async function ensureCashControlSchema(){return ensureTables()}
 
 async function requireCashAccess(req,res,next){
+  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='shifts.read'){
+    const target=req.path.match(/^\/stores\/([^/]+)\/reporting-overview$/);
+    if(target&&target[1]===req.user.storeId)return next();
+  }
+  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='sales.read')return next();
+  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='shifts.close'&&req.path.endsWith('/close-context'))return next();
+  if(req.user?.staffAccess===true&&req.method==='POST'&&req.staffGrant?.capability==='shifts.close')return next();
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   if(backoffice)return next();
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
@@ -134,8 +146,8 @@ async function requireCashAccess(req,res,next){
   if(permissions?.includes("CASH_CONTROL"))return next();
   return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
 }
-function assertStoreAccess(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
-async function ownedStore(storeId,companyId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return store}
+function assertStoreAccess(req,storeId){if((req.user?.tokenType==="STORE_OPERATOR"||req.user?.staffAccess===true)&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
+async function ownedStore(storeId,companyId,db=prisma){const store=await db.store.findFirst({where:{id:storeId,companyId,active:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return store}
 async function requestTerminal(req){
   const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
   if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
@@ -150,7 +162,9 @@ async function requestTerminal(req){
 
 const amount=z.coerce.number().finite().min(0).max(999999999).default(0);
 const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable()});
-const closeSchema=z.object({cardCode:z.string().max(120).optional(),cashSales:amount,cardSales:amount,eftposTotal:z.preprocess(value=>declaredEftpos(value)??NaN,z.number().finite().min(0).max(999999999)),expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable(),forceCloseWithShortage:z.boolean().optional().default(false)});
+// Net ledger totals may be negative after returns; physical counts remain nonnegative.
+const ledgerAmount=z.coerce.number().finite().min(-999999999).max(999999999).default(0);
+const closeSchema=z.object({pendingInvoiceAcknowledged:z.boolean().optional().default(false),pendingInvoiceFingerprint:z.string().regex(/^[0-9a-f]{64}$/).optional(),cardCode:z.string().max(120).optional(),pin:z.string().regex(/^\d{4,8}$/).optional(),closeCredentialMethod:z.enum(["CARD","PIN"]).optional(),cashSales:ledgerAmount,cardSales:ledgerAmount,eftposTotal:z.preprocess(value=>declaredEftpos(value)??NaN,z.number().finite().min(0).max(999999999)),expenses:ledgerAmount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable(),forceCloseWithShortage:z.boolean().optional().default(false)}).superRefine((body,ctx)=>{if((body.pin&&String(body.cardCode||"").trim())||(body.pin&&body.closeCredentialMethod!=="PIN")||(body.closeCredentialMethod==="PIN"&&!body.pin))ctx.addIssue({code:z.ZodIssueCode.custom,path:["closeCredentialMethod"],message:"Επίλεξε μόνο κάρτα ή προσωπικό PIN για το κλείσιμο."})});
 const reportDateSchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const reviewSchema=z.object({decision:z.enum(["EXPLANATION","CONFIRMED_SHORTAGE","REVIEWED_NO_CHANGE"]),amount:z.coerce.number().finite().min(0).max(999999999).default(0),note:z.string().trim().min(5).max(1000)}).superRefine((value,ctx)=>{if(value.decision==="EXPLANATION"&&value.amount<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["amount"],message:"Η εξήγηση χρειάζεται θετικό ποσό."})});
 
@@ -187,11 +201,11 @@ async function existingAuditTables(db){
   const rows=await db.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety"`;
   return rows[0]||{};
 }
-async function cashControlRule(store,companyId){
-  const rows=await prisma.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled" FROM "CashControlStoreRule" WHERE "storeId"=${store.id} AND "companyId"=${companyId} LIMIT 1`;
+async function cashControlRule(store,companyId,db=prisma){
+  const rows=await db.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled" FROM "CashControlStoreRule" WHERE "storeId"=${store.id} AND "companyId"=${companyId} LIMIT 1`;
   return rows[0]?{...rows[0],source:"CONFIGURED"}:legacyStoreRule(store);
 }
-async function reviewSnapshot(companyId,storeId,sessionId){return readCashReviewSnapshot(prisma,companyId,storeId,sessionId)}
+async function reviewSnapshot(companyId,storeId,sessionId,db=prisma){return readCashReviewSnapshot(db,companyId,storeId,sessionId)}
 function sameSnapshot(left,right){return sameCashReviewSnapshot(left,right)}
 function suspiciousOperatorEvent(eventType){return /CANCEL|RETURN|VOID|REVERSE|DUPLICATE|DELAY|OVERRIDE|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(eventType||""))}
 function auditAmount(details){for(const key of ["reversalTotal","originalTotal","total","amount"]){const value=Number(details?.[key]);if(Number.isFinite(value)&&value!==0)return value}return null}
@@ -209,8 +223,9 @@ async function syncOperatorWorkforceAttendance(tx,req,storeId,eventType,cashSess
   if(!legacyEmployeeId)return {status:"SKIPPED",reason:"EMPLOYEE_NOT_IDENTIFIED"};
   const employee=await tx.workforceEmployee.findFirst({where:{companyId:req.user.companyId,legacyEmployeeId,active:true,OR:[{baseStoreId:storeId},{storeAccess:{some:{storeId,active:true}}}]}});
   if(!employee)return {status:"SKIPPED",reason:"WORKFORCE_EMPLOYEE_NOT_LINKED"};
+  await tx.$queryRaw`SELECT "id" FROM "WorkforceEmployee" WHERE "id"=${employee.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
   const now=new Date(),date=workforceDate(now);
-  const open=await tx.workforceAttendanceSession.findFirst({where:{companyId:req.user.companyId,storeId,employeeId:employee.id,status:"OPEN"},orderBy:{startedAt:"desc"}});
+  const [open]=await tx.$queryRaw`SELECT * FROM "WorkforceAttendanceSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "employeeId"=${employee.id} AND "status"='OPEN' ORDER BY "startedAt" DESC LIMIT 1 FOR UPDATE`;
   const resolvedEventType=eventType==="TOGGLE"?(open?"OUT":"IN"):eventType;
   if(resolvedEventType==="IN"&&open)return {status:"ALREADY_OPEN",sessionId:open.id,employeeName:employee.fullName,eventType:"IN"};
   if(resolvedEventType==="OUT"&&!open)return {status:"NO_OPEN_SESSION",employeeName:employee.fullName,eventType:"OUT"};
@@ -306,13 +321,43 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     prisma.$queryRaw`SELECT "clientTransactionId","status","saleId","attempts","lastErrorCode","idempotentReplay","firstReportedAt","lastReportedAt","syncedAt" FROM "OfflineSaleSyncEvidence" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} ORDER BY "lastReportedAt" DESC LIMIT 50`,
     prisma.$queryRaw`SELECT COUNT(*) FILTER (WHERE "status"='PENDING')::int AS pending,COUNT(*) FILTER (WHERE "status"='FAILED')::int AS failed,COUNT(*) FILTER (WHERE "status"='SYNCED')::int AS synced,COUNT(*) FILTER (WHERE "idempotentReplay"=TRUE)::int AS replays FROM "OfflineSaleSyncEvidence" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id}`
   ]);
-  const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
+  const openSession=normalize(openRows[0]);
+  if(req.user.staffAccess===true){
+    const {grant}=await requireStaffGrant(prisma,req.user,store.id,'sales.read');
+    const pendingInvoices=grant.capabilities.includes('shifts.close')&&openSession?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
+    await requireStaffGrant(prisma,req.user,store.id,'sales.read');
+    return res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession,recent:recentRows.map(normalize)});
+  }
+  const pendingInvoices=openSession&&(req.user.tokenType!=="STORE_OPERATOR"||openSession.openedBy===req.user.id)?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
+  const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
 }));
 
+router.get("/stores/:storeId/close-context",route(async(req,res)=>{
+  const {storeId}=req.params,{companyId}=req.user;
+  if(req.user.staffAccess!==true||req.user.storeId!==storeId) return res.sendStatus(403);
+  await requireStaffGrant(prisma,req.user,storeId,'shifts.close');
+  if(!String(req.get('x-mws-terminal-pos')||'').trim())return res.sendStatus(400);
+  const terminalPos=await requestTerminal(req);
+  const [session]=await prisma.$queryRaw`SELECT "id","openingSafe","openingOperational" FROM "CashShiftSession" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
+  const pendingInvoices=session?await readPendingInvoices(prisma,{companyId,storeId,user:req.user,terminalPos,sessionId:session.id,sessionAll:true}):null;
+  const totals=session?await authoritativeShiftTotals(prisma,companyId,storeId,session.id):null;
+  await requireStaffGrant(prisma,req.user,storeId,'shifts.close');
+  res.json({openSession:session?normalize(session):null,pendingInvoices,summaryBySession:session?{[session.id]:{cashSales:totals.cashSales,cardSales:totals.cardSales,expensesTotal:totals.expenses,transferIn:totals.transferIn,transferOut:totals.transferOut}}:{}});
+}));
+
+function staffShiftReportRow(row){
+  const {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,cashSales,cardSales,expenses,
+    actualOperational,expectedOperational,variance,eftposTotal,cardVariance,transactionCount}=row;
+  return {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,cashSales,cardSales,expenses,
+    actualOperational,expectedOperational,variance,eftposTotal,cardVariance,transactionCount};
+}
+
 router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
-  if(req.user?.tokenType==="STORE_OPERATOR"||!["OWNER","ADMIN","MANAGER"].includes(req.user?.role))return res.status(403).json({error:"Η συγκεντρωτική αναφορά βαρδιών είναι διαθέσιμη μόνο στο BackOffice."});
+  const delegated=req.user?.staffAccess===true;
+  if(!delegated&&(req.user?.tokenType==="STORE_OPERATOR"||!["OWNER","ADMIN","MANAGER"].includes(req.user?.role)))return res.status(403).json({error:"Η συγκεντρωτική αναφορά βαρδιών είναι διαθέσιμη μόνο στο BackOffice."});
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
+  if(delegated)await requireStaffGrant(prisma,req.user,store.id,"shifts.read");
   const sessionRows=await prisma.$queryRaw`
     SELECT s.*,
       COALESCE(t."cashSales",0) AS "liveCashSales",
@@ -342,18 +387,21 @@ router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
     FROM "StoreTransaction"
     WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "sessionId"=ANY(${ids}::text[])
     ORDER BY "occurredAt" DESC LIMIT 500`:[];
-  res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent:sessions,openSessions:sessions.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
+  if(delegated)await requireStaffGrant(prisma,req.user,store.id,"shifts.read");
+  const recent=delegated?sessions.map(staffShiftReportRow):sessions;
+  res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent,openSessions:recent.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
 }));
 
-router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
+export async function readCashDailySummary(req,{db=prisma,prepareSource=null}={}){
+  const prisma=db;
   assertStoreAccess(req,req.params.storeId);
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId,db);
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const date=reportDateSchema.parse(String(req.query.date||today));
   const period=resolveCashReportPeriod(req.query,date);
-  if(period.sessionId)return res.status(400).json({error:"Για συγκεκριμένη βάρδια άνοιξε την Ανάλυση της βάρδιας."});
-  await ensurePosSaleSafetySchema();
-  const rule=await cashControlRule(store,req.user.companyId),[sessionRows,expenseRows,auditRows,attemptRows,fiscalRows,actionRows]=await Promise.all([
+  if(period.sessionId)throw Object.assign(new Error("Για συγκεκριμένη βάρδια άνοιξε την Ανάλυση της βάρδιας."),{status:400});
+  if(prepareSource)await prepareSource();
+  const rule=await cashControlRule(store,req.user.companyId,db),[sessionRows,expenseRows,auditRows,attemptRows,fiscalRows,actionRows]=await Promise.all([
     prisma.$queryRaw`
       SELECT * FROM "CashShiftSession"
       WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='CLOSED'
@@ -382,12 +430,15 @@ router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
   for(const row of sessions){if(rule.carryOverEnabled&&Math.abs(money(row.openingVariance))>0.009)alerts.push({type:"OPENING_CONTINUITY",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.openingVariance),scope:row.delivery?"DELIVERY_TO_DELIVERY":"SAME_POS_ONLY"});if(row.varianceConsidered&&Math.abs(money(row.variance))>0.009)alerts.push({type:money(row.variance)<0?"SHORTAGE":"SURPLUS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.variance)});if(rule.posEftposEnabled&&Math.abs(money(row.cardVariance))>0.009)alerts.push({type:"POS_EFTPOS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.cardVariance)});if((row.duplicateReview||[]).length)alerts.push({type:"DUPLICATE_REVIEW",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,count:row.duplicateReview.length})}
   for(const expense of expenseChecks){if(!["MATCHED","PARTIALLY_PAID","REVERSED"].includes(expense.status))alerts.push({type:expense.status,transactionId:expense.id,sessionId:expense.sessionId,amount:expense.amount,difference:expense.difference})}
   const reconciliation=buildKatShiftReconciliation({sessions,auditEvents:auditRows,paymentAttempts:attemptRows,fiscalDocuments:fiscalRows,actionEvents:actionRows});
-  res.json({date,...period,coverageStatus:"PROVISIONAL",timeZone:"Europe/Athens",store:{id:store.id,name:store.name},rule,status:alerts.length||reconciliation.status!=="AGREEMENT"?"NEEDS_REVIEW":"AGREEMENT",sessions,expenseChecks,totals,alerts,reconciliation,recalculatedAt:new Date()});
-}));
+  return ({date,...period,coverageStatus:"PROVISIONAL",timeZone:"Europe/Athens",store:{id:store.id,name:store.name},rule,status:alerts.length||reconciliation.status!=="AGREEMENT"?"NEEDS_REVIEW":"AGREEMENT",sessions,expenseChecks,totals,alerts,reconciliation,recalculatedAt:new Date()});
+}
 
-router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
+router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{res.json(await readCashDailySummary(req,{prepareSource:ensurePosSaleSafetySchema}))}));
+
+export async function readCashSessionInvestigation(req,{db=prisma}={}){
+  const prisma=db;
   const found=await prisma.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
-  const session=normalize(found[0]);if(!session)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια."});assertStoreAccess(req,session.storeId);const store=await ownedStore(session.storeId,req.user.companyId),controlRule=await cashControlRule(store,req.user.companyId),varianceConsidered=controlRule.mode!=="DIFFERENCE_ONLY";
+  const session=normalize(found[0]);if(!session)throw Object.assign(new Error("Δεν βρέθηκε η βάρδια."),{status:404});assertStoreAccess(req,session.storeId);const store=await ownedStore(session.storeId,req.user.companyId,db),controlRule=await cashControlRule(store,req.user.companyId,db),varianceConsidered=controlRule.mode!=="DIFFERENCE_ONLY";
   const transactions=await prisma.$queryRaw`SELECT "id","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",("attachmentData" IS NOT NULL) AS "hasAttachment",CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN "attachmentFilename" ELSE NULL END AS "purchaseDocumentId" FROM "StoreTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "occurredAt"`;
   const tables=await existingAuditTables(prisma),auditEvents=[],auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
   if(tables.operator){const rows=await prisma.$queryRaw`SELECT "id","eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`;for(const row of rows)if(suspiciousOperatorEvent(row.eventType))auditEvents.push({source:"STORE_OPERATOR_AUDIT",type:row.eventType,actorId:row.actorId,operatorId:row.operatorId,at:row.createdAt,details:row.details||{},amount:auditAmount(row.details)})}
@@ -408,15 +459,28 @@ router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
   const amounts=new Map();for(const event of auditEvents){if(event.amount==null)continue;const key=Math.abs(Number(event.amount)).toFixed(2),same=amounts.get(key)||[];same.push(event);amounts.set(key,same)}for(const [amount,events] of amounts)if(events.length>1)findings.push({code:"REPEATED_AUDIT_AMOUNT",severity:"MEDIUM",amount:Number(amount),count:events.length,events});
   if(Math.abs(money(session.cardVariance))>0.009)findings.unshift({code:"POS_EFTPOS_DIFFERENCE",severity:"HIGH",amount:money(session.cardVariance)});
   if(varianceConsidered&&Math.abs(money(session.variance))>0.009)findings.unshift({code:money(session.variance)<0?"CASH_SHORTAGE":"CASH_SURPLUS",severity:"HIGH",amount:money(session.variance)});
-  const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt","id"`;
+  const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id,db),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt","id"`;
   const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,snapshotRecheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
   const explanationBalance=confirmedExplanationBalance(session.variance,confirmedExplanations,{enabled:varianceConsidered});
   const reviewBalance=snapshotRecheckRequired?{...explanationBalance,status:"RECHECK_REQUIRED",reason:"STALE_REVIEW",unexplainedVariance:null}:explanationBalance;
   const recheckRequired=snapshotRecheckRequired||reviewBalance.status==="RECHECK_REQUIRED";
   const unexplainedVariance=reviewBalance.unexplainedVariance;
   const finalizedShortage=validReviews.some(row=>row.decision==="CONFIRMED_SHORTAGE");
-  res.json({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
-}));
+  // Chat discovery is limited to the existing authenticated Owner review, after
+  // company/store authorization. Operators receive no additional chat metadata.
+  let chatAllowed=false;
+  if(req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"&&req.license?.licenseAllowed){
+    try{
+      const chatModules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${session.storeId} AND "moduleKey"='STORE_CHAT' LIMIT 1`;
+      chatAllowed=effectiveModuleEnabled(Boolean(req.license.activeModules?.includes("STORE_CHAT")),chatModules[0]?{...chatModules[0],configured:true}:{configured:false});
+    }catch{/* Missing entitlement evidence never authorizes reading chat. */}
+  }
+  const reviewEvidence=req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"
+    ?await readCashReviewEvidence(prisma,{...session,sessionId:session.id,auditRule:controlRule},{includeChat:chatAllowed}):null;
+  return ({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
+}
+
+router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{res.json(await readCashSessionInvestigation(req))}));
 
 router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Μόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να οριστικοποιήσει τον έλεγχο."});
@@ -447,9 +511,25 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   }
   const expectedOpening=lastClosedRows[0]?money(lastClosedRows[0].nextOpeningTotal):operational,openingVariance=operational-expectedOpening,actorName=req.user.fullName||"Χρήστης";
   const sessionId=crypto.randomUUID();
-  const rows=await prisma.$queryRaw`
+  const insertSession=db=>db.$queryRaw`
     INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
     VALUES (${sessionId},${req.user.companyId},${store.id},${terminalPos},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
+  const rows=await (req.user.tokenType==="STORE_OPERATOR"?prisma.$transaction(async tx=>{
+    // Serialize opening with delegated POS-access revocation on the operator credential.
+    const [credential]=await tx.$queryRaw`
+      SELECT "id" FROM "StoreOperatorCredential"
+      WHERE "id"=${req.user.id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=TRUE
+      FOR UPDATE`;
+    if(!credential)return null;
+    const [access]=await tx.$queryRaw`
+      SELECT COALESCE(p."posAccess",TRUE) AS "posAccess"
+      FROM "StoreOperatorCredential" c
+      JOIN "StoreOperatorSession" os ON os."operatorId"=c."id" AND os."companyId"=c."companyId" AND os."storeId"=c."storeId"
+      LEFT JOIN "StoreOperatorProfile" p ON p."employeeId"=c."employeeId" AND p."storeId"=c."storeId" AND p."companyId"=c."companyId"
+      WHERE c."id"=${credential.id} AND os."id"=${req.user.operatorSessionId} AND os."revokedAt" IS NULL AND os."expiresAt">NOW()`;
+    return access?.posAccess===true?insertSession(tx):null;
+  }):insertSession(prisma));
+  if(!rows)return res.status(403).json({error:"Η πρόσβαση POS του χειριστή δεν είναι πλέον ενεργή.",code:"STORE_OPERATOR_POS_ACCESS_DISABLED"});
 
   let safeChange=null;
   if(Math.abs(safeDelta)>0.009){
@@ -485,7 +565,12 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
       SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId"
       WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
     const session=normalize(found[0]);if(!session)return null;assertStoreAccess(req,session.storeId);
-    await verifyShiftCloseCard(tx,req.user,session,body.cardCode);
+    if(req.user?.staffAccess===true)await requireStaffAction(tx,req,session.storeId,'shifts.close');
+    if(req.user?.staffAccess===true&&String(session.terminalPos||'MAIN').toUpperCase()!==await requestTerminal(req))throw Object.assign(new Error('Επίλεξε το ταμείο της βάρδιας.'),{status:403});
+    const authentication=await verifyShiftCloseCredential(tx,req.user,session,body);
+    if(!authentication.ok)return {authFailed:authentication};
+    const pendingInvoices=await checkClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session});
+    if(pendingInvoices.confirmationRequired)return {pendingInvoiceConfirmationRequired:true,pendingInvoices};
     // KAT_SAFE_VAULT_CLOSE_ALERT_V1
     const previousSafe=money(session.openingSafe),safeDelta=Number((body.safe-previousSafe).toFixed(2)),safeReason=String(body.safeReason||"").trim();
     if(safeDelta < -0.009 && safeReason.length < 3){const error=new Error(`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν κλείσει η βάρδια.`);error.status=409;throw error}
@@ -505,9 +590,16 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
         "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},"expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},"nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
       WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *`;
+    if(rows[0])await recordClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session,snapshot:pendingInvoices});
+    if(rows[0]&&authentication.method==="PIN"){
+      const details=JSON.stringify({sessionId:session.id,terminalPos:session.terminalPos,credentialMethod:"PIN"});
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${req.user.operatorId||req.user.id},${req.user.id},'SHIFT_CLOSED_WITH_PERSONAL_PIN',${details}::jsonb,NOW())`;
+    }
     return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null,attendanceSync:await syncOperatorWorkforceAttendance(tx,req,session.storeId,"OUT",session.id)}:null;
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
+  if(closeResult.authFailed)return res.status(closeResult.authFailed.status).json({code:closeResult.authFailed.code,error:closeResult.authFailed.error});
+  if(closeResult.pendingInvoiceConfirmationRequired)return res.status(409).json({code:"MISSING_INVOICES_CONFIRMATION_REQUIRED",error:"Υπάρχουν εκκρεμότητες τιμολογίων. Σύνδεσε τα παραστατικά με τις υπάρχουσες πληρωμές πριν κλείσεις τη βάρδια.",pendingInvoices:closeResult.pendingInvoices});
   if(closeResult.recountRequired)return res.status(409).json({code:"SHIFT_RECOUNT_REQUIRED",error:`Βρέθηκε έλλειμμα ${Number(closeResult.shortage).toFixed(2)} €. Θέλεις να ξαναμετρήσεις; Πάτησε ΝΑΙ για επανακαταμέτρηση ή ΟΧΙ για κλείσιμο της βάρδιας με καταγεγραμμένο έλλειμμα. Η απόπειρα και τα ποσά καταγράφηκαν στα Συμβάντα.`,...closeResult});
   const {closed,storeId,safeChange,attendanceSync}=closeResult;
   const [store,owners]=await Promise.all([prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})]);

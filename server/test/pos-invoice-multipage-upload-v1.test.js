@@ -31,7 +31,8 @@ const v244Client=await readFile(new URL("../../client/src/lib/invoice-v244-core.
 test("POS accepts and visibly orders up to five pages for one invoice",()=>{
   assert.match(client,/type="file" multiple accept="image\/\*,application\/pdf"/);
   assert.match(client,/incoming\.length>5-pages\.length/);
-  assert.match(client,/Σελίδα \{index\+1\}/);
+  assert.match(client,/Αρχείο \{index\+1\}/);
+  assert.match(client,/<InvoiceFilePageSummary pages=\{pages\} scopeKey=\{store.id\}/);
   assert.match(client,/movePage\(index,-1\)/);
   assert.match(client,/movePage\(index,1\)/);
 });
@@ -77,7 +78,7 @@ test("fast header falls back from Azure without blocking payment",()=>{
 test("fast header also falls back when Azure succeeds with an empty header",()=>{
   assert.match(wrapper,/const azureHeader=/);
   assert.match(wrapper,/const azureHasUsefulHeader=Boolean/);
-  assert.match(wrapper,/if\(azureHasUsefulHeader&&azureProductLines\.length\)return res\.json\(azureHeader\)/);
+  assert.match(wrapper,/if\(azureHasUsefulHeader&&azureCanVerifyDocumentTotal&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(reviewFastSupplierVat\(azureHeader,recipientVat,azureSupplierVat\)\)/);
   assert.match(wrapper,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
   assert.match(wrapper,/FAST Azure header incomplete; trying configured fallback/);
   assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
@@ -93,7 +94,20 @@ test("MANTZILAS FAST total uses the balanced VAT summary and ignores the account
   assert.equal(recoverVatSummaryInvoiceTotal(printed),318.74);
   assert.equal(recoverVatSummaryInvoiceTotal("ΝΕΟ ΥΠΟΛΟΙΠΟ 4.531,01"),0,"an account balance alone is never an invoice total proof");
   assert.equal(recoverVatSummaryInvoiceTotal("ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ΣΥΝΟΛΑ 264,27 54,47 319,74"),0,"an unbalanced summary is rejected");
-  assert.match(wrapper,/verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal\(azureRawText\)/);
+  const headerStart=wrapper.indexOf('router.post("/ai-reader/fast-header"');
+  const headerEnd=wrapper.indexOf('\nrouter.post("/ai-reader/fast-duplicate-check"',headerStart);
+  assert.ok(headerStart>=0&&headerEnd>headerStart);
+  const header=wrapper.slice(headerStart,headerEnd);
+  assert.match(header,/let azureCanVerifyDocumentTotal=!isPdf;/);
+  assert.match(header,/azureCanVerifyDocumentTotal=!isPdf\|\|\(!pdfHeaderPriority&&parsed\.azurePageCount===1\);/);
+  assert.match(header,/const verifiedVatSummaryTotal=azureCanVerifyDocumentTotal\?recoverVatSummaryInvoiceTotal\(azureRawText\):0;/);
+  // Execute the production assignment: image/known-one-page reuse remains,
+  // but a balanced page footer cannot certify a multi-page or unknown PDF.
+  const assignment=header.split('\n').find(line=>line.trim().startsWith('const verifiedVatSummaryTotal='));
+  assert.ok(assignment);
+  const readFooter=new Function('azureCanVerifyDocumentTotal','recoverVatSummaryInvoiceTotal','azureRawText',`${assignment}\nreturn verifiedVatSummaryTotal;`);
+  assert.equal(readFooter(true,recoverVatSummaryInvoiceTotal,printed),318.74);
+  assert.equal(readFooter(false,recoverVatSummaryInvoiceTotal,printed),0);
   assert.match(wrapper,/ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ/);
 });
 
@@ -151,7 +165,7 @@ test("fast header preserves a readable fallback inside its dedicated POS request
   const operator=await readFile(new URL("../../client/src/components/store/StoreOperatorApp.jsx",import.meta.url),"utf8");
   assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=20000/);
   assert.match(wrapper,/FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=70000/);
-  assert.match(wrapper,/callAzure\(\{contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS\}\)/);
+  assert.match(wrapper,/callAzure\(\{contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS,timing\}\)/);
   assert.match(wrapper,/const remainingMs=deadline-Date\.now\(\)/);
   assert.match(wrapper,/signal:AbortSignal\.timeout\(remainingMs\)/);
   assert.match(wrapper,/detail:"high"/);
@@ -183,12 +197,13 @@ test("BackOffice purchase intake keeps every selected invoice page",()=>{
   assert.match(backofficeIntake,/headerIndexes=files\.length>1\?\[0,files\.length-1\]:\[0\]/);
 });
 
-test("camera preview attaches and plays the acquired stream before capture",()=>{
+test("camera preview attaches and plays the acquired stream before capture",async()=>{
   assert.match(client,/useEffect\(\(\)=>\{if\(!cameraOpen\|\|!stream\|\|!videoRef\.current\)return/);
   assert.match(client,/video\.srcObject=stream/);
   assert.match(client,/video\.play\(\)\.catch/);
-  assert.match(client,/facingMode:\{ideal:"environment"\}/);
-  assert.match(client,/Η προεπισκόπηση κάμερας δεν είναι ακόμη έτοιμη/);
+  assert.match(client,/cameraSession\.open\(\)/);
+  const acquisition=await readFile(new URL("../../client/src/lib/camera-acquisition.js",import.meta.url),"utf8");assert.match(acquisition,/facingMode:\{ideal:"environment"\}/);
+  assert.match(client,/captureCameraFrame\(videoRef\.current/);assert.match(acquisition,/video\.readyState<2/);
 });
 
 test("multipage OCR sends all ordered pages through one invoice analysis",()=>{

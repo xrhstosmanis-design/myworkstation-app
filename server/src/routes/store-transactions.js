@@ -1,4 +1,10 @@
+import { findMyDataPurchase, hasMyDataPurchaseLines } from "../lib/mydata-pos-receipt.js";
+import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
+import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
+import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from "../lib/supplier-advance.js";
+import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {createPendingInvoicePayment,readPendingInvoices,capturePendingInvoice} from "../services/pos-pending-invoices.js";
 import {supplierCreditCashContext,applySupplierCreditCash,assertCreditCashUnlinked} from "../lib/supplier-credit-cash.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import { Router } from "express";
@@ -166,10 +172,26 @@ async function ensureTables(){
   return tablesPromise;
 }
 
+const approvalsPaths=['/api/transactions/supplier-settlements/review','/api/transactions/other-expenses/review','/api/transactions/bank-ledger/review'];
+const delegatedApprovalsRead=req=>req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='approvals.read'&&approvalsPaths.includes(String(req.originalUrl||'').split('?')[0]);
+async function requireApprovalsRead(req){
+ if(!delegatedApprovalsRead(req)||typeof req.query.storeId!=='string'||req.query.storeId!==req.user.storeId||req.query.companyId&&req.query.companyId!==req.user.companyId)throw staffError();
+ await requireStaffGrant(prisma,req.user,req.user.storeId,'approvals.read');
+}
+async function sendApprovalsRead(req,res,items){
+ await requireApprovalsRead(req);
+ const keys=['id','transactionId','sourceTransactionId','type','status','paymentMethod','paidAt','note','createdAt','createdByName','amount','proofAmount','advanceDeclared','attachmentFilename','hasAttachment','occurredAt','supplierName','storeName','description','actorName','advanceAmount','automaticCheck','allocations'];
+ const pick=(value,allowed)=>Object.fromEntries(allowed.filter(key=>value?.[key]!==undefined).map(key=>[key,value[key]]));
+ const safeItems=items.map(item=>({...Object.fromEntries(keys.filter(key=>item[key]!==undefined).map(key=>[key,item[key]])),
+  ...(item.automaticCheck?{automaticCheck:{...pick(item.automaticCheck,['matched','allocationTotal','advanceAmount']),checks:(item.automaticCheck.checks||[]).filter(value=>typeof value==='string')}}:{}),
+  ...(Array.isArray(item.allocations)?{allocations:item.allocations.map(value=>pick(value,['purchaseDocumentId','documentNumber','amount']))}:{}),companyId:req.user.companyId,storeId:req.user.storeId}));
+ return res.json({companyId:req.user.companyId,storeId:req.user.storeId,items:safeItems});
+}
+
 function route(handler){
   return async(req,res)=>{
     try{
-      await ensureTables();
+      if(delegatedApprovalsRead(req))await requireApprovalsRead(req);else await ensureTables();
       await handler(req,res);
     }catch(error){
       console.error("Store Transactions:",error);
@@ -181,6 +203,16 @@ function route(handler){
 }
 
 function requireLedgerAccess(req,res,next){
+  if(delegatedApprovalsRead(req))return next();
+  if(req.user?.staffAccess===true){
+    const capability=req.staffGrant?.capability;
+    const path=String(req.originalUrl||"").split("?")[0];
+    if(['sales.read','payments.supplier','payments.expense'].includes(capability))return next();
+    if(capability==='approvals.expense-confirm'&&req.method==='POST'&&/^\/api\/transactions\/other-expenses\/[^/]+\/review$/.test(path))return next();
+    if(capability==='approvals.supplier-recovery'&&['GET','POST'].includes(req.method)&&/^\/api\/transactions\/other-expenses\/[^/]+\/supplier-advance$/.test(path))return next();
+    if(capability==='payments.advance-allocate'&&req.method==='POST'&&/^\/api\/transactions\/stores\/[^/]+\/supplier-advances\/[^/]+\/allocate$/.test(path))return next();
+    return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
+  }
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
@@ -191,14 +223,15 @@ function requireLedgerAccess(req,res,next){
   );
   const transferContext=req.method==="GET"&&/\/stores\/[^/]+\/cash-transfer\/context(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("TRANSFER_AMOUNT");
   const creditContext=req.method==="GET"&&/\/stores\/[^/]+\/supplier-credit-cash(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("SUPPLIER_PAYMENT")&&permissions.includes("SAME_SHIFT_PAYMENTS");
+  const pendingInvoiceContext=req.method==="GET"&&/\/stores\/[^/]+\/pending-invoices(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("SUPPLIER_PAYMENT");
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
-    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext||creditContext
+    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext||creditContext||pendingInvoiceContext
   );
   if(!backoffice&&!superAdmin&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
 }
 function assertStoreAccess(req,storeId){
-  if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){
+  if((req.user?.tokenType==="STORE_OPERATOR"||req.user?.staffAccess===true)&&req.user.storeId!==storeId){
     const error=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error;
   }
 }
@@ -283,9 +316,12 @@ const transactionSchema=z.object({
   type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES","TRANSFER_AMOUNT"]),
   amount:z.coerce.number().finite().refine(value=>value!==0,{message:"Το ποσό δεν μπορεί να είναι μηδενικό."}).refine(value=>Math.abs(value)<=999999999,{message:"Το ποσό είναι πολύ μεγάλο."}),
   description:z.string().trim().max(500).optional().nullable(),
+  expenseCategoryId:z.string().trim().min(1).max(180).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
   supplierId:z.string().optional().nullable(),
   invoiceDocumentNumber:z.string().trim().min(1).max(80).optional().nullable(),
+  existingMyDataDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  deferredInvoice:z.object({documentDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),sessionId:z.string().trim().min(1).max(180)}).optional(),
   evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().nullable(),
   purchaseDocumentId:z.string().trim().min(1).max(180).optional().nullable(),
   paymentSource:z.enum(["CASH_SHIFT","EXTERNAL"]).optional().nullable(),
@@ -520,6 +556,7 @@ router.get("/stores/:storeId/supplier-open-invoices",route(async(req,res)=>{
     ORDER BY d."documentDate" ASC,d."id" ASC
   `;
   const advanceData=await availableSupplierAdvances(req.user.companyId,req.params.storeId,supplierId);
+  if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,req.params.storeId,'payments.supplier');
   res.json({...advanceData,supplier:{id:supplier[0].id,name:supplier[0].name},items:rows.map(row=>({
     ...row,totalGross:Number(row.totalGross||0),reservedAmount:Number(row.reservedAmount||0),
     outstandingAmount:Number((Number(row.totalGross||0)-Number(row.reservedAmount||0)).toFixed(2))
@@ -533,7 +570,7 @@ async function availableSupplierAdvances(companyId,storeId,supplierId){
 
 router.post("/stores/:storeId/supplier-advances/:settlementId/allocate",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);await ownedStore(req.params.storeId,req.user.companyId);
-  res.json(await allocateSupplierAdvance(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,settlementId:req.params.settlementId,user:req.user},req.body));
+  res.json(await allocateSupplierAdvance(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,settlementId:req.params.settlementId,user:req.user,authorize:req.user.staffAccess===true?db=>requireStaffAction(db,req,req.params.storeId,'payments.advance-allocate'):null},req.body));
 }));
 
 router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
@@ -544,7 +581,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const total=body.totalAmount??allocatedTotal,advanceAmount=Number((total-allocatedTotal).toFixed(2));
   const proof=attachment?.mimeType==="application/pdf"
     ?await readSupplierProofPdf(Buffer.from(attachment.dataUrl.split(",")[1],"base64")):null;
-  const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
+  const ownerPayment=req.user.staffAccess!==true&&req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
   const ownerProofError=ownerPayment&&attachment?ownerSupplierProofError({mimeType:attachment.mimeType,proof}):null;
   if(ownerProofError)return res.status(400).json({error:ownerProofError});
   const proofError=supplierProofMismatch(proof,{amount:total,method:body.paymentMethod});
@@ -558,6 +595,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   // A responsibility statement is not proof and always waits for human review.
   const initialStatus=ownerPayment&&!noDocument?"CONFIRMED":"PENDING_REVIEW";
   const result=await prisma.$transaction(async tx=>{
+    if(req.user?.staffAccess===true)await requireStaffAction(tx,req,store.id,'payments.supplier');
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${transactionId},0))::text AS locked`;
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
@@ -635,9 +673,11 @@ function isSuperAdminReview(req){
   return req.user?.role==="SUPER_ADMIN"||req.user?.platformRole==="SUPER_ADMIN"||req.user?.isSuperAdmin===true;
 }
 function reviewScopeCompanyId(req){
+  if(req.user?.staffAccess===true)return req.user.companyId;
   return isSuperAdminReview(req)?null:req.user?.companyId||null;
 }
 function requireSuperAdminSettlementReview(req,res,next){
+  if(delegatedApprovalsRead(req))return next();
   const owner=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="OWNER";
   if(!isSuperAdminReview(req)&&!owner)return res.status(403).json({error:"Η επιβεβαίωση πληρωμών είναι διαθέσιμη μόνο στον ιδιοκτήτη της εταιρείας ή στον Super Admin."});
   next();
@@ -718,8 +758,10 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
 
 router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const {companyId,storeId}=bankReviewFilters(req);
-  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."sourceTransactionId",e."type",e."amount",e."proofAmount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${companyId}::text IS NULL OR e."companyId"=${companyId}) AND (${storeId}::text IS NULL OR e."storeId"=${storeId}) AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=e."companyId" AND ss."transactionId"=e."sourceTransactionId") AND NOT EXISTS (SELECT 1 FROM "OtherExpenseReview" er WHERE er."companyId"=e."companyId" AND er."transactionId"=e."sourceTransactionId") ORDER BY e."createdAt" ASC LIMIT 500`;
-  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
+  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."sourceTransactionId",e."type",e."amount",e."proofAmount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" AND (${!delegatedApprovalsRead(req)} OR a."companyId"=e."companyId" AND a."storeId"=e."storeId") JOIN "Store" s ON s."id"=e."storeId" AND (${!delegatedApprovalsRead(req)} OR s."companyId"=e."companyId") JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${companyId}::text IS NULL OR e."companyId"=${companyId}) AND (${storeId}::text IS NULL OR e."storeId"=${storeId}) AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=e."companyId" AND ss."transactionId"=e."sourceTransactionId") AND NOT EXISTS (SELECT 1 FROM "OtherExpenseReview" er WHERE er."companyId"=e."companyId" AND er."transactionId"=e."sourceTransactionId") ORDER BY e."createdAt" ASC LIMIT 500`;
+  const items=rows.map(row=>({...row,amount:Number(row.amount||0)}));
+  if(delegatedApprovalsRead(req))return sendApprovalsRead(req,res,items);
+  res.json({items});
 }));
 
 router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
@@ -754,13 +796,13 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
            t."id" AS "transactionId",t."amount",EXISTS (SELECT 1 FROM "StoreOperatorAudit" audit WHERE audit."companyId"=ss."companyId" AND audit."storeId"=ss."storeId" AND audit."details"->>'transactionId'=t."id" AND (audit."eventType"='OTHER_EXPENSE_SUPPLIER_ADVANCE' OR (audit."eventType" IN ('SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED','SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_ADVANCE_DECLARED') AND audit."details"->>'advanceAcknowledged'='true'))) AS "advanceDeclared",t."attachmentFilename",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
            COALESCE(json_agg(json_build_object('purchaseDocumentId',a."purchaseDocumentId",'amount',a."amount",'documentNumber',p."documentNumber") ORDER BY p."documentDate") FILTER (WHERE a."id" IS NOT NULL),'[]'::json) AS allocations
     FROM "SupplierPaymentSettlement" ss
-    JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
+    JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR t."storeId"=ss."storeId")
     JOIN "Supplier" s ON s."id"=ss."supplierId" AND s."companyId"=ss."companyId"
     JOIN "Store" st ON st."id"=ss."storeId" AND st."companyId"=ss."companyId"
     JOIN "Company" c ON c."id"=ss."companyId"
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
-    LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId"
-    LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId"
+    LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR EXISTS(SELECT 1 FROM "PurchaseDocument" scoped WHERE scoped."id"=a."purchaseDocumentId" AND scoped."companyId"=ss."companyId" AND scoped."storeId"=ss."storeId"))
+    LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR p."storeId"=ss."storeId")
     WHERE ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
       AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR ss."companyId"=${filters.companyId})
@@ -769,14 +811,14 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
       AND (${filters.to||null}::date IS NULL OR ss."paidAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
     GROUP BY ss."id",t."id",s."name",st."name",c."name",owner."fullName" ORDER BY ss."createdAt" ASC LIMIT 500
   `;
-  const companies=await prisma.$queryRaw`
+  const companies=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`
     SELECT c."id",c."name",owner."fullName" AS "ownerName"
     FROM "Company" c
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
     WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId})
     ORDER BY c."name"
   `;
-  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
+  const stores=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
   const items=rows.map(row=>{
     const amount=Number(row.amount||0),allocations=Array.isArray(row.allocations)?row.allocations:[];
     const allocationTotal=Number(allocations.reduce((sum,item)=>sum+Number(item.amount||0),0).toFixed(2));
@@ -787,6 +829,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     if(advanceAmount<0||(advanceAmount>0&&!row.advanceDeclared))checks.push(`Το άθροισμα τιμολογίων (${allocationTotal.toFixed(2)} €) διαφέρει από την πληρωμή (${amount.toFixed(2)} €).`);
     return {...row,amount,advanceAmount:row.advanceDeclared?Math.max(0,advanceAmount):0,automaticCheck:{matched:checks.length===0,allocationTotal,advanceAmount:row.advanceDeclared?Math.max(0,advanceAmount):0,checks}};
   });
+  if(delegatedApprovalsRead(req))return sendApprovalsRead(req,res,items);
   res.json({items,companies,stores});
 }));
 
@@ -870,7 +913,7 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
   const items=await prisma.$queryRaw`
     SELECT er."id",er."status",er."createdAt",t."id" AS "transactionId",t."amount",t."description",t."paymentMethod",t."attachmentFilename",t."attachmentData" IS NOT NULL AS "hasAttachment",t."occurredAt",t."actorName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName"
     FROM "OtherExpenseReview" er
-    JOIN "StoreTransaction" t ON t."id"=er."transactionId" AND t."companyId"=er."companyId" AND t."reversedAt" IS NULL
+    JOIN "StoreTransaction" t ON t."id"=er."transactionId" AND t."companyId"=er."companyId" AND (${!delegatedApprovalsRead(req)} OR t."storeId"=er."storeId") AND t."reversedAt" IS NULL
     JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId"
     JOIN "Company" c ON c."id"=er."companyId"
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
@@ -882,8 +925,8 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
       AND (${filters.to||null}::date IS NULL OR t."occurredAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
     ORDER BY er."createdAt" ASC LIMIT 500
   `;
-  const companies=await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId}) ORDER BY c."name"`;
-  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
+  const companies=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId}) ORDER BY c."name"`;
+  const stores=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
   const checkedItems=items.map(item=>{
     const amount=Number(item.amount||0),checks=[];
     if(!item.hasAttachment)checks.push("Δεν υπάρχει αποδεικτικό ή συνδεδεμένο παραστατικό.");
@@ -891,32 +934,55 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
     if(!item.paymentMethod)checks.push("Δεν έχει δηλωθεί τρόπος πληρωμής.");
     return {...item,amount,hasAttachment:Boolean(item.hasAttachment),automaticCheck:{matched:checks.length===0,checks}};
   });
+  if(delegatedApprovalsRead(req))return sendApprovalsRead(req,res,checkedItems);
   res.json({items:checkedItems,companies,stores});
 }));
 
-async function expenseAdvanceScope(req){
-  const companyId=reviewScopeCompanyId(req);
-  const rows=await prisma.$queryRaw`SELECT er."companyId",er."storeId",er."transactionId" FROM "OtherExpenseReview" er JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId" WHERE er."id"=${req.params.reviewId} AND (${companyId}::text IS NULL OR er."companyId"=${companyId}) AND st."active"=true LIMIT 1`;
-  if(!rows[0]){const error=new Error("Δεν βρέθηκε το έξοδο στο ενεργό κατάστημα.");error.status=404;throw error}
-  return {...rows[0],user:req.user};
+function requireExpenseAdvanceAccess(req,res,next){
+  if(req.user?.staffAccess===true){
+    if(req.staffGrant?.capability==='approvals.supplier-recovery'&&req.user.storeId)return next();
+    return next(staffError());
+  }
+  return requireSuperAdminSettlementReview(req,res,next);
 }
-router.get("/other-expenses/:reviewId/supplier-advance",requireSuperAdminSettlementReview,route(async(req,res)=>{
+async function expenseAdvanceScope(req){
+  const storeId=req.user?.staffAccess===true?req.user.storeId:null;
+  const authorize=storeId?db=>requireStaffAction(db,req,storeId,'approvals.supplier-recovery'):null;
+  if(authorize)await authorize(prisma);
+  const companyId=reviewScopeCompanyId(req);
+  const rows=await prisma.$queryRaw`SELECT er."companyId",er."storeId",er."transactionId" FROM "OtherExpenseReview" er JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId" WHERE er."id"=${req.params.reviewId} AND (${companyId}::text IS NULL OR er."companyId"=${companyId}) AND (${storeId}::text IS NULL OR er."storeId"=${storeId}) AND st."active"=true LIMIT 1`;
+  if(!rows[0]){const error=new Error("Δεν βρέθηκε το έξοδο στο ενεργό κατάστημα.");error.status=404;throw error}
+  return {...rows[0],user:req.user,authorize};
+}
+router.get("/other-expenses/:reviewId/supplier-advance",requireExpenseAdvanceAccess,route(async(req,res)=>{
   const scope=await expenseAdvanceScope(req);res.json({...await supplierAdvanceContext(prisma,scope),companyId:scope.companyId});
 }));
-router.post("/other-expenses/:reviewId/supplier-advance",requireSuperAdminSettlementReview,route(async(req,res)=>{
+router.post("/other-expenses/:reviewId/supplier-advance",requireExpenseAdvanceAccess,route(async(req,res)=>{
   const scope=await expenseAdvanceScope(req);res.json(await associateExpenseAsAdvance(prisma,scope,req.body));
 }));
 
-router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+function requireExpenseConfirmation(req,res,next){
+  if(req.user?.staffAccess===true&&req.staffGrant?.capability==='approvals.expense-confirm')return next();
+  return requireSuperAdminSettlementReview(req,res,next);
+}
+router.post("/other-expenses/:reviewId/review",requireExpenseConfirmation,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
   const status="CONFIRMED";
+  const storeId=req.user?.staffAccess===true?req.user.storeId:null;
   const rows=await prisma.$transaction(async tx=>{
-    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    if(req.user?.staffAccess===true){
+      if(!storeId||body.note.length<3)throw staffError(400,'CONFIRMATION_REQUIRED','Απαιτείται αιτιολογία επιβεβαίωσης.');
+      await requireStaffGrant(tx,req.user,storeId,'approvals.expense-confirm');
+    }
+    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND (${storeId}::text IS NULL OR ("storeId"=${storeId} AND EXISTS (
+      SELECT 1 FROM "StoreTransaction" st WHERE st."id"="OtherExpenseReview"."transactionId" AND st."companyId"="OtherExpenseReview"."companyId" AND st."storeId"=${storeId} AND st."reversedAt" IS NULL
+    ))) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(!updated[0])return updated;
     await tx.$executeRaw`
       UPDATE "BankLedgerEntry" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
       WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
+        AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
     `;
     const transaction=await tx.$queryRaw`SELECT "amount","description" FROM "StoreTransaction" WHERE "id"=${updated[0].transactionId} AND "companyId"=${updated[0].companyId} LIMIT 1`;
@@ -935,7 +1001,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     ?await prisma.$queryRaw`SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos","openingOperational" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' ORDER BY "openedAt" DESC`
     :await prisma.$queryRaw`SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos","openingOperational" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
   const openSession=openRows[0]||null;
-  for(const session of openRows)await reconcileOnlineSalesForOpenSession({store,companyId:req.user.companyId,openSession:session});
+  if(req.user.staffAccess!==true)for(const session of openRows)await reconcileOnlineSalesForOpenSession({store,companyId:req.user.companyId,openSession:session});
   const canReviewStoreLedger=req.user.tokenType!=="STORE_OPERATOR"||req.user.permissions?.includes("STORE_LEDGER_REVIEW");
   const canReverse=req.user.tokenType!=="STORE_OPERATOR"
     ?["OWNER","ADMIN","MANAGER"].includes(req.user?.role)
@@ -974,8 +1040,8 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   `;
   const recent=recentRows.map(row=>({...normalize(row),canCorrectAmount:canCorrectPayment(req.user,row,openRows.find(session=>session.id===row.sessionId)?{...openRows.find(session=>session.id===row.sessionId),status:"OPEN",companyId:req.user.companyId,storeId:store.id}:null,terminalPos)}));
   const myPayments=myPaymentRows.map(row=>({...normalize(row),canCorrectAmount:canCorrectPayment(req.user,row,{...openSession,status:"OPEN",companyId:req.user.companyId,storeId:store.id},terminalPos)}));
-  const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
-  const purchaseDocuments=await prisma.$queryRaw`
+  const suppliers=req.user.staffAccess===true?[]:await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
+  const purchaseDocuments=req.user.staffAccess===true?[]:await prisma.$queryRaw`
     SELECT p."id",p."supplierId",p."documentNumber",p."documentDate",p."totalGross",p."status",s."name" AS "supplierName"
     FROM "PurchaseDocument" p
     LEFT JOIN "Supplier" s ON s."id"=p."supplierId" AND s."companyId"=${req.user.companyId}
@@ -989,6 +1055,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
       FROM "StoreTransaction"
       WHERE "sessionId"=${openSession.id} AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
     `).map(normalize);
+  if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,store.id,'sales.read');
   res.json({
     store:{id:store.id,name:store.name},
     openSession,
@@ -1018,11 +1085,35 @@ router.post("/stores/:storeId/cash-transfer",route(async(req,res)=>{
   res.status(result.duplicate?200:201).json({ok:true,...result,transaction:normalize(result.transaction)});
 }));
 
+router.get("/stores/:storeId/pending-invoices",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
+  const pending=await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos});
+  const sessions=await prisma.$queryRaw`SELECT "id","terminalPos","openedBy" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;
+  res.json({storeId:store.id,...pending,openSession:sessions[0]||null});
+}));
+
+router.post("/stores/:storeId/pending-invoices/:transactionId/attachment",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  if(req.body?.paymentTransactionId!==req.params.transactionId)return res.status(409).json({error:"Το πρωτότυπο δεν αντιστοιχεί στην επιλεγμένη πληρωμή.",code:"PENDING_INVOICE_CONFLICT"});
+  const captured=await capturePendingInvoice(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos:await requestTerminal(req)},req.body||{});
+  res.status(captured.duplicate?200:201).json(captured);
+}));
+
 router.post("/stores/:storeId",route(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.body?.type==="TRANSFER_AMOUNT")return res.status(403).json({error:"Η μεταφορά χειριστή γίνεται προς τον Ιδιοκτήτη από τη λειτουργία Μεταφοράς μετρητών."});
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
+  if (body.existingMyDataDate && (body.type !== "SUPPLIER_PAYMENT" || body.amount <= 0 || body.evidenceMode !== "DOCUMENT" || !body.purchaseDocumentId || !body.supplierId || !body.invoiceDocumentNumber || body.deferredInvoice)) {
+    return res.status(400).json({error:"Χρειάζεται επιλογή απλήρωτου τιμολογίου myDATA για αυτή την πληρωμή."});
+  }
+  if(body.expenseCategoryId&&(body.type!=="OTHER_EXPENSE"||body.deferredInvoice))return res.status(400).json({error:"Η κατηγορία εξόδου επιτρέπεται μόνο στα λοιπά έξοδα χωρίς αναβολή τιμολογίου."});
+  if(body.deferredInvoice){
+    const result=await createPendingInvoicePayment(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos:await requestTerminal(req)},body);
+    return res.status(result.duplicate?200:201).json({...normalize(result.transaction),duplicate:result.duplicate,pendingInvoiceId:result.pendingInvoiceId,fingerprint:result.fingerprint,evidenceMode:"NO_DOCUMENT",paymentSource:body.paymentSource,paymentMethod:body.paymentMethod});
+  }
   const isPayment=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   if(body.amount<0&&(!["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(body.type)||body.paymentSource!=="CASH_SHIFT"))return res.status(400).json({error:"Αρνητική κίνηση επιτρέπεται μόνο στο ταμείο της ενεργής βάρδιας."});
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
@@ -1112,9 +1203,19 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       RETURNING *
     `;
   };
+  const persist=async tx=>{
+  if(req.user?.staffAccess===true)await requireStaffAction(tx,req,store.id,'payments.expense');
+  // A centrally selected category is read and locked in the same transaction as
+  // this new expense. Deactivation/rename must wait until its binding commits.
+  if(body.expenseCategoryId){
+    const categories=await tx.$queryRaw`SELECT "id" FROM "ManagementExpenseCategory" WHERE "id"=${body.expenseCategoryId} AND "companyId"=${req.user.companyId} AND "active"=true FOR SHARE`;
+    if(!categories[0])return {error:"Η κατηγορία εξόδου δεν είναι διαθέσιμη. Ανανέωσε τις κατηγορίες και επίλεξε ενεργή κατηγορία."};
+  }
   let rows;
   if(invoicePaymentKey){
-    const outcome=await prisma.$transaction(async tx=>{
+    const checkInvoicePayment=async tx=>{
+      // Same lock order as invoice creation: store first, exact key second.
+      await lockInvoiceStore(tx,req.user.companyId,store.id);
       await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const duplicate=await tx.$queryRaw`
         SELECT t."id",t."storeId",t."occurredAt",t."amount",t."actorName"
@@ -1125,27 +1226,48 @@ router.post("/stores/:storeId",route(async(req,res)=>{
           AND (t."invoicePaymentKey"=${invoicePaymentKey} OR POSITION(${invoiceReference} IN UPPER(REGEXP_REPLACE(COALESCE(t."description",''),'[^A-ZΑ-Ω0-9]','','g')))>0)
         ORDER BY t."occurredAt" ASC LIMIT 1`;
       if(duplicate[0])return {duplicate:duplicate[0],rows:null};
+      const review=Number(body.amount)>0?await findExistingInvoicePaymentReview(tx,{companyId:req.user.companyId,storeId:store.id,supplierId:body.supplierId,supplierTaxId,documentNumber:body.invoiceDocumentNumber||invoiceReference,totalGross:body.amount}):null;
+      if(review)return {review,rows:null};
+      if (body.existingMyDataDate) {
+        const match = await findMyDataPurchase(tx, {companyId:req.user.companyId,storeId:store.id,supplierId:body.supplierId,supplierTaxId,documentNumber:body.invoiceDocumentNumber,documentDate:body.existingMyDataDate,totalGross:body.amount});
+        if (match?.documentId !== purchaseDocument?.id || !match || match.paymentTransactionId || match.settlementMode === "PAID" || match.resultJson?.mydataPosReceipt?.receivedAt || match.rawPayload?.mydataPosReceipt?.receivedAt || !await hasMyDataPurchaseLines(tx,match)) {
+          throw Object.assign(new Error("Το τιμολόγιο myDATA άλλαξε. Έλεγξε το παραστατικό πριν την πληρωμή."), {status:409});
+        }
+      }
       return {duplicate:null,rows:await insertTransaction(tx)};
-    });
-    if(outcome.duplicate)return res.status(409).json({error:`Η πληρωμή του τιμολογίου ${body.invoiceDocumentNumber||invoiceReference} υπάρχει ήδη. Δεν δημιουργήθηκε δεύτερη οικονομική κίνηση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:outcome.duplicate});
+    };
+    const outcome=tx===prisma?await prisma.$transaction(checkInvoicePayment):await checkInvoicePayment(tx);
+    if(outcome.review)return {error:"Υπάρχει πιθανή πληρωμή του ίδιου τιμολογίου με διαφορετική γραφή αριθμού ή σειράς. Απαιτείται έλεγχος στο BackOffice. Δεν έγινε νέα πληρωμή.",code:"INVOICE_PAYMENT_REVIEW_REQUIRED"};
+    if(outcome.duplicate)return {error:`Η πληρωμή του τιμολογίου ${body.invoiceDocumentNumber||invoiceReference} υπάρχει ήδη. Δεν δημιουργήθηκε δεύτερη οικονομική κίνηση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:outcome.duplicate};
     rows=outcome.rows;
-  }else rows=await insertTransaction(prisma);
-  if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
+  }else rows=await insertTransaction(tx);
+  if(!rows[0])return {error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."};
   const transaction=normalize(rows[0]);
-  const expenseStatus=expenseReviewStatus(req.user);
-  if(body.type==="OTHER_EXPENSE")await prisma.$executeRaw`
+  if(body.expenseCategoryId){
+    const bound=await tx.$executeRaw`UPDATE "StoreTransaction" SET "expenseCategoryId"=${body.expenseCategoryId} WHERE "id"=${transaction.id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "type"='OTHER_EXPENSE' AND "expenseCategoryId" IS NULL`;
+    if(Number(bound)!==1){const error=new Error("Η κατηγορία εξόδου δεν αποθηκεύτηκε. Η πληρωμή δεν καταχωρίστηκε.");error.status=409;throw error}
+    transaction.expenseCategoryId=body.expenseCategoryId;
+  }
+  const expenseStatus=req.user.staffAccess===true?"PENDING_REVIEW":expenseReviewStatus(req.user);
+  if(body.type==="OTHER_EXPENSE")await tx.$executeRaw`
     INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status","reviewedBy","reviewedAt","reviewNote")
     VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${transaction.id},${expenseStatus},${expenseStatus==="CONFIRMED"?req.user.id:null},${expenseStatus==="CONFIRMED"?new Date():null},${expenseStatus==="CONFIRMED"?"Καταχώριση από ιδιοκτήτη / υπερδιαχειριστή":null})
     ON CONFLICT ("transactionId") DO NOTHING
   `;
-  if(body.type==="OTHER_EXPENSE"&&["CORPORATE_CARD","BANK_TRANSFER"].includes(selectedPaymentMethod)&&!transaction.reversedAt)await prisma.$transaction(async tx=>{
+  if(req.user?.staffAccess===true)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},NULL,${req.user.id},'BACKOFFICE_STAFF_EXPENSE_RECORDED',${JSON.stringify({transactionId:transaction.id,amount:body.amount,paymentMethod:selectedPaymentMethod,evidenceMode:body.evidenceMode,responsibilityAcknowledged:req.body.responsibilityAcknowledged===true,status:expenseStatus,terminalPos})}::jsonb)`;
+  if(body.type==="OTHER_EXPENSE"&&["CORPORATE_CARD","BANK_TRANSFER"].includes(selectedPaymentMethod)&&!transaction.reversedAt){const bankEntry=async tx=>{
     const account=await virtualBankAccount(tx,{companyId:req.user.companyId,storeId:store.id,userId:req.user.id});
     await tx.$executeRaw`
       INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
       VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account.id},${selectedPaymentMethod},${-Math.abs(Number(transaction.amount||0))},${expenseStatus},${transaction.id},${legacyAttachment?.dataUrl||null},${legacyAttachment?.mimeType||null},${legacyAttachment?.filename||null},${transaction.occurredAt||new Date()},${req.user.id},${actorName})
       ON CONFLICT ("sourceTransactionId") DO NOTHING
     `;
-  });
+  };if(tx===prisma)await prisma.$transaction(bankEntry);else await bankEntry(tx);}
+  return {transaction};
+  };
+  const persisted=req.user?.staffAccess===true||body.expenseCategoryId?await prisma.$transaction(persist):await persist(prisma);
+  if(persisted.error)return res.status(409).json(persisted);
+  const transaction=persisted.transaction;
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
   res.status(201).json({
     ...transaction,
@@ -1216,5 +1338,7 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
   res.json({...reversed,emailNotification});
 }));
 
+router.resolveTerminal = requestTerminal;
 export default router;
+
 

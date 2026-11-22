@@ -1,0 +1,9 @@
+{
+  "observedAtUtc": "2026-11-01T00:25:37.834339+00:00",
+  "scope": "Pure literal PostgreSQL18 SELECT comparison only; no message or other user rows read; no writes",
+  "oldILikeGreekUppercaseMatchesFinalSigma": false,
+  "upperBothOperandsMatchesGreek": true,
+  "upperBothOperandsMatchesFinalAndMedialSigma": true,
+  "escapedWildcardLiteralPreserved": true,
+  "sql": "SELECT 'Literal 100%_! offer and καφές' ILIKE '%100!%!_!!%' ESCAPE '!' AS literal_match, 'καφές' ILIKE '%ΚΑΦΈΣ%' AS old_greek_match, UPPER('καφές') LIKE UPPER('%ΚΑΦΈΣ%') ESCAPE '!' AS upper_greek_match, UPPER('Καφέσ') LIKE UPPER('%καφές%') ESCAPE '!' AS sigma_match, UPPER('Literal 100%_! offer and καφές') LIKE UPPER('%100!%!_!!%') ESCAPE '!' AS upper_literal_match"
+}

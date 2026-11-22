@@ -1,3 +1,4 @@
+import {reviewedCashAnswer} from '../../../shared/assistant-reviewed-cash.mjs';
 import {businessRecordLabel,businessStatusLabel} from '../../../shared/assistant-business.mjs';
 const money=v=>v===null||v===undefined?null:typeof v==="number"&&Number.isFinite(v)?v:null;
 const at=v=>v&&!Number.isNaN(new Date(v).getTime())?new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens",hourCycle:"h23"}):"Μη καταγεγραμμένη";
@@ -23,7 +24,8 @@ export function assistantReportTables(evidence,{generatedAt=new Date()}={}){
   const noAmounts=["ambiguous","no_match","source_limited"].includes(r.result);
   if(r.reason==="catalog_name_not_found")notes.push("Δεν βρέθηκε αντιστοίχιση στον εξουσιοδοτημένο κατάλογο· δεν αποδεικνύονται μηδενικές πωλήσεις.");
   if(Array.isArray(r.categoryCandidates)&&r.categoryCandidates.length)notes.push(`Καταγεγραμμένες κατηγορίες: ${r.categoryCandidates.slice(0,20).join(" · ")}`);
-  if(r.kind==="business_records"){
+  if(r.kind==='cash_reviewed'){const actual=reviewedCashAnswer([r]);if(!actual?.sources?.length)throw Object.assign(new Error('Δεν επιβεβαιώθηκε η αναφορά ελέγχου.'),{status:422});title='Έλεγχος ταμείων';columns=['Κείμενο αναφοράς'];rows=actual.answer.split('\n').map(line=>[line]);}
+  else if(r.kind==="business_records"){
    title=r.title;columns=["Ημερομηνία","Είδος εγγραφής","Περιγραφή / Ονομασία","Ποσό (€)","Χειριστής","Αριθμός / Ταμείο","Κατάσταση"];
    rows=noAmounts?[]:r.rows.map(x=>[at(x.recordedAt),businessRecordLabel(x.recordType),x.label,money(x.amount),x.operatorName||"",x.reference||"",businessStatusLabel(x.status)]);
    if(r.currentSnapshot)notes.push("Τρέχων κατάλογος, όχι ιστορική εικόνα.");
@@ -46,7 +48,7 @@ export function assistantReportTables(evidence,{generatedAt=new Date()}={}){
    title="Έλεγχος κλεισμένων βαρδιών";columns=["Εταιρεία","Κατάστημα","Βάρδια / POS","Κλείσιμο","Αναμενόμενα (€)","Καταμετρημένα (€)","Διαφορά μετρητών (€)","Διαφορά POS–EFTPOS (€)"];
    rows=r.rows.map(x=>[x.companyName,x.storeName,`${x.shiftLabel||""} / ${x.terminalPos||""}`,at(x.closedAt),money(x.expectedOperational),money(x.actualOperational),x.auditRule?.mode==="POS_EFTPOS_ONLY"?"Δεν ελέγχεται":money(x.variance),x.auditRule?.posEftposEnabled===false?"Δεν ελέγχεται":money(x.cardVariance)]);notes.push("Μόνο κλεισμένες βάρδιες. Οι κανόνες ελέγχου διατηρούνται· απουσία κλεισμένων βαρδιών δεν επιβεβαιώνει συμφωνία στα ανοικτά ταμεία.");
   }else throw Object.assign(new Error("Η πηγή δεν υποστηρίζει ακόμη εξαγωγή."),{status:422});
-  const details={title,columns,rows,notes:notes.map(v=>String(v).slice(0,2000)),sheet:`Αναφορά ${index+1}`};
+  const details={title,columns,rows,...(r.kind==='cash_reviewed'?{prose:true}:{}),notes:notes.map(v=>String(v).slice(0,2000)),sheet:`Αναφορά ${index+1}`};
   if(r.kind==="sales_by_store"&&!noAmounts&&Array.isArray(r.stores))return [{title:"Σύνοψη ανά κατάστημα",columns:["Εταιρεία","Κατάστημα","Κατάσταση πηγής","Τζίρος (€)","Ποσότητες ανά μονάδα"],rows:r.stores.map(x=>[x.companyName,x.storeName,({complete:"Διαβάστηκε",no_sales:"Χωρίς πωλήσεις",unavailable:"Μη διαθέσιμη"})[x.result]||"Δες τον περιορισμό της πηγής",money(x.grossSales),(x.quantities||[]).map(q=>`${q.quantity} ${unit(q.unit)}`).join(" · ")]),notes:details.notes,sheet:`Σύνοψη ${index+1}`},details];
   return [details];
  });

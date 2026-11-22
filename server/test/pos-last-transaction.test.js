@@ -16,7 +16,7 @@ async function fixture(run,terminalChoices={terminalPos:'MAIN',fiscalDisplayName
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
  const calls=[],checkouts=[],polls=[],product={id:'water',sku:'2270',name:'Fixture water',salePrice:1,currentStock:100,barcodes:['52101588']};
  const api=async(path,options={})=>{
-  calls.push({path,options});
+  calls.push({path,options});if(path.endsWith('/ftext-cash/capability'))return {storeId:path.split('/')[4],configured:false};
   if(path.endsWith('/payment-terminals'))return terminalChoices;if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>checkouts.push({resolve,reject,body:JSON.parse(options.body)}));
   if(path.endsWith('/rbs-capdriver-v1/last-fixture'))return new Promise(resolve=>polls.push(resolve));
   if(/^\/api\/store-pos\/stores\/[^/]+$/.test(path))return {products:[product],layout:{quickKeys:[],categories:[]},access:{}};
@@ -37,8 +37,8 @@ test('completed totals accept genuine zero/signed numeric totals and reject fabr
  for(const value of [null,undefined,'',' ',true,false,{},[],NaN,Infinity,-Infinity,'bad','1,25',1e20])assert.equal(completedPosAmount(value),null);
 });
 
-test('mounted POS header retains actual completed amount and tap reset changes no payment, cart or tender',async()=>fixture(async f=>{
- assert.equal(f.amount(),'0,00€');assert.ok(f.button().closest('.store-pos-top'));assert.equal(f.button().type,'button');
+test('mounted POS basket top retains actual completed amount and tap reset changes no payment, cart or tender',async()=>fixture(async f=>{
+ assert.equal(f.amount(),'0,00€');assert.equal(f.button(),document.querySelector('.pos-modern-cart').firstElementChild);assert.equal(f.button().closest('.store-pos-top'),null);assert.equal(document.querySelectorAll('[data-pos-last-transaction]').length,1);assert.deepEqual([...document.querySelector('.pos-modern-primary-payments').children].map(button=>button.className),['cash','credit','iris','card']);assert.equal(f.button().type,'button');
  await f.scan();await f.click('button.cash');assert.equal(f.amount(),'0,00€');await f.act(async()=>f.checkouts.at(-1).resolve({total:9.25,payments:[{method:'CASH',amount:9.25}]}));assert.equal(f.amount(),'9,25€');
  await f.scan();await f.act(async()=>[...document.querySelectorAll('.number-grid button')].find(b=>b.textContent==='2').click());
  const beforeCalls=f.calls.length,cart=document.querySelector('.standard-lines').textContent,tender=document.querySelector('.money-cards').textContent;

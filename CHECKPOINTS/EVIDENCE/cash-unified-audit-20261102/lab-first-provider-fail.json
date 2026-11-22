@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "runtime": "dbb46c0ca655d139ac6ff76bd7f4d1949cd17c15",
+  "checksum": "58a1ba5a0071b82341bd4424eb5d6a343605e81b735561e572268dd913d71d8a",
+  "messageId": "chat-1793635167150-pvio9fobhk",
+  "requests": 1,
+  "completions": 1,
+  "status": "EXTRACTED_UNVERIFIED",
+  "observed": {
+    "dateText": "27/10/2026",
+    "documentDate": null,
+    "operatorText": "LAB POS 2",
+    "closingKind": "CLOSING_CASH",
+    "amountText": "9,40 €",
+    "timeText": "19:24:28",
+    "uncertain": false,
+    "notes": [],
+    "nullAmountOtherHeadings": 5
+  },
+  "projection": "DOCUMENT_DATE_UNREADABLE",
+  "acceptance": "LAB FAIL - no real-store AI dispatch",
+  "targetControlCounts": [
+    0,
+    3
+  ],
+  "targetControlLedgerDigests": [
+    "d41d8cd98f00b204e9800998ecf8427e",
+    "1e78213a2831b31871797e42bd653b57"
+  ],
+  "moneyAndLedgerUnchanged": true,
+  "rawRetained": true,
+  "providerReplayAuthorized": false
+}

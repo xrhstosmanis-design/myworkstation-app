@@ -1,0 +1,397 @@
+{
+  "caseId": "LAB-CATEGORY-20261103-ROOT-01",
+  "result": "PASS bounded nonfinancial catalogue lifecycle",
+  "finalBackendPublicHealth": {"ok":true,"version":"0.22.0+kat-test-pos","revision":"35d6840e43080dd519a730a27437100b277a3404","recordedAt":"2026-11-03T17:24:47.195Z","exactLoadedClientRevision":null},
+  "beforeActionMain": "d72937d703344b76f55e3eb16f1800e9cf7526cc",
+  "freshBeforeCreate": {
+    "caseId": "LAB-CATEGORY-20261103-ROOT-01",
+    "phase": "fresh-before-create",
+    "actor": "genuine SUPER_ADMIN Χρήστος Μάνης through normal LAB support UI",
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "controlStoreId": "cmv2qanca000psigeizep8o9m",
+    "previousNativeHealth": {
+      "revision": "35d6840e43080dd519a730a27437100b277a3404",
+      "ok": true,
+      "recordedAt": "2026-11-03T17:05:43.086Z"
+    },
+    "catalog": [
+      {
+        "active_categories": 0,
+        "intended_label_count": 0,
+        "observed_at": "2026-11-03T17:21:42.512737Z",
+        "total_categories": 0
+      }
+    ],
+    "scalarControls": [
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 43,
+        "projection": "CashShiftSession",
+        "scalar_projection_digest": "01e2aaec3a6dbee5095c279fe49aa401",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 95,
+        "projection": "StockMovement",
+        "scalar_projection_digest": "182c6d86da53a8435ff976e89e5c5b4f",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 110,
+        "projection": "StoreProduct",
+        "scalar_projection_digest": "a11573f6cd4bdea44fae983ffe71f19c",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 134,
+        "projection": "StoreTransaction",
+        "scalar_projection_digest": "b7821cb230dcb6de75880b4b89dff9a5",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 0,
+        "projection": "CashShiftSession",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 0,
+        "projection": "StockMovement",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 0,
+        "projection": "StoreProduct",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:21:33.031656Z",
+        "projected_rows": 0,
+        "projection": "StoreTransaction",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      }
+    ],
+    "ui": {
+      "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "catalogCount": 0,
+      "mainTransactions": 0,
+      "mainCash": 0,
+      "mainCards": 0,
+      "mainIris": 0,
+      "mainExpenses": 0,
+      "mainTotal": 0,
+      "stockAction": null,
+      "paymentAction": null
+    },
+    "plannedActions": [
+      "Create exactly one active synthetic category in LAB company through existing central UI",
+      "Refresh actual POS modal catalogue and select same persisted ID without entering amount/file/ack or payment submit",
+      "Record fresh before-deactivation metadata and scalar controls locally before action",
+      "Soft-deactivate same category through existing central UI; retain row and verify POS no longer offers active choice"
+    ],
+    "scopeLimit": "Counts and digests cover only the explicit capped scalar projections in the companion SQL; not whole-row or whole-database invariance. N40 is financial/stock control only; catalogue is company-shared.",
+    "scopeRestored": "Normal PlatformAdmin chain to LAB after previous support context invalidated; no writes before restoration",
+    "exactLoadedClientRevision": null
+  },
+  "createdRow": [
+    {
+      "active": true,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-11-03T17:21:57.932Z",
+      "description": "LAB-CATEGORY-20261103-ROOT-01",
+      "id": "0b3618e5-7549-4907-a5e9-01f94d1b9bf6",
+      "observed_at": "2026-11-03T17:22:04.298763Z",
+      "updatedAt": "2026-11-03T17:21:57.932Z"
+    }
+  ],
+  "afterCreateControls": [
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 43,
+      "projection": "CashShiftSession",
+      "scalar_projection_digest": "01e2aaec3a6dbee5095c279fe49aa401",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 95,
+      "projection": "StockMovement",
+      "scalar_projection_digest": "182c6d86da53a8435ff976e89e5c5b4f",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 110,
+      "projection": "StoreProduct",
+      "scalar_projection_digest": "a11573f6cd4bdea44fae983ffe71f19c",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 134,
+      "projection": "StoreTransaction",
+      "scalar_projection_digest": "b7821cb230dcb6de75880b4b89dff9a5",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 0,
+      "projection": "CashShiftSession",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 0,
+      "projection": "StockMovement",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 0,
+      "projection": "StoreProduct",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:22:05.013696Z",
+      "projected_rows": 0,
+      "projection": "StoreTransaction",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    }
+  ],
+  "beforeSoftDeactivate": {
+    "caseId": "LAB-CATEGORY-20261103-ROOT-01",
+    "phase": "before-soft-deactivate",
+    "actor": "genuine SUPER_ADMIN Χρήστος Μάνης, normal LAB support",
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "row": [
+      {
+        "active": true,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-11-03T17:21:57.932Z",
+        "description": "LAB-CATEGORY-20261103-ROOT-01",
+        "id": "0b3618e5-7549-4907-a5e9-01f94d1b9bf6",
+        "observed_at": "2026-11-03T17:23:16.913028Z",
+        "updatedAt": "2026-11-03T17:21:57.932Z"
+      }
+    ],
+    "scalarControls": [
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 43,
+        "projection": "CashShiftSession",
+        "scalar_projection_digest": "01e2aaec3a6dbee5095c279fe49aa401",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 95,
+        "projection": "StockMovement",
+        "scalar_projection_digest": "182c6d86da53a8435ff976e89e5c5b4f",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 110,
+        "projection": "StoreProduct",
+        "scalar_projection_digest": "a11573f6cd4bdea44fae983ffe71f19c",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 134,
+        "projection": "StoreTransaction",
+        "scalar_projection_digest": "b7821cb230dcb6de75880b4b89dff9a5",
+        "store_id": "cmtpopbgo000trhb5ng9ytiru"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 0,
+        "projection": "CashShiftSession",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 0,
+        "projection": "StockMovement",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 0,
+        "projection": "StoreProduct",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      },
+      {
+        "complete": true,
+        "observed_at": "2026-11-03T17:23:17.335776Z",
+        "projected_rows": 0,
+        "projection": "StoreTransaction",
+        "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+        "store_id": "cmv2qanca000psigeizep8o9m"
+      }
+    ],
+    "pos": {
+      "selectedId": "0b3618e5-7549-4907-a5e9-01f94d1b9bf6",
+      "selectionRetainedAfterRefresh": true,
+      "amount": "",
+      "comments": "",
+      "attachments": 0,
+      "ack": false,
+      "submitted": false
+    },
+    "plannedAction": "Native central UI soft-deactivate exact row once, retain row, refresh mounted POS and verify stale selection cleared",
+    "recordedAt": "2026-11-03T17:23:17.525Z"
+  },
+  "retainedInactiveRow": [
+    {
+      "active": false,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-11-03T17:21:57.932Z",
+      "description": "LAB-CATEGORY-20261103-ROOT-01",
+      "id": "0b3618e5-7549-4907-a5e9-01f94d1b9bf6",
+      "observed_at": "2026-11-03T17:23:42.399229Z",
+      "updatedAt": "2026-11-03T17:23:27.195Z"
+    }
+  ],
+  "afterSoftDeactivateControls": [
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 43,
+      "projection": "CashShiftSession",
+      "scalar_projection_digest": "01e2aaec3a6dbee5095c279fe49aa401",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 95,
+      "projection": "StockMovement",
+      "scalar_projection_digest": "182c6d86da53a8435ff976e89e5c5b4f",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 110,
+      "projection": "StoreProduct",
+      "scalar_projection_digest": "a11573f6cd4bdea44fae983ffe71f19c",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 134,
+      "projection": "StoreTransaction",
+      "scalar_projection_digest": "b7821cb230dcb6de75880b4b89dff9a5",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 0,
+      "projection": "CashShiftSession",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 0,
+      "projection": "StockMovement",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 0,
+      "projection": "StoreProduct",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:42.813353Z",
+      "projected_rows": 0,
+      "projection": "StoreTransaction",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    }
+  ],
+  "comparisons": {
+    "allEightControlsUnchangedAfterCreate": true,
+    "allEightControlsUnchangedAfterDeactivate": true
+  },
+  "pos": {
+    "selectedUuid": "0b3618e5-7549-4907-a5e9-01f94d1b9bf6",
+    "selectedEvidenceAt": "2026-11-03T17:22:39.895Z",
+    "retainedAfterNormalRefresh": true,
+    "afterDeactivateRefresh": {
+      "value": "",
+      "disabled": true,
+      "options": [
+        {
+          "text": "— Επιλογή κατηγορίας —",
+          "value": "",
+          "selected": true
+        }
+      ],
+      "observedAt": "2026-11-03T17:23:50.541Z"
+    },
+    "amount": "",
+    "comments": "",
+    "attachments": 0,
+    "ack": false,
+    "submitted": false
+  },
+  "limitations": [
+    "Genuine SUPER_ADMIN on cloud browser, not independent operator/device acceptance",
+    "No financial submission or persisted payment binding acceptance",
+    "No physical camera/photo/focus test",
+    "Only explicit capped scalar projections compared, not whole-row/database invariance",
+    "Company-shared LAB catalogue; N40 financial/stock control only",
+    "Exact loaded client revision not independently captured"
+  ]
+}

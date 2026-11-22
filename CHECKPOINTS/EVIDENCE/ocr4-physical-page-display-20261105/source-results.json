@@ -1,0 +1,46 @@
+{
+  "status": "SOURCE_CANDIDATE_AWAITING_FULL_CI_REVIEW_LAB",
+  "base_claim": "7851efe9889621553790fe920316c6b0a5bdbfcd",
+  "recorded_at": "2026-11-05T12:11:06+02:00",
+  "runtime": "v20.20.2",
+  "baseline": {
+    "tests": 72,
+    "pass": 72,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "combined": {
+    "tests": 119,
+    "pass": 119,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "actual_chromium_cases": 16,
+  "normal_client_build": "PASS",
+  "hosted_ocr": false,
+  "deployed": false,
+  "business_mutation": false,
+  "visual_review": "PENDING",
+  "registries": {
+    "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md": {
+      "before_blob": "6bc44b54e7212d0a2b6c88fa2afdfae6ca531ec6",
+      "after_blob": "8ce3defc7932da4576f1ba2a42b51cd732b2ae1a",
+      "prefix_bytes": 2432,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/OPEN_WORK_TRACKER.md": {
+      "before_blob": "b32bbefeb12b7fe9ecc1feca3098a1d630cdfa1f",
+      "after_blob": "963ba78f85a2de98e1b7eebb2fafb0a0d939b44a",
+      "prefix_bytes": 2432,
+      "old_suffix_preserved": true
+    },
+    "docs/roadmap/PENDING_WORK.md": {
+      "before_blob": "e3e32fbc598d2088834e628421e1cffa66ad2e44",
+      "after_blob": "4d382f996838d9e5eb5d4439d322cfe09cd02454",
+      "prefix_bytes": 2432,
+      "old_suffix_preserved": true
+    }
+  }
+}

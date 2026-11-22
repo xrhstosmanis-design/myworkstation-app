@@ -1,0 +1,280 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {basename} from 'node:path';
+import {build} from 'esbuild';
+import {JSDOM} from 'jsdom';
+
+async function mount(entry,keep=[]){
+ const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/'+entry,import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime'],loader:{'.css':'empty'},plugins:[{name:'isolated-unrelated-panels',setup(b){b.onLoad({filter:/\.jsx$/},args=>new Set([basename(entry),...keep]).has(basename(args.path))?undefined:{contents:'import React from "react";export default function OtherPanel(){return null}',loader:'jsx'});}}]});
+ const module={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/platform-admin'}),keys=['window','document','navigator','HTMLElement','Node','Event','CustomEvent','MutationObserver','localStorage','sessionStorage','fetch','crypto','IS_REACT_ACT_ENVIRONMENT'],previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:k==='crypto'?{randomUUID}:dom.window[k]});
+ const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
+ return {dom,React,act,root,Component:module.exports.default,cleanup:async()=>{await act(async()=>root.unmount());dom.window.close();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k];}};
+}
+const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text);
+const field=text=>[...document.querySelectorAll('label')].find(l=>l.textContent.startsWith(text))?.querySelector('select,input,textarea');
+const row=(id,name,next)=>({sessionId:id,operatorName:name,day:'2026-10-21',terminalPos:'MAIN',remainingCents:id==='a'?-8700:8000,sourceHash:(id==='a'?'a':'b').repeat(64),planHash:'c'.repeat(64),nextSessionId:next,eligible:true,reviewed:false,status:'AWAITING_REVIEW',transactions:[]});
+function report(store,period,completed=[]){return {storeId:store,generation:'0',period,head:completed.length?'a'.repeat(64):'ROOT',rows:[row('a','<img src=x onerror=bad>','b'),row('b','Second',null)],context:[],history:[],reportHash:'d'.repeat(64),completedRequestIds:completed,text:'SERVER REPORT '+store+' <script>untrusted</script>',checkpoint:null};}
+const period={from:'2026-10-21',to:'2026-10-23'};
+test('mounted review panel: no automatic requests, explicit confirmed single POST, uncertain reply requires GET, exact common copy and no guessed paper values',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m,calls=[],committed=[];let fail=true,commitFailure=true,copied;
+ Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>copied=text}});
+ const api=async(path,options={})=>{calls.push({path,...options});if(options.method==='POST'){const request=JSON.parse(options.body);if(!fail||commitFailure)committed.push(request.requestId);if(fail)throw Error('Lost reply');return report('A',period,committed);}
+  if(path.startsWith('/api/cash-papers/'))return {storeId:'A',generation:'0',sources:[{sourceId:'paper',checksum:'e'.repeat(64),references:[{messageId:'paper',filename:'<svg onload=bad>'}],reading:{status:'EXTRACTED_UNVERIFIED',sourceKey:'f'.repeat(64),extraction:{documentDate:null,lines:[{label:'Δυσανάγνωστο',amountText:null,amountCents:null,requiresReview:true}]}}}]};
+  const id=new URL(path,'https://isolated.invalid').searchParams.get('requestId');return {...report('A',period,committed),requestId:id,requestStatus:id?(committed.includes(id)?'APPLIED':'NOT_FOUND'):null};
+ };
+ const click=async el=>{assert.ok(el);await act(async()=>el.click());},change=async(el,value)=>{assert.ok(el);await act(async()=>{const proto=el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?dom.window.HTMLTextAreaElement.prototype:dom.window.HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});};
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));assert.equal(calls.length,0);
+  await click(button('Έλεγχος με επανυπολογισμούς'));assert.equal(calls.length,1);assert.equal(document.querySelector('script'),null);assert.equal(document.querySelector('img'),null);
+  await change(field('Προηγούμενη βάρδια'),'a');await change(field('Επόμενη βάρδια'),'b');await change(field('Επιβεβαιωμένο ποσό'),'80,00');await change(field('Τεκμηρίωση'),'Επιβεβαιώθηκε λάθος καταμέτρησης.');assert.equal(button('Καταχώριση ελέγχου').disabled,true);
+  await click(document.querySelector('input[type="checkbox"]'));await act(async()=>{button('Καταχώριση ελέγχου').click();button('Καταχώριση ελέγχου').click();});
+  const posts=()=>calls.filter(c=>c.method==='POST');assert.equal(posts().length,1);const sent=JSON.parse(posts()[0].body);assert.equal(sent.data.kind,'OFFSET');assert.equal(sent.data.amountCents,8000);assert.equal(sent.data.countingErrorConfirmed,true);assert.equal(button('Καταχώριση ελέγχου').disabled,true);assert.equal(button('Αντιγραφή ελεγμένης αναφοράς').disabled,true);
+  await act(async()=>Promise.resolve());assert.equal(posts().length,1,'no deferred retry');fail=false;
+  await click(button('Ανανέωση ελέγχου'));assert.match(document.body.textContent,/είχε ήδη καταχωριστεί/);assert.equal(posts().length,1);
+  await click(button('Αντιγραφή ελεγμένης αναφοράς'));assert.equal(copied,report('A',period,committed).text,'clipboard uses exactly the common server report');
+  await change(field('Ενέργεια ελέγχου'),'ASSOCIATE');await click(button('Φόρτωση αναγνωσμένων χαρτιών'));assert.equal(calls.at(-1).path,'/api/cash-papers/stores/A');
+  await change(field('Χαρτί'),'e'.repeat(64));await change(field('Γραμμή χαρτιού'),'0');assert.equal(field('Επιβεβαιωμένο ποσό').value,'');assert.equal(field('Επιβεβαιωμένη ημερομηνία').value,'');assert.equal(document.querySelector('svg'),null);assert(!calls.some(c=>c.path.endsWith('/read')),'association never invokes AI');
+  await change(field('Ενέργεια ελέγχου'),'CONFIRM');await change(field('Βάρδια ελέγχου'),'a');await change(field('Τεκμηρίωση'),'Επανελέγχθηκαν τα αρχικά στοιχεία.');await click(document.querySelector('input[type="checkbox"]'));
+  fail=true;commitFailure=false;await click(button('Καταχώριση ελέγχου'));const uncertainId=JSON.parse(posts().at(-1).body).requestId;
+  fail=false;await click(button('Ανανέωση ελέγχου'));assert.match(document.body.textContent,/δεν βρέθηκε/);await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));assert.equal(JSON.parse(posts().at(-1).body).requestId,uncertainId,'manual retry keeps the original idempotency identity');
+ }finally{await m.cleanup();}
+});
+test('mounted review panel rejects old store and period completions without remount or automatic resubmission',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m,calls=[];let release;
+ const api=async(path,options={})=>{calls.push({path,...options});const store=new URL(path,'https://isolated.invalid').pathname.split('/')[4];if(options.method==='POST')return new Promise(resolve=>release=()=>resolve(report('A',period)));return report(store,period);};
+ const render=(store,p=period)=>act(async()=>root.render(React.createElement(Component,{api,storeId:store,...p}))),click=el=>act(async()=>el.click()),change=(el,value)=>act(async()=>{Object.getOwnPropertyDescriptor(el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:dom.window.HTMLTextAreaElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});
+ try{
+  await render('A');await click(button('Έλεγχος με επανυπολογισμούς'));await change(field('Ενέργεια ελέγχου'),'CONFIRM');await change(field('Βάρδια ελέγχου'),'a');await change(field('Τεκμηρίωση'),'Ελέγχθηκαν τα στοιχεία βάρδιας.');await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));assert.equal(typeof release,'function');
+  await render('B',{from:'2026-10-22',to:'2026-10-24'});await act(async()=>release());assert.doesNotMatch(document.body.textContent,/SERVER REPORT A/);assert.equal(calls.filter(c=>c.method==='POST').length,1);assert.equal(button('Έλεγχος με επανυπολογισμούς').getAttribute('aria-expanded'),'false');
+ }finally{await m.cleanup();}
+});
+test('actual Platform parent mounts the real review panel for an explicitly selected empty store and sends its authenticated scoped GET',async()=>{
+ const m=await mount('platform/PlatformAdminApp.jsx',['CashReconciliationPanel.jsx','CashReportPeriodFields.jsx']),{act,dom,React,root,Component}=m,calls=[];
+ localStorage.setItem('token','synthetic');localStorage.setItem('platformUser',JSON.stringify({id:'test',fullName:'Test'}));
+ globalThis.fetch=async(path,options={})=>{calls.push({path,...options});assert(!options.method||options.method==='GET');const url=new URL(path,'https://isolated.invalid');let data;
+  if(url.pathname==='/api/platform/overview')data={stats:{},companies:[{id:'co',name:'Company',active:true,plan:'BASIC',stores:[{id:'A',name:'Store A',active:true},{id:'B',name:'Store B',active:true}]}]};
+  else if(url.pathname==='/api/platform/owners')data={owners:[]};else if(url.pathname==='/api/platform/backup-monitoring')data={configured:false};
+  else if(url.pathname==='/api/platform/cash-control/daily')data={...Object.fromEntries(url.searchParams),storeIds:url.searchParams.get("storeIds")?.split(",")||[],totals:{shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0},rows:[],stores:[]};
+  else if(url.pathname.startsWith('/api/cash-reconciliation/stores/'))data=report(url.pathname.split('/').at(-1),{from:url.searchParams.get('from'),to:url.searchParams.get('to')});else throw Error('Unexpected route '+path);
+  return {ok:true,status:200,text:async()=>JSON.stringify(data)};
+ };
+ const click=el=>act(async()=>el.click()),select=async value=>act(async()=>{for(const el of document.querySelectorAll('.cash-report-stores input')){if(el.checked!==(el.closest('label').textContent.trim()===`Store ${value}`))el.click()};});
+ try{
+  await act(async()=>root.render(React.createElement(Component)));await click(button('Οικονομικά & Έλεγχοι'));await click(button('Ταμεία'));assert.equal(document.querySelector('.cash-reconciliation-panel'),null);
+  await select('A');assert.ok(button('Έλεγχος με επανυπολογισμούς'));assert(!calls.some(c=>c.path.startsWith('/api/cash-reconciliation')));
+  await click(button('Έλεγχος με επανυπολογισμούς'));assert.match(calls.at(-1).path,/^\/api\/cash-reconciliation\/stores\/A\?/);assert.equal(calls.at(-1).headers.Authorization,'Bearer synthetic');
+  await select('B');assert.doesNotMatch(document.body.textContent,/SERVER REPORT A/);await click(button('Έλεγχος με επανυπολογισμούς'));assert.match(calls.at(-1).path,/^\/api\/cash-reconciliation\/stores\/B\?/);
+ }finally{await m.cleanup();}
+});
+test('actual Backoffice parent uses the applied report period and current store for the real review panel',async()=>{
+ const m=await mount('cloud/CashControlPanel.jsx',['CashReconciliationPanel.jsx','CashReportPeriodFields.jsx']),{act,React,root,Component}=m,calls=[];
+ const api=async(path,options={})=>{calls.push({path,...options});assert(!options.method||options.method==='GET');const url=new URL(path,'https://isolated.invalid');
+  if(path.includes('/daily-summary'))return {...period,date:period.from,sessions:[]};if(path.includes('/overview'))return {recent:[],suggestedOpening:{},offlineSync:{counts:{}}};
+  if(path.startsWith('/api/cash-reconciliation/'))return report(url.pathname.split('/').at(-1),{from:url.searchParams.get('from'),to:url.searchParams.get('to')});throw Error('Unexpected fixture request '+path);
+ };
+ const render=id=>act(async()=>root.render(React.createElement(Component,{api,store:{id,name:id}}))),click=el=>act(async()=>el.click());
+ try{
+  await render('A');assert(!calls.some(c=>c.path.startsWith('/api/cash-reconciliation/')));await click(button('Έλεγχος με επανυπολογισμούς'));
+  let url=new URL(calls.at(-1).path,'https://isolated.invalid');assert.equal(url.pathname,'/api/cash-reconciliation/stores/A');assert.equal(url.searchParams.get('from'),period.from);assert.equal(url.searchParams.get('to'),period.to);
+  await render('B');assert.doesNotMatch(document.body.textContent,/SERVER REPORT A/);await click(button('Έλεγχος με επανυπολογισμούς'));url=new URL(calls.at(-1).path,'https://isolated.invalid');assert.equal(url.pathname,'/api/cash-reconciliation/stores/B');
+ }finally{await m.cleanup();}
+});
+test('review history pages are explicit free GETs and never resubmit an action or silently broaden the store',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];
+ const api=async(path,options={})=>{calls.push({path,...options});assert(!options.method||options.method==='GET');const page=Number(new URL(path,'https://isolated.invalid').searchParams.get('historyPage')||0);return {...report('A',period),historyPage:page,historyPages:3,historyTotal:130,history:[{id:'page-'+page,kind:'CHECKPOINT',note:'Καταχώρηση σελίδας '+page,actorName:'Test',createdAt:'2026-10-26',active:true}]};};
+ const click=el=>act(async()=>el.click());
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));await click(document.querySelector('summary'));
+  await click(button('Παλαιότερες καταχωρήσεις'));assert.match(calls.at(-1).path,/historyPage=1/);assert.match(document.body.textContent,/Καταχώρηση σελίδας 1/);
+  await click(button('Παλαιότερες καταχωρήσεις'));assert.equal(button('Παλαιότερες καταχωρήσεις').disabled,true);await click(button('Νεότερες καταχωρήσεις'));assert.match(calls.at(-1).path,/historyPage=1/);assert(calls.every(c=>c.path.startsWith('/api/cash-reconciliation/stores/A?')));
+ }finally{await m.cleanup();}
+});
+
+test('continuation defaults exclude automatic rows while retaining unresolved rows and explicitly saved notes, including empty lists',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m;let checkpoint=null;
+ const api=async()=>({...report('A',period),rows:[{...row('a','Calculated','b'),automaticallyCalculated:true},{...row('b','Pending',null),automaticallyCalculated:false}],checkpoint});
+ const click=el=>act(async()=>el.click());
+ const choose=async value=>{const el=field('Ενέργεια ελέγχου');await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});};
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));
+  await click(button('Έλεγχος με επανυπολογισμούς'));await choose('CHECKPOINT');
+  assert.doesNotMatch(field('Εκκρεμότητες').value,/Calculated/);assert.match(field('Εκκρεμότητες').value,/Pending/);
+  checkpoint={resumeFrom:'2026-10-22',pendingNotes:['Λείπει παραστατικό υπολογισμένης βάρδιας.']};
+  await click(button('Ανανέωση ελέγχου'));assert.equal(field('Εκκρεμότητες').value,checkpoint.pendingNotes[0]);
+  checkpoint={...checkpoint,pendingNotes:[]};await click(button('Ανανέωση ελέγχου'));assert.equal(field('Εκκρεμότητες').value,'','a deliberately saved empty list is not overwritten by generated review notes');
+ }finally{await m.cleanup();}
+});
+
+test('individual issue reply selects the exact transaction, requires explicit decision and confirmation, recovers a lost reply and reopens without another cash approval',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m,calls=[],committed=[];let lost=true,decision='OPEN';
+ const q={id:'1'.repeat(64),sessionId:'a',transactionId:'expense-one',sourceHash:'a'.repeat(64),fingerprint:'e'.repeat(64),code:'EXPENSE_WITHOUT_DOCUMENT',day:period.from,operatorName:'First',amountCents:2500,occurredAt:'2026-10-21T10:00:00Z',current:true};
+ const result=()=>({...report('A',period),issueRegister:{version:1,status:'AVAILABLE',limit:500,issues:[{...q,status:decision,lastReply:committed.length?{note:'<img src=x onerror=bad> Συγκεκριμένη απάντηση.',actorName:'Auditor',createdAt:'2026-10-31T12:00:00Z'}:null},{...q,id:'2'.repeat(64),transactionId:'expense-two',current:false,status:'RECHECK_REQUIRED',lastReply:null}]}});
+ const api=async(path,options={})=>{calls.push({path,...options});if(options.method==='POST'){const req=JSON.parse(options.body);assert.equal(req.data.kind,'ISSUE');assert.equal(req.data.issueId,q.id);assert.equal(req.data.sessionId,q.sessionId);assert.equal(req.data.sourceHash,q.sourceHash);assert.equal(req.data.issueFingerprint,q.fingerprint);assert.equal(req.data.reportHash,'d'.repeat(64));decision=req.data.status;committed.push(req.requestId);if(lost)throw Error('Lost response');return result();}const id=new URL(path,'https://isolated.invalid').searchParams.get('requestId');return {...result(),requestId:id,requestStatus:id?(committed.includes(id)?'APPLIED':'NOT_FOUND'):null};};
+ const click=el=>act(async()=>el.click()),change=(el,value)=>act(async()=>{const proto=el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:dom.window.HTMLTextAreaElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});
+ const posts=()=>calls.filter(c=>c.method==='POST');
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));
+  assert.equal([...document.querySelectorAll('button')].filter(b=>b.textContent==='Απάντηση στην εκκρεμότητα')[1].disabled,true);
+  await click(button('Απάντηση στην εκκρεμότητα'));assert.equal(field('Εκκρεμότητα παραστατικού').value,q.id);
+  await change(field('Κατάσταση μετά την απάντηση'),'CLOSED');await change(field('Τεκμηρίωση'),'Ελέγχθηκε το πρωτότυπο της πρώτης κίνησης.');assert.equal(posts().length,0);assert.equal(button('Καταχώριση ελέγχου').disabled,true);
+  await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));assert.equal(posts().length,1);assert.equal(JSON.parse(posts()[0].body).data.status,'CLOSED');
+  lost=false;await click(button('Ανανέωση ελέγχου'));assert.equal(posts().length,1);assert.match(document.body.textContent,/είχε ήδη καταχωριστεί/);assert.equal(document.querySelector('img'),null);assert.match(document.body.textContent,/Κλειστή με τεκμηρίωση/);
+  await click(button('Απάντηση στην εκκρεμότητα'));assert.equal(field('Κατάσταση μετά την απάντηση').value,'CLOSED');await change(field('Κατάσταση μετά την απάντηση'),'OPEN');await change(field('Τεκμηρίωση'),'Άνοιγμα ξανά της ίδιας συγκεκριμένης εκκρεμότητας.');await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));
+  assert.equal(posts().length,2);assert.equal(JSON.parse(posts()[1].body).data.status,'OPEN');assert(!posts().some(p=>JSON.parse(p.body).data.kind==='CONFIRM'));
+ }finally{await m.cleanup();}
+});
+
+test('original handoff reply selects both exact shifts, requires explicit decision and confirmation, recovers a lost reply and reopens without another cash approval',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m,calls=[],committed=[];let lost=true,decision='OPEN';
+ const q={id:'1'.repeat(64),previousSessionId:'a',nextSessionId:'b',previousHash:'a'.repeat(64),nextHash:'b'.repeat(64),fingerprint:'e'.repeat(64),previousDay:period.from,nextDay:period.to,previousOperator:'First',nextOperator:'Second',terminalPos:'MAIN',previousClosingCents:10000,nextOpeningCents:21900,differenceCents:11900,repliesCount:0,current:true};
+ const result=()=>({...report('A',period),handoffRegister:{version:1,status:'AVAILABLE',limit:500,issues:[{...q,status:decision,lastReply:committed.length?{note:'<img src=x onerror=bad> Συγκεκριμένη απάντηση.',actorName:'Auditor',createdAt:'2026-10-31T12:00:00Z'}:null},{...q,id:'2'.repeat(64),previousSessionId:'old-a',current:false,status:'RECHECK_REQUIRED',lastReply:null}]}});
+ const api=async(path,options={})=>{calls.push({path,...options});if(options.method==='POST'){const req=JSON.parse(options.body);assert.equal(req.data.kind,'HANDOFF_ISSUE');assert.equal(req.data.issueId,q.id);assert.equal(req.data.previousSessionId,q.previousSessionId);assert.equal(req.data.nextSessionId,q.nextSessionId);assert.equal(req.data.previousHash,q.previousHash);assert.equal(req.data.nextHash,q.nextHash);assert.equal(req.data.issueFingerprint,q.fingerprint);assert.equal(req.data.reportHash,'d'.repeat(64));decision=req.data.status;committed.push(req.requestId);if(lost)throw Error('Lost response');return result();}const id=new URL(path,'https://isolated.invalid').searchParams.get('requestId');return {...result(),requestId:id,requestStatus:id?(committed.includes(id)?'APPLIED':'NOT_FOUND'):null};};
+ const click=el=>act(async()=>el.click()),change=(el,value)=>act(async()=>{const proto=el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:dom.window.HTMLTextAreaElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});
+ const posts=()=>calls.filter(c=>c.method==='POST');
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));
+  assert.equal([...document.querySelectorAll('button')].filter(b=>b.textContent==='Απάντηση στην παράδοση')[1].disabled,true);
+  await click(button('Απάντηση στην παράδοση'));assert.equal(field('Παράδοση βάρδιας').value,q.id);
+  await change(field('Κατάσταση μετά την απάντηση'),'CLOSED');await change(field('Τεκμηρίωση'),'Ελέγχθηκε το πρωτότυπο της πρώτης κίνησης.');assert.equal(posts().length,0);assert.equal(button('Καταχώριση ελέγχου').disabled,true);
+  await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));assert.equal(posts().length,1);assert.equal(JSON.parse(posts()[0].body).data.status,'CLOSED');
+  lost=false;await click(button('Ανανέωση ελέγχου'));assert.equal(posts().length,1);assert.match(document.body.textContent,/είχε ήδη καταχωριστεί/);assert.equal(document.querySelector('img'),null);assert.match(document.body.textContent,/Κλειστή με τεκμηρίωση/);
+  await click(button('Απάντηση στην παράδοση'));assert.equal(field('Κατάσταση μετά την απάντηση').value,'CLOSED');await change(field('Κατάσταση μετά την απάντηση'),'OPEN');await change(field('Τεκμηρίωση'),'Άνοιγμα ξανά της ίδιας συγκεκριμένης εκκρεμότητας.');await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));
+  assert.equal(posts().length,2);assert.equal(JSON.parse(posts()[1].body).data.status,'OPEN');assert(!posts().some(p=>JSON.parse(p.body).data.kind==='CONFIRM'));
+ }finally{await m.cleanup();}
+});
+
+const automaticButton='Αυτόματος έλεγχος με χειρόγραφα και συμβάντα';
+const paperList=(store='A')=>({storeId:store,generation:'0',status:'AWAITING_READING',sources:[{checksum:'a'.repeat(64),reading:{status:'EXTRACTED_UNVERIFIED'}},{checksum:'b'.repeat(64),reading:{status:'NOT_READ'}},{checksum:'c'.repeat(64),reading:{status:'NOT_READ'}}]});
+const paperStep=(status,checksum,remaining,p=period)=>({storeId:'A',generation:'0',period:p,status,processedChecksum:checksum,remaining});
+test('mounted automatic check explicitly discovers papers, processes next unread originals and requests full evidence once with no review mutation',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let step=0,copied;
+ Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>copied=text}});
+ const api=async(path,options={})=>{calls.push({path,...options});
+  if(path.endsWith('/read-next')){assert.equal(options.method,'POST');assert.deepEqual(JSON.parse(options.body),{generation:'0',period});return ++step===1?paperStep('MORE','b'.repeat(64),1):paperStep('COMPLETE','c'.repeat(64),0);}
+  if(path==='/api/cash-papers/stores/A')return paperList();
+  const url=new URL(path,'https://isolated.invalid'),store=url.pathname.split('/').at(-1);return {...report(store,period),text:url.searchParams.has('fullAudit')?'FULL EVIDENCE REPORT':'BASIC REPORT'};
+ };
+ const render=store=>act(async()=>root.render(React.createElement(Component,{api,storeId:store,...period}))),click=el=>act(async()=>el.click());
+ try{
+  await render('A');assert.equal(calls.length,0);await click(button('Έλεγχος με επανυπολογισμούς'));assert.equal(calls.length,1);assert(!calls[0].path.includes('fullAudit'));
+  await click(button(automaticButton));assert.deepEqual(calls.slice(1).map(c=>new URL(c.path,'https://isolated.invalid').pathname),['/api/cash-papers/stores/A','/api/cash-papers/stores/A/read-next','/api/cash-papers/stores/A/read-next','/api/cash-reconciliation/stores/A']);
+  assert.equal(new URL(calls.at(-1).path,'https://isolated.invalid').searchParams.get('fullAudit'),'1');assert.equal(step,2,'existing extraction needs no separate AI read');assert(!calls.some(c=>c.path.endsWith('/read')||c.path.endsWith('/reviews')));
+  await click(button('Αντιγραφή ελεγμένης αναφοράς'));assert.equal(copied,'FULL EVIDENCE REPORT');
+  await click(button('Ανανέωση ελέγχου'));assert.match(calls.at(-1).path,/fullAudit=1/);assert.equal(step,2,'refresh reuses completed evidence without another POST');
+  await render('B');await click(button('Έλεγχος με επανυπολογισμούς'));assert.match(calls.at(-1).path,/stores\/B\?/);assert(!calls.at(-1).path.includes('fullAudit'),'another store starts with its basic view until explicitly requested');
+ }finally{await m.cleanup();}
+});
+test('mounted automatic check stops a stale discovery or read-next response after store or period changes',async()=>{
+ for(const phase of ['discovery','read-next']){
+  const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let release;
+  const api=async(path,options={})=>{calls.push({path,...options});
+   if(path==='/api/cash-papers/stores/A')return phase==='discovery'?new Promise(resolve=>release=()=>resolve(paperList())):paperList();
+   if(path.endsWith('/read-next'))return new Promise(resolve=>release=()=>resolve(paperStep('MORE','b'.repeat(64),1)));
+   const url=new URL(path,'https://isolated.invalid');return report(url.pathname.split('/').at(-1),{from:url.searchParams.get('from'),to:url.searchParams.get('to')});
+  };
+  const render=(store,p=period)=>act(async()=>root.render(React.createElement(Component,{api,storeId:store,...p}))),click=el=>act(async()=>el.click());
+  try{
+   await render('A');await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(automaticButton));assert.equal(typeof release,'function');
+   await render(phase==='discovery'?'B':'A',{from:'2026-10-24',to:'2026-10-25'});await act(async()=>release());await act(async()=>Promise.resolve());
+   assert.equal(calls.filter(c=>c.method==='POST').length,phase==='discovery'?0:1);assert(!calls.some(c=>c.path.includes('fullAudit')));assert.doesNotMatch(document.body.textContent,/SERVER REPORT A|Ανάγνωση χειρόγραφων:/);assert.equal(button('Έλεγχος με επανυπολογισμούς').getAttribute('aria-expanded'),'false');
+  }finally{await m.cleanup();}
+ }
+});
+test('mounted automatic check never retries uncertain provider requests and a normal refresh remains a read',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];
+ const api=async(path,options={})=>{calls.push({path,...options});if(path==='/api/cash-papers/stores/A')return paperList();if(options.method==='POST')throw Error('Uncertain response');return report('A',period);};
+ const click=el=>act(async()=>el.click());
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(automaticButton));
+  assert.equal(calls.filter(c=>c.method==='POST').length,1);assert.match(document.body.textContent,/Δεν επαναλαμβάνεται αυτόματα αβέβαιο αίτημα/);
+  await act(async()=>Promise.resolve());assert.equal(calls.filter(c=>c.method==='POST').length,1);assert(!calls.some(c=>c.path.includes('fullAudit')));
+  await click(button('Ανανέωση ελέγχου'));assert.equal(calls.filter(c=>c.method==='POST').length,1);assert(!calls.at(-1).path.includes('fullAudit'));
+ }finally{await m.cleanup();}
+});
+test('mounted automatic check bounds a malformed MORE stream to at most fifty paid requests and refuses duplicate checksums',async()=>{
+ for(const duplicate of [false,true]){
+  const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let posts=0;
+  const api=async(path,options={})=>{calls.push({path,...options});if(path==='/api/cash-papers/stores/A')return paperList();if(options.method==='POST'){posts++;return paperStep('MORE',String(duplicate?1:posts).padStart(64,'0'),50);}return report('A',period);};
+  const click=el=>act(async()=>el.click());
+  try{
+   await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(automaticButton));
+   assert.equal(posts,duplicate?2:50);assert(!calls.some(c=>c.path.includes('fullAudit')));assert.match(document.body.textContent,/Δεν επαναλαμβάνεται αυτόματα αβέβαιο αίτημα/);
+  }finally{await m.cleanup();}
+ }
+});
+
+test('explicit available-reading view uses only GET and full evidence without dispatching an AI read',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];
+ const api=async(path,options={})=>{calls.push({path,...options});assert.equal(options.method,undefined,'preview must never POST or charge a provider');return report('A',period);};
+ try{await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await act(async()=>button('Έλεγχος με επανυπολογισμούς').click());await act(async()=>button('Έλεγχος με διαθέσιμες αναγνώσεις').click());assert.equal(calls.length,2);assert.equal(new URL(calls[1].path,'https://isolated.invalid').searchParams.get('fullAudit'),'1');assert(calls.every(c=>c.path.startsWith('/api/cash-reconciliation/')));assert.match(document.body.textContent,/SERVER REPORT A/);}finally{await m.cleanup();}
+});
+
+const freeAutomaticButton='Αυτόματος έλεγχος χωρίς χρέωση';
+const withAutomaticSummary=(result,overrides={})=>({...result,automaticCheck:{storeId:result.storeId,reportHash:result.reportHash,status:'REVIEW_REQUIRED',checkedShifts:result.rows.length,pendingShifts:2,cashDifferenceShifts:2,cardDifferenceShifts:0,countingCandidates:1,ambiguousPairs:0,paperCoverage:'INCOMPLETE',unresolvedPapers:1,unreadPaperSources:1,pendingPaperSources:0,reviewPaperSources:0,...overrides}});
+
+for(const kind of ['CONFIRM','OFFSET','REVOKE'])test(`no-charge automatic summary is invalidated by a successful ${kind} and only a fresh automatic GET replaces it`,async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m,calls=[];let reviewed=false;
+ const snapshot=()=>({...report('A',period),reportHash:(reviewed?'e':'d').repeat(64),text:reviewed?'UPDATED CANONICAL REPORT '+kind:'ORIGINAL CANONICAL REPORT',history:[{id:'prior-confirmation',kind:'CONFIRM',sessionId:'a',active:true,actorName:'Test',note:'Existing synthetic review',createdAt:period.from}]});
+ const api=async(path,options={})=>{
+  calls.push({path,...options});const url=new URL(path,'https://isolated.invalid');
+  if(options.method==='POST'){
+   assert.equal(url.pathname,'/api/cash-reconciliation/stores/A/reviews');assert.equal(url.searchParams.get('fullAudit'),'1');
+   assert.equal(JSON.parse(options.body).data.kind,kind);reviewed=true;return snapshot();
+  }
+  assert.equal(options.method,undefined);
+  return url.pathname.endsWith('/automatic-check')?withAutomaticSummary(snapshot(),reviewed?{status:'HOLD',countingCandidates:0}:{}):snapshot();
+ };
+ const click=async el=>{assert.ok(el);await act(async()=>el.click());},change=async(el,value)=>{
+  assert.ok(el);await act(async()=>{const proto=el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?dom.window.HTMLTextAreaElement.prototype:dom.window.HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});
+ };
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));assert.equal(calls.length,0);
+  await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(freeAutomaticButton));
+  assert.match(document.querySelector('.cash-auto-summary')?.textContent||'',/Χρειάζεται ανθρώπινος έλεγχος/);
+  assert.match(document.querySelector('.cash-auto-summary').textContent,/Πιθανά λάθη καταμέτρησης: 1/);
+  await change(field('Ενέργεια ελέγχου'),kind);
+  if(kind==='OFFSET'){
+   await change(field('Προηγούμενη βάρδια'),'a');await change(field('Επόμενη βάρδια'),'b');await change(field('Επιβεβαιωμένο ποσό'),'80,00');
+  }else if(kind==='CONFIRM')await change(field('Βάρδια ελέγχου'),'a');
+  else await change(field('Καταχώρηση προς αναίρεση'),'prior-confirmation');
+  await change(field('Τεκμηρίωση'),'Επανελέγχθηκαν τα στοιχεία της βάρδιας.');await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));
+  assert.equal(calls.filter(c=>c.method==='POST').length,1);assert.equal(document.querySelector('pre').textContent,'UPDATED CANONICAL REPORT '+kind);
+  assert.equal(document.querySelector('.cash-auto-summary'),null,'summary of the old report must not accompany a newly accepted canonical report');
+  await click(button(freeAutomaticButton));
+  assert.match(document.querySelector('.cash-auto-summary')?.textContent||'',/HOLD — εκκρεμεί τεκμηρίωση/);
+  assert.match(document.querySelector('.cash-auto-summary').textContent,/Πιθανά λάθη καταμέτρησης: 0/);
+  assert.equal(calls.filter(c=>c.method==='POST').length,1,'fresh no-charge check never replays the review');
+  assert.equal(calls.filter(c=>c.path.includes('/automatic-check')).length,2);
+  assert(calls.every(c=>c.path.startsWith('/api/cash-reconciliation/stores/A')),'no paid paper reader is requested');
+ }finally{await m.cleanup();}
+});
+
+for(const changed of ['store','period'])test(`no-charge automatic check discards a delayed summary after the selected ${changed} changes`,async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let release,delay=true;
+ const api=async(path,options={})=>{
+  calls.push({path,...options});assert.equal(options.method,undefined);
+  const url=new URL(path,'https://isolated.invalid'),store=url.pathname.split('/')[4],p={from:url.searchParams.get('from'),to:url.searchParams.get('to')},result=report(store,p);
+  if(url.pathname.endsWith('/automatic-check')){
+   if(delay)return new Promise(resolve=>release=()=>resolve(withAutomaticSummary(result)));
+   return withAutomaticSummary(result);
+  }
+  return result;
+ };
+ const render=(store,p)=>act(async()=>root.render(React.createElement(Component,{api,storeId:store,...p}))),click=async el=>{assert.ok(el);await act(async()=>el.click());};
+ try{
+  await render('A',period);await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(freeAutomaticButton));assert.equal(typeof release,'function');
+  const newStore=changed==='store'?'B':'A',newPeriod=changed==='period'?{from:'2026-10-24',to:'2026-10-25'}:period;
+  await render(newStore,newPeriod);await act(async()=>release());
+  assert.equal(document.querySelector('.cash-auto-summary'),null);assert.equal(document.querySelector('pre'),null);
+  assert.equal(button('Έλεγχος με επανυπολογισμούς').getAttribute('aria-expanded'),'false');assert.equal(calls.length,2,'changing scope does not replay a request');
+  delay=false;await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(freeAutomaticButton));
+  assert.ok(document.querySelector('.cash-auto-summary'));assert.equal(document.querySelector('pre').textContent,report(newStore,newPeriod).text);
+  const latest=new URL(calls.at(-1).path,'https://isolated.invalid');assert.equal(latest.pathname,`/api/cash-reconciliation/stores/${newStore}/automatic-check`);assert.equal(latest.searchParams.get('from'),newPeriod.from);assert.equal(latest.searchParams.get('to'),newPeriod.to);
+  assert.equal(calls.length,4);
+ }finally{await m.cleanup();}
+});

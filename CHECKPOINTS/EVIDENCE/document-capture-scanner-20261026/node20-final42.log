@@ -1,0 +1,229 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+TAP version 13
+# Subtest: camera acquires full document detail with capability fallback, never retries permission denial
+ok 1 - camera acquires full document detail with capability fallback, never retries permission denial
+  ---
+  duration_ms: 4.068471
+  ...
+# Subtest: cancel, superseding open and unmount stop streams arriving after browser permission
+ok 2 - cancel, superseding open and unmount stop streams arriving after browser permission
+  ---
+  duration_ms: 0.596
+  ...
+# Subtest: capture refuses an unready camera rather than inventing a black 1280x720 frame
+ok 3 - capture refuses an unready camera rather than inventing a black 1280x720 frame
+  ---
+  duration_ms: 0.394681
+  ...
+# Subtest: pairing is explicit, validates tokens and never invokes scan or a business endpoint
+ok 4 - pairing is explicit, validates tokens and never invokes scan or a business endpoint
+  ---
+  duration_ms: 1.040343
+  ...
+# Subtest: scan requires pairing and rejects malformed or oversized device pages
+ok 5 - scan requires pairing and rejects malformed or oversized device pages
+  ---
+  duration_ms: 3.628583
+  ...
+# Subtest: one explicit scan at a time; a cancelled late response cannot supply files; no retry
+ok 6 - one explicit scan at a time; a cancelled late response cannot supply files; no retry
+  ---
+  duration_ms: 4.632073
+  ...
+# Subtest: portrait and landscape documents keep all source edges; every decoded image is closed
+ok 7 - portrait and landscape documents keep all source edges; every decoded image is closed
+  ---
+  duration_ms: 124.192478
+  ...
+# Subtest: mounted scanner pairs without scanning, delivers once, and discards cross-store/closed results
+ok 8 - mounted scanner pairs without scanning, delivers once, and discards cross-store/closed results
+  ---
+  duration_ms: 763.384206
+  ...
+# Subtest: Inventory 2.0 supports partial scope without touching unrelated products
+ok 9 - Inventory 2.0 supports partial scope without touching unrelated products
+  ---
+  duration_ms: 2.836364
+  ...
+# Subtest: Inventory 2.0 keeps immutable count and recount evidence
+ok 10 - Inventory 2.0 keeps immutable count and recount evidence
+  ---
+  duration_ms: 2.039051
+  ...
+# Subtest: live stocktakes adjust the expected quantity from every stock movement
+ok 11 - live stocktakes adjust the expected quantity from every stock movement
+  ---
+  duration_ms: 0.55843
+  ...
+# Subtest: Inventory mobile access is scoped and expiring
+ok 12 - Inventory mobile access is scoped and expiring
+  ---
+  duration_ms: 0.516338
+  ...
+# Subtest: bulk zero count is draft-only, version checked and auditable
+ok 13 - bulk zero count is draft-only, version checked and auditable
+  ---
+  duration_ms: 0.709292
+  ...
+# Subtest: Inventory mobile scans retail barcodes with the rear camera
+ok 14 - Inventory mobile scans retail barcodes with the rear camera
+  ---
+  duration_ms: 0.633462
+  ...
+# Subtest: Invoice Learning Lab exposes camera and mobile QR intake
+ok 15 - Invoice Learning Lab exposes camera and mobile QR intake
+  ---
+  duration_ms: 2.059158
+  ...
+# Subtest: camera and QR files use the same Azure and AI reader path
+ok 16 - camera and QR files use the same Azure and AI reader path
+  ---
+  duration_ms: 0.297508
+  ...
+# Subtest: mobile QR upload is short-lived and scoped to the signed-in Platform Super Admin
+ok 17 - mobile QR upload is short-lived and scoped to the signed-in Platform Super Admin
+  ---
+  duration_ms: 0.321709
+  ...
+# Subtest: QR camera reads once and ignores late download after close/store change
+ok 18 - QR camera reads once and ignores late download after close/store change
+  ---
+  duration_ms: 872.891926
+  ...
+# Subtest: QR camera preserves fallback on unsupported QR and permission failure
+ok 19 - QR camera preserves fallback on unsupported QR and permission failure
+  ---
+  duration_ms: 99.833248
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: Basic/Premium camera intake fills reviewed fields and original PDF without any payment
+ok 20 - Basic/Premium camera intake fills reviewed fields and original PDF without any payment
+  ---
+  duration_ms: 413.943644
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: scanner in both payment forms reads exact URL once without camera or payment
+ok 21 - scanner in both payment forms reads exact URL once without camera or payment
+  ---
+  duration_ms: 265.190417
+  ...
+# Subtest: scanner rejects unsafe response, retries and discards closed or previous-store results
+ok 22 - scanner rejects unsafe response, retries and discards closed or previous-store results
+  ---
+  duration_ms: 39.296042
+  ...
+# Subtest: scanner preserves native rapid input through rerenders, Greek keys and Tab suffix
+ok 23 - scanner preserves native rapid input through rerenders, Greek keys and Tab suffix
+  ---
+  duration_ms: 54.548441
+  ...
+# Subtest: numeric/truncated scanner input makes no request and explicit clear allows exact pasted URL
+ok 24 - numeric/truncated scanner input makes no request and explicit clear allows exact pasted URL
+  ---
+  duration_ms: 50.21744
+  ...
+# Subtest: Greek physical key recovery is scoped and preserves Latin, paste and modifier shortcuts
+ok 25 - Greek physical key recovery is scoped and preserves Latin, paste and modifier shortcuts
+  ---
+  duration_ms: 2.632516
+  ...
+# Subtest: mobile invoice upload page preserves OCR quality and reports errors
+ok 26 - mobile invoice upload page preserves OCR quality and reports errors
+  ---
+  duration_ms: 3.086421
+  ...
+# Subtest: camera focus uses only supported modes/ranges and handles rejected or ended tracks
+ok 27 - camera focus uses only supported modes/ranges and handles rejected or ended tracks
+  ---
+  duration_ms: 9.18935
+  ...
+# Subtest: mounted focus controls provide refocus/manual adjustment, fixed-focus guidance and stale cleanup
+ok 28 - mounted focus controls provide refocus/manual adjustment, fixed-focus guidance and stale cleanup
+  ---
+  duration_ms: 580.982434
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: actual Basic/Premium QR review stays open, durable payment closes before background OCR
+ok 29 - actual Basic/Premium QR review stays open, durable payment closes before background OCR
+  ---
+  duration_ms: 1221.370029
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: Premium duplicate cancellation and failed durable handoff never signal completion
+ok 30 - Premium duplicate cancellation and failed durable handoff never signal completion
+  ---
+  duration_ms: 318.501767
+  ...
+# Subtest: open invoice payment and bank deposit close only after POST, not photo-quality success
+ok 31 - open invoice payment and bank deposit close only after POST, not photo-quality success
+  ---
+  duration_ms: 456.560604
+  ...
+# Subtest: expense POST waits for acceptance and stale selected-store result cannot close another store
+ok 32 - expense POST waits for acceptance and stale selected-store result cannot close another store
+  ---
+  duration_ms: 268.291
+  ...
+# Subtest: mobile five-photo publication is ordered, atomic and safe on identical retry
+ok 33 - mobile five-photo publication is ordered, atomic and safe on identical retry
+  ---
+  duration_ms: 3.379462
+  ...
+# Subtest: mobile rejects sixth, unsupported, oversized, mixed-PDF, stale/token and out-of-order uploads before publication
+ok 34 - mobile rejects sixth, unsupported, oversized, mixed-PDF, stale/token and out-of-order uploads before publication
+  ---
+  duration_ms: 6.785805
+  ...
+# Subtest: mobile legacy single-file clients and one-file remaining capacity keep working
+ok 35 - mobile legacy single-file clients and one-file remaining capacity keep working
+  ---
+  duration_ms: 0.200499
+  ...
+# Subtest: actual mobile page collects camera/gallery photos, reorders/removes and sends all once
+ok 36 - actual mobile page collects camera/gallery photos, reorders/removes and sends all once
+  ---
+  duration_ms: 361.04174
+  ...
+# Subtest: actual mobile page retains photos and reuses the same batch after a dropped response
+ok 37 - actual mobile page retains photos and reuses the same batch after a dropped response
+  ---
+  duration_ms: 138.935799
+  ...
+# Subtest: actual mobile page rejects low decoded resolution without an upload
+ok 38 - actual mobile page rejects low decoded resolution without an upload
+  ---
+  duration_ms: 24.355524
+  ...
+# Subtest: bundled PDF parses as five ordered image pages and rejects invalid selection/oversize before submission
+ok 39 - bundled PDF parses as five ordered image pages and rejects invalid selection/oversize before submission
+  ---
+  duration_ms: 629.323906
+  ...
+# Subtest: actual Basic, Premium and open-payment forms retain/count/order five photos and block the sixth
+ok 40 - actual Basic, Premium and open-payment forms retain/count/order five photos and block the sixth
+  ---
+  duration_ms: 951.418817
+  ...
+# Subtest: phone QR polling appends a whole batch once and ignores cancelled/foreign-store late responses
+ok 41 - phone QR polling appends a whole batch once and ignores cancelled/foreign-store late responses
+  ---
+  duration_ms: 340.408863
+  ...
+# Subtest: five selected photos use one existing supplier payment with all pages retained
+ok 42 - five selected photos use one existing supplier payment with all pages retained
+  ---
+  duration_ms: 438.749745
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 42
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6791.551538

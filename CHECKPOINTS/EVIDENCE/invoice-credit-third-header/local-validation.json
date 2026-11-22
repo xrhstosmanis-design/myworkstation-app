@@ -1,0 +1,31 @@
+{
+  "scope": "INVOICE-CREDIT-THIRD-HEADER-01",
+  "baseCommit": "4fa7ffa4bb0420487b072770a61080ee8bd9bd6f",
+  "beforeSourceClaim": 3652,
+  "localRuntime": "Node v22.16.0",
+  "localCommand": "node --test server/test/invoice-common-credit-series.test.js",
+  "localResult": {"pass": 52, "fail": 0, "skip": 0},
+  "localScope": "Actual helper, preview and reconciliation functions with synthetic SQL responses; no native database or external provider",
+  "oldSourceRegression": {
+    "serverBlob": "a57006f2698497989d0ff7e0d06d4113f6742ffb",
+    "testNamePattern": "actual writer admits reviewed third-series",
+    "pass": 0,
+    "fail": 1,
+    "observedErrorCode": "INVOICE_CREDIT_REVIEW_REQUIRED"
+  },
+  "syntaxChecks": "PASS for server source and the new/extended test files",
+  "whitespaceCheck": "git diff --check PASS",
+  "candidateBlobs": {
+    "server/src/lib/invoice-common-draft.js": "a3c2a0cca7741441f0155c855646151941cdc26b",
+    "client/src/components/commerce/InvoiceCommonDraftReview.jsx": "f5efd19a2f036d7cb043a9683bd690be6b9e0a03",
+    "server/test/invoice-common-credit-series.test.js": "db2bb1650050ea665a64ae1c4d543d428d8781e8",
+    "server/test/invoice-common-credit-postgres.test.js": "da8948245b09ac2619bf86e787eaefd286477612",
+    "server/test/invoice-common-credit-series-ui.test.js": "72acf1dfa90a8d8b8628fe0bcfb31a63b517d6d3"
+  },
+  "nativePostgres": "NOT EXECUTED LOCALLY: no isolated PostgreSQL/Prisma",
+  "mountedUi": "NOT EXECUTED LOCALLY: React/esbuild/jsdom unavailable",
+  "required": "Exact full Node20/native/mounted PR and main CI, guarded healthy release, measured synthetic LAB with before/after/control",
+  "productionMutation": false,
+  "labAcceptance": "NOT TESTED",
+  "parentStatus": "OPEN"
+}

@@ -1,3 +1,4 @@
+import {walletActivityFromRequest,publicWalletActivity} from "../src/services/ai-wallet-activity.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -10,7 +11,7 @@ async function library(){
  const src=(await readFile(new URL('../src/lib/pos-inbox-original.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
  const reader=async()=>({text:'400015624303633 099999999 088888888 6836',pageCount:2});
  const verify=(text,r)=>{for(const s of [r.mark,r.issuerVat,r.counterpartVat,r.documentNumber])assert.ok(text.includes(s))};
- return new Function('crypto','sameInvoiceNumber','invoiceNumberParts','lockInvoiceStore','previewInvoiceReconciliation','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead,assertEmptyInboxRead,assertInboxSelectionUnambiguous};')(crypto,sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
+ return new Function('publicWalletActivity','crypto','sameInvoiceNumber','invoiceNumberParts','lockInvoiceStore','previewInvoiceReconciliation','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead,assertEmptyInboxRead,assertInboxSelectionUnambiguous};')(publicWalletActivity,crypto,sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
 }
 async function handler(db,lib,readPdf){
  const src=(await readFile(new URL('../src/routes/commerce-pos-inbox.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
@@ -47,8 +48,9 @@ test('native actual selected-store inbox SQL and concurrent empty draft queue pr
   assert.equal((await invoke(h,{storeId:'s',taxId:'011111111'})).result.items.length,0);
   await assert.rejects(lib.selectedInboxRow(f.db,'foreign','s','inbox'));await assert.rejects(lib.selectedInboxRow(f.db,'c','control','inbox'));
   const identity={companyId:'c',storeId:'s',supplierId:'sup',supplierTaxId:'099999999',documentNumber:'21-ΤΔΑ 6836',documentDate:'2026-10-12',totalGross:3.39,documentType:'INVOICE'},match={jobId:'j-pdf',purchaseNumber:identity.documentNumber};
-  const queued=await Promise.all(Array.from({length:4},()=>lib.queueEmptyInboxRead(f.db,identity,match,{id:"payment"})));assert.equal(queued.filter(Boolean).length,1);
-  const job=(await f.db.$queryRawUnsafe(`SELECT * FROM "AiReaderJob" WHERE "id"='j-pdf'`))[0];assert.equal(job.status,'POS_DRAFT_READY');assert.equal(job.resultJson.posHandoff.inboxInitialRead,true);assert.deepEqual(job.resultJson.posHandoff.pageJobIds,['j-pdf']);assert.equal(job.resultJson.posHandoff.paymentTransactionId,'payment');assert.equal(job.resultJson.posHandoff.settlementMode,'PAID');
+  const activity=walletActivityFromRequest({user:{id:"pos-caller",tokenType:"STORE_OPERATOR",companyId:"c",storeId:"s",fullName:"Synthetic operator",role:"EMPLOYEE"}},{storeId:"s",purpose:"PAYMENT_INVOICE_READ",jobId:match.jobId});
+  const queued=await Promise.all(Array.from({length:4},()=>lib.queueEmptyInboxRead(f.db,identity,match,{id:"payment"},activity)));assert.equal(queued.filter(Boolean).length,1);
+  const job=(await f.db.$queryRawUnsafe(`SELECT * FROM "AiReaderJob" WHERE "id"='j-pdf'`))[0];assert.equal(job.status,'POS_DRAFT_READY');assert.equal(job.resultJson.posHandoff.inboxInitialRead,true);assert.deepEqual(job.resultJson.posHandoff.pageJobIds,['j-pdf']);assert.equal(job.resultJson.posHandoff.paymentTransactionId,'payment');assert.equal(job.resultJson.posHandoff.settlementMode,'PAID');assert.equal(job.resultJson.posHandoff.walletActivity.actor.id,'pos-caller');assert.equal(job.resultJson.posHandoff.walletActivity.jobId,'j-pdf');
   assert.equal(await f.snapshot(),before);assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "PurchaseOrder"`))[0].n,1);
  }finally{await f.close()}
 });

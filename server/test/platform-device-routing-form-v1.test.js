@@ -29,6 +29,7 @@ test("routing form loads the saved fiscal and EFTPOS values for the selected ter
     deliveryEftposName:"EFTPOS Delivery / Online",
     storeTransactionMode:"IMMEDIATE",
     deliveryTransactionMode:"DEFERRED",
+    fiscalActive:true,storeEftposActive:true,deliveryEftposActive:true,
     complete:true
   });
 });
@@ -76,4 +77,28 @@ test("editing one installation preserves other terminal mappings and validates p
  assert.throws(()=>buildDeviceRoutingUpdate(routing,{...single,deliveryEftposCode:"DELIVERY"}),/και όνομα/);
  const both=buildDeviceRoutingUpdate({}, {...single,deliveryEftposCode:"DELIVERY",deliveryEftposName:"Delivery"});
  assert.equal(both.eftposDevices.length,2);
+});
+
+
+test("inactive fiscal and EFTPOS mappings round-trip without losing codes, modes or other terminals",()=>{
+ const values={...deviceRoutingFormValues(routing,"KAT-POS-02"),fiscalActive:"false",storeEftposActive:"false",deliveryEftposActive:"false",storeTransactionMode:"DEFERRED",deliveryTransactionMode:"IMMEDIATE"};
+ const saved=buildDeviceRoutingUpdate(routing,values),loaded=deviceRoutingFormValues(saved,"KAT-POS-02");
+ assert.equal(saved.fiscalDevices.find(x=>x.terminalPos==="KAT-POS-02").active,false);
+ assert.equal(loaded.fiscalDeviceCode,"KAT-FISCAL-02");
+ assert.equal(loaded.storeEftposCode,"KAT-EFTPOS-02A");
+ assert.equal(loaded.deliveryEftposCode,"KAT-EFTPOS-02B");
+ assert.equal(loaded.fiscalActive,false);assert.equal(loaded.storeEftposActive,false);assert.equal(loaded.deliveryEftposActive,false);
+ assert.equal(loaded.storeTransactionMode,"DEFERRED");assert.equal(loaded.deliveryTransactionMode,"IMMEDIATE");
+ assert.deepEqual(saved.fiscalDevices[0],routing.fiscalDevices[0]);
+ assert.deepEqual(saved.eftposDevices.slice(0,2),routing.eftposDevices.slice(0,2));
+ assert.deepEqual(buildDeviceRoutingUpdate(saved,loaded),saved);
+ const restored=buildDeviceRoutingUpdate(saved,{...loaded,fiscalActive:"true",storeEftposActive:"true",deliveryEftposActive:"true"});
+ assert.equal(restored.fiscalDevices[1].active,true);assert.equal(restored.eftposDevices[2].active,true);assert.equal(restored.eftposDevices[3].active,true);
+});
+
+test("legacy callers default active; fiscal and EFTPOS flags remain independent",()=>{
+ const saved=buildDeviceRoutingUpdate({},single);assert.equal(saved.fiscalDevices[0].active,true);assert.equal(saved.eftposDevices[0].active,true);
+ const independent=buildDeviceRoutingUpdate({}, {...single,fiscalActive:false,storeEftposActive:true});
+ assert.equal(independent.fiscalDevices[0].active,false);assert.equal(independent.eftposDevices[0].active,true);
+ assert.throws(()=>buildDeviceRoutingUpdate({}, {...single,fiscalActive:"invalid"}),/ενεργοποίησης/);
 });

@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-28T13:54:00Z/2026-10-28T13:55:10Z",
+  "revision": "6bbf006742e15aeb6f5492af68bbc4ee12c2801a",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "storeName": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "period": {
+    "from": "2026-10-01",
+    "to": "2026-10-31"
+  },
+  "method": "authenticated UI read-only refresh of existing report",
+  "findings": {
+    "zeroValue": 2,
+    "priceReduction": 3,
+    "unconfirmedApplication": 3
+  },
+  "midnight": {
+    "saleId": "05061018-0b7d-4fcb-8a61-08a5486b9611",
+    "before": "12/10/26, 24:13:46",
+    "after": "12/10/2026, 00:13:46"
+  },
+  "visibleFinancials": {
+    "shiftCount": 13,
+    "originalShortageCents": 890,
+    "originalSurplusCents": 0,
+    "cardZeroLineCount": 13,
+    "pendingExcludedFromReviewedTotals": 13
+  },
+  "financialOrReviewActions": 0,
+  "actualEmails": 0,
+  "scope": "LIMITED_NATIVE_READONLY_DISPLAY_PASS",
+  "externalXlsImport": "NOT_IMPLEMENTED",
+  "fullWorkflow": "OPEN"
+}

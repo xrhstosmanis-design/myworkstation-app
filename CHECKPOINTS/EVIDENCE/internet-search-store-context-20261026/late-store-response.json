@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-26",
+  "node": "24.22.1",
+  "baseline": "5ca3fb5e1bd6b408956e098a93ebe72fff70ac1f",
+  "status": "LOCAL_SYNTHETIC_FAIL_NOT_LAB",
+  "noProductionAction": true,
+  "rawLogFile": null,
+  "sourceEdits": false,
+  "kind": "actual mounted InternetProductSearchPanel via esbuild/React/JSDOM with synthetic API",
+  "toolOutputChunk": "ef41aa",
+  "action": "Start search in A, select B, resolve A response",
+  "expectedLatePriorStoreResultRendered": false,
+  "observedSelectedStore": "B",
+  "observedLatePriorStoreResultRendered": true,
+  "historyRequests": [
+    "/api/commerce/internet-product-search/history"
+  ],
+  "proposalRequests": [
+    "/api/commerce/internet-product-search/price-proposals"
+  ],
+  "businessWrites": 0,
+  "limits": "Not hosted, not physical, no provider/network/price proposal/order API call; local tool output only, not saved raw TAP."
+}

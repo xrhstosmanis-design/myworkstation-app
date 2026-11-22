@@ -2,7 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {createFtextInstallationService} from '../src/services/ftext-installation.js';
+import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/services/ftext-cash-schema.js';
+import {prepareFtextCashRequest,claimFtextCashRequest} from '../src/services/ftext-cash-requests.js';
 import {companyModuleState} from '../src/middleware/module-access.js';
+import {pollFtextDeviceWork} from '../src/services/ftext-device-work.js';
+import {acceptFtextHandoff} from '../src/services/ftext-handoff.js';
+import {recordFtextCashResult} from '../src/services/ftext-cash-requests.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(decodeURIComponent(u.pathname))}catch{return false}}
 export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
  const sql=[
@@ -23,7 +28,7 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
  await a.$executeRaw`INSERT INTO "StoreFiscalDevice" VALUES ('company-A','store-A','POS-01','FISCAL-A',true),('company-B','store-B','POS-01','FISCAL-B',true)`;
  await a.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('store-A','company-A',0,false,false),('store-B','company-B',0,false,false)`;
  let now=new Date();const secret=()=> 'isolated-fixture-secret-123456789';
- const make=(db=a,key=secret)=>createFtextInstallationService({db,moduleState:(id,t)=>companyModuleState(id,{db:t}),secret:key,clock:()=>now});
+ const make=(db=a,key=secret)=>createFtextInstallationService({db,moduleState:(id,t)=>companyModuleState(id,{db:t}),secret:key,clock:()=>now,cashSchemaInstaller:t=>ensureFtextCashSchema(t,{manifest:ftextCashLifecycleReviewProposal()})});
  const service=make(),other=make(b),scope={companyId:'company-A',storeId:'store-A',terminalPos:'POS-01'},control={companyId:'company-B',storeId:'store-B',terminalPos:'POS-01'};
  const input={terminalPos:'POS-01',serialNumber:'TEST12345',workFolder:'C:\\FText',confirmed:true};
  const configured=await service.configure(scope,input,'fixture-admin');await service.configure(control,{...input,serialNumber:'CONTROL123'},'fixture-admin');
@@ -49,12 +54,104 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
   await assert.rejects(service.report(token,{...body,requestId:'b'.repeat(32)}),e=>e.status===409);
  });
  await subtest('real license, lifecycle, route and changed configuration revoke access and preserve foreign control',async()=>{
-  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;await assert.rejects(service.ping(token),e=>e.status===403);await b.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-A'`;
-  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=true WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=false,"generation"=1 WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);
+  const known='a'.repeat(32),unknown='f'.repeat(32);
+  const foreignIds=['1','2','3','4','5','6'].map(x=>x.repeat(32));
+  const originalDevice=(await snapshot()).find(d=>d.storeId===scope.storeId);
+  for(let i=0;i<foreignIds.length;i++)await a.$executeRaw`INSERT INTO "CloudAudit" ("id","companyId","storeId","actorType","actorId","eventType","details") VALUES (${foreignIds[i]},${i===0?'company-B':scope.companyId},${i===1?'store-B':scope.storeId},'DEVICE',${i===2?'foreign-device':originalDevice.id},${i===3?'FTEXT_PAIRED':'FTEXT_STATUS_REPORTED'},${JSON.stringify({terminalPos:i===4?'POS-02':scope.terminalPos,requestId:foreignIds[i],ok:i!==5,code:i===5?101:0})}::jsonb)`;
+  const before=await snapshot(),auditBefore=await a.$queryRaw`SELECT * FROM "CloudAudit" ORDER BY "id"`;
+  const history=await service.statusHistory(token,{requestIds:[known,unknown,known,...foreignIds]});
+  assert.deepEqual(history.acknowledgedIds,[known]);assert.equal(history.storeId,scope.storeId);assert.equal(history.fiscalExecution,false);assert.equal(history.readinessVerified,false);
+  assert.deepEqual(await snapshot(),before,'History lookup must not renew heartbeat/readiness');
+  assert.deepEqual(await a.$queryRaw`SELECT * FROM "CloudAudit" ORDER BY "id"`,auditBefore,'History lookup must not create audit/business evidence');
+  for(const body of [{requestIds:[]},{requestIds:Array(101).fill(known)},{requestIds:['../x']},{requestIds:[known],storeId:'store-B'}])await assert.rejects(service.statusHistory(token,body));
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;await assert.rejects(service.ping(token),e=>e.status===403);await assert.rejects(service.statusHistory(token,{requestIds:[known]}),e=>e.status===403);await b.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-A'`;
+  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=true WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);await assert.rejects(service.statusHistory(token,{requestIds:[known]}),e=>e.status===409);await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=false,"generation"=1 WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);await assert.rejects(service.statusHistory(token,{requestIds:[known]}),e=>e.status===409);
   const fresh=await service.configure(scope,input,'fixture-admin');assert.notEqual(fresh.settingsHash,configured.settingsHash);await assert.rejects(service.ping(token),e=>e.status===401);
   const pair=await service.createPairing(scope,'fixture-admin'),paired=await service.pair(pairInput(pair.code,fresh));
   await b.$executeRaw`UPDATE "StoreFiscalDevice" SET "deviceCode"='REPLACED' WHERE "storeId"='store-A'`;await assert.rejects(service.ping(paired.token),e=>e.status===409);
   assert.deepEqual((await snapshot()).find(r=>r.companyId===control.companyId),controlBefore);
+ });
+ await subtest('cash requires fresh paired STATUS and current license; pending request blocks configuration and revoked dispatch',async()=>{
+  now=new Date();await a.$executeRaw`UPDATE "StoreFiscalDevice" SET "deviceCode"='FISCAL-A' WHERE "storeId"='store-A'`;
+  const c=await service.configure(scope,{...input,cashEnabled:true,cashDepartments:[{department:4,vatRate:13,vatCode:'2'}]},'fixture-admin');
+  const pair=await service.createPairing(scope,'fixture-admin'),paired=await service.pair(pairInput(pair.code,c));
+  await assert.rejects(a.$transaction(tx=>service.cashContext(tx,scope)),e=>e.status===409);
+  await service.report(paired.token,{requestId:'c'.repeat(32),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'fixture clock',fiscalExecution:false});
+  await service.ping(paired.token,{readinessVersion:1});
+  await b.$executeRaw`UPDATE "CloudDevice" SET "metadata"=jsonb_set(jsonb_set("metadata",'{ftextLastStatus,checkedAt}','"2000-01-01T00:00:00Z"'::jsonb),'{ftextLastStatus,receivedAt}','"2000-01-01T00:00:00Z"'::jsonb) WHERE "storeId"='store-A'`;
+  await service.ping(paired.token); // An old heartbeat must not downgrade the readiness requirement.
+  assert.equal((await service.view(scope)).readinessRequired,true);assert.equal((await service.view(scope)).registerReady,false);
+  await assert.rejects(a.$transaction(tx=>service.cashContext(tx,scope)),e=>e.status===503&&e.code==='FTEXT_REGISTER_NOT_READY');
+  assert.equal((await a.$queryRaw`SELECT * FROM "FtextCashRequest"`).length,0,'Stale STATUS creates no request or fiscal instruction');
+  await a.$transaction(tx=>service.cashContext(tx,scope,{requireOnline:false})); // Existing receipt recovery remains available.
+  await service.report(paired.token,{requestId:'d'.repeat(32),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'fresh readiness',fiscalExecution:false});
+  assert.equal((await service.view(scope)).registerReady,true);
+  let pending;await a.$transaction(async tx=>{const current=await service.cashContext(tx,scope);pending=await prepareFtextCashRequest(tx,{...current,sessionId:'fixture-shift',clientTransactionId:'fixture-checkout',requestHash:'fixture-hash',checkout:{paymentMethod:'CASH'},items:[{productId:'product-a',name:'SYNTHETIC',quantity:1,effectiveUnitPrice:1.25,discount:0,lineTotal:1.25,fiscalDepartment:4,vatRate:13,fiscalVatCode:'2'}],summary:{subtotal:1.25,discount:0,total:1.25}})});
+  await b.$executeRaw`UPDATE "CloudDevice" SET "metadata"=jsonb_set(jsonb_set("metadata",'{ftextLastStatus,checkedAt}','"2000-01-01T00:00:00Z"'::jsonb),'{ftextLastStatus,receivedAt}','"2000-01-01T00:00:00Z"'::jsonb) WHERE "storeId"='store-A'`;
+  assert.equal(await service.authenticated(paired.token,(tx,d,c)=>claimFtextCashRequest(tx,d,c)),null);
+  assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${pending.id}`)[0].status,'PREPARED','Readiness expiry must not dispatch a prepared payment');
+  await service.report(paired.token,{requestId:'e'.repeat(32),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'fresh dispatch readiness',fiscalExecution:false});
+  await assert.rejects(service.configure(scope,{...input,cashEnabled:false},'fixture-admin'),e=>e.status===409);
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;
+  await assert.rejects(service.authenticated(paired.token,(tx,d,c)=>claimFtextCashRequest(tx,d,c)),e=>e.status===403);
+  assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${pending.id}`)[0].status,'PREPARED');
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-A'`;
+  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=2 WHERE "storeId"='store-A'`;
+  await assert.rejects(service.authenticated(paired.token,(tx,d,c)=>claimFtextCashRequest(tx,d,c)),e=>e.status===409);
+  assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${pending.id}`)[0].status,'PREPARED');
+  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=1 WHERE "storeId"='store-A'`;
+  const combined=(svc,recovering=false)=>svc.ping(paired.token,{readinessVersion:1},(tx,d,c)=>pollFtextDeviceWork(tx,d,c,{recovering}));
+  // Real heartbeat+claim transaction: old heartbeat may be renewed but old STATUS
+  // cannot; a durable local result must prevent any new dispatch.
+  const beforeRecovery=await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${pending.id}`;
+  assert.deepEqual(await combined(service,true).then(({request,lateReceipt,errorEvidence})=>({request,lateReceipt,errorEvidence})),{request:null,lateReceipt:null,errorEvidence:null});
+  assert.deepEqual(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${pending.id}`,beforeRecovery);
+  await b.$executeRaw`UPDATE "CloudDevice" SET "metadata"=jsonb_set(jsonb_set("metadata",'{ftextLastStatus,checkedAt}','"2000-01-01T00:00:00Z"'::jsonb),'{ftextLastStatus,receivedAt}','"2000-01-01T00:00:00Z"'::jsonb) WHERE "storeId"='store-A'`;
+  assert.equal((await combined(service)).request,null);assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${pending.id}`)[0].status,'PREPARED');
+  await service.report(paired.token,{requestId:'f'.repeat(32),checkedAt:new Date(now.getTime()+1).toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'combined poll readiness',fiscalExecution:false});
+  const beforeControl=(await snapshot()).find(r=>r.companyId===control.companyId);
+  const combinedClaims=await Promise.all([combined(service),combined(other)]);
+  assert.equal(combinedClaims.filter(w=>w.request).length,1);assert.equal(combinedClaims.find(w=>w.request).request.id,pending.id);
+  assert.ok(combinedClaims.every(w=>w.settingsHash===c.settingsHash&&w.readinessRequired===true));
+  assert.equal((await combined(service)).request,null,'Lost combined response cannot renew a one-shot dispatch');
+  assert.deepEqual((await snapshot()).find(r=>r.companyId===control.companyId),beforeControl);
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;await assert.rejects(combined(service),e=>e.status===403);
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-A'`;
+  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=2 WHERE "storeId"='store-A'`;await assert.rejects(combined(service),e=>e.status===409);
+ });
+
+ await subtest('negotiated CASH and both CARD preserve one authorization across concurrent acceptance and lost replies',async()=>{
+  await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "clientTransactionId"='fixture-checkout'`;
+  for(const [method,format]of [['CASH','OPERATOR_CONFIRMATION'],['CARD','OPERATOR_CONFIRMATION'],['CARD','POS_LINE8_OS7']]){
+   now=new Date();
+   const configured=await service.configure(scope,{...input,cashEnabled:true,cashDepartments:[{department:4,vatRate:13,vatCode:'2'}],cardEnabled:true,cardPayment:{code:2,posTerminalId:1,transactionType:format==='OPERATOR_CONFIRMATION'?1:6,resultFormat:format,confirmed:true}},'fixture-admin');
+   const pair=await service.createPairing(scope,'fixture-admin'),paired=await service.pair(pairInput(pair.code,configured));
+   await service.report(paired.token,{requestId:randomBytes(16).toString('hex'),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'handoff fixture',fiscalExecution:false});
+   const key='handoff-'+method+'-'+format;
+   let request;await a.$transaction(async tx=>{request=await prepareFtextCashRequest(tx,{...await service.cashContext(tx,scope),sessionId:'fixture-shift',clientTransactionId:key,requestHash:'fixture-hash',checkout:{paymentMethod:method},items:[{productId:'product-a',name:'SYNTHETIC',quantity:1,effectiveUnitPrice:1.25,discount:0,lineTotal:1.25,fiscalDepartment:4,vatRate:13,fiscalVatCode:'2'}],summary:{subtotal:1.25,discount:0,total:1.25}})});
+   const work=svc=>svc.ping(paired.token,{readinessVersion:1},(tx,d,c)=>pollFtextDeviceWork(tx,d,c,{handoffVersion:1}));
+   await assert.rejects(service.ping(paired.token,{readinessVersion:1},async(tx,d,c)=>{assert.equal((await pollFtextDeviceWork(tx,d,c,{handoffVersion:1})).request.id,request.id);throw Error('synthetic lost offer before commit')}),/synthetic lost offer before commit/);
+   const rolledBack=(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0];assert.equal(rolledBack.status,'PREPARED');assert.equal(Object.hasOwn(rolledBack.checkoutJson,'ftextHandoff'),false);
+   const first=await work(service);assert.equal(first.request.id,request.id);
+   const offers=await Promise.all([work(service),work(other)]);assert.ok(offers.every(w=>JSON.stringify(w.request)===JSON.stringify(first.request)),'Lost delivery must retain the original nonce and plan, not create another request');
+   const unknown={requestId:request.id,settingsHash:request.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+   await assert.rejects(service.authenticated(paired.token,(tx,d,c)=>recordFtextCashResult(tx,d,c,unknown)),e=>e.code==='FTEXT_HANDOFF_REVIEW');
+   const body={requestId:request.id,settingsHash:request.settingsHash,nonce:first.request.handoff.nonce,commandHash:first.request.handoff.commandHash,readyForExecution:true};
+   const accept=(svc,patch={})=>svc.authenticated(paired.token,(tx,d,c)=>acceptFtextHandoff(tx,d,c,{...body,...patch}));
+   await assert.rejects(accept(service,{commandHash:'b'.repeat(64)}),e=>e.code==='FTEXT_HANDOFF_REVIEW');
+   assert.equal((await accept(service,{readyForExecution:false})).requiresReadiness,true);
+   await assert.rejects(service.authenticated(paired.token,async(tx,d,c)=>{assert.ok((await acceptFtextHandoff(tx,d,c,body)).authorization?.acceptedAt);throw Error('synthetic lost grant before commit')}),/synthetic lost grant before commit/);
+   assert.equal((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0].checkoutJson.ftextHandoff.state,'OFFERED');
+   const controlBefore=(await snapshot()).find(r=>r.companyId===control.companyId),grants=await Promise.all([accept(service),accept(other)]);
+   assert.ok(grants[0].authorization?.acceptedAt);assert.deepEqual(grants[0].authorization,grants[1].authorization,'Concurrent replies retrieve the same immutable authorization');
+   const accepted=(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0];assert.equal(accepted.status,'DISPATCHED');assert.equal(accepted.resultHash,null);assert.equal(accepted.saleId,null);
+   assert.deepEqual((await accept(other)).authorization,grants[0].authorization,'Lost acknowledgement retrieves the same original authorization');
+   assert.deepEqual((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0],accepted);
+   assert.equal((await work(service)).request,null);assert.deepEqual((await snapshot()).find(r=>r.companyId===control.companyId),controlBefore);
+   const reported=await service.authenticated(paired.token,(tx,d,c)=>recordFtextCashResult(tx,d,c,unknown));assert.equal(reported.status,'REQUIRES_CHECK');
+   await assert.rejects(accept(service),e=>e.code==='FTEXT_HANDOFF_REVIEW');
+   await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "id"=${request.id}`; // isolated fixture only; no live fiscal operation
+  }
  });
 }
 test('native ftext installation: tenant/atomic pairing/rollback/real license/lifecycle/replay/control',{skip:!isolated(),timeout:120000},async t=>{

@@ -32,7 +32,7 @@ test("mounted report dialog saves explicit store slots, previews saved versions 
  const button=text=>[...document.querySelectorAll("button")].find(b=>b.textContent===text);
  const change=async(selector,value)=>act(async()=>{const input=document.querySelector(selector);Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set.call(input,value);input.dispatchEvent(new dom.window.Event("input",{bubbles:true}))});
  try{
-  await render("A");assert.match(document.body.textContent,/Η αυτόματη αποστολή δεν έχει ενεργοποιηθεί/);assert.equal(button("Προεπισκόπηση αναφοράς").disabled,true);
+  await render("A");assert.match(document.querySelector(".report-settings-note").textContent,/Η κατάσταση αποστολής εμφανίζεται στην ενότητα/);assert.equal(button("Προεπισκόπηση αναφοράς").disabled,true);
   await act(async()=>button("+ Προσθήκη ταμείου").click());await change('[aria-label="Κωδικός ταμείου 1"]',"MAIN");
   await act(async()=>button("+ Προσθήκη ταμείου").click());await change('[aria-label="Κωδικός ταμείου 2"]',"DELIVERY");
   const deliverySlots=document.querySelectorAll('[aria-label="Βάρδιες ταμείου 2"] input');

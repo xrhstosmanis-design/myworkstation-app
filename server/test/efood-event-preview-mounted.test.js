@@ -13,7 +13,7 @@ test('native integration preview is outside credential forms and cannot implicit
   const request=async(url,options={})=>{calls.push({url,options});assert.ok(!options.method||options.method==='GET');if(url.endsWith('/event-previews'))return {events:[{id:'event',externalOrderId:'order',externalStatus:'READY_FOR_PICKUP'}]};return {labAllowed:true,integration:{updatedAt:'synthetic-version',metadata:{vendorId:'9344842'},webhookTest:{accepting:false,status:'CONSUMED',secretConfigured:true}}}};
   try{
     await act(async()=>root.render(React.createElement(module.exports.default,{manager:{company:{id:'company',name:'MYWORKSTATION LAB'},store:{id:'store',name:'ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ'},integrations:[]},request,onClose:()=>{},onChanged:()=>{throw Error('Unexpected setup mutation')}})));
-    const panel=document.querySelector('.efood-event-preview');assert.ok(panel);assert.equal(panel.closest('form'),null);assert.equal(document.querySelectorAll('form').length,3);
+    const panel=document.querySelector('.efood-event-preview');assert.ok(panel);assert.equal(panel.closest('form'),null);assert.equal(document.querySelectorAll('form').length,4);
     await act(async()=>[...panel.querySelectorAll('button')].find(button=>button.textContent==='Εμφάνιση αποθηκευμένων events').click());
     assert.equal(panel.querySelector('select').closest('form'),null);assert.ok([...panel.querySelectorAll('button')].every(button=>button.type==='button'));
     await act(async()=>panel.querySelector('select').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})));

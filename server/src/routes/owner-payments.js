@@ -4,6 +4,7 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {businessPictureCalendarRange} from "../business-picture-dates.js";
 import {finishBusinessPictureRow} from "../business-picture-totals.js";
+import {applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts} from "../business-picture-cost-estimates.js";
 
 const router=Router();
 const reportQuery=z.object({
@@ -16,6 +17,8 @@ const reportQuery=z.object({
 });
 
 const n=value=>Number(value||0);
+const costEstimateFields=["estimatedCostValue","unestimatedCostLines","categoryEstimatedCostLines","storeEstimatedCostLines","salesAbsNet","missingSalesAbsNet","normalizedPurchaseCostLines","normalizedCatalogCostLines"];
+const costEstimateMetrics=row=>Object.fromEntries(costEstimateFields.map(field=>[field,n(row?.[field])]));
 const isoDay=date=>new Date(date).toISOString().slice(0,10);
 const purchaseDocumentMime="application/vnd.myworkstation.purchase-document";
 const mapMovement=row=>{
@@ -49,9 +52,9 @@ function dateRange(query){
   return {from,to};
 }
 function txFilterType(type){return type==="ALL"?null:type}
-async function verifyStore(companyId,storeId){
+async function verifyStore(companyId,storeId,{db=prisma}={}){
   if(!storeId)return null;
-  const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});
+  const store=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});
   if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα.");error.status=404;throw error}
   return store;
 }
@@ -66,51 +69,115 @@ function mergeByKey(primary,secondary,key,fields){
   return [...rows.values()];
 }
 
-router.get("/business-picture",async(req,res,next)=>{
-  try{
-    requireOwnerReport(req);
-    const query=reportQuery.pick({from:true,to:true,storeId:true}).extend({calendarFrom:z.string().optional(),calendarTo:z.string().optional()}).parse(req.query||{});
+export async function readOwnerBusinessPicture(scopeCompanyId,rawQuery,{db=prisma,strictTenant=false}={}){
+ const prisma=db;
+    const query=reportQuery.pick({from:true,to:true,storeId:true}).extend({calendarFrom:z.string().optional(),calendarTo:z.string().optional()}).parse(rawQuery||{});
     const calendar=query.calendarFrom!==undefined||query.calendarTo!==undefined;
     if(calendar&&(query.from!==undefined||query.to!==undefined))throw Object.assign(new Error("Μη συνδυάζεις ημερολογιακές και ISO ημερομηνίες."),{status:400});
     const period=calendar?businessPictureCalendarRange(query.calendarFrom,query.calendarTo):{...dateRange(query),timeZone:"Europe/Athens"};
-    const {from,to}=period,companyId=req.user.companyId,storeId=query.storeId||null;
+    const {from,to}=period,companyId=scopeCompanyId,storeId=query.storeId||null;
     // Calendar periods end at the next midnight, including sub-millisecond ledger timestamps.
     const upper=calendar?new Date(to.getTime()+1):to,inclusiveUpper=!calendar;
-    await verifyStore(companyId,storeId);
+    await verifyStore(companyId,storeId,{db:prisma});
     const [stores,sales,purchases,expenses]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
       prisma.$queryRaw`
-        SELECT TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
-          COUNT(DISTINCT sa."id")::int AS transactions,
-          COUNT(DISTINCT sa."id") FILTER (WHERE sa."source"='POS_REVERSAL' AND sa."reversalKind"='RETURN')::int AS "returnTransactions",
-          COUNT(DISTINCT sa."id") FILTER (WHERE sa."source"='POS_REVERSAL' AND sa."reversalKind"='CANCEL')::int AS "cancelTransactions",COALESCE(SUM(sl."lineTotal"),0) AS "salesGross",
-          COUNT(*)::int AS "salesLines",
-          COUNT(*) FILTER (WHERE (sa."source"='POS_REVERSAL' AND original."id" IS NULL) OR (pc."unitCost" IS NULL AND (p."costPrice" IS NULL OR p."costPrice"<=0)))::int AS "missingCostLines",
-          COALESCE(SUM(CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesNet",
-          COALESCE(SUM(sl."lineTotal"-CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesVat",
-          COALESCE(SUM(CASE WHEN sa."source"='POS_REVERSAL' AND original."id" IS NULL THEN NULL ELSE sl."quantity"*COALESCE(pc."unitCost",p."costPrice",0) END),0) AS "costValue"
-        FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED'
-        LEFT JOIN "Sale" original ON sa."source"='POS_REVERSAL' AND original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId" AND original."status"='COMPLETED' AND original."source"<>'POS_REVERSAL'
-        LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
-        LEFT JOIN LATERAL (
-          SELECT CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END AS "unitCost"
-          FROM "PurchaseDocumentLine" pl JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId"
-          WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=sl."productId" AND pd."documentDate"<=CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END
-          ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
-        ) pc ON true
-        WHERE sa."occurredAt">=(${from}::timestamptz AT TIME ZONE 'UTC') AND (sa."occurredAt"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND sa."occurredAt"=(${upper}::timestamptz AT TIME ZONE 'UTC'))) AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
-        GROUP BY 1,2 ORDER BY day`,
+        WITH "postedCostGroups" AS MATERIALIZED (
+          SELECT pd."id" AS "documentId",pd."companyId",pd."storeId",pd."supplierId",pd."sourceType",pd."purchaseOrderId",pd."documentNumber",pd."documentDate",pd."createdAt",
+            pl."productId",SUM(pl."quantity") AS quantity,SUM(pl."netAmount") AS "postedNet",
+            (ARRAY_AGG(CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END ORDER BY pl."createdAt" DESC,pl."id" DESC))[1] AS "legacyUnitCost"
+          FROM "PurchaseDocument" pd JOIN "PurchaseDocumentLine" pl ON pl."purchaseDocumentId"=pd."id"
+          WHERE pd."companyId"=${companyId} AND pd."status"='APPROVED' AND (${storeId}::text IS NULL OR pd."storeId"=${storeId})
+          GROUP BY pd."id",pl."productId"
+        ), "purchaseCosts" AS MATERIALIZED (
+          SELECT posted.*,COALESCE(correction."unitCost",original."pieceCost",posted."legacyUnitCost") AS "unitCost",
+            COALESCE(correction."unitCost",original."pieceCost") AS "pieceCost",original."rawLandedCost",original.factor
+          FROM "postedCostGroups" posted
+          LEFT JOIN LATERAL (
+            SELECT sm."unitCost" FROM "StockMovement" sm
+            WHERE posted."sourceType"='PURCHASE_ORDER' AND sm."sourceType"='PURCHASE_ORDER'
+              AND sm."sourceId"=posted."documentId" AND sm."storeId"=posted."storeId"
+              AND sm."productId"=posted."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+              AND sm."unitCost">0
+            ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1
+          ) correction ON true
+          LEFT JOIN LATERAL (
+            SELECT SUM(l."netAmount"+COALESCE(l."exciseTotal",0))/NULLIF(SUM(l."quantity"*CASE WHEN l."invoiceUnit"='PACKAGE' THEN l."stockUnitsPerInvoiceUnit" ELSE 1 END),0) AS "pieceCost",
+              SUM(l."netAmount"+COALESCE(l."exciseTotal",0))/NULLIF(SUM(l."quantity"),0) AS "rawLandedCost",
+              SUM(l."quantity"*CASE WHEN l."invoiceUnit"='PACKAGE' THEN l."stockUnitsPerInvoiceUnit" ELSE 1 END)/NULLIF(SUM(l."quantity"),0) AS factor
+            FROM "PurchaseOrder" o JOIN "PurchaseOrderLine" l ON l."orderId"=o."id" AND l."productId"=posted."productId"
+            WHERE o."id"=CASE WHEN posted."purchaseOrderId" IS NOT NULL THEN posted."purchaseOrderId" WHEN posted."sourceType"='PURCHASE_ORDER' THEN posted."documentId" END
+              AND o."companyId"=posted."companyId" AND o."storeId"=posted."storeId" AND o."supplierId" IS NOT DISTINCT FROM posted."supplierId"
+              AND o."invoiceNumber"=posted."documentNumber" AND o."status" IN ('FINAL','INVOICED')
+            HAVING SUM(l."quantity")=posted.quantity AND ROUND(SUM(l."netAmount"),2)=ROUND(posted."postedNet",2)
+              AND BOOL_AND(COALESCE(l."quantity">0 AND l."netAmount">=0 AND COALESCE(l."exciseTotal",0)>=0 AND l."resolutionStatus"='MATCHED'
+                AND (l."invoiceUnit" IN ('PIECE','KG','LITER') OR (l."invoiceUnit"='PACKAGE' AND l."stockUnitsPerInvoiceUnit">0)),false))
+          ) original ON true
+        ), "purchaseCostTimeline" AS MATERIALIZED (
+          SELECT costs.*,LEAD("documentDate") OVER(PARTITION BY "companyId","storeId","productId" ORDER BY "documentDate","createdAt","documentId") AS "validUntil" FROM "purchaseCosts" costs
+        ), "catalogCostSources" AS MATERIALIZED (
+          SELECT DISTINCT ON ("companyId","storeId","productId") "companyId","storeId","productId","pieceCost","rawLandedCost",factor
+          FROM "purchaseCosts" ORDER BY "companyId","storeId","productId","documentDate" DESC,"createdAt" DESC,"documentId" DESC
+        ), "saleCostLines" AS MATERIALIZED (
+          SELECT sa."id" AS "saleId",sa."source",sa."reversalKind",sa."storeId",p."categoryId",COALESCE(p."unit",'UNKNOWN') AS "costUnit",
+            TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,
+            TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
+            CASE WHEN ${strictTenant} THEN p."id" ELSE sl."productId" END AS "productId",COALESCE(p."name",sl."description") AS "productName",p."sku",sl."quantity",sl."lineTotal",
+            CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END AS "salesNet",
+            CASE WHEN sa."source"='POS_REVERSAL' AND original."id" IS NULL THEN NULL ELSE sl."quantity"*COALESCE(pc."unitCost",catalog."unitCost",0) END AS "lineCost",
+            (COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) OR (pc."unitCost" IS NULL AND (p."costPrice" IS NULL OR p."costPrice"<=0))) AS "missingCost",
+            (COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) OR sl."quantity"*sl."lineTotal"<0 OR sl."quantity"=0) AS "unsafeEstimate",
+            COALESCE(pc."pieceCost" IS NOT NULL AND ABS(pc."pieceCost"-pc."legacyUnitCost")>0.000001,false) AS "purchaseAdjusted",
+            COALESCE(pc."unitCost" IS NULL AND ABS(catalog."unitCost"-p."costPrice")>0.000001,false) AS "catalogAdjusted"
+          FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=sa."storeId" AND scopeStore."companyId"=sa."companyId"))
+          LEFT JOIN "Sale" original ON sa."source"='POS_REVERSAL' AND original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId" AND original."status"='COMPLETED' AND original."source"<>'POS_REVERSAL'
+          LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
+          LEFT JOIN "purchaseCostTimeline" pc ON pc."companyId"=sa."companyId" AND pc."storeId"=sa."storeId" AND pc."productId"=sl."productId"
+            AND pc."documentDate"<=CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END
+            AND (pc."validUntil" IS NULL OR pc."validUntil">CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END)
+          LEFT JOIN "catalogCostSources" recent ON recent."companyId"=sa."companyId" AND recent."storeId"=sa."storeId" AND recent."productId"=sl."productId"
+          LEFT JOIN LATERAL (
+            SELECT CASE WHEN p."unit"='PIECE' AND p."costPrice">0 AND recent."pieceCost" IS NOT NULL AND recent.factor>1
+              AND ABS(p."costPrice"-recent."rawLandedCost")<=0.000001 THEN recent."pieceCost" ELSE p."costPrice" END AS "unitCost"
+          ) catalog ON true
+          WHERE sa."occurredAt">=(${from}::timestamptz AT TIME ZONE 'UTC') AND (sa."occurredAt"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND sa."occurredAt"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
+            AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
+        ), "costGroups" AS MATERIALIZED (
+          SELECT day,"storeId","categoryId","costUnit",
+            COALESCE(SUM("salesNet") FILTER(WHERE NOT "missingCost" AND quantity>0 AND "salesNet">0 AND "lineCost">=0),0) AS "knownSalesNet",
+            COALESCE(SUM("lineCost") FILTER(WHERE NOT "missingCost" AND quantity>0 AND "salesNet">0 AND "lineCost">=0),0) AS "knownSalesCost",
+            COALESCE(SUM(quantity) FILTER(WHERE NOT "missingCost" AND quantity>0 AND "lineCost">=0),0) AS "knownQuantity",
+            COALESCE(SUM("lineCost") FILTER(WHERE NOT "missingCost" AND quantity>0 AND "lineCost">=0),0) AS "knownUnitCostValue",
+            COALESCE(SUM("salesNet") FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"<>0 AND quantity<>0),0) AS "missingSalesNet",
+            COALESCE(SUM(quantity) FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"=0 AND quantity<>0),0) AS "missingZeroSalesQuantity",
+            COUNT(*) FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"<>0 AND quantity<>0)::int AS "missingPricedLines",
+            COUNT(*) FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"=0 AND quantity<>0)::int AS "missingZeroPriceLines",
+            COUNT(*) FILTER(WHERE "missingCost" AND "unsafeEstimate")::int AS "unsafeMissingLines",
+            COUNT(*) FILTER(WHERE "missingCost")::int AS "missingCostLines"
+          FROM "saleCostLines" GROUP BY day,"storeId","categoryId","costUnit"
+        )
+        SELECT month,day,COUNT(DISTINCT "saleId")::int AS transactions,
+          COUNT(DISTINCT "saleId") FILTER(WHERE source='POS_REVERSAL' AND "reversalKind"='RETURN')::int AS "returnTransactions",
+          COUNT(DISTINCT "saleId") FILTER(WHERE source='POS_REVERSAL' AND "reversalKind"='CANCEL')::int AS "cancelTransactions",
+          COUNT(*)::int AS "salesLines",COUNT(*) FILTER(WHERE "missingCost")::int AS "missingCostLines",
+          COALESCE(SUM("lineTotal"),0) AS "salesGross",COALESCE(SUM("salesNet"),0) AS "salesNet",COALESCE(SUM("lineTotal"-"salesNet"),0) AS "salesVat",COALESCE(SUM("lineCost"),0) AS "costValue",
+          COALESCE(SUM("lineCost") FILTER(WHERE NOT "missingCost"),0) AS "estimateKnownCostValue",
+          COALESCE(SUM(ABS("salesNet")),0) AS "salesAbsNet",COALESCE(SUM(ABS("salesNet")) FILTER(WHERE "missingCost"),0) AS "missingSalesAbsNet",
+          COUNT(*) FILTER(WHERE "purchaseAdjusted")::int AS "normalizedPurchaseCostLines",COUNT(*) FILTER(WHERE "catalogAdjusted")::int AS "normalizedCatalogCostLines",
+          (SELECT JSONB_AGG(TO_JSONB(g)) FROM "costGroups" g WHERE g.day=l.day) AS "costGroups",
+          COALESCE(JSONB_AGG(JSONB_BUILD_OBJECT('storeId',"storeId",'productId',"productId",'name',"productName",'sku',sku,'quantity',quantity,'salesGross',"lineTotal",'salesNet',"salesNet",'reason',CASE WHEN "unsafeEstimate" THEN 'UNSAFE_ORIGINAL' ELSE 'MISSING_COST' END)) FILTER(WHERE "missingCost"),'[]'::jsonb) AS "missingCostDetails"
+        FROM "saleCostLines" l GROUP BY month,day ORDER BY day`,
       prisma.$queryRaw`
         SELECT TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,COUNT(*)::int AS documents,
-          COALESCE(SUM("totalNet"),0) AS "purchaseNet",COALESCE(SUM("totalVat"),0) AS "purchaseVat",COALESCE(SUM("totalGross"),0) AS "purchaseGross"
-        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND ("documentDate"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND "documentDate"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
+          COALESCE(SUM(CASE WHEN "documentType"='CREDIT_NOTE' THEN -"totalNet" ELSE "totalNet" END),0) AS "purchaseNet",COALESCE(SUM(CASE WHEN "documentType"='CREDIT_NOTE' THEN -"totalVat" ELSE "totalVat" END),0) AS "purchaseVat",COALESCE(SUM(CASE WHEN "documentType"='CREDIT_NOTE' THEN -"totalGross" ELSE "totalGross" END),0) AS "purchaseGross"
+        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="PurchaseDocument"."storeId" AND scopeStore."companyId"="PurchaseDocument"."companyId")) AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND ("documentDate"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND "documentDate"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
         WITH "expenseLinks" AS (
           SELECT "companyId","storeId","attachmentFilename",SUM("amount") AS paid,
             MIN("amount") AS "minAmount",MAX("amount") AS "maxAmount"
-          FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "type"='OTHER_EXPENSE' AND "reversedAt" IS NULL AND "attachmentMimeType"=${purchaseDocumentMime}
+          FROM "StoreTransaction" WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="StoreTransaction"."storeId" AND scopeStore."companyId"="StoreTransaction"."companyId")) AND "type"='OTHER_EXPENSE' AND "reversedAt" IS NULL AND "attachmentMimeType"=${purchaseDocumentMime}
           GROUP BY "companyId","storeId","attachmentFilename"
         ), "expenseAllocation" AS (
           -- Allocate before the report date filter; cumulative rounding preserves the final cent.
@@ -124,7 +191,7 @@ router.get("/business-picture",async(req,res,next)=>{
             AND links."minAmount"*pd."totalGross">=0 AND links."maxAmount"*pd."totalGross">=0
             AND ROUND(pd."totalNet"+pd."totalVat",2)=ROUND(pd."totalGross",2)
             AND pd."totalNet"*pd."totalGross">=0 AND pd."totalVat"*pd."totalGross">=0 AND ABS(pd."totalVat")<=ABS(pd."totalGross")
-          WHERE tx."companyId"=${companyId} AND tx."type"='OTHER_EXPENSE' AND tx."reversedAt" IS NULL AND tx."attachmentMimeType"=${purchaseDocumentMime}
+          WHERE tx."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=tx."storeId" AND scopeStore."companyId"=tx."companyId")) AND tx."type"='OTHER_EXPENSE' AND tx."reversedAt" IS NULL AND tx."attachmentMimeType"=${purchaseDocumentMime}
           WINDOW payment_order AS (PARTITION BY tx."companyId",tx."storeId",tx."attachmentFilename" ORDER BY tx."occurredAt",tx."id" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
         )
         SELECT TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
@@ -145,34 +212,33 @@ router.get("/business-picture",async(req,res,next)=>{
         FROM "StoreTransaction" tx
         LEFT JOIN "expenseAllocation" allocation ON allocation."id"=tx."id"
         LEFT JOIN "PurchaseDocument" evidence ON tx."attachmentMimeType"=${purchaseDocumentMime} AND evidence."id"=tx."attachmentFilename" AND evidence."companyId"=tx."companyId" AND evidence."storeId"=tx."storeId"
-        WHERE tx."companyId"=${companyId} AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND (tx."occurredAt"<${upper} OR (${inclusiveUpper}::boolean AND tx."occurredAt"=${upper}))
+        WHERE tx."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=tx."storeId" AND scopeStore."companyId"=tx."companyId")) AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND (tx."occurredAt"<${upper} OR (${inclusiveUpper}::boolean AND tx."occurredAt"=${upper}))
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`
     ]);
-    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0});return rows.get(id)};
-    for(const row of sales)Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),returnTransactions:n(row.returnTransactions),cancelTransactions:n(row.cancelTransactions),salesLines:n(row.salesLines),missingCostLines:n(row.missingCostLines),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue)});
+    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()});return rows.get(id)};
+    for(const row of applyBusinessPictureCostEstimates(sales))Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),returnTransactions:n(row.returnTransactions),cancelTransactions:n(row.cancelTransactions),salesLines:n(row.salesLines),missingCostLines:n(row.missingCostLines),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue),...costEstimateMetrics(row)});
     for(const row of purchases)Object.assign(ensure(row.day,row.month),{documents:n(row.documents),purchaseNet:n(row.purchaseNet),purchaseVat:n(row.purchaseVat),purchaseGross:n(row.purchaseGross)});
     for(const row of expenses)Object.assign(ensure(row.day,row.month),{payments:n(row.payments),expenseGross:n(row.expenseGross),expensePayments:n(row.expensePayments),missingExpenseVatPayments:n(row.missingExpenseVatPayments),knownExpenseVat:n(row.knownExpenseVat),paymentTotal:n(row.paymentTotal)});
     const finish=finishBusinessPictureRow;
     const daily=[...rows.values()].sort((a,b)=>b.day.localeCompare(a.day)).map(finish);
-    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
-    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0}));
-    res.set("Cache-Control","no-store, private");
-    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,missingExpenseVatDetails:expenses.flatMap(row=>(row.missingExpenseVatDetails||[]).map(item=>({...item,day:row.day,month:row.month,amount:n(item.amount),storeName:stores.find(store=>store.id===item.storeId)?.name||null}))).sort((a,b)=>String(b.occurredAt).localeCompare(String(a.occurredAt))||b.id.localeCompare(a.id)),calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Κάθε ενεργή πληρωμή εμφανίζεται στην ημερομηνία της. Καθαρό ποσό και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό του ίδιου καταστήματος, με συμφωνία στρογγυλοποίησης στην εξόφληση. Χωρίς τεκμηρίωση, σε υπερπληρωμή ή ασυνεπή πρόσημα παραμένουν άγνωστα. Ακυρωμένες πληρωμές δεν προσμετρώνται. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
-  }catch(error){next(error)}
-});
+    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
+    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()}));
+    return ({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,missingCostDetails:collectBusinessPictureMissingCosts(sales).map(row=>({...row,storeName:stores.find(store=>store.id===row.storeId)?.name||null})),missingExpenseVatDetails:expenses.flatMap(row=>(row.missingExpenseVatDetails||[]).map(item=>({...item,day:row.day,month:row.month,amount:n(item.amount),storeName:stores.find(store=>store.id===item.storeId)?.name||null}))).sort((a,b)=>String(b.occurredAt).localeCompare(String(a.occurredAt))||b.id.localeCompare(a.id)),calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Κάθε ενεργή πληρωμή εμφανίζεται στην ημερομηνία της. Καθαρό ποσό και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό του ίδιου καταστήματος, με συμφωνία στρογγυλοποίησης στην εξόφληση. Όπου δεν υπάρχει έγκυρη ανάλυση ΦΠΑ (χωρίς σύνδεση, μη διαθέσιμο ή ασυνεπές παραστατικό, υπερπληρωμή), ολόκληρο το ποσό υπολογίζεται ως έξοδο με ΦΠΑ 0% στην εικόνα ιδιοκτήτη, σύμφωνα με την οδηγία του. Τα αρχικά παραστατικά δεν τροποποιούνται. Ακυρωμένες πληρωμές δεν προσμετρώνται. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, τα οριστικά κέρδη και Margin παραμένουν άγνωστα. Εμφανίζεται χωριστά εκτίμηση από τα γνωστά κόστη της ίδιας κατηγορίας και μονάδας στην επιλεγμένη περίοδο, με εναλλακτική βάση το ίδιο κατάστημα. Οι δωρεάν πωλήσεις εκτιμώνται από γνωστό κόστος ανά μονάδα. Χωρίς επαρκή βάση ή αρχική πώληση επιστροφής δεν παράγεται εκτίμηση. Η κάλυψη αφορά τις πωλήσεις με γνωστό κόστος, όχι εγγύηση ακρίβειας. Μηδενικό πραγματικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",units:"Στις παλιές εγγραφές συσκευασίας το κόστος μετατρέπεται ανά τεμάχιο μόνο με άμεση σύνδεση στο οριστικοποιημένο αρχικό παραστατικό και συμφωνία ποσοτήτων/καθαρών αξιών. Περιλαμβάνονται οι τελικές εκπτώσεις και ο ΕΦΚ. Τα αρχικά στοιχεία δεν τροποποιούνται.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
 
-router.get("/report",async(req,res,next)=>{
-  try{
-    requireOwnerReport(req);
-    const query=reportQuery.parse(req.query||{});
+}
+router.get("/business-picture",async(req,res,next)=>{try{requireOwnerReport(req);res.set("Cache-Control","no-store, private");res.json(await readOwnerBusinessPicture(req.user.companyId,req.query||{}))}catch(error){next(error)}});
+
+export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,strictTenant=false}={}){
+ const prisma=db;
+    const query=reportQuery.parse(rawQuery||{});
     const {from,to}=dateRange(query);
-    const companyId=req.user.companyId;
+    const companyId=scopeCompanyId;
     const storeId=query.storeId||null;
     const supplierId=query.supplierId||null;
     const type=txFilterType(query.type);
     const needle=query.q||null;
-    await verifyStore(companyId,storeId);
+    await verifyStore(companyId,storeId,{db:prisma});
 
     const [stores,suppliers,ledgerTable]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
@@ -181,7 +247,7 @@ router.get("/report",async(req,res,next)=>{
     ]);
 
     if(!ledgerTable[0]?.exists){
-      return res.json({
+      return ({
         generatedAt:new Date().toISOString(),from,to,stores,suppliers,summary:{count:0,totalExpenses:0,supplierPayments:0,otherExpenses:0,averageExpense:0,missingAttachments:0,reversedCount:0,salesTotal:0,purchasesTotal:0,percentOfSales:0,changePercent:null},
         byStore:[],bySupplier:[],categories:[],daily:[],movements:[],sourceStatus:{ledger:false,sales:true,purchases:true}
       });
@@ -204,9 +270,9 @@ router.get("/report",async(req,res,next)=>{
         )::int AS "missingAttachments",
         COUNT(*) FILTER (WHERE t."reversedAt" IS NOT NULL)::int AS "reversedCount"
       FROM "StoreTransaction" t
-      JOIN "Store" st ON st."id"=t."storeId"
-      LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-      WHERE t."companyId"=${companyId}
+      JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+      LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+      WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId"))
         AND t."occurredAt">=${rangeFrom} AND t."occurredAt"<=${rangeTo}
         AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
         AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
@@ -221,14 +287,14 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT COALESCE(SUM("total"),0) AS total
         FROM "Sale"
-        WHERE "companyId"=${companyId} AND "status"='COMPLETED'
+        WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="Sale"."storeId" AND scopeStore."companyId"="Sale"."companyId")) AND "status"='COMPLETED'
           AND "occurredAt">=${from} AND "occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
       `,
       prisma.$queryRaw`
         SELECT COALESCE(SUM("totalGross"),0) AS total
         FROM "PurchaseDocument"
-        WHERE "companyId"=${companyId} AND "status"='APPROVED'
+        WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="PurchaseDocument"."storeId" AND scopeStore."companyId"="PurchaseDocument"."companyId")) AND "status"='APPROVED'
           AND "documentDate">=${from} AND "documentDate"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR "supplierId"=${supplierId})
@@ -239,9 +305,9 @@ router.get("/report",async(req,res,next)=>{
                t."subtractFromShift",t."actorId",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",
                (t."attachmentData" IS NOT NULL) AS "hasAttachment",t."attachmentMimeType",t."attachmentFilename"
         FROM "StoreTransaction" t
-        JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId}
+        JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId"))
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
@@ -255,9 +321,9 @@ router.get("/report",async(req,res,next)=>{
         SELECT t."storeId",st."name" AS name,
                COUNT(*) FILTER (WHERE t."reversedAt" IS NULL)::int AS count,
                COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS expenses
-        FROM "StoreTransaction" t JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
+        FROM "StoreTransaction" t JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -267,23 +333,23 @@ router.get("/report",async(req,res,next)=>{
       `,
       prisma.$queryRaw`
         SELECT s."storeId",st."name" AS name,COALESCE(SUM(s."total"),0) AS sales
-        FROM "Sale" s JOIN "Store" st ON st."id"=s."storeId"
+        FROM "Sale" s JOIN "Store" st ON st."id"=s."storeId" AND (${strictTenant}=false OR st."companyId"=s."companyId")
         WHERE s."companyId"=${companyId} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR s."storeId"=${storeId})
         GROUP BY s."storeId",st."name"
       `,
       prisma.$queryRaw`
         SELECT d."storeId",st."name" AS name,COALESCE(SUM(d."totalGross"),0) AS purchases
-        FROM "PurchaseDocument" d JOIN "Store" st ON st."id"=d."storeId"
-        WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND d."documentDate">=${from} AND d."documentDate"<=${to}
+        FROM "PurchaseDocument" d JOIN "Store" st ON st."id"=d."storeId" AND (${strictTenant}=false OR st."companyId"=d."companyId")
+        WHERE d."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=d."storeId" AND scopeStore."companyId"=d."companyId")) AND d."status"='APPROVED' AND d."documentDate">=${from} AND d."documentDate"<=${to}
           AND (${storeId}::text IS NULL OR d."storeId"=${storeId})
         GROUP BY d."storeId",st."name"
       `,
       prisma.$queryRaw`
         SELECT COALESCE(t."supplierId",'') AS "supplierId",COALESCE(NULLIF(t."supplierName",''),sp."name",'Χωρίς προμηθευτή') AS name,
                COUNT(*)::int AS count,COALESCE(SUM(t."amount"),0) AS payments
-        FROM "StoreTransaction" t LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."reversedAt" IS NULL AND t."type"='SUPPLIER_PAYMENT'
+        FROM "StoreTransaction" t LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."reversedAt" IS NULL AND t."type"='SUPPLIER_PAYMENT'
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -295,8 +361,8 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT COALESCE(d."supplierId",'') AS "supplierId",COALESCE(sp."name",'Χωρίς προμηθευτή') AS name,
                COUNT(*)::int AS documents,COALESCE(SUM(d."totalGross"),0) AS purchases
-        FROM "PurchaseDocument" d LEFT JOIN "Supplier" sp ON sp."id"=d."supplierId"
-        WHERE d."companyId"=${companyId} AND d."status"='APPROVED'
+        FROM "PurchaseDocument" d LEFT JOIN "Supplier" sp ON sp."id"=d."supplierId" AND (${strictTenant}=false OR sp."companyId"=d."companyId")
+        WHERE d."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=d."storeId" AND scopeStore."companyId"=d."companyId")) AND d."status"='APPROVED'
           AND d."documentDate">=${from} AND d."documentDate"<=${to}
           AND (${storeId}::text IS NULL OR d."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR d."supplierId"=${supplierId})
@@ -306,9 +372,9 @@ router.get("/report",async(req,res,next)=>{
         SELECT COALESCE(NULLIF(BTRIM(t."description"),''),'Λοιπά έξοδα') AS name,
                COUNT(*)::int AS count,COALESCE(SUM(t."amount"),0) AS amount
         FROM "StoreTransaction" t
-        JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."reversedAt" IS NULL AND t."type"='OTHER_EXPENSE'
+        JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."reversedAt" IS NULL AND t."type"='OTHER_EXPENSE'
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -319,9 +385,9 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT DATE(t."occurredAt" AT TIME ZONE 'Europe/Athens') AS day,COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS expenses
         FROM "StoreTransaction" t
-        JOIN "Store" st ON st."id"=t."storeId"
-        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
-        WHERE t."companyId"=${companyId} AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
+        JOIN "Store" st ON st."id"=t."storeId" AND (${strictTenant}=false OR st."companyId"=t."companyId")
+        LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND (${strictTenant}=false OR sp."companyId"=t."companyId")
+        WHERE t."companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"=t."storeId" AND scopeStore."companyId"=t."companyId")) AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
           AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -332,7 +398,7 @@ router.get("/report",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT DATE("occurredAt" AT TIME ZONE 'Europe/Athens') AS day,COALESCE(SUM("total"),0) AS sales
         FROM "Sale"
-        WHERE "companyId"=${companyId} AND "status"='COMPLETED' AND "occurredAt">=${from} AND "occurredAt"<=${to}
+        WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="Sale"."storeId" AND scopeStore."companyId"="Sale"."companyId")) AND "status"='COMPLETED' AND "occurredAt">=${from} AND "occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY DATE("occurredAt" AT TIME ZONE 'Europe/Athens') ORDER BY day
       `
@@ -368,7 +434,7 @@ router.get("/report",async(req,res,next)=>{
       ...categoryRows.map(row=>({name:row.name,type:"OTHER_EXPENSE",count:n(row.count),amount:n(row.amount)}))
     ].sort((a,b)=>b.amount-a.amount);
 
-    res.json({
+    return ({
       generatedAt:new Date().toISOString(),from,to,previousFrom,previousTo,stores,suppliers,
       summary:{
         count:n(raw.count),totalExpenses,supplierPayments:n(raw.supplierPayments),otherExpenses:n(raw.otherExpenses),averageExpense:n(raw.average),
@@ -381,7 +447,8 @@ router.get("/report",async(req,res,next)=>{
       bySupplier,categories,daily:[...dailyMap.values()].sort((a,b)=>a.day.localeCompare(b.day)),movements:movementRows.map(mapMovement),
       sourceStatus:{ledger:true,sales:true,purchases:true}
     });
-  }catch(error){next(error)}
-});
+
+}
+router.get("/report",async(req,res,next)=>{try{requireOwnerReport(req);res.json(await readOwnerPaymentReport(req.user.companyId,req.query||{}))}catch(error){next(error)}});
 
 export default router;

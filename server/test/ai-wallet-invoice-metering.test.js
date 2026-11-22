@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createInvoiceWalletMeter,throwIfWalletError,invoiceWalletFeatures} from '../src/services/ai-wallet-invoice-metering.js';
+import {walletActivityFromRequest} from '../src/services/ai-wallet-activity.js';
 
 const token={model:'synthetic',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:0,outputMicrosPerMillion:1000000,contextTokens:100,maxOutputTokens:20};
 const page={model:'prebuilt-invoice',apiVersion:'2024-11-30',unitMicros:40,maxPages:5};
@@ -8,6 +9,24 @@ const env={AI_OWNER_WALLET_ENABLED:'true',AI_OWNER_WALLET_INVOICES_ENABLED:'true
 const url='https://api.openai.com/v1/responses',options={method:'POST',body:JSON.stringify({model:'synthetic',input:'synthetic private invoice'})},scope={companyId:'c',storeId:'s'};
 const raw=id=>({id,model:'synthetic',usage:{input_tokens:5,output_tokens:3,input_tokens_details:{cached_tokens:0}},output_text:'synthetic answer'});
 const azurePayload={status:'succeeded',analyzeResult:{modelId:page.model,apiVersion:page.apiVersion,pages:[{pageNumber:1},{pageNumber:2}]}};
+test('parallel original callers retain copied activity through provider waits without names or scope leaking',async()=>{
+ const f=fixture(),names=['Synthetic operator A','Synthetic operator B'];
+ const requests=names.map((name,index)=>{
+  const own={companyId:'company-'+index,storeId:'store-'+index};
+  const activity=walletActivityFromRequest({user:{...own,id:'operator-'+index,tokenType:'STORE_OPERATOR',role:'EMPLOYEE',fullName:name}},{storeId:own.storeId,purpose:'INVOICE_ASSISTANT'});
+  const work=f.meter.run({...own,activity},()=>f.meter.responsesFetch(url,options));activity.actor.name='Changed after request';return work;
+ });
+ await Promise.all(requests);
+ const holds=f.events.filter(e=>e.kind==='reserve');assert.deepEqual(holds.map(e=>e.activity.actor.name).sort(),names);
+ for(const hold of holds){assert.equal(hold.activity.companyId,hold.companyId);assert.equal(hold.activity.storeId,hold.storeId)}
+ assert.equal(f.events.filter(e=>e.kind==='settle').length,2);
+});
+test('invoice pricing receives only the server-supplied durable document and parallel scopes cannot leak it',async()=>{
+ const f=fixture();
+ await Promise.all(['document-a','document-b'].map(invoiceDocumentId=>f.meter.run({...scope,invoiceDocumentId},()=>f.meter.responsesFetch(url,options))));
+ assert.deepEqual(f.events.filter(e=>e.kind==='reserve').map(e=>e.invoiceDocumentId).sort(),['document-a','document-b']);
+ assert.throws(()=>f.meter.run({...scope,invoiceDocumentId:''},()=>{throw Error('must not invoke')}),e=>e.code==='AI_WALLET_SCOPE_DENIED');
+});
 function fixture({configuration=env,repository={},transport,countPages=async()=>2}={}){
  const events=[];let sequence=0;
  const repo={enabledFor:async()=>true,reserve:async data=>{const id='r'+(++sequence);events.push({kind:'reserve',id,...data});return {id}},settle:async(companyId,id,data)=>events.push({kind:'settle',companyId,id,...data}),review:async(companyId,id)=>events.push({kind:'review',companyId,id}),...repository};
@@ -19,7 +38,7 @@ test('invoice runtime and feature gates default OFF; original transport/options 
   let calls=0;const response=new Response('original'),f=fixture({configuration,repository:{enabledFor(){throw Error('no DB')}},transport:async(u,o)=>{assert.equal(u,url);assert.equal(o,options);calls++;return response},countPages(){throw Error('no PDF parse')}});
   assert.equal(await f.meter.responsesFetch(url,options),response);assert.equal(await f.meter.azure({},async()=>azurePayload),azurePayload);assert.equal(calls,1);
  }
- assert.deepEqual(invoiceWalletFeatures({}),['OWNER_ASSISTANT']);assert.ok(invoiceWalletFeatures(env).includes('INVOICE_AZURE'));
+ assert.deepEqual(invoiceWalletFeatures({}),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);assert.ok(invoiceWalletFeatures(env).includes('INVOICE_AZURE'));
 });
 test('active invoice calls require a canonical scope and reject arbitrary outbound URL before paid I/O',async()=>{
  let calls=0;const f=fixture({transport:async()=>{calls++;return new Response('{}')}});
@@ -87,3 +106,50 @@ test('failed review persistence still stops paid fallbacks and retains the origi
   assert.equal(paid,1);assert.equal(fallback,0);assert.equal(f.events.filter(e=>e.kind==='reserve').length,1);assert.equal(f.events.filter(e=>e.kind==='settle').length,0);
  }
 });
+
+test('opt-in invoice request reservation counts exact input before reserve, then settles only the original generation',async()=>{
+ const calls=[];let f;
+ f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_REQUEST_RESERVE_ENABLED:'true'},transport:async(u,o)=>{
+  calls.push(u);
+  if(u.endsWith('/input_tokens')){assert.equal(f.events.length,0);assert.equal(JSON.parse(o.body).input,'synthetic private invoice');return new Response(JSON.stringify({object:'response.input_tokens',input_tokens:5}))}
+  assert.equal(f.events[0].amountMicros,25n);return new Response(JSON.stringify(raw('counted-response')));
+ }});
+ await f.meter.run(scope,()=>f.meter.responsesFetch(url,options));
+ assert.deepEqual(calls,[url+'/input_tokens',url]);assert.equal(f.events[1].amountMicros,8n);assert.equal(f.events[0].tariff.contextTokens,100);
+});
+test('invoice count failure cannot enter paid fallback, reserve money or affect Azure page metering',async()=>{
+ let generated=0,fallback=0;
+ const f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_REQUEST_RESERVE_ENABLED:'true'},transport:async u=>{if(u.endsWith('/input_tokens'))return new Response('unavailable',{status:503});generated++;return new Response('{}')}});
+ await assert.rejects(f.meter.run(scope,async()=>{try{return await f.meter.responsesFetch(url,options)}catch(error){throwIfWalletError(error);fallback++}}),e=>e.code==='AI_WALLET_INPUT_COUNT_REQUIRED'&&e.status===409);
+ assert.equal(generated,0);assert.equal(fallback,0);assert.equal(f.events.length,0);
+ await f.meter.run(scope,()=>f.meter.azure({...page},async mark=>{mark('synthetic-azure-operation');return azurePayload}));
+ assert.equal(f.events[0].amountMicros,80n);assert.equal(f.events[1].amountMicros,80n);
+});
+test('dedicated invoice schedules override only invoice prices and an invalid dedicated schedule never silently uses the Owner rate',async()=>{
+ const configuration={...env,AI_OWNER_WALLET_INVOICE_TARIFFS:JSON.stringify([{...token,inputMicrosPerMillion:2000000}]),AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS:JSON.stringify([{...page,unitMicros:60}])};
+ const f=fixture({configuration});await f.meter.run(scope,()=>f.meter.responsesFetch(url,options));
+ assert.equal(f.events[1].amountMicros,13n);
+ await f.meter.run(scope,()=>f.meter.azure({...page},async mark=>{mark('dedicated-price-operation');return azurePayload}));assert.equal(f.events[3].amountMicros,120n);
+ assert.equal(configuration.AI_OWNER_WALLET_TARIFFS,env.AI_OWNER_WALLET_TARIFFS);
+ for(const bad of ['[]','not JSON']){
+  const g=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_TARIFFS:bad}});
+  await assert.rejects(g.meter.run(scope,()=>g.meter.responsesFetch(url,options)),e=>e.code==='AI_WALLET_TARIFF_REQUIRED');assert.equal(g.events.length,0);
+ }
+});
+test('company rollout boundary meters only the selected invoice companies and reports the same scope',async()=>{
+ const configuration={...env,AI_OWNER_WALLET_INVOICE_COMPANIES:JSON.stringify(['lab'])};let original=0;
+ const excluded=fixture({configuration,repository:{enabledFor(){throw Error('unselected invoice must not touch wallet')}},transport:async(u,o)=>{assert.equal(o,options);original++;return 'original'}});
+ assert.equal(await excluded.meter.run(scope,()=>excluded.meter.responsesFetch(url,options)),'original');
+ assert.equal(await excluded.meter.run(scope,()=>excluded.meter.azure({},async()=>azurePayload)),azurePayload);assert.equal(original,1);assert.equal(excluded.events.length,0);
+ assert.deepEqual(invoiceWalletFeatures(configuration,'c'),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);assert.ok(invoiceWalletFeatures(configuration,'lab').includes('INVOICE_AZURE'));
+ const selected=fixture({configuration});await selected.meter.run({companyId:'lab',storeId:'lab1'},()=>selected.meter.responsesFetch(url,options));assert.equal(selected.events[1].amountMicros,8n);
+});
+test('invalid explicit company rollout cannot silently broaden invoice charging or call a provider',async()=>{
+ for(const value of ['not JSON','null','{}','["lab","lab"]','[""]','[" lab"]']){
+  let called=0;const f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_COMPANIES:value},transport:async()=>{called++}});
+  await assert.rejects(f.meter.run(scope,()=>f.meter.responsesFetch(url,options)),e=>e.code==='AI_WALLET_TARIFF_REQUIRED');assert.equal(called,0);assert.equal(f.events.length,0);
+ }
+ assert.deepEqual(invoiceWalletFeatures({...env,AI_OWNER_WALLET_INVOICE_COMPANIES:'[]'},'c'),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);
+});
+
+

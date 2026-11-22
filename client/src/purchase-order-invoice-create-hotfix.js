@@ -1,7 +1,8 @@
 const previousFetch=window.fetch.bind(window);
 
 let latestInvoiceJobId="";
-const activeInvoiceModal=()=>[...document.querySelectorAll(".po-modal")].reverse().find(modal=>modal.querySelector('form[data-new-order]')&&modal.querySelector('[data-create-invoice]'))||null;
+const hasPageAwareIntake=modal=>Boolean(modal?.querySelector("[data-invoice-pages-file]"));
+const activeInvoiceModal=()=>[...document.querySelectorAll(".po-modal")].reverse().find(modal=>!hasPageAwareIntake(modal)&&modal.querySelector('form[data-new-order]')&&modal.querySelector('[data-create-invoice]'))||null;
 const authHeaders=()=>{const token=localStorage.getItem("token")||sessionStorage.getItem("storeOperatorToken");return {"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}};
 const normalizeDate=value=>{const text=String(value||"").trim();if(!text)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const match=text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(!match)return null;return `${match[3]}-${String(match[2]).padStart(2,"0")}-${String(match[1]).padStart(2,"0")}`};
 const parseAmount=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const number=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(number)?number:0};
@@ -80,6 +81,8 @@ function bindButton(button){
 function scan(){
   if(!latestInvoiceJobId)latestInvoiceJobId=recoverJobIdFromPerformance();
   document.querySelectorAll("[data-create-invoice]").forEach(button=>{
+    // The page-aware handler saves edited lines and sends every secondary job ID.
+    if(hasPageAwareIntake(button.closest(".po-modal")))return;
     const bound=bindButton(button)||button;
     const modal=bound.closest(".po-modal");
     if(modal&&latestInvoiceJobId&&!modal.dataset.invoiceJobId)modal.dataset.invoiceJobId=latestInvoiceJobId;

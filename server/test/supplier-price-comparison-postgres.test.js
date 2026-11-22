@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {once} from "node:events";
 import express from "express";
-import {buildSupplierPriceComparison} from "../src/lib/supplier-price-comparison.js";
+import {readSupplierComparison} from "../src/services/supplier-comparison-report.js";
 import {ownerRestrictedModuleKeys} from "../src/services/module-catalog.js";
 
 // Execute the registered production handler and module guard against real SQL.
@@ -71,7 +71,7 @@ test("supplier comparison HTTP/SQL isolates stores, prices and module access",{s
         ["invalid-p","po-invalid","invalid-order",1,"PIECE",null,999]
       ];
       for(const [id,document,product,quantity,unit,pack,net] of lines)await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" VALUES (${id},${document},${product},${quantity},${unit},${pack},${net})`;
-      await tx.$executeRawUnsafe(`INSERT INTO "PurchaseOrder" VALUES ('po-explicit','a','a1','FINAL'),('po-corrected','a','a1','FINAL'),('po-invalid','a','a1','FINAL')`);
+      await tx.$executeRawUnsafe(`INSERT INTO "PurchaseOrder" VALUES ('po-explicit','a','a1','INVOICED'),('po-corrected','a','a1','FINAL'),('po-invalid','a','a1','FINAL')`);
       await tx.$executeRawUnsafe(`INSERT INTO "PurchaseOrderLine" VALUES ('ol1','po-explicit','order',2,12,12,3,'PACKAGE'),('ol2','po-corrected','order',2,12,20,0,'PACKAGE'),('ol3','po-invalid','invalid-order',2,0,12,0,'PACKAGE')`);
       await tx.$executeRawUnsafe(`INSERT INTO "StockMovement" VALUES ('correct-own','a1','order','PURCHASE_ORDER','po-corrected','PURCHASE_PACK_CORRECTION',.4,'2026-10-01'),('correct-sibling','a2','order','PURCHASE_ORDER','po-corrected','PURCHASE_PACK_CORRECTION',.001,'2026-10-04')`);
 
@@ -94,7 +94,7 @@ test("supplier comparison HTTP/SQL isolates stores, prices and module access",{s
       const routeSource=await readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
       const registrations=[];
       const router=Object.fromEntries(["get","post","patch","put","delete","use"].map(method=>[method,(...args)=>registrations.push({method,args})]));
-      new Function("Router","prisma","requireCompanyModule","requireStoreModule","buildSupplierPriceComparison","orderSuggestionsRouter",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,""))(()=>router,db,guards.requireCompanyModule,guards.requireStoreModule,buildSupplierPriceComparison,express.Router());
+      new Function("Router","prisma","requireCompanyModule","requireStoreModule","readSupplierComparison","orderSuggestionsRouter","lowValueProductsRouter",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,""))(()=>router,db,guards.requireCompanyModule,guards.requireStoreModule,readSupplierComparison,express.Router(),express.Router());
       const route=registrations.find(row=>row.method==="get"&&row.args[0]==="/supplier-price-comparison");
       assert.ok(route,"Production comparison route must be registered");
       const users={owner:{role:"OWNER",companyId:"a"},admin:{role:"SUPER_ADMIN",companyId:"different-login-company"},operator:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",companyId:"a",storeId:"a1"}};

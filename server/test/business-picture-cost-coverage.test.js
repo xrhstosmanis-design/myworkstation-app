@@ -20,10 +20,24 @@ test('no sales avoids NaN and still retains known expense outcome',()=>{
  const r=finish({...base,salesNet:0,costValue:0,salesLines:0});assert.equal(r.margin,0);assert.equal(r.netProfit,-8);
 });
 
-test('unknown expense VAT preserves gross but suppresses net result without hiding known gross profit',()=>{
- const r=finish({...base,missingExpenseVatPayments:1});assert.equal(r.expenseGross,10);assert.equal(r.expenses,null);assert.equal(r.expenseVat,null);assert.equal(r.netProfit,null);assert.equal(r.expenseSalesPercent,null);assert.equal(r.grossProfit,40);
+test('expenses without VAT analysis use the owner zero-rate convention and preserve documented VAT',()=>{
+ const r=finish({...base,missingExpenseVatPayments:1});assert.equal(r.expenseGross,10);assert.equal(r.expenses,8);assert.equal(r.expenseVat,2);assert.equal(r.netProfit,32);assert.equal(r.expenseSalesPercent,8);assert.equal(r.grossProfit,40);assert.equal(r.expenseVatComplete,false);assert.equal(r.expenseVatPolicy,"DOCUMENTED_OR_ZERO");
 });
 test('documented VAT is deducted exactly once and credit expenses retain their sign',()=>{
  const r=finish(base);assert.equal(r.expenses,8);assert.equal(r.expenseVat,2);assert.equal(r.expenseSalesPercent,8);
  const credit=finish({...base,expenseGross:-10,knownExpenseVat:-2});assert.equal(credit.expenses,-8);assert.equal(credit.expenseSalesPercent,-8);assert.equal(credit.netProfit,48);
+});
+
+test('all undocumented expense amounts are deducted in full including credits without inventing sales costs',()=>{
+ for(const amount of [10,-10,0]){
+  const r=finish({...base,expenseGross:amount,knownExpenseVat:0,missingExpenseVatPayments:2});
+  assert.equal(r.expenses,amount);assert.equal(r.expenseVat,0);assert.equal(r.netProfit,40-amount);
+  assert.equal(finish({...base,expenseGross:amount,knownExpenseVat:0,missingExpenseVatPayments:2,missingCostLines:1}).netProfit,null);
+ }
+});
+test('mixed documented and zero-rate expenses add consistently across days and months',()=>{
+ const days=[{...base,expenseGross:124,knownExpenseVat:24},{...base,expenseGross:50,knownExpenseVat:0,missingExpenseVatPayments:1}];
+ const total=Object.fromEntries(Object.keys(base).map(k=>[k,days.reduce((sum,r)=>sum+r[k],0)]));
+ const r=finish(total);assert.equal(r.expenses,150);assert.equal(r.expenseVat,24);assert.equal(r.netProfit,-70);
+ assert.equal(r.expenses,days.reduce((sum,row)=>sum+finish(row).expenses,0));
 });

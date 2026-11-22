@@ -224,8 +224,8 @@ async function main(){
     assert.equal(day.payload.totals.salesLines,2);
     assert.equal(day.payload.totals.purchaseGross,7);
     assert.equal(day.payload.totals.expenseGross,12);
-    assert.equal(day.payload.totals.expenses,null);
-    assert.equal(day.payload.totals.expenseVat,null);
+    assert.equal(day.payload.totals.expenses,12);
+    assert.equal(day.payload.totals.expenseVat,0);
     assert.equal(day.payload.totals.missingExpenseVatPayments,2);
     assert.equal(day.payload.daily.length,1);
     assert.equal(day.payload.daily[0].day,'2030-10-01');
@@ -314,11 +314,11 @@ async function main(){
     }
     for(const day of ['06','07','08','10','11','22','23']){
       const result=await request(vatPath(day),{token:ownerToken});assert.equal(result.response.status,200,JSON.stringify(result.payload));
-      for(const r of [result.payload.totals,...result.payload.daily,...result.payload.monthly]){assert.equal(r.missingExpenseVatPayments,1);assert.equal(r.expenses,null);assert.equal(r.expenseVat,null);assert.equal(r.netProfit,null);assert.equal(r.expenseSalesPercent,null);assert.equal(r.grossProfit,0);}
+      for(const r of [result.payload.totals,...result.payload.daily,...result.payload.monthly]){assert.equal(r.missingExpenseVatPayments,1);assert.equal(r.expenses,r.expenseGross);assert.equal(r.expenseVat,0);assert.equal(r.netProfit,-r.expenseGross);assert.equal(r.expenseSalesPercent,0);assert.equal(r.grossProfit,0);}
     }
     const reversed=await request(vatPath('12'),{token:ownerToken});assert.equal(reversed.payload.totals.expenseGross,0);assert.equal(reversed.payload.totals.expensePayments,0);assert.equal(reversed.payload.totals.missingExpenseVatPayments,0);
     const mixed=await request(vatPath('01')+'&calendarTo=2032-05-11',{token:ownerToken});assert.equal(mixed.response.status,400,'Duplicate query field must be rejected');
-    const all=await request(vatPath('01').replace('calendarTo=2032-05-01','calendarTo=2032-05-11'),{token:ownerToken});assert.equal(all.payload.totals.missingExpenseVatPayments,5);assert.equal(all.payload.totals.expenses,null);assert.equal(all.payload.totals.expenseVat,null);assert.equal(all.payload.totals.netProfit,null);
+    const all=await request(vatPath('01').replace('calendarTo=2032-05-01','calendarTo=2032-05-11'),{token:ownerToken});assert.equal(all.payload.totals.missingExpenseVatPayments,5);assert.equal(all.payload.totals.expenses,756);assert.equal(all.payload.totals.expenseVat,36);assert.equal(all.payload.totals.netProfit,-756);
     const mayCents=await request(vatPath('20'),{token:ownerToken});
     assert.equal(mayCents.payload.totals.expenseGross,1);assert.equal(mayCents.payload.totals.expenseVat,.01);assert.equal(mayCents.payload.totals.expenses,.99);
     const juneCents=await request(`/api/owner-payments/business-picture?storeId=${storeId}&calendarFrom=2032-06-01&calendarTo=2032-06-01`,{token:ownerToken});
@@ -332,7 +332,7 @@ async function main(){
     for(const id of vatTransactions)await prisma.$executeRaw`DELETE FROM "StoreTransaction" WHERE "id"=${id} AND "companyId"=${companyId}`;
     for(const id of vatDocs)await prisma.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${id} AND "companyId"=${companyId}`;
   }
-  console.log('E2E task27 documented expense VAT passed',{fullGross:124,net:100,vat:24,zeroVatKnown:true,creditNet:-100,unknownPayments:8,partialAndDuplicateVat:null});
+  console.log('E2E task27 documented expense VAT passed',{fullGross:124,net:100,vat:24,zeroVatKnown:true,creditNet:-100,zeroRateFallback:true,documentedPartialVat:12});
 
   console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:3,manualPrice:2.5});
 }

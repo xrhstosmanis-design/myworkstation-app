@@ -1,3 +1,8 @@
+import { recognizeLocalInvoice } from "../../lib/local-invoice-ocr.mjs";
+import DocumentCameraFocus from "./DocumentCameraFocus.jsx";
+import useCameraAcquisition from "./useCameraAcquisition.js";
+import {captureCameraFrame} from "../../lib/camera-acquisition.js";
+import DocumentScanButton from "./DocumentScanButton.jsx";
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, FileUp, Wallet } from "lucide-react";
@@ -64,61 +69,13 @@ function collectLines(data) {
       confidence: Math.round(Number(data?.confidence) || 0),
     }));
 }
-async function pdfPreview(file) {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).toString();
-  const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() })
-    .promise;
-  const page = await pdf.getPage(1),
-    viewport = page.getViewport({ scale: 2 }),
-    canvas = document.createElement("canvas");
-  canvas.width = Math.ceil(viewport.width);
-  canvas.height = Math.ceil(viewport.height);
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport })
-    .promise;
-  return {
-    source: canvas.toDataURL("image/jpeg", 0.92),
-    pageCount: pdf.numPages,
-    pdfNote:
-      pdf.numPages > 1
-        ? `Το OCR διάβασε την πρώτη σελίδα από ${pdf.numPages}. Αν χρειαστεί AI, ελέγχεται το αρχικό PDF.`
-        : "Αναγνώστηκε η πρώτη σελίδα του PDF.",
-  };
-}
 async function localOcr(file) {
   const dataUrl = await readFile(file);
-  let source = file,
-    pageCount = null,
-    pdfNote = null;
-  if (file.type === "application/pdf") {
-    const preview = await pdfPreview(file);
-    source = preview.source;
-    pageCount = preview.pageCount;
-    pdfNote = preview.pdfNote;
-  }
-  const { createWorker } = await import("tesseract.js"),
-    worker = await createWorker("ell+eng");
-  let result;
-  try {
-    result = await worker.recognize(source);
-  } finally {
-    await worker.terminate();
-  }
   return {
     dataUrl,
     filename: file.name || "timologio.jpg",
     mimeType: file.type || "image/jpeg",
-    confidence: Math.max(
-      0,
-      Math.min(100, Math.round(Number(result?.data?.confidence) || 0)),
-    ),
-    rawText: result?.data?.text || "",
-    lines: collectLines(result?.data || {}),
-    pageCount,
-    pdfNote,
+    ...await recognizeLocalInvoice(file, collectLines),
   };
 }
 function localMeta(rawText, suppliers = []) {
@@ -318,6 +275,7 @@ export default function StoreSupplierInvoiceV244({
   onChanged,
   setMessage,
 }) {
+  const cameraSession=useCameraAcquisition(store.id);
   const [invoice, setInvoice] = useState(emptyInvoice),
     [candidate, setCandidate] = useState({
       name: "",
@@ -342,7 +300,7 @@ export default function StoreSupplierInvoiceV244({
       null,
     [suppliers, invoice.supplierId],
   );
-  const stopCamera = () => {
+  const stopCamera = () => {cameraSession.cancel();
     stream?.getTracks?.().forEach((track) => track.stop());
     setStream(null);
     setCameraOpen(false);
@@ -358,24 +316,7 @@ export default function StoreSupplierInvoiceV244({
       working: false,
       status: `❌ ${message}`,
     }));
-  const startCamera = async () => {
-    try {
-      stopCamera();
-      const next = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
-      setStream(next);
-      setCameraOpen(true);
-      setTimeout(() => {
-        if (videoRef.current) videoRef.current.srcObject = next;
-      }, 0);
-    } catch {
-      setFailure(
-        "Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του browser.",
-      );
-    }
-  };
+  const startCamera=async()=>{try{stopCamera();const next=await cameraSession.open();if(!next)return;setStream(next);setCameraOpen(true);setTimeout(()=>{if(videoRef.current&&cameraSession.current(epoch))videoRef.current.srcObject=next},0);const epoch=cameraSession.checkpoint()}catch(error){setFailure(error.message)}};
   const runAiJob = async ({ dataUrl, filename, mimeType, rawText = "" }) => {
     const job = await api("/api/commerce/ai-reader/jobs", {
       method: "POST",
@@ -607,27 +548,7 @@ export default function StoreSupplierInvoiceV244({
       setFailure(error.message || "Ο επανέλεγχος με AI απέτυχε.");
     }
   };
-  const capture = () => {
-    const video = videoRef.current,
-      canvas = canvasRef.current;
-    if (!video || !canvas) return;
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        stopCamera();
-        processFile(
-          new File([blob], `timologio-${Date.now()}.jpg`, {
-            type: "image/jpeg",
-          }),
-        );
-      },
-      "image/jpeg",
-      0.92,
-    );
-  };
+  const capture=async()=>{const epoch=cameraSession.checkpoint();try{const file=await captureCameraFrame(videoRef.current,{name:`parastatiko-${Date.now()}.jpg`,isCurrent:()=>cameraSession.current(epoch)});if(!file)return;stopCamera();processFile(file)}catch(error){setFailure(error.message)}};
   const saveSupplier = async () => {
     if (!invoice.jobId)
       return setFailure(
@@ -820,7 +741,7 @@ export default function StoreSupplierInvoiceV244({
       >
         {invoice.status}
       </div>
-      <div className="pos-photo-actions">
+      <DocumentScanButton scopeKey={store.id} onFiles={files=>processFile(files[0])} disabled={invoice.working||invoice.done} maxPages={1}/><div className="pos-photo-actions">
         <button
           type="button"
           onClick={startCamera}
@@ -843,7 +764,7 @@ export default function StoreSupplierInvoiceV244({
       {cameraOpen && (
         <div className="pos-camera-live">
           <video ref={videoRef} autoPlay playsInline />
-          <canvas ref={canvasRef} hidden />
+          <canvas ref={canvasRef} hidden /><DocumentCameraFocus track={stream?.getVideoTracks?.()[0]} videoRef={videoRef}/>
           <div>
             <button type="button" onClick={capture}>
               <Camera /> Φωτογράφιση
@@ -1111,3 +1032,4 @@ export default function StoreSupplierInvoiceV244({
     </div>
   );
 }
+

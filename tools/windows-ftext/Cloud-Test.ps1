@@ -20,6 +20,7 @@ if(Test-Path -LiteralPath $path) {
     if(-not $pending.PSObject.Properties['settingsHash'] -or $pending.settingsHash -cne $c.settingsHash) { throw 'An earlier STATUS report belongs to different settings. Preserve it for review; no new STATUS was sent.' }
     $body=[string]$pending.body
 } else {
+    if(Test-Path -LiteralPath (Join-Path $c.workFolder '.mws-ftext-cash.json')) {throw 'A cash request is unresolved. Preserve its evidence; no new STATUS was sent.'}
     $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath
     $r=$evidence.result
     $report=[ordered]@{requestId=$evidence.requestId;checkedAt=$evidence.checkedAt;ok=$r.ok;code=$r.code;fiscalExecution=$false}

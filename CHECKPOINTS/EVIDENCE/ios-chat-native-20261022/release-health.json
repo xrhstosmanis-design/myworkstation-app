@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-22T17:34:02.453041+00:00",
+  "url": "https://myworkstation-app.onrender.com/api/health",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774"
+  },
+  "deploy": "dep-dbd4faff3r2c739b9rpg",
+  "renderStatus": "live",
+  "verificationScope": "exact healthy server revision only; no physical iPhone, Apple signing, APNs delivery or business test"
+}

@@ -9,7 +9,7 @@ import * as xmlHelpers from "../src/mydata-xml.js";
 test("real sync handler uses raw Supplier lookup and writes one draft, including unmatched suppliers",async()=>{
   const source=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8");
   const routes=new Map(),queries=[],writes=[];
-  let matchingSupplier=true,alreadyExists=false,pendingOriginals=[];
+  let matchingSupplier=true,alreadyExists=false,pendingOriginals=[],emptyDrafts=[];
   const acquired=[];
   const tx={
     async $queryRawUnsafe(sql){assert.match(sql,/current_schema/);return [{schema:'public',fence:null}]},
@@ -30,14 +30,15 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
       if(sql.includes('FROM "StoreIntegrationCredential"'))return [{enabled:true,environment:"PRODUCTION",credentialsEnc:"fixture"}];
       if(sql.includes('MAX('))return [{lastMark:"0"}];
       if(sql.includes('originalPending'))return pendingOriginals;
+      if(sql.includes('automaticPrefillChecked'))return emptyDrafts;
       throw new Error(`Unexpected query: ${sql}`);
     },
     async $transaction(callback){return callback(tx)}
   };
   const key="__mydataPersistenceTest";
-  globalThis[key]={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
+  globalThis[key]={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,linkStoredPosInvoicePhotos:async()=>0,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
   const injected=`import crypto from "node:crypto";
-    const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
+    const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,linkStoredPosInvoicePhotos,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
     const requireCompanyModule=()=>()=>{};
     const ensureStoreIntegrationSchema=async()=>{};
     const decryptStoreIntegrationCredentials=()=>({accountId:"fixture",secret:"fixture"});\n`;
@@ -66,6 +67,11 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     pendingOriginals=[{inboxId:"pending-one"}];
     result=await run();assert.equal(result.originalsDownloaded,1);
     assert.deepEqual(acquired[0].slice(1),["company-one","store-one","pending-one","owner-one",true]);
+    pendingOriginals=[];
+    emptyDrafts=[{inboxId:"older-empty-draft"}];
+    result=await run();
+    assert.equal(result.originalsDownloaded,0);
+    assert.deepEqual(acquired.at(-1).slice(1),["company-one","store-one","older-empty-draft","owner-one",true]);
     assert.equal(writes.length,0); // attachment helper mocked; receiving replay still writes nothing
 
   }finally{globalThis.fetch=previousFetch}

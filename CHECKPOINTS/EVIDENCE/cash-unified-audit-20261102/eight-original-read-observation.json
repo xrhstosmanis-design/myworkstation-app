@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-02",
+  "status": "REAL_BATCH_OBSERVED_FULL_ACCEPTANCE_OPEN",
+  "runtime": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+  "owner": "codex/cash-chat-reconciliation-20261026",
+  "before": {
+    "requested": 0,
+    "completed": 0,
+    "exactApprovedOriginals": 8,
+    "privateFixedShiftAndControlSnapshots": 5
+  },
+  "after": {
+    "requested": 8,
+    "completed": 8,
+    "distinctOriginals": 8,
+    "extractedUnverified": 7,
+    "requiresReview": 1,
+    "originalsUnchanged": true,
+    "allFivePrivateMoneyAndControlSnapshotsUnchanged": true
+  },
+  "firstRequestedAt": "2026-11-02T18:39:53.654Z",
+  "lastCompletedAt": "2026-11-02T18:43:28.508Z",
+  "storedExtractionShape": {
+    "datedSupplierDocuments": 4,
+    "handwrittenWithoutVerifiedYear": 2,
+    "zeroLineModelDescribedQROnly": 1
+  },
+  "getOnlyRefresh": {
+    "verified": true,
+    "extraProviderRequests": 0
+  },
+  "fullProjection": {
+    "status": "PENDING",
+    "unresolvedDocumentEvidenceEntries": 155,
+    "displayLimit": 100,
+    "notFinancialDifferenceCount": true,
+    "remaining": [
+      "UNCERTAIN_READING",
+      "INCOMPLETE_HANDWRITTEN_DATE_CONTEXT",
+      "DOCUMENT_RELEVANCE_AND_PAYMENT_CORROBORATION",
+      "EVENTS_EXPENSES_CARDS_NEXT_SHIFT"
+    ]
+  },
+  "rawSourcesImmutable": true,
+  "reupload": false,
+  "providerRetry": false,
+  "reviewOrApprovalWrites": false,
+  "cashCardStockFiscalWrites": false,
+  "email": false,
+  "independentOriginalAccuracyCertification": false,
+  "fullFinancialPass": false,
+  "nextAction": "Use the stored readings for bounded document-aware follow-up and authoritative missing date/context review; do not replay paid originals."
+}

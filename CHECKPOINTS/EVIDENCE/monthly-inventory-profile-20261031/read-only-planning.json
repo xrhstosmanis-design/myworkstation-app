@@ -1,0 +1,54 @@
+{
+  "tableObservation": {
+    "at": "2026-10-31T18:43:36.260565Z",
+    "schema": "public",
+    "readOnly": "on",
+    "known": 272,
+    "owned": 189,
+    "actual": 273,
+    "unknown": [
+      "StoreLifecycleRuntime"
+    ],
+    "missingOwned": [],
+    "allowedInternalExtra": [
+      "StoreLifecycleRuntime"
+    ],
+    "unreviewedExtras": [],
+    "note": "Known and owned names match after the executor's existing INTERNAL exclusion; this is names only, not eligibility."
+  },
+  "columnObservation": {
+    "at": "2026-10-31T18:45:37.403181Z",
+    "readOnly": "on",
+    "reviewedRelations": 272,
+    "columnTriples": 3164,
+    "mismatchedRelations": [],
+    "allowedInternalRuntimeColumns": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "heartbeatJson",
+        "text",
+        true
+      ],
+      [
+        "mac",
+        "text",
+        true
+      ]
+    ]
+  },
+  "separateReadOnlySnapshots": true,
+  "productionMutation": false,
+  "trustedInstallerInspectExecuted": false,
+  "installationPacketMinted": false,
+  "blocker": "Trusted application-service inspection requires Render dashboard authentication; MCP supplies read-only SQL but no remote command execution.",
+  "notVerified": [
+    "Full trusted in-service inspector packet",
+    "Indexes/constraints/triggers/RLS/reference/global-state/full readiness",
+    "Signed full-profile worker capability",
+    "Any production DDL/enrollment/grant/capture/activation"
+  ]
+}

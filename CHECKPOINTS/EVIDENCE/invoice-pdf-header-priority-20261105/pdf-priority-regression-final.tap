@@ -1,0 +1,2120 @@
+TAP version 13
+# Subtest: measured invoice input plus unchanged requested output replaces the full capacity hold
+ok 1 - measured invoice input plus unchanged requested output replaces the full capacity hold
+  ---
+  duration_ms: 7.418959
+  ...
+# Subtest: request holds cover every cache partition and the precise long-context boundary
+ok 2 - request holds cover every cache partition and the precise long-context boundary
+  ---
+  duration_ms: 0.21927
+  ...
+# Subtest: no measurement and unsupported mutable requests keep the original full hold
+ok 3 - no measurement and unsupported mutable requests keep the original full hold
+  ---
+  duration_ms: 0.972834
+  ...
+# Subtest: invalid counts/caps stop before hold and generation without reducing the requested output
+ok 4 - invalid counts/caps stop before hold and generation without reducing the requested output
+  ---
+  duration_ms: 1.899299
+  ...
+# Subtest: insufficient balance and input counting failure never generate or silently fall back
+ok 5 - insufficient balance and input counting failure never generate or silently fall back
+  ---
+  duration_ms: 0.949289
+  ...
+# Subtest: provider usage over the measured input or requested output retains REVIEW and cannot settle
+ok 6 - provider usage over the measured input or requested output retains REVIEW and cannot settle
+  ---
+  duration_ms: 1.624015
+  ...
+# Subtest: runtime/company OFF preserve legacy invocation and never count or initialize a wallet
+ok 7 - runtime/company OFF preserve legacy invocation and never count or initialize a wallet
+  ---
+  duration_ms: 0.278159
+  ...
+# Subtest: input-count request preserves inline invoice and JSON schema, credentials/signal; generation-only cap is excluded
+ok 8 - input-count request preserves inline invoice and JSON schema, credentials/signal; generation-only cap is excluded
+  ---
+  duration_ms: 24.698199
+  ...
+# Subtest: PDF data is countable; remote URL, conversation, tool, prompt and unknown inputs keep full holds without preflight I/O
+ok 9 - PDF data is countable; remote URL, conversation, tool, prompt and unknown inputs keep full holds without preflight I/O
+  ---
+  duration_ms: 0.919284
+  ...
+# Subtest: invalid/unavailable/aborted count responses fail safely without leaking provider details
+ok 10 - invalid/unavailable/aborted count responses fail safely without leaking provider details
+  ---
+  duration_ms: 2.071178
+  ...
+# Subtest: invoice reference candidate validates exact aliases/cache tiers and bounds a small request without reducing model capacity
+ok 11 - invoice reference candidate validates exact aliases/cache tiers and bounds a small request without reducing model capacity
+  ---
+  duration_ms: 2.192881
+  ...
+# Subtest: parallel original callers retain copied activity through provider waits without names or scope leaking
+ok 12 - parallel original callers retain copied activity through provider waits without names or scope leaking
+  ---
+  duration_ms: 32.598082
+  ...
+# Subtest: invoice pricing receives only the server-supplied durable document and parallel scopes cannot leak it
+ok 13 - invoice pricing receives only the server-supplied durable document and parallel scopes cannot leak it
+  ---
+  duration_ms: 2.840366
+  ...
+# Subtest: invoice runtime and feature gates default OFF; original transport/options and Azure results pass through without wallet effects
+ok 14 - invoice runtime and feature gates default OFF; original transport/options and Azure results pass through without wallet effects
+  ---
+  duration_ms: 1.138644
+  ...
+# Subtest: active invoice calls require a canonical scope and reject arbitrary outbound URL before paid I/O
+ok 15 - active invoice calls require a canonical scope and reject arbitrary outbound URL before paid I/O
+  ---
+  duration_ms: 0.761897
+  ...
+# Subtest: disabled company preserves exact options even under the invoice runtime gate
+ok 16 - disabled company preserves exact options even under the invoice runtime gate
+  ---
+  duration_ms: 0.401345
+  ...
+# Subtest: parallel invoice scopes retain the exact company/store across provider waits and settle only actual tokens
+ok 17 - parallel invoice scopes retain the exact company/store across provider waits and settle only actual tokens
+  ---
+  duration_ms: 15.430399
+  ...
+# Subtest: exhausted balance never calls a paid provider; uncertain billing is409 and cannot enter ordinary503 fallback/retry
+ok 18 - exhausted balance never calls a paid provider; uncertain billing is409 and cannot enter ordinary503 fallback/retry
+  ---
+  duration_ms: 1.744065
+  ...
+# Subtest: Azure page funding reserves once before POST/polls and uses verified physical pages and opaque operation identity
+ok 19 - Azure page funding reserves once before POST/polls and uses verified physical pages and opaque operation identity
+  ---
+  duration_ms: 1.585396
+  ...
+# Subtest: Azure unknown/missing/duplicate pages, operation or model retain the hold instead of inventing consumption
+ok 20 - Azure unknown/missing/duplicate pages, operation or model retain the hold instead of inventing consumption
+  ---
+  duration_ms: 1.616133
+  ...
+# Subtest: Azure missing price, excessive physical pages and low balance fail before POST
+ok 21 - Azure missing price, excessive physical pages and low balance fail before POST
+  ---
+  duration_ms: 0.984432
+  ...
+# Subtest: actual internal commerce HTTP transport bypasses the invoice provider meter
+ok 22 - actual internal commerce HTTP transport bypasses the invoice provider meter
+  ---
+  duration_ms: 9.054892
+  ...
+# Subtest: failed review persistence still stops paid fallbacks and retains the original uncertain hold
+ok 23 - failed review persistence still stops paid fallbacks and retains the original uncertain hold
+  ---
+  duration_ms: 1.331294
+  ...
+# Subtest: opt-in invoice request reservation counts exact input before reserve, then settles only the original generation
+ok 24 - opt-in invoice request reservation counts exact input before reserve, then settles only the original generation
+  ---
+  duration_ms: 7.419088
+  ...
+# Subtest: invoice count failure cannot enter paid fallback, reserve money or affect Azure page metering
+ok 25 - invoice count failure cannot enter paid fallback, reserve money or affect Azure page metering
+  ---
+  duration_ms: 1.509663
+  ...
+# Subtest: dedicated invoice schedules override only invoice prices and an invalid dedicated schedule never silently uses the Owner rate
+ok 26 - dedicated invoice schedules override only invoice prices and an invalid dedicated schedule never silently uses the Owner rate
+  ---
+  duration_ms: 2.175825
+  ...
+# Subtest: company rollout boundary meters only the selected invoice companies and reports the same scope
+ok 27 - company rollout boundary meters only the selected invoice companies and reports the same scope
+  ---
+  duration_ms: 1.684065
+  ...
+# Subtest: invalid explicit company rollout cannot silently broaden invoice charging or call a provider
+ok 28 - invalid explicit company rollout cannot silently broaden invoice charging or call a provider
+  ---
+  duration_ms: 1.100307
+  ...
+# Subtest: store PDF payload opts in without altering original file bytes or source metadata
+ok 29 - store PDF payload opts in without altering original file bytes or source metadata
+  ---
+  duration_ms: 2.036556
+  ...
+# Subtest: image/unknown MIME image/jpeg retains the legacy payload
+ok 30 - image/unknown MIME image/jpeg retains the legacy payload
+  ---
+  duration_ms: 0.150446
+  ...
+# Subtest: image/unknown MIME image/png retains the legacy payload
+ok 31 - image/unknown MIME image/png retains the legacy payload
+  ---
+  duration_ms: 0.142584
+  ...
+# Subtest: image/unknown MIME image/webp retains the legacy payload
+ok 32 - image/unknown MIME image/webp retains the legacy payload
+  ---
+  duration_ms: 0.099119
+  ...
+# Subtest: image/unknown MIME  retains the legacy payload
+ok 33 - image/unknown MIME  retains the legacy payload
+  ---
+  duration_ms: 1.065934
+  ...
+# Subtest: image/unknown MIME undefined retains the legacy payload
+ok 34 - image/unknown MIME undefined retains the legacy payload
+  ---
+  duration_ms: 0.095915
+  ...
+# Subtest: request body is fresh per store/source and cannot inherit an old PDF priority flag
+ok 35 - request body is fresh per store/source and cannot inherit an old PDF priority flag
+  ---
+  duration_ms: 0.128403
+  ...
+# Subtest: Invoice Learning uses the same Azure transport as the POS reader
+ok 36 - Invoice Learning uses the same Azure transport as the POS reader
+  ---
+  duration_ms: 1.827281
+  ...
+# Subtest: Invoice Learning follows the POS fallback when Azure transport fails
+ok 37 - Invoice Learning follows the POS fallback when Azure transport fails
+  ---
+  duration_ms: 0.439632
+  ...
+# Subtest: actual Azure transport observes POST, waits and polls without changing bytes, marking, deadlines or returned identity
+ok 38 - actual Azure transport observes POST, waits and polls without changing bytes, marking, deadlines or returned identity
+  ---
+  duration_ms: 6.356098
+  ...
+# Subtest: other unobserved consumers retain the identical transport trace and result with no diagnostics
+ok 39 - other unobserved consumers retain the identical transport trace and result with no diagnostics
+  ---
+  duration_ms: 1.927001
+  ...
+# Subtest: POST network errors preserve original identity and never mark or poll
+ok 40 - POST network errors preserve original identity and never mark or poll
+  ---
+  duration_ms: 1.137803
+  ...
+# Subtest: POST HTTP failure retains the existing bounded error body while telemetry excludes it
+ok 41 - POST HTTP failure retains the existing bounded error body while telemetry excludes it
+  ---
+  duration_ms: 0.609277
+  ...
+# Subtest: missing operation location keeps the existing failure and cannot create a poll
+ok 42 - missing operation location keeps the existing failure and cannot create a poll
+  ---
+  duration_ms: 0.383247
+  ...
+# Subtest: wallet rejection before invocation never reaches transport or any Azure phase
+ok 43 - wallet rejection before invocation never reaches transport or any Azure phase
+  ---
+  duration_ms: 0.439292
+  ...
+# Subtest: operation marking failure remains a wallet failure without another provider call
+ok 44 - operation marking failure remains a wallet failure without another provider call
+  ---
+  duration_ms: 0.440784
+  ...
+# Subtest: wallet settlement failure after successful transport retains its original identity
+ok 45 - wallet settlement failure after successful transport retains its original identity
+  ---
+  duration_ms: 0.835187
+  ...
+# Subtest: poll network failure preserves original identity and exact request count
+ok 46 - poll network failure preserves original identity and exact request count
+  ---
+  duration_ms: 0.746393
+  ...
+# Subtest: poll HTTP errors remain fail-stop without a retry or body leak
+ok 47 - poll HTTP errors remain fail-stop without a retry or body leak
+  ---
+  duration_ms: 0.656057
+  ...
+# Subtest: poll JSON decoding errors retain the original error and diagnostic ordinal
+ok 48 - poll JSON decoding errors retain the original error and diagnostic ordinal
+  ---
+  duration_ms: 9.222333
+  ...
+# Subtest: provider failed payload keeps its existing status failure
+ok 49 - provider failed payload keeps its existing status failure
+  ---
+  duration_ms: 0.447173
+  ...
+# Subtest: provider canceled payload keeps its existing status failure
+ok 50 - provider canceled payload keeps its existing status failure
+  ---
+  duration_ms: 0.330418
+  ...
+# Subtest: deadline refuses the first wait before scheduling or polling
+ok 51 - deadline refuses the first wait before scheduling or polling
+  ---
+  duration_ms: 0.946875
+  ...
+# Subtest: shared deadline is not reset between polls
+ok 52 - shared deadline is not reset between polls
+  ---
+  duration_ms: 0.363918
+  ...
+# Subtest: exact thirty-poll cap and700/700/1200 schedule are retained without a31st request
+ok 53 - exact thirty-poll cap and700/700/1200 schedule are retained without a31st request
+  ---
+  duration_ms: 5.770728
+  ...
+# Subtest: wait failure preserves identity and cannot fall through to a poll
+ok 54 - wait failure preserves identity and cannot fall through to a poll
+  ---
+  duration_ms: 0.355575
+  ...
+# Subtest: empty documents retain the old pre-request rejection
+ok 55 - empty documents retain the old pre-request rejection
+  ---
+  duration_ms: 0.463617
+  ...
+# Subtest: AbortSignal construction errors are not swallowed as instrumentation failures
+ok 56 - AbortSignal construction errors are not swallowed as instrumentation failures
+  ---
+  duration_ms: 0.35231
+  ...
+# Subtest: throwing getters/start/finish and rejected asynchronous observers cannot change a successful transport
+ok 57 - throwing getters/start/finish and rejected asynchronous observers cannot change a successful transport
+  ---
+  duration_ms: 19.435553
+  ...
+# Subtest: observer faults also preserve the original provider error without retrying
+ok 58 - observer faults also preserve the original provider error without retrying
+  ---
+  duration_ms: 1.066736
+  ...
+# Subtest: actual timing emitter and clock failures remain silent and leave transport unchanged
+ok 59 - actual timing emitter and clock failures remain silent and leave transport unchanged
+  ---
+  duration_ms: 1.522291
+  ...
+# Subtest: overlapping calls through one compiled transport keep independent correlations and operation marking
+ok 60 - overlapping calls through one compiled transport keep independent correlations and operation marking
+  ---
+  duration_ms: 1.033576
+  ...
+# Subtest: BackOffice refresh reclaims only durable, stale POS handoffs without a payment write
+ok 61 - BackOffice refresh reclaims only durable, stale POS handoffs without a payment write
+  ---
+  duration_ms: 1.151213
+  ...
+# Subtest: fast handoff creates the BackOffice shell and file inbox before OCR
+ok 62 - fast handoff creates the BackOffice shell and file inbox before OCR
+  ---
+  duration_ms: 0.203206
+  ...
+# Subtest: complete FAST product lines recover printed discounts before bypassing full OCR
+ok 63 - complete FAST product lines recover printed discounts before bypassing full OCR
+  ---
+  duration_ms: 0.216505
+  ...
+# Subtest: Azure may forward a reconciled complete table while OpenAI FAST remains header-only
+ok 64 - Azure may forward a reconciled complete table while OpenAI FAST remains header-only
+  ---
+  duration_ms: 0.174603
+  ...
+# Subtest: a partial Azure header without a reconciled table retains FAST OpenAI fallback
+ok 65 - a partial Azure header without a reconciled table retains FAST OpenAI fallback
+  ---
+  duration_ms: 0.708336
+  ...
+# Subtest: fast handoff hydrates an empty newest job from the matching exact-file durable table
+ok 66 - fast handoff hydrates an empty newest job from the matching exact-file durable table
+  ---
+  duration_ms: 0.171198
+  ...
+# Subtest: fast handoff survives optimized image checksum changes using strict invoice identity
+ok 67 - fast handoff survives optimized image checksum changes using strict invoice identity
+  ---
+  duration_ms: 0.234203
+  ...
+# Subtest: durable POS task receives the complete cached-line handoff
+ok 68 - durable POS task receives the complete cached-line handoff
+  ---
+  duration_ms: 0.170727
+  ...
+# Subtest: durable POS background uses a job-scoped server capability instead of the browser session
+ok 69 - durable POS background uses a job-scoped server capability instead of the browser session
+  ---
+  duration_ms: 0.308354
+  ...
+# Subtest: POS background capability is bound to exact route, method, body, tenant, store and durable job
+ok 70 - POS background capability is bound to exact route, method, body, tenant, store and durable job
+  ---
+  duration_ms: 0.255995
+  ...
+# Subtest: POS background capability remains active across the durable claim race only
+ok 71 - POS background capability remains active across the durable claim race only
+  ---
+  duration_ms: 0.128303
+  ...
+# Subtest: a repeated POS intake reuses and re-verifies durable cached lines without provider OCR
+ok 72 - a repeated POS intake reuses and re-verifies durable cached lines without provider OCR
+  ---
+  duration_ms: 0.152299
+  ...
+# Subtest: background OCR falls back publicly only for a loopback connection failure
+ok 73 - background OCR falls back publicly only for a loopback connection failure
+  ---
+  duration_ms: 0.168935
+  ...
+# Subtest: the durable database task is the only background retry owner
+ok 74 - the durable database task is the only background retry owner
+  ---
+  duration_ms: 0.323007
+  ...
+# Subtest: orders refresh starts durable handoff recovery without blocking the report
+ok 75 - orders refresh starts durable handoff recovery without blocking the report
+  ---
+  duration_ms: 0.13265
+  ...
+# Subtest: fast recovery reports why stored jobs were not reclaimed
+ok 76 - fast recovery reports why stored jobs were not reclaimed
+  ---
+  duration_ms: 0.21963
+  ...
+# Subtest: queued recovery uses the existing database lease and skips a completed draft
+ok 77 - queued recovery uses the existing database lease and skips a completed draft
+  ---
+  duration_ms: 0.326742
+  ...
+# Subtest: completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the archived image
+ok 78 - completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the archived image
+  ---
+  duration_ms: 0.315154
+  ...
+# Subtest: recovery prioritizes recent completed drafts before the bounded legacy scan
+ok 79 - recovery prioritizes recent completed drafts before the bounded legacy scan
+  ---
+  duration_ms: 0.247162
+  ...
+# Subtest: a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment
+ok 80 - a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment
+  ---
+  duration_ms: 0.450568
+  ...
+# Subtest: AI recheck applies verified printed column recovery before reconciliation
+ok 81 - AI recheck applies verified printed column recovery before reconciliation
+  ---
+  duration_ms: 0.140712
+  ...
+# Subtest: completed background OCR can fill only its own linked empty POS draft
+ok 82 - completed background OCR can fill only its own linked empty POS draft
+  ---
+  duration_ms: 0.148884
+  ...
+# Subtest: full OCR page recovery stays parallel and exposes retryable Azure timeouts
+ok 83 - full OCR page recovery stays parallel and exposes retryable Azure timeouts
+  ---
+  duration_ms: 0.088433
+  ...
+# Subtest: AI recheck reports a safe stage instead of a hidden generic 500
+ok 84 - AI recheck reports a safe stage instead of a hidden generic 500
+  ---
+  duration_ms: 0.121363
+  ...
+# Subtest: table recheck provider failure falls through to Azure recovery
+ok 85 - table recheck provider failure falls through to Azure recovery
+  ---
+  duration_ms: 0.096405
+  ...
+# Subtest: discount verification internal failure is eligible for durable reread
+ok 86 - discount verification internal failure is eligible for durable reread
+  ---
+  duration_ms: 0.0663
+  ...
+# Subtest: bounded invoice-total diagnostics remain eligible for durable reread
+ok 87 - bounded invoice-total diagnostics remain eligible for durable reread
+  ---
+  duration_ms: 0.069624
+  ...
+# Subtest: a reclaimed discount failure stays in POS recovery instead of reporting the stale failure
+ok 88 - a reclaimed discount failure stays in POS recovery instead of reporting the stale failure
+  ---
+  duration_ms: 0.23238
+  ...
+# Subtest: normal POS status polling does not enqueue a successor until processing is stale
+ok 89 - normal POS status polling does not enqueue a successor until processing is stale
+  ---
+  duration_ms: 0.106871
+  ...
+# Subtest: background failure identifies the internal operation
+ok 90 - background failure identifies the internal operation
+  ---
+  duration_ms: 0.104447
+  ...
+# Subtest: the repaired secondary-page conflict is eligible for durable recovery
+ok 91 - the repaired secondary-page conflict is eligible for durable recovery
+  ---
+  duration_ms: 0.067762
+  ...
+# Subtest: a historical hidden AI-recheck failure can be reclaimed after staged diagnostics deploy
+ok 92 - a historical hidden AI-recheck failure can be reclaimed after staged diagnostics deploy
+  ---
+  duration_ms: 0.121353
+  ...
+# Subtest: priority PDF uses actual server page parser and actual Responses body, without Azure or FAST rows
+ok 93 - priority PDF uses actual server page parser and actual Responses body, without Azure or FAST rows
+  ---
+  duration_ms: 430.866519
+  ...
+# Subtest: priority verified 2-page PDF uses one full-document read
+ok 94 - priority verified 2-page PDF uses one full-document read
+  ---
+  duration_ms: 1.919089
+  ...
+# Subtest: priority verified 3-page PDF uses one full-document read
+ok 95 - priority verified 3-page PDF uses one full-document read
+  ---
+  duration_ms: 1.504635
+  ...
+# Subtest: priority verified 4-page PDF uses one full-document read
+ok 96 - priority verified 4-page PDF uses one full-document read
+  ---
+  duration_ms: 1.214569
+  ...
+# Subtest: priority verified 5-page PDF uses one full-document read
+ok 97 - priority verified 5-page PDF uses one full-document read
+  ---
+  duration_ms: 1.243352
+  ...
+# Subtest: non-explicit priority undefined keeps legacy PDF order
+ok 98 - non-explicit priority undefined keeps legacy PDF order
+  ---
+  duration_ms: 1.802954
+  ...
+# Subtest: non-explicit priority false keeps legacy PDF order
+ok 99 - non-explicit priority false keeps legacy PDF order
+  ---
+  duration_ms: 1.672438
+  ...
+# Subtest: non-explicit priority true keeps legacy PDF order
+ok 100 - non-explicit priority true keeps legacy PDF order
+  ---
+  duration_ms: 1.341128
+  ...
+# Subtest: non-explicit priority 1 keeps legacy PDF order
+ok 101 - non-explicit priority 1 keeps legacy PDF order
+  ---
+  duration_ms: 1.391966
+  ...
+# Subtest: non-explicit priority [object Object] keeps legacy PDF order
+ok 102 - non-explicit priority [object Object] keeps legacy PDF order
+  ---
+  duration_ms: 3.726135
+  ...
+# Subtest: non-explicit priority null keeps legacy PDF order
+ok 103 - non-explicit priority null keeps legacy PDF order
+  ---
+  duration_ms: 1.862845
+  ...
+# Subtest: priority probe 1 preserves legacy safe fallback
+ok 104 - priority probe 1 preserves legacy safe fallback
+  ---
+  duration_ms: 1.580479
+  ...
+# Subtest: priority probe 0 preserves legacy safe fallback
+ok 105 - priority probe 0 preserves legacy safe fallback
+  ---
+  duration_ms: 2.118229
+  ...
+# Subtest: priority probe -1 preserves legacy safe fallback
+ok 106 - priority probe -1 preserves legacy safe fallback
+  ---
+  duration_ms: 1.491495
+  ...
+# Subtest: priority probe 6 preserves legacy safe fallback
+ok 107 - priority probe 6 preserves legacy safe fallback
+  ---
+  duration_ms: 1.595332
+  ...
+# Subtest: priority probe 2 preserves legacy safe fallback
+ok 108 - priority probe 2 preserves legacy safe fallback
+  ---
+  duration_ms: 1.521681
+  ...
+# Subtest: priority probe NaN preserves legacy safe fallback
+ok 109 - priority probe NaN preserves legacy safe fallback
+  ---
+  duration_ms: 1.458956
+  ...
+# Subtest: priority probe Infinity preserves legacy safe fallback
+ok 110 - priority probe Infinity preserves legacy safe fallback
+  ---
+  duration_ms: 1.612237
+  ...
+# Subtest: priority probe Error: unreadable PDF preserves legacy safe fallback
+ok 111 - priority probe Error: unreadable PDF preserves legacy safe fallback
+  ---
+  duration_ms: 1.371505
+  ...
+# Subtest: priority hint cannot change image/one-page shortcuts or their complete verified rows
+ok 112 - priority hint cannot change image/one-page shortcuts or their complete verified rows
+  ---
+  duration_ms: 3.74665
+  ...
+# Subtest: without OpenAI key a priority hint cannot invoke probe/OpenAI or bypass legacy Azure rules
+ok 113 - without OpenAI key a priority hint cannot invoke probe/OpenAI or bypass legacy Azure rules
+  ---
+  duration_ms: 2.727295
+  ...
+# Subtest: priority missing/invalid whole-PDF total 0 fails closed without Azure subtotal
+ok 114 - priority missing/invalid whole-PDF total 0 fails closed without Azure subtotal
+  ---
+  duration_ms: 2.359892
+  ...
+# Subtest: priority missing/invalid whole-PDF total -1 fails closed without Azure subtotal
+ok 115 - priority missing/invalid whole-PDF total -1 fails closed without Azure subtotal
+  ---
+  duration_ms: 1.423423
+  ...
+# Subtest: priority missing/invalid whole-PDF total NaN fails closed without Azure subtotal
+ok 116 - priority missing/invalid whole-PDF total NaN fails closed without Azure subtotal
+  ---
+  duration_ms: 1.211835
+  ...
+# Subtest: priority missing/invalid whole-PDF total Infinity fails closed without Azure subtotal
+ok 117 - priority missing/invalid whole-PDF total Infinity fails closed without Azure subtotal
+  ---
+  duration_ms: 1.16929
+  ...
+# Subtest: priority missing/invalid whole-PDF total undefined fails closed without Azure subtotal
+ok 118 - priority missing/invalid whole-PDF total undefined fails closed without Azure subtotal
+  ---
+  duration_ms: 1.230092
+  ...
+# Subtest: priority positive total rescues missing metadata once, even when Azure falsely reports one page
+ok 119 - priority positive total rescues missing metadata once, even when Azure falsely reports one page
+  ---
+  duration_ms: 1.7208
+  ...
+# Subtest: priority metadata rescue cannot replace whole-PDF money with a balanced VAT footer or account balance
+ok 120 - priority metadata rescue cannot replace whole-PDF money with a balanced VAT footer or account balance
+  ---
+  duration_ms: 1.758137
+  ...
+# Subtest: priority credit type remains explicit and never becomes a settlement or writer
+ok 121 - priority credit type remains explicit and never becomes a settlement or writer
+  ---
+  duration_ms: 1.382601
+  ...
+# Subtest: priority provider failure retains original identity without a wasted unsafe Azure fallback
+ok 122 - priority provider failure retains original identity without a wasted unsafe Azure fallback
+  ---
+  duration_ms: 1.135179
+  ...
+# Subtest: priority wallet denials stop at the failing stage, including a later metadata rescue
+ok 123 - priority wallet denials stop at the failing stage, including a later metadata rescue
+  ---
+  duration_ms: 3.648523
+  ...
+# Subtest: priority still rejects foreign/missing stores before probe or providers
+ok 124 - priority still rejects foreign/missing stores before probe or providers
+  ---
+  duration_ms: 1.721041
+  ...
+# Subtest: priority actual retry still shares the original70s budget and identical whole-PDF body
+ok 125 - priority actual retry still shares the original70s budget and identical whole-PDF body
+  ---
+  duration_ms: 3.751017
+  ...
+# Subtest: priority exact-file durable hit still bypasses probe and all paid providers with verified rows
+ok 126 - priority exact-file durable hit still bypasses probe and all paid providers with verified rows
+  ---
+  duration_ms: 1.775813
+  ...
+# Subtest: client-supplied page counts cannot enable priority for a server-verified single-page PDF
+ok 127 - client-supplied page counts cannot enable priority for a server-verified single-page PDF
+  ---
+  duration_ms: 1.400398
+  ...
+# Subtest: failed metadata rescue preserves the full-PDF total and never fabricates missing fields or rereads OpenAI
+ok 128 - failed metadata rescue preserves the full-PDF total and never fabricates missing fields or rereads OpenAI
+  ---
+  duration_ms: 1.534611
+  ...
+# Subtest: one handler keeps overlapping priority and legacy PDF requests and their timing correlations independent
+ok 129 - one handler keeps overlapping priority and legacy PDF requests and their timing correlations independent
+  ---
+  duration_ms: 2.899936
+  ...
+# Subtest: actual FAST PDF fallback sends original PDF data URL through actual Responses request body
+ok 130 - actual FAST PDF fallback sends original PDF data URL through actual Responses request body
+  ---
+  duration_ms: 2.493644
+  ...
+# Subtest: actual FAST GPT-5 exact models receive minimal reasoning without changing PDF transport or schema
+ok 131 - actual FAST GPT-5 exact models receive minimal reasoning without changing PDF transport or schema
+  ---
+  duration_ms: 5.721563
+  ...
+# Subtest: actual FAST model resolution changes reasoning only for exact GPT-5 targets
+ok 132 - actual FAST model resolution changes reasoning only for exact GPT-5 targets
+  ---
+  duration_ms: 19.200193
+  ...
+# Subtest: actual GPT-5 retry preserves identical minimal-reasoning body and original shared deadline
+ok 133 - actual GPT-5 retry preserves identical minimal-reasoning body and original shared deadline
+  ---
+  duration_ms: 2.049856
+  ...
+# Subtest: actual FAST image fallback keeps image data URL through actual Responses request body
+ok 134 - actual FAST image fallback keeps image data URL through actual Responses request body
+  ---
+  duration_ms: 1.636774
+  ...
+# Subtest: actual FAST route returns complete Azure header without a second provider or fabricated rows
+ok 135 - actual FAST route returns complete Azure header without a second provider or fabricated rows
+  ---
+  duration_ms: 1.240748
+  ...
+# Subtest: complete Azure header discards unreconciled table without a second header provider
+ok 136 - complete Azure header discards unreconciled table without a second header provider
+  ---
+  duration_ms: 1.464725
+  ...
+# Subtest: complete Azure header keeps a reconciled printed table
+ok 137 - complete Azure header keeps a reconciled printed table
+  ---
+  duration_ms: 1.496663
+  ...
+# Subtest: new supplier complete header needs recognized identity rather than a pre-existing supplier ID
+ok 138 - new supplier complete header needs recognized identity rather than a pre-existing supplier ID
+  ---
+  duration_ms: 1.195629
+  ...
+# Subtest: partial Azure header missing supplier continues to configured fallback
+ok 139 - partial Azure header missing supplier continues to configured fallback
+  ---
+  duration_ms: 1.25509
+  ...
+# Subtest: partial Azure header missing number continues to configured fallback
+ok 140 - partial Azure header missing number continues to configured fallback
+  ---
+  duration_ms: 1.134939
+  ...
+# Subtest: partial Azure header missing number without digits continues to configured fallback
+ok 141 - partial Azure header missing number without digits continues to configured fallback
+  ---
+  duration_ms: 1.566939
+  ...
+# Subtest: partial Azure header missing date continues to configured fallback
+ok 142 - partial Azure header missing date continues to configured fallback
+  ---
+  duration_ms: 1.542822
+  ...
+# Subtest: partial Azure header missing malformed date continues to configured fallback
+ok 143 - partial Azure header missing malformed date continues to configured fallback
+  ---
+  duration_ms: 1.267658
+  ...
+# Subtest: partial Azure header missing total continues to configured fallback
+ok 144 - partial Azure header missing total continues to configured fallback
+  ---
+  duration_ms: 1.272615
+  ...
+# Subtest: partial Azure header missing finite total continues to configured fallback
+ok 145 - partial Azure header missing finite total continues to configured fallback
+  ---
+  duration_ms: 1.320858
+  ...
+# Subtest: empty Azure header still reaches fallback
+ok 146 - empty Azure header still reaches fallback
+  ---
+  duration_ms: 1.38184
+  ...
+# Subtest: legacy useful header plus reconciled table retains its existing early return
+ok 147 - legacy useful header plus reconciled table retains its existing early return
+  ---
+  duration_ms: 1.851407
+  ...
+# Subtest: ordinary fallback provider failure preserves useful Azure partial header
+ok 148 - ordinary fallback provider failure preserves useful Azure partial header
+  ---
+  duration_ms: 1.472266
+  ...
+# Subtest: Azure wallet failure stops before fallback and cannot become a partial success
+ok 149 - Azure wallet failure stops before fallback and cannot become a partial success
+  ---
+  duration_ms: 1.02953
+  ...
+# Subtest: fallback wallet failure cannot return a useful Azure partial success
+ok 150 - fallback wallet failure cannot return a useful Azure partial success
+  ---
+  duration_ms: 1.575342
+  ...
+# Subtest: verified exact-file durable reading bypasses both external providers
+ok 151 - verified exact-file durable reading bypasses both external providers
+  ---
+  duration_ms: 1.46152
+  ...
+# Subtest: non-reconciled durable reading cannot bypass the normal provider path
+ok 152 - non-reconciled durable reading cannot bypass the normal provider path
+  ---
+  duration_ms: 1.509993
+  ...
+# Subtest: foreign store operator is refused before wallet, cache or provider access
+ok 153 - foreign store operator is refused before wallet, cache or provider access
+  ---
+  duration_ms: 0.723679
+  ...
+# Subtest: store outside selected company is refused before wallet, cache or provider access
+ok 154 - store outside selected company is refused before wallet, cache or provider access
+  ---
+  duration_ms: 0.635517
+  ...
+# Subtest: complete credit header returns the balanced printed invoice total rather than an adjacent receipt
+ok 155 - complete credit header returns the balanced printed invoice total rather than an adjacent receipt
+  ---
+  duration_ms: 1.198825
+  ...
+# Subtest: ordinary Azure failure retains configured header fallback
+ok 156 - ordinary Azure failure retains configured header fallback
+  ---
+  duration_ms: 1.585156
+  ...
+# Subtest: single-page PDF with known numeric page count keeps complete-header bypass
+ok 157 - single-page PDF with known numeric page count keeps complete-header bypass
+  ---
+  duration_ms: 1.615572
+  ...
+# Subtest: PDF header-only two pages page count continues to fallback
+ok 158 - PDF header-only two pages page count continues to fallback
+  ---
+  duration_ms: 1.345616
+  ...
+# Subtest: PDF header-only missing page count continues to fallback
+ok 159 - PDF header-only missing page count continues to fallback
+  ---
+  duration_ms: 1.510999
+  ...
+# Subtest: PDF header-only zero page count continues to fallback
+ok 160 - PDF header-only zero page count continues to fallback
+  ---
+  duration_ms: 2.433163
+  ...
+# Subtest: PDF header-only negative page count continues to fallback
+ok 161 - PDF header-only negative page count continues to fallback
+  ---
+  duration_ms: 1.450784
+  ...
+# Subtest: PDF header-only numeric string page count continues to fallback
+ok 162 - PDF header-only numeric string page count continues to fallback
+  ---
+  duration_ms: 1.191204
+  ...
+# Subtest: PDF header-only non-numeric page count continues to fallback
+ok 163 - PDF header-only non-numeric page count continues to fallback
+  ---
+  duration_ms: 1.114418
+  ...
+# Subtest: PDF header-only non-finite page count continues to fallback
+ok 164 - PDF header-only non-finite page count continues to fallback
+  ---
+  duration_ms: 1.173377
+  ...
+# Subtest: PDF header-only null page count continues to fallback
+ok 165 - PDF header-only null page count continues to fallback
+  ---
+  duration_ms: 1.48784
+  ...
+# Subtest: PDF reconciled subtotal with page count 2 and complete header continues to fallback
+ok 166 - PDF reconciled subtotal with page count 2 and complete header continues to fallback
+  ---
+  duration_ms: 1.570204
+  ...
+# Subtest: PDF reconciled subtotal with page count 2 and partial header continues to fallback
+ok 167 - PDF reconciled subtotal with page count 2 and partial header continues to fallback
+  ---
+  duration_ms: 1.402091
+  ...
+# Subtest: PDF reconciled subtotal with page count undefined and complete header continues to fallback
+ok 168 - PDF reconciled subtotal with page count undefined and complete header continues to fallback
+  ---
+  duration_ms: 1.332365
+  ...
+# Subtest: PDF reconciled subtotal with page count undefined and partial header continues to fallback
+ok 169 - PDF reconciled subtotal with page count undefined and partial header continues to fallback
+  ---
+  duration_ms: 1.306016
+  ...
+# Subtest: PDF reconciled subtotal with page count 0 and complete header continues to fallback
+ok 170 - PDF reconciled subtotal with page count 0 and complete header continues to fallback
+  ---
+  duration_ms: 1.372896
+  ...
+# Subtest: PDF reconciled subtotal with page count 0 and partial header continues to fallback
+ok 171 - PDF reconciled subtotal with page count 0 and partial header continues to fallback
+  ---
+  duration_ms: 1.31542
+  ...
+# Subtest: PDF reconciled subtotal with page count -1 and complete header continues to fallback
+ok 172 - PDF reconciled subtotal with page count -1 and complete header continues to fallback
+  ---
+  duration_ms: 1.317303
+  ...
+# Subtest: PDF reconciled subtotal with page count -1 and partial header continues to fallback
+ok 173 - PDF reconciled subtotal with page count -1 and partial header continues to fallback
+  ---
+  duration_ms: 1.319827
+  ...
+# Subtest: PDF reconciled subtotal with page count 1 and complete header continues to fallback
+ok 174 - PDF reconciled subtotal with page count 1 and complete header continues to fallback
+  ---
+  duration_ms: 1.302661
+  ...
+# Subtest: PDF reconciled subtotal with page count 1 and partial header continues to fallback
+ok 175 - PDF reconciled subtotal with page count 1 and partial header continues to fallback
+  ---
+  duration_ms: 1.303021
+  ...
+# Subtest: PDF reconciled subtotal with page count invalid and complete header continues to fallback
+ok 176 - PDF reconciled subtotal with page count invalid and complete header continues to fallback
+  ---
+  duration_ms: 1.373087
+  ...
+# Subtest: PDF reconciled subtotal with page count invalid and partial header continues to fallback
+ok 177 - PDF reconciled subtotal with page count invalid and partial header continues to fallback
+  ---
+  duration_ms: 1.347869
+  ...
+# Subtest: PDF reconciled subtotal with page count Infinity and complete header continues to fallback
+ok 178 - PDF reconciled subtotal with page count Infinity and complete header continues to fallback
+  ---
+  duration_ms: 1.289942
+  ...
+# Subtest: PDF reconciled subtotal with page count Infinity and partial header continues to fallback
+ok 179 - PDF reconciled subtotal with page count Infinity and partial header continues to fallback
+  ---
+  duration_ms: 1.369312
+  ...
+# Subtest: PDF reconciled subtotal with page count null and complete header continues to fallback
+ok 180 - PDF reconciled subtotal with page count null and complete header continues to fallback
+  ---
+  duration_ms: 1.542702
+  ...
+# Subtest: PDF reconciled subtotal with page count null and partial header continues to fallback
+ok 181 - PDF reconciled subtotal with page count null and partial header continues to fallback
+  ---
+  duration_ms: 1.323312
+  ...
+# Subtest: single-page PDF keeps reconciled-table shortcut with complete header
+ok 182 - single-page PDF keeps reconciled-table shortcut with complete header
+  ---
+  duration_ms: 2.870251
+  ...
+# Subtest: single-page PDF keeps reconciled-table shortcut with partial header
+ok 183 - single-page PDF keeps reconciled-table shortcut with partial header
+  ---
+  duration_ms: 1.159415
+  ...
+# Subtest: multi-page PDF fallback failure cannot return the Azure page subtotal
+ok 184 - multi-page PDF fallback failure cannot return the Azure page subtotal
+  ---
+  duration_ms: 1.392627
+  ...
+# Subtest: multi-page PDF without configured fallback cannot return the Azure page subtotal
+ok 185 - multi-page PDF without configured fallback cannot return the Azure page subtotal
+  ---
+  duration_ms: 1.264664
+  ...
+# Subtest: multi-page PDF fallback wallet refusal cannot return a useful reconciled subtotal
+ok 186 - multi-page PDF fallback wallet refusal cannot return a useful reconciled subtotal
+  ---
+  duration_ms: 1.262911
+  ...
+# Subtest: image header-only bypass remains unchanged even when page count is not one
+ok 187 - image header-only bypass remains unchanged even when page count is not one
+  ---
+  duration_ms: 1.21554
+  ...
+# Subtest: actual two-page PDF text cannot promote a page subtotal through header-only bypass
+ok 188 - actual two-page PDF text cannot promote a page subtotal through header-only bypass
+  ---
+  duration_ms: 375.165348
+  ...
+# Subtest: actual FAST Azure response emits sanitized stage spans and one total through finish then close
+ok 189 - actual FAST Azure response emits sanitized stage spans and one total through finish then close
+  ---
+  duration_ms: 2.319532
+  ...
+# Subtest: actual durable-header reuse logs only lookup and response completion with no provider call
+ok 190 - actual durable-header reuse logs only lookup and response completion with no provider call
+  ---
+  duration_ms: 1.582663
+  ...
+# Subtest: actual PDF fallback correlates both providers and matching without changing the Responses payload
+ok 191 - actual PDF fallback correlates both providers and matching without changing the Responses payload
+  ---
+  duration_ms: 4.247334
+  ...
+# Subtest: actual fallback retry keeps the shared 70-second deadline and exactly two bounded attempt events
+ok 192 - actual fallback retry keeps the shared 70-second deadline and exactly two bounded attempt events
+  ---
+  duration_ms: 2.849639
+  ...
+# Subtest: actual fallback emits no phantom attempt after the shared budget is exhausted
+ok 193 - actual fallback emits no phantom attempt after the shared budget is exhausted
+  ---
+  duration_ms: 2.485081
+  ...
+# Subtest: actual two-attempt failure preserves its original wrapped error and last cause
+ok 194 - actual two-attempt failure preserves its original wrapped error and last cause
+  ---
+  duration_ms: 2.555517
+  ...
+# Subtest: actual Azure wallet refusal preserves the same error and stops before supplier or fallback work
+ok 195 - actual Azure wallet refusal preserves the same error and stops before supplier or fallback work
+  ---
+  duration_ms: 1.274689
+  ...
+# Subtest: actual OpenAI wallet refusal preserves the same normalized error without retry or useful-Azure success
+ok 196 - actual OpenAI wallet refusal preserves the same normalized error without retry or useful-Azure success
+  ---
+  duration_ms: 1.97991
+  ...
+# Subtest: actual exact-file lookup failure preserves its original error and makes no provider call
+ok 197 - actual exact-file lookup failure preserves its original error and makes no provider call
+  ---
+  duration_ms: 1.247388
+  ...
+# Subtest: actual access refusal logs only response completion and still performs no wallet, lookup or provider work
+ok 198 - actual access refusal logs only response completion and still performs no wallet, lookup or provider work
+  ---
+  duration_ms: 0.672292
+  ...
+# Subtest: diagnostic sink failure cannot replace actual successful fallback fields or add provider attempts
+ok 199 - diagnostic sink failure cannot replace actual successful fallback fields or add provider attempts
+  ---
+  duration_ms: 4.469568
+  ...
+# Subtest: diagnostic sink failure cannot replace an actual wallet error or resume provider work
+ok 200 - diagnostic sink failure cannot replace an actual wallet error or resume provider work
+  ---
+  duration_ms: 1.201619
+  ...
+# Subtest: actual response close during Azure work records one interrupted total and does not cancel or duplicate the existing provider operation
+ok 201 - actual response close during Azure work records one interrupted total and does not cancel or duplicate the existing provider operation
+  ---
+  duration_ms: 1.52773
+  ...
+# Subtest: two concurrent calls to the same actual FAST handler retain independent random correlations and elapsed times
+ok 202 - two concurrent calls to the same actual FAST handler retain independent random correlations and elapsed times
+  ---
+  duration_ms: 1.591096
+  ...
+# Subtest: actual FAST handler forwards its request-local observer to the existing Azure invocation
+ok 203 - actual FAST handler forwards its request-local observer to the existing Azure invocation
+  ---
+  duration_ms: 1.470673
+  ...
+# Subtest: production parser: VAT summary
+ok 204 - production parser: VAT summary
+  ---
+  duration_ms: 1.470584
+  ...
+# Subtest: production parser: labelled payable
+ok 205 - production parser: labelled payable
+  ---
+  duration_ms: 0.632713
+  ...
+# Subtest: production parser: full VAT summary
+ok 206 - production parser: full VAT summary
+  ---
+  duration_ms: 0.165549
+  ...
+# Subtest: production parser: thousands separator
+ok 207 - production parser: thousands separator
+  ---
+  duration_ms: 0.109024
+  ...
+# Subtest: production parser: accented/lowercase
+ok 208 - production parser: accented/lowercase
+  ---
+  duration_ms: 0.115724
+  ...
+# Subtest: production parser: unbalanced VAT
+ok 209 - production parser: unbalanced VAT
+  ---
+  duration_ms: 0.118058
+  ...
+# Subtest: production parser: unlabelled values
+ok 210 - production parser: unlabelled values
+  ---
+  duration_ms: 0.208224
+  ...
+# Subtest: production parser: receipt section excluded
+ok 211 - production parser: receipt section excluded
+  ---
+  duration_ms: 0.116645
+  ...
+# Subtest: production parser: receipt/account VAT correction
+ok 212 - production parser: receipt/account VAT correction
+  ---
+  duration_ms: 0.174783
+  ...
+# Subtest: production parser can accept the FIRST balanced page footer: regression is not a constant-return mock
+ok 213 - production parser can accept the FIRST balanced page footer: regression is not a constant-return mock
+  ---
+  duration_ms: 0.229145
+  ...
+# Subtest: actual parsers / multi-page / VAT: partial footer must not replace full-reader 24.80
+ok 214 - actual parsers / multi-page / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 6.293304
+  ...
+# Subtest: actual parsers / multi-page / VAT: missing full-reader amount cannot inherit 12.40
+ok 215 - actual parsers / multi-page / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 2.561917
+  ...
+# Subtest: actual parsers / multi-page / VAT: no key cannot return partial money
+ok 216 - actual parsers / multi-page / VAT: no key cannot return partial money
+  ---
+  duration_ms: 1.671957
+  ...
+# Subtest: actual parsers / multi-page / VAT: two real wrapper failures cannot return partial money
+ok 217 - actual parsers / multi-page / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 2.383789
+  ...
+# Subtest: actual parsers / multi-page / payable: partial footer must not replace full-reader 24.80
+ok 218 - actual parsers / multi-page / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 2.127182
+  ...
+# Subtest: actual parsers / multi-page / payable: missing full-reader amount cannot inherit 12.40
+ok 219 - actual parsers / multi-page / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 2.709509
+  ...
+# Subtest: actual parsers / multi-page / payable: no key cannot return partial money
+ok 220 - actual parsers / multi-page / payable: no key cannot return partial money
+  ---
+  duration_ms: 2.025159
+  ...
+# Subtest: actual parsers / multi-page / payable: two real wrapper failures cannot return partial money
+ok 221 - actual parsers / multi-page / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 2.437249
+  ...
+# Subtest: actual parsers / unknown / VAT: partial footer must not replace full-reader 24.80
+ok 222 - actual parsers / unknown / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 2.369277
+  ...
+# Subtest: actual parsers / unknown / VAT: missing full-reader amount cannot inherit 12.40
+ok 223 - actual parsers / unknown / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 2.241865
+  ...
+# Subtest: actual parsers / unknown / VAT: no key cannot return partial money
+ok 224 - actual parsers / unknown / VAT: no key cannot return partial money
+  ---
+  duration_ms: 2.970502
+  ...
+# Subtest: actual parsers / unknown / VAT: two real wrapper failures cannot return partial money
+ok 225 - actual parsers / unknown / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 2.236587
+  ...
+# Subtest: actual parsers / unknown / payable: partial footer must not replace full-reader 24.80
+ok 226 - actual parsers / unknown / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 4.422588
+  ...
+# Subtest: actual parsers / unknown / payable: missing full-reader amount cannot inherit 12.40
+ok 227 - actual parsers / unknown / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.980271
+  ...
+# Subtest: actual parsers / unknown / payable: no key cannot return partial money
+ok 228 - actual parsers / unknown / payable: no key cannot return partial money
+  ---
+  duration_ms: 1.841683
+  ...
+# Subtest: actual parsers / unknown / payable: two real wrapper failures cannot return partial money
+ok 229 - actual parsers / unknown / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 2.003746
+  ...
+# Subtest: actual parsers / string-one / VAT: partial footer must not replace full-reader 24.80
+ok 230 - actual parsers / string-one / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 2.040682
+  ...
+# Subtest: actual parsers / string-one / VAT: missing full-reader amount cannot inherit 12.40
+ok 231 - actual parsers / string-one / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.847661
+  ...
+# Subtest: actual parsers / string-one / VAT: no key cannot return partial money
+ok 232 - actual parsers / string-one / VAT: no key cannot return partial money
+  ---
+  duration_ms: 1.752158
+  ...
+# Subtest: actual parsers / string-one / VAT: two real wrapper failures cannot return partial money
+ok 233 - actual parsers / string-one / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 3.409873
+  ...
+# Subtest: actual parsers / string-one / payable: partial footer must not replace full-reader 24.80
+ok 234 - actual parsers / string-one / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 2.106942
+  ...
+# Subtest: actual parsers / string-one / payable: missing full-reader amount cannot inherit 12.40
+ok 235 - actual parsers / string-one / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.931347
+  ...
+# Subtest: actual parsers / string-one / payable: no key cannot return partial money
+ok 236 - actual parsers / string-one / payable: no key cannot return partial money
+  ---
+  duration_ms: 1.856875
+  ...
+# Subtest: actual parsers / string-one / payable: two real wrapper failures cannot return partial money
+ok 237 - actual parsers / string-one / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.993471
+  ...
+# Subtest: actual parsers / zero / VAT: partial footer must not replace full-reader 24.80
+ok 238 - actual parsers / zero / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 1.945048
+  ...
+# Subtest: actual parsers / zero / VAT: missing full-reader amount cannot inherit 12.40
+ok 239 - actual parsers / zero / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.387179
+  ...
+# Subtest: actual parsers / zero / VAT: no key cannot return partial money
+ok 240 - actual parsers / zero / VAT: no key cannot return partial money
+  ---
+  duration_ms: 1.313698
+  ...
+# Subtest: actual parsers / zero / VAT: two real wrapper failures cannot return partial money
+ok 241 - actual parsers / zero / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.361469
+  ...
+# Subtest: actual parsers / zero / payable: partial footer must not replace full-reader 24.80
+ok 242 - actual parsers / zero / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 1.868333
+  ...
+# Subtest: actual parsers / zero / payable: missing full-reader amount cannot inherit 12.40
+ok 243 - actual parsers / zero / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 4.115576
+  ...
+# Subtest: actual parsers / zero / payable: no key cannot return partial money
+ok 244 - actual parsers / zero / payable: no key cannot return partial money
+  ---
+  duration_ms: 3.291105
+  ...
+# Subtest: actual parsers / zero / payable: two real wrapper failures cannot return partial money
+ok 245 - actual parsers / zero / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.780981
+  ...
+# Subtest: two successive balanced page footers do not displace the full-document result
+ok 246 - two successive balanced page footers do not displace the full-document result
+  ---
+  duration_ms: 1.503363
+  ...
+# Subtest: full-page table is retained only after the actual return predicate agrees with 24.80
+ok 247 - full-page table is retained only after the actual return predicate agrees with 24.80
+  ---
+  duration_ms: 1.652157
+  ...
+# Subtest: image: real VAT parser still corrects adjacent receipt/account amount without fallback
+ok 248 - image: real VAT parser still corrects adjacent receipt/account amount without fallback
+  ---
+  duration_ms: 1.350823
+  ...
+# Subtest: image: real payable parser still corrects a wrong full-reader amount after fallback
+ok 249 - image: real payable parser still corrects a wrong full-reader amount after fallback
+  ---
+  duration_ms: 1.60767
+  ...
+# Subtest: image: ordinary two-attempt failure retains the prior useful-header policy
+ok 250 - image: ordinary two-attempt failure retains the prior useful-header policy
+  ---
+  duration_ms: 1.462722
+  ...
+# Subtest: known single-page PDF: real VAT parser still corrects adjacent receipt/account amount without fallback
+ok 251 - known single-page PDF: real VAT parser still corrects adjacent receipt/account amount without fallback
+  ---
+  duration_ms: 1.227798
+  ...
+# Subtest: known single-page PDF: real payable parser still corrects a wrong full-reader amount after fallback
+ok 252 - known single-page PDF: real payable parser still corrects a wrong full-reader amount after fallback
+  ---
+  duration_ms: 1.440839
+  ...
+# Subtest: known single-page PDF: ordinary two-attempt failure retains the prior useful-header policy
+ok 253 - known single-page PDF: ordinary two-attempt failure retains the prior useful-header policy
+  ---
+  duration_ms: 1.409322
+  ...
+# Subtest: actual Responses wrapper retries HTTP 400, then keeps 24.80 not partial footer
+ok 254 - actual Responses wrapper retries HTTP 400, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.78018
+  ...
+# Subtest: actual Responses wrapper retries empty content, then keeps 24.80 not partial footer
+ok 255 - actual Responses wrapper retries empty content, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.525767
+  ...
+# Subtest: actual Responses wrapper retries malformed JSON, then keeps 24.80 not partial footer
+ok 256 - actual Responses wrapper retries malformed JSON, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.407329
+  ...
+# Subtest: actual Responses wrapper retries array JSON, then keeps 24.80 not partial footer
+ok 257 - actual Responses wrapper retries array JSON, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.450614
+  ...
+# Subtest: actual Responses wrapper retries null JSON, then keeps 24.80 not partial footer
+ok 258 - actual Responses wrapper retries null JSON, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.899259
+  ...
+# Subtest: actual Responses wrapper retries network failure, then keeps 24.80 not partial footer
+ok 259 - actual Responses wrapper retries network failure, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.741261
+  ...
+# Subtest: actual Responses wrapper valid JSON with zero total stays blocked
+ok 260 - actual Responses wrapper valid JSON with zero total stays blocked
+  ---
+  duration_ms: 1.509272
+  ...
+# Subtest: actual Responses wrapper valid JSON with missing total stays blocked
+ok 261 - actual Responses wrapper valid JSON with missing total stays blocked
+  ---
+  duration_ms: 1.342351
+  ...
+# Subtest: actual Responses wrapper valid JSON with null amount total stays blocked
+ok 262 - actual Responses wrapper valid JSON with null amount total stays blocked
+  ---
+  duration_ms: 1.534771
+  ...
+# Subtest: actual Responses request retains complete PDF data URL and strict production header schema
+ok 263 - actual Responses request retains complete PDF data URL and strict production header schema
+  ---
+  duration_ms: 5.378797
+  ...
+# Subtest: actual Responses request retains image transport unchanged
+ok 264 - actual Responses request retains image transport unchanged
+  ---
+  duration_ms: 1.641371
+  ...
+# Subtest: actual Responses wrapper accepts nested output text as before
+ok 265 - actual Responses wrapper accepts nested output text as before
+  ---
+  duration_ms: 3.3283
+  ...
+# Subtest: actual wallet guard: azure status 400 refuses fallback success/retry
+ok 266 - actual wallet guard: azure status 400 refuses fallback success/retry
+  ---
+  duration_ms: 1.637284
+  ...
+# Subtest: actual wallet guard: azure status 402 refuses fallback success/retry
+ok 267 - actual wallet guard: azure status 402 refuses fallback success/retry
+  ---
+  duration_ms: 1.29507
+  ...
+# Subtest: actual wallet guard: azure status 403 refuses fallback success/retry
+ok 268 - actual wallet guard: azure status 403 refuses fallback success/retry
+  ---
+  duration_ms: 1.316962
+  ...
+# Subtest: actual wallet guard: azure status 404 refuses fallback success/retry
+ok 269 - actual wallet guard: azure status 404 refuses fallback success/retry
+  ---
+  duration_ms: 2.348966
+  ...
+# Subtest: actual wallet guard: azure status 409 refuses fallback success/retry
+ok 270 - actual wallet guard: azure status 409 refuses fallback success/retry
+  ---
+  duration_ms: 1.139225
+  ...
+# Subtest: actual wallet guard: azure status 503 refuses fallback success/retry
+ok 271 - actual wallet guard: azure status 503 refuses fallback success/retry
+  ---
+  duration_ms: 1.21545
+  ...
+# Subtest: actual wallet guard: openai status 400 refuses fallback success/retry
+ok 272 - actual wallet guard: openai status 400 refuses fallback success/retry
+  ---
+  duration_ms: 2.031788
+  ...
+# Subtest: actual wallet guard: openai status 402 refuses fallback success/retry
+ok 273 - actual wallet guard: openai status 402 refuses fallback success/retry
+  ---
+  duration_ms: 1.752318
+  ...
+# Subtest: actual wallet guard: openai status 403 refuses fallback success/retry
+ok 274 - actual wallet guard: openai status 403 refuses fallback success/retry
+  ---
+  duration_ms: 1.659088
+  ...
+# Subtest: actual wallet guard: openai status 404 refuses fallback success/retry
+ok 275 - actual wallet guard: openai status 404 refuses fallback success/retry
+  ---
+  duration_ms: 1.599578
+  ...
+# Subtest: actual wallet guard: openai status 409 refuses fallback success/retry
+ok 276 - actual wallet guard: openai status 409 refuses fallback success/retry
+  ---
+  duration_ms: 1.406717
+  ...
+# Subtest: actual wallet guard: openai status 503 refuses fallback success/retry
+ok 277 - actual wallet guard: openai status 503 refuses fallback success/retry
+  ---
+  duration_ms: 1.54137
+  ...
+# Subtest: foreign store cannot reach real parsers/provider/wallet scope
+ok 278 - foreign store cannot reach real parsers/provider/wallet scope
+  ---
+  duration_ms: 0.981688
+  ...
+# Subtest: foreign company/store cannot reach real parsers/provider/wallet scope
+ok 279 - foreign company/store cannot reach real parsers/provider/wallet scope
+  ---
+  duration_ms: 0.655496
+  ...
+# Subtest: verified durable cache retains bypass without reaching actual provider wrapper
+ok 280 - verified durable cache retains bypass without reaching actual provider wrapper
+  ---
+  duration_ms: 1.154628
+  ...
+# Subtest: V3 successful full-document total retains the complete timing trace and one request total
+ok 281 - V3 successful full-document total retains the complete timing trace and one request total
+  ---
+  duration_ms: 1.59426
+  ...
+# Subtest: V3 missing full-document amount is a policy error even when provider transport finishes
+ok 282 - V3 missing full-document amount is a policy error even when provider transport finishes
+  ---
+  duration_ms: 2.13925
+  ...
+# Subtest: V3 two failed provider attempts preserve wrapped error, timing and no successful subtotal
+ok 283 - V3 two failed provider attempts preserve wrapped error, timing and no successful subtotal
+  ---
+  duration_ms: 1.790035
+  ...
+# Subtest: V3 missing fallback configuration records no phantom fallback span and returns no subtotal
+ok 284 - V3 missing fallback configuration records no phantom fallback span and returns no subtotal
+  ---
+  duration_ms: 1.593179
+  ...
+# Subtest: V3 wallet hold remains original normalized error and a single failed attempt
+ok 285 - V3 wallet hold remains original normalized error and a single failed attempt
+  ---
+  duration_ms: 1.397043
+  ...
+# Subtest: V3 synchronous telemetry failure cannot enable unsafe money
+ok 286 - V3 synchronous telemetry failure cannot enable unsafe money
+  ---
+  duration_ms: 35.081597
+  ...
+# Subtest: V3 asynchronous telemetry failure cannot enable unsafe money
+ok 287 - V3 asynchronous telemetry failure cannot enable unsafe money
+  ---
+  duration_ms: 2.87636
+  ...
+# Subtest: V3 shared 70-second provider budget is unchanged on retry
+ok 288 - V3 shared 70-second provider budget is unchanged on retry
+  ---
+  duration_ms: 2.287294
+  ...
+# Subtest: V3 exhausted shared provider budget cannot return partial money or emit a phantom attempt
+ok 289 - V3 exhausted shared provider budget cannot return partial money or emit a phantom attempt
+  ---
+  duration_ms: 2.009845
+  ...
+# Subtest: PDF two pages: absent fallback key cannot expose the Azure subtotal
+ok 290 - PDF two pages: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 6.780357
+  ...
+# Subtest: PDF two pages: fallback failure cannot expose the Azure subtotal
+ok 291 - PDF two pages: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 2.682929
+  ...
+# Subtest: PDF two pages: missing fallback amount cannot inherit Azure money
+ok 292 - PDF two pages: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 3.008399
+  ...
+# Subtest: PDF two pages: balanced partial vat footer cannot overwrite the full-reader amount
+ok 293 - PDF two pages: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 2.275345
+  ...
+# Subtest: PDF two pages: balanced partial payable footer cannot overwrite the full-reader amount
+ok 294 - PDF two pages: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.957276
+  ...
+# Subtest: PDF three pages: absent fallback key cannot expose the Azure subtotal
+ok 295 - PDF three pages: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.570294
+  ...
+# Subtest: PDF three pages: fallback failure cannot expose the Azure subtotal
+ok 296 - PDF three pages: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.364924
+  ...
+# Subtest: PDF three pages: missing fallback amount cannot inherit Azure money
+ok 297 - PDF three pages: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.481701
+  ...
+# Subtest: PDF three pages: balanced partial vat footer cannot overwrite the full-reader amount
+ok 298 - PDF three pages: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.412506
+  ...
+# Subtest: PDF three pages: balanced partial payable footer cannot overwrite the full-reader amount
+ok 299 - PDF three pages: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.649703
+  ...
+# Subtest: PDF missing: absent fallback key cannot expose the Azure subtotal
+ok 300 - PDF missing: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.255119
+  ...
+# Subtest: PDF missing: fallback failure cannot expose the Azure subtotal
+ok 301 - PDF missing: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.677926
+  ...
+# Subtest: PDF missing: missing fallback amount cannot inherit Azure money
+ok 302 - PDF missing: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.780039
+  ...
+# Subtest: PDF missing: balanced partial vat footer cannot overwrite the full-reader amount
+ok 303 - PDF missing: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.942935
+  ...
+# Subtest: PDF missing: balanced partial payable footer cannot overwrite the full-reader amount
+ok 304 - PDF missing: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 4.331791
+  ...
+# Subtest: PDF zero: absent fallback key cannot expose the Azure subtotal
+ok 305 - PDF zero: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.853149
+  ...
+# Subtest: PDF zero: fallback failure cannot expose the Azure subtotal
+ok 306 - PDF zero: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 2.633424
+  ...
+# Subtest: PDF zero: missing fallback amount cannot inherit Azure money
+ok 307 - PDF zero: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 3.0362
+  ...
+# Subtest: PDF zero: balanced partial vat footer cannot overwrite the full-reader amount
+ok 308 - PDF zero: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.734731
+  ...
+# Subtest: PDF zero: balanced partial payable footer cannot overwrite the full-reader amount
+ok 309 - PDF zero: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.739368
+  ...
+# Subtest: PDF negative: absent fallback key cannot expose the Azure subtotal
+ok 310 - PDF negative: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.756274
+  ...
+# Subtest: PDF negative: fallback failure cannot expose the Azure subtotal
+ok 311 - PDF negative: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.668702
+  ...
+# Subtest: PDF negative: missing fallback amount cannot inherit Azure money
+ok 312 - PDF negative: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.552948
+  ...
+# Subtest: PDF negative: balanced partial vat footer cannot overwrite the full-reader amount
+ok 313 - PDF negative: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.648161
+  ...
+# Subtest: PDF negative: balanced partial payable footer cannot overwrite the full-reader amount
+ok 314 - PDF negative: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.701982
+  ...
+# Subtest: PDF string one: absent fallback key cannot expose the Azure subtotal
+ok 315 - PDF string one: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.669984
+  ...
+# Subtest: PDF string one: fallback failure cannot expose the Azure subtotal
+ok 316 - PDF string one: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.638196
+  ...
+# Subtest: PDF string one: missing fallback amount cannot inherit Azure money
+ok 317 - PDF string one: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.696564
+  ...
+# Subtest: PDF string one: balanced partial vat footer cannot overwrite the full-reader amount
+ok 318 - PDF string one: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.841452
+  ...
+# Subtest: PDF string one: balanced partial payable footer cannot overwrite the full-reader amount
+ok 319 - PDF string one: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 2.688617
+  ...
+# Subtest: PDF string two: absent fallback key cannot expose the Azure subtotal
+ok 320 - PDF string two: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.633089
+  ...
+# Subtest: PDF string two: fallback failure cannot expose the Azure subtotal
+ok 321 - PDF string two: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 3.184134
+  ...
+# Subtest: PDF string two: missing fallback amount cannot inherit Azure money
+ok 322 - PDF string two: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.745948
+  ...
+# Subtest: PDF string two: balanced partial vat footer cannot overwrite the full-reader amount
+ok 323 - PDF string two: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.684025
+  ...
+# Subtest: PDF string two: balanced partial payable footer cannot overwrite the full-reader amount
+ok 324 - PDF string two: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.641932
+  ...
+# Subtest: PDF null: absent fallback key cannot expose the Azure subtotal
+ok 325 - PDF null: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.568711
+  ...
+# Subtest: PDF null: fallback failure cannot expose the Azure subtotal
+ok 326 - PDF null: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.631576
+  ...
+# Subtest: PDF null: missing fallback amount cannot inherit Azure money
+ok 327 - PDF null: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.759919
+  ...
+# Subtest: PDF null: balanced partial vat footer cannot overwrite the full-reader amount
+ok 328 - PDF null: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.506007
+  ...
+# Subtest: PDF null: balanced partial payable footer cannot overwrite the full-reader amount
+ok 329 - PDF null: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.550033
+  ...
+# Subtest: PDF NaN: absent fallback key cannot expose the Azure subtotal
+ok 330 - PDF NaN: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.82651
+  ...
+# Subtest: PDF NaN: fallback failure cannot expose the Azure subtotal
+ok 331 - PDF NaN: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.645527
+  ...
+# Subtest: PDF NaN: missing fallback amount cannot inherit Azure money
+ok 332 - PDF NaN: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.617505
+  ...
+# Subtest: PDF NaN: balanced partial vat footer cannot overwrite the full-reader amount
+ok 333 - PDF NaN: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 4.580175
+  ...
+# Subtest: PDF NaN: balanced partial payable footer cannot overwrite the full-reader amount
+ok 334 - PDF NaN: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.757456
+  ...
+# Subtest: PDF Infinity: absent fallback key cannot expose the Azure subtotal
+ok 335 - PDF Infinity: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 2.531782
+  ...
+# Subtest: PDF Infinity: fallback failure cannot expose the Azure subtotal
+ok 336 - PDF Infinity: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.652368
+  ...
+# Subtest: PDF Infinity: missing fallback amount cannot inherit Azure money
+ok 337 - PDF Infinity: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.576624
+  ...
+# Subtest: PDF Infinity: balanced partial vat footer cannot overwrite the full-reader amount
+ok 338 - PDF Infinity: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.60753
+  ...
+# Subtest: PDF Infinity: balanced partial payable footer cannot overwrite the full-reader amount
+ok 339 - PDF Infinity: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.617736
+  ...
+# Subtest: PDF boolean: absent fallback key cannot expose the Azure subtotal
+ok 340 - PDF boolean: absent fallback key cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.468951
+  ...
+# Subtest: PDF boolean: fallback failure cannot expose the Azure subtotal
+ok 341 - PDF boolean: fallback failure cannot expose the Azure subtotal
+  ---
+  duration_ms: 1.730755
+  ...
+# Subtest: PDF boolean: missing fallback amount cannot inherit Azure money
+ok 342 - PDF boolean: missing fallback amount cannot inherit Azure money
+  ---
+  duration_ms: 1.957487
+  ...
+# Subtest: PDF boolean: balanced partial vat footer cannot overwrite the full-reader amount
+ok 343 - PDF boolean: balanced partial vat footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.880932
+  ...
+# Subtest: PDF boolean: balanced partial payable footer cannot overwrite the full-reader amount
+ok 344 - PDF boolean: balanced partial payable footer cannot overwrite the full-reader amount
+  ---
+  duration_ms: 1.194828
+  ...
+# Subtest: PDF fallback missing amount is not successful
+ok 345 - PDF fallback missing amount is not successful
+  ---
+  duration_ms: 1.175089
+  ...
+# Subtest: PDF fallback negative amount is not successful
+ok 346 - PDF fallback negative amount is not successful
+  ---
+  duration_ms: 1.17609
+  ...
+# Subtest: PDF fallback NaN amount is not successful
+ok 347 - PDF fallback NaN amount is not successful
+  ---
+  duration_ms: 1.228169
+  ...
+# Subtest: PDF fallback Infinity amount is not successful
+ok 348 - PDF fallback Infinity amount is not successful
+  ---
+  duration_ms: 1.146316
+  ...
+# Subtest: image: complete Azure shortcut preserved
+ok 349 - image: complete Azure shortcut preserved
+  ---
+  duration_ms: 1.389011
+  ...
+# Subtest: image: legacy useful-header fallback preserved on no key
+ok 350 - image: legacy useful-header fallback preserved on no key
+  ---
+  duration_ms: 3.513079
+  ...
+# Subtest: image: legacy useful-header fallback preserved on failure
+ok 351 - image: legacy useful-header fallback preserved on failure
+  ---
+  duration_ms: 1.290072
+  ...
+# Subtest: image: existing invoice-footer correction remains intact
+ok 352 - image: existing invoice-footer correction remains intact
+  ---
+  duration_ms: 4.796069
+  ...
+# Subtest: one-page PDF: complete Azure shortcut preserved
+ok 353 - one-page PDF: complete Azure shortcut preserved
+  ---
+  duration_ms: 1.468771
+  ...
+# Subtest: one-page PDF: legacy useful-header fallback preserved on no key
+ok 354 - one-page PDF: legacy useful-header fallback preserved on no key
+  ---
+  duration_ms: 1.273867
+  ...
+# Subtest: one-page PDF: legacy useful-header fallback preserved on failure
+ok 355 - one-page PDF: legacy useful-header fallback preserved on failure
+  ---
+  duration_ms: 1.788252
+  ...
+# Subtest: one-page PDF: existing invoice-footer correction remains intact
+ok 356 - one-page PDF: existing invoice-footer correction remains intact
+  ---
+  duration_ms: 1.156561
+  ...
+# Subtest: PDF success retains full data URL, filename, identity and existing provider-call count
+ok 357 - PDF success retains full data URL, filename, identity and existing provider-call count
+  ---
+  duration_ms: 1.252745
+  ...
+# Subtest: PDF credit identity is retained without a credit transaction
+ok 358 - PDF credit identity is retained without a credit transaction
+  ---
+  duration_ms: 1.606588
+  ...
+# Subtest: azure wallet failure remains fail-stop
+ok 359 - azure wallet failure remains fail-stop
+  ---
+  duration_ms: 2.175515
+  ...
+# Subtest: openai wallet failure remains fail-stop
+ok 360 - openai wallet failure remains fail-stop
+  ---
+  duration_ms: 2.806325
+  ...
+# Subtest: verified exact-file durable result still bypasses providers
+ok 361 - verified exact-file durable result still bypasses providers
+  ---
+  duration_ms: 1.980602
+  ...
+# Subtest: foreign-store operator is denied before wallet, cache or provider access
+ok 362 - foreign-store operator is denied before wallet, cache or provider access
+  ---
+  duration_ms: 1.011533
+  ...
+# Subtest: unknown company/store is denied before wallet, cache or provider access
+ok 363 - unknown company/store is denied before wallet, cache or provider access
+  ---
+  duration_ms: 0.938924
+  ...
+# Subtest: invalid PDF input is denied before cache/provider access
+ok 364 - invalid PDF input is denied before cache/provider access
+  ---
+  duration_ms: 1.147898
+  ...
+# Subtest: Azure unavailable still uses the existing full-document fallback
+ok 365 - Azure unavailable still uses the existing full-document fallback
+  ---
+  duration_ms: 1.399416
+  ...
+# Subtest: Azure not configured still permits a valid full-document result
+ok 366 - Azure not configured still permits a valid full-document result
+  ---
+  duration_ms: 1.612878
+  ...
+# Subtest: Azure not configured cannot turn an unknown PDF amount into a success
+ok 367 - Azure not configured cannot turn an unknown PDF amount into a success
+  ---
+  duration_ms: 3.145766
+  ...
+# Subtest: default diagnostic sink writes one JSON line with no supplied business data
+ok 368 - default diagnostic sink writes one JSON line with no supplied business data
+  ---
+  duration_ms: 2.204679
+  ...
+# Subtest: elapsed spans are finite nonnegative differences and faulty clock readings never change the work
+ok 369 - elapsed spans are finite nonnegative differences and faulty clock readings never change the work
+  ---
+  duration_ms: 0.417519
+  ...
+# Subtest: unrecognized stages, outcomes and unbounded attempts never become diagnostic payloads
+ok 370 - unrecognized stages, outcomes and unbounded attempts never become diagnostic payloads
+  ---
+  duration_ms: 0.370268
+  ...
+# Subtest: synchronous or asynchronous sink failure preserves the exact work result and original error once
+ok 371 - synchronous or asynchronous sink failure preserves the exact work result and original error once
+  ---
+  duration_ms: 5.87935
+  ...
+# Subtest: failed timing initialization is silent and leaves both provider values and errors untouched
+ok 372 - failed timing initialization is silent and leaves both provider values and errors untouched
+  ---
+  duration_ms: 0.634446
+  ...
+# Subtest: partially registered response observers cannot emit or replace an error after setup fails
+ok 373 - partially registered response observers cannot emit or replace an error after setup fails
+  ---
+  duration_ms: 0.277078
+  ...
+# Subtest: Azure phase events accept only bounded poll ordinals and retain the separate OpenAI attempt contract
+ok 374 - Azure phase events accept only bounded poll ordinals and retain the separate OpenAI attempt contract
+  ---
+  duration_ms: 0.374304
+  ...
+# Subtest: printed 7% discount rounding to zero cents keeps a two-cent 24% VAT row
+ok 375 - printed 7% discount rounding to zero cents keeps a two-cent 24% VAT row
+  ---
+  duration_ms: 2.018378
+  ...
+# Subtest: POS accepts and visibly orders up to five pages for one invoice
+ok 376 - POS accepts and visibly orders up to five pages for one invoice
+  ---
+  duration_ms: 2.705954
+  ...
+# Subtest: STEFANIDIS FAST header is independent of reversed page selection
+ok 377 - STEFANIDIS FAST header is independent of reversed page selection
+  ---
+  duration_ms: 0.526022
+  ...
+# Subtest: POS reads multipage FAST headers sequentially without losing a successful page
+ok 378 - POS reads multipage FAST headers sequentially without losing a successful page
+  ---
+  duration_ms: 0.201543
+  ...
+# Subtest: POS background reads central STEFANIDIS Azure pages in order before unified AI
+ok 379 - POS background reads central STEFANIDIS Azure pages in order before unified AI
+  ---
+  duration_ms: 0.357629
+  ...
+# Subtest: fast header falls back from Azure without blocking payment
+ok 380 - fast header falls back from Azure without blocking payment
+  ---
+  duration_ms: 0.139911
+  ...
+# Subtest: fast header also falls back when Azure succeeds with an empty header
+ok 381 - fast header also falls back when Azure succeeds with an empty header
+  ---
+  duration_ms: 0.246341
+  ...
+# Subtest: MANTZILAS FAST total uses the balanced VAT summary and ignores the account balance
+ok 382 - MANTZILAS FAST total uses the balanced VAT summary and ignores the account balance
+  ---
+  duration_ms: 1.046094
+  ...
+# Subtest: a separate receipt total cannot displace another supplier's balanced printed invoice footer
+ok 383 - a separate receipt total cannot displace another supplier's balanced printed invoice footer
+  ---
+  duration_ms: 0.282775
+  ...
+# Subtest: MANTZILAS rechecks Azure candidate rows against the corrected total and recovers its existing draft first
+ok 384 - MANTZILAS rechecks Azure candidate rows against the corrected total and recovers its existing draft first
+  ---
+  duration_ms: 0.324459
+  ...
+# Subtest: MANTZILAS uses one complete verifier instead of stacking redundant provider passes
+ok 385 - MANTZILAS uses one complete verifier instead of stacking redundant provider passes
+  ---
+  duration_ms: 0.218249
+  ...
+# Subtest: MANTZILAS exact-total rejection records bounded diagnostics without publishing candidate rows
+ok 386 - MANTZILAS exact-total rejection records bounded diagnostics without publishing candidate rows
+  ---
+  duration_ms: 0.756118
+  ...
+# Subtest: fast header preserves a readable fallback inside its dedicated POS request budget
+ok 387 - fast header preserves a readable fallback inside its dedicated POS request budget
+  ---
+  duration_ms: 10.547287
+  ...
+# Subtest: operator-facing FAST fallback reads only payment header fields and leaves products to the background
+ok 388 - operator-facing FAST fallback reads only payment header fields and leaves products to the background
+  ---
+  duration_ms: 0.397368
+  ...
+# Subtest: BackOffice purchase intake keeps every selected invoice page
+ok 389 - BackOffice purchase intake keeps every selected invoice page
+  ---
+  duration_ms: 0.273261
+  ...
+# Subtest: camera preview attaches and plays the acquired stream before capture
+ok 390 - camera preview attaches and plays the acquired stream before capture
+  ---
+  duration_ms: 1.672017
+  ...
+# Subtest: multipage OCR sends all ordered pages through one invoice analysis
+ok 391 - multipage OCR sends all ordered pages through one invoice analysis
+  ---
+  duration_ms: 0.563908
+  ...
+# Subtest: full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever
+ok 392 - full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever
+  ---
+  duration_ms: 0.334583
+  ...
+# Subtest: OpenAI full-table fallback outlives an exhausted Azure F0 request
+ok 393 - OpenAI full-table fallback outlives an exhausted Azure F0 request
+  ---
+  duration_ms: 0.277107
+  ...
+# Subtest: full-table OCR uses the bounded vision model instead of the general reasoning model
+ok 394 - full-table OCR uses the bounded vision model instead of the general reasoning model
+  ---
+  duration_ms: 0.190927
+  ...
+# Subtest: full-table OCR returns one compact structured table and rebuilds audit text locally
+ok 395 - full-table OCR returns one compact structured table and rebuilds audit text locally
+  ---
+  duration_ms: 0.556487
+  ...
+# Subtest: full-table OCR spends its bounded provider window on extraction instead of reasoning
+ok 396 - full-table OCR spends its bounded provider window on extraction instead of reasoning
+  ---
+  duration_ms: 0.141553
+  ...
+# Subtest: full OCR preserves the failing provider and page instead of hiding the root error
+ok 397 - full OCR preserves the failing provider and page instead of hiding the root error
+  ---
+  duration_ms: 0.117487
+  ...
+# Subtest: a multipage invoice is blocked rather than saved empty when no product lines are found
+ok 398 - a multipage invoice is blocked rather than saved empty when no product lines are found
+  ---
+  duration_ms: 0.186972
+  ...
+# Subtest: a total mismatch is created as a BackOffice draft without stock posting
+ok 399 - a total mismatch is created as a BackOffice draft without stock posting
+  ---
+  duration_ms: 0.175485
+  ...
+# Subtest: all page attachments are archived only after the single purchase is created
+ok 400 - all page attachments are archived only after the single purchase is created
+  ---
+  duration_ms: 0.19902
+  ...
+# Subtest: additional page jobs are locked individually and internal intake errors identify their stage
+ok 401 - additional page jobs are locked individually and internal intake errors identify their stage
+  ---
+  duration_ms: 0.133552
+  ...
+# Subtest: empty initial invoice extraction triggers the table recovery pass
+ok 402 - empty initial invoice extraction triggers the table recovery pass
+  ---
+  duration_ms: 0.102754
+  ...
+# Subtest: failed unified AI recovers every page through Azure without adding carry-forward totals
+ok 403 - failed unified AI recovers every page through Azure without adding carry-forward totals
+  ---
+  duration_ms: 0.518931
+  ...
+# Subtest: multipage invoice recovery also uses Azure to fill missing VAT
+ok 404 - multipage invoice recovery also uses Azure to fill missing VAT
+  ---
+  duration_ms: 0.263787
+  ...
+# Subtest: Azure-derived net unit cost does not hide invoice discounts
+ok 405 - Azure-derived net unit cost does not hide invoice discounts
+  ---
+  duration_ms: 8.148807
+  ...
+# Subtest: main AI extraction carries original prices, discount pairs, and verifies line arithmetic
+ok 406 - main AI extraction carries original prices, discount pairs, and verifies line arithmetic
+  ---
+  duration_ms: 3.717386
+  ...
+# Subtest: one complete 25 percent line repairs sibling lines only when every net value balances
+ok 407 - one complete 25 percent line repairs sibling lines only when every net value balances
+  ---
+  duration_ms: 2.035024
+  ...
+# Subtest: rounded net values snap an AI-derived 24.9524 percent back to the verified invoice 25 percent
+ok 408 - rounded net values snap an AI-derived 24.9524 percent back to the verified invoice 25 percent
+  ---
+  duration_ms: 0.360473
+  ...
+# Subtest: printed original price restores a missing discount hidden inside net unit cost
+ok 409 - printed original price restores a missing discount hidden inside net unit cost
+  ---
+  duration_ms: 0.726954
+  ...
+# Subtest: MANTZILAS focused reread replaces a self-consistent wrong quantity and returns printed VAT groups
+ok 410 - MANTZILAS focused reread replaces a self-consistent wrong quantity and returns printed VAT groups
+  ---
+  duration_ms: 1.239536
+  ...
+# Subtest: MANTZILAS focused reread preserves a printed zero-discount row and rejects an incomplete invented discount
+ok 411 - MANTZILAS focused reread preserves a printed zero-discount row and rejects an incomplete invented discount
+  ---
+  duration_ms: 0.740635
+  ...
+# Subtest: MANTZILAS focused reread rolls back a fully consistent batch that misses the printed invoice total
+ok 412 - MANTZILAS focused reread rolls back a fully consistent batch that misses the printed invoice total
+  ---
+  duration_ms: 0.621385
+  ...
+# Subtest: MANTZILAS focused reread rejects a candidate assigned to the wrong supplier code
+ok 413 - MANTZILAS focused reread rejects a candidate assigned to the wrong supplier code
+  ---
+  duration_ms: 0.610639
+  ...
+# Subtest: MANTZILAS focused reread replaces a wrong first-pass row when code, math and invoice total agree
+ok 414 - MANTZILAS focused reread replaces a wrong first-pass row when code, math and invoice total agree
+  ---
+  duration_ms: 0.393472
+  ...
+# Subtest: complete-table reread can rebuild an empty first-pass table only with verified footer totals
+ok 415 - complete-table reread can rebuild an empty first-pass table only with verified footer totals
+  ---
+  duration_ms: 0.375154
+  ...
+# Subtest: MANTZILAS row identity accepts omitted display-leading zeroes without weakening index matching
+ok 416 - MANTZILAS row identity accepts omitted display-leading zeroes without weakening index matching
+  ---
+  duration_ms: 0.467154
+  ...
+# Subtest: MANTZILAS resolves doubled-quantity equivalent-discount ambiguity from same-price sibling
+ok 417 - MANTZILAS resolves doubled-quantity equivalent-discount ambiguity from same-price sibling
+  ---
+  duration_ms: 0.592382
+  ...
+# Subtest: MANTZILAS code 00009 resolves its x24 equivalent scale without a matching sibling
+ok 418 - MANTZILAS code 00009 resolves its x24 equivalent scale without a matching sibling
+  ---
+  duration_ms: 0.687685
+  ...
+# Subtest: code 00009 pack arithmetic is not changed outside the MANTZILAS supplier rule
+ok 419 - code 00009 pack arithmetic is not changed outside the MANTZILAS supplier rule
+  ---
+  duration_ms: 0.516277
+  ...
+# Subtest: MANTZILAS full reread cannot publish a table outside cent-level invoice tolerance
+ok 420 - MANTZILAS full reread cannot publish a table outside cent-level invoice tolerance
+  ---
+  duration_ms: 0.201523
+  ...
+# Subtest: V2.4.4 does not accept net value as the initial value when quantity times price disagrees
+ok 421 - V2.4.4 does not accept net value as the initial value when quantity times price disagrees
+  ---
+  duration_ms: 2.081017
+  ...
+# Subtest: locked reread admits only an unclaimed or same-draft secondary page
+ok 422 - locked reread admits only an unclaimed or same-draft secondary page
+  ---
+  duration_ms: 0.085328
+  ...
+1..422
+# tests 422
+# suites 0
+# pass 422
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1152.100807

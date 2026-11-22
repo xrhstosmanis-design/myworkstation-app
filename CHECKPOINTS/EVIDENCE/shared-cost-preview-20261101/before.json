@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-11-01T21:14:03.082Z",
+  "revision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e",
+  "scope": "synthetic preview and virtual LAB only",
+  "lab": {
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "entries": 14,
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "requests": 9,
+    "debtMicros": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ]
+  },
+  "privateCustomerControl": "NOT TESTED - automatic approval review rejected private extraction; no retry",
+  "businessTransaction": false
+}

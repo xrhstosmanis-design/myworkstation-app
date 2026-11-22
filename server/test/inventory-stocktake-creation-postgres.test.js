@@ -15,7 +15,7 @@ test('large stocktake creation snapshots selected active membership atomically i
     for(const sql of [
       'CREATE TABLE "Store"("id" text PRIMARY KEY,"companyId" text,"active" boolean)',
       'CREATE TABLE "Product"("id" text PRIMARY KEY,"companyId" text,"name" text,"categoryId" text,"active" boolean,"costPrice" numeric)',
-      'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"active" boolean,"currentStock" numeric,PRIMARY KEY("storeId","productId"))',
+      'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"active" boolean,"currentStock" numeric,"costPriceOverride" numeric,"categoryIdOverride" text,"subcategoryIdOverride" text,"vatDepartmentIdOverride" text,PRIMARY KEY("storeId","productId"))',
       'CREATE TABLE "Stocktake"("id" text PRIMARY KEY,"companyId" text,"storeId" text,"name" text,"inventoryVersion" int,"scopeType" text,"scopeJson" jsonb,"liveDuringTrading" boolean,"recountPolicy" text,"createdByUserId" text)',
       'CREATE TABLE "InventoryZone"("id" text PRIMARY KEY)',
       'CREATE TABLE "StocktakeLine"("id" text PRIMARY KEY,"stocktakeId" text REFERENCES "Stocktake"("id"),"productId" text,"expectedQuantity" numeric,"unitCost" numeric,"zoneId" text REFERENCES "InventoryZone"("id"),UNIQUE("stocktakeId","productId"))'
@@ -31,7 +31,7 @@ test('large stocktake creation snapshots selected active membership atomically i
       store:{findFirst:async({where})=>(await db.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${where.id} AND "companyId"=${where.companyId} AND "active"=true`)[0]||null},
       $transaction:fn=>{transactions++;return db.$transaction(tx=>fn({$executeRaw:async(...args)=>{statements++;return tx.$executeRaw(...args)}}))}
     };
-    const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete'].map(method=>[method,(path,...fns)=>handlers.set(method+path,fns)]));
+    const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete','patch'].map(method=>[method,(path,...fns)=>handlers.set(method+path,fns)]));
     const source=fs.readFileSync(new URL('../src/routes/inventory-v2.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export .*;\n/gm,'');
     new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed',source)(Router,z,crypto,prisma,{},()=>{},()=>{},()=>{},()=>false,(user,store)=>!user.storeId||user.storeId===store);
     const create=async(body,user={id:'owner',role:'OWNER',companyId:'company',storeId:'store'})=>{

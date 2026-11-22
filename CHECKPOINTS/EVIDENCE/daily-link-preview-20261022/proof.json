@@ -1,0 +1,36 @@
+{
+  "observedAt": "2026-10-22T20:16:33.895190+00:00",
+  "revision": "723c8184f39d87e262d7d1c59c1941e4cadee55b",
+  "result": "LIMITED LIVE HTTP METADATA PASS",
+  "title": "DAILY BITE - Online Παραγγελίες",
+  "metadata": {
+    "null": null,
+    "viewport": "width=device-width, initial-scale=1.0",
+    "description": "DAILY BITE — Σωστή διατροφή… κάθε μέρα! Καφές και αγαπημένες γεύσεις, με παραλαβή ή delivery.",
+    "og:type": "website",
+    "og:site_name": "DAILY BITE",
+    "og:title": "DAILY BITE - Online Παραγγελίες",
+    "og:description": "DAILY BITE — Σωστή διατροφή… κάθε μέρα! Καφές και αγαπημένες γεύσεις, με παραλαβή ή delivery.",
+    "og:url": "https://myworkstation-app.onrender.com/online/daily-bite",
+    "og:image": "https://myworkstation-app.onrender.com/kat/brand-daily-bite.png",
+    "og:image:type": "image/png",
+    "og:image:width": "825",
+    "og:image:height": "774",
+    "og:image:alt": "DAILY BITE",
+    "twitter:card": "summary",
+    "twitter:title": "DAILY BITE - Online Παραγγελίες",
+    "twitter:description": "DAILY BITE — Σωστή διατροφή… κάθε μέρα! Καφές και αγαπημένες γεύσεις, με παραλαβή ή delivery.",
+    "twitter:image": "https://myworkstation-app.onrender.com/kat/brand-daily-bite.png"
+  },
+  "canonical": "https://myworkstation-app.onrender.com/online/daily-bite",
+  "freshQueryIdentical": true,
+  "katByteIdentical": true,
+  "sharedStyleScriptBodyByteIdentical": true,
+  "logoSha256": "d003419554139638e0656ca57fab9f9b9525c35b78f3c7d585946d3864635704",
+  "logoDimensions": [
+    825,
+    774
+  ],
+  "dailyHtmlSha256": "af3a032f7e22553d26a1cc0d045751c694bd480360c2b79f1a1c0b38acfd899d",
+  "scope": "Read-only raw GET/HEAD with WhatsApp User-Agent; no WhatsApp cached-message rendering or checkout acceptance"
+}

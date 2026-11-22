@@ -1,0 +1,58 @@
+# INVOICE-PAYMENT-RECOVERY-01 — before-source claim, 21 November 2026
+
+Owner /root of the invoice-payment recovery conversation. User explicitly requests owner and delegated responsible-person access, photo/assistant reading after failed QR/myDATA lookup, same payment/draft, reviewed posting. Claim only the independently scoped recovery bridge. Retain No5 general capability/installer owner, No04 assistant/line parser owner, No02 provider/original reader owner and existing cash/shift owner. Do not change their shared files until a precise coordinated boundary is recorded.
+
+Observed source on 9f03779dc7a61830c6fcb1be796039a2afb7e66b:
+- StoreSupplierInvoiceFast already bundles up to five photos, supports camera/mobile QR and starts the assistant. Its ordinary PAID branch creates a payment; do not instruct a user with an existing expense to take that branch.
+- OtherExpenseReviewCenter exposes existing-expense reassociation only on Platform Admin. supplier-advance.js internally permits OWNER, but both corresponding HTTP routes requireSuperAdminSettlementReview. Delegated approvals.read is read-only and is NOT authority to reassociate.
+- Durable PLAIN_CAPTURE intentionally resolves close obligation without creating an AI job/draft. commerce-pos-v244.js rejects its conversion at the old generic handoff boundaries with PENDING_INVOICE_SOURCE_KIND. Do not remove those guards globally or claim that capture means warehouse receipt.
+- Existing supplier advance allocation requires a confirmed settlement and a CREDIT draft of the same supplier/store. Preserve this evidence/approval boundary.
+
+Bounded implementation sequence:
+1. New store-scoped recovery action and UI using canonical company/store plus original transaction. Owner or explicit fresh delegated action grant; reads and writes recheck grant, store lifecycle and modules. No implicit grant to approvals.read, no role spoof or global data. Coordinate any shared No5 registry/provenance edits with its retained owner; independent helper/UI/test files may be developed only after this claim merges.
+2. Explicit opt-in promotion of an existing PLAIN_CAPTURE to one assistant job and one editable draft using saved checksum-verified originals. Keep proof immutable and recognize both source identities durably; lock transaction/store and enforce replay identity. Existing rejection stays on generic paths; no free-standing new upload/payment. Do not auto-trigger paid AI on a mere attachment.
+3. Existing OTHER_EXPENSE reassociation, confirmed supplier advance and draft allocation remain separate states. Preserve actual original payment amount/time/session, review/audit and pending proof. Display unresolved prerequisites; never reinterpret an unconfirmed advance as invoice paid.
+4. Attach all physical pages to same draft; reuse existing assistant/row review; no parser/provider changes or hidden cost/wallet bypass. Finalization requires existing approval/stock and active-inventory policy; diagnostics do not post stock.
+
+Required automated proof: exact owner/same-store success; unauthorized staff/read-only/foreign company/store/module/lifecycle denial; fresh revoke before commit; concurrent/replayed request exactly once; failure rollback; original payment/cash/shift/stock unchanged; same original bytes; same job/draft after retry; deliberately deleted draft not resurrected; generic PLAIN_CAPTURE guard preserved. UI stale store/payment/cancel response fencing and retry with same idempotency identity.
+
+Current evidence: existing narrow plain-capture LAB PASS and ordinary signed-ledger close USER PASS are protected and must not be replayed. New combined recovery and delegated action NOT IMPLEMENTED / NOT TESTED. No runtime changes, production records, AI spending or stock action in this claim. One grouped final existing-LAB session after exact CI/release. No new user role switching requested now.
+
+Next action after green merged claim: implement isolated recovery eligibility/transition contract and tests, then integrate only coordinated runtime boundaries; do not change No5/No04/No02 owners in parallel.
+
+## Isolated read-only recovery contract after claim4115
+
+Claim4115 merged170182adb0742313ad465cf2feca5c4820a9389e after3applicable CI44876650247 successes (2docs-runtime skips). New owned files only: server/src/lib/invoice-payment-recovery.js and server/test/invoice-payment-recovery.test.js. No existing route, shared permissions/provenance, assistant/parser/provider or financial runtime changed.
+
+The canonical-snapshot projection distinguishes ASSOCIATE_SUPPLIER, CONFIRM_ADVANCE, UPLOAD_ORIGINAL, REQUEST_ASSISTANT, OPEN_EXISTING_JOB and OPEN_EXISTING_DRAFT. Every result explicitly forbids creation of a payment or stock posting. It rejects reversed/foreign or incompletely linked inputs, stale draft identity and deliberately missing remembered drafts. Original page payloads are rehashed with bounded size/page counts; calendar date, number and amount must match. Inputs must be canonical server snapshots after real authorization; this helper is NOT authentication, MIME/image decoding, a job creator, transaction lock, HTTP route or a native DB acceptance test.
+
+Node20 targeted14PASS/0FAIL/0SKIP. Tests cover two-page original integrity, invalid finances/calendars, foreign scope and missing linkage, pending advance prerequisites, retry with existing job/draft and no resurrection. They use synthetic snapshot/byte fixtures, not real invoice OCR or new LAB actions. No payment/AI/draft/stock writes occurred.
+
+Integration remains BLOCKED ON COORDINATED SHARED BOUNDARIES: No5 retains shared capability mapping/service and COMPANY source-provenance. Requested exact action is a new store-scoped supplier recovery grant (no auto grant from approvals.read), checked before access and again in the transaction; no general authority takeover. No04 retains assistant/line runtime; explicit capture promotion must lock and preserve the original capture proof, create/reuse one job/draft and pass through the normal wallet/assistant path. Existing generic PLAIN_CAPTURE guards remain unchanged. Do not label this preparatory contract as an installed feature or full user flow.
+
+## Integration-base reconciliation, 21 November
+
+Draft4118 initial e9db16473f0994fe22744e2f2e1121add2364067 fullCI44877661366 completed ALL5SUCCESS. This proves the preparatory contract only, not the full requested workflow. Existing No5 ae0f628 delegated expense confirmation is not supplier reassociation; ec2d95a introduces invoice-ai.photo-preview with invoices.edit prerequisite. The existing delegated payment UI explicitly disables advance allocation, and the shared request mapper has no supplier-advance allocation/reassociation action. These are concrete remaining integration boundaries, not missing user approval or a failed OCR test.
+
+Merged public main bdc192a (No02 printed discounts, No5 photo rights and No14 claim) locally with every peer runtime blob retained unchanged. Only shared ACTIVE append conflict was resolved by retaining both entries in full. Exact delta against that main stays five own files; no peer runtime, permission, provenance or line-reader source changed. Own helper/test blobs are unchanged, so their fourteen targeted results are reused rather than rerun. Full combined-head CI remains required before any merge. Keep Draft4118 unmerged until actual caller/UI/grant/promotion integration and native safeguards exist; no deployment of a purported completed feature.
+
+## Owner entry implementation and correction of the original diagnosis
+
+Direct examination of requireSuperAdminSettlementReview shows it already accepts a non-operator OWNER. The earlier statement that the HTTP endpoint is Super-Admin-only was inaccurate; its name does not describe its complete authorization. supplierAdvanceContext/associateExpenseAsAdvance already support OWNER. The owner gap is the entry point. No server authorization change is necessary for this slice.
+
+OwnerPaymentQuickActions now exposes a separate owner-only store-bound entry. OwnerExpenseRecoveryPanel reuses the existing OtherExpenseReviewCenter with fixed store, no central company/store selectors, no unrelated expense-confirmation/evidence controls or Super Admin note. The ordinary Platform Admin component keeps its existing behavior.
+
+The new narrow API adapter forces the selected store list, requires a fetched matching original transaction/amount/store/version/supplier context before the existing POST, fences stale store/API/unmount and overlapping refresh responses, and preserves the same form payload/idempotency key after uncertain replies. It has no endpoint to create a payment, post stock, approve or finalize. Server owner/company/transaction checks remain unchanged and mandatory; client fences are not claimed as server authorization. Existing server REVIEW/CONFIRMED advance policy is preserved.
+
+No implicit delegated capability: legacy MANAGER and delegated staff do not see this new owner entry. Their separate supplier-recovery/allocation grants remain with No5. Explicit stored-PLAIN_CAPTURE-to-assistant promotion remains with the coordinated No04 boundary; it is not implemented by this owner entry. Existing photo-preview grant is preserved, not modified. No No02/No14 runtime or provenance changed; main be74d9a was merged preserving all peer entries and blobs.
+
+Node20:14 unchanged plan tests,8 adapter tests,1 mounted owner form,1 mounted parent/role entry and1 retained Platform Admin test:25 distinct targeted PASS/0FAIL/0SKIP. The parent harness initially failed to load the package's CommonJS lucide entry under ESM; it then used the same icon-only fixture boundary as the retained UI test and passed unchanged action assertions. Production frontend build passed. No actual HTTP/native/LAB owner action has been submitted; full exact source CI and final existing-LAB acceptance remain required. This is source implemented / NOT INSTALLED, not a complete recovery or role-parity PASS.
+
+
+## Approved recovery integration expansion —21 November 2026
+
+The user explicitly approved this conversation taking the two bounded shared integration points after the ownership question: dedicated responsible-person supplier recovery and original-photo-to-assistant recovery of the same payment/draft. Retained No5 general grants/installer, No04 parser/line/wallet behavior and No02 acquisition remain with their owners. This supersedes the previous coordination hold ONLY for these two exact recovery adapters.
+
+Before-source boundary: new payments.supplier-recovery capability (default off; payments.read prerequisite), exact store-bound list/context/supplier reassociation paths, canonical fresh grant/module/lifecycle checks before reads and inside/at end of the existing cash-preserving writer. No implicit approvals.read write authority, legacy role elevation or actual grant mutation. A separate explicit assistant recovery action must reuse immutable saved originals, normal charged assistant admission, locks/idempotency and one retained draft; generic PLAIN_CAPTURE refusals remain. No generic parser/OCR, permission service rewrite, COMPANY pins, installer/schema or financial/stock bypass.
+
+Publish this bounded before-source expansion before changing runtime. Implement and verify the combined branch before a grouped release. Owner entry4118 already has full CI and technical LIVE evidence on ee7d24; grouped human acceptance and the complete expanded workflow remain OPEN. Do not replay protected capture/close or actual business transactions.

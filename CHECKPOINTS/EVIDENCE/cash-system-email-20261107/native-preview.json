@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "task": "CASH-UNIFIED-AUDIT-15",
+  "observationType": "NATIVE_SYSTEM_EMAIL_PREVIEW",
+  "status": "FAIL",
+  "reason": "OBSERVED_OVERSIZED_NATIVE_DIALOG_TRUNCATION",
+  "recordedAt": "2026-11-07T20:19:03Z",
+  "ownership": {
+    "retainedOwner": "codex/cash-chat-reconciliation-20261026",
+    "coordinator": "/root",
+    "transfer": false
+  },
+  "revision": "be3844895e807db469c3d3571cefa42bd7f3ec1c",
+  "sourceRelease": {
+    "pullRequest": 3708,
+    "pullRequestCI": {
+      "runId": 42407283334,
+      "attempt": 2,
+      "allFiveJobs": "SUCCESS",
+      "priorAttemptContext": "One Chromium-startup retry"
+    },
+    "mainCI": {
+      "runId": 42408570056,
+      "attempt": 1,
+      "allFiveJobs": "SUCCESS"
+    },
+    "deployment": {
+      "runId": 42409414620,
+      "jobId": 128514126908,
+      "status": "SUCCESS",
+      "actualHealth": {
+        "at": "2026-11-07T20:08:57.3367141Z",
+        "ok": true,
+        "revision": "be3844895e807db469c3d3571cefa42bd7f3ec1c"
+      },
+      "privateGuardLogSha256": "76a3db1986a88f2521fb8f3c16d9ef3193ec395ba414e972c46e235105596bef"
+    }
+  },
+  "scope": {
+    "kind": "OWNER_DIRECTED_LIVE_STORE_DAILY_PREVIEW",
+    "privateStoreAndDayDetails": "OMITTED",
+    "newNoChargeButtonInvocation": false
+  },
+  "timeline": {
+    "previewOpenedAt": "2026-11-07T20:10:42.209Z",
+    "promptObservedBy": "2026-11-07T20:11:08.808Z",
+    "cancelledAt": "2026-11-07T20:14:15.269Z"
+  },
+  "observed": {
+    "fullAuditPendingRows": 3,
+    "canonicalSystemFollowUpSentenceVisible": true,
+    "duplicateCandidateVisible": true,
+    "cachedAndUnreadPaperDetailsVisible": true,
+    "nativeMessageCharacterCount": 10240,
+    "messageEndedMidPaperLine": true,
+    "recipientLineVisible": false,
+    "finalInstructionsVisible": false,
+    "commentFieldEmpty": true,
+    "commentTyped": false,
+    "dialogClosedAfterCancel": true,
+    "nativePreviewButtonRestored": true
+  },
+  "limits": {
+    "fullBodyParity": "NOT_MEASURED",
+    "canonicalReportHash": "NOT_CAPTURED",
+    "universalBrowserCharacterLimit": "NOT_ESTABLISHED",
+    "financialLedgerControlInvariance": "NOT_MEASURED",
+    "inboxOrReadReceipt": "NOT_TESTED"
+  },
+  "outbound": {
+    "operatorSendAction": false,
+    "status": "NOT_SENT",
+    "actualDeliveryAcceptance": "NOT_TESTED",
+    "exactRecipientApproval": "OUTSTANDING",
+    "earlierApprovalRejectionStillEffective": true
+  },
+  "financialFinality": "OPEN",
+  "uiCorrection": {
+    "status": "NOT_IMPLEMENTED_AWAITING_LAB",
+    "claimBranch": "docs/cash-email-preview-claim-20261107",
+    "futureImplementationBranch": "fix/cash-email-preview-20261107"
+  },
+  "privacy": {
+    "rawReportTextPublished": false,
+    "privateStoreOrStaffIdentityPublished": false,
+    "recipientAddressesPublished": false,
+    "financialAmountsPublished": false,
+    "transactionIdentifiersPublished": false,
+    "privateFilenameOrAttachmentContentPublished": false
+  },
+  "provenance": "Sanitized coordinating-operator native UI observation; no new browser action was performed to author this receipt."
+}

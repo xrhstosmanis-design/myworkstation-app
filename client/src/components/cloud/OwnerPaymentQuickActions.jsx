@@ -1,10 +1,13 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Banknote,Building2,ChartNoAxesCombined,FileSpreadsheet,FileText,Landmark,ReceiptText,RefreshCw,Truck,UsersRound,WalletCards,X} from "lucide-react";
 import BankPaymentImportPanel from "../commerce/BankPaymentImportPanel.jsx";
 import OwnerBusinessPicture from "./OwnerBusinessPicture.jsx";
 import ExpenseDocumentModal from "./ExpenseDocumentModal.jsx";
+import OwnerCashWithdrawalModal from "../store/OwnerCashWithdrawalModal.jsx";
 import StoreCashTransferModal from "../store/StoreCashTransferModal.jsx";
+import StoreSupplierOpenInvoicePayment from '../store/StoreSupplierOpenInvoicePayment.jsx';
 import StorePosPaymentsModal from "../store/StorePosPaymentsModal.jsx";
+import OwnerExpenseRecoveryPanel from "./OwnerExpenseRecoveryPanel.jsx";
 
 const categories=[
   {id:"INVOICE",label:"Πληρωμή Τιμολογίου",type:"SUPPLIER_PAYMENT",icon:FileText,document:true},
@@ -19,16 +22,30 @@ const categories=[
 const ownerRoles=new Set(["OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(String(value||"0").replace(",","."))||0;
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const bankTransferStatus={
+  PENDING_PROOF:"Αναμονή αποδεικτικού",
+  PENDING_REVIEW:"Σε αναμονή ελέγχου",
+  CONFIRMED:"Επιβεβαιωμένη στο MyWorkStation",
+  DISCREPANCY:"Ασυμφωνία προς έλεγχο",
+  CANCELLED:"Ακυρωμένη"
+};
+const bankTransferDate=new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens",hour12:false});
 const storedUser=()=>{try{return JSON.parse(localStorage.getItem("user")||"null")}catch{return null}};
 const safeKey=()=>`owner-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 
-export default function OwnerPaymentQuickActions({api,store,onChanged}){
+export default function OwnerPaymentQuickActions({api,store,onChanged,delegatedCapabilities=null}){
   const [ledger,setLedger]=useState(null),[active,setActive]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[bankOpen,setBankOpen]=useState(false),[businessOpen,setBusinessOpen]=useState(false),[supplierPaymentsOpen,setSupplierPaymentsOpen]=useState(false);
   const [form,setForm]=useState({amount:"",supplierId:"",purchaseDocumentId:"",description:"",paymentSource:"EXTERNAL"});
   const [transferOpen,setTransferOpen]=useState(false);
+  const [withdrawalOpen,setWithdrawalOpen]=useState(false);
   const [expenseDocumentOpen,setExpenseDocumentOpen]=useState(false);
+  const [expenseRecoveryOpen,setExpenseRecoveryOpen]=useState(false);
+  const delegated=Array.isArray(delegatedCapabilities),paymentKey=useRef(safeKey());
+  const [responsibility,setResponsibility]=useState(false);
   const user=storedUser();
-  const allowed=ownerRoles.has(user?.role);
+  const withdrawalAllowed=delegated?delegatedCapabilities.includes('payments.owner-withdrawal'):user?.role==='OWNER'||user?.role==='SUPER_ADMIN'||user?.isSuperAdmin===true;
+  const allowed=delegated?delegatedCapabilities.includes('payments.read'):ownerRoles.has(user?.role)||withdrawalAllowed;
+  const visibleCategories=delegated?categories.filter(c=>c.id==='SUPPLIER'&&delegatedCapabilities.includes('payments.supplier')||c.id==='OTHER'&&delegatedCapabilities.includes('payments.expense')):categories;
   const suppliers=ledger?.suppliers||[];
   const documents=ledger?.purchaseDocuments||[];
   const expenseDocumentAllowed=active?.id==="OTHER"||active?.id==="UTILITIES";
@@ -37,12 +54,44 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
   const selectedDocument=useMemo(()=>documents.find(row=>row.id===form.purchaseDocumentId)||null,[documents,form.purchaseDocumentId]);
   const requiresShift=active?.type==="TRANSFER_AMOUNT"||form.paymentSource==="CASH_SHIFT";
 
-  const load=async()=>{if(!allowed)return;setError("");try{setLedger(await api(`/api/transactions/stores/${store.id}/overview`))}catch(e){setError(e.message)}};
-  useEffect(()=>{load()},[store.id,allowed]);
+  const loadedStore=useRef(store.id);
+  const loadSequence=useRef(0);
+  const [historyState,setHistoryState]=useState("loading");
+  const canUseCash=!delegated||delegatedCapabilities.includes("payments.cash");
+  const load=async()=>{
+    if(!allowed)return;
+    const sequence=++loadSequence.current;
+    const current=()=>sequence===loadSequence.current;
+    if(loadedStore.current!==store.id){loadedStore.current=store.id;setLedger(null);setMessage("")}
+    setError("");
+    setHistoryState("loading");
+    try{
+      if(!delegated){
+        const overview=await api(`/api/transactions/stores/${store.id}/overview`);
+        if(current())setLedger(overview);
+        return;
+      }
+      const payments=await api(`/api/backoffice-staff/payments/stores/${store.id}`);
+      if(!current())return;
+      setLedger({...payments,openSession:null});
+      setHistoryState("ready");
+      if(canUseCash){
+        const cash=await api(`/api/cash/stores/${store.id}/overview`).catch(()=>null);
+        if(current())setLedger({...payments,openSession:cash?.openSession??null});
+      }
+    }catch(e){
+      if(current()){
+        setLedger(null);
+        setError(e.message);
+        setHistoryState("error");
+      }
+    }
+  };
+  useEffect(()=>{load();return()=>{loadSequence.current++}},[store.id,allowed,delegated,canUseCash]);
   useEffect(()=>{if(selectedDocument?.supplierId)setForm(current=>({...current,supplierId:selectedDocument.supplierId}))},[selectedDocument?.id]);
   if(!allowed)return null;
 
-  const open=category=>{setError("");setMessage("");if(category.type==="TRANSFER_AMOUNT"){setTransferOpen(true);return}if(category.type==="SUPPLIER_PAYMENT"){setSupplierPaymentsOpen(true);return}setActive(category);setForm({amount:"",supplierId:"",purchaseDocumentId:"",description:category.label,paymentSource:"EXTERNAL"})};
+  const open=category=>{paymentKey.current=safeKey();setResponsibility(false);setError("");setMessage("");if(category.type==="TRANSFER_AMOUNT"){setTransferOpen(true);return}if(category.type==="SUPPLIER_PAYMENT"){setSupplierPaymentsOpen(true);return}setActive(category);setForm({amount:"",supplierId:"",purchaseDocumentId:"",description:category.label,paymentSource:"EXTERNAL"})};
   const close=()=>{if(!busy)setActive(null)};
   const submit=async event=>{
     event.preventDefault();
@@ -51,6 +100,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
     if(active.type==="SUPPLIER_PAYMENT"&&!form.supplierId)return setError("Επίλεξε προμηθευτή.");
     if(active.document&&!form.purchaseDocumentId)return setError("Επίλεξε παραστατικό από την υπάρχουσα λειτουργία ανάγνωσης παραστατικών.");
     if(requiresShift&&!ledger?.openSession)return setError("Δεν υπάρχει ενεργή βάρδια για αυτή την κίνηση.");
+    if(delegated&&!form.purchaseDocumentId&&!responsibility)return setError('Επιβεβαίωσε τη δήλωση καταχώρισης χωρίς παραστατικό.');
     setBusy(true);setError("");setMessage("");
     try{
       const body=active.type==="TRANSFER_AMOUNT"
@@ -63,7 +113,8 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
             evidenceMode:active.document||linkedDocument?"DOCUMENT":"NO_DOCUMENT",
             purchaseDocumentId:active.document||linkedDocument?form.purchaseDocumentId:null,
             paymentSource:form.paymentSource,
-            idempotencyKey:safeKey()
+            idempotencyKey:delegated?paymentKey.current:safeKey(),
+            ...(delegated?{responsibilityAcknowledged:responsibility,paymentMethod:form.paymentSource==='CASH_SHIFT'?'CASH_SHIFT':form.paymentMethod||'CORPORATE_CARD'}:{})
           };
       await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify(body)});
       setMessage(`${active.label}: καταχωρίστηκε ${money(amount)} στο BackOffice.`);
@@ -75,18 +126,44 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
   const tileStyle={minHeight:88,textAlign:"left",border:"1px solid #dce5ef",background:"linear-gradient(180deg,#fff,#f8fbff)",borderRadius:15,padding:14,cursor:"pointer",display:"flex",alignItems:"center",gap:12};
   return <section style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,marginBottom:18,boxShadow:"0 8px 30px rgba(15,42,75,.05)"}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,marginBottom:14}}>
-      <div><h3 style={{margin:0,fontSize:18}}>Πληρωμές Ιδιοκτήτη / Διαχειριστή</h3><p style={{margin:"5px 0 0",color:"#6b7b91",fontSize:13}}>Όλες οι κατηγορίες καταχωρίζονται στην υπάρχουσα ενιαία βάση και στο BackOffice.</p></div>
+      <div><h3 style={{margin:0,fontSize:18}}>{delegated?"Πληρωμές":"Πληρωμές Ιδιοκτήτη / Διαχειριστή"}</h3><p style={{margin:"5px 0 0",color:"#6b7b91",fontSize:13}}>Όλες οι κατηγορίες καταχωρίζονται στην υπάρχουσα ενιαία βάση και στο BackOffice.</p></div>
       <button type="button" onClick={load} style={{border:"1px solid #d9e3ef",background:"#f8fbff",borderRadius:10,padding:"9px 12px",display:"flex",gap:7,alignItems:"center",fontWeight:700}}><RefreshCw size={16}/>Ανανέωση</button>
     </div>
     {error&&!active&&<div style={{padding:10,borderRadius:10,background:"#fff0f0",color:"#b42318",marginBottom:12}}>{error}</div>}
+    {!active&&message&&<p role={message.startsWith("❌")?"alert":"status"} style={{color:message.startsWith("❌")?"#b42318":"#08783e"}}>{message}</p>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(205px,1fr))",gap:12}}>
-      <button type="button" onClick={()=>setBusinessOpen(true)} style={{...tileStyle,border:"2px solid #1769e0",background:"linear-gradient(180deg,#eff6ff,#e8f1ff)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#dbeafe",color:"#1457b8"}}><ChartNoAxesCombined size={23}/></span><span><b style={{display:"block",fontSize:14,color:"#102f59"}}>Εικόνα Επιχειρήσεις</b><small style={{color:"#496b95"}}>Πωλήσεις · αγορές · ΦΠΑ · κέρδος · έξοδα</small></span></button>
-      {categories.map(category=>{const Icon=category.icon;return <button key={category.id} type="button" onClick={()=>open(category)} style={tileStyle}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#eaf2ff",color:"#1769e0"}}><Icon size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#12233d"}}>{category.label}</b><small style={{color:"#718096"}}>{category.type==="TRANSFER_AMOUNT"?"Ιδιοκτήτης → Ταμείο · μετρητά":category.type==="SUPPLIER_PAYMENT"?"Προμηθευτές / παραστατικά":"Κατηγορία εξόδου"}</small></span></button>})}
-      <button type="button" onClick={()=>setBankOpen(true)} style={{...tileStyle,border:"2px solid #0f766e",background:"linear-gradient(180deg,#f0fdfa,#ecfdf5)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#d1fae5",color:"#047857"}}><FileSpreadsheet size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#064e3b"}}>Εισαγωγή αρχείου τράπεζας</b><small style={{color:"#47766d"}}>Excel / CSV · matching προμηθευτή / τιμολογίου</small></span></button>
+      {!delegated&&<button type="button" onClick={()=>setBusinessOpen(true)} style={{...tileStyle,border:"2px solid #1769e0",background:"linear-gradient(180deg,#eff6ff,#e8f1ff)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#dbeafe",color:"#1457b8"}}><ChartNoAxesCombined size={23}/></span><span><b style={{display:"block",fontSize:14,color:"#102f59"}}>Εικόνα Επιχειρήσεις</b><small style={{color:"#496b95"}}>Πωλήσεις · αγορές · ΦΠΑ · κέρδος · έξοδα</small></span></button>}
+      {!delegated&&user?.role==="OWNER"&&<button type="button" style={tileStyle} onClick={()=>setExpenseRecoveryOpen(true)}><WalletCards size={22}/><span><b>Σύνδεση εξόδου με προμηθευτή</b><small style={{display:"block"}}>Υπάρχουσα πληρωμή · χωρίς νέα εκταμίευση</small></span></button>}
+      {visibleCategories.map(category=>{const Icon=category.icon;return <button key={category.id} type="button" onClick={()=>open(category)} style={tileStyle}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#eaf2ff",color:"#1769e0"}}><Icon size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#12233d"}}>{category.label}</b><small style={{color:"#718096"}}>{category.type==="TRANSFER_AMOUNT"?"Ιδιοκτήτης → Ταμείο · μετρητά":category.type==="SUPPLIER_PAYMENT"?"Προμηθευτές / παραστατικά":"Κατηγορία εξόδου"}</small></span></button>})}
+      {!delegated&&<button type="button" onClick={()=>setBankOpen(true)} style={{...tileStyle,border:"2px solid #0f766e",background:"linear-gradient(180deg,#f0fdfa,#ecfdf5)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#d1fae5",color:"#047857"}}><FileSpreadsheet size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#064e3b"}}>Εισαγωγή αρχείου τράπεζας</b><small style={{color:"#47766d"}}>Excel / CSV · matching προμηθευτή / τιμολογίου</small></span></button>}
     </div>
+    {delegated&&<section aria-label="Ιστορικό τραπεζικών μεταφορών">
+      <h4>Πρόσφατες τραπεζικές μεταφορές</h4>
+      {historyState==="loading"&&<p role="status">Φόρτωση ιστορικού…</p>}
+      {historyState==="error"&&<p>Το ιστορικό δεν είναι διαθέσιμο. Πάτησε «Ανανέωση».</p>}
+      {historyState==="ready"&&!ledger?.recentBankTransfers&&<p>Το ιστορικό δεν είναι διαθέσιμο.</p>}
+      {historyState==="ready"&&ledger?.recentBankTransfers?.length===0&&<p>Δεν υπάρχουν πρόσφατες καταχωρίσεις τραπεζικών μεταφορών.</p>}
+      {historyState==="ready"&&ledger?.recentBankTransfers?.length>0&&<div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",textAlign:"left"}}>
+          <thead><tr><th scope="col">Ημερομηνία</th><th scope="col">Προμηθευτής / είδος</th><th scope="col">Ποσό</th><th scope="col">Κατάσταση</th></tr></thead>
+          <tbody>{ledger.recentBankTransfers.map(row=><tr key={row.id}>
+            <td>{bankTransferDate.format(new Date(row.occurredAt))}</td>
+            <td>{row.supplierName||(row.type==="OTHER_EXPENSE"?"Λοιπό έξοδο":"Πληρωμή προμηθευτή")}
+              {row.documentNumbers?.length>0&&<small style={{display:"block"}}>{row.documentNumbers.join(", ")}</small>}
+            </td>
+            <td>{money(row.amount)}</td>
+            <td>{bankTransferStatus[row.status]||"Καταχωρισμένη"}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
+    </section>}
+    {withdrawalAllowed&&<button type="button" onClick={()=>setWithdrawalOpen(true)}>Ταμείο → Ιδιοκτήτης · Καταχώριση ανάληψης</button>}
+    {withdrawalOpen&&<OwnerCashWithdrawalModal key={store.id} api={api} store={store} actorKey={user?.id||""} allowed={withdrawalAllowed} onClose={()=>setWithdrawalOpen(false)} onChanged={()=>{load();onChanged?.()}}/>}
     {transferOpen&&<StoreCashTransferModal key={store.id} api={api} store={store} direction="IN" allowed={allowed} onClose={()=>setTransferOpen(false)} onChanged={()=>{load();onChanged?.()}}/>}
+    {expenseRecoveryOpen&&!delegated&&user?.role==="OWNER"&&<OwnerExpenseRecoveryPanel key={store.id} api={api} store={store} onClose={()=>setExpenseRecoveryOpen(false)} setMessage={setMessage}/>}
     {businessOpen&&<OwnerBusinessPicture api={api} store={store} onClose={()=>setBusinessOpen(false)}/>}
-    {supplierPaymentsOpen&&<StorePosPaymentsModal api={api} store={store} initialPaymentType="SUPPLIER_PAYMENT" onClose={()=>setSupplierPaymentsOpen(false)} onChanged={async()=>{await load();onChanged?.()}} setMessage={setMessage} setError={setError}/>} 
+    {supplierPaymentsOpen&&delegated&&<div className="pos-sale-actions-overlay"><section className="pos-sale-actions-modal"><header><h3>Πληρωμή προμηθευτή · {store.name}</h3><button type="button" onClick={()=>setSupplierPaymentsOpen(false)}>Κλείσιμο</button></header><p>Η καταχώριση παραμένει προς έλεγχο ιδιοκτήτη.</p><StoreSupplierOpenInvoicePayment api={api} store={store} suppliers={suppliers} allowCash={delegatedCapabilities.includes('payments.cash')} allowAdvanceAllocation={delegatedCapabilities.includes('payments.advance-allocate')} onCompleted={()=>{setSupplierPaymentsOpen(false);load();onChanged?.()}} setMessage={setMessage}/></section></div>}
+    {supplierPaymentsOpen&&!delegated&&<StorePosPaymentsModal api={api} store={store} initialPaymentType="SUPPLIER_PAYMENT" onClose={()=>setSupplierPaymentsOpen(false)} onChanged={async()=>{await load();onChanged?.()}} setMessage={setMessage} setError={setError}/>}
     {bankOpen&&<div onMouseDown={e=>e.target===e.currentTarget&&setBankOpen(false)} style={{position:"fixed",inset:0,zIndex:5900,background:"rgba(10,24,43,.52)",display:"grid",placeItems:"center",padding:20}}><div style={{width:"min(1500px,97vw)",maxHeight:"92vh",overflow:"auto",background:"#f8fafc",borderRadius:20,boxShadow:"0 28px 90px rgba(0,0,0,.28)"}}><header style={{position:"sticky",top:0,zIndex:2,padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"#123b5d",color:"white"}}><div><b style={{fontSize:19}}>Εισαγωγή αρχείου τράπεζας</b><small style={{display:"block",opacity:.82,marginTop:3}}>{store.name} · προεπισκόπηση πριν από οποιαδήποτε πληρωμή</small></div><button type="button" onClick={()=>setBankOpen(false)} style={{border:0,background:"transparent",color:"white",cursor:"pointer"}}><X size={26}/></button></header><div style={{padding:18}}><BankPaymentImportPanel api={api} fixedStore={store}/></div></div></div>}
     {expenseDocumentOpen&&<ExpenseDocumentModal api={api} store={store} onClose={()=>setExpenseDocumentOpen(false)} onApproved={async doc=>{await load();setForm(f=>({...f,purchaseDocumentId:doc.id}));onChanged?.()}}/>}
     {active&&<div onMouseDown={e=>e.target===e.currentTarget&&close()} style={{position:"fixed",inset:0,zIndex:5000,background:"rgba(10,24,43,.48)",display:"grid",placeItems:"center",padding:20}}><form onSubmit={submit} style={{width:expenseDocumentAllowed?"min(880px,96vw)":"min(640px,96vw)",background:"white",borderRadius:expenseDocumentAllowed?12:20,boxShadow:"0 24px 80px rgba(0,0,0,.24)",overflow:"hidden"}}>
@@ -95,11 +172,13 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
         {requiresShift&&!ledger?.openSession&&<div style={{padding:11,borderRadius:11,background:"#fff7e6",color:"#8a5a00"}}>Δεν υπάρχει ενεργή βάρδια στο κατάστημα για αυτή την κίνηση. Οι εξωτερικές πληρωμές μπορούν να καταχωριστούν κανονικά χωρίς βάρδια.</div>}
         {active.type==="SUPPLIER_PAYMENT"&&<label style={{display:"grid",gap:6,fontWeight:700}}>Προμηθευτής<select value={form.supplierId} onChange={e=>setForm({...form,supplierId:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}
         {active.document&&<label style={{display:"grid",gap:6,fontWeight:700}}>Παραστατικό<select value={form.purchaseDocumentId} onChange={e=>setForm({...form,purchaseDocumentId:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Επίλεξε παραστατικό</option>{documents.map(row=><option key={row.id} value={row.id}>{row.supplierName||"Προμηθευτής"} · {row.documentNumber||row.id.slice(0,8)} · {money(row.totalGross)}</option>)}</select></label>}
-        {expenseDocumentAllowed&&<label style={{display:"grid",gridColumn:"1 / -1",minWidth:0,gap:8,fontSize:16,fontWeight:700}}>Παραστατικό εξόδου (προαιρετικό)<select value={form.purchaseDocumentId} onChange={e=>setForm({...form,purchaseDocumentId:e.target.value})} style={{padding:12,width:"100%",minWidth:0,boxSizing:"border-box",minHeight:48,fontSize:16,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Χωρίς σύνδεση παραστατικού</option>{approvedExpenseDocuments.map(row=><option key={row.id} value={row.id}>{row.supplierName||"Προμηθευτής"} · {row.documentNumber||row.id.slice(0,8)} · {money(row.totalGross)}</option>)}</select><span style={{fontWeight:400,lineHeight:1.5}}>Επίλεξε μόνο παραστατικό που αφορά αυτό το έξοδο. Το ποσό πληρωμής συμπληρώνεται ξεχωριστά. Κάθε πληρωμή εμφανίζεται στη δική της ημερομηνία. Καθαρή αξία και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό. Χωρίς τεκμηρίωση ή σε υπερπληρωμή παραμένουν άγνωστα.</span></label>}
-        {expenseDocumentAllowed&&<button type="button" onClick={()=>setExpenseDocumentOpen(true)} style={{gridColumn:"1 / -1",padding:12,minHeight:48,border:"1px solid #ccd8e6",borderRadius:10,fontSize:16,fontWeight:700,background:"#f6f9fc"}}>Νέο / πρόχειρο παραστατικό υπηρεσίας</button>}
+        {expenseDocumentAllowed&&<label style={{display:"grid",gridColumn:"1 / -1",minWidth:0,gap:8,fontSize:16,fontWeight:700}}>Παραστατικό εξόδου (προαιρετικό)<select value={form.purchaseDocumentId} onChange={e=>setForm({...form,purchaseDocumentId:e.target.value})} style={{padding:12,width:"100%",minWidth:0,boxSizing:"border-box",minHeight:48,fontSize:16,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Χωρίς σύνδεση παραστατικού</option>{approvedExpenseDocuments.map(row=><option key={row.id} value={row.id}>{row.supplierName||"Προμηθευτής"} · {row.documentNumber||row.id.slice(0,8)} · {money(row.totalGross)}</option>)}</select><span style={{fontWeight:400,lineHeight:1.5}}>Επίλεξε μόνο παραστατικό που αφορά αυτό το έξοδο. Το ποσό πληρωμής συμπληρώνεται ξεχωριστά. Κάθε πληρωμή εμφανίζεται στη δική της ημερομηνία. Καθαρή αξία και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό. Χωρίς έγκυρη ανάλυση ΦΠΑ, ολόκληρο το ποσό αφαιρείται ως έξοδο με ΦΠΑ 0% στην εικόνα ιδιοκτήτη. Τα αρχικά παραστατικά δεν αλλάζουν.</span></label>}
+        {!delegated&&expenseDocumentAllowed&&<button type="button" onClick={()=>setExpenseDocumentOpen(true)} style={{gridColumn:"1 / -1",padding:12,minHeight:48,border:"1px solid #ccd8e6",borderRadius:10,fontSize:16,fontWeight:700,background:"#f6f9fc"}}>Νέο / πρόχειρο παραστατικό υπηρεσίας</button>}
         <label style={{display:"grid",gap:6,fontWeight:700}}>Ποσό<input inputMode="decimal" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0,00" style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10,fontSize:18,fontWeight:800}}/></label>
-        {active.type!=="TRANSFER_AMOUNT"&&<label style={{display:"grid",gap:6,fontWeight:700}}>Πηγή πληρωμής<select value={form.paymentSource} onChange={e=>setForm({...form,paymentSource:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="EXTERNAL">Εξωτερική πληρωμή / τράπεζα</option><option value="CASH_SHIFT">Από μετρητά ενεργής βάρδιας</option></select></label>}
+        {active.type!=="TRANSFER_AMOUNT"&&<label style={{display:"grid",gap:6,fontWeight:700}}>Πηγή πληρωμής<select value={form.paymentSource} onChange={e=>setForm({...form,paymentSource:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="EXTERNAL">Εξωτερική πληρωμή / τράπεζα</option>{(!delegated||delegatedCapabilities.includes('payments.cash'))&&<option value="CASH_SHIFT">Από μετρητά ενεργής βάρδιας</option>}</select></label>}
         <label style={{display:"grid",gridColumn:expenseDocumentAllowed?"1 / -1":undefined,gap:6,fontWeight:700}}>Αιτιολογία / Σχόλιο<input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}/></label>
+        {delegated&&form.paymentSource==='EXTERNAL'&&<label>Τρόπος πληρωμής<select value={form.paymentMethod||'CORPORATE_CARD'} onChange={e=>setForm({...form,paymentMethod:e.target.value})}><option value="CORPORATE_CARD">Εταιρική κάρτα</option><option value="BANK_TRANSFER">Τραπεζική μεταφορά</option><option value="EMPLOYEE_REIMBURSEMENT">Πληρωμή υπαλλήλου προς επιστροφή</option></select></label>}
+        {delegated&&!form.purchaseDocumentId&&<label><input type="checkbox" checked={responsibility} onChange={e=>setResponsibility(e.target.checked)}/>Δηλώνω υπεύθυνα την καταχώριση εξόδου χωρίς παραστατικό. Θα ελεγχθεί από τον ιδιοκτήτη.</label>}
         {error&&<div style={{padding:10,borderRadius:10,background:"#fff0f0",color:"#b42318"}}>{error}</div>}
         {message&&<div style={{padding:10,borderRadius:10,background:"#eaf8ef",color:"#08783e"}}>{message}</div>}
       </div>

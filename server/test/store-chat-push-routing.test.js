@@ -10,7 +10,7 @@ function harness(windows=[]){
   const clients={matchAll:async()=>windows.map(window=>({...window,postMessage:data=>posts.push({id:window.id,data}),focus:async()=>{focused.push(window.id)},navigate:async url=>{navigated.push({id:window.id,url})}})),openWindow:async url=>opened.push(url)};
   const self={location:{origin},clients,registration:{showNotification:async(title,options)=>notifications.push({title,options})},addEventListener:(type,handler)=>{handlers[type]=handler}};
   vm.runInNewContext(source,{self,clients,URL});
-  return {notifications,opened,posts,focused,navigated,async push(data){let work;handlers.push({data:{json:()=>data},waitUntil:p=>{work=p}});await work},async click(url){let work;handlers.notificationclick({notification:{data:{url},close(){}},waitUntil:p=>{work=p}});await work}};
+  return {notifications,opened,posts,focused,navigated,async push(data){let work;handlers.push({data:{json:()=>data},waitUntil:p=>{work=p}});await work},async click(url,action,reply){let work;handlers.notificationclick({action,notification:{data:{url,reply},close(){}},waitUntil:p=>{work=p}});await work}};
 }
 const windowFor=(id,store,visibilityState="visible")=>({id,url:`${origin}/store/${store}`,visibilityState});
 
@@ -53,4 +53,27 @@ test("existing Chat receives an explicit reopen command for only its own store",
   const h=harness([{id:"chat",url:`${origin}/chat/B`,visibilityState:"hidden"}]);await h.click("/chat/B");
   assert.deepEqual(h.focused,["chat"]);assert.equal(h.posts[0].data.type,"STORE_CHAT_OPEN");assert.equal(h.posts[0].data.storeId,"B");
   assert.equal(h.opened.length,0);assert.equal(h.navigated.length,0);
+});
+
+test("reply opens the exact authenticated chat target with opaque message and topic",async()=>{
+  const h=harness([windowFor("other","A")]);
+  await h.push({storeId:"B",messageId:"chat-123",topic:"CASH"});
+  const {data,actions}=h.notifications[0].options;
+  assert.equal(actions[0].action,"reply");
+  await h.click(data.url,"reply",data.reply);
+  assert.deepEqual(h.opened,[`${origin}/chat/B?reply=chat-123&topic=CASH`]);
+  assert.equal(h.navigated.length,0);
+});
+
+test("reply intent focuses an existing exact Chat and rejects invalid topic metadata",async()=>{
+  const h=harness([{id:"chat",url:`${origin}/chat/B`,visibilityState:"hidden"}]);
+  await h.push({storeId:"B",messageId:"chat-123",topic:"INVOICE"});
+  const valid=h.notifications[0].options.data;
+  await h.click(valid.url,"reply",valid.reply);
+  assert.equal(h.posts[0].data.reply.messageId,"chat-123");
+  assert.equal(h.posts[0].data.reply.topic,"INVOICE");
+  await h.push({storeId:"B",messageId:"chat-123",topic:"UNKNOWN"});
+  assert.equal(h.notifications[1].options.actions,undefined);
+  await h.click(valid.url,"reply",{messageId:"chat-123",topic:"UNKNOWN"});
+  assert.equal(h.posts[1].data.reply,undefined);
 });

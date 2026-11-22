@@ -3,3 +3,5 @@ node_modules/
 client/dist/
 server/prisma/dev.db
 .DS_Store
+
+server/.startup-source-artifact.json

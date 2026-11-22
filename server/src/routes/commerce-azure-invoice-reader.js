@@ -1,3 +1,5 @@
+import {measureFastHeaderPhase} from "../lib/pos-fast-header-timing.js";
+import {walletActivityFromRequest} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,meterInvoiceAzure} from "../services/ai-wallet-invoice-metering.js";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -112,7 +114,7 @@ function normalizeItem(item,index){
   const confidence=confidences.length?Math.max(...confidences):0;
   return {rawText,code,barcode:"",description,quantity,retailPrice,sourcePage,sourceY,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureUnitCostDerivedFromNet,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
-export async function callAzure({contentData,mimeType,timeoutMs=0}){
+export async function callAzure({contentData,mimeType,timeoutMs=0,timing}){
   return await meterInvoiceAzure({contentData,mimeType,model:MODEL_ID,apiVersion:API_VERSION},async markOperation=>{
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
   const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
@@ -121,25 +123,30 @@ export async function callAzure({contentData,mimeType,timeoutMs=0}){
   const {bytes,mimeType:detected}=parseDataUrl(contentData,mimeType);
   if(bytes.length<20)throw new Error("AZURE_EMPTY_DOCUMENT");
   const url=`${endpoint}/documentintelligence/documentModels/${MODEL_ID}:analyze?api-version=${API_VERSION}`;
-  const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":detected},body:bytes,signal:requestSignal()});
-  if(!start.ok)throw new Error(`AZURE_ANALYZE_${start.status}:${(await start.text()).slice(0,300)}`);
-  const operation=start.headers.get("operation-location");
-  if(!operation)throw new Error("AZURE_NO_OPERATION_LOCATION");
+  const operation=await measureFastHeaderPhase(timing,"azure_submit",async()=>{
+    const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":detected},body:bytes,signal:requestSignal()});
+    if(!start.ok)throw new Error(`AZURE_ANALYZE_${start.status}:${(await start.text()).slice(0,300)}`);
+    const operation=start.headers.get("operation-location");
+    if(!operation)throw new Error("AZURE_NO_OPERATION_LOCATION");
+    return operation;
+  });
   markOperation(operation);
   for(let i=0;i<30;i++){
     const delay=i<2?700:1200;
     if(deadline&&Date.now()+delay>=deadline)throw new Error("AZURE_TIMEOUT");
-    await new Promise(resolve=>setTimeout(resolve,delay));
-    const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key},signal:requestSignal()});
-    if(!poll.ok)throw new Error(`AZURE_POLL_${poll.status}`);
-    const payload=await poll.json();
+    await measureFastHeaderPhase(timing,"azure_poll_wait",()=>new Promise(resolve=>setTimeout(resolve,delay)),i+1);
+    const payload=await measureFastHeaderPhase(timing,"azure_poll_request",async()=>{
+      const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key},signal:requestSignal()});
+      if(!poll.ok)throw new Error(`AZURE_POLL_${poll.status}`);
+      return await poll.json();
+    },i+1);
     if(payload.status==="succeeded")return payload;
     if(payload.status==="failed"||payload.status==="canceled")throw new Error(`AZURE_${String(payload.status).toUpperCase()}`);
   }
   throw new Error("AZURE_TIMEOUT");
   });
 }
-export function normalizeAzure(payload){
+export function normalizeAzure(payload,{includeRecipientVat=false}={}){
   const result=payload?.analyzeResult||{};
   const doc=result.documents?.[0]||{};
   const f=doc.fields||{};
@@ -154,7 +161,7 @@ export function normalizeAzure(payload){
   const headerConf=[f.VendorName?.confidence,f.VendorTaxId?.confidence,f.InvoiceId?.confidence,f.InvoiceDate?.confidence,f.InvoiceTotal?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const aiConfidence=Math.round((lineConf.concat(headerConf).reduce((a,b)=>a+b,0)/(lineConf.length+headerConf.length||1))*10)/10;
   const lines=productLines.map(line=>({text:line.rawText||[line.code,line.description,line.quantity,line.unit,line.unitCost,line.netAmount].filter(Boolean).join(" "),confidence:line.confidence}));
-  return {aiConfidence,supplier,documentNumber,documentDate,totalGross,rawText:String(result.content||""),lines,productLines,azureDocumentIntelligence:true,azureModel:MODEL_ID,azureApiVersion:API_VERSION,azureDocumentConfidence:pct(doc.confidence),azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
+  return {aiConfidence,supplier,...(includeRecipientVat?{recipientVat:fieldText(f.CustomerTaxId)}:{}),documentNumber,documentDate,totalGross,rawText:String(result.content||""),lines,productLines,azureDocumentIntelligence:true,azureModel:MODEL_ID,azureApiVersion:API_VERSION,azureDocumentConfidence:pct(doc.confidence),azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
 }
 
 router.get("/ai-reader/azure-status",requireCompanyModule("AI_READER"),(req,res)=>res.json({configured:configured(),provider:"AZURE_DOCUMENT_INTELLIGENCE",model:MODEL_ID,apiVersion:API_VERSION}));
@@ -170,7 +177,7 @@ router.post("/ai-reader/azure-direct",requireCompanyModule("AI_READER"),async(re
     const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId,activity:walletActivityFromRequest(req,{storeId,purpose:"INVOICE_READ"})},async()=>{
     let parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType}));
     if(!parsed.productLines.length)return res.status(422).json({error:"Το Azure διάβασε το παραστατικό αλλά δεν επέστρεψε γραμμές προϊόντων."});
     await verifyInvoiceDiscounts({contentData:dataUrl,mimeType,filename,productLines:parsed.productLines.filter(line=>!line.sourceColumnsVerified),apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
@@ -203,7 +210,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     // replace resultJson before next(), erasing posHandoff and forcing the
     // durable draft into the wrong provider/recovery loop.
     if(job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object")return next();
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:job.storeId},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:job.storeId,activity:walletActivityFromRequest(req,{storeId:job.storeId,purpose:"INVOICE_RECHECK",jobId:job.id,originalActivity:job.resultJson?.posHandoff?.walletActivity})},async()=>{
     let payload;
     try{payload=await callAzure({contentData:job.contentData,mimeType:job.mimeType})}catch(error){throwIfWalletError(error);console.error("Azure Document Intelligence fallback:",error?.message||error);return next()}
     let parsed=normalizeAzure(payload);

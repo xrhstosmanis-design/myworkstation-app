@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "scope": "INVOICE-PHYSICAL-PAGE-DISPLAY-01 / OCR4 K01 limited hosted UI and four-header observation; no submit",
+  "status": "SCOPED_HOSTED_UI_HEADER_PASS",
+  "owner": "retained task4 owner /root",
+  "result_visible_by_utc": "2026-11-06T20:14:56.265Z",
+  "record_prepared_at_utc": "2026-11-06T20:24:16.783178+00:00",
+  "timestamps_note": "Result-visible timestamp is the captured screenshot timestamp, not a measured provider/browser duration. Other receipt preparation timestamps are not latency measurements.",
+  "store": {
+    "company": "MYWORKSTATION LAB",
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "id": "cmtpopbgo000trhb5ng9ytiru"
+  },
+  "actor": "Platform owner / Super Admin support in desktop Cloud Chrome",
+  "flow": [
+    "Selected company/store",
+    "Full Backoffice",
+    "Πληρωμές Ιδιοκτήτη / Διαχειριστή",
+    "Πληρωμή Τιμολογίου",
+    "Νέο τιμολόγιο",
+    "Επιλογή έως 5 αρχείων (εικόνες / PDF)"
+  ],
+  "live_revision_at_reading": "NOT CAPTURED; no prior health revision is assigned to this test",
+  "record_base_main": "34e25f7f9af015d114e69f3992d85a7999b257f1",
+  "authorization": "User ξεκινα after the specific prepared K01 fixture and platform AI cost disclosure; one reading without save/payment.",
+  "fixture": {
+    "file": "LAB-OCR4-20261106-K01.pdf",
+    "bytes": 55825,
+    "sha256": "7de9ea9e5dca6cfc0e8347aea743a9036b66948abf841e78055efc29f55bd18c",
+    "synthetic": true,
+    "supplier": "LAB METER TEST",
+    "invoice_number": "LAB-OCR4-20261106-K01",
+    "date_iso": "2026-11-06",
+    "net_eur": "40.00",
+    "vat_eur": "9.60",
+    "payable_eur": "49.60",
+    "page_partial_eur": [
+      "18.60",
+      "31.00"
+    ],
+    "file_count": 1,
+    "physical_pages": 2,
+    "product_lines": 2
+  },
+  "actions": {
+    "successful_file_selections": 1,
+    "manual_header_edits": 0,
+    "document_type_selection": 0,
+    "paid_selection": 0,
+    "credit_selection": 0,
+    "submit_actions": 0,
+    "payment_actions": 0,
+    "wallet_setting_changes": 0,
+    "chooser_note": "First hidden input click timed out before setFiles; observed empty form afterward. Visible label chooser then selected K01 successfully once."
+  },
+  "observed": {
+    "file_count": 1,
+    "pdf_file_count": 1,
+    "physical_pdf_pages": 2,
+    "supplier": "LAB METER TEST",
+    "invoice_number": "LAB-OCR4-20261106-K01",
+    "date_iso": "2026-11-06",
+    "payable_eur": "49.60",
+    "status_text": "1 αρχείο έτοιμο (1%). Έλεγξε τα 4 στοιχεία και συνέχισε.",
+    "paid_selected": false,
+    "credit_selected": false,
+    "submit_disabled": true
+  },
+  "evidence_attribution": {
+    "page_count": "Actual browser accessibility observation: 1 αρχείο · 1 PDF; Αρχείο 1: 2 φυσικές σελίδες PDF. This is not an offline inference.",
+    "header_fields": "Actual browser accessibility values and attached screenshot; no manual field edits.",
+    "date": "DOM date value 2026-11-06; screenshot renders 11/06/2026 in the browser MM/DD/YYYY format.",
+    "screenshot_scope": "The screenshot shows the four fields, disabled submit and 1% status. The physical-page badge is below that screenshot viewport; it is supported by the separate accessibility observation."
+  },
+  "before": {
+    "shift_ui_last_observed_local": "2026-11-06 22:10 Europe/Athens",
+    "terminal": "MAIN",
+    "cash_eur": "40.00",
+    "cards_iris_eur": "0.00",
+    "total_eur": "0.00",
+    "movements": 1,
+    "wallet_refreshed_via_company_selection": true,
+    "customer_balance_eur": "4.610532",
+    "reserved_eur": "0.00",
+    "customer_billing_enabled": false,
+    "invoice_billing_enabled": false,
+    "wallet_displayed_historical_ai_eur": "0.409468",
+    "wallet_displayed_historical_calls": 10,
+    "wallet_displayed_movements": 14,
+    "new_invoice_form_empty": true,
+    "selected_files": 0,
+    "submit_disabled": true,
+    "control": "Empty selected-LAB form and existing UI balances; no cross-store or database-wide snapshot taken."
+  },
+  "after_wallet": {
+    "fresh_company_reselection": true,
+    "customer_balance_eur": "4.610532",
+    "reserved_eur": "0.00",
+    "customer_billing_enabled": false,
+    "invoice_billing_enabled": false,
+    "historical_ai_eur": "0.409468",
+    "historical_calls": 10,
+    "movements": 14
+  },
+  "wallet_delta": {
+    "customer_balance_eur": "0.000000",
+    "reserved_eur": "0.00",
+    "displayed_movement_count": 0,
+    "meaning": "Customer billing remained OFF and wallet values remained unchanged. This does not prove no provider calls or zero platform cost."
+  },
+  "acceptance": {
+    "hosted_page_count": "PASS for K01",
+    "four_header_fields": "4/4 MATCHED without edits",
+    "product_lines_quantities_vat": "NOT TESTED",
+    "invoice_payment_stock": "NOT TESTED",
+    "financial_database_deltas_and_other_terminal_control": "NOT TESTED",
+    "provider_cost": "NOT CAPTURED"
+  },
+  "confidence": {
+    "displayed": "1%",
+    "meaning_from_source_review": "Reader confidence formatting, not progress or page coverage.",
+    "raw_provider_value": "NOT CAPTURED",
+    "raw_scale": "NOT VERIFIED",
+    "cause": "OPEN; rounding a 0..1 confidence is one possible explanation, not an established runtime diagnosis.",
+    "do_not_relabel_as": "99% or 100%"
+  },
+  "provider": {
+    "calls": "NOT DIRECTLY OBSERVED; normal server retries/rescue may involve more than one attempt",
+    "model": "NOT CAPTURED",
+    "cost": "NOT CAPTURED",
+    "customer_charge": "No change observed in the customer wallet with billing OFF"
+  },
+  "limitations": [
+    "No complete product-row, quantity, discount, VAT/EFK or packaging acceptance.",
+    "No invoice submission, payment, draft or stock workflow acceptance.",
+    "No fresh after-state financial/stock database fingerprint or other-terminal/control-store comparison.",
+    "Shift overview can reconcile pre-existing online sales; no claim of zero writes across the database.",
+    "No physical POS, mobile or other-role test.",
+    "No general latency/SLA result.",
+    "No overall OCR4, No09 or No15 closure."
+  ],
+  "protected_samples": {
+    "K01": "Consumed once for this hosted reading; do not replay to fill evidence gaps.",
+    "J": "Preserved, not selected or replaced; its prior identity is separate.",
+    "other_prior_consumed_samples": "Not replayed."
+  },
+  "source_review": {
+    "reviewed_at_commit": "f81aba245787e5ecda325d81ba919ef130a44e63",
+    "note": "Independent static review, not a captured runtime response. No invoice-runtime changes appeared in the later record-base diff.",
+    "paths": [
+      "client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",
+      "client/src/lib/invoice-fast-header-merge.js",
+      "server/src/routes/commerce-pos-v244.js",
+      "server/src/services/ai-wallet-invoice-metering.js",
+      "server/src/routes/store-transactions.js"
+    ]
+  },
+  "artifacts": {
+    "screenshot": {
+      "file": "hosted-k01-20261106.jpg",
+      "bytes": 112417,
+      "sha256": "e68b27204b4a03948aba09cb870d25f8eceff358de17aa7567c60dac5e0719db"
+    }
+  },
+  "next_action": "Investigate the displayed confidence scale without replaying K01 or closing broader OCR scope.",
+  "publication_note": "This file records the observed UI result. CI and main integration are verified separately; CI does not create LAB acceptance."
+}
