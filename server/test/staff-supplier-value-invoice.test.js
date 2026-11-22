@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {createStaffSupplierValueInvoice} from "../src/services/staff-supplier-value-invoice.js";
 import {staffRequestCapability} from "../../shared/backoffice-staff.mjs";
 
@@ -31,6 +32,9 @@ function fixture({supplier=[{id:"supplier"}],duplicate=[],receipt=[]}={}){
 }
 
 test("value-only entry uses a standalone grant and legacy supplier edit remains unavailable",()=>{
+  const mount=readFileSync(new URL("../src/routes/supplier-control-normalized.js",import.meta.url),"utf8");
+  assert.ok(mount.indexOf('router.post("/:supplierId/value-only-invoice"')>0);
+  assert.ok(mount.indexOf('router.post("/:supplierId/value-only-invoice"')<mount.indexOf("router.use(supplierGlobalReportRoutes);"));
   assert.equal(staffRequestCapability("POST","/api/supplier-control/supplier/value-only-invoice",body),"invoices.value-only");
   assert.equal(staffRequestCapability("PATCH","/api/supplier-control/supplier",{}),null);
   assert.equal(staffRequestCapability("POST","/api/supplier-control/supplier/balance-adjustments",{}),null);
