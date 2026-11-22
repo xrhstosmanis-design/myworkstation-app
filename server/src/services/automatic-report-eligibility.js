@@ -26,6 +26,15 @@ export function automaticReportScopeInput(raw){
  if(!['companyId','storeId'].every(k=>typeof result[k]==='string'&&result[k]===result[k].trim()&&result[k].length>0&&result[k].length<=200&&!/[\u0000-\u001f\u007f]/.test(result[k]))||!['DAILY','WEEKLY','MONTHLY','EVENT'].includes(result.frequency)||result.frequency==='EVENT'&&(typeof result.eventId!=='string'||result.eventId!==result.eventId.trim()||!result.eventId||result.eventId.length>200||/[\u0000-\u001f\u007f]/.test(result.eventId)))hold();
  return Object.freeze(result);
 }
+export function cashGrantPeriodStart(grant,frequency){
+ // A later grantedAt with original createdAt records a DAILY-to-MONTHLY
+ // extension. Older workers still see the new notBefore and hold safely.
+ const notBefore=iso(grant.notBefore);
+ if(frequency==='DAILY'&&grant.allowedFrequencies.length===2&&
+    grant.allowedFrequencies.includes('DAILY')&&grant.allowedFrequencies.includes('MONTHLY')&&
+    grant.grantedAt&&iso(grant.createdAt)<iso(grant.grantedAt)&&iso(grant.grantedAt)<=notBefore)return iso(grant.createdAt);
+ return notBefore;
+}
 export function includesScheduledMonthlyTurnover({frequency,storeId},env){
  return frequency==='MONTHLY'&&(
   storeId===env.MONTHLY_TURNOVER_REPORT_STORE_ID||
@@ -73,7 +82,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    ? {from:monthBoundary(completedSupplierReportMonth(Date.parse(month+'-15T12:00:00Z'))),to:monthBoundary(month)}
    : completedReportPeriod(new Date(now),scope.frequency,configuration);
   const from=period.from.toISOString(),to=period.to.toISOString();
-  if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<iso(grant.notBefore))hold();
+  if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<(nonCash?iso(grant.notBefore):cashGrantPeriodStart(grant,scope.frequency)))hold();
   const settingsVersion=nonCash?safe(policy.revision):settings.version;
   let payload;
   if(inventory)payload=await buildAutomaticInventoryPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
