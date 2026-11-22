@@ -1,5 +1,5 @@
 import StockPackageEditor from './StockPackageEditor.jsx';
-import {inventoryCsv,printInventoryRows,inventoryHistoryColumns} from "./inventory-export.js";
+import {inventoryCsv,printInventoryRows,printInventoryArchivePage,inventoryHistoryColumns} from "./inventory-export.js";
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {ArrowRightLeft,Barcode,ChevronLeft,ChevronRight,ClipboardList,Edit3,FileSpreadsheet,PackagePlus,Printer,RefreshCw,Search,Truck,X} from "lucide-react";
@@ -51,7 +51,7 @@ function DuplicateGroup({group, canMerge, onMerge}) {
   </section>;
 }
 
-export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null,staffCardEdit=false,stockMovementRead=false,companyId=null}){
+export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null,staffCardEdit=false,staffPrint=false,stockMovementRead=false,companyId=null}){
   const operatorMode=operatorCapabilities!==null;
   const can=key=>!operatorMode||operatorCapabilities[key]===true;
   const [operatorMenu,setOperatorMenu]=useState(null),[history,setHistory]=useState(null);
@@ -129,13 +129,23 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   transferSourceRef.current=storeId;
 
   const store=useMemo(()=>stores.find(s=>s.id===storeId),[stores,storeId]);
+  const [printSnapshot,setPrintSnapshot]=useState(null);
+  const readyToPrint=staffPrint&&store&&printSnapshot?.api===api&&printSnapshot.storeId===storeId
+    &&printSnapshot.companyId===companyId&&printSnapshot.items===data.items&&data.items.length>0;
+  const printStaffPage=()=>{
+    if(!readyToPrint||loading)return;
+    if(!printInventoryArchivePage({storeName:store.name,page:data.page,rows:data.items})){
+      setError("Δεν άνοιξε το παράθυρο εκτύπωσης.");
+    }
+  };
   const load=async(nextPage=page,filters={})=>{
     const generation=++archiveGeneration.current;
+    setPrintSnapshot(null);
     if(!storeId)return;setLoading(true);setError("");setMessage("");
     if(stockMovementRead){movementRequest.current++;setHistory(null);setSelected(null);setData(current=>({...current,items:[],total:0,totals:{}}));}
     try{
       const params=new URLSearchParams({storeId,q:query,category,subcategory,status,vatDepartment,marginMin,marginMax,...filters,page:String(nextPage),pageSize:String(pageSize)});
-      const result=await api(`/api/inventory-archive?${params.toString()}`);if(cardScopeRef.current!==storeId||generation!==archiveGeneration.current)return;if(stockMovementRead&&result?.store?.id!==storeId)throw Error("Δεν επιβεβαιώθηκε το κατάστημα της αποθήκης.");setData(result);setPage(result.page);setChecked(ids=>ids.filter(id=>result.items.some(row=>row.productId===id)));setSelected(current=>current?result.items.find(r=>r.productId===current.productId)||null:null);
+      const result=await api(`/api/inventory-archive?${params.toString()}`);if(cardScopeRef.current!==storeId||generation!==archiveGeneration.current)return;if((stockMovementRead||staffPrint)&&result?.store?.id!==storeId)throw Error("Δεν επιβεβαιώθηκε το κατάστημα της αποθήκης.");if(result?.store?.id===storeId)setPrintSnapshot({api,companyId,storeId,items:result.items});setData(result);setPage(result.page);setChecked(ids=>ids.filter(id=>result.items.some(row=>row.productId===id)));setSelected(current=>current?result.items.find(r=>r.productId===current.productId)||null:null);
     }catch(e){if(cardScopeRef.current===storeId&&generation===archiveGeneration.current)setError(e.message)}finally{if(cardScopeRef.current===storeId&&generation===archiveGeneration.current)setLoading(false)}
   };
   useEffect(()=>{setPage(1);load(1)},[storeId,pageSize]);
@@ -358,6 +368,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
         ?<button disabled={!storeId||loading||exporting} onClick={()=>setExportIds([...checked])}>Επιλογή ειδών για Excel</button>
         :<><button disabled={!exportIds.length||loading||exporting} onClick={()=>exportCatalog(exportIds)}>Excel επιλεγμένων ({exportIds.length})</button>
           <button onClick={()=>setExportIds(null)}>Τέλος επιλογής Excel</button></>}
+      {readOnly&&staffPrint&&<button type="button" disabled={loading||!readyToPrint} onClick={printStaffPage}><Printer/>Εκτύπωση τρέχουσας σελίδας</button>}
       {!readOnly&&<><button onClick={openNewCard} disabled={loading||!can("create")}><PackagePlus/>Νέο είδος</button><button disabled={loading||(!can("edit")&&!can("prices"))} onClick={openBulk}><Edit3/>Ομαδική διόρθωση</button><button disabled={operatorMode||loading||checked.length<2||checked.length>4} onClick={openMerge}><ArrowRightLeft/>Συγχώνευση ειδών</button><button disabled={operatorMode||loading||!selected||Number(selected.currentStock||0)<=0} onClick={openTransfer}><ArrowRightLeft/>Μεταφορά</button><button disabled={operatorMode&&!onOrders} onClick={()=>openOrders()}><ClipboardList/>Παραγγελία</button><button disabled={!can("create")||!can("edit")||!can("prices")||!can("barcodes")} onClick={()=>setModal("import")}><FileSpreadsheet/>Εισαγωγή από Excel</button><button disabled={!can("print")} onClick={()=>window.print()}><Printer/>Εκτύπωση</button><button disabled={!selected} onClick={()=>selected&&openDelivery(selected)}><Truck/>e‑Delivery</button>{operatorMode&&<button disabled={!selected} onClick={()=>setOperatorMenu(selected)}>Ενέργειες είδους</button>}</>}</div><label className="ia-page-size">Γραμμές ανά σελίδα<select value={pageSize} onChange={e=>setPageSize(Number(e.target.value))}><option>50</option><option>100</option><option>200</option></select></label></footer>
 
 
