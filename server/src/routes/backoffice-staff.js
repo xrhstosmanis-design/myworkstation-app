@@ -1,3 +1,4 @@
+import {updateStaffSupplierFiscal} from '../services/backoffice-staff-supplier-fiscal.js';
 import {createStaffSupplierManually} from '../services/backoffice-staff-supplier-manual.js';
 import {applyStaffSupplierAction} from '../services/backoffice-staff-supplier-actions.js';
 import {ensureSupplierControlSchema} from './supplier-control.js';
@@ -87,6 +88,7 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     const result=await createStaffSupplierManually(db,req);
     res.status(result.replay?200:201).json(result);
   }catch(error){failure(res,error)}});
+  router.patch('/company/party-control/suppliers/:partyId/fiscal',async(req,res)=>{try{res.json(await updateStaffSupplierFiscal(db,req))}catch(error){failure(res,error)}});
   router.patch('/company/party-control/suppliers/:partyId/contact',async(req,res)=>{try{res.json(await updateStaffSupplierContact(db,req))}catch(error){failure(res,error)}});
   router.post('/company/party-control/suppliers/:partyId/balance-adjustments',async(req,res)=>{
     try{
