@@ -32,6 +32,12 @@ router.post("/:supplierId/value-only-invoice",async(req,res,next)=>{
     return res.status(draft.reused?200:201).json(draft);
   }catch(error){next(error)}
 });
+router.use((req,res,next)=>{
+  if(req.user?.staffAccess===true&&req.staffCompanyGrant?.capability==="supplier-products.transfer"){
+    return supplierProductTransferRoutes(req,res,next);
+  }
+  next();
+});
 router.use(supplierGlobalReportRoutes);
 router.use(supplierProductCatalogRoutes);
 router.use(supplierProductTransferRoutes);
