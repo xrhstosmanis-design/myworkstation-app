@@ -453,6 +453,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "advance-allocate",
       "read",
+      "import-kiosk",
       "supplier",
       "expense",
       "cash",
