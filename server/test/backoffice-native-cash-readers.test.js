@@ -11,9 +11,9 @@ function database({investigation=false,stale=false}={}){
  return {queries,store:{findFirst:async args=>{assert.deepEqual(args.where,{id:'S',companyId:'C',active:true});return{id:'S',name:'Store'}}},$queryRaw:async(parts,...values)=>{const sql=parts.join('?');queries.push(sql);assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i);if(sql.includes('FROM "CashControlStoreRule"'))return[{mode:'FULL',deliveryTerminalPattern:'DELIVERY',carryOverEnabled:true,posEftposEnabled:true}];if(sql.includes('FROM "CashShiftSession"')){assert.ok(values.includes('C'));return[{...session}]}if(sql.includes('to_regclass'))return[{operator:null,actions:null,safety:null}];if(sql.includes('COUNT(*)::int'))return[snapshot];if(sql.includes('FROM "CashControlReview"'))return[{id:'review',decision:'EXPLANATION',amount:'5',snapshotJson:stale?{...snapshot,transactionCount:1}:snapshot,createdAt:new Date('2026-11-02Z')}];return[]}};
 }
 
-test('cash canonical complete pre-extraction bodies remain unchanged outside injection/response boundaries',async()=>{
+test('cash canonical reader bodies match the reviewed report contracts outside injection/response boundaries',async()=>{
  const original=JSON.parse(await readFile(new URL('./fixtures/backoffice-cash-original-bodies.json',import.meta.url),'utf8'));
- const hashes={readCashDailySummary:'02a441a24a6b7047ba58d054eb1fc703aaf8e11ea4c6f990f543320737aa00d4',readCashSessionInvestigation:'202e27262867e360855ae900e838dca2f335557db2b1460c2cf055ae9a699ca6'};
+ const hashes={readCashDailySummary:'148bf75dad729e1f09f6cd9b3ab5c4e7ab59f2f7fc50e139079fd7ce1dade9f3',readCashSessionInvestigation:'202e27262867e360855ae900e838dca2f335557db2b1460c2cf055ae9a699ca6'};
  const source=await readFile(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
  for(const [name,body]of Object.entries(original)){
   assert.equal(createHash('sha256').update(body).digest('hex'),hashes[name]);

@@ -91,3 +91,19 @@ test('native real registered supplier endpoints over loopback HTTP deny POS and 
 test('native old metadata snapshot cannot overwrite the reviewed supplier correction',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await fixture();try{const [old]=await f.db.$queryRawUnsafe('SELECT * FROM "PurchaseOrder" WHERE "id"=\'pos\'');const p=await f.preview();await correction.correctPurchaseSupplier(f.db,actor,'pos',request(p));const before=await f.all();await assert.rejects(f.db.$transaction(tx=>correction.lockPurchaseSupplierMetadata(tx,old)),e=>e.status===409);assert.deepEqual(await f.all(),before)}finally{await f.close()}
 });
+
+test('delegated correction requires matching store and a live grant before preview or write',async()=>{
+ const staff={id:'staff',companyId:'c',storeId:'s',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true};
+ const scope={storeId:'s',supplierId:'target'};
+ let opened=0;
+ const tx=Object.freeze({});
+ const db={$transaction:async callback=>{opened++;return callback(tx)}};
+ await assert.rejects(correction.previewPurchaseSupplierCorrection(db,staff,'pos',scope),{status:403});
+ await assert.rejects(correction.previewPurchaseSupplierCorrection(db,staff,'pos',{...scope,storeId:'other'},{verify:async()=>{assert.fail('wrong store')}}),{status:403});
+ assert.equal(opened,0);
+ const revoked=Object.assign(new Error('revoked'),{status:403});
+ const verify=async(database,storeId)=>{assert.equal(database,tx);assert.equal(storeId,'s');throw revoked};
+ await assert.rejects(correction.previewPurchaseSupplierCorrection(db,staff,'pos',scope,{verify}),revoked);
+ await assert.rejects(correction.correctPurchaseSupplier(db,staff,'pos',request({version:'a'.repeat(64)}),{verify}),revoked);
+ assert.equal(opened,2);
+});

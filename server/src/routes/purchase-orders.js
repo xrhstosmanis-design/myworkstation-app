@@ -1,8 +1,9 @@
+import {staffInvoiceCompanyProduct} from '../services/staff-invoice-company-product.js';
 import {readMyDataPrintedEconomicsReview} from "../lib/mydata-printed-economics-review.js";
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../lib/invoice-line-taxonomy.js";
 import {authorizeMonthlyInvoiceAuditInTransaction} from '../services/monthly-invoice-audit.js';
 import {invoiceIssuerName} from "../mydata-xml.js";
-import {requireStaffGrant,requireStaffOrderAction} from '../services/backoffice-staff-access.js';
+import {requireStaffAction,requireStaffGrant,requireStaffOrderAction,staffError} from '../services/backoffice-staff-access.js';
 import {previewPurchaseSupplierCorrection,correctPurchaseSupplier,lockPurchaseSupplierMetadata} from "../services/purchase-supplier-correction.js";
 import {assertReopenedIdentity,lockEditablePurchaseOrder} from "../services/purchase-order-reopen.js";
 import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
@@ -206,16 +207,34 @@ router.get("/report",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 router.post("/",async(req,res,next)=>{try{
-  const body=z.object({storeId:z.string(),supplierId:z.string().optional().nullable(),invoiceNumber:z.string().trim().max(100).optional().nullable(),description:z.string().trim().max(300).optional().nullable()}).parse(req.body||{}),companyId=req.user.companyId;
-  if(!await store(companyId,body.storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});if(body.supplierId&&!await supplier(companyId,body.supplierId))return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});const orderId=id(),actor=req.user.fullName||"Χρήστης";
-  await prisma.$transaction(async tx=>{await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","invoiceNumber","description","createdByUserId","createdByName","updatedByName") VALUES (${orderId},${companyId},${body.storeId},${body.supplierId||null},${body.invoiceNumber||null},${body.description||null},${req.user.id},${actor},${actor})`;await writePurchaseAudit(tx,req,{storeId:body.storeId,eventType:"PURCHASE_ORDER_DRAFT_CREATED",details:{orderId,invoiceNumber:body.invoiceNumber||null,supplierId:body.supplierId||null,sourceType:"MANUAL"}})});res.status(201).json({id:orderId,status:"NEW"});
+  const body=z.object({storeId:z.string(),supplierId:z.string().optional().nullable(),invoiceNumber:z.string().trim().max(100).optional().nullable(),description:z.string().trim().max(300).optional().nullable()}).parse(req.body||{});
+  const {companyId}=req.user,delegated=req.user.staffAccess===true;
+  if(!delegated){
+    if(!await store(companyId,body.storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    if(body.supplierId&&!await supplier(companyId,body.supplierId))return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+  }
+  const orderId=id(),actor=req.user.fullName||"Χρήστης";
+  await prisma.$transaction(async tx=>{
+    if(delegated){
+      await requireStaffAction(tx,req,body.storeId,"invoices.create");
+      if(body.supplierId){
+        const [currentSupplier]=await tx.$queryRaw`SELECT "id" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${companyId} AND "active"=true FOR SHARE`;
+        if(!currentSupplier)throw Object.assign(new Error("Δεν βρέθηκε ο προμηθευτής."),{status:404});
+      }
+    }
+    await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","invoiceNumber","description","createdByUserId","createdByName","updatedByName") VALUES (${orderId},${companyId},${body.storeId},${body.supplierId||null},${body.invoiceNumber||null},${body.description||null},${req.user.id},${actor},${actor})`;
+    await writePurchaseAudit(tx,req,{storeId:body.storeId,eventType:"PURCHASE_ORDER_DRAFT_CREATED",details:{orderId,invoiceNumber:body.invoiceNumber||null,supplierId:body.supplierId||null,sourceType:"MANUAL"}});
+  });
+  res.status(201).json({id:orderId,status:"NEW"});
 }catch(error){next(error)}});
 
+const supplierCorrectionOptions=req=>({verify:(tx,storeId)=>requireStaffAction(tx,req,storeId,"invoices.correct-supplier")});
+
 router.get("/:orderId/supplier-correction-preview",async(req,res,next)=>{try{
-  res.set("Cache-Control","no-store");res.json(await previewPurchaseSupplierCorrection(prisma,req.user,req.params.orderId,{storeId:String(req.query.storeId||""),supplierId:String(req.query.supplierId||"")}));
+  res.set("Cache-Control","no-store");res.json(await previewPurchaseSupplierCorrection(prisma,req.user,req.params.orderId,{storeId:String(req.query.storeId||""),supplierId:String(req.query.supplierId||"")},supplierCorrectionOptions(req)));
 }catch(error){next(error)}});
 router.post("/:orderId/supplier-correction",async(req,res,next)=>{try{
-  res.json(await correctPurchaseSupplier(prisma,req.user,req.params.orderId,req.body));
+  res.json(await correctPurchaseSupplier(prisma,req.user,req.params.orderId,req.body,supplierCorrectionOptions(req)));
 }catch(error){next(error)}});
 
 router.patch("/:orderId",async(req,res,next)=>{try{
@@ -303,10 +322,11 @@ router.get("/:orderId/detail",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 router.post("/:orderId/reconcile-ocr-total",async(req,res,next)=>{try{
+  if(req.user.staffAccess===true&&req.body?.confirmed!==true)return res.status(400).json({error:"Επιβεβαίωσε τον έλεγχο του συνόλου OCR."});
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});editable(found);
   if(found.sourceType!=="POS_OCR_DRAFT"||!found.sourceDocumentId)return res.json({ok:true,repaired:false,reason:"NOT_POS_OCR_DRAFT"});
   const result=await prisma.$transaction(async tx=>{if(req.user?.staffAccess===true)await requireStaffOrderAction(tx,req,found.id,'invoices.edit');if(Number(found.reopenVersion)>0||found.sourceType==="POS_OCR_DRAFT"&&found.status==="NEW")await lockEditablePurchaseOrder(tx,found);
-    const documents=await tx.$queryRaw`SELECT "id","totalGross" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`;
+    const documents=await tx.$queryRaw`SELECT "id","totalGross" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "storeId"=${found.storeId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`;
     if(!documents[0])return {repaired:false,reason:"DOCUMENT_NOT_EDITABLE"};
     const totals=await tx.$queryRaw`SELECT COALESCE(SUM("netAmount"),0) AS "net",COALESCE(SUM("exciseTotal"),0) AS "excise",COALESCE(SUM("grossAmount"),0) AS "gross" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
     if(n(totals[0]?.excise)>0)return {repaired:false,reason:"EXCISE_REQUIRES_REVIEW"};
@@ -315,7 +335,8 @@ router.post("/:orderId/reconcile-ocr-total",async(req,res,next)=>{try{
     const changed=await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "vatRate"=0,"vatAmount"=0,"grossAmount"="netAmount","updatedAt"=NOW() WHERE "orderId"=${found.id}`;
     const marker=`Αυτόματη συμφωνία OCR με σύνολο τιμολογίου ${headerTotal.toFixed(2)} €`;
     await tx.$executeRaw`UPDATE "PurchaseOrder" SET "description"=CASE WHEN COALESCE("description",'') LIKE ${`%${marker}%`} THEN "description" ELSE CONCAT_WS(' • ',NULLIF("description",''),${marker}) END,"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
-    await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${netTotal},"totalVat"=0,"updatedAt"=NOW() WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId}`;
+    await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${netTotal},"totalVat"=0,"updatedAt"=NOW() WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "storeId"=${found.storeId}`;
+    await writePurchaseAudit(tx,req,{storeId:found.storeId,eventType:"PURCHASE_OCR_TOTAL_RECONCILED",details:{orderId:found.id,documentId:found.sourceDocumentId,changed:Number(changed),headerTotal,grossTotalBefore:grossTotal,grossTotalAfter:netTotal}});
     return {repaired:true,changed:Number(changed),headerTotal,netTotal,grossTotalBefore:grossTotal,grossTotalAfter:netTotal};
   });
   res.json({ok:true,...result});
@@ -428,6 +449,44 @@ router.post("/:orderId/assistant-line-transfer",async(req,res,next)=>{try{
   },{timeout:30000});
   res.json(changed);
 }catch(error){next(error)}});
+
+export async function readStaffInvoiceProductReference(db,req,verify=requireStaffGrant){
+  const {user,staffGrant}=req;
+  if(user?.staffAccess!==true||staffGrant?.capability!=="invoices.read"||!user.storeId)throw staffError();
+  const {companyId,storeId}=user,{orderId,lineId}=req.params;
+  return db.$transaction(async tx=>{
+    await verify(tx,user,storeId,"invoices.read",{additionalModules:["INVENTORY"]});
+    await verify(tx,user,storeId,"products.read");
+    const [product]=await tx.$queryRaw`SELECT p."id",p."name",p."sku",sp."salePrice",sp."currentStock"
+      FROM "PurchaseOrder" o
+      JOIN "PurchaseOrderLine" l ON l."orderId"=o."id"
+      JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=o."companyId" AND p."active"=true
+      JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=o."storeId" AND sp."active"=true
+      WHERE o."id"=${orderId} AND l."id"=${lineId} AND o."companyId"=${companyId} AND o."storeId"=${storeId}
+      LIMIT 1 FOR SHARE OF o,l,p,sp`;
+    if(!product)throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Η γραμμή δεν συνδέεται με ενεργό είδος του επιλεγμένου καταστήματος.");
+    const barcodes=await tx.$queryRaw`SELECT b."barcode",b."name",b."unitMultiplier"
+      FROM "ProductBarcode" b WHERE b."productId"=${product.id} ORDER BY b."createdAt",b."id" LIMIT 201`;
+    if(barcodes.length>200)throw staffError(422,"STAFF_PRODUCT_BARCODE_LIMIT","Η καρτέλα έχει περισσότερους από 200 κωδικούς.");
+    return {orderId,lineId,storeId,product:{...product,salePrice:product.salePrice==null?null:n(product.salePrice),currentStock:n(product.currentStock)},
+      barcodes:barcodes.map(row=>({...row,unitMultiplier:n(row.unitMultiplier)}))};
+  });
+}
+
+router.get("/:orderId/lines/:lineId/product-reference",async(req,res,next)=>{try{
+  res.set("Cache-Control","private, no-store");
+  res.json(await readStaffInvoiceProductReference(prisma,req));
+}catch(error){next(error)}});
+
+for(const kind of ["card","barcodes"]){
+  const path=`/:orderId/lines/:lineId/product-company-${kind}`;
+  const handler=async(req,res,next)=>{try{
+    res.set("Cache-Control","private, no-store");
+    res.json(await staffInvoiceCompanyProduct(prisma,req,kind));
+  }catch(error){next(error)}};
+  router.get(path,handler);
+  router.patch(path,handler);
+}
 
 router.patch("/:orderId/lines/:lineId/product-card",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId),current=await line(companyId,req.params.lineId);if(!found||!current||current.orderId!==found.id)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});editable(found);const body=z.object({supplierCode:z.string().trim().max(100).optional().nullable(),description:z.string().trim().min(1).max(250).optional(),productName:z.string().trim().min(1).max(180).optional(),salePrice:z.coerce.number().min(0).max(1000000).optional(),primaryBarcode:z.string().trim().min(3).max(80).optional()}).parse(req.body||{});

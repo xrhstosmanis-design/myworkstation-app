@@ -3,6 +3,8 @@ import {Router} from "express";
 import crypto from "crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
+import {readCashControlRule} from "../services/cash-control-rules.js";
+import {declaredEftpos} from "../../../shared/declared-eftpos.mjs";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -104,6 +106,12 @@ export async function readOwnerShiftReport(scopeCompanyId,rawQuery,{db=prisma}={
     `;
     const shifts=rows.map(normalizeShift);
     const summary=shifts.reduce((a,row)=>{a.count++;if(awaitingCount(row)){a.awaitingCount++;a.alerts++;}if(row.status==="OPEN")a.open++;else a.closed++;a.cashSales+=n(row.cashSales);a.cardSales+=n(row.cardSales);a.eftpos+=n(row.eftposTotal);a.expenses+=n(row.expenses);a.variance+=n(row.variance);a.openingVariance+=n(row.openingVariance);a.cardVariance+=n(row.cardVariance);a.alerts+=(Math.abs(n(row.variance))>.009?1:0)+(Math.abs(n(row.openingVariance))>.009?1:0)+(Math.abs(n(row.cardVariance))>.009?1:0)+n(row.reversedCount);return a},{count:0,open:0,closed:0,awaitingCount:0,cashSales:0,cardSales:0,eftpos:0,expenses:0,variance:0,openingVariance:0,cardVariance:0,alerts:0});
+    if(summary.awaitingCount){
+      summary.eftpos=null;
+      summary.variance=null;
+      summary.cardVariance=null;
+    }
+    if(shifts.some(row=>row.openingOperational!==null&&row.openingVariance===null))summary.openingVariance=null;
     return ({generatedAt:new Date().toISOString(),from,to,stores,summary,shifts});
 
 }
@@ -185,7 +193,17 @@ export async function readOwnerShiftDetail(scopeCompanyId,sessionId,{db=prisma}=
     return ({shift,transactions,categories,paymentMethods,sales,difference,alerts,sourceStatus:{vatFiscal:false,note:"Η ανάλυση Τμήματος ΦΠΑ παραμένει κλειδωμένη μέχρι πραγματική φορολογική πηγή/Connector."}});
 
 }
-router.get("/:sessionId/detail",async(req,res,next)=>{try{await ensureSchema();res.json(await readOwnerShiftDetail(req.user.companyId,req.params.sessionId))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
+router.get("/:sessionId/detail",async(req,res,next)=>{
+  try{
+    await ensureSchema();
+    const detail=await readOwnerShiftDetail(req.user.companyId,req.params.sessionId);
+    if(canEnterClosingCount(req.user)&&awaitingCount(detail.shift)){
+      const store={id:detail.shift.storeId,companyId:req.user.companyId,name:detail.shift.storeName};
+      detail.countEntry={requiresEftpos:(await readCashControlRule(prisma,store)).posEftposEnabled};
+    }
+    res.json(detail);
+  }catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}
+});
 
 router.post("/:sessionId/force-close",async(req,res,next)=>{
   try{
@@ -209,6 +227,73 @@ router.post("/:sessionId/force-close",async(req,res,next)=>{
     if(!result)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή."});
     res.json({ok:true,shift:normalizeShift(result),administrativeClose:true,physicalCount:false});
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Γράψε αιτιολογία τουλάχιστον 3 χαρακτήρων."});next(error)}
+});
+
+const canEnterClosingCount=user=>user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER"].includes(user?.role);
+const physicalAmount=z.preprocess(value=>declaredEftpos(value)??NaN,z.number().finite().refine(value=>Math.abs(value*100-Math.round(value*100))<0.0001));
+const closingCountSchema=z.object({
+  storeId:z.string().trim().min(1).max(180),
+  drawer:physicalAmount,custody:physicalAmount,coins:physicalAmount,safe:physicalAmount,
+  eftposTotal:physicalAmount.optional(),note:z.string().trim().min(3).max(500)
+}).strict();
+const roundToCents=value=>Math.round(value*100)/100;
+const countError=(status,message)=>Object.assign(new Error(message),{status});
+
+export async function recordPendingClosingCount(db,user,sessionId,input){
+  if(!canEnterClosingCount(user)||!user.companyId||!user.id){
+    throw countError(403,"Μόνο ο Ιδιοκτήτης ή ο Super Admin μπορεί να καταχωρίσει την καταμέτρηση.");
+  }
+  const body=closingCountSchema.parse(input);
+  return db.$transaction(async tx=>{
+    const companyId=user.companyId;
+    const rows=await tx.$queryRaw`SELECT s.*,st."name" AS "storeName"
+      FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId"
+      WHERE s."id"=${sessionId} AND s."companyId"=${companyId} AND s."storeId"=${body.storeId}
+      LIMIT 1 FOR UPDATE OF s`;
+    const shift=rows[0];
+    if(!shift)throw countError(404,"Δεν βρέθηκε η βάρδια στο επιλεγμένο κατάστημα.");
+    if(!awaitingCount(shift)||!shift.closedAt||shift.expectedOperational==null||shift.cardSales==null){
+      throw countError(409,"Η βάρδια δεν έχει εκκρεμή καταμέτρηση ή λείπουν τα ποσά του κλεισίματος.");
+    }
+    const rule=await readCashControlRule(tx,{id:shift.storeId,companyId,name:shift.storeName});
+    if(rule.posEftposEnabled&&body.eftposTotal===undefined){
+      throw countError(400,"Καταχώρισε το ποσό EFTPOS της κλεισμένης βάρδιας.");
+    }
+    const eftposTotal=body.eftposTotal??null;
+    const actual=roundToCents(body.drawer+body.custody+body.coins);
+    const variance=roundToCents(actual-n(shift.expectedOperational));
+    const cardVariance=eftposTotal===null?null:roundToCents(n(shift.cardSales)-eftposTotal);
+    const updated=await tx.$queryRaw`UPDATE "CashShiftSession"
+      SET "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},
+          "closingSafe"=${body.safe},"actualOperational"=${actual},"variance"=${variance},
+          "nextOpeningTotal"=${actual},"eftposTotal"=${eftposTotal},"cardVariance"=${cardVariance},
+          "closeReconciliationStatus"='COUNTED',"updatedAt"=NOW()
+      WHERE "id"=${shift.id} AND "companyId"=${companyId} AND "storeId"=${shift.storeId}
+        AND "status"='CLOSED' AND "closeReconciliationStatus"='AWAITING_COUNT' RETURNING *`;
+    if(!updated[0])throw countError(409,"Η βάρδια δεν έχει πλέον εκκρεμή καταμέτρηση.");
+    const details=JSON.stringify({
+      sessionId:shift.id,terminalPos:shift.terminalPos,closedAt:shift.closedAt,actorRole:user.role,
+      note:body.note,drawer:body.drawer,custody:body.custody,coins:body.coins,safe:body.safe,
+      expectedOperational:n(shift.expectedOperational),actualOperational:actual,variance,eftposTotal,cardVariance
+    });
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit"
+      ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${shift.storeId},${null},${user.id},'SHIFT_CLOSING_COUNT_RECORDED',${details}::jsonb)`;
+    return normalizeShift(updated[0]);
+  });
+}
+
+router.post("/:sessionId/closing-count",async(req,res,next)=>{
+  try{
+    if(!canEnterClosingCount(req.user))throw countError(403,"Μόνο ο Ιδιοκτήτης ή ο Super Admin μπορεί να καταχωρίσει την καταμέτρηση.");
+    await ensureSchema();
+    const shift=await recordPendingClosingCount(prisma,req.user,req.params.sessionId,req.body||{});
+    res.json({ok:true,shift});
+  }catch(error){
+    if(error?.name==="ZodError")return res.status(400).json({error:"Συμπλήρωσε τα τέσσερα ποσά καταμέτρησης και την αιτιολογία."});
+    if(error?.status)return res.status(error.status).json({error:error.message});
+    next(error);
+  }
 });
 
 export default router;

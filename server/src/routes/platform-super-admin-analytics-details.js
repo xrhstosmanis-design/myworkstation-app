@@ -186,6 +186,30 @@ async function completePaymentControls(body){
   return {enabled:true,readOnly:true,findings,withoutEvidenceCount:withoutEvidence.length,potentialDuplicateCount:duplicateGroups.length,status:findings.length?"Χρειάζεται έλεγχο":"ΟΚ"};
 }
 
+function premiumShiftResult(session,evidence){
+  if(session.closeReconciliationStatus==="AWAITING_COUNT"){
+    return {...session,cashVariance:null,cardVariance:null,closingOperational:null,
+      handoverDelta:null,automaticOffset:false,handoverMatched:null,evidence,
+      finalStatus:"AWAITING_COUNT",finalLabel:"Εκκρεμεί καταμέτρηση",approvalRequired:false};
+  }
+  const cashVariance=number(session.cashVariance),cardVariance=number(session.cardVariance);
+  const handoverDelta=session.nextOpenedAt?number(session.nextOpeningOperational)-number(session.closingOperational):null;
+  const automaticOffset=handoverDelta!==null&&Math.abs(cashVariance+handoverDelta)<=cashTolerance;
+  const handoverMatched=handoverDelta===null||Math.abs(handoverDelta)<=cashTolerance||automaticOffset;
+  if(!handoverMatched){
+    evidence.push({
+      id:`handover:${session.sessionId}`,code:"SHIFT_HANDOVER_DIFFERENCE",title:"Απόκλιση παράδοσης προς επόμενη βάρδια",
+      handover:{closingSessionId:session.sessionId,closingShiftLabel:session.shiftLabel||null,closingTerminalPos:session.terminalPos||null,closingAt:session.closedAt||null,closingOperational:number(session.closingOperational),nextSessionId:session.nextSessionId||null,nextShiftLabel:session.nextShiftLabel||null,nextTerminalPos:session.nextTerminalPos||null,nextOpenedByName:session.nextOpenedByName||null,nextOpenedAt:session.nextOpenedAt,nextOpeningOperational:number(session.nextOpeningOperational)},
+      possibleExplanation:`Το κλείσιμο ${number(session.closingOperational).toFixed(2)} € δεν συμφωνεί με το επόμενο άνοιγμα ${number(session.nextOpeningOperational).toFixed(2)} €.`
+    });
+  }
+  const hasVariance=Math.abs(cashVariance)>cashTolerance||Math.abs(cardVariance)>cardTolerance;
+  return {...session,cashVariance,cardVariance,handoverDelta,automaticOffset,handoverMatched,evidence,
+    finalStatus:evidence.length?"FINAL_WITH_TRACED_EVIDENCE":hasVariance?"FINAL_UNEXPLAINED_VARIANCE":"FINAL_RECONCILED",
+    finalLabel:evidence.length?"Τελικό αποτέλεσμα με τεκμηριωμένες κινήσεις":hasVariance?"Τελικό ανεξήγητο υπόλοιπο":"Τελική συμφωνία",
+    approvalRequired:true};
+}
+
 async function premiumVarianceControls(body){
   // Every correlation is constrained by the immutable cash-shift session.  We deliberately
   // never compare transactions from two different shifts, even when their baskets match.
@@ -200,8 +224,9 @@ async function premiumVarianceControls(body){
   const [sessions,sales,reversalAudits,safetyAudits,operationalTables]=await Promise.all([
     prisma.$queryRaw`
       SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",sh."openedByName",sh."closedByName",sh."openedAt",sh."closedAt",
-        COALESCE(sh."variance",0)::float AS "cashVariance",COALESCE(sh."cardVariance",0)::float AS "cardVariance",
-        COALESCE(sh."actualOperational",0)::float AS "closingOperational",next."id" AS "nextSessionId",next."shiftLabel" AS "nextShiftLabel",next."terminalPos" AS "nextTerminalPos",next."openedByName" AS "nextOpenedByName",next."openedAt" AS "nextOpenedAt",COALESCE(next."openingOperational",0)::float AS "nextOpeningOperational"
+        to_jsonb(sh)->>'closeReconciliationStatus' AS "closeReconciliationStatus",
+        sh."variance"::float AS "cashVariance",sh."cardVariance"::float AS "cardVariance",
+        sh."actualOperational"::float AS "closingOperational",next."id" AS "nextSessionId",next."shiftLabel" AS "nextShiftLabel",next."terminalPos" AS "nextTerminalPos",next."openedByName" AS "nextOpenedByName",next."openedAt" AS "nextOpenedAt",COALESCE(next."openingOperational",0)::float AS "nextOpeningOperational"
       FROM "CashShiftSession" sh
       LEFT JOIN LATERAL (SELECT n."id",n."shiftLabel",n."terminalPos",n."openedByName",n."openedAt",n."openingOperational" FROM "CashShiftSession" n WHERE n."companyId"=sh."companyId" AND n."storeId"=sh."storeId" AND n."terminalPos"=sh."terminalPos" AND n."openedAt">COALESCE(sh."closedAt",sh."openedAt") ORDER BY n."openedAt" LIMIT 1) next ON TRUE
       WHERE sh."companyId"=${body.companyId} AND sh."storeId"=${body.storeId} AND sh."status"='CLOSED'
@@ -276,7 +301,7 @@ async function premiumVarianceControls(body){
   }
   // Older installations may not have operational events; this is exposed explicitly instead of guessing.
   const byShift=new Map();for(const finding of findings){if(!finding.sessionId)continue;const list=byShift.get(finding.sessionId)||[];list.push(finding);byShift.set(finding.sessionId,list)}
-  const shiftResults=sessions.map(session=>{const evidence=byShift.get(session.sessionId)||[],cashVariance=number(session.cashVariance),cardVariance=number(session.cardVariance),handoverDelta=session.nextOpenedAt?number(session.nextOpeningOperational)-number(session.closingOperational):null;const automaticOffset=handoverDelta!==null&&Math.abs(cashVariance+handoverDelta)<=cashTolerance;const handoverMatched=handoverDelta===null||Math.abs(handoverDelta)<=cashTolerance||automaticOffset;if(!handoverMatched)evidence.push({id:`handover:${session.sessionId}`,code:"SHIFT_HANDOVER_DIFFERENCE",title:"Απόκλιση παράδοσης προς επόμενη βάρδια",handover:{closingSessionId:session.sessionId,closingShiftLabel:session.shiftLabel||null,closingTerminalPos:session.terminalPos||null,closingAt:session.closedAt||null,closingOperational:number(session.closingOperational),nextSessionId:session.nextSessionId||null,nextShiftLabel:session.nextShiftLabel||null,nextTerminalPos:session.nextTerminalPos||null,nextOpenedByName:session.nextOpenedByName||null,nextOpenedAt:session.nextOpenedAt,nextOpeningOperational:number(session.nextOpeningOperational)},possibleExplanation:`Το κλείσιμο ${number(session.closingOperational).toFixed(2)} € δεν συμφωνεί με το επόμενο άνοιγμα ${number(session.nextOpeningOperational).toFixed(2)} €. Ο συμψηφισμός γίνεται αυτόματα επειδή η διαφορά της προηγούμενης βάρδιας εξηγείται από το επόμενο άνοιγμα.`});return{...session,cashVariance,cardVariance,handoverDelta,automaticOffset,handoverMatched,evidence,finalStatus:evidence.length?"FINAL_WITH_TRACED_EVIDENCE":Math.abs(cashVariance)>cashTolerance||Math.abs(cardVariance)>cardTolerance?"FINAL_UNEXPLAINED_VARIANCE":"FINAL_RECONCILED",finalLabel:evidence.length?"Τελικό αποτέλεσμα με τεκμηριωμένες κινήσεις":Math.abs(cashVariance)>cashTolerance||Math.abs(cardVariance)>cardTolerance?"Τελικό ανεξήγητο υπόλοιπο":"Τελική συμφωνία",approvalRequired:true}});
+  const shiftResults=sessions.map(session=>premiumShiftResult(session,byShift.get(session.sessionId)||[]));
   return {enabled:true,readOnly:true,scope:"PER_CLOSED_SHIFT_ONLY",shiftResults,findings:findings.slice(0,findingLimit),potentialDuplicateSaleCount:findings.filter(item=>item.code.includes("DUPLICATE")||item.code.includes("PAYMENT_SWITCH")).length,potentialRepeatedReversalCount:findings.filter(item=>item.code==="POTENTIAL_REPEATED_REVERSAL").length,operationalEventsAvailable:Boolean(operationalTables[0]?.exists),status:"Τελική ανάλυση ανά βάρδια"};
 }
 
@@ -287,6 +312,7 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
     const [rows,findingSessions]=await Promise.all([
       prisma.$queryRaw`
         SELECT s."storeId",s."companyId",COUNT(*)::int AS "shifts",
+          COUNT(*) FILTER (WHERE to_jsonb(s)->>'closeReconciliationStatus'='AWAITING_COUNT')::int AS "awaitingCount",
           COALESCE(SUM(s."variance"),0)::float AS "cashVariance",
           COALESCE(SUM(s."cardVariance"),0)::float AS "cardVariance"
         FROM "CashShiftSession" s
@@ -346,11 +372,17 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
           AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null})
           AND (${body.from||null}::date IS NULL OR s."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens'))
           AND (${body.to||null}::date IS NULL OR s."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
+          AND to_jsonb(s)->>'closeReconciliationStatus' IS DISTINCT FROM 'AWAITING_COUNT'
           AND (ABS(COALESCE(s."variance",0)::float)>${cashTolerance} OR ABS(COALESCE(s."cardVariance",0)::float)>${cardTolerance})
         ORDER BY COALESCE(s."closedAt",s."openedAt") DESC,s."id" DESC
         LIMIT ${findingLimit}`
     ]);
-    const normalizedRows=rows.map(row=>({...row,cashVariance:number(row.cashVariance),cardVariance:number(row.cardVariance)}));
+    const normalizedRows=rows.map(row=>{
+      const awaitingCount=number(row.awaitingCount);
+      return {...row,awaitingCount,cashVariance:awaitingCount?null:number(row.cashVariance),
+        cardVariance:awaitingCount?null:number(row.cardVariance)};
+    });
+    const awaitingCount=normalizedRows.reduce((total,row)=>total+row.awaitingCount,0);
     const findings=findingSessions.map(findingFromSession);
     const complete=packageAccess.complete?await completePaymentControls(body):{enabled:false,reason:"Ενεργοποίησε COMPLETE ή PREMIUM Έλεγχο για έλεγχο πληρωμών και παραστατικών."};
     const premium=packageAccess.premium?await premiumVarianceControls(body):{enabled:false,reason:"Ενεργοποίησε PREMIUM Έλεγχο για επαναλαμβανόμενες αποκλίσεις."};
@@ -373,7 +405,8 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
       premium,
       pendingFindingCount,
       reviewedFindingCount,
-      status:findings.length===0?"ΟΚ":pendingFindingCount?"Χρειάζεται έλεγχο":"Καταχωρισμένοι έλεγχοι",
+      awaitingCount,
+      status:awaitingCount?"Εκκρεμεί καταμέτρηση":findings.length===0?"ΟΚ":pendingFindingCount?"Χρειάζεται έλεγχο":"Καταχωρισμένοι έλεγχοι",
       timeZone:"Europe/Athens",
       findingLimit,
       findingsTruncated:findingSessions.length>=findingLimit,
@@ -390,6 +423,7 @@ router.post("/super-admin-analytics/sessions/:sessionId/reviews",async(req,res,n
     const sessions=await prisma.$queryRaw`
       SELECT s."id" AS "sessionId",s."companyId",c."name" AS "companyName",s."storeId",st."name" AS "storeName",
         s."status",s."shiftLabel",s."terminalPos",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
+        to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus",
         COALESCE(s."variance",0)::float AS "cashVariance",COALESCE(s."cardVariance",0)::float AS "cardVariance"
       FROM "CashShiftSession" s
       JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId"
@@ -399,6 +433,7 @@ router.post("/super-admin-analytics/sessions/:sessionId/reviews",async(req,res,n
     const session=sessions[0];
     if(!session)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια στην επιλεγμένη εταιρεία και το κατάστημα."});
     if(session.status!=="CLOSED")return res.status(409).json({error:"Ο έλεγχος καταχωρίζεται μόνο σε κλεισμένη βάρδια."});
+    if(session.closeReconciliationStatus==="AWAITING_COUNT")return res.status(409).json({error:"Εκκρεμεί καταμέτρηση για τη βάρδια.",code:"SHIFT_AWAITING_COUNT"});
     if(body.decision==="CONFIRMED_SHORTAGE"&&number(session.cashVariance)>=-cashTolerance)return res.status(409).json({error:"Η βάρδια δεν έχει έλλειμμα μετρητών για επιβεβαίωση."});
     const amount=body.decision==="REVIEWED_NO_CHANGE"
       ?0

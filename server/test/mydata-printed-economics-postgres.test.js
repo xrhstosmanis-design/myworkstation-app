@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import PDFDocument from 'pdfkit';
 import {myDataPrintedEconomicsRowsFingerprint,readMyDataPrintedEconomicsReview} from '../src/lib/mydata-printed-economics-review.js';
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
-import {acquireOriginal} from '../src/mydata-original.js';
+import {acquireOriginal,prefillStoredMyDataDraft} from '../src/mydata-original.js';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const scope = {companyId:'c',storeId:'s',orderId:'mydata'};
@@ -119,6 +119,26 @@ async function insertionFixture({fresh=false}={}){
   return {...f,acquire};
  }catch(error){await f.close();throw error;}
 }
+
+test('native delegated stored prefill fills one scoped draft and records one audit on replay',{skip:!isolatedInvoiceDb(),timeout:180000},async()=>{
+ const f=await insertionFixture();
+ try{
+  await f.db.$executeRawUnsafe('CREATE TABLE "StoreOperatorAudit" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb)');
+  const snapshot=await f.snapshot();
+  const delegated={...scope,actorId:'staff'};
+  let checks=0;
+  const verify=async db=>{const rows=await db.$queryRaw`SELECT 1 AS active`;assert.equal(rows[0].active,1);checks++};
+  await assert.rejects(()=>prefillStoredMyDataDraft(f.db,delegated,async()=>{throw new Error('grant revoked')}),/grant revoked/);
+  await assert.rejects(()=>prefillStoredMyDataDraft(f.db,{...delegated,storeId:'control'},verify),error=>error.status===409);
+  assert.deepEqual(await prefillStoredMyDataDraft(f.db,delegated,verify),{lineCount:1});
+  assert.deepEqual(await prefillStoredMyDataDraft(f.db,delegated,verify),{lineCount:1});
+  assert.equal(checks,3);
+  assert.equal((await readMyDataPrintedEconomicsReview(f.db,scope)).state,'VERIFIED');
+  const audits=await f.db.$queryRaw`SELECT "actorId","eventType" FROM "StoreOperatorAudit"`;
+  assert.deepEqual(audits,[{actorId:'staff',eventType:'PURCHASE_MYDATA_PREFILLED'}]);
+  assert.equal(await f.snapshot(),snapshot);
+ }finally{await f.close();}
+});
 
 test('native first insert retains original costs and typed amount, replay/delete never refills or changes business identities', {skip:!isolatedInvoiceDb(),timeout:180000},async()=>{
  const f=await insertionFixture();try{

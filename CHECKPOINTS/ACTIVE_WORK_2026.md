@@ -1,4 +1,8 @@
-- 22/11/2026 · Νο 5 · Διοικητικό κλείσιμο χωρίς καταμέτρηση · [Έλεγχοι](CHANGES/2026-11-22-no5-uncounted-close.md).
+- 22/11/2026 · Νο 5 · Διοικητικό κλείσιμο χωρίς καταμέτρηση · Εκκρεμής και μεταγενέστερη καταμέτρηση, αναφορές Ιδιοκτήτη και χειριστών · 72 στοχευμένοι έλεγχοι με PostgreSQL · [Έλεγχοι](CHANGES/2026-11-22-no5-uncounted-close.md).
+
+- 22/11/2026 · POS · Χρώμα σε όλη την επιφάνεια του γρήγορου πλήκτρου · [Checkpoint](CHANGES/2026-11-22-pos-full-key-color.md).
+
+- 22/11/2026 · POS · Πλάτος κατηγοριών και γρήγορων πλήκτρων, δεύτερη σελίδα και χρώματα · /root · 22 τοπικοί έλεγχοι, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-22-pos-quick-pages-resize.md).
 
 - 22/11/2026 · Νο 5 · Αλλαγή PIN χειριστή POS · 22 τοπικοί έλεγχοι πέρασαν · [Checkpoint](CHANGES/2026-11-22-no5-operator-pin-reset.md).
 
@@ -14,6 +18,10 @@ Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατ
 - 22/11/2026 · Νο 7 · Αυτόματη ανάγνωση χειρόγραφων πριν από το ημερήσιο email · [Checkpoint](CHANGES/2026-11-22-no7-scheduled-cash-papers.md).
 
 - 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
+
+- 22/11/2026 · Νο 5 · Δικαιώματα τιμολογίων και προμηθευτών · [Καταγραφή](CHANGES/2026-11-22-no5-invoice-supplier-rights.md).
+
+- 22/11/2026 · Νο 5 · Διόρθωση δημιουργίας προμηθευτή από τιμολόγιο · [Καταγραφή](CHANGES/2026-11-22-no5-supplier-correction-fix.md).
 
 ## 21/11/2026,20:18Ελλάδας — No02 — recovery source4048 TECHNICAL LIVE / SCOPE GAPS OPEN
 
@@ -82,6 +90,10 @@ Source #4063/head684e7524 merged964f05bd. Exact PR CI44494855233 και mainCI44
 ## 18/11/2026 — myDATA Epsilon Digital PDF / AWAITING CI AND LAB
 
 PR #4036. Read-only provider check for Diadochou Pavlou invoice 34795 returned HTTP 200 and PDF from /pdf. [Checkpoint](CHANGES/2026-11-18-mydata-epsilon-original-pdf.md). Attachment verification pending.
+
+## 22/11/2026 — Νο 19 · Συνθετική παραγγελία efood στο LAB — CI σε εκκρεμότητα
+
+PR #4156 · Vendor 9344842. Τοπικά πέρασαν 20 δοκιμές και ο έλεγχος συναλλαγής PGlite. Εκκρεμούν πλήρες CI, έλεγχος στο εγκατεστημένο LAB και δοκιμή μέσω Pelican. [Checkpoint](CHANGES/2026-11-22-no19-efood-lab-order-run.md).
 
 ## 18/11/2026 — Νο 15 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ c88b7aad / ΜΕΡΙΚΗ LIVE ΑΠΟΔΟΧΗ / OPEN
 
@@ -327,6 +339,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · Νο 4 · POS → Βοηθός → BackOffice · [Checkpoint](CHANGES/2026-11-17-no4-pos-assistant-backoffice.md) · Ενιαία συναλλαγή μεταφοράς, 64 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
+- 22/11/2026 · Νο 7 · Προγραμματισμός αυτόματων αποστολών ανά κατάστημα · [Checkpoint](CHANGES/2026-11-22-no7-automatic-delivery-schedules.md).
 
 - 2026-11-17 · Νο 27 · Κεντρική Διαχείριση και σελίδα Ιδιοκτήτη · [Checkpoint](CHANGES/2026-11-17-no27-central-owner.md) · Τοπική υλοποίηση στο `work/no27-central-owner`, 96 συνδυασμένοι τοπικοί έλεγχοι και build PASS · CI και LAB εκκρεμούν.
 
@@ -942,3 +955,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 22/11/2026 · Νο 9: [Τιμή προσφοράς στο ανώνυμο καλάθι POS](CHANGES/2026-11-22-no9-pos-anonymous-promotion.md). Draft PR #4152, 12 στοχευμένοι τοπικοί έλεγχοι PASS. Εκκρεμούν πλήρες CI, δοκιμαστική πώληση στο LAB και διασταύρωση Message-ID.
 
 - Νο 9 · [Μηνιαία ταμεία και τζίρος LAB](CHANGES/2026-11-22-lab-monthly-cash-turnover.md). Χωριστή ρύθμιση για τον υπολογισμό τζίρου στο LAB. Εκκρεμεί ανεξάρτητη έναρξη μηνιαίας εξουσιοδότησης.
+
+- 22/11/2026 · Πανόρμου · myDATA Smart 9 / 217 και αναδρομική ανάκτηση από 1/1/2026 · CI και πραγματικό PDF σε εκκρεμότητα · [Checkpoint](CHANGES/2026-11-22-panormou-mydata-smart9-recovery.md).

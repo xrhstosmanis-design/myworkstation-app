@@ -10,7 +10,8 @@ const account={username:'counter.1',fullName:'Isolated Counter',password:'isolat
 test('invoice read is an exact list/file admission, never sync, AI, draft approval or deletion',()=>{
   assert.equal(staffRequestCapability('GET','/api/commerce/documents/inbox/archive'),'invoices.read');
   assert.equal(staffRequestCapability('GET','/api/commerce/documents/inbox/invoice/file'),'invoices.read');
-  for(const [method,path] of [['POST','/api/commerce/documents/mydata/sync'],['POST','/api/commerce/documents/inbox/invoice/original'],['PATCH','/api/commerce/documents/inbox/invoice'],['DELETE','/api/commerce/documents/inbox/invoice'],['POST','/api/commerce/purchases/invoice/approve'],['POST','/api/commerce/ai-reader/jobs/job/confirm']])assert.equal(staffRequestCapability(method,path),null);
+  assert.equal(staffRequestCapability('POST','/api/commerce/documents/mydata/sync'),'invoices.sync-mydata');
+  for(const [method,path] of [['POST','/api/commerce/documents/inbox/invoice/original'],['PATCH','/api/commerce/documents/inbox/invoice'],['DELETE','/api/commerce/documents/inbox/invoice'],['POST','/api/commerce/purchases/invoice/approve'],['POST','/api/commerce/ai-reader/jobs/job/confirm']])assert.equal(staffRequestCapability(method,path),null);
 });
 test('product view, creation and opening stock are independent explicit rights with dependency closure',()=>{
   const all=changeStaffCapability([],'products.opening-stock',true);

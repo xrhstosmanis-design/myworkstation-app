@@ -5,7 +5,7 @@ import {JSDOM} from 'jsdom';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 
-const compiled=await build({stdin:{contents:`import React from 'react';import Catalog from './client/src/components/store/PosModernCatalog.jsx';import Editor from './client/src/components/store/StorePosButtonEditor.jsx';import {createPosCatalogResolver} from './client/src/utils/pos-catalog-resolver.js';export default function Fixture(p){return <div className="mws-standard-pos"><Catalog storeId={p.catalogStoreId||p.store.id} quickButtons={(p.layout.quickKeys||[]).filter(x=>x.visible)} categoryButtons={(p.layout.categories||[]).filter(x=>x.visible)} quickProduct={createPosCatalogResolver(p.products,Boolean(p.layout.catalogCompanyId)).quickProduct} categoryProducts={createPosCatalogResolver(p.products,Boolean(p.layout.catalogCompanyId)).categoryProducts} categoryCount={createPosCatalogResolver(p.products,Boolean(p.layout.catalogCompanyId)).categoryCount} onQuick={p.onQuick} onProduct={()=>{}} search={null} query="" searchRows={[]}/><Editor {...p}/></div>}`,resolveDir:fileURLToPath(new URL('../../',import.meta.url)),loader:'jsx'},bundle:true,write:false,platform:'node',format:'cjs',external:['react','react-dom','react-dom/client'],loader:{'.css':'empty'},logLevel:'silent'});
+const compiled=await build({stdin:{contents:`import React from 'react';import Catalog from './client/src/components/store/PosModernCatalog.jsx';import Editor from './client/src/components/store/StorePosButtonEditor.jsx';import {createPosCatalogResolver} from './client/src/utils/pos-catalog-resolver.js';export default function Fixture(p){return <div className="mws-standard-pos"><Catalog storeId={p.catalogStoreId||p.store.id} quickButtons={p.layout.quickKeys||[]} categoryButtons={(p.layout.categories||[]).filter(x=>x.visible)} quickProduct={createPosCatalogResolver(p.products,Boolean(p.layout.catalogCompanyId)).quickProduct} categoryProducts={createPosCatalogResolver(p.products,Boolean(p.layout.catalogCompanyId)).categoryProducts} categoryCount={createPosCatalogResolver(p.products,Boolean(p.layout.catalogCompanyId)).categoryCount} onQuick={p.onQuick} onProduct={()=>{}} search={null} query="" searchRows={[]}/><Editor {...p}/></div>}`,resolveDir:fileURLToPath(new URL('../../',import.meta.url)),loader:'jsx'},bundle:true,write:false,platform:'node',format:'cjs',external:['react','react-dom','react-dom/client'],loader:{'.css':'empty'},logLevel:'silent'});
 const module={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
 const products=[{id:'product-A',name:'SYNTHETIC PRODUCT A',sku:'LEGACY-A',barcodes:['5200000000001'],salePrice:2},{id:'product-B',name:'SYNTHETIC PRODUCT B',sku:'LEGACY-B',barcodes:[],salePrice:3}];
 const callback=(element,key='onClick')=>element[Object.keys(element).find(key=>key.startsWith('__reactProps$'))]?.[key];
@@ -165,3 +165,51 @@ test('clearing or blanking a new category label never activates fallback categor
   await f.render({layout:result});const button=document.querySelector('.standard-category-strip>div>button');assert.equal(button.disabled,true);assert.match(button.textContent,/0 προϊόντα/);await f.click(button);assert.equal(document.querySelector('.pos-modern-product'),null);
  }
 },{catalogProducts:[{id:'default',name:'DEFAULT MATCH',categoryName:'ΚΑΤΗΓΟΡΙΑ',salePrice:3},{id:'uncategorized',name:'NO CATEGORY',categoryName:'',salePrice:4}]}));
+
+test('the second quick page is saved explicitly, and its positions and colors stay independent',()=>fixture(async f=>{
+ const initial=f.layout.quickKeys[0];
+ await f.click(f.launcher());
+ await f.click([...document.querySelectorAll('button')].find(button=>button.textContent==='+ Δεύτερη σελίδα'));
+ assert.equal(f.calls.length,1);
+ const expanded=f.completed[0].layout;
+ assert.equal(expanded.quickKeys.length,40);
+ assert.deepEqual(expanded.quickKeys[0],initial);
+ assert.ok(expanded.quickKeys.slice(20).every(button=>button.emptySlot));
+ await f.render({layout:expanded});
+ await f.slot('quick',39);
+ await f.click(document.querySelector('.pos-button-product-list button'));
+ const color=document.querySelector('input[type="color"]');
+ await f.React.act(async()=>callback(color,'onChange')({target:{value:'#ff2200'}}));
+ await f.click(f.save());
+ assert.equal(f.calls.length,2);
+ const configured=f.completed[1].layout;
+ assert.deepEqual(configured.quickKeys[0],initial);
+ assert.equal(configured.quickKeys[39].color,'#ff2200');
+ await f.render({layout:configured});
+ const quickButtons=()=>[...document.querySelectorAll('.standard-quick>div>button')];
+ assert.equal(quickButtons()[0].disabled,false);
+ await f.click(document.querySelectorAll('.pos-quick-pages button')[1]);
+ assert.equal(quickButtons()[0].disabled,true);
+ assert.equal(quickButtons()[19].style.getPropertyValue('--product-color'),'#ff2200');
+ await f.click(quickButtons()[19]);
+ assert.deepEqual(f.added,[configured.quickKeys[39].id]);
+},{layout:{quickKeys:[{id:'original',label:'Πρώτη σελίδα',productCodes:['product-B'],visible:true}],categories:[]}}));
+
+test('the category divider applies a scoped width by pointer and restores it after remount',()=>fixture(async f=>{
+ const selector='.pos-modern-catalog > [role="separator"]';
+ const divider=document.querySelector(selector);
+ Object.defineProperty(divider.parentElement,'clientWidth',{value:650});
+ divider.parentElement.style.padding='0px';
+ divider.previousElementSibling.getBoundingClientRect=()=>({width:104});
+ divider.setPointerCapture=()=>{};
+ await f.React.act(async()=>{
+  callback(divider,'onPointerDown')({currentTarget:divider,button:0,pointerId:1,clientX:100});
+  callback(divider,'onPointerMove')({currentTarget:divider,pointerId:1,clientX:155});
+  callback(divider,'onLostPointerCapture')();
+ });
+ assert.equal(divider.parentElement.style.getPropertyValue('--pos-categories-width'),'159px');
+ await f.render({store:{id:'store-B'}});
+ assert.equal(document.querySelector(selector).parentElement.style.getPropertyValue('--pos-categories-width'),'');
+ await f.render({store:{id:'store-A'}});
+ assert.equal(document.querySelector(selector).parentElement.style.getPropertyValue('--pos-categories-width'),'159px');
+}));

@@ -22,3 +22,16 @@ test("reopened BackOffice draft reads the primary photo and its merged pages in 
     ["primary","company","lab"],["second","company","lab"],["third","company","lab"]
   ]);
 });
+
+test("delegated stored original only reads a draft and attachment from the selected store",async()=>{
+ const calls=[];
+ const db={$queryRaw:async(strings,...values)=>{
+  calls.push({sql:strings.join("?"),values});
+  return [];
+ }};
+ assert.equal(await loadInvoiceAssistantSource(db,"company","order",{storeId:"lab"}),null);
+ assert.deepEqual(calls[0].values,["order","company","lab","lab"]);
+ assert.match(calls[0].sql,/d\."storeId"=o\."storeId"/);
+ assert.match(calls[0].sql,/o\."storeId"=\?/);
+ assert.equal(calls.length,1);
+});

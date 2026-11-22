@@ -533,8 +533,9 @@ router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{res.json(
 
 router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Μόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να οριστικοποιήσει τον έλεγχο."});
-  const body=reviewSchema.parse(req.body||{}),found=await prisma.$queryRaw`SELECT s."id",s."storeId",s."variance",s."status" FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
+  const body=reviewSchema.parse(req.body||{}),found=await prisma.$queryRaw`SELECT s."id",s."storeId",s."variance",s."status",to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus" FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
   const session=found[0];if(!session)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια."});if(session.status!=="CLOSED")return res.status(409).json({error:"Ο έλεγχος οριστικοποιείται μόνο σε κλεισμένη βάρδια."});
+  if(session.closeReconciliationStatus==="AWAITING_COUNT")return res.status(409).json({error:"Εκκρεμεί η πραγματική καταμέτρηση της βάρδιας."});
   if(body.decision==="CONFIRMED_SHORTAGE"&&money(session.variance)>=-0.009)return res.status(409).json({error:"Η βάρδια δεν έχει έλλειμμα για οριστικοποίηση."});
   const id=crypto.randomUUID(),actorName=req.user.fullName||req.user.email||"Διαχειριστής",snapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id);
   const rows=await prisma.$queryRaw`INSERT INTO "CashControlReview" ("id","companyId","storeId","sessionId","decision","amount","note","actorId","actorName","snapshotJson") VALUES (${id},${req.user.companyId},${session.storeId},${session.id},${body.decision},${body.amount},${body.note},${req.user.id},${actorName},${JSON.stringify(snapshot)}::jsonb) RETURNING *`;

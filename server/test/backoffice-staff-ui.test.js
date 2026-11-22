@@ -302,6 +302,7 @@ test('invoice-only operator reads the existing inbox and safe original preview w
     await m.act(async()=>button('Τιμολόγια').click());
     await m.act(async()=>new Promise(resolve=>setTimeout(resolve,300)));
     assert.match(document.body.textContent,/Synthetic.pdf/);
+    assert.equal(document.querySelector('.invoice-inbox input[type=file]'),null);
     for(const label of ['Διαγραφή φωτογραφίας','Επανεπεξεργασία γραμμών','Έλεγχος από βοηθό AI','Έλεγχος εγγραφής','Άνοιγμα υπάρχοντος'])assert.equal(button(label),undefined);
     assert.equal(button('Λήψη από myDATA').hidden,true);
     window.open=()=>({document:preview.window.document,opener:window,close(){}});
@@ -310,6 +311,95 @@ test('invoice-only operator reads the existing inbox and safe original preview w
     assert.ok(calls.filter(c=>!c.path.endsWith('/me')).every(c=>c.options.headers['x-backoffice-store-id']==='a1'&&!c.options.method));
     assert.ok(calls.every(c=>!c.path.includes('/mydata/')));
   }finally{preview.window.close();await m.close()}
+});
+test('separately granted inbox upload stores a synthetic original in the selected store only',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','invoices.upload-original']}]};
+    if(options.method==='POST')return {id:'fixture',status:'RECEIVED'};
+    return {items:[],total:0,archiveTotal:0,suppliers:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Τιμολόγια').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,80)));
+    const input=document.querySelector('.invoice-inbox input[type=file]');
+    const file=new window.File(['%PDF-1.7\n'+'synthetic fixture\n'.repeat(8)],'synthetic.pdf',{type:'application/pdf'});
+    Object.defineProperty(input,'files',{value:[file]});
+    await m.act(async()=>{input.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,60));});
+    const posts=calls.filter(c=>c.options.method==='POST');
+    assert.equal(posts.length,1);
+    assert.equal(posts[0].path,'/api/commerce/documents/inbox');
+    assert.equal(posts[0].options.headers['x-backoffice-store-id'],'a1');
+    const body=JSON.parse(posts[0].options.body);
+    assert.equal(body.storeId,'a1');
+    assert.equal(body.file.filename,'synthetic.pdf');
+    assert.match(body.file.dataUrl,/^data:application\/pdf;base64,/);
+    assert.match(document.body.textContent,/Το πρωτότυπο αποθηκεύτηκε στη θυρίδα/);
+  }finally{await m.close()}
+});
+test('separately granted provider original download attaches one PDF without reopening the invoice',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const item={id:'fixture',filename:'Synthetic.pdf',mark:'SYNTHETIC',issueDate:'2026-10-31',receivedAt:'2026-10-31T08:00:00Z',status:'RECEIVED',processingStatus:'PENDING',hasProviderOriginal:true,hasAttachment:false};
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','invoices.fetch-original']}]};
+    if(options.method==='POST'){
+      item.hasAttachment=true;
+      return {id:'fixture',downloaded:true,reused:false,attachmentOnly:true};
+    }
+    return {items:[item],total:1,archiveTotal:1,suppliers:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Τιμολόγια').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,300)));
+    await m.act(async()=>{
+      const download=button('Λήψη πρωτότυπου PDF παρόχου');
+      download.click();
+      download.click();
+    });
+    const posts=calls.filter(c=>c.options.method==='POST');
+    assert.equal(posts.length,1);
+    assert.equal(posts[0].path,'/api/commerce/documents/inbox/fixture/provider-original');
+    assert.equal(posts[0].options.headers['x-backoffice-store-id'],'a1');
+    assert.deepEqual(JSON.parse(posts[0].options.body),{storeId:'a1'});
+    assert.match(document.body.textContent,/Το πρωτότυπο PDF επισυνάφθηκε στη θυρίδα/);
+    assert.ok(button('Πρωτότυπο φωτογραφία/PDF'));
+    assert.equal(button('Άνοιγμα υπάρχοντος προχείρου'),undefined);
+  }finally{await m.close()}
+});
+test('delegated myDATA receiving is manual and submits only the selected store',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','invoices.sync-mydata']}]};
+    if(options.method==='POST')return {created:1,message:'1 νέα παραστατικά μπήκαν στη θυρίδα.'};
+    return {items:[],total:0,archiveTotal:0,suppliers:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Τιμολόγια').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,300)));
+    assert.ok(!calls.some(c=>c.path.includes('/mydata/')));
+    await m.act(async()=>{
+      const sync=button('Λήψη από myDATA');
+      assert.equal(sync.hidden,false);
+      sync.click();
+      sync.click();
+    });
+    const requests=calls.filter(c=>c.path.includes('/mydata/'));
+    assert.equal(requests.length,1);
+    assert.equal(requests[0].path,'/api/commerce/documents/mydata/sync');
+    assert.equal(requests[0].options.method,'POST');
+    assert.equal(requests[0].options.headers['x-backoffice-store-id'],'a1');
+    assert.deepEqual(JSON.parse(requests[0].options.body),{storeId:'a1'});
+    assert.match(document.body.textContent,/νέα παραστατικά μπήκαν στη θυρίδα/);
+  }finally{await m.close()}
 });
 test('owner entry reuses existing POS operator administration only after explicit same-company store selection',async()=>{
   const Admin=await component('BackofficeStaffAdmin'),calls=[];
@@ -1435,4 +1525,77 @@ test('native payroll read-only rejects foreign periods, detail and preview envel
       assert.doesNotMatch(document.body.textContent,/Scoped period|99999|99.999/);
     }finally{await m.close()}
   }
+});
+
+test('invoice supplier correction searches the directory and sends only a scoped confirmed change',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const calls=[],order={id:'order',storeId:'a1',storeName:'A1',supplierId:'old',supplierName:'Παλαιός',status:'FINAL',sourceType:'POS_OCR_DRAFT',invoiceNumber:'SYN-1'};
+ const suppliers=[{id:'old',name:'Παλαιός',taxId:'111111111'},{id:'new',name:'Νέος',taxId:'222222222'},{id:'other',name:'Άλλος',taxId:'333333333'}];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'MANAGER',capabilities:['invoices.read','invoices.correct-supplier']}]};
+  if(path.startsWith('/api/purchase-orders/report?'))return {stores:[{id:'a1',name:'A1'}],suppliers,orders:[order],summary:{count:1}};
+  if(path.endsWith('/detail'))return {order,lines:[],totals:{quantity:0,net:0,gross:0}};
+  if(path.includes('/supplier-correction-preview?'))return {version:'a'.repeat(64),beforeSupplier:suppliers[0],targetSupplier:suppliers[1],totalGross:1,payment:{amount:1}};
+  if(path.endsWith('/supplier-correction'))return {ok:true};
+  return {items:[],suppliers:[],total:0,archiveTotal:0};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Τιμολόγια').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>document.querySelector('[data-po-open]').click());
+  await m.act(async()=>document.querySelector('[data-correct-supplier]').click());
+  const form=document.querySelector('[data-supplier-correction]');
+  const search=form.elements.supplierSearch;
+  search.value='νεος';search.dispatchEvent(new Event('input',{bubbles:true}));
+  assert.equal(form.elements.supplierId.querySelector('[value="other"]').hidden,true);
+  form.elements.supplierId.value='new';form.elements.supplierId.dispatchEvent(new Event('change',{bubbles:true}));
+  await m.act(async()=>form.querySelector('[data-preview]').click());
+  const submit=form.querySelector('[type="submit"]');
+  assert.equal(submit.disabled,true);
+  form.elements.reason.value='Έλεγχος πρωτοτύπου';
+  form.elements.original.checked=true;
+  form.elements.original.dispatchEvent(new Event('change',{bubbles:true}));
+  assert.equal(submit.disabled,true,'linked payment requires independent confirmation');
+  form.elements.payment.checked=true;
+  form.elements.payment.dispatchEvent(new Event('change',{bubbles:true}));
+  assert.equal(submit.disabled,false);
+  await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  const [write]=calls.filter(c=>c.options.method==='POST');
+  assert.equal(write.path,'/api/purchase-orders/order/supplier-correction');
+  assert.equal(write.options.headers['x-backoffice-store-id'],'a1');
+  assert.deepEqual(JSON.parse(write.options.body),{storeId:'a1',supplierId:'new',version:'a'.repeat(64),reason:'Έλεγχος πρωτοτύπου',confirmOriginal:true,confirmPaymentSupplier:true});
+ }finally{await m.close()}
+});
+
+test('invoice line product and barcode views require the store product grant and stay read-only',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const order={id:'order',storeId:'a1',storeName:'A1',supplierId:'sup',status:'NEW',invoiceNumber:'SYN-1'};
+ const line={id:'line',orderId:'order',productId:'p',primaryBarcode:'123456789',description:'Synthetic row',quantity:1,unitCost:1,netAmount:1,grossAmount:1.24,vatRate:24};
+ const calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','products.read']}]};
+  if(path.startsWith('/api/purchase-orders/report?'))return {stores:[{id:'a1',name:'A1'}],suppliers:[],orders:[order],summary:{count:1}};
+  if(path.endsWith('/detail'))return {order,lines:[line],totals:{quantity:1,net:1,gross:1.24}};
+  if(path.endsWith('/product-reference'))return {orderId:'order',lineId:'line',storeId:'a1',product:{id:'p',name:'Scoped product',sku:'ABC',salePrice:2,currentStock:3},barcodes:[{barcode:'123456789',unitMultiplier:1}]};
+  return {items:[],suppliers:[],total:0,archiveTotal:0};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  window.alert=globalThis.alert=message=>assert.fail(message);
+  await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Τιμολόγια').click());
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>document.querySelector('[data-po-open]').click());
+  await m.act(async()=>document.querySelector('[data-barcodes]').click());
+  assert.match(document.body.textContent,/Scoped product/,JSON.stringify(calls.map(x=>x.path)));
+  assert.match(document.body.textContent,/123456789/);
+  assert.ok(calls.some(item=>item.path==='/api/purchase-orders/order/lines/line/product-reference'&&item.options.headers['x-backoffice-store-id']==='a1'));
+  assert.equal(calls.some(item=>item.options.method&&item.options.method!=='GET'),false);
+ }finally{await m.close()}
 });

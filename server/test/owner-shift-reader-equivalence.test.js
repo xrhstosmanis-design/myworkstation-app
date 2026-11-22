@@ -59,7 +59,7 @@ test('owner shift extraction preserves independent original SQL, approved select
  // The administrative-close contract intentionally changes only the owner route
  // prefix and the dedicated force-close writer. Preserve the original artifact
  // independently and keep all other canonical SQL comparisons intact.
- assert.equal(sha(prefix),'c98dcb052ad77c157f0abf71f22278e758d797c9515ef3dd198ff8b4eacd0aec','approved owner auth, schema and normalization prefix');
+ assert.equal(sha(prefix),'a2d4fed8c28f500b77240113a5d39e8848cca0fd808f526dfb649a4483aa9da6','approved owner auth, schema and normalization prefix');
  const writerBoundary='\nrouter.post("/:sessionId/force-close",';
  const sqls=source=>Array.from(source.matchAll(/prisma\.\$(?:queryRaw|executeRaw)`[\s\S]*?`/g),m=>m[0]);
  const outside=route.slice(0,a)+route.slice(b,route.indexOf(writerBoundary)),oldOutside=originalRoute.slice(0,originalA)+originalRoute.slice(originalB,originalRoute.indexOf(writerBoundary));
