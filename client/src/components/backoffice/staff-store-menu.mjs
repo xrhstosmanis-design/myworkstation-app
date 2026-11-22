@@ -13,6 +13,7 @@ const groups = [
 
 // Register each new dedicated store view here with its capability and group.
 const views = [
+  ["operator-profiles.manage-permissions","people","operator-permissions","Δικαιώματα χειριστών POS"],
   ["invoices.read", "invoices", "invoices", "Τιμολόγια"],
   ["shifts.read", "cash", "shift-report", "Αναφορά βαρδιών"],
   ["shifts.close", "cash", "close", "Κλείσιμο βάρδιας"],

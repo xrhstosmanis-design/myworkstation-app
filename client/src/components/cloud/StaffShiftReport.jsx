@@ -1,8 +1,8 @@
 import React,{useEffect,useState} from 'react';
+import {buildStaffShiftReportCsv,formatShiftTimestamp} from './staff-shift-report-csv.mjs';
 
-const dateTime=new Intl.DateTimeFormat('el-GR',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Athens',hour12:false});
 const euros=new Intl.NumberFormat('el-GR',{style:'currency',currency:'EUR'});
-const timestamp=value=>value&&Number.isFinite(Date.parse(value))?dateTime.format(new Date(value)):'—';
+const timestamp=value=>formatShiftTimestamp(value)||'—';
 const amount=value=>value==null||!Number.isFinite(Number(value))?'—':euros.format(Number(value));
 const transactionLabels={
   SALE_CASH:'Πώληση με μετρητά',
@@ -14,27 +14,38 @@ const transactionLabels={
   OTHER_EXPENSE:'Έξοδο'
 };
 
-export default function StaffShiftReport({api,storeId}){
+export default function StaffShiftReport({api,storeId,canExport=false}){
   const [revision,setRevision]=useState(0);
-  const [result,setResult]=useState(null);
+  const [loaded,setLoaded]=useState(null);
+  const result=loaded?.api===api&&loaded.storeId===storeId&&loaded.revision===revision?loaded.data:null;
   const [error,setError]=useState('');
   const [selectedId,setSelectedId]=useState('');
 
   useEffect(()=>{
     let current=true;
-    setResult(null);
+    setLoaded(null);
     setError('');
     api(`/api/cash-control/stores/${encodeURIComponent(storeId)}/reporting-overview`).then(data=>{
       if(!current)return;
       if(data?.store?.id!==storeId||!Array.isArray(data.recent)||!Array.isArray(data.openSessions)||!Array.isArray(data.recentTransactions)){
         throw Error('Δεν επιβεβαιώθηκε η αναφορά για το επιλεγμένο κατάστημα.');
       }
-      setResult(data);
+      setLoaded({api,storeId,revision,data});
     }).catch(error=>{
       if(current)setError(error.message||'Δεν φορτώθηκε η αναφορά βαρδιών.');
     });
     return ()=>{current=false};
   },[api,storeId,revision]);
+
+  const exportCsv=()=>{
+    if(!canExport||!result?.recent.length)return;
+    const url=URL.createObjectURL(new Blob([buildStaffShiftReportCsv(result.recent)],{type:'text/csv;charset=utf-8'}));
+    const link=document.createElement('a');
+    link.href=url;
+    link.download='anafora-vardion.csv';
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
 
   const selected=result?.recent.find(shift=>shift.id===selectedId);
   const transactions=selected?result.recentTransactions.filter(transaction=>transaction.sessionId===selected.id):[];
@@ -42,6 +53,7 @@ export default function StaffShiftReport({api,storeId}){
   return <section className="panel staff-panel" aria-labelledby="staff-shift-report-title">
     <h3 id="staff-shift-report-title">Αναφορά βαρδιών</h3>
     <button type="button" onClick={()=>setRevision(value=>value+1)}>Ανανέωση αναφοράς βαρδιών</button>
+    {canExport&&<button type="button" onClick={exportCsv} disabled={!result?.recent.length}>Εξαγωγή εμφανιζόμενων βαρδιών</button>}
     {error&&<p role="alert">{error}</p>}
     {!result&&!error&&<p role="status">Φόρτωση αναφοράς βαρδιών…</p>}
     {result&&<p>Έως 20 πρόσφατες βάρδιες, από όλα τα ταμεία του καταστήματος.</p>}
