@@ -112,7 +112,10 @@ test('Panormou historical recovery starts January 2026 after explicit opt-in', a
       return [];
     },
   };
-  const options = {db, companyId: 'company', storeId, userId: 'actor', source: 'AADE_MYDATA_PRODUCTION'};
+  const options = {
+    db, companyId: 'company', storeId, userId: 'actor', source: 'AADE_MYDATA_PRODUCTION',
+    acquire: async () => assert.fail('No original should be acquired without candidates'),
+  };
   await mod.recoverHistoricalOriginals({...options, storeIds: 'other'});
   assert.equal(queries, 0);
   await mod.recoverHistoricalOriginals({...options, storeIds: storeId});
