@@ -1,3 +1,5 @@
+import CompanySupplierContactEditor from './CompanySupplierContactEditor.jsx';
+import {supplierContactCapability} from '../../../../shared/backoffice-staff-company.mjs';
 import CompanyFinalPassiveReadView from './CompanyFinalPassiveReadView.jsx';
 import {finalPassiveCompanyActions} from '../../../../shared/backoffice-staff-final-passive.mjs';
 import CompanyProductCenterReadView from './CompanyProductCenterReadView.jsx';
@@ -56,6 +58,7 @@ export default function CompanyDirectoryView(props){
  if(companyProductCenterActions.some(action=>action.key===props.capability))return <CompanyProductCenterReadView {...props}/>;
  if(observerLogisticsActions.some(action=>action.key===props.capability))return <CompanyObserverLogisticsReadView {...props}/>;
  if(companyWholesaleActions.some(action=>action.key===props.capability))return <CompanyWholesaleReadView {...props}/>;
+ if(props.capability===supplierContactCapability)return <CompanySupplierContactEditor {...props}/>;
  if(companyPartyControlActions.some(action=>action.key===props.capability))return <CompanyPartyControlReadView {...props}/>;
  if(['dashboard.read','master-catalog.read','financial-store-options.read','financial-supplier-options.read'].includes(props.capability))return <CompanyOwnerOverviewReadView {...props}/>;
  if(['owner-shifts.read','owner-payments-report.read','business-picture.read'].includes(props.capability))return <CompanyOwnerFinancialReadView {...props}/>;
