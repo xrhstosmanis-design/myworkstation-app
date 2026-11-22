@@ -54,7 +54,8 @@ export default function AutomaticReportSettingsManager({company,store,request,on
         <button type="button" className="secondary" aria-label={`Αφαίρεση ταμείου ${index+1}`} onClick={()=>change({...draft,terminals:draft.terminals.filter((_,i)=>i!==index)})}>Αφαίρεση</button></div>)}
       <button type="button" className="secondary" disabled={draft.terminals.length>=100} onClick={()=>change({...draft,terminals:[...draft.terminals,{terminalPos:"",requiredSlots:[1,2,3]}]})}>+ Προσθήκη ταμείου</button>
       <p>Τρέχων κανόνας: <strong>{modeNames[data.cashRule.mode]||data.cashRule.mode}</strong> · αναγνώριση delivery: <strong>{data.cashRule.deliveryTerminalPattern}</strong>. Η ρύθμιση αναφορών δεν αλλάζει τον κανόνα λειτουργίας του ταμείου.</p>
-      <label><input type="checkbox" checked={draft.reviewedReconciliation===true} onChange={e=>change({...draft,reviewedReconciliation:e.target.checked})}/>Αναφορά με ελεγμένους επανυπολογισμούς</label>
+      <label><input type="checkbox" checked={draft.reviewedReconciliation===true} onChange={e=>change({...draft,reviewedReconciliation:e.target.checked,...(!e.target.checked&&draft.automaticPaperReading?{automaticPaperReading:false}:{})})}/>Αναφορά με ελεγμένους επανυπολογισμούς</label>
+      {draft.reviewedReconciliation===true&&<label><input type="checkbox" checked={draft.automaticPaperReading===true} onChange={e=>change({...draft,automaticPaperReading:e.target.checked})}/>Αυτόματη ανάγνωση χειρόγραφων από Chat → Ταμεία πριν από την ημερήσια αποστολή (χρέωση AI)</label>}
       <label className="report-settings-confirm"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>Επιβεβαιώνω τον εμφανιζόμενο κανόνα και τις αναμενόμενες βάρδιες αυτού του καταστήματος.</label>
       <button type="submit" disabled={!confirmed||draft.terminals.length===0}>{busy==="save"?"Αποθήκευση…":"Αποθήκευση ρυθμίσεων αναφορών"}</button>
     </fieldset></form>
