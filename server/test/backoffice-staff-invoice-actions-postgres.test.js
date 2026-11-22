@@ -17,9 +17,20 @@ function metadataEditSource(source){
  return source.slice(start,end);
 }
 
-test('metadata action harness extracts only its handler when detail readers export additional functions',async()=>{
+function assistantTransferSource(source){
+ const schema=source.indexOf('const assistantTransferSchema=');
+ const start=source.indexOf('router.post("/:orderId/assistant-line-transfer",',schema);
+ const terminator='\n}catch(error){next(error)}});';
+ const end=source.indexOf(terminator,start);
+ assert.ok(schema>=0&&start>schema&&end>start,'extract transfer schema and handler before adjacent readers');
+ return source.slice(schema,end+terminator.length);
+}
+
+test('invoice action harnesses exclude adjacent detail reader exports',async()=>{
  const source=await readFile(new URL('../src/routes/purchase-orders.js',import.meta.url),'utf8');
- assert.doesNotThrow(()=>new Function('router',metadataEditSource(source)));
+ for(const extract of [metadataEditSource,assistantTransferSource]){
+  assert.doesNotThrow(()=>new Function('router',extract(source)));
+ }
 });
 
 test('native delegated invoice metadata and canonical approval preserve one posting, actor, control stock and live withdrawal',{skip:!isolatedInvoiceDb(),timeout:90000},async()=>{
@@ -51,7 +62,7 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const lineBindings={...deps,invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,router:{patch:(_path,h)=>editLine=h,post:(_path,h)=>transferLines=h},product:async()=>null,n:value=>Number(value||0),purchasePrintedRounding,lockEditablePurchaseOrder,
    line:async(_company,id)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"=${id}`)[0],
    learnConfirmedLineCorrection:()=>assert.fail('store-only staff edit must not change company supplier learning'),learnCentralInvoiceCorrection:()=>assert.fail('store-only staff edit must not change cross-company learning')};
-  new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(source.indexOf('function purchaseBatchError('),source.indexOf('router.post("/:orderId/lines",'))+source.slice(lineStart,lineEnd)+source.slice(source.indexOf('const assistantTransferSchema='),source.indexOf('router.patch("/:orderId/lines/:lineId/product-card"')))(...Object.values(lineBindings));
+  new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(source.indexOf('function purchaseBatchError('),source.indexOf('router.post("/:orderId/lines",'))+source.slice(lineStart,lineEnd)+assistantTransferSource(source))(...Object.values(lineBindings));
   const changedLine=await invoke(editLine,'invoices.edit',{description:'Reviewed store-only line',quantity:3});assert.ifError(changedLine.failure);assert.equal(changedLine.result.ok,true);assert.equal(changedLine.result.mappingLearned,false);assert.equal(changedLine.result.centralLearning.learned,false);assert.equal(await f.snapshot(),before);
   const [draft]=await db.$queryRaw`SELECT "storeId","sourceDocumentId","reopenVersion" FROM "PurchaseOrder" WHERE "id"='pos'`;
   const rowSnapshot=()=>db.$queryRaw`SELECT "id","description","updatedAt" FROM "PurchaseOrderLine" WHERE "orderId"='pos'`;
