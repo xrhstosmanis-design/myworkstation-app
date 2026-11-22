@@ -11,6 +11,8 @@ import {assertEfoodLabContext,buildEfoodCatalogPreview,buildEfoodOrderRecoveryPr
 import {buildEfoodEventList,buildEfoodEventPreview} from "../integrations/efood/event-preview.js";
 import {recordEfoodWebhookEvent,requireWebhookIdentity} from "./efood-pelican-webhook.js";
 
+import { applyEfoodLabOrder, ensureEfoodLabOrderSchema } from "../integrations/efood/lab-order-postgres.js";
+
 const router=Router();
 const uid=()=>crypto.randomUUID();
 const sha256=value=>crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -134,6 +136,39 @@ async function efoodPreviewContext(req){
   return {store,integration};
 }
 
+const labOrderRunSchema = z.object({
+  runId: z.string().uuid(),
+  step: z.enum(["accept", "cancel"]),
+}).strict();
+
+router.post("/companies/:companyId/stores/:storeId/efood/lab-order-runs", async (req, res, next) => {
+  try {
+    const { runId, step } = labOrderRunSchema.parse(req.body);
+    const { store, integration } = await efoodPreviewContext(req);
+    const vendorId = safeMetadata(integration.metadataJson).vendorId;
+    if (vendorId !== "9344842") {
+      return res.status(409).json({ error: "Απαιτείται το δοκιμαστικό κατάστημα efood 9344842." });
+    }
+    await ensureEfoodLabOrderSchema(prisma);
+    const result = await applyEfoodLabOrder(prisma, {
+      context: { companyName: store.companyName, storeName: store.name, environment: integration.environment },
+      integrationId: integration.id,
+      vendorId,
+      runId,
+      payload: {
+        store_id: vendorId,
+        order_id: runId,
+        event_id: step,
+        status: step === "accept" ? "READY_FOR_PICKUP" : "CANCELLED",
+        items: step === "accept" ? [{ sku: "SLL45E", quantity: 1 }] : [],
+      },
+    });
+    res.json({ ...result, synthetic: true, labOnly: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/companies/:companyId/stores/:storeId/efood/event-previews",async(req,res,next)=>{try{
   const {store,integration}=await efoodPreviewContext(req);
   const rows=await prisma.$queryRaw`SELECT "id","companyId","storeId","integrationId","externalOrderId","externalStatus" FROM "EfoodWebhookEvent" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "integrationId"=${integration.id} ORDER BY "receivedAt" DESC LIMIT 200`;
@@ -195,4 +230,5 @@ router.get("/companies/:companyId/stores/:storeId/efood/previews",async(req,res,
 }catch(error){next(error)}});
 
 export default router;
+
 

@@ -82,6 +82,10 @@ Source #4063/head684e7524 merged964f05bd. Exact PR CI44494855233 και mainCI44
 
 PR #4036. Read-only provider check for Diadochou Pavlou invoice 34795 returned HTTP 200 and PDF from /pdf. [Checkpoint](CHANGES/2026-11-18-mydata-epsilon-original-pdf.md). Attachment verification pending.
 
+## 22/11/2026 — Νο 19 · Συνθετική παραγγελία efood στο LAB — CI σε εκκρεμότητα
+
+PR #4156 · Vendor 9344842. Τοπικά πέρασαν 20 δοκιμές και ο έλεγχος συναλλαγής PGlite. Εκκρεμούν πλήρες CI, έλεγχος στο εγκατεστημένο LAB και δοκιμή μέσω Pelican. [Checkpoint](CHANGES/2026-11-22-no19-efood-lab-order-run.md).
+
 ## 18/11/2026 — Νο 15 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ c88b7aad / ΜΕΡΙΚΗ LIVE ΑΠΟΔΟΧΗ / OPEN
 
 Ίδιος υπεύθυνος /root, ίδια ανάθεση TABLE_SERVICE. #4023/#4024 εγκαταστάθηκαν μέσω πλήρους main CI44385977787 (5SUCCESS, 6241PASS/0FAIL/2προαιρετικάSKIP +8backupPASS) και κανονικού guarded release44390636363· Render dep-dbv0j1brjlhs73aguvl0 LIVE 18/11 22:29:52 Ελλάδας, ακριβές c88b7aad, ανεξάρτητο health200/oktrue από τον συντονιστή. Νέο scoped LIVE PASS: μεταφορά/διαίρεση/ένωση, αλλαγή σερβιτόρου, μπλοκάρισμα επαναποστολής φορτωμένων γραμμών, 3 ανεξάρτητα KDS READY (3→2→1→0), πραγματική κινητή ροή responsive browser με χρέωση0,50€ σε καφέ1€ και μία αποστολή1,50€ / μία γραμμή / ένα δελτίο / ένα request / ένα Audit. Δεν επαναλαμβάνονται αυτά ή το ιστορικό τραπέζι3€.
