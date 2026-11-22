@@ -1,4 +1,6 @@
 import {Router} from "express";
+import {prisma} from "../prisma.js";
+import {createStaffSupplierValueInvoice} from "../services/staff-supplier-value-invoice.js";
 import supplierGlobalReportRoutes from "./supplier-global-reports.js";
 import supplierProductCatalogRoutes from "./supplier-product-catalog.js";
 import supplierProductTransferRoutes from "./supplier-product-transfer.js";
@@ -22,6 +24,13 @@ router.use((req,res,next)=>{
     }
   }
   next();
+});
+router.post("/:supplierId/value-only-invoice",async(req,res,next)=>{
+  if(req.user?.staffAccess!==true)return next("route");
+  try{
+    const draft=await createStaffSupplierValueInvoice(prisma,req,req.params.supplierId,req.body);
+    return res.status(draft.reused?200:201).json(draft);
+  }catch(error){next(error)}
 });
 router.use(supplierGlobalReportRoutes);
 router.use(supplierProductCatalogRoutes);
