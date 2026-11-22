@@ -1,3 +1,4 @@
+import {buildStaffScheduleCsv} from "./staff-schedule-csv.mjs";
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,CalendarDays,CheckCircle2,ClipboardCheck,Clock3,Edit3,Plus,RefreshCw,ScrollText,ShieldCheck,Trash2,UsersRound} from "lucide-react";
@@ -11,7 +12,7 @@ const dayName=value=>new Intl.DateTimeFormat("el-GR",{...({weekday:"short",day:"
 const periodDays=(start,end)=>{const rows=[];if(!start||!end)return rows;for(let cursor=new Date(`${start}T12:00:00Z`),last=new Date(`${end}T12:00:00Z`);cursor<=last;cursor=new Date(cursor.getTime()+86400000))rows.push(greeceDateInput(cursor));return rows};
 const warningsFor=assignment=>Array.isArray(assignment.warningJson)?assignment.warningJson:Array.isArray(assignment.warningJson?.warnings)?assignment.warningJson.warnings:[];
 
-export default function WorkforceV2ScheduleTab({company,store,request:sendRequest,data={employees:[],shiftTemplates:[]},readOnly=false,readOnlySection="SCHEDULE",canCreateSchedule=false,canEditSchedule=false,canPreviewSchedule=false,canApproveSchedule=false,canPublishSchedule=false,canApproveScheduleException=false,canCreateLeave=false,canApproveLeave=false,canRejectLeave=false,canCancelLeave=false}){
+export default function WorkforceV2ScheduleTab({company,store,request:sendRequest,data={employees:[],shiftTemplates:[]},readOnly=false,readOnlySection="SCHEDULE",canCreateSchedule=false,canExportSchedule=false,canEditSchedule=false,canPreviewSchedule=false,canApproveSchedule=false,canPublishSchedule=false,canApproveScheduleException=false,canCreateLeave=false,canApproveLeave=false,canRejectLeave=false,canCancelLeave=false}){
   const canDecideLeave=canApproveLeave||canRejectLeave||canCancelLeave;
   const request=(path,options={})=>{
     const scopedDecision=readOnlySection==="LEAVE"&&path.startsWith(base+"/leaves/")&&path.endsWith("/decision")&&canDecideLeave;
@@ -35,6 +36,7 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
   const [scheduleOptions,setScheduleOptions]=useState(null);
   const scope=JSON.stringify([company.id,store.id,readOnly,readOnlySection,canCreateLeave,canEditSchedule,readOnly?date:null]);currentScope.current=scope;
   const [loadedScope,setLoadedScope]=useState("");
+  const loadedRequest=useRef(null);
   const items=loadedScope===scope?storedItems:[],leaves=loadedScope===scope?storedLeaves:[];
   const selectedSchedule=useMemo(()=>items.find(item=>item.id===selected)||null,[items,selected]);
   const source=readOnly?(loadedScope===scope&&scheduleOptions?scheduleOptions:{employees:[],shiftTemplates:[]}):data;
@@ -54,6 +56,15 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
     if(reasonDialog?.requiresReason&&!value)return setError("Γράψε υποχρεωτικά αιτιολογία πριν συνεχίσεις.");
     const action=reasonDialog?.onConfirm;setReasonDialog(null);setReasonText("");
     await action?.(value);
+  };
+  const exportSchedule=()=>{
+    if(!canExportSchedule||loadedScope!==scope||loadedRequest.current!==sendRequest||!assignments.length)return;
+    const url=URL.createObjectURL(new Blob([buildStaffScheduleCsv(assignments)],{type:"text/csv;charset=utf-8"}));
+    const link=document.createElement("a");
+    link.href=url;
+    link.download="programma-vardion.csv";
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
   const canEdit=(!readOnly||canEditSchedule)&&Boolean(selectedSchedule&&["DRAFT","PREVIEWED"].includes(selectedSchedule.status));
 
@@ -84,6 +95,7 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
         if(current!==sequence.current||own!==currentScope.current)return;
         setItems(s.items||[]);setLeaves(l.items||[]);setAuditItems(a.items||[]);
       }
+      loadedRequest.current=sendRequest;
       setLoadedScope(own);
     }catch(e){if(current===sequence.current&&own===currentScope.current)setError(e.message)}
     finally{if(current===sequence.current&&own===currentScope.current)setBusy(false)}
@@ -177,7 +189,7 @@ export default function WorkforceV2ScheduleTab({company,store,request:sendReques
     {(!readOnly||canDecideLeave||canEditSchedule||canPublishSchedule||canApproveScheduleException)&&reasonDialog&&<div className="workforce-reason-backdrop" role="dialog" aria-modal="true" aria-label={reasonDialog.label}><div className="workforce-reason-dialog"><h4>{reasonDialog.requiresReason?"Αιτιολογία και επιβεβαίωση":reasonDialog.label}</h4><p>{reasonDialog.message||(reasonDialog.label+". Η αιτιολογία θα καταγραφεί στο Audit.")}</p>{reasonDialog.requiresReason&&<label>Υποχρεωτική αιτιολογία<textarea autoFocus value={reasonText} onChange={event=>setReasonText(event.target.value)} placeholder="Γράψε την αιτιολογία της ενέργειας"/></label>}<div><button className="secondary" onClick={()=>setReasonDialog(null)}>Ακύρωση</button><button className="primary" onClick={confirmReason} disabled={busy}>{reasonDialog.confirmLabel}</button></div></div></div>}
     {!readOnly&&activeSection==="AI"&&<div className="workforce-editor-card"><div className="workforce-card-title"><div><h4>✨ Δημιουργία προγράμματος με AI</h4><p>Γράψε όπως θα το έλεγες σε άνθρωπο. Το AI χρησιμοποιεί τους πραγματικούς εργαζόμενους, μόνιμους κανόνες, άδειες και πρότυπα βαρδιών. Πρώτα μόνο preview — ποτέ αυτόματη δημοσίευση.</p></div></div><label className="workforce-notes">Τι πρόγραμμα θέλεις;<textarea rows="6" value={aiText} onChange={e=>setAiText(e.target.value)} placeholder="π.χ. Βγάλε πρόγραμμα για την επόμενη εβδομάδα. Ο Άγγελος ρεπό Δευτέρα–Τρίτη, η Νωπή μόνο πρωί, όταν λείπει η Νωπή βάλε την Κωνσταντίνα πρωί, τα ρεπό συνεχόμενα όπου γίνεται."/></label><button onClick={interpretAi} disabled={busy}>✨ Ανάλυση οδηγίας & Preview</button>{aiPreview&&<div className="workforce-validation"><b>AI Scheduler · ασφαλές preview</b><p>{aiPreview.message}</p><p><b>{aiPreview.context.employees.length}</b> ενεργοί εργαζόμενοι · <b>{aiPreview.context.shiftTemplates.length}</b> πρότυπα βαρδιών.</p>{aiPreview.proposal&&<><div className="workforce-assignment-table">{aiPreview.proposal.assignments.map((a,i)=><div className="workforce-assignment-row" key={`${a.date}-${a.shiftTemplateId}-${a.slot}-${i}`}><div><b>{dayName(a.date)}</b><span>{a.shiftName} · {a.startTime}–{a.endTime}</span></div><div><b>{a.employeeName||"ΑΚΑΛΥΠΤΟ"}</b><span>θέση {a.slot}</span></div></div>)}</div><div className="workforce-summary-row">{aiPreview.proposal.summary.map(x=><div key={x.employeeId}><b>{x.workDays}</b><span>{x.employeeName} · ημέρες</span></div>)}</div>{aiPreview.proposal.warnings.length>0&&<ul>{aiPreview.proposal.warnings.map((w,i)=><li key={i}>{w.date}: {w.message}</li>)}</ul>}</>}<small>PREVIEW ONLY — δεν έχει γραφτεί καμία ανάθεση. Γράψε νέα οδηγία για διόρθωση· το ιστορικό κρατιέται στη συνεδρία.</small><div><button onClick={applyAiDraft} disabled={busy||!aiPreview.proposal.assignments.some(a=>a.employeeId)}>Αποθήκευση ως DRAFT για έλεγχο</button></div></div>}</div>}
     {activeSection==="SCHEDULE"&&<>
-    <div className="workforce-schedule-controlbar"><label>Ημερομηνία<input type="date" value={date} onChange={event=>setDate(event.target.value)}/></label>{(!readOnly||canCreateSchedule)&&<><label>Περίοδος<select value={periodType} onChange={event=>setPeriodType(event.target.value)}><option value="WEEK">Εβδομάδα</option><option value="MONTH">Μήνας</option></select></label><button className="primary" onClick={create} disabled={busy}><Plus/> Νέο πρόχειρο πρόγραμμα</button></>}</div>
+    <div className="workforce-schedule-controlbar">{canExportSchedule&&<button type="button" disabled={busy||!assignments.length} onClick={exportSchedule}>Εξαγωγή προγράμματος CSV</button>}<label>Ημερομηνία<input type="date" value={date} onChange={event=>setDate(event.target.value)}/></label>{(!readOnly||canCreateSchedule)&&<><label>Περίοδος<select value={periodType} onChange={event=>setPeriodType(event.target.value)}><option value="WEEK">Εβδομάδα</option><option value="MONTH">Μήνας</option></select></label><button className="primary" onClick={create} disabled={busy}><Plus/> Νέο πρόχειρο πρόγραμμα</button></>}</div>
     <div className="workforce-schedule-overview"><div><small>Επιλεγμένο πρόγραμμα</small><select value={selected} onChange={event=>{setSelected(event.target.value);setValidation(null);resetAssignment();}}><option value="">Επίλεξε πρόγραμμα</option>{items.filter(item=>item.status!=="SUPERSEDED").map(item=><option key={item.id} value={item.id}>{item.periodStart} · έκδοση {item.version} · {statusText[item.status]}</option>)}</select></div><div className="workforce-view-switch"><button className={view==="DAILY"?"active":""} onClick={()=>setView("DAILY")}>Αναλυτική ημέρας</button><button className={view==="WEEK_SUMMARY"?"active":""} onClick={()=>setView("WEEK_SUMMARY")}>Συνοπτική εβδομάδας</button><button className={view==="WEEK_DETAILED"?"active":""} onClick={()=>setView("WEEK_DETAILED")}>Αναλυτική εβδομάδας</button><button className={view==="BY_EMPLOYEE"?"active":""} onClick={()=>setView("BY_EMPLOYEE")}>Ανά εργαζόμενο</button></div></div>
     {shownSchedule&&<><div className="workforce-schedule-metrics"><article><CalendarDays/><div><small>Περίοδος</small><b>{shownSchedule.periodStart} – {shownSchedule.periodEnd}</b></div></article><article><UsersRound/><div><small>Κάλυψη</small><b>{assignedCount}/{assignments.length} αναθέσεις</b></div></article>{!readOnly&&<article><AlertTriangle/><div><small>Έλεγχοι</small><b>{validationFor?`${validationFor.errors.length} σφάλματα · ${validationFor.approvals.length} εγκρίσεις`:"Πάτησε Έλεγχος"}</b></div></article>}<article><CheckCircle2/><div><small>Κατάσταση</small><b>{statusText[shownSchedule.status]}</b></div></article></div>
       {(!readOnly||canPreviewSchedule||canApproveSchedule||canPublishSchedule)&&<div className="workforce-schedule-actions">{!readOnly&&<button className="secondary" onClick={()=>evaluate(shownSchedule)} disabled={busy}><ClipboardCheck/> Έλεγχος προγράμματος</button>}{(!readOnly||canPreviewSchedule)&&shownSchedule.status==="DRAFT"&&<button onClick={()=>transition(shownSchedule,"PREVIEWED")} disabled={busy}>Προεπισκόπηση</button>}{(!readOnly||canApproveSchedule)&&shownSchedule.status==="PREVIEWED"&&<button onClick={()=>transition(shownSchedule,"APPROVED")} disabled={busy}>Έγκριση</button>}{(!readOnly||canPublishSchedule)&&shownSchedule.status==="APPROVED"&&<button onClick={()=>transition(shownSchedule,"PUBLISHED")} disabled={busy}>Δημοσίευση</button>}<span>Έκδοση {shownSchedule.version}</span></div>}
