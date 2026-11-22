@@ -1,3 +1,5 @@
+- 22/11/2026 · Νο 5 · Αλλαγή PIN χειριστή POS · 22 τοπικοί έλεγχοι πέρασαν · [Checkpoint](CHANGES/2026-11-22-no5-operator-pin-reset.md).
+
 ## 22/11/2026 — Κεντρική διόρθωση Margin αποθήκης — AWAITING LAB
 
 Κοινός υπολογισμός για όλα τα καταστήματα. 16 στοχευμένοι έλεγχοι πέρασαν. [Checkpoint](CHANGES/2026-11-22-central-warehouse-net-margin.md).

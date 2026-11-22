@@ -13,6 +13,7 @@ import "./inventory-v2-center.css";
 import InventoryMobileApp from "./InventoryMobileApp.jsx";
 import InventoryFastCount from "./InventoryFastCount.jsx";
 import { inventoryUnitCost } from "./inventory-cost.js";
+import { buildStaffStocktakeCsv } from "./staff-stocktake-csv.mjs";
 import InventoryValuationReport from "./InventoryValuationReport.jsx";
 import InventoryReconciliationPanel from "./InventoryReconciliationPanel.jsx";
 const num = (v) => Number(v || 0),
@@ -266,6 +267,16 @@ export default function InventoryV2Center({
     a.download = `inventory-${current.id}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
+  };
+  const exportStaffCsv = () => {
+    if (!delegated?.canExport || locked || !current?.lines?.length || current.storeId !== storeId) return;
+    const showExpected = Boolean(delegated.canSeeExpected || delegated.canFinalize);
+    const blob = new Blob([buildStaffStocktakeCsv(current.lines, showExpected)], { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `inventory-${current.id}-page-${delegated.detailPagination?.page ?? 1}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
   const loadInvestigation = async () => {
     setBusy(true);
@@ -564,6 +575,9 @@ export default function InventoryV2Center({
                     <RefreshCw />
                     Ανανέωση
                   </button>
+                  {delegated?.canExport && <button type="button" disabled={locked || !current.lines?.length} onClick={exportStaffCsv}>
+                    <Download /> Εξαγωγή τρέχουσας σελίδας CSV
+                  </button>}
                   {!delegated && <>
                   <button onClick={exportCsv}>
                     <Download />
