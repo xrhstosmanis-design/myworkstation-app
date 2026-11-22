@@ -1,6 +1,6 @@
 import {readMyDataPdfDraftReadiness} from '../lib/mydata-pdf-draft-readiness.js';
 import {greeceExportRows} from "../../../shared/greece-time.mjs";
-import {requireStaffGrant} from '../services/backoffice-staff-access.js';
+import {requireStaffAction,requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain} from "../server-shutdown.js";
 import crypto from "crypto";
@@ -13,7 +13,7 @@ import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "
 import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
-import {acquireOriginal,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
+import {acquireOriginal,prefillStoredMyDataDraft,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
@@ -48,6 +48,14 @@ router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS
 }catch(error){next(error)}});
 
 router.post("/documents/mydata/orders/:orderId/prefill",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{
+  if(req.user.staffAccess===true){
+    const storeId=req.body?.storeId;
+    if(typeof storeId!=="string"||!storeId||storeId.length>160)throw syncError("Επίλεξε κατάστημα.",400);
+    if(req.user.storeId!==storeId||req.staffGrant?.capability!=="invoices.mydata-prefill")throw syncError("Δεν επιτρέπεται η συμπλήρωση σε αυτό το κατάστημα.",403);
+    const {companyId,id:actorId}=req.user,orderId=req.params.orderId;
+    return res.json(await prefillStoredMyDataDraft(prisma,{companyId,storeId,orderId,actorId},
+      tx=>requireStaffAction(tx,req,storeId,"invoices.mydata-prefill")));
+  }
   if(!canSync(req))return res.status(403).json({error:"Η συμπλήρωση επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
   const companyId=req.user.companyId,storeId=String(req.body?.storeId||""),orderId=req.params.orderId;
   await ensureSchema();
