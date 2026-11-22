@@ -65,10 +65,22 @@
 .pos-quick-pages{display:flex;align-items:center;gap:5px;flex:none}
 .pos-quick-pages button{padding:5px 10px;border:1px solid #cbd7e4;border-radius:5px;background:#fff;color:#213b60;font:inherit;cursor:pointer}
 .pos-quick-pages button[aria-pressed="true"]{background:#213b60;color:#fff;border-color:#213b60}
-.pos-modern .pos-modern-catalog .standard-quick>div>button:not(:disabled){
+.pos-modern .pos-modern-catalog .standard-quick>div>button{
   background:color-mix(in srgb,var(--product-color,#fff) 30%, white)!important;
 }
-.pos-modern .pos-modern-catalog .standard-category-strip>div>button:not([aria-pressed="true"]):not(:disabled),
+.pos-modern .pos-modern-catalog .pos-modern-rail .standard-category-strip>div>button,
 .pos-modern .pos-modern-product-grid>.pos-modern-subcategory{
   background:color-mix(in srgb,var(--category-color,#fff) 30%, white)!important;
+}
+
+.pos-modern .pos-modern-catalog .standard-quick > div > button .pos-modern-picture {
+  background: transparent;
+}
+
+.pos-modern .pos-modern-catalog .pos-modern-rail .standard-category-strip > div > button[aria-pressed="true"] {
+  color: #213b60;
+  box-shadow: inset 0 0 0 2px #213b60;
+}
+.pos-modern .pos-modern-catalog .pos-modern-rail .standard-category-strip > div > button[aria-pressed="true"] :is(svg, small) {
+  color: inherit;
 }
