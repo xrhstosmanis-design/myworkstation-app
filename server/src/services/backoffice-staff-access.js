@@ -146,7 +146,7 @@ function modulesForCapability(capability){
  const passive=finalPassiveStoreActions.find(action=>action.key===capability);if(passive)return [...passive.modules];
  if(storeReportCapabilities.includes(capability))return freeStoreReportCapabilities.includes(capability)?[]:['INVENTORY'];
  if(capability==='unsold-products.read')return ['SALES_ANALYTICS'];
- if(['operator-profiles.manage-permissions','operator-profiles.manage-pos-access','operator-profiles.create-employee'].includes(capability))return ['STORE_MODE'];
+ if(['operator-profiles.manage-permissions','operator-profiles.manage-pos-access','operator-profiles.create-employee','operator-profiles.reset-pin'].includes(capability))return ['STORE_MODE'];
  if(capability==='payments.import-kiosk')return ['CASH_CONTROL'];
  if(capability==='invoice-ai.photo-preview')return ['AI_READER','DOCUMENTS','INVENTORY'];
  if(capability==='sales-journal.read')return ['STORE_MODE'];
