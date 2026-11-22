@@ -36,6 +36,7 @@ const epsilonOriginalFormats = new Map([
   ["epsilondigital-enetgroup.epsilonnet.gr", "107"],
   ["epsilondigital-nbg.epsilonnet.gr", "109"],
   ["epsilondigitalsmart10.epsilonnet.gr", "227"],
+  ["epsilondigitalsmart9.epsilonnet.gr", "217"],
 ]);
 
 function originalRecoveryLinkPattern(formats) {
