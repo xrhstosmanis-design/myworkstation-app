@@ -44,10 +44,11 @@ export default function PosLayoutDivider({storeId, type, label}) {
         if (event.button !== 0 || drag.current) return;
         const parent = event.currentTarget.parentElement;
         const scale = parent.getBoundingClientRect().width / parent.offsetWidth || 1;
+        const panel = event.currentTarget.previousElementSibling;
         drag.current = {
           id: event.pointerId,
           x: event.clientX,
-          width: event.currentTarget.previousElementSibling.offsetWidth,
+          width: panel.offsetWidth || panel.getBoundingClientRect().width,
           scale,
         };
         event.currentTarget.setPointerCapture(event.pointerId);
