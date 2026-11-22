@@ -1,3 +1,7 @@
+## 22/11/2026 — Κεντρική διόρθωση Margin αποθήκης — AWAITING LAB
+
+Κοινός υπολογισμός για όλα τα καταστήματα. 16 στοχευμένοι έλεγχοι πέρασαν. [Checkpoint](CHANGES/2026-11-22-central-warehouse-net-margin.md).
+
 ## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
 
 Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατάστασης στην κεντρική οθόνη, 18 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-22-central-purchase-status-buttons.md).
