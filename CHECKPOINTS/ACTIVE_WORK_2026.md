@@ -1,3 +1,5 @@
+- 22/11/2026 · Πανόρμου · myDATA Smart 9 / 217 και αναδρομική ανάκτηση από 1/1/2026 · CI και πραγματικό PDF σε εκκρεμότητα · [Checkpoint](CHANGES/2026-11-22-panormou-mydata-smart9-recovery.md).
+
 ## 22/11/2026 — Κεντρική διόρθωση Margin αποθήκης — AWAITING LAB
 
 Κοινός υπολογισμός για όλα τα καταστήματα. 16 στοχευμένοι έλεγχοι πέρασαν. [Checkpoint](CHANGES/2026-11-22-central-warehouse-net-margin.md).
