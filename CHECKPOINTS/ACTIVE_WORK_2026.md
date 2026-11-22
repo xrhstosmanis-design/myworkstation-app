@@ -331,6 +331,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · Νο 4 · POS → Βοηθός → BackOffice · [Checkpoint](CHANGES/2026-11-17-no4-pos-assistant-backoffice.md) · Ενιαία συναλλαγή μεταφοράς, 64 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
+- 22/11/2026 · Νο 7 · Προγραμματισμός αυτόματων αποστολών ανά κατάστημα · [Checkpoint](CHANGES/2026-11-22-no7-automatic-delivery-schedules.md).
 
 - 2026-11-17 · Νο 27 · Κεντρική Διαχείριση και σελίδα Ιδιοκτήτη · [Checkpoint](CHANGES/2026-11-17-no27-central-owner.md) · Τοπική υλοποίηση στο `work/no27-central-owner`, 96 συνδυασμένοι τοπικοί έλεγχοι και build PASS · CI και LAB εκκρεμούν.
 
@@ -947,4 +948,4 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - Νο 9 · [Μηνιαία ταμεία και τζίρος LAB](CHANGES/2026-11-22-lab-monthly-cash-turnover.md). Χωριστή ρύθμιση για τον υπολογισμό τζίρου στο LAB. Εκκρεμεί ανεξάρτητη έναρξη μηνιαίας εξουσιοδότησης.
 
-- 22/11/2026 · Νο 7 · Προγραμματισμός αυτόματων αποστολών ανά κατάστημα · [Checkpoint](CHANGES/2026-11-22-no7-automatic-delivery-schedules.md).
+- 22/11/2026 · Πανόρμου · myDATA Smart 9 / 217 και αναδρομική ανάκτηση από 1/1/2026 · CI και πραγματικό PDF σε εκκρεμότητα · [Checkpoint](CHANGES/2026-11-22-panormou-mydata-smart9-recovery.md).
