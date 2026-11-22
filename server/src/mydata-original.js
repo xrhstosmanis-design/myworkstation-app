@@ -289,6 +289,42 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   return {reused:true,downloaded:false,jobId,purchaseOrderId:orderId};
 }
 
+// For delegated prefill, the source is already attached to the specific
+// draft. Never invoke the download, draft creation or reconciliation paths.
+export async function prefillStoredMyDataDraft(db,{companyId,storeId,orderId,actorId},verify){
+  return db.$transaction(async tx=>{
+    await verify(tx);
+    await lockInvoiceStore(tx,companyId,storeId);
+    const sources=await tx.$queryRaw`SELECT m.*,i."attachmentId",o."supplierId",o."sourceDocumentId"
+      FROM "MyDataInboundDocument" m
+      JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+      JOIN "PurchaseOrder" o ON o."id"=m."rawPayload"->>'mydataDraftOrderId' AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
+      JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."id"=m."rawPayload"->>'mydataDraftDocumentId'
+        AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
+      JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=m."companyId" AND a."storeId"=m."storeId"
+      WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND o."id"=${orderId} AND i."status"='IN_REVIEW'
+        AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT' AND d."documentType"='INVOICE'
+        AND COALESCE(to_jsonb(o)->>'reopenVersion','0')='0'
+      LIMIT 2 FOR UPDATE OF m,i,o,d`;
+    const row=sources[0];
+    if(sources.length!==1||!/^(?:1\.[1-6]|2\.[1-4])$/.test(String(row.invoiceType||""))||
+      (row.currency&&row.currency!=="EUR")||!(Number(row.totalGross)>0)){
+      throw error("Δεν βρέθηκε μοναδικό ανοιχτό πρόχειρο τιμολογίου myDATA με συνημμένο πρωτότυπο.",409);
+    }
+    const jobs=await tx.$queryRaw`SELECT "id","companyId","storeId","attachmentId","purchaseDocumentId","resultJson"
+      FROM "AiReaderJob" WHERE "attachmentId"=${row.attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId}
+        AND "purchaseDocumentId"=${row.sourceDocumentId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
+    const filled=await prefillReviewDraft(tx,row,jobs[0],companyId,storeId,orderId,row.supplierId);
+    const [count]=await tx.$queryRaw`SELECT COUNT(*)::int AS "lineCount" FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;
+    const lineCount=count.lineCount;
+    if(!filled)return {lineCount};
+    const details=JSON.stringify({orderId,documentId:row.sourceDocumentId,inboxId:row.inboxId,lineCount});
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},NULL,${actorId},'PURCHASE_MYDATA_PREFILLED',${details}::jsonb)`;
+    return {lineCount};
+  },{timeout:30000});
+}
+
 async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierId){
   const locked=await tx.$queryRaw`SELECT o."id",o."supplierId",d."id" AS "documentId" FROM "PurchaseOrder" o
     JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
