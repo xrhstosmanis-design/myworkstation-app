@@ -1,4 +1,4 @@
-export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,modal,esc,money,refresh,current,staff=false,lookup=true,create=true}){
+export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,modal,esc,money,refresh,current,staff=false,lookup=true,officialLookup=false,create=true}){
  const valid=()=>root.isConnected&&parent.isConnected&&current();
  if(!valid()||parent.dataset.supplierCorrectionBusy)return;
  parent.dataset.supplierCorrectionBusy='1';
@@ -13,7 +13,7 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
    <label>ΑΦΜ <input value="${esc(issuerVat)}" readonly></label>
    <button type="button" data-create-mydata-supplier>Δημιουργία προμηθευτή</button>
   </details>`:'';
- const m=modal(`<div class="po-modal-title blue"><h2>Διόρθωση προμηθευτή τιμολογίου</h2><button data-po-close>×</button></div><form data-supplier-correction style="padding:20px;display:grid;gap:16px;font-size:18px"><p>Παραστατικό <b>${esc(order.invoiceNumber||'')}</b> · ${esc(order.supplierName||'Χωρίς προμηθευτή')}</p><label>Αναζήτηση προμηθευτή<input type="search" name="supplierSearch" placeholder="Επωνυμία ή ΑΦΜ"></label><label>Σωστός προμηθευτής<select name="supplierId" required style="display:block;width:100%;min-height:48px;font-size:18px"><option value="">Επίλεξε βάσει πρωτοτύπου και ΑΦΜ</option>${suppliers.filter(s=>s.id!==order.supplierId&&/^\d{9}$/.test(String(s.taxId||'').trim())).map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ΑΦΜ ${esc(s.taxId)}</option>`).join('')}</select></label>${lookupButton}${issuerForm}<button type="button" data-preview>Έλεγχος διόρθωσης</button><div data-preview-result style="display:grid;gap:14px"></div><p role="alert"></p><button type="button" data-po-close>Άκυρο</button><button type="submit" class="primary" disabled>Επιβεβαίωση διόρθωσης προμηθευτή</button></form>`);
+ const m=modal(`<div class="po-modal-title blue"><h2>Διόρθωση προμηθευτή τιμολογίου</h2><button data-po-close>×</button></div><form data-supplier-correction style="padding:20px;display:grid;gap:16px;font-size:18px"><p>Παραστατικό <b>${esc(order.invoiceNumber||'')}</b> · ${esc(order.supplierName||'Χωρίς προμηθευτή')}</p><label>Αναζήτηση προμηθευτή<input type="search" name="supplierSearch" placeholder="Επωνυμία ή ΑΦΜ"></label><label>Σωστός προμηθευτής<select name="supplierId" required style="display:block;width:100%;min-height:48px;font-size:18px"><option value="">Επίλεξε βάσει πρωτοτύπου και ΑΦΜ</option>${suppliers.filter(s=>s.id!==order.supplierId&&/^\d{9}$/.test(String(s.taxId||'').trim())).map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ΑΦΜ ${esc(s.taxId)}</option>`).join('')}</select></label>${lookupButton}${officialLookup?'<button type="button" data-official-supplier>Έλεγχος ΑΦΜ στην ΑΑΔΕ</button><p data-official-supplier-result role="status"></p>':""}${issuerForm}<button type="button" data-preview>Έλεγχος διόρθωσης</button><div data-preview-result style="display:grid;gap:14px"></div><p role="alert"></p><button type="button" data-po-close>Άκυρο</button><button type="submit" class="primary" disabled>Επιβεβαίωση διόρθωσης προμηθευτή</button></form>`);
  const form=m.querySelector('[data-supplier-correction]'),select=form.elements.supplierId,previewButton=form.querySelector('[data-preview]'),host=form.querySelector('[data-preview-result]'),submit=form.querySelector('[type=submit]'),error=form.querySelector('[role=alert]');
  let preview=null,busy=false,generation=0;
  const alive=()=>valid()&&m.isConnected;
@@ -31,6 +31,31 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
  m.addEventListener('click',event=>{if(event.target===m||event.target.closest('[data-po-close]')){generation++;delete parent.dataset.supplierCorrectionBusy}},{capture:true});
  const createButton=form.querySelector('[data-create-mydata-supplier]');
  const findButton=form.querySelector('[data-find-mydata-supplier]');
+ const officialButton=form.querySelector('[data-official-supplier]'),officialResult=form.querySelector('[data-official-supplier-result]');
+ let officialGeneration=0,officialPending=false;
+ const targetVat=()=>select.value
+  ? String(suppliers.find(s=>s.id===select.value)?.taxId||select.selectedOptions[0]?.dataset.taxId||'').replace(/\D/g,'')
+  : issuerVat;
+ const updateOfficial=()=>{if(officialButton)officialButton.disabled=officialPending||!/^\d{9}$/.test(targetVat())};
+ select.addEventListener('change',()=>{
+  officialGeneration++;
+  if(officialResult)officialResult.textContent='';
+  updateOfficial();
+ });
+ updateOfficial();
+ officialButton?.addEventListener('click',async()=>{
+  const taxId=targetVat();
+  if(!alive()||officialButton.disabled||!/^\d{9}$/.test(taxId))return;
+  const request=++officialGeneration;
+  officialPending=true;
+  updateOfficial();
+  officialResult.textContent='Έλεγχος ΑΦΜ στην ΑΑΔΕ…';
+  try{
+   const result=await api(`/api/commerce/vat-lookup?storeId=${encodeURIComponent(order.storeId)}&taxId=${encodeURIComponent(taxId)}&official=1`);
+   if(alive()&&request===officialGeneration)officialResult.textContent=[result.name,result.address].filter(Boolean).join(' · ');
+  }catch(e){if(alive()&&request===officialGeneration)officialResult.textContent=e.message}
+  finally{officialPending=false;if(alive())updateOfficial()}
+ });
  async function resolveIssuer(createIfMissing){
 
   if(!alive()||busy)return;
@@ -49,10 +74,13 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
    supplierId=supplier.id;
    if(!Array.from(select.options).some(option=>option.value===supplierId)){
     const option=document.createElement('option');
-    option.value=supplierId;option.textContent=`${supplier.name||issuerName} · ΑΦΜ ${issuerVat}`;
+    option.value=supplierId;option.dataset.taxId=issuerVat;option.textContent=`${supplier.name||issuerName} · ΑΦΜ ${issuerVat}`;
     select.appendChild(option);
    }
    select.value=supplierId;
+   officialGeneration++;
+   if(officialResult)officialResult.textContent='';
+   updateOfficial();
    if(createButton)createButton.closest('details').hidden=true;
   }catch(e){if(alive())error.textContent=e.message}
   finally{busy=false;if(alive()){select.disabled=false;if(createButton)createButton.disabled=false;findButton.disabled=false;previewButton.disabled=false;update()}}
