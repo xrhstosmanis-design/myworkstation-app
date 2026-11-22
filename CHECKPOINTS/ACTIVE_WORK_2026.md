@@ -235,6 +235,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 22/11 No5 — opt-in CSV of displayed shifts for the selected store. [Checkpoint](CHANGES/2026-11-22-no5-shift-report-export.md).
 
+22/11 No5 — prioritized delegated editing of individual POS operator permissions. [Checkpoint](CHANGES/2026-11-22-no5-operator-permissions.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB

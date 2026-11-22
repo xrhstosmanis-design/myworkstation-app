@@ -1,39 +1,12 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {ArrowLeft,Check,FileText,Filter,KeyRound,LockKeyhole,MoreHorizontal,Pencil,Plus,Printer,RefreshCw,Save,Search,ShieldCheck,Trash2,UserRound,UsersRound,X} from "lucide-react";
 import "./operator-management.css";
+import {POS_PERMISSIONS} from "../../../../shared/pos-operator-permissions.mjs";
 import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—";
 const roleLabel=role=>role==="MANAGER"?"ΔΙΑΧΕΙΡΙΣΤΗΣ (ΥΠΕΥΘΥΝΟΣ)":"ΧΡΗΣΤΗΣ (ΥΠΑΛΛΗΛΟΣ)";
 const boolObject=value=>value&&typeof value==="object"?value:{};
-const POS_PERMISSIONS=[
-  ["inventoryPos","Αποθήκη από POS"],
-  ["inventoryMerge","Συγχώνευση διπλοεγγραφών από POS"],
-  ["editDescription","Επεξεργασία στοιχείων ειδών (PoS)"],
-  ["newProduct","Νέο είδος · Πλήρης καρτέλα (PoS)"],
-  ["stockPos","στήλη Stock (PoS)"],
-  ["confirmDeleteSale","Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"],
-  ["editPosButtons","Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"],
-  ["closeWithoutPrint","Κλείσιμο χωρίς εκτύπωση (PoS)"],
-  ["deleteSaleReason","διαγραφή λίστας πώλησης (PoS) με αιτιολογία"],
-  ["addBarcode","Προσθήκη barcode είδους (PoS & BackOffice)"],
-  ["onlineBarcode","Online αναζήτηση barcode (PoS)"],
-  ["changeRetail","Αλλαγή τιμής λιανικής (PoS & BackOffice)"],
-  ["returnItems","Επιστροφή ειδών (PoS)"],
-  ["customersPos","Πελάτες (PoS)"],
-  ["customerCardOnly","Αναζήτηση πελάτη μόνο με αριθμό κάρτας (PoS)"],
-  ["thirdPartyPayment","πληρωμή προς Τρίτους"],
-  ["hidePrinter","Απόκρυψη εκτύπωσης ετικέτας (PoS)"],
-  ["supplierPayment","πληρωμή Προμηθευτή"],
-  ["sameShiftPayments","Οι πληρωμές να αφαιρούνται από την ίδια βάρδια"],
-  ["transferAmount","Μεταφορά ποσού"],
-  ["shiftTransactionsPos","Συναλλαγές βάρδιας (PoS)"],
-  ["allShiftTransactionsPos","Όλες οι συναλλαγές Βάρδιας (PoS)"],
-  ["cash","Μετρητά"],
-  ["initialCash","με αρχικό Ταμείο"],
-  ["closeShift","Κλείσιμο βάρδιας (PoS)"],
-  ["cards","Κάρτες"]
-];
 const MENU_PERMISSIONS=[["orders","Παραγγελίες (Τιμολόγια / Παραλαβές στο PoS)"]];
 
 
