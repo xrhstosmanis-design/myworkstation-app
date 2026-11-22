@@ -30,3 +30,16 @@ test('delegated mutation rechecks the live grant and updates only one POS flag i
   assert.match(writer,/'OPERATOR_PERMISSION_UPDATED'/);
   assert.doesNotMatch(writer,/"pinHash"|"powerUser"|"backofficeAccess"/);
 });
+
+
+test('the POS orders flag uses the same setting that the operator runtime reads',()=>{
+  const catalog=readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8');
+  const owner=readFileSync(new URL('../../client/src/components/commerce/OperatorManagementPanel.jsx',import.meta.url),'utf8');
+  const manager=readFileSync(new URL('../../client/src/components/backoffice/StaffOperatorPermissions.jsx',import.meta.url),'utf8');
+  assert.match(catalog,/purchaseOrders:row.backofficeMenu\?\.orders===true/);
+  assert.match(owner,/items=\{POS_MENU_PERMISSIONS\}/);
+  assert.match(manager,/\[\.\.\.POS_PERMISSIONS,\.\.\.POS_MENU_PERMISSIONS\]/);
+  assert.match(route,/profile\?\.backofficeMenu\?\.orders===true/);
+  assert.match(route,/jsonb_set\("backofficeMenu",'\{orders\}'/);
+  assert.match(route,/jsonb_build_object\('orders'/);
+});
