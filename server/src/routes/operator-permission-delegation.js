@@ -3,11 +3,13 @@ import crypto from "node:crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireStaffAction,staffError} from "../services/backoffice-staff-access.js";
-import {POS_PERMISSIONS} from "../../../shared/pos-operator-permissions.mjs";
+import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from "../../../shared/pos-operator-permissions.mjs";
 
 const router=Router();
 const delegatedOperatorPermission = "operator-profiles.manage-permissions";
-const operatorPermissionKeys = POS_PERMISSIONS.map(([key])=>key);
+const operatorPermissionKeys = [...POS_PERMISSIONS,...POS_MENU_PERMISSIONS].map(([key])=>key);
+const isMenuPermission = key=>key==="orders";
+const permissionEnabled = (profile,key)=>isMenuPermission(key)?profile?.backofficeMenu?.orders===true:Boolean(profile?.permissions?.[key]);
 const permissionChange = z.object({
   key:z.enum(operatorPermissionKeys), enabled:z.boolean(), expected:z.boolean()
 }).strict();
@@ -28,7 +30,7 @@ function delegatedPermissionsRoute(handler){
 router.get("/stores/:storeId/employee-permissions",delegatedPermissionsRoute(async(req,res)=>{
   const {companyId,id:actorId}=req.user,storeId=req.params.storeId;
   const rows=await prisma.$queryRaw`
-    SELECT c."employeeId",c."displayName",p."permissions"
+    SELECT c."employeeId",c."displayName",p."permissions",p."backofficeMenu"
     FROM "StoreOperatorCredential" c
     JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId"
     LEFT JOIN "StoreOperatorProfile" p ON p."employeeId"=c."employeeId" AND p."storeId"=c."storeId" AND p."companyId"=c."companyId"
@@ -38,7 +40,7 @@ router.get("/stores/:storeId/employee-permissions",delegatedPermissionsRoute(asy
   await requireStaffAction(prisma,req,storeId,delegatedOperatorPermission);
   res.json({companyId,storeId,items:rows.map(row=>({
     employeeId:row.employeeId,displayName:row.displayName,
-    permissions:Object.fromEntries(operatorPermissionKeys.map(key=>[key,Boolean(row.permissions?.[key])]))
+    permissions:Object.fromEntries(operatorPermissionKeys.map(key=>[key,permissionEnabled(row,key)]))
   }))});
 }));
 
@@ -55,17 +57,23 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId",delegatedPermis
       FOR UPDATE OF c,e`;
     if(!credential)throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Δεν βρέθηκε ενεργός χειριστής στο κατάστημα.");
     const [profile]=await tx.$queryRaw`
-      SELECT "permissions" FROM "StoreOperatorProfile"
+      SELECT "permissions","backofficeMenu" FROM "StoreOperatorProfile"
       WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId} FOR UPDATE`;
-    const before=Boolean(profile?.permissions?.[key]);
+    const before=permissionEnabled(profile,key);
     if(before===enabled)return;
     if(before!==expected)throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Το δικαίωμα άλλαξε. Ανανέωσε τη λίστα.");
+    const menuPermission=isMenuPermission(key);
     const changed=profile?await tx.$executeRaw`
-      UPDATE "StoreOperatorProfile" SET "permissions"=jsonb_set("permissions",ARRAY[${key}]::text[],to_jsonb(${enabled}::boolean)),"updatedAt"=NOW()
+      UPDATE "StoreOperatorProfile" SET
+        "permissions"=CASE WHEN ${menuPermission} THEN "permissions" ELSE jsonb_set("permissions",ARRAY[${key}]::text[],to_jsonb(${enabled}::boolean)) END,
+        "backofficeMenu"=CASE WHEN ${menuPermission} THEN jsonb_set("backofficeMenu",'{orders}',to_jsonb(${enabled}::boolean)) ELSE "backofficeMenu" END,
+        "updatedAt"=NOW()
       WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId}`
       :await tx.$executeRaw`
-      INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","permissions","createdBy")
-      VALUES (${crypto.randomUUID()},${companyId},${storeId},${employeeId},jsonb_build_object(${key}::text,${enabled}::boolean),${actorId})
+      INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","permissions","backofficeMenu","createdBy")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${employeeId},
+        CASE WHEN ${menuPermission} THEN '{}'::jsonb ELSE jsonb_build_object(${key}::text,${enabled}::boolean) END,
+        CASE WHEN ${menuPermission} THEN jsonb_build_object('orders',${enabled}::boolean) ELSE '{}'::jsonb END,${actorId})
       ON CONFLICT ("storeId","employeeId") DO NOTHING`;
     if(changed!==1)throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Το δικαίωμα άλλαξε. Ανανέωσε τη λίστα.");
     await tx.$executeRaw`
