@@ -12,10 +12,11 @@ function workbook(rows){
 test('Kiosk preview and import can use the same normalized amount, date and description',()=>{
   const parsed=parseKioskPaymentFile('kiosk.xlsx',workbook([
     ['22/11/2026',-12,'Αρνητική εγγραφή'],
+    ['22/11/2026','-12,00','Αρνητική εγγραφή σε κείμενο'],
     ['22/11/2026',12.5,'Έξοδο']
   ]));
   assert.equal(parsed.rows.length,1);
-  assert.equal(parsed.skipped,1);
+  assert.equal(parsed.skipped,2);
   assert.equal(parsed.rows[0].amount,12.5);
   assert.equal(parsed.rows[0].description,'Kiosk · Έξοδο');
   assert.equal(parsed.sheet,'Kiosk');
