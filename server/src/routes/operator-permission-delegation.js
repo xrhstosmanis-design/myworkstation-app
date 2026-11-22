@@ -130,6 +130,30 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId/pos-access",dele
   res.json({companyId,storeId,employeeId,enabled});
 },delegatedPosAccess));
 
+const delegatedPinReset="operator-profiles.reset-pin";
+const pinResetBody=z.object({pin:z.string().regex(/^\d{4,8}$/)}).strict();
+
+router.post("/stores/:storeId/employee-permissions/:employeeId/pin",delegatedPermissionsRoute(async(req,res)=>{
+  const {companyId,id:actorId}=req.user,{storeId,employeeId}=req.params;
+  const {pin}=pinResetBody.parse(req.body);
+  const pinHash=await bcrypt.hash(pin,12);
+  await prisma.$transaction(async tx=>{
+    await requireStaffAction(tx,req,storeId,delegatedPinReset);
+    const credential=await lockEmployeeOperator(tx,{companyId,storeId,employeeId,actorId});
+    await tx.$executeRaw`
+      UPDATE "StoreOperatorCredential" SET "pinHash"=${pinHash},"updatedAt"=NOW()
+      WHERE "id"=${credential.id} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+    await tx.$executeRaw`
+      UPDATE "StoreOperatorSession" SET "revokedAt"=NOW()
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "operatorId"=${credential.id} AND "revokedAt" IS NULL`;
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${credential.id},${actorId},'OPERATOR_PIN_CHANGED',
+        CAST(${JSON.stringify({employeeId})} AS jsonb))`;
+  });
+  res.json({companyId,storeId,employeeId,changed:true});
+},delegatedPinReset));
+
 const delegatedProvisioning="operator-profiles.create-employee";
 const provisionBody=z.object({
   fullName:z.string().trim().min(2).max(160),
