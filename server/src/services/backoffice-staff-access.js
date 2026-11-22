@@ -63,7 +63,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(user?.tokenType!=='BACKOFFICE_USER'||user.staffAccess!==true)return true;
   if(req.get?.('x-backoffice-company-id')!==undefined)return enforceStaffCompanyRequest(db,req);
   await liveStaff(db,user);
-  const path=String(req.originalUrl||'').split('?')[0],capability=staffRequestCapability(req.method,path,req.body||{});
+  const path=String(req.originalUrl||'').split('?')[0],capability=staffRequestCapability(req.method,path,req.body||{},req.query||{});
   if(!capability)throw staffError();
   req.user={...user,staffAccess:true};
   res.setHeader('Cache-Control','private, no-store');
