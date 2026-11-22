@@ -9,8 +9,9 @@ export async function loadInvoiceAssistantSource(db,companyId,orderId,context={}
   }
   const docs=await db.$queryRaw`
     SELECT d."id",d."storeId",d."documentNumber",d."totalGross",COALESCE(o."supplierId",d."supplierId") AS "supplierId"
-    FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId"
+    FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
     WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND o."status"='NEW'
+      AND (${context.storeId??null}::text IS NULL OR o."storeId"=${context.storeId??null})
       AND o."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT' LIMIT 1`;
   const document=docs[0];if(!document)return null;
   if(context.inboxId){
@@ -67,7 +68,7 @@ export async function loadInvoiceAssistantSource(db,companyId,orderId,context={}
   const pages=[];
   for(const pageId of ids){
     const rows=await db.$queryRaw`SELECT a."filename",a."mimeType",a."contentData"
-      FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId"
+      FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId"
       WHERE j."id"=${pageId} AND j."companyId"=${companyId} AND j."storeId"=${document.storeId} LIMIT 1`;
     if(!rows[0]?.contentData)return {document,pages:[]};
     pages.push(rows[0]);

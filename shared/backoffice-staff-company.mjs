@@ -15,8 +15,56 @@ export {companyConfigurationActions,companyConfigurationRequest};
 // Company authority is independent of STORE membership and profile presets.
 // These keys become selectable only after the installed protocol is verified.
 export const staffCompanyProtocol='MWS_BACKOFFICE_COMPANY_V1';
-export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read','reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read','reports-stocktakes.read','reports-stock-snapshot.read','reports-item-snapshot.read','reports-stock-analysis.read','reports-sales-analysis.read','reports-payroll-expenses.read','reports-supplier-invoices.read','reports-supplier-payments.read','reports-supplier-purchases.read','reports-customer-turnover.read',...companyConfigurationActions.map(action=>action.key),...companyOwnerReportActions.map(action=>action.key),...companyPartyControlActions.map(action=>action.key),...companyWholesaleActions.map(action=>action.key),...observerLogisticsActions.map(action=>action.key),...companyProductCenterActions.map(action=>action.key),...finalPassiveCompanyActions.map(action=>action.key)]);
-export const staffCompanyModules=Object.freeze({'stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY','reports-deactivations.read':null,'reports-logins.read':'INVENTORY','reports-sale-deletions.read':null,'reports-pos-sale-actions.read':null,'reports-destructions.read':null,'reports-movements.read':'INVENTORY','reports-stocktakes.read':'INVENTORY','reports-stock-snapshot.read':'INVENTORY','reports-item-snapshot.read':'INVENTORY','reports-stock-analysis.read':'INVENTORY','reports-sales-analysis.read':'INVENTORY','reports-payroll-expenses.read':'INVENTORY','reports-supplier-invoices.read':'INVENTORY','reports-supplier-payments.read':'INVENTORY','reports-supplier-purchases.read':'INVENTORY','reports-customer-turnover.read':'CORE',...Object.fromEntries(companyConfigurationActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyOwnerReportActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyPartyControlActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyWholesaleActions.map(action=>[action.key,action.module])),...Object.fromEntries(observerLogisticsActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyProductCenterActions.map(action=>[action.key,action.module])),...Object.fromEntries(finalPassiveCompanyActions.map(action=>[action.key,action.module]))});
+export const supplierManualCreateCapability='supplier-manual.create';
+export const supplierFiscalCapability='supplier-fiscal.edit';
+export const supplierTransferCapability='supplier-products.transfer';
+export const supplierTaxIdCapability='supplier-tax-id.correct';
+export const supplierContactCapability='supplier-contact.edit';
+export const supplierContactPath='/api/backoffice-staff/company/party-control/suppliers';
+export const supplierAddressCapability='supplier-addresses.manage';
+export const supplierUnitCapability='supplier-units.manage';
+export const supplierBalanceAdjustCapability='supplier-balance.adjust';
+export const supplierDeactivateCapability='supplier-status.deactivate';
+export const supplierReactivateCapability='supplier-status.reactivate';
+export const invoiceProductCardCapability='invoice-product-card.edit';
+export const invoiceProductBarcodesCapability='invoice-product-barcodes.edit';
+function supplierRouteId(value){
+ let id;try{id=decodeURIComponent(value)}catch{return null}
+ return id&&id.trim()===id&&id.length<=160&&!['.','..'].includes(id)&&!/[\x00-\x1f\x7f/\\?#]/.test(id)?id:null;
+}
+export function staffSupplierManagementRoute(method,path){
+ const transfer=/^\/api\/supplier-control\/([^/]+)\/(transfer-candidates|transfer)$/.exec(path);
+ if(transfer&&((method==='GET'&&transfer[2]==='transfer-candidates')||(method==='POST'&&transfer[2]==='transfer'))){
+  const supplierId=supplierRouteId(transfer[1]);
+  return supplierId?{supplierId,capability:supplierTransferCapability}:null;
+ }
+
+
+ if(method==='POST'&&path===supplierContactPath)return {capability:supplierManualCreateCapability};
+ if(typeof path!=='string'||!path.startsWith(supplierContactPath+'/'))return null;
+ const tail=path.slice(supplierContactPath.length).split('/');
+ const [,rawSupplierId,resource,rawItemId]=tail;
+ const supplierId=supplierRouteId(rawSupplierId??'');
+ if(!supplierId)return null;
+ if(resource==='tax-id'&&method==='PATCH'&&tail.length===3)return {supplierId,capability:supplierTaxIdCapability};
+ if(resource==='contact'&&method==='PATCH'&&tail.length===3)return {supplierId,capability:supplierContactCapability};
+ if(resource==='fiscal'&&method==='PATCH'&&tail.length===3)return {supplierId,capability:supplierFiscalCapability};
+ if(resource==='balance-adjustments'&&method==='POST'&&tail.length===3)return {supplierId,capability:supplierBalanceAdjustCapability};
+ if(resource==='deactivate'&&method==='POST'&&tail.length===3)return {supplierId,capability:supplierDeactivateCapability};
+ if(resource==='reactivate'&&method==='POST'&&tail.length===3)return {supplierId,capability:supplierReactivateCapability};
+ const capability=resource==='addresses'?supplierAddressCapability:resource==='units'?supplierUnitCapability:null;
+ if(!capability)return null;
+ if(method==='POST'&&tail.length===3)return {supplierId,resource,capability};
+ const itemId=rawItemId&&supplierRouteId(rawItemId);
+ if(method==='DELETE'&&tail.length===4&&itemId)return {supplierId,resource,capability,itemId};
+ return null;
+}
+export function staffSupplierContactId(method,path){
+ const route=staffSupplierManagementRoute(method,path);
+ return route?.capability===supplierContactCapability?route.supplierId:null;
+}
+export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read','reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read','reports-stocktakes.read','reports-stock-snapshot.read','reports-item-snapshot.read','reports-stock-analysis.read','reports-sales-analysis.read','reports-payroll-expenses.read','reports-supplier-invoices.read','reports-supplier-payments.read','reports-supplier-purchases.read','reports-customer-turnover.read',...companyConfigurationActions.map(action=>action.key),...companyOwnerReportActions.map(action=>action.key),...companyPartyControlActions.map(action=>action.key),...companyWholesaleActions.map(action=>action.key),...observerLogisticsActions.map(action=>action.key),...companyProductCenterActions.map(action=>action.key),...finalPassiveCompanyActions.map(action=>action.key),supplierContactCapability,supplierAddressCapability,supplierUnitCapability,supplierBalanceAdjustCapability,supplierDeactivateCapability,supplierReactivateCapability,supplierManualCreateCapability,supplierFiscalCapability,supplierTransferCapability,supplierTaxIdCapability,invoiceProductCardCapability,invoiceProductBarcodesCapability]);
+export const staffCompanyModules=Object.freeze({[invoiceProductCardCapability]:'INVENTORY',[invoiceProductBarcodesCapability]:'INVENTORY',[supplierTaxIdCapability]:'INVENTORY',[supplierFiscalCapability]:'INVENTORY',[supplierManualCreateCapability]:'INVENTORY',[supplierBalanceAdjustCapability]:'INVENTORY',[supplierDeactivateCapability]:'INVENTORY',[supplierReactivateCapability]:'INVENTORY',[supplierAddressCapability]:'INVENTORY',[supplierUnitCapability]:'INVENTORY',[supplierContactCapability]:'INVENTORY','stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY','reports-deactivations.read':null,'reports-logins.read':'INVENTORY','reports-sale-deletions.read':null,'reports-pos-sale-actions.read':null,'reports-destructions.read':null,'reports-movements.read':'INVENTORY','reports-stocktakes.read':'INVENTORY','reports-stock-snapshot.read':'INVENTORY','reports-item-snapshot.read':'INVENTORY','reports-stock-analysis.read':'INVENTORY','reports-sales-analysis.read':'INVENTORY','reports-payroll-expenses.read':'INVENTORY','reports-supplier-invoices.read':'INVENTORY','reports-supplier-payments.read':'INVENTORY','reports-supplier-purchases.read':'INVENTORY','reports-customer-turnover.read':'CORE',...Object.fromEntries(companyConfigurationActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyOwnerReportActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyPartyControlActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyWholesaleActions.map(action=>[action.key,action.module])),...Object.fromEntries(observerLogisticsActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyProductCenterActions.map(action=>[action.key,action.module])),...Object.fromEntries(finalPassiveCompanyActions.map(action=>[action.key,action.module]))});
 export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:'Εταιρικές προβολές',actions:Object.freeze([
   {key:'stores.read',label:'Προβολή καταστημάτων εταιρείας',description:'Βλέπει τον κατάλογο καταστημάτων της εταιρείας, χωρίς ρυθμίσεις ή είσοδο στη διαχείρισή τους.'},
   {key:'suppliers.read',label:'Προβολή προμηθευτών εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας και ΑΦΜ προμηθευτών της εταιρείας, χωρίς πληρωμές ή αλλαγές.'},
@@ -56,6 +104,18 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   ...companyConfigurationActions.map(({module,...action})=>action),
   ...companyOwnerReportActions.map(({module,...action})=>action),
   ...companyPartyControlActions.map(({module,...action})=>action),
+  {key:supplierTransferCapability,requires:['supplier-control-report.read'],label:'Μεταφορά ειδών και κωδικών προμηθευτή',description:'Μεταφέρει επιλεγμένα είδη ή κωδικούς μεταξύ προμηθευτών της ίδιας εταιρείας.'},
+  {key:supplierManualCreateCapability,label:'Χειροκίνητη δημιουργία προμηθευτή',description:'Δημιουργεί νέα κοινή καρτέλα προμηθευτή για όλη την εταιρεία.'},
+  {key:supplierFiscalCapability,requires:['supplier-card.read'],label:'Φορολογικές και λογιστικές ρυθμίσεις προμηθευτή',description:'Αλλάζει ΔΟΥ, ΜΥΦ, λογιστικούς κωδικούς, κατηγορία και προτιμήσεις ΦΠΑ/πληρωμής στην κοινή καρτέλα της εταιρείας. Το ΑΦΜ εμφανίζεται για αναφορά.'},
+  {key:supplierTaxIdCapability,requires:['supplier-card.read'],label:'Διόρθωση ΑΦΜ καρτέλας προμηθευτή',description:'Ελέγχει το ΑΦΜ και το αλλάζει στην κοινή καρτέλα με αιτιολογία και επιβεβαίωση. Καρτέλα με συνδεδεμένες αγορές ή πληρωμές απαιτεί ειδικό έλεγχο.'},
+  {key:supplierContactCapability,requires:['supplier-card.read'],label:'Επεξεργασία βασικών στοιχείων προμηθευτή',description:'Αλλάζει επωνυμία, τηλέφωνα και email στην κοινή καρτέλα προμηθευτή της εταιρείας.'},
+  {key:supplierBalanceAdjustCapability,requires:['supplier-card.read','supplier-balances.read'],label:'Διόρθωση υπολοίπου προμηθευτή',description:'Καταχωρίζει αιτιολογημένη προσαρμογή υπολοίπου στην εταιρεία.'},
+  {key:supplierDeactivateCapability,requires:['supplier-card.read'],label:'Απενεργοποίηση προμηθευτή',description:'Απενεργοποιεί την κοινή καρτέλα προμηθευτή της εταιρείας και διατηρεί το ιστορικό.'},
+  {key:supplierReactivateCapability,requires:['supplier-card.read'],label:'Επανενεργοποίηση προμηθευτή',description:'Ενεργοποιεί ξανά υπάρχουσα ανενεργή καρτέλα προμηθευτή της εταιρείας.'},
+  {key:invoiceProductCardCapability,contextOnly:true,label:'Διόρθωση εταιρικής καρτέλας είδους από τιμολόγιο',description:'Αλλάζει την ονομασία και τη βασική λιανική της εταιρικής καρτέλας από συνδεδεμένη γραμμή τιμολογίου.'},
+  {key:invoiceProductBarcodesCapability,contextOnly:true,label:'Διαχείριση εταιρικών barcodes είδους από τιμολόγιο',description:'Προσθέτει, διορθώνει ή αφαιρεί barcodes στο είδος που είναι συνδεδεμένο με τη γραμμή τιμολογίου.'},
+  {key:supplierAddressCapability,requires:['supplier-card.read'],label:'Διαχείριση διευθύνσεων προμηθευτή',description:'Προσθέτει και αφαιρεί διευθύνσεις στην κοινή καρτέλα ενεργού προμηθευτή της εταιρείας.'},
+  {key:supplierUnitCapability,requires:['supplier-card.read'],label:'Διαχείριση μονάδων προμηθευτή',description:'Προσθέτει και αφαιρεί επιχειρηματικές μονάδες στην κοινή καρτέλα ενεργού προμηθευτή της εταιρείας.'},
   ...companyWholesaleActions.map(({module,...action})=>action),
   ...observerLogisticsActions.map(({module,...action})=>action),
   ...companyProductCenterActions.map(({module,...action})=>action),
@@ -100,6 +160,8 @@ export function staffCompanyReportProductId(path,family){
  return value&&value.length<=160&&value.trim()===value&&!/[\/\\\u0000-\u001f\u007f]/.test(value)?value:null;
 }
 export function staffCompanyRequestCapability(method,path){
+  const supplierWrite=staffSupplierManagementRoute(method,path);
+  if(supplierWrite)return supplierWrite.capability;
   if(method!=='GET')return null;
   if(path==='/api/owner-products/stores')return 'stores.read';
   if(path==='/api/commerce/suppliers')return 'suppliers.read';

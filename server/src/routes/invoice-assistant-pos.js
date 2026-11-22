@@ -45,7 +45,8 @@ function manager(req,res,next){
   if(req.user?.staffAccess===true){
     if(req.method==="POST"&&req.staffGrant?.capability==="invoice-ai.photo-preview"&&
       req.user.storeId&&req.body?.storeId===req.user.storeId&&Array.isArray(req.body.manualPhotos))return next();
-    return res.status(403).json({error:"Η ανάγνωση απαιτεί φωτογραφίες και δικαίωμα στο επιλεγμένο κατάστημα."});
+    if(req.staffGrant?.capability==="invoice-ai.original-preview"&&req.user.storeId&&req.body?.manualPhotos===undefined)return next();
+    return res.status(403).json({error:"Η ανάγνωση απαιτεί δικαίωμα στο επιλεγμένο κατάστημα."});
   }
   if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!managers.has(req.user?.role)))return res.status(403).json({error:"Ο έλεγχος τιμολογίου είναι διαθέσιμος μόνο σε ιδιοκτήτη ή διαχειριστή."});
   next();
@@ -72,9 +73,10 @@ function assistantSourceContext(req,res,next){
     req.invoiceAssistantSource=parsed.data;
     return requireCompanyModule("DOCUMENTS")(req,res,error=>error?next(error):requireCompanyModule("INVENTORY")(req,res,next));
   }
-  if(input?.inboxId===undefined){req.invoiceAssistantSource={};return next()}
+  if(input?.inboxId===undefined){req.invoiceAssistantSource=req.user.staffAccess===true?{storeId:req.user.storeId}:{};return next()}
   try{req.invoiceAssistantSource=sourceContextSchema.parse(input)}catch(error){return res.status(400).json({error:"Απαιτείται συγκεκριμένη εγγραφή myDATA και επιλεγμένο κατάστημα."})}
-  if(req.posPurchaseOrderAccess||req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Ο έλεγχος από myDATA επιτρέπεται μόνο στο BackOffice."});
+  if(req.user.staffAccess===true&&req.invoiceAssistantSource.storeId!==req.user.storeId)throw staffError();
+  if(req.posPurchaseOrderAccess&&req.user.staffAccess!==true||req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Ο έλεγχος από myDATA επιτρέπεται μόνο στο BackOffice."});
   return requireCompanyModule("DOCUMENTS")(req,res,error=>error?next(error):requireCompanyModule("INVENTORY")(req,res,next));
 }
 
@@ -84,6 +86,10 @@ router.get("/purchase-orders/:orderId/invoice-assistant/source",requireCompanyMo
     if(!result)return res.status(404).json({error:"Δεν υπάρχει ενεργό πρόχειρο POS για αυτό το τιμολόγιο."});
     if(!result.pages.length)return res.status(409).json({error:req.invoiceAssistantSource.inboxId?"Δεν βρέθηκε το πρωτότυπο PDF της συγκεκριμένης εγγραφής myDATA στο ίδιο πρόχειρο και κατάστημα.":"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
     const supplier=await prisma.$queryRaw`SELECT "taxId" FROM "Supplier" WHERE "id"=${result.document.supplierId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    if(req.user.staffAccess===true){
+      if(result.document.storeId!==req.user.storeId)throw staffError();
+      await requireStaffGrant(prisma,req.user,req.user.storeId,"invoice-ai.original-preview");
+    }
     res.json({document:{id:result.document.id,documentNumber:result.document.documentNumber,totalGross:Number(result.document.totalGross||0),supplierTaxId:String(supplier[0]?.taxId||"")},pages:result.pages.map((page,index)=>({index:index+1,filename:page.filename,mimeType:page.mimeType,dataUrl:page.contentData}))});
   }catch(error){next(error)}
 });
@@ -97,7 +103,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     if(!result.pages.length)return res.status(409).json({error:req.invoiceAssistantSource.inboxId?"Δεν βρέθηκε το πρωτότυπο PDF της συγκεκριμένης εγγραφής myDATA στο ίδιο πρόχειρο και κατάστημα.":"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
     if(req.user?.staffAccess===true){
       if(result.document.storeId!==req.user.storeId)throw staffError();
-      await requireStaffGrant(prisma,req.user,req.user.storeId,'invoice-ai.photo-preview');
+      await requireStaffGrant(prisma,req.user,req.user.storeId,req.invoiceAssistantSource.manualPhotos?'invoice-ai.photo-preview':'invoice-ai.original-preview');
     }
     return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:result.document.storeId,invoiceDocumentId:req.invoiceAssistantSource.manualPhotos?undefined:result.document.id,activity:walletActivityFromRequest(req,{storeId:result.document.storeId,purpose:"INVOICE_ASSISTANT",documentId:req.invoiceAssistantSource.manualPhotos?null:result.document.id,documentNumber:result.document.documentNumber})},async()=>{
     const rows=await prisma.$queryRaw`SELECT "id","ocrSequence","supplierCode","description","quantity","unitCost","invoiceUnit","stockUnitsPerInvoiceUnit","discount1","discount2","discount3","exciseTotal","vatRate","netAmount","grossAmount","ocrRawText"
