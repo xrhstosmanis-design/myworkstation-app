@@ -2,6 +2,14 @@ import React,{useEffect,useId,useRef,useState} from "react";
 import "./automatic-report-settings.css";
 import AutomaticReportDispatchManager from './AutomaticReportDispatchManager.jsx';
 
+const deliveryScheduleLabels=[
+  ["cashDaily","Ημερήσια ταμεία"],
+  ["cashWeekly","Εβδομαδιαία ταμεία"],
+  ["cashMonthly","Μηνιαία ταμεία, τζίρος και βάρδιες"],
+  ["supplierMonthly","Μηνιαία σύγκριση προμηθευτών"],
+  ["promotionResult","Αποτελέσματα προσφορών"],
+  ["inventoryResult","Αποτελέσματα απογραφής"]
+];
 const dateTime=value=>new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false});
 const money=v=>Number(v).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const modeNames={FULL:"Πλήρης έλεγχος",DIFFERENCE_ONLY:"Μόνο διαφορά",POS_EFTPOS_ONLY:"Μόνο POS / EFTPOS"};
@@ -23,6 +31,11 @@ export default function AutomaticReportSettingsManager({company,store,request,on
   };
   useEffect(()=>{load();return()=>{sequence.current++}},[path,request]);
   const change=next=>{setDraft(next);setDirty(true);setReport(null);setMessage("")};
+  const changeSchedule=(key,schedule)=>{
+    const next={...draft,deliverySchedules:{...draft.deliverySchedules,[key]:schedule}};
+    if(key==="cashDaily")delete next.dailySendTime;
+    change(next);
+  };
   const save=async event=>{
     event.preventDefault();if(!confirmed||!data||!draft||busy)return;
     const token=++sequence.current;setBusy("save");setError("");setMessage("");setReport(null);
@@ -47,6 +60,16 @@ export default function AutomaticReportSettingsManager({company,store,request,on
     {draft&&data&&<><form onSubmit={save}><fieldset disabled={Boolean(busy)}><legend>Επιχειρησιακή ημέρα και βάρδιες · ώρα Ελλάδας</legend>
       <div className="report-settings-hours">{[["dayStartHour","Αλλαγή ημέρας / έναρξη 1ης",5,12],["secondShiftStartHour","Έναρξη 2ης βάρδιας",6,22],["thirdShiftStartHour","Έναρξη 3ης βάρδιας",7,23]].map(([key,label,min,max])=><label key={key}>{label}<input aria-label={label} type="number" required={key!=="thirdShiftStartHour"||draft.terminals.some(t=>t.requiredSlots.includes(3))} min={min} max={max} step="1" value={draft[key]??""} onChange={e=>change({...draft,[key]:e.target.value===""?"":Number(e.target.value)})}/></label>)}</div>
       <p>Ώρες έναρξης, όχι κλεισίματος. Για δύο βάρδιες επίλεξε μόνο 1η και 2η στο ταμείο· η ώρα τρίτης μπορεί να μείνει κενή. Η τελευταία βάρδια μπορεί να κλείνει μετά τα μεσάνυχτα και ανήκει στην επιχειρησιακή ημέρα που άνοιξε. Οι βάρδιες αντιστοιχίζονται από την πραγματική ώρα ανοίγματος στα δηλωμένα όρια· πρώιμα ή έκτακτα ανοίγματα χρειάζονται έλεγχο.</p>
+      <fieldset><legend>Προγραμματισμός αυτόματων αποστολών</legend>
+        <p>Η ώρα είναι το νωρίτερο σημείο αποστολής, σε ώρα Ελλάδας. Οι έτοιμες αναφορές αποστέλλονται στα email που έχεις αποθηκεύσει στις «Αυτόματες αποστολές».</p>
+        {deliveryScheduleLabels.map(([key,label])=>{
+          const schedule=draft.deliverySchedules?.[key]??{enabled:true,sendTime:key==="cashDaily"?draft.dailySendTime:undefined};
+          return <div className="report-settings-hours" key={key}>
+            <label><input type="checkbox" checked={schedule.enabled} onChange={e=>changeSchedule(key,{...schedule,enabled:e.target.checked})}/>{label}</label>
+            <label>Ώρα αποστολής<input aria-label={`Ώρα αποστολής · ${label}`} type="time" value={schedule.sendTime??""} disabled={!schedule.enabled} onChange={e=>changeSchedule(key,{enabled:schedule.enabled,sendTime:e.target.value||undefined})}/></label>
+          </div>;
+        })}
+      </fieldset>
       <h3>Αναμενόμενα ταμεία</h3><p>Δήλωσε κάθε ταμείο με τον ακριβή κωδικό του και τις βάρδιες που πρέπει να λειτουργεί. Το delivery μπορεί να έχει μόνο πρωινή βάρδια.</p>
       <datalist id={id+"-terminals"}>{data.observedTerminals.map(value=><option key={value} value={value}/>)}</datalist>
       {draft.terminals.map((terminal,index)=><div className="report-settings-terminal" key={index}><label>Ταμείο {index+1}<input aria-label={`Κωδικός ταμείου ${index+1}`} required maxLength="120" list={id+"-terminals"} value={terminal.terminalPos} onChange={e=>change({...draft,terminals:draft.terminals.map((t,i)=>i===index?{...t,terminalPos:e.target.value}:t)})}/></label>
