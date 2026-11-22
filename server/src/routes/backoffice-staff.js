@@ -1,3 +1,4 @@
+import {createStaffSupplierManually} from '../services/backoffice-staff-supplier-manual.js';
 import {applyStaffSupplierAction} from '../services/backoffice-staff-supplier-actions.js';
 import {ensureSupplierControlSchema} from './supplier-control.js';
 import {mutateStaffSupplierRelatedRecord} from '../services/backoffice-staff-supplier-related-records.js';
@@ -82,6 +83,10 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     router.post(path,async(req,res)=>{try{res.status(201).json(await mutateStaffSupplierRelatedRecord(db,req))}catch(error){failure(res,error)}});
     router.delete(path+'/:itemId',async(req,res)=>{try{res.json(await mutateStaffSupplierRelatedRecord(db,req))}catch(error){failure(res,error)}});
   }
+  router.post('/company/party-control/suppliers',async(req,res)=>{try{
+    const result=await createStaffSupplierManually(db,req);
+    res.status(result.replay?200:201).json(result);
+  }catch(error){failure(res,error)}});
   router.patch('/company/party-control/suppliers/:partyId/contact',async(req,res)=>{try{res.json(await updateStaffSupplierContact(db,req))}catch(error){failure(res,error)}});
   router.post('/company/party-control/suppliers/:partyId/balance-adjustments',async(req,res)=>{
     try{
@@ -89,7 +94,7 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
       res.status(201).json(await applyStaffSupplierAction(db,req));
     }catch(error){failure(res,error)}
   });
-  router.post('/company/party-control/suppliers/:partyId/deactivate',async(req,res)=>{
+  router.post(['/company/party-control/suppliers/:partyId/deactivate','/company/party-control/suppliers/:partyId/reactivate'],async(req,res)=>{
     try{res.json(await applyStaffSupplierAction(db,req))}catch(error){failure(res,error)}
   });
   router.get(['/company/owner-reports/dashboard','/company/owner-reports/master-catalog','/company/owner-reports/financial-stores','/company/owner-reports/financial-suppliers','/company/owner-reports/shifts','/company/owner-reports/shifts/:sessionId/detail','/company/owner-reports/payments','/company/owner-reports/business-picture','/company/owner-reports/audit'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
