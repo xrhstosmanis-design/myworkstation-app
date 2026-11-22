@@ -340,6 +340,38 @@ test('separately granted inbox upload stores a synthetic original in the selecte
     assert.match(document.body.textContent,/Το πρωτότυπο αποθηκεύτηκε στη θυρίδα/);
   }finally{await m.close()}
 });
+test('separately granted provider original download attaches one PDF without reopening the invoice',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const item={id:'fixture',filename:'Synthetic.pdf',mark:'SYNTHETIC',issueDate:'2026-10-31',receivedAt:'2026-10-31T08:00:00Z',status:'RECEIVED',processingStatus:'PENDING',hasProviderOriginal:true,hasAttachment:false};
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','invoices.fetch-original']}]};
+    if(options.method==='POST'){
+      item.hasAttachment=true;
+      return {id:'fixture',downloaded:true,reused:false,attachmentOnly:true};
+    }
+    return {items:[item],total:1,archiveTotal:1,suppliers:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Τιμολόγια').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,300)));
+    await m.act(async()=>{
+      const download=button('Λήψη πρωτότυπου PDF παρόχου');
+      download.click();
+      download.click();
+    });
+    const posts=calls.filter(c=>c.options.method==='POST');
+    assert.equal(posts.length,1);
+    assert.equal(posts[0].path,'/api/commerce/documents/inbox/fixture/provider-original');
+    assert.equal(posts[0].options.headers['x-backoffice-store-id'],'a1');
+    assert.deepEqual(JSON.parse(posts[0].options.body),{storeId:'a1'});
+    assert.match(document.body.textContent,/Το πρωτότυπο PDF επισυνάφθηκε στη θυρίδα/);
+    assert.ok(button('Πρωτότυπο φωτογραφία/PDF'));
+    assert.equal(button('Άνοιγμα υπάρχοντος προχείρου'),undefined);
+  }finally{await m.close()}
+});
 test('owner entry reuses existing POS operator administration only after explicit same-company store selection',async()=>{
   const Admin=await component('BackofficeStaffAdmin'),calls=[];
   const api=async(path,options={})=>{calls.push({path,options});return path==='/api/backoffice-staff/admin'?{accounts:[],stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}:{operators:[]}};
@@ -1506,5 +1538,35 @@ test('invoice supplier correction searches the directory and sends only a scoped
   assert.equal(write.path,'/api/purchase-orders/order/supplier-correction');
   assert.equal(write.options.headers['x-backoffice-store-id'],'a1');
   assert.deepEqual(JSON.parse(write.options.body),{storeId:'a1',supplierId:'new',version:'a'.repeat(64),reason:'Έλεγχος πρωτοτύπου',confirmOriginal:true,confirmPaymentSupplier:true});
+ }finally{await m.close()}
+});
+
+test('invoice line product and barcode views require the store product grant and stay read-only',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const order={id:'order',storeId:'a1',storeName:'A1',supplierId:'sup',status:'NEW',invoiceNumber:'SYN-1'};
+ const line={id:'line',orderId:'order',productId:'p',primaryBarcode:'123456789',description:'Synthetic row',quantity:1,unitCost:1,netAmount:1,grossAmount:1.24,vatRate:24};
+ const calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','products.read']}]};
+  if(path.startsWith('/api/purchase-orders/report?'))return {stores:[{id:'a1',name:'A1'}],suppliers:[],orders:[order],summary:{count:1}};
+  if(path.endsWith('/detail'))return {order,lines:[line],totals:{quantity:1,net:1,gross:1.24}};
+  if(path.endsWith('/product-reference'))return {orderId:'order',lineId:'line',storeId:'a1',product:{id:'p',name:'Scoped product',sku:'ABC',salePrice:2,currentStock:3},barcodes:[{barcode:'123456789',unitMultiplier:1}]};
+  return {items:[],suppliers:[],total:0,archiveTotal:0};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  window.alert=globalThis.alert=message=>assert.fail(message);
+  await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Τιμολόγια').click());
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>document.querySelector('[data-po-open]').click());
+  await m.act(async()=>document.querySelector('[data-barcodes]').click());
+  assert.match(document.body.textContent,/Scoped product/,JSON.stringify(calls.map(x=>x.path)));
+  assert.match(document.body.textContent,/123456789/);
+  assert.ok(calls.some(item=>item.path==='/api/purchase-orders/order/lines/line/product-reference'&&item.options.headers['x-backoffice-store-id']==='a1'));
+  assert.equal(calls.some(item=>item.options.method&&item.options.method!=='GET'),false);
  }finally{await m.close()}
 });
