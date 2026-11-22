@@ -72,3 +72,7 @@
 .pos-modern .pos-modern-product-grid>.pos-modern-subcategory{
   background:color-mix(in srgb,var(--category-color,#fff) 30%, white)!important;
 }
+
+.pos-modern .pos-modern-catalog .standard-quick > div > button .pos-modern-picture {
+  background: transparent;
+}
