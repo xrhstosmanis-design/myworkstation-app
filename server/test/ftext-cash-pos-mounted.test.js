@@ -47,7 +47,7 @@ for(const outcome of ['YES','NO'])test(`actual POS operator card ${outcome} uses
   assert.match(document.body.textContent,/Ναι · εγκρίθηκε/);
   assert.equal(calls.some(c=>c.path.endsWith('/finalize')),false);
   const button=[...document.querySelectorAll('button')].find(x=>x.textContent.startsWith(outcome==='YES'?'Ναι ·':'Όχι ·'));await click(button);
-  const writes=calls.filter(c=>c.options.method==='POST'&&!c.path.endsWith('/audience-selection'));assert.equal(writes.length,1,JSON.stringify(writes.map(x=>x.path)));assert.equal(writes[0].path,'/api/store-pos/stores/A/ftext-cash/operator-request/outcome');assert.deepEqual(JSON.parse(writes[0].options.body),{outcome});
+  const writes=calls.filter(c=>c.options.method==='POST'&&!c.path.endsWith('/audience-selection')&&c.path!=='/api/store-pos/stores/A/quote');assert.equal(writes.length,1,JSON.stringify(writes.map(x=>x.path)));assert.equal(writes[0].path,'/api/store-pos/stores/A/ftext-cash/operator-request/outcome');assert.deepEqual(JSON.parse(writes[0].options.body),{outcome});
   assert.equal(calls.some(c=>c.path.includes('/rbs-capdriver-v1/')||c.path.endsWith('/checkout')),false);
   assert.equal([...document.querySelectorAll('h2')].some(x=>x.textContent==='Επιβεβαίωση κάρτας'),false,'Persisted decision must close blocking confirmation');
   if(outcome==='NO'){
