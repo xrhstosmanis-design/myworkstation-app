@@ -1,5 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {POS_PERMISSIONS} from '../../../../shared/pos-operator-permissions.mjs';
+import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from '../../../../shared/pos-operator-permissions.mjs';
+
+const EDITABLE_POS_PERMISSIONS=[...POS_PERMISSIONS,...POS_MENU_PERMISSIONS];
 
 export default function StaffOperatorPermissions({api,companyId,storeId}){
   const base=`/api/operator-management/stores/${encodeURIComponent(storeId)}/employee-permissions`;
@@ -61,7 +63,7 @@ export default function StaffOperatorPermissions({api,companyId,storeId}){
     </select></label>}
     {operator&&<fieldset disabled={busy}>
       <legend>Δικαιώματα POS · {operator.displayName}</legend>
-      {POS_PERMISSIONS.map(([key,label])=><label className="staff-check" key={key}>
+      {EDITABLE_POS_PERMISSIONS.map(([key,label])=><label className="staff-check" key={key}>
         <input type="checkbox" checked={Boolean(operator.permissions[key])} onChange={event=>change(key,event.target.checked)}/>
         {label}
       </label>)}
