@@ -1,3 +1,7 @@
+## 22/11/2026 — Νο 19 · Συνθετική παραγγελία efood στο LAB — CI σε εκκρεμότητα
+
+PR #4156 · Vendor 9344842. Τοπικά πέρασαν 20 δοκιμές και ο έλεγχος συναλλαγής PGlite. Εκκρεμούν πλήρες CI, έλεγχος στο εγκατεστημένο LAB και δοκιμή μέσω Pelican. [Checkpoint](CHANGES/2026-11-22-no19-efood-lab-order-run.md).
+
 ## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
 
 Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατάστασης στην κεντρική οθόνη, 18 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-22-central-purchase-status-buttons.md).
