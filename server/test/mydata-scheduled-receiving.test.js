@@ -64,12 +64,13 @@ test('historical original recovery is explicitly store-scoped, production-only, 
       assert.match(strings.join("?"), /i\."attachmentId" IS NULL AND i\."status"='RECEIVED'/);
       assert.match(strings.join("?"), /"rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM/);
       assert.match(strings.join("?"), /m\."issueDate">=DATE '2026-11-01' AND m\."issueDate"<DATE '2026-12-01'/);
-      assert.equal(values[5],'with-impact-pattern');
-      assert.equal(values[6],'supported-link-pattern');
+      assert.equal(values[2],false);
+      assert.equal(values[6],'with-impact-pattern');
+      assert.equal(values[7],'supported-link-pattern');
       assert.match(strings.join("?"), /jsonb_array_elements_text/);
-      assert.equal(values[3],'["ordinary-pending","newly-received"]');
+      assert.equal(values[4],'["ordinary-pending","newly-received"]');
       assert.match(strings.join("?"), /ORDER BY m\."fetchedAt",m\."id" LIMIT 2/);
-      assert.deepEqual(values.slice(0,3), ['company','store','AADE_MYDATA_PRODUCTION']);
+      assert.deepEqual(values.slice(0,4), ['company','store',false,'AADE_MYDATA_PRODUCTION']);
       calls.push('query');
       return [{inboxId:'downloadable'},{inboxId:'unavailable'}];
     },
@@ -95,4 +96,25 @@ test('historical original recovery is explicitly store-scoped, production-only, 
   assert.deepEqual(calls,[]);
   assert.deepEqual(await mod.recoverHistoricalOriginals({...options,storeIds:'other, store'}),{downloaded:1,failed:1});
   assert.deepEqual(calls,['query','downloadable','unavailable','version-stamped']);
+});
+
+
+test('Panormou historical recovery starts January 2026 after explicit opt-in', async () => {
+  const {mod} = await fixture();
+  const storeId = 'cmwqvuxrx001is8g4uqlyzwg2';
+  let queries = 0;
+  const db = {
+    $queryRaw: async (strings, ...values) => {
+      queries++;
+      assert.match(strings.join('?'), /CASE WHEN \? THEN m\."issueDate">=DATE '2026-01-01'/);
+      assert.deepEqual(values.slice(0, 4), ['company', storeId, true, 'AADE_MYDATA_PRODUCTION']);
+      assert.equal(values[5], 'panormou-provider-formats-from-202601-v1');
+      return [];
+    },
+  };
+  const options = {db, companyId: 'company', storeId, userId: 'actor', source: 'AADE_MYDATA_PRODUCTION'};
+  await mod.recoverHistoricalOriginals({...options, storeIds: 'other'});
+  assert.equal(queries, 0);
+  await mod.recoverHistoricalOriginals({...options, storeIds: storeId});
+  assert.equal(queries, 1);
 });
