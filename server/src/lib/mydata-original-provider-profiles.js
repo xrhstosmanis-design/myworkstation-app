@@ -10,6 +10,8 @@ const epsilonFormats=new Map([
  ['epsilondigital-nbg.epsilonnet.gr','109'],
  ['epsilondigitalsmart10.epsilonnet.gr','227'],
  ['epsilondigitalsmart9.epsilonnet.gr','217'],
+ ['epsilondigital2.epsilonnet.gr','72'],
+ ['epsilondigital18.epsilonnet.gr','172'],
  ['epsilondigital19.epsilonnet.gr','177'],
  ['epsilondigital-3rdpartb.epsilonnet.gr','129'],
  ['epsilondigital9.epsilonnet.gr','145'],
