@@ -1,3 +1,4 @@
+import {staffInvoiceCompanyProduct} from '../services/staff-invoice-company-product.js';
 import {readMyDataPrintedEconomicsReview} from "../lib/mydata-printed-economics-review.js";
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../lib/invoice-line-taxonomy.js";
 import {authorizeMonthlyInvoiceAuditInTransaction} from '../services/monthly-invoice-audit.js';
@@ -476,6 +477,16 @@ router.get("/:orderId/lines/:lineId/product-reference",async(req,res,next)=>{try
   res.set("Cache-Control","private, no-store");
   res.json(await readStaffInvoiceProductReference(prisma,req));
 }catch(error){next(error)}});
+
+for(const kind of ["card","barcodes"]){
+  const path=`/:orderId/lines/:lineId/product-company-${kind}`;
+  const handler=async(req,res,next)=>{try{
+    res.set("Cache-Control","private, no-store");
+    res.json(await staffInvoiceCompanyProduct(prisma,req,kind));
+  }catch(error){next(error)}};
+  router.get(path,handler);
+  router.patch(path,handler);
+}
 
 router.patch("/:orderId/lines/:lineId/product-card",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId),current=await line(companyId,req.params.lineId);if(!found||!current||current.orderId!==found.id)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});editable(found);const body=z.object({supplierCode:z.string().trim().max(100).optional().nullable(),description:z.string().trim().min(1).max(250).optional(),productName:z.string().trim().min(1).max(180).optional(),salePrice:z.coerce.number().min(0).max(1000000).optional(),primaryBarcode:z.string().trim().min(3).max(80).optional()}).parse(req.body||{});
