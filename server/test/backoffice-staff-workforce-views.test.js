@@ -11,11 +11,11 @@ const base='/api/platform/store-modules/companies';
 const project=(value,select)=>Array.isArray(value)?value.map(row=>project(row,select)):Object.fromEntries(Object.entries(select).filter(([,enabled])=>enabled).map(([key,selection])=>[key,selection===true?value[key]:value[key]==null?value[key]:project(value[key],selection.select)]));
 for(const [path,capability,packageKey,query] of [['schedules','schedule.read','PERSONNEL_BASIC',''],['attendance','attendance.read','PERSONNEL_PRO','?date=2026-11-17'],['leaves','leaves.read','PERSONNEL_BASIC','']]){
  test(`native ${path} delegated view is scoped, read only, live revoked and excludes payroll`,async()=>{
-  let capabilities=[capability],paid=packageKey,revoke=false,reads=0,leaveWrites=0,leaveAudits=0,attendanceWrites=0,payrollLocked=false,scheduleWrites=0,scheduleBlocked=true;
+  let capabilities=[capability],paid=packageKey,revoke=false,reads=0,leaveWrites=0,leaveAudits=0,attendanceWrites=0,payrollLocked=false,scheduleWrites=0,scheduleBlocked=true,exceptionWrites=0;
   const createdLeaves=new Map();
   const forbidden=()=>assert.fail('delegated view attempted write, personnel bootstrap or remuneration query');
   const employee={id:'employee',fullName:'Synthetic Employee',companyId:'company',baseStoreId:'store',paymentType:'HOURLY',pinHash:'secret',dailyRate:100};
-  const template={id:'template',name:'Morning',startTime:'08:00',endTime:'16:00',category:'MORNING',minimumPeople:1,maximumPeople:2,requiredRole:{id:'role',name:'Cashier'}};
+  const template={companyId:'company',storeId:'store',id:'template',name:'Morning',startTime:'08:00',endTime:'16:00',category:'MORNING',minimumPeople:1,maximumPeople:2,requiredRole:{id:'role',name:'Cashier'}};
   const assignment={id:'assignment',date:new Date('2026-11-17'),employeeId:'employee',shiftTemplateId:'template',slot:1,status:'ASSIGNED',warningState:'NONE',employee,shiftTemplate:template};
   const schedule={id:'schedule',companyId:'company',storeId:'store',periodStart:new Date('2026-11-16'),periodEnd:new Date('2026-11-22'),status:'PUBLISHED',version:1,assignments:[assignment],createdByUserId:'secret',notes:'secret'};
   const attendance={id:'session',companyId:'company',storeId:'store',employeeId:'employee',scheduledAssignmentId:'assignment',startedAt:new Date('2026-11-17T08:00Z'),endedAt:new Date('2026-11-17T16:00Z'),workedMinutes:480,status:'NEEDS_REVIEW',updatedAt:new Date('2026-11-17T17:00Z'),employee,hourlyRate:100,workedAmount:800,issueJson:{secret:'private'}};
@@ -33,7 +33,7 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
    workforceSchedule:{
     findFirst:async({where,select})=>{
      assert.equal(where.companyId,'company');assert.equal(where.storeId,'store');
-     if(where.id==='schedule')return {...schedule,assignments:[]};
+     if(where.id==='schedule')return {...schedule,assignments:schedule.status==='PREVIEWED'?[assignment]:[]};
      if(select?.id){assert.ok(where.status.in.includes('PUBLISHED'));return scheduleBlocked?{id:'published'}:null;}
      return {version:2};
     },
@@ -48,8 +48,9 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
     findFirst:async({where})=>where.id===attendance.id&&where.storeId==='store'&&where.companyId==='company'&&where.employee?.companyId==='company'?attendance:null,
     update:async({where,data})=>{assert.equal(where.id,attendance.id);attendanceWrites++;Object.assign(attendance,data,{updatedAt:new Date(+attendance.updatedAt+1)});return attendance;},
     findMany:async options=>{assert.equal(options.where.employee.companyId,'company');return selected(options,attendance);}},
-   workforceScheduleAssignment:{findMany:async options=>{assert.deepEqual(options.where.schedule,{companyId:'company',storeId:'store'});assert.deepEqual(options.where.shiftTemplate,{companyId:'company',storeId:'store'});return selected(options,assignment,{scoped:false});}},
+   workforceScheduleAssignment:{update:async({data})=>{exceptionWrites++;Object.assign(assignment,data);return assignment;},findMany:async options=>{assert.deepEqual(options.where.schedule,{companyId:'company',storeId:'store'});assert.deepEqual(options.where.shiftTemplate,{companyId:'company',storeId:'store'});return selected(options,assignment,{scoped:false});}},
    workforceEmployee:{findFirst:async({where})=>{
+    if(path==='schedules')return where.id===employee.id&&where.companyId==='company'?employee:null;
     assert.deepEqual(where.storeAccess,{none:{active:true,storeId:{not:'store'}}});
     return where.id===employee.id&&where.baseStoreId==='store'&&where.companyId==='company'&&where.active?{id:employee.id}:null;
    },findMany:async options=>{assert.equal(options.where.companyId,'company');if(options.where.baseStoreId){
@@ -61,13 +62,13 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
     findMany:async options=>{assert.equal(options.where.employee.companyId,'company');assert.ok(JSON.stringify(options.where.employee.OR).includes('store'));return selected(options,leave);}},
    workforcePayrollPeriod:{findFirst:async({where})=>{assert.equal(where.status,'CLOSED');assert.equal(where.storeId,'store');return payrollLocked?{id:'locked'}:null;}},
    workforceShiftTemplate:{findMany:async()=>[]},
-   workforceHourlyRate:{findMany:forbidden},$transaction:async callback=>{assert.ok(capabilities.some(right=>['schedule.create','schedule.preview','schedule.approve','leaves.create','attendance.correct','attendance.approve-review','attendance.approve-overtime'].includes(right)));return callback(db);},$executeRaw:forbidden,$executeRawUnsafe:forbidden,$queryRawUnsafe:async sql=>{assert.match(sql,/StoreLifecycleFence/);return [{schema:"test",fence:null}];},
+   workforceHourlyRate:{findMany:forbidden},$transaction:async callback=>{assert.ok(capabilities.some(right=>['schedule.create','schedule.preview','schedule.approve','schedule.approve-exception','leaves.create','attendance.correct','attendance.approve-review','attendance.approve-overtime'].includes(right)));return callback(db);},$executeRaw:forbidden,$executeRawUnsafe:forbidden,$queryRawUnsafe:async sql=>{assert.match(sql,/StoreLifecycleFence/);return [{schema:"test",fence:null}];},
    $queryRaw:async(strings,...values)=>{const sql=strings.join('?');if(sql.includes('FOR UPDATE')&&sql.includes('WorkforceAttendanceSession'))return [];if(sql.includes('pg_advisory_xact_lock'))return [{locked:1}];if(sql.includes('FROM "BackofficeStaffAccount" a'))return [{mustChangePassword:false}];if(sql.includes('FROM "BackofficeStaffGrant" g'))return values[2]==='store'?[{profile:'AUDITOR',capabilities}]:[];if(sql.includes('FROM "StorePaidModule"'))return paid?[{moduleKey:paid,active:true}]:[];assert.fail(sql);}
   };
   const accessSource=await readFile(new URL('../src/routes/workforce-v2-access.js',import.meta.url),'utf8');
   const access=new Function('prisma','requireStaffGrant','staffError','staffRequestCapability','PERSONNEL_BASIC','isSuperAdmin','requirePersonnelPackage','storePaidModuleState','storePaidModuleStates','serializeWorkforceRule',accessSource.replace(/^import .*;\s*$/gm,'').replace(/^export \{.*\};?$/gm,'').replace(/^export /gm,'')+'\nreturn {managementGuard,contextFor};')(db,requireStaffGrant,staffError,staffRequestCapability,'PERSONNEL_BASIC',()=>false,forbidden,forbidden,forbidden,forbidden);
   const source=await readFile(new URL(`../src/routes/platform-workforce-v2-${path}.js`,import.meta.url),'utf8');
-  const router=new Function('createHash','Router','z','prisma','contextFor','requireStaffGrant','audit','loadEmployee','confirmed',source.replace(/^import .*;\s*$/gm,'').replace('export default router;','return router;').replace(/^export /gm,''))(createHash,express.Router,z,db,access.contextFor,requireStaffGrant,async()=>{leaveAudits++;},forbidden,z.literal(true));
+  const router=new Function('createHash','Router','z','prisma','contextFor','requireStaffGrant','audit','loadEmployee','employeeInclude','confirmed',source.replace(/^import .*;\s*$/gm,'').replace('export default router;','return router;').replace(/^export /gm,''))(createHash,express.Router,z,db,access.contextFor,requireStaffGrant,async()=>{leaveAudits++;},forbidden,{},z.literal(true));
   const app=express();app.use(express.json());app.use(async(req,res,next)=>{req.user={id:'staff',companyId:'company',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true,sessionId:'session',sessionVersion:0};try{await enforceBackofficeStaff(db,req,res);next();}catch(error){next(error);}});
   app.use(`${base}/:companyId/stores/:storeId/workforce-v2/${path}`,access.managementGuard,router);
   app.use((error,_req,res,_next)=>res.status(error.status||500).json({code:error.code,error:error.message}));
@@ -103,6 +104,17 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
     capabilities=['schedule.read','schedule.approve'];
     const approved=await request({...preview,body:{...preview.body,status:'APPROVED',version:2}});
     assert.equal(approved.body.item?.status,'APPROVED',JSON.stringify(approved.body));
+    Object.assign(schedule,{status:'PREVIEWED'});
+    Object.assign(assignment,{warningState:'NEEDS_APPROVAL',warningJson:{warnings:[{ruleCode:'DOUBLE_SHIFT',message:'private diagnostic'}]}});
+    const exception={method:'POST',suffix:'/schedule/exceptions',body:{version:3,confirmed:true,assignmentId:'assignment',ruleCode:'DOUBLE_SHIFT',reason:'Synthetic exception'}};
+    assert.equal((await request(exception)).status,403);
+    capabilities=['schedule.read','schedule.approve-exception'];
+    const list=await request();
+    assert.deepEqual(list.body.items[0].assignments[0].warningJson,{warnings:[{ruleCode:'DOUBLE_SHIFT'}],approvedRuleCodes:[]});
+    assert.equal((await request({...exception,store:'sibling'})).status,403);
+    const decided=await request(exception);assert.equal(decided.status,201,JSON.stringify(decided.body));
+    assert.equal((await request(exception)).status,409);
+    assert.equal(exceptionWrites,1);
     capabilities=['schedule.read'];
    }
    if(path==='attendance'){
