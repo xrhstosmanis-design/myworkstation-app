@@ -130,6 +130,55 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId/pos-access",dele
   res.json({companyId,storeId,employeeId,enabled});
 },delegatedPosAccess));
 
+const delegatedCopy="operator-profiles.copy-permissions";
+const snapshotSchema=z.object(Object.fromEntries(operatorPermissionKeys.map(key=>[key,z.boolean()]))).strict();
+const copyBody=z.object({
+  sourceEmployeeId:z.string().trim().min(1),
+  expectedSource:snapshotSchema,
+  expectedTarget:snapshotSchema
+}).strict();
+const operatorPermissionSnapshot=profile=>Object.fromEntries(operatorPermissionKeys.map(key=>[key,permissionEnabled(profile,key)]));
+
+router.post("/stores/:storeId/employee-permissions/:employeeId/copy-permissions",delegatedPermissionsRoute(async(req,res)=>{
+  const {companyId,id:actorId}=req.user,{storeId,employeeId}=req.params;
+  const {sourceEmployeeId,expectedSource,expectedTarget}=copyBody.parse(req.body);
+  if(sourceEmployeeId===employeeId)throw staffError(400,"STAFF_OPERATOR_COPY_SAME_EMPLOYEE","Επίλεξε δύο διαφορετικούς χειριστές.");
+  const copied=await prisma.$transaction(async tx=>{
+    await requireStaffAction(tx,req,storeId,delegatedCopy);
+    const credentialByEmployee=new Map();
+    for(const id of [employeeId,sourceEmployeeId].sort()){
+      credentialByEmployee.set(id,await lockEmployeeOperator(tx,{companyId,storeId,employeeId:id,actorId}));
+    }
+    const profiles=await tx.$queryRaw`
+      SELECT "employeeId","permissions","backofficeMenu" FROM "StoreOperatorProfile"
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId" IN (${employeeId},${sourceEmployeeId})
+      ORDER BY "employeeId" FOR UPDATE`;
+    const source=operatorPermissionSnapshot(profiles.find(item=>item.employeeId===sourceEmployeeId));
+    const target=operatorPermissionSnapshot(profiles.find(item=>item.employeeId===employeeId));
+    if(operatorPermissionKeys.every(key=>source[key]===target[key]))return source;
+    if(operatorPermissionKeys.some(key=>source[key]!==expectedSource[key]||target[key]!==expectedTarget[key])){
+      throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Τα δικαιώματα άλλαξαν. Ανανέωσε τη λίστα.");
+    }
+    const permissions=JSON.stringify(Object.fromEntries(POS_PERMISSIONS.map(([key])=>[key,source[key]])));
+    const changed=await tx.$executeRaw`
+      INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","permissions","backofficeMenu","createdBy")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${employeeId},CAST(${permissions} AS jsonb),
+        jsonb_build_object('orders',${source.orders}::boolean),${actorId})
+      ON CONFLICT ("storeId","employeeId") DO UPDATE SET
+        "permissions"="StoreOperatorProfile"."permissions" || EXCLUDED."permissions",
+        "backofficeMenu"=jsonb_set("StoreOperatorProfile"."backofficeMenu",'{orders}',EXCLUDED."backofficeMenu"->'orders'),
+        "updatedAt"=NOW()
+      WHERE "StoreOperatorProfile"."companyId"=${companyId}`;
+    if(changed!==1)throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Τα δικαιώματα άλλαξαν. Ανανέωσε τη λίστα.");
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${credentialByEmployee.get(employeeId).id},${actorId},'OPERATOR_PERMISSIONS_COPIED',
+        CAST(${JSON.stringify({sourceEmployeeId,targetEmployeeId:employeeId,before:target,after:source})} AS jsonb))`;
+    return source;
+  });
+  res.json({companyId,storeId,employeeId,sourceEmployeeId,permissions:copied});
+},delegatedCopy));
+
 const delegatedPinReset="operator-profiles.reset-pin";
 const pinResetBody=z.object({pin:z.string().regex(/^\d{4,8}$/)}).strict();
 
