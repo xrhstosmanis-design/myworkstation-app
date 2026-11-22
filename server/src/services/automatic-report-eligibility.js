@@ -106,7 +106,9 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    authorities[recipient.email]={basis:authority.basis,mailboxVerified:!!recipient.verifiedAt};
   }
   if(!eligible.length)hold();
-  return {scope,now,payload,inputs:eligible,activation:control,authorities};
+  const automaticPapers=!nonCash&&scope.frequency==='DAILY'&&configuration.automaticPaperReading===true
+   ? {actorId:principal.id,generation:lifecycle.generation,from,to,now}:null;
+  return {scope,now,payload,inputs:eligible,activation:control,authorities,automaticPapers};
  }
  const reader=async({tx,companyId,storeId,input,now})=>{
   const current=await context(tx,{companyId,storeId,frequency:input.frequency,...(input.eventId?{eventId:input.eventId}:{})},now);

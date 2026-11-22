@@ -4,19 +4,22 @@ import {createAutomaticReportEligibilityReader,automaticReportScopeInput} from '
 import {createAutomaticReportDeliveryRepository} from './automatic-report-delivery-repository.js';
 import {createAutomaticReportDeliveryDriver} from './automatic-report-delivery-driver.js';
 import {createAutomaticReportSmtpTransport} from './mail.js';
+import {createScheduledCashPaperReader} from './cash-paper-scheduled.js';
 
 // There is no schema creation, implicit enrollment, automatic recovery or send
 // within preparation. The bound facade keeps repository.create in the caller's
 // transaction rather than checking out an independent nested transaction.
-export function createAutomaticReportDispatcher({db,persistence=defaultPersistence,activationProvider,reportType='CASH',clock=()=>new Date().toISOString(),sendMail}){
+export function createAutomaticReportDispatcher({db,persistence=defaultPersistence,activationProvider,reportType='CASH',clock=()=>new Date().toISOString(),sendMail,readScheduledPapers}){
  if(!db||typeof db.$transaction!=='function'||typeof activationProvider!=='function'||typeof clock!=='function'||sendMail!==undefined&&typeof sendMail!=='function')throw new TypeError('Trusted dispatcher dependencies required');
  const transactional={$transaction:fn=>db.$transaction(fn,{isolationLevel:'ReadCommitted',maxWait:5000,timeout:15000})};
  const eligibility=createAutomaticReportEligibilityReader({activationProvider,persistence,reportType});
+ const readPapers=readScheduledPapers??createScheduledCashPaperReader(db);
  const repository=createAutomaticReportDeliveryRepository({db:transactional,readEligibility:eligibility});
- async function prepare(raw){
+ async function prepare(raw,inspectPapers=false){
   const scope=automaticReportScopeInput(raw),now=clock();
   return transactional.$transaction(async tx=>{
    const context=await eligibility.readContext(tx,scope,now);
+   if(inspectPapers&&context.automaticPapers)return {automaticPapers:context.automaticPapers};
    await persistence.putImmutablePayload(tx,{companyId:scope.companyId,storeId:scope.storeId,payload:context.payload,now,lifecycleGeneration:context.inputs[0].snapshot.lifecycleGeneration});
    const bound=createAutomaticReportDeliveryRepository({db:{$transaction:fn=>fn(tx)},readEligibility:eligibility});
    const slots=[];
@@ -28,7 +31,16 @@ export function createAutomaticReportDispatcher({db,persistence=defaultPersisten
   if(!Number.isInteger(maxAttempts)||maxAttempts<1||maxAttempts>5)throw new TypeError('Bounded recipient attempts required');
   const scope=automaticReportScopeInput(raw),control=activationProvider();
   if(!control?.valid||!control.enabled)return {status:'OFF',attempted:0,outcomes:[]};
-  let prepared;try{prepared=await prepare(scope)}catch{return {status:'HOLD',attempted:0,outcomes:[]}}
+  let prepared;
+  try{
+    prepared=await prepare(scope,true);
+    if(prepared.automaticPapers){
+      const current=activationProvider();
+      if(!current?.valid||!current.enabled||current.fingerprint!==control.fingerprint)return {status:'OFF',attempted:0,outcomes:[]};
+      if(await readPapers(scope,prepared.automaticPapers)==='MORE')return {status:'HOLD',attempted:0,outcomes:[]};
+      prepared=await prepare(scope);
+    }
+  }catch{return {status:'HOLD',attempted:0,outcomes:[]}}
   const outcomes=[];let attempted=0;
   for(const {record} of prepared.slots){
    if(attempted>=maxAttempts)break;

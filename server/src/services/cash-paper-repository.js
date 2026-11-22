@@ -9,7 +9,7 @@ export function paperState(rows,key,scope,checksum){
   if(!intent&&!completion)return {status:'NOT_READ',sourceKey:key};
   const valid=(row,action)=>row&&row.companyId===scope.companyId&&row.storeId===scope.storeId&&row.entityType===CASH_PAPER_ENTITY&&row.entityId===key&&row.action===action&&row.afterJson?.version===1&&row.afterJson.generation===scope.generation&&row.afterJson.checksum===checksum;
   if(!valid(intent,'CASH_PAPER_REQUESTED'))return {status:'REQUIRES_REVIEW',sourceKey:key,reason:'INVALID_INTENT'};
-  if(!completion)return {status:'PENDING',sourceKey:key};
+  if(!completion)return {status:'PENDING',sourceKey:key,requestedAt:intent.createdAt};
   if(!valid(completion,'CASH_PAPER_COMPLETED'))return {status:'REQUIRES_REVIEW',sourceKey:key,reason:'INVALID_COMPLETION'};
   const detail=completion.afterJson;
   if(detail.status!=='EXTRACTED_UNVERIFIED')return {status:'REQUIRES_REVIEW',sourceKey:key,reason:'READING_UNCERTAIN'};
@@ -35,7 +35,7 @@ export function createCashPaperRepository(db){
     const revised=await readState(db,scope,checksum,true);
     if(revised.status==='NOT_READ')return {...original,canReread:true};
     if(revised.status==='EXTRACTED_UNVERIFIED')return revised;
-    return {...original,rereadStatus:revised.status};
+    return {...original,rereadStatus:revised.status,...(revised.requestedAt?{rereadRequestedAt:revised.requestedAt}:{})};
   }
   async function getHistorical(scope,checksum,sourceKey){
     const original=paperKey(scope,checksum),revised=paperRereadKey(scope,checksum);
