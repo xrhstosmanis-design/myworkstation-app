@@ -1,3 +1,9 @@
+## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
+
+Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατάστασης στην κεντρική οθόνη, 18 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-22-central-purchase-status-buttons.md).
+
+- 22/11/2026 · Νο 7 · Αυτόματη ανάγνωση χειρόγραφων πριν από το ημερήσιο email · [Checkpoint](CHANGES/2026-11-22-no7-scheduled-cash-papers.md).
+
 - 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
 
 ## 21/11/2026,20:18Ελλάδας — No02 — recovery source4048 TECHNICAL LIVE / SCOPE GAPS OPEN
@@ -882,6 +888,10 @@ Retained /root, branchfix/no2-printed-discounts-20261120. Before-source independ
 
 Ομαδοποίηση των προβολών καταστήματος βάσει δικαιωμάτων. [Καταγραφή](CHANGES/2026-11-21-staff-functional-menu.md).
 
+## 22/11/2026 — Εμφάνιση αναφορών Υπευθύνου
+
+Ενιαία παρουσίαση φίλτρων, πινάκων και κουμπιών και στις 15 αναφορές καταστήματος. [Καταγραφή](CHANGES/2026-11-22-staff-report-presentation.md).
+
 ## 21/11/2026 — Λίστες και κουμπιά Υπευθύνου
 
 Ενιαία εμφάνιση λιστών, φίλτρων και ενεργειών στο BackOffice καταστήματος. [Καταγραφή](CHANGES/2026-11-21-staff-list-styling.md).
@@ -910,5 +920,9 @@ Owner /root; feat/owner-cash-withdrawal-implementation-20261121. Before-source c
 
 
 INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes this owner to integrate ONLY dedicated responsible-person recovery and same-original assistant promotion. General No5/No04/No02 ownership retained. New exact mapping/default-off action and canonical writer checks are in the existing recovery checkpoint. Before-source expansion; no new runtime or actual transactions.
+
+## 22/11/2026 — Τελευταίος προμηθευτής είδους
+
+Εμφάνιση προμηθευτή από καταχωρισμένη αγορά του επιλεγμένου καταστήματος. [Καταγραφή](CHANGES/2026-11-22-product-card-latest-supplier.md).
 
 - 22/11/2026 · Νο 9: [Τιμή προσφοράς στο ανώνυμο καλάθι POS](CHANGES/2026-11-22-no9-pos-anonymous-promotion.md). Draft PR #4152, 12 στοχευμένοι τοπικοί έλεγχοι PASS. Εκκρεμούν πλήρες CI, δοκιμαστική πώληση στο LAB και διασταύρωση Message-ID.

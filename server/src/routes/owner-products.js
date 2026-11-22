@@ -231,7 +231,18 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
 });
 
 router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{res.json(await readOwnerProductArchive(req.user.companyId,req.query,req.params.productId,{db:prisma,scopedStoreId}))}catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}});
+  try{
+    const requestedStore=typeof req.query.storeId==="string"?req.query.storeId.trim():"";
+    if(requestedStore&&!scopedStoreId){
+      const store=await prisma.store.findFirst({where:{id:requestedStore,companyId:req.user.companyId},select:{id:true}});
+      if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    }
+    const details=await readOwnerProductArchive(req.user.companyId,req.query,req.params.productId,{
+      db:prisma,scopedStoreId:scopedStoreId||requestedStore||null
+    });
+    res.json(details);
+  }catch(error){if(error.status===404)return res.status(404).json({error:error.message});next(error)}
+});
 
 router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
