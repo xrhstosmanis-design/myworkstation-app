@@ -216,7 +216,16 @@ async function createOperatorSession(req,row){
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${terminalLock},0))::text AS locked`;
     await assertPosShiftOwner(tx,{companyId:row.companyId,storeId:row.storeId,operatorId:row.id,terminalPos:row.terminalPos});
     // Serialize logins for this operator: two concurrent POS requests must not both pass the check.
-    await tx.$queryRaw`SELECT "id" FROM "StoreOperatorCredential" WHERE "id"=${row.id} FOR UPDATE`;
+    const [credential]=await tx.$queryRaw`
+      SELECT "id" FROM "StoreOperatorCredential" WHERE "id"=${row.id}
+        AND "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "active"=TRUE FOR UPDATE`;
+    const [profile]=credential?await tx.$queryRaw`
+      SELECT "posAccess" FROM "StoreOperatorProfile"
+      WHERE "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "employeeId"=${row.employeeId}`:[];
+    if(!credential||profile?.posAccess===false){
+      const error=new Error("Η πρόσβαση POS του χειριστή δεν είναι ενεργή.");
+      error.status=403;error.code="STORE_OPERATOR_POS_ACCESS_DISABLED";throw error;
+    }
     const other=(await tx.$queryRaw`
       SELECT "terminalPos" FROM "StoreOperatorSession"
       WHERE "operatorId"=${row.id} AND "storeId"=${row.storeId}
