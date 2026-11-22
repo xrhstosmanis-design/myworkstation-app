@@ -16,7 +16,7 @@ export function managementGuard(req,res,next){
   if(req.user?.staffAccess===true){
     const path=String(req.originalUrl||'').split('?')[0];
     const capability=staffRequestCapability(req.method,path,req.body);
-    if(['employees.read','schedule.read','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','attendance.read','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','payroll.read','shift-templates.manage','workforce-rules.manage'].includes(capability)&&req.staffGrant?.capability===capability&&req.params.companyId===req.user.companyId&&req.params.storeId===req.user.storeId)return next();
+    if(['employees.read','employees.edit','schedule.read','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','schedule.approve-exception','attendance.read','attendance.clock','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','payroll.read','shift-templates.manage','workforce-rules.manage'].includes(capability)&&req.staffGrant?.capability===capability&&req.params.companyId===req.user.companyId&&req.params.storeId===req.user.storeId)return next();
     return res.status(403).json({error:'Δεν υπάρχει δικαίωμα προβολής προσωπικού.'});
   }
   if(isSuperAdmin(req.user)||managementRoles.has(req.user?.role))return next();
@@ -56,7 +56,7 @@ export async function contextFor(req){
   if(!isSuperAdmin(req.user)&&String(req.user?.companyId||"")!==companyId)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404});
   if(req.user?.staffAccess===true){
     const capability=req.staffGrant?.capability;
-    if(req.user.storeId!==storeId||!['employees.read','schedule.read','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','attendance.read','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','payroll.read','shift-templates.manage','workforce-rules.manage'].includes(capability))throw staffError();
+    if(req.user.storeId!==storeId||!['employees.read','employees.edit','schedule.read','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','schedule.approve-exception','attendance.read','attendance.clock','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','payroll.read','shift-templates.manage','workforce-rules.manage'].includes(capability))throw staffError();
     await requireStaffGrant(prisma,req.user,storeId,capability);
     const [store,company]=await Promise.all([
       prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true,companyId:true}}),

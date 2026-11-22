@@ -46,7 +46,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
   {key:"workforce-rules",label:"Κανόνες προσωπικού καταστήματος",scope:"STORE",actions:["read","manage"]},
   {key:"shift-templates",label:"Πρότυπα βαρδιών καταστήματος",scope:"STORE",actions:["read","manage"]},
   {key:"workforce-audit",label:"Ιστορικό προσωπικού καταστήματος",scope:"STORE",actions:["read"]},
-  {key:"operator-profiles",label:"Δικαιώματα χειριστών POS",scope:"STORE",actions:["manage-permissions"]},
+  {key:"operator-profiles",label:"Δικαιώματα χειριστών POS",scope:"STORE",actions:["manage-permissions","manage-pos-access","create-employee"]},
   {key:"payroll",label:"Μισθοδοσία",scope:"STORE",actions:["read"]},
   {
     "key": "low-value-products",
@@ -104,6 +104,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "publish",
       "preview",
       "approve",
+      "approve-exception",
       "delete",
       "export",
       "print"
@@ -129,6 +130,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "scope": "STORE",
     "actions": [
       "read",
+      "clock",
       "correct",
       "approve",
       "approve-review",
@@ -451,6 +453,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "advance-allocate",
       "read",
+      "import-kiosk",
       "supplier",
       "expense",
       "cash",

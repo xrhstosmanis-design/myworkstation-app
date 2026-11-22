@@ -20,6 +20,10 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   if(path.endsWith("/audit")&&JSON.parse(options.body||"{}").actionType==="PRICE_CHANGE"){if(rejectPrice)throw Error("PRICE_PERMISSION_REVOKED");if(pendingPrice)await pendingPrice;}
   if(path.endsWith("/audit")&&JSON.parse(options.body||"{}").actionType==="CART_CANCEL"){if(rejectCancel)throw Error("AUDIT_REJECTED");if(pendingCancel)await pendingCancel;}
   if(path==='/api/store-pos/stores/A')return {products:[product],access:{...denied,onlineProductSearch:false},layout:{quickKeys:[{id:'quick',visible:true,label:'CONTROL',productQuery:'CONTROL-SKU'}],categories:[]}};
+  if(path==='/api/store-pos/stores/A/quote'){
+   const {items}=JSON.parse(options.body);
+   return {items:items.map(item=>({lineTotal:(item.unitPriceOverride??2)*item.quantity}))};
+  }
   if(path.endsWith('/access'))return {access:{thirdPartyPayment:true,supplierPayment:true,sameShiftPayments:true}};
   if(path.endsWith('/overview'))return {openSession:{id:'isolated-shift',openedAt:new Date().toISOString()},suppliers:[]};
   if(path.includes('/barcode-registration'))return {rows:[{...product,barcodes:[]}],missingCount:5,totalMatches:1};
@@ -97,7 +101,13 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   await render(paymentRights);await click(find('← Όλες οι πληρωμές'));assert.ok(find('Λοιπά έξοδα'));assert.ok(find('Πληρωμή προμηθευτή'));await click(find('Λοιπά έξοδα'));
   assert.equal(find('Μετρητά από ενεργή βάρδια').disabled,false);assert.equal(amount(),'7');
   assert.equal(calls.filter(c=>c.path==='/api/store-pos/stores/A/access').length,1);
-  assert.equal(calls.some(c=>c.options.method&&c.options.method!=='GET'&&!/\/(audit|audience-selection)$/.test(c.path)),false);
+  const quote=calls.find(c=>c.path==='/api/store-pos/stores/A/quote');
+  assert.equal(quote?.options.method,'POST');
+  const quoteBody=JSON.parse(quote.options.body);
+  assert.equal(quoteBody.customerId,undefined);
+  assert.equal(quoteBody.items.length,1);
+  assert.equal(quoteBody.items[0].quantity,1);
+  assert.equal(calls.some(c=>c.options.method&&c.options.method!=='GET'&&!/\/(audit|audience-selection)$/.test(c.path)&&c.path!=='/api/store-pos/stores/A/quote'),false);
   await click(paymentModal.querySelector('header button'));
 
   const cancelCalls=()=>calls.filter(c=>c.path.endsWith('/audit')&&JSON.parse(c.options.body||'{}').actionType==='CART_CANCEL');

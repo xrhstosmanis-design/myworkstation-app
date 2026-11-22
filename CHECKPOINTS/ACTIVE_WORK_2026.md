@@ -2,6 +2,7 @@
 
 PR #4156 · Vendor 9344842. Τοπικά πέρασαν 20 δοκιμές και ο έλεγχος συναλλαγής PGlite. Εκκρεμούν πλήρες CI, έλεγχος στο εγκατεστημένο LAB και δοκιμή μέσω Pelican. [Checkpoint](CHANGES/2026-11-22-no19-efood-lab-order-run.md).
 
+- 22/11/2026 · Νο 7 · Ένδειξη ελέγχου POS–EFTPOS στην ημερήσια αναφορά · [Checkpoint](CHANGES/2026-11-22-no7-card-detail-review.md).
 ## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
 
 Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατάστασης στην κεντρική οθόνη, 18 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-22-central-purchase-status-buttons.md).
@@ -246,6 +247,11 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 22/11 No5 — opt-in CSV of displayed shifts for the selected store. [Checkpoint](CHANGES/2026-11-22-no5-shift-report-export.md).
 
 22/11 No5 — prioritized delegated editing of individual POS operator permissions. [Checkpoint](CHANGES/2026-11-22-no5-operator-permissions.md).
+
+22/11 No5 — combined manager rights follow-up for POS invoice access, schedule exceptions, attendance CSV, shift print and warehouse print. [Checkpoint](CHANGES/2026-11-22-no5-rights-batch.md).
+22/11 No5 — delegated print of the loaded inventory archive page. [Checkpoint](CHANGES/2026-11-22-no5-warehouse-print.md).
+
+22/11 No5 — delegated edits to employee contact and shift availability. [Checkpoint](CHANGES/2026-11-22-no5-workforce-employee-details.md).
 
 <!-- NO5-STATUS:END -->
 
@@ -928,3 +934,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 ## 22/11/2026 — Τελευταίος προμηθευτής είδους
 
 Εμφάνιση προμηθευτή από καταχωρισμένη αγορά του επιλεγμένου καταστήματος. [Καταγραφή](CHANGES/2026-11-22-product-card-latest-supplier.md).
+
+- 22/11/2026 · Νο 9: [Τιμή προσφοράς στο ανώνυμο καλάθι POS](CHANGES/2026-11-22-no9-pos-anonymous-promotion.md). Draft PR #4152, 12 στοχευμένοι τοπικοί έλεγχοι PASS. Εκκρεμούν πλήρες CI, δοκιμαστική πώληση στο LAB και διασταύρωση Message-ID.
