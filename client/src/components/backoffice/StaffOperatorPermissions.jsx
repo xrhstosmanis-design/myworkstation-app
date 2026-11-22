@@ -3,7 +3,7 @@ import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from '../../../../shared/pos-opera
 
 const EDITABLE_POS_PERMISSIONS=[...POS_PERMISSIONS,...POS_MENU_PERMISSIONS];
 
-export default function StaffOperatorPermissions({api,companyId,storeId}){
+export default function StaffOperatorPermissions({api,companyId,storeId,canManagePosAccess=false}){
   const base=`/api/operator-management/stores/${encodeURIComponent(storeId)}/employee-permissions`;
   const [loaded,setLoaded]=useState(null),[selected,setSelected]=useState('');
   const [revision,reload]=useState(0),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -29,19 +29,21 @@ export default function StaffOperatorPermissions({api,companyId,storeId}){
 
   const change=async(key,enabled)=>{
     if(writing.current||!operator)return;
+    const accessChange=key===null;
+    if(accessChange&&(!canManagePosAccess||(!enabled&&!window.confirm(`Απενεργοποίηση πρόσβασης POS για «${operator.displayName}»;`))))return;
     const request=generation.current,employeeId=operator.employeeId;
     writing.current=true;
     setBusy(true);setError('');setNotice('');
     try{
-      const result=await api(`${base}/${encodeURIComponent(employeeId)}`,{
-        method:'PATCH',body:JSON.stringify({key,enabled,expected:Boolean(operator.permissions[key])})
+      const result=await api(`${base}/${encodeURIComponent(employeeId)}${accessChange?"/pos-access":""}`,{
+        method:'PATCH',body:JSON.stringify(accessChange?{enabled,expected:operator.posAccess}:{key,enabled,expected:Boolean(operator.permissions[key])})
       });
       if(request!==generation.current)return;
-      if(result?.companyId!==companyId||result.storeId!==storeId||result.employeeId!==employeeId||result.key!==key||result.enabled!==enabled){
+      if(result?.companyId!==companyId||result.storeId!==storeId||result.employeeId!==employeeId||(!accessChange&&result.key!==key)||result.enabled!==enabled){
         throw Error('Δεν επιβεβαιώθηκε η αλλαγή δικαιώματος.');
       }
       setLoaded(current=>current?{...current,items:current.items.map(item=>item.employeeId===employeeId?
-        {...item,permissions:{...item.permissions,[key]:enabled}}:item)}:current);
+        {...item,...(accessChange?{posAccess:enabled}:{permissions:{...item.permissions,[key]:enabled}})}:item)}:current);
       setNotice('Το δικαίωμα αποθηκεύτηκε.');
     }catch(error){
       if(request===generation.current){setLoaded(null);setError(error.message);}
@@ -61,6 +63,10 @@ export default function StaffOperatorPermissions({api,companyId,storeId}){
       <option value="">Επίλεξε χειριστή</option>
       {items.map(item=><option key={item.employeeId} value={item.employeeId}>{item.displayName}</option>)}
     </select></label>}
+    {operator&&canManagePosAccess&&<label className="staff-check">
+      <input type="checkbox" disabled={busy} checked={operator.posAccess} onChange={event=>change(null,event.target.checked)}/>
+      Πρόσβαση στις Πωλήσεις (POS)
+    </label>}
     {operator&&<fieldset disabled={busy}>
       <legend>Δικαιώματα POS · {operator.displayName}</legend>
       {EDITABLE_POS_PERMISSIONS.map(([key,label])=><label className="staff-check" key={key}>
