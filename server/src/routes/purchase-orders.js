@@ -2,7 +2,7 @@ import {readMyDataPrintedEconomicsReview} from "../lib/mydata-printed-economics-
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../lib/invoice-line-taxonomy.js";
 import {authorizeMonthlyInvoiceAuditInTransaction} from '../services/monthly-invoice-audit.js';
 import {invoiceIssuerName} from "../mydata-xml.js";
-import {requireStaffAction,requireStaffGrant,requireStaffOrderAction} from '../services/backoffice-staff-access.js';
+import {requireStaffAction,requireStaffGrant,requireStaffOrderAction,staffError} from '../services/backoffice-staff-access.js';
 import {previewPurchaseSupplierCorrection,correctPurchaseSupplier,lockPurchaseSupplierMetadata} from "../services/purchase-supplier-correction.js";
 import {assertReopenedIdentity,lockEditablePurchaseOrder} from "../services/purchase-order-reopen.js";
 import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
@@ -447,6 +447,34 @@ router.post("/:orderId/assistant-line-transfer",async(req,res,next)=>{try{
     return {count:editedIds.length+added.length,addedIds:added.map(line=>line.id)};
   },{timeout:30000});
   res.json(changed);
+}catch(error){next(error)}});
+
+export async function readStaffInvoiceProductReference(db,req,verify=requireStaffGrant){
+  const {user,staffGrant}=req;
+  if(user?.staffAccess!==true||staffGrant?.capability!=="invoices.read"||!user.storeId)throw staffError();
+  const {companyId,storeId}=user,{orderId,lineId}=req.params;
+  return db.$transaction(async tx=>{
+    await verify(tx,user,storeId,"invoices.read",{additionalModules:["INVENTORY"]});
+    await verify(tx,user,storeId,"products.read");
+    const [product]=await tx.$queryRaw`SELECT p."id",p."name",p."sku",sp."salePrice",sp."currentStock"
+      FROM "PurchaseOrder" o
+      JOIN "PurchaseOrderLine" l ON l."orderId"=o."id"
+      JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=o."companyId" AND p."active"=true
+      JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=o."storeId" AND sp."active"=true
+      WHERE o."id"=${orderId} AND l."id"=${lineId} AND o."companyId"=${companyId} AND o."storeId"=${storeId}
+      LIMIT 1 FOR SHARE OF o,l,p,sp`;
+    if(!product)throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Η γραμμή δεν συνδέεται με ενεργό είδος του επιλεγμένου καταστήματος.");
+    const barcodes=await tx.$queryRaw`SELECT b."barcode",b."name",b."unitMultiplier"
+      FROM "ProductBarcode" b WHERE b."productId"=${product.id} ORDER BY b."createdAt",b."id" LIMIT 201`;
+    if(barcodes.length>200)throw staffError(422,"STAFF_PRODUCT_BARCODE_LIMIT","Η καρτέλα έχει περισσότερους από 200 κωδικούς.");
+    return {orderId,lineId,storeId,product:{...product,salePrice:product.salePrice==null?null:n(product.salePrice),currentStock:n(product.currentStock)},
+      barcodes:barcodes.map(row=>({...row,unitMultiplier:n(row.unitMultiplier)}))};
+  });
+}
+
+router.get("/:orderId/lines/:lineId/product-reference",async(req,res,next)=>{try{
+  res.set("Cache-Control","private, no-store");
+  res.json(await readStaffInvoiceProductReference(prisma,req));
 }catch(error){next(error)}});
 
 router.patch("/:orderId/lines/:lineId/product-card",async(req,res,next)=>{try{
