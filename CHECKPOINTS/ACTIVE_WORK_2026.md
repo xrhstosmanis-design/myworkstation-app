@@ -1,3 +1,7 @@
+## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
+
+Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατάστασης στην κεντρική οθόνη, 18 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-22-central-purchase-status-buttons.md).
+
 - 22/11/2026 · Νο 7 · Αυτόματη ανάγνωση χειρόγραφων πριν από το ημερήσιο email · [Checkpoint](CHANGES/2026-11-22-no7-scheduled-cash-papers.md).
 
 - 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
