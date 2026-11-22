@@ -278,7 +278,8 @@ router.post("/:scheduleId/exceptions",async(req,res,next)=>{try{
   const body=z.object({version:z.number().int().positive().optional(),assignmentId:z.string().min(1),
     ruleCode:z.enum(exceptionCodes),reason:z.string().trim().min(3).max(500),confirmed}).parse(req.body||{});
   const schedule=await loadSchedule(context,req.params.scheduleId);
-  if(delegated){assertMutable(schedule);assertVersion(schedule,body.version);}
+  if(delegated)assertMutable(schedule);
+  if(delegated||body.version!==undefined)assertVersion(schedule,body.version);
   const assignment=schedule.assignments.find(item=>item.id===body.assignmentId);
   if(!assignment||delegated&&(assignment.shiftTemplate.companyId!==context.company.id||assignment.shiftTemplate.storeId!==context.store.id||
     assignment.employeeId&&assignment.employee?.companyId!==context.company.id)){
@@ -299,7 +300,7 @@ router.post("/:scheduleId/exceptions",async(req,res,next)=>{try{
       entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:assignment.id,
       after:{ruleCode:body.ruleCode,employeeId:assignment.employeeId,date:iso(assignment.date),shiftTemplateId:assignment.shiftTemplateId},reason:body.reason});
   });
-  res.status(201).json({approved:true,ruleCode:body.ruleCode,allApproved});
+  res.status(201).json({approved:true,ruleCode:body.ruleCode,allApproved,version:schedule.version+1});
 }catch(error){next(error)}});
 
 
