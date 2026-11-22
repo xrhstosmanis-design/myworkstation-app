@@ -68,3 +68,19 @@ test('a concurrent POS shift open shares the credential lock and rereads access 
   assert.match(open,/prisma\.\$transaction[\s\S]*FROM "StoreOperatorCredential"[\s\S]*FOR UPDATE/);
   assert.match(open,/FOR UPDATE[\s\S]*COALESCE\(p\."posAccess",TRUE\)[\s\S]*"revokedAt" IS NULL[\s\S]*insertSession\(tx\)/);
 });
+
+test('new operator provisioning is independently scoped and grants no POS access',()=>{
+  const right='operator-profiles.create-employee';
+  const path='/api/operator-management/stores/store/employee-provisioning';
+  assert.equal(staffRequestCapability('POST',path),right);
+  assert.equal(staffRequestCapability('PATCH',path),null);
+  assert.equal(validStaffCapabilities([right]),false);
+  assert.equal(validStaffCapabilities([capability,right]),true);
+  const handler=route.slice(route.indexOf('const delegatedProvisioning='));
+  assert.match(handler,/\.strict\(\)/);
+  assert.match(handler,/await bcrypt\.hash\(initialPin,12\)/);
+  assert.match(handler,/\$transaction[\s\S]*requireStaffAction\(tx[\s\S]*pg_advisory_xact_lock/);
+  assert.match(handler,/'EMPLOYEE',[^\n]*pinHash/);
+  assert.match(handler,/\$\{employeeId\},FALSE,\$\{actorId\}/);
+  assert.match(handler,/json\(\{companyId,storeId,employeeId\}\)/);
+});
