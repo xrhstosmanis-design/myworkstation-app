@@ -5,7 +5,7 @@ import {staffRequestCapability,validStaffCapabilities,staffProfiles} from '../..
 
 const capability='operator-profiles.manage-permissions';
 const base='/api/operator-management/stores/store/employee-permissions';
-const route=readFileSync(new URL('../src/routes/operator-management-v2.js',import.meta.url),'utf8');
+const route=readFileSync(new URL('../src/routes/operator-permission-delegation.js',import.meta.url),'utf8');
 
 test('operator permission delegation admits only the dedicated store list and single-employee change',()=>{
   assert.equal(validStaffCapabilities([capability]),true);
@@ -20,7 +20,7 @@ test('operator permission delegation admits only the dedicated store list and si
 });
 
 test('delegated mutation rechecks the live grant and updates only one POS flag inside its audit transaction',()=>{
-  const writer=route.slice(route.indexOf('router.patch("/stores/:storeId/employee-permissions'),route.indexOf('router.get("/stores/:storeId/operators"'));
+  const writer=route.slice(route.indexOf('router.patch("/stores/:storeId/employee-permissions'),route.indexOf("export default router"));
   assert.match(writer,/\$transaction[\s\S]*requireStaffAction\(tx/);
   assert.match(writer,/c\."companyId"[\s\S]*c\."storeId"[\s\S]*c\."role"='EMPLOYEE'/);
   assert.match(writer,/e\."userId" IS DISTINCT FROM/);
