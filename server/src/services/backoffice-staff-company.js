@@ -7,7 +7,7 @@ import {companyOwnerReportFilters,readCompanyOwnerReport} from './backoffice-sta
 import {companyConfigurationFilters,readCompanyConfiguration} from './backoffice-staff-company-configuration.js';
 import {companyReportFilters,readCompanyReports} from './backoffice-staff-company-reports.js';
 import {PERSONNEL_BASIC,resolvePersonnelPackageStates} from '../personnel-packages.js';
-import {staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies,companyConfigurationRequest,companyOwnerReportRequest,companyPartyControlRequest,companyWholesaleRequest,observerLogisticsRequest,companyProductCenterRequest,finalPassiveCompanyRequest} from '../../../shared/backoffice-staff-company.mjs';
+import {supplierContactCapability,staffCompanyCapabilities,staffCompanyModules,staffCompanyProtocol,staffCompanyRequestCapability,validStaffCompanyCapabilities,staffCompanyCapabilityDependencies,companyConfigurationRequest,companyOwnerReportRequest,companyPartyControlRequest,companyWholesaleRequest,observerLogisticsRequest,companyProductCenterRequest,finalPassiveCompanyRequest} from '../../../shared/backoffice-staff-company.mjs';
 import {readCompanyCommerceData} from './backoffice-staff-company-commerce.js';
 import {managementVatExemptions} from '../lib/management-vat-exemptions.js';
 import {liveStaff,staffError} from './backoffice-staff-access.js';
@@ -68,13 +68,14 @@ function validCompanyQuery(query,capability,path){
 export async function enforceStaffCompanyRequest(db,req){
  const companyId=req.get('x-backoffice-company-id'),path=String(req.originalUrl||req.path||'').split('?')[0];
  const capability=staffCompanyRequestCapability(req.method,path);
- if(!capability||companyId!==req.user?.companyId||req.get('x-backoffice-store-id')!==undefined||req.user?.storeId||!validCompanyQuery(req.query,capability,path)||req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length)throw staffError();
+ if(!capability||companyId!==req.user?.companyId||req.get('x-backoffice-store-id')!==undefined||req.user?.storeId||!validCompanyQuery(req.query,capability,path))throw staffError();
+ if(capability!==supplierContactCapability&&(req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length))throw staffError();
  req.staffCompanyGrant=await requireStaffCompanyGrant(db,req.user,capability);
  return true;
 }
 export async function readStaffCompanyDirectory(db,req){
  const capability=staffCompanyRequestCapability(req.method,String(req.originalUrl||req.path||'').split('?')[0]);
- if(!capability||req.user?.staffAccess!==true||req.staffCompanyGrant?.capability!==capability||req.staffCompanyGrant.companyId!==req.user.companyId)throw staffError();
+ if(req.method!=='GET'||!capability||req.user?.staffAccess!==true||req.staffCompanyGrant?.capability!==capability||req.staffCompanyGrant.companyId!==req.user.companyId)throw staffError();
  await enforceStaffCompanyRequest(db,req);
  const companyId=req.user.companyId;
  const passive=finalPassiveCompanyRequest(req.method,String(req.originalUrl||req.path||'').split('?')[0]);
