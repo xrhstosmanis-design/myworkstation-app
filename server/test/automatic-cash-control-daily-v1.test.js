@@ -28,7 +28,7 @@ test("super admin receives all-store reports by Greek date, POS and shift",()=>{
   assert.match(platform,/s\."terminalPos"/);
   assert.match(platform,/s\."shiftLabel"/);
   assert.match(platformUi,/Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια/);
-  assert.match(platform,/stores:\[\.\.\.byStore\.values\(\)\]/);
+  assert.match(platform,/const stores=\[\.\.\.byStore\.values\(\)\]/);
   assert.match(platformUi,/Συνολικό έλλειμμα/);
   assert.match(platform,/fromTime/);
   assert.match(platform,/toTime/);
@@ -152,6 +152,6 @@ test("later expenses, documents or reversals invalidate the old result and requi
   assert.match(cash,/reviewSnapshot/);
   assert.match(cash,/recheckRequired/);
   assert.match(cash,/RECHECK_REQUIRED/);
-  assert.match(cash,/validReviews=reviews\.filter\(row=>sameSnapshot/);
+  assert.match(cash,/validReviews=awaitingCount\?\[\]:reviews\.filter\(row=>sameSnapshot/);
   assert.doesNotMatch(ui,/ΑΠΑΙΤΕΙΤΑΙ ΕΠΑΝΕΛΕΓΧΟΣ/);
 });
