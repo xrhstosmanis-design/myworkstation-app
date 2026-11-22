@@ -147,3 +147,15 @@ test('event automation refuses an unselected lifecycle profile before reading li
   assert.deepEqual(h.events,[]);
  }
 });
+
+test('store schedule gates daily delivery before source work and allows explicit resume in Athens time',async()=>{
+ const h=fixture(),read=createAutomaticReportEligibilityReader(h);
+ h.configuration.deliverySchedules={cashDaily:{enabled:true,sendTime:'08:00'},cashMonthly:{enabled:false}};
+ await assert.rejects(read.readContext(h.tx,scope,'2026-10-22T04:59:59.000Z'),{code:'REPORT_DISPATCH_HOLD'});
+ assert.equal(h.events.some(sql=>sql.includes('FROM "CashShiftSession"')),false);
+ assert.equal((await read.readContext(h.tx,scope,'2026-10-22T05:00:00.000Z')).inputs.length,1);
+ h.configuration.deliverySchedules.cashDaily.enabled=false;
+ await assert.rejects(read.readContext(h.tx,scope,NOW),{code:'REPORT_DISPATCH_HOLD'});
+ h.configuration.deliverySchedules.cashDaily.enabled=true;
+ assert.equal((await read.readContext(h.tx,scope,NOW)).inputs.length,1);
+});

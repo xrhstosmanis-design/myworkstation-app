@@ -1,3 +1,4 @@
+- 22/11/2026 · Νο 7 · Προγραμματισμός αυτόματων αποστολών ανά κατάστημα · [Checkpoint](CHANGES/2026-11-22-no7-automatic-delivery-schedules.md).
 - 22/11/2026 · Νο 5 · Αλλαγή PIN χειριστή POS · 22 τοπικοί έλεγχοι πέρασαν · [Checkpoint](CHANGES/2026-11-22-no5-operator-pin-reset.md).
 
 ## 22/11/2026 — Κεντρική διόρθωση Margin αποθήκης — AWAITING LAB
