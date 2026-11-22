@@ -116,6 +116,7 @@ export function syncMyDataStore(req,{db=prisma}={}){
 }
 // Opt-in historical recovery for verified provider URL formats.
 const originalRecoveryVersion = "verified-provider-formats-202611-v1";
+const panormouStoreId = "cmwqvuxrx001is8g4uqlyzwg2";
 
 export async function recoverHistoricalOriginals({
   db, companyId, storeId, userId, source, excludeInboxIds = [],
@@ -126,11 +127,14 @@ export async function recoverHistoricalOriginals({
   if (source !== "AADE_MYDATA_PRODUCTION" || !storeIds.split(",").map(id => id.trim()).includes(storeId)) {
     return {downloaded: 0, failed: 0};
   }
+  const isPanormou = storeId === panormouStoreId;
+  const recoveryVersion = isPanormou ? "panormou-provider-formats-from-202601-v1" : originalRecoveryVersion;
   const candidates = await db.$queryRaw`
     SELECT m."inboxId" FROM "MyDataInboundDocument" m
     JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
     WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
-      AND m."issueDate">=DATE '2026-11-01' AND m."issueDate"<DATE '2026-12-01'
+      AND CASE WHEN ${isPanormou} THEN m."issueDate">=DATE '2026-01-01'
+        ELSE m."issueDate">=DATE '2026-11-01' AND m."issueDate"<DATE '2026-12-01' END
       AND m."rawPayload"->>'source'=${source}
       AND i."attachmentId" IS NULL AND i."status"='RECEIVED'
       AND m."rawPayload"->>'originalDownloaded' IS DISTINCT FROM 'true'
@@ -138,7 +142,7 @@ export async function recoverHistoricalOriginals({
         SELECT 1 FROM jsonb_array_elements_text(${JSON.stringify(excludeInboxIds)}::jsonb) AS excluded("inboxId")
         WHERE excluded."inboxId"=m."inboxId"
       )
-      AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
+      AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${recoveryVersion}
       AND m."rawPayload"->>'xml' ~* CASE
         WHEN COALESCE((m."rawPayload"->>'originalAttempts')::int,0)=0
         THEN ${providerOriginalRecoveryLinkPattern({includeExistingImpact:true})}
@@ -154,11 +158,11 @@ export async function recoverHistoricalOriginals({
       failed++;
       await db.$executeRaw`
         UPDATE "MyDataInboundDocument" m SET "rawPayload"=m."rawPayload"||jsonb_build_object(
-          'originalRecoveryVersion',${originalRecoveryVersion},'originalError',
+          'originalRecoveryVersion',${recoveryVersion},'originalError',
           'Το πρωτότυπο δεν κατέβηκε κατά την επανάληψη. Δοκιμάστε από τη Θυρίδα.')
         WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId}
           AND m."rawPayload"->>'originalDownloaded' IS DISTINCT FROM 'true'
-          AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${originalRecoveryVersion}
+          AND m."rawPayload"->>'originalRecoveryVersion' IS DISTINCT FROM ${recoveryVersion}
           AND EXISTS (
             SELECT 1 FROM "DocumentInbox" i
             WHERE i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
