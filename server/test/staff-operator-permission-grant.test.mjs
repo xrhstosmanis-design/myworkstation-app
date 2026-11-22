@@ -84,3 +84,45 @@ test('new operator provisioning is independently scoped and grants no POS access
   assert.match(handler,/\$\{employeeId\},FALSE,\$\{actorId\}/);
   assert.match(handler,/json\(\{companyId,storeId,employeeId\}\)/);
 });
+
+test('existing operator PIN reset is opt-in, scoped and audited without recording the secret',()=>{
+  const right='operator-profiles.reset-pin';
+  const path=base+'/employee/pin';
+  assert.equal(staffRequestCapability('POST',path),right);
+  assert.equal(staffRequestCapability('POST',path+'/random'),null);
+  assert.equal(staffRequestCapability('GET',path),null);
+  assert.equal(validStaffCapabilities([right]),false);
+  assert.equal(validStaffCapabilities([capability,right]),true);
+  assert.ok(!staffProfiles.MANAGER.capabilities.includes(right));
+  const handler=route.slice(route.indexOf('const delegatedPinReset='),route.indexOf('const delegatedProvisioning='));
+  assert.match(handler,/await bcrypt\.hash\(pin,12\)/);
+  assert.match(handler,/\$transaction[\s\S]*requireStaffAction\(tx,req,storeId,delegatedPinReset\)[\s\S]*lockEmployeeOperator/);
+  assert.match(handler,/UPDATE "StoreOperatorCredential"[\s\S]*UPDATE "StoreOperatorSession"[\s\S]*'OPERATOR_PIN_CHANGED'/);
+  assert.match(handler,/JSON\.stringify\(\{employeeId\}\)/);
+  assert.match(handler,/res\.json\(\{companyId,storeId,employeeId,changed:true\}\)/);
+});
+
+test('POS PIN login compares the verified hash under the credential lock',()=>{
+  const login=readFileSync(new URL('../src/routes/store-operators.js',import.meta.url),'utf8');
+  assert.match(login,/FOR UPDATE`[\s\S]*credential\.pinHash!==expectedPinHash[\s\S]*STORE_OPERATOR_PIN_CHANGED/);
+  assert.match(login,/createOperatorSession\(req,operator,operator\.pinHash\)/);
+});
+
+test('template copy requires its own grant and only updates approved POS flags',()=>{
+  const right='operator-profiles.copy-permissions';
+  const path=base+'/employee/copy-permissions';
+  assert.equal(staffRequestCapability('POST',path),right);
+  assert.equal(staffRequestCapability('POST',path+'/bulk'),null);
+  assert.equal(staffRequestCapability('PATCH',path),null);
+  assert.equal(validStaffCapabilities([right]),false);
+  assert.equal(validStaffCapabilities([capability,right]),true);
+  assert.ok(!staffProfiles.MANAGER.capabilities.includes(right));
+  const handler=route.slice(route.indexOf('const delegatedCopy='),route.indexOf('const delegatedPinReset='));
+  assert.match(handler,/sourceEmployeeId===employeeId/);
+  assert.match(handler,/\$transaction[\s\S]*requireStaffAction\(tx,req,storeId,delegatedCopy\)[\s\S]*\[employeeId,sourceEmployeeId\]\.sort\(\)[\s\S]*lockEmployeeOperator/);
+  assert.match(handler,/source\[key\]!==expectedSource\[key\]\|\|target\[key\]!==expectedTarget\[key\]/);
+  assert.match(handler,/POS_PERMISSIONS\.map[\s\S]*"permissions" \|\| EXCLUDED\."permissions"/);
+  assert.match(handler,/jsonb_set\("StoreOperatorProfile"\."backofficeMenu",'{orders}'/);
+  assert.match(handler,/'OPERATOR_PERMISSIONS_COPIED'[\s\S]*sourceEmployeeId,targetEmployeeId:employeeId,before:target,after:source/);
+  assert.doesNotMatch(handler,/"pinHash"|"posAccess"|"powerUser"|"backofficeAccess"/);
+});

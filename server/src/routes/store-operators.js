@@ -206,7 +206,7 @@ function mobileEmployeeToken(row){
   return jwt.sign({id:row.id,operatorId:row.id,employeeId:row.employeeId,companyId:row.companyId,storeId:row.storeId,role:row.role,fullName:row.displayName,tokenType:"WORKFORCE_MOBILE",permissions:["WORK_CARD_SELF"]},process.env.JWT_SECRET,{expiresIn:"12h"});
 }
 
-async function createOperatorSession(req,row){
+async function createOperatorSession(req,row,expectedPinHash){
   row.terminalPos=String(row.terminalPos||"MAIN").trim().toUpperCase()||"MAIN";
   const sessionId=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+12*60*60*1000);
@@ -217,8 +217,14 @@ async function createOperatorSession(req,row){
     await assertPosShiftOwner(tx,{companyId:row.companyId,storeId:row.storeId,operatorId:row.id,terminalPos:row.terminalPos});
     // Serialize logins for this operator: two concurrent POS requests must not both pass the check.
     const [credential]=await tx.$queryRaw`
-      SELECT "id" FROM "StoreOperatorCredential" WHERE "id"=${row.id}
+      SELECT "id","pinHash" FROM "StoreOperatorCredential" WHERE "id"=${row.id}
         AND "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "active"=TRUE FOR UPDATE`;
+    if(credential&&expectedPinHash!==undefined&&credential.pinHash!==expectedPinHash){
+      const error=new Error("Το PIN άλλαξε. Χρησιμοποίησε το νέο PIN.");
+      error.status=401;
+      error.code="STORE_OPERATOR_PIN_CHANGED";
+      throw error;
+    }
     const [profile]=credential?await tx.$queryRaw`
       SELECT "posAccess" FROM "StoreOperatorProfile"
       WHERE "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "employeeId"=${row.employeeId}`:[];
@@ -376,7 +382,7 @@ router.post("/login/pin",route(async(req,res)=>{
   await assertOperatorTerminalAvailable(operator);
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
-  const operatorSessionId=await createOperatorSession(req,operator);
+  const operatorSessionId=await createOperatorSession(req,operator,operator.pinHash);
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_PIN",details:{employeeId:operator.employeeId,terminalPos:operator.terminalPos}});
   res.json({
     token:operatorToken(operator,operatorSessionId),
