@@ -40,8 +40,8 @@ const tableStatements = [
     "openingCoins" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingSafe" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
-    "expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
-    "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "expectedOpeningOperational" NUMERIC(14,2) DEFAULT 0,
+    "openingVariance" NUMERIC(14,2) DEFAULT 0,
     "openingNote" TEXT,
     "closedBy" TEXT,
     "closedByName" TEXT,
@@ -65,8 +65,9 @@ const tableStatements = [
   )`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
-  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0`,
-  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "expectedOpeningOperational" NUMERIC(14,2) DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openingVariance" NUMERIC(14,2) DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ALTER COLUMN "expectedOpeningOperational" DROP NOT NULL, ALTER COLUMN "openingVariance" DROP NOT NULL`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb`,
@@ -297,6 +298,27 @@ router.post("/stores/:storeId/attendance-pin/submit",route(async(req,res)=>{
   res.status(201).json({ok:true,...result});
 }));
 
+export function shiftOpeningContinuity(previous,input,declared){
+  const actual=declared.drawer+declared.custody+declared.coins;
+  if(previous?.closeReconciliationStatus==="AWAITING_COUNT"){
+    const missingCount=["drawer","custody","coins","safe"].some(key=>
+      typeof input?.[key]!=="number"&&(typeof input?.[key]!=="string"||!input[key].trim()));
+    return {missingCount,expectedOpening:null,openingVariance:null,previousSafe:null,safeDelta:null};
+  }
+  const expectedOpening=previous?money(previous.nextOpeningTotal):actual;
+  const previousSafe=previous?money(previous.closingSafe):declared.safe;
+  return {missingCount:false,expectedOpening,openingVariance:actual-expectedOpening,previousSafe,
+    safeDelta:Number((declared.safe-previousSafe).toFixed(2))};
+}
+
+export function suggestedShiftOpening(previous){
+  if(previous?.closeReconciliationStatus==="AWAITING_COUNT"){
+    return {drawer:null,custody:null,coins:null,safe:null,operational:null,awaitingPreviousCount:true};
+  }
+  return {drawer:Number(previous?.closingDrawer||0),custody:Number(previous?.closingCustody||0),
+    coins:Number(previous?.closingCoins||0),safe:Number(previous?.closingSafe||0),operational:Number(previous?.nextOpeningTotal||0)};
+}
+
 router.get("/stores/:storeId/shift-status",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
@@ -304,9 +326,8 @@ router.get("/stores/:storeId/shift-status",route(async(req,res)=>{
   const open=rows[0];
   const result={store:{id:store.id,name:store.name},openSession:open?{id:open.id,status:open.status,openedAt:open.openedAt}:null};
   if(req.user.tokenType!=="STORE_OPERATOR"||(req.user.permissions||[]).includes("INITIAL_CASH")){
-    const closed=await prisma.$queryRaw`SELECT "closingDrawer","closingCustody","closingCoins","closingSafe","nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
-    const last=closed[0];
-    result.suggestedOpening={drawer:Number(last?.closingDrawer||0),custody:Number(last?.closingCustody||0),coins:Number(last?.closingCoins||0),safe:Number(last?.closingSafe||0),operational:Number(last?.nextOpeningTotal||0)};
+    const closed=await prisma.$queryRaw`SELECT s."closingDrawer",s."closingCustody",s."closingCoins",s."closingSafe",s."nextOpeningTotal",to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus" FROM "CashShiftSession" s WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
+    result.suggestedOpening=suggestedShiftOpening(closed[0]);
   }
   res.json(result);
 }));
@@ -329,7 +350,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     return res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession,recent:recentRows.map(normalize)});
   }
   const pendingInvoices=openSession&&(req.user.tokenType!=="STORE_OPERATOR"||openSession.openedBy===req.user.id)?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
-  const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
+  const counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:suggestedShiftOpening(lastClosedRows[0])});
 }));
 
 router.get("/stores/:storeId/close-context",route(async(req,res)=>{
@@ -392,6 +413,33 @@ router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
   res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent,openSessions:recent.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
 }));
 
+export function periodCashTotals(sessions,rule){
+  const totals={
+    cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,cardVariance:0,
+    shortage:0,surplus:0,duplicateCandidates:0,awaitingCount:0
+  };
+  for(const row of sessions){
+    totals.cashSales+=money(row.cashSales);
+    totals.cardSales+=money(row.cardSales);
+    totals.expenses+=money(row.expenses);
+    totals.duplicateCandidates+=(row.duplicateReview||[]).length;
+    if(row.closeReconciliationStatus==="AWAITING_COUNT"){
+      totals.awaitingCount++;
+      continue;
+    }
+    const variance=money(row.effectiveVariance);
+    totals.eftposTotal+=money(row.eftposTotal);
+    totals.variance+=variance;
+    totals.cardVariance+=rule.posEftposEnabled?money(row.cardVariance):0;
+    totals.shortage+=Math.max(0,-variance);
+    totals.surplus+=Math.max(0,variance);
+  }
+  if(totals.awaitingCount){
+    for(const key of ["eftposTotal","variance","cardVariance","shortage","surplus"])totals[key]=null;
+  }
+  return totals;
+}
+
 export async function readCashDailySummary(req,{db=prisma,prepareSource=null}={}){
   const prisma=db;
   assertStoreAccess(req,req.params.storeId);
@@ -423,10 +471,11 @@ export async function readCashDailySummary(req,{db=prisma,prepareSource=null}={}
     prisma.$queryRaw`SELECT f."saleId" FROM "FiscalDocument" f JOIN "Sale" s ON s."id"=f."saleId" WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND (s."occurredAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date`,
     prisma.$queryRaw`SELECT "actionType","details","createdAt" FROM "PosSaleActionAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND ("createdAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date ORDER BY "createdAt","id"`
   ]);
-  const sessions=sessionRows.map(row=>{const session=normalize(row),delivery=String(session.terminalPos||"").toUpperCase().includes(String(rule.deliveryTerminalPattern||"DELIVERY").toUpperCase());return {...session,delivery,varianceConsidered:rule.mode!=="POS_EFTPOS_ONLY",effectiveVariance:rule.mode==="POS_EFTPOS_ONLY"?0:money(session.variance)}});
+  const sessions=sessionRows.map(row=>{const session=normalize(row),delivery=String(session.terminalPos||"").toUpperCase().includes(String(rule.deliveryTerminalPattern||"DELIVERY").toUpperCase());return {...session,delivery,varianceConsidered:rule.mode!=="POS_EFTPOS_ONLY",effectiveVariance:session.closeReconciliationStatus==="AWAITING_COUNT"?null:rule.mode==="POS_EFTPOS_ONLY"?0:money(session.variance)}});
   const expenseChecks=await readCashExpenseEvidence(prisma,{companyId:req.user.companyId,storeId:store.id},expenseRows);
-  const totals=sessions.reduce((sum,row)=>{const variance=money(row.effectiveVariance),cardVariance=rule.posEftposEnabled?money(row.cardVariance):0;sum.cashSales+=money(row.cashSales);sum.cardSales+=money(row.cardSales);sum.eftposTotal+=money(row.eftposTotal);sum.expenses+=money(row.expenses);sum.variance+=variance;sum.cardVariance+=cardVariance;sum.shortage+=variance<0?Math.abs(variance):0;sum.surplus+=variance>0?variance:0;sum.duplicateCandidates+=(row.duplicateReview||[]).length;return sum},{cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,cardVariance:0,shortage:0,surplus:0,duplicateCandidates:0});
+  const totals=periodCashTotals(sessions,rule);
   const alerts=[];
+  for(const row of sessions)if(row.closeReconciliationStatus==="AWAITING_COUNT")alerts.push({type:"SHIFT_AWAITING_COUNT",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel});
   for(const row of sessions){if(rule.carryOverEnabled&&Math.abs(money(row.openingVariance))>0.009)alerts.push({type:"OPENING_CONTINUITY",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.openingVariance),scope:row.delivery?"DELIVERY_TO_DELIVERY":"SAME_POS_ONLY"});if(row.varianceConsidered&&Math.abs(money(row.variance))>0.009)alerts.push({type:money(row.variance)<0?"SHORTAGE":"SURPLUS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.variance)});if(rule.posEftposEnabled&&Math.abs(money(row.cardVariance))>0.009)alerts.push({type:"POS_EFTPOS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.cardVariance)});if((row.duplicateReview||[]).length)alerts.push({type:"DUPLICATE_REVIEW",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,count:row.duplicateReview.length})}
   for(const expense of expenseChecks){if(!["MATCHED","PARTIALLY_PAID","REVERSED"].includes(expense.status))alerts.push({type:expense.status,transactionId:expense.id,sessionId:expense.sessionId,amount:expense.amount,difference:expense.difference})}
   const reconciliation=buildKatShiftReconciliation({sessions,auditEvents:auditRows,paymentAttempts:attemptRows,fiscalDocuments:fiscalRows,actionEvents:actionRows});
@@ -502,14 +551,14 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});
   // KAT_SAFE_VAULT_ADJUSTMENT_ALERT_V2
   const operational=body.drawer+body.custody+body.coins; // ΧΡΗΜΑΤΟΚΙΒΩΤΙΟ ΔΕΝ ΜΕΤΡΑΕΙ ΣΤΟ ΛΕΙΤΟΥΡΓΙΚΟ ΤΑΜΕΙΟ
-  const lastClosedRows=await prisma.$queryRaw`SELECT "nextOpeningTotal","closingSafe" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
-  const previousSafe=lastClosedRows[0]?money(lastClosedRows[0].closingSafe):body.safe;
-  const safeDelta=Number((body.safe-previousSafe).toFixed(2));
+  const lastClosedRows=await prisma.$queryRaw`SELECT s."nextOpeningTotal",s."closingSafe",to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus" FROM "CashShiftSession" s WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
+  const {missingCount,previousSafe,safeDelta,expectedOpening,openingVariance}=shiftOpeningContinuity(lastClosedRows[0],req.body,body);
+  if(missingCount)return res.status(400).json({error:"Καταχώρισε τη νέα καταμέτρηση για συρτάρι, φύλαξη, κέρματα και χρηματοκιβώτιο.",code:"OPENING_COUNT_REQUIRED"});
   const safeReason=String(body.safeReason||body.note||"").trim();
-  if(safeDelta < -0.009 && !safeReason){
+  if(safeDelta!==null&&safeDelta < -0.009 && !safeReason){
     return res.status(409).json({error:`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν ανοίξει η βάρδια.`,code:"SAFE_DECREASE_REASON_REQUIRED",previousSafe,newSafe:body.safe,delta:safeDelta});
   }
-  const expectedOpening=lastClosedRows[0]?money(lastClosedRows[0].nextOpeningTotal):operational,openingVariance=operational-expectedOpening,actorName=req.user.fullName||"Χρήστης";
+  const actorName=req.user.fullName||"Χρήστης";
   const sessionId=crypto.randomUUID();
   const insertSession=db=>db.$queryRaw`
     INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
@@ -532,7 +581,7 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   if(!rows)return res.status(403).json({error:"Η πρόσβαση POS του χειριστή δεν είναι πλέον ενεργή.",code:"STORE_OPERATOR_POS_ACCESS_DISABLED"});
 
   let safeChange=null;
-  if(Math.abs(safeDelta)>0.009){
+  if(safeDelta!==null&&Math.abs(safeDelta)>0.009){
     const description=[`Χρηματοκιβώτιο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");
     await prisma.$executeRaw`
       INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt")
@@ -584,7 +633,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
       if(!body.forceCloseWithShortage)return {recountRequired:true,sessionId:session.id,storeId:session.storeId,expectedOperational:expected,actualOperational:actual,variance,shortage};
     }
     const duplicateReview=Math.abs(cardVariance)>0.009?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date()):[],duplicateReviewJson=JSON.stringify(duplicateReview);
-    if(Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
+    if(safeDelta!==null&&Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
     const rows=await tx.$queryRaw`
       UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
         "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
