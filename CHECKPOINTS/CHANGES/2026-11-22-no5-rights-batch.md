@@ -5,3 +5,5 @@ CENTRAL-BACKOFFICE-ACCESS-01 continues with one package for five changes: operat
 The package excludes unimplemented Owner workflows such as PIN and account provisioning, manual clock writes, force-close and payment import. These actions need distinct authorization and their normal operational safeguards. Production acceptance of the earlier #4133 and #4149 is still open.
 
 Follow-up in the same release candidate: separately delegated POS access with open-shift protection, employee contact/availability updates, manual attendance, attendance print, and schedule CSV. 31 focused tests passed. Account/PIN provisioning, force-close and payment import remain separate gaps. Release and manual acceptance are pending.
+
+POS entry now rechecks the enabled profile under the same credential lock used by access revocation before either PIN or card issues a session. The isolated PostgreSQL fixture covers both credential types and verifies no session was created while disabled.
