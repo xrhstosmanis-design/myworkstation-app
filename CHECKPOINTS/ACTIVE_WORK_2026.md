@@ -1,3 +1,5 @@
+- 22/11/2026 · POS · Πλάτος κατηγοριών και γρήγορων πλήκτρων, δεύτερη σελίδα και χρώματα · /root · 22 τοπικοί έλεγχοι, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-22-pos-quick-pages-resize.md).
+
 - 22/11/2026 · Νο 5 · Αλλαγή PIN χειριστή POS · 22 τοπικοί έλεγχοι πέρασαν · [Checkpoint](CHANGES/2026-11-22-no5-operator-pin-reset.md).
 
 ## 22/11/2026 — Κεντρική διόρθωση Margin αποθήκης — AWAITING LAB
