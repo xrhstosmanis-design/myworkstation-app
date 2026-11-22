@@ -1,0 +1,24 @@
+# INACTIVE DRAFT. Located outside .github/workflows and intentionally job-disabled.
+# Not authorized to run Claude, merge, deploy, change secrets, or incur usage.
+name: MyWorkStation dispatch policy preflight (INACTIVE)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-tests:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run pure policy tests (no Claude, no Render)
+        run: node --test docs/coord/claude-automation-policy.test.mjs
