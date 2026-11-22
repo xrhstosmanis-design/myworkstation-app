@@ -19,17 +19,17 @@ src=src.replace(reportNeedle,`${reportNeedle},\n        COALESCE(SUM(t."amount")
 const summaryNeedle='a.expenses+=n(row.expenses);a.variance+=n(row.variance);';
 if(!src.includes(summaryNeedle))throw new Error("owner shifts transfer patch: summary anchor not found");
 src=src.replace(summaryNeedle,'a.expenses+=n(row.expenses);a.transferIn+=n(row.transferIn);a.variance+=n(row.variance);');
-const summaryInitNeedle='{count:0,open:0,closed:0,cashSales:0,cardSales:0,eftpos:0,expenses:0,variance:0,openingVariance:0,cardVariance:0,alerts:0}';
-if(!src.includes(summaryInitNeedle))throw new Error("owner shifts transfer patch: summary init anchor not found");
-src=src.replace(summaryInitNeedle,'{count:0,open:0,closed:0,cashSales:0,cardSales:0,eftpos:0,expenses:0,transferIn:0,variance:0,openingVariance:0,cardVariance:0,alerts:0}');
+const summaryInitNeedle=/\{count:0,open:0,closed:0,(?:awaitingCount:0,)?cashSales:0,cardSales:0,eftpos:0,expenses:0,variance:0,openingVariance:0,cardVariance:0,alerts:0\}/;
+if(!summaryInitNeedle.test(src))throw new Error("owner shifts transfer patch: summary init anchor not found");
+src=src.replace(summaryInitNeedle,summary=>summary.replace("expenses:0,","expenses:0,transferIn:0,"));
 
 const detailNeedle='const recordedSupplierPayments=sum("SUPPLIER_PAYMENT"),recordedOtherExpenses=sum("OTHER_EXPENSE"),deductedSupplierPayments=sum("SUPPLIER_PAYMENT",true),deductedOtherExpenses=sum("OTHER_EXPENSE",true),percentages=sum("PERCENTAGES");';
 if(!src.includes(detailNeedle))throw new Error("owner shifts transfer patch: detail aggregate anchor not found");
 src=src.replace(detailNeedle,'const recordedSupplierPayments=sum("SUPPLIER_PAYMENT"),recordedOtherExpenses=sum("OTHER_EXPENSE"),deductedSupplierPayments=sum("SUPPLIER_PAYMENT",true),deductedOtherExpenses=sum("OTHER_EXPENSE",true),percentages=sum("PERCENTAGES"),transferIn=sum("TRANSFER_AMOUNT");');
 
-const diffNeedle='cashSales:n(shift.cashSales),cardSales:n(shift.cardSales),eftposTotal:n(shift.eftposTotal),cardVariance:n(shift.cardVariance),recordedSupplierPayments,recordedOtherExpenses,deductedSupplierPayments,deductedOtherExpenses,percentages,';
-if(!src.includes(diffNeedle))throw new Error("owner shifts transfer patch: difference anchor not found");
-src=src.replace(diffNeedle,'cashSales:n(shift.cashSales),cardSales:n(shift.cardSales),eftposTotal:n(shift.eftposTotal),cardVariance:n(shift.cardVariance),recordedSupplierPayments,recordedOtherExpenses,deductedSupplierPayments,deductedOtherExpenses,percentages,transferIn,');
+const diffNeedle=/cashSales:n\(shift\.cashSales\),cardSales:n\(shift\.cardSales\),eftposTotal:(?:n\(shift\.eftposTotal\)|closeAmount\("eftposTotal"\)),cardVariance:(?:n\(shift\.cardVariance\)|closeAmount\("cardVariance"\)),recordedSupplierPayments,recordedOtherExpenses,deductedSupplierPayments,deductedOtherExpenses,percentages,/;
+if(!diffNeedle.test(src))throw new Error("owner shifts transfer patch: difference anchor not found");
+src=src.replace(diffNeedle,difference=>difference+"transferIn,");
 
 fs.writeFileSync(path,src);
 console.log("Owner shifts transfer-in reporting installed.");
