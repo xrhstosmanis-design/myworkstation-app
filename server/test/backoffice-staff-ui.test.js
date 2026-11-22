@@ -1436,3 +1436,46 @@ test('native payroll read-only rejects foreign periods, detail and preview envel
     }finally{await m.close()}
   }
 });
+
+test('invoice supplier correction searches the directory and sends only a scoped confirmed change',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const calls=[],order={id:'order',storeId:'a1',storeName:'A1',supplierId:'old',supplierName:'Παλαιός',status:'FINAL',sourceType:'POS_OCR_DRAFT',invoiceNumber:'SYN-1'};
+ const suppliers=[{id:'old',name:'Παλαιός',taxId:'111111111'},{id:'new',name:'Νέος',taxId:'222222222'},{id:'other',name:'Άλλος',taxId:'333333333'}];
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'MANAGER',capabilities:['invoices.read','invoices.correct-supplier']}]};
+  if(path.startsWith('/api/purchase-orders/report?'))return {stores:[{id:'a1',name:'A1'}],suppliers,orders:[order],summary:{count:1}};
+  if(path.endsWith('/detail'))return {order,lines:[],totals:{quantity:0,net:0,gross:0}};
+  if(path.includes('/supplier-correction-preview?'))return {version:'a'.repeat(64),beforeSupplier:suppliers[0],targetSupplier:suppliers[1],totalGross:1,payment:{amount:1}};
+  if(path.endsWith('/supplier-correction'))return {ok:true};
+  return {items:[],suppliers:[],total:0,archiveTotal:0};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Τιμολόγια').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  await m.act(async()=>document.querySelector('[data-po-open]').click());
+  await m.act(async()=>document.querySelector('[data-correct-supplier]').click());
+  const form=document.querySelector('[data-supplier-correction]');
+  const search=form.elements.supplierSearch;
+  search.value='νεος';search.dispatchEvent(new Event('input',{bubbles:true}));
+  assert.equal(form.elements.supplierId.querySelector('[value="other"]').hidden,true);
+  form.elements.supplierId.value='new';form.elements.supplierId.dispatchEvent(new Event('change',{bubbles:true}));
+  await m.act(async()=>form.querySelector('[data-preview]').click());
+  const submit=form.querySelector('[type="submit"]');
+  assert.equal(submit.disabled,true);
+  form.elements.reason.value='Έλεγχος πρωτοτύπου';
+  form.elements.original.checked=true;
+  form.elements.original.dispatchEvent(new Event('change',{bubbles:true}));
+  assert.equal(submit.disabled,true,'linked payment requires independent confirmation');
+  form.elements.payment.checked=true;
+  form.elements.payment.dispatchEvent(new Event('change',{bubbles:true}));
+  assert.equal(submit.disabled,false);
+  await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  const [write]=calls.filter(c=>c.options.method==='POST');
+  assert.equal(write.path,'/api/purchase-orders/order/supplier-correction');
+  assert.equal(write.options.headers['x-backoffice-store-id'],'a1');
+  assert.deepEqual(JSON.parse(write.options.body),{storeId:'a1',supplierId:'new',version:'a'.repeat(64),reason:'Έλεγχος πρωτοτύπου',confirmOriginal:true,confirmPaymentSupplier:true});
+ }finally{await m.close()}
+});
