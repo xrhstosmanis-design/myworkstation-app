@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dispatchPolicyFingerprint} from '../src/services/automatic-report-dispatch-policy.js';
 import {readActivation,ACTIVATION_SERVICE_ID} from '../src/services/automatic-report-activation.js';
-import {createAutomaticReportEligibilityReader,automaticReportScopeInput} from '../src/services/automatic-report-eligibility.js';
+import {createAutomaticReportEligibilityReader,automaticReportScopeInput,includesScheduledMonthlyTurnover,cashGrantPeriodStart} from '../src/services/automatic-report-eligibility.js';
 const NOW='2026-10-22T12:00:00.000Z';
 const control=readActivation({RENDER_SERVICE_ID:ACTIVATION_SERVICE_ID,AUTOMATIC_REPORT_ACTIVATION_CONTROL:JSON.stringify({v:1,serviceId:ACTIVATION_SERVICE_ID,epoch:'11111111-1111-4111-8111-111111111111',issuedAt:'2026-10-19T00:00:00.000Z',notBefore:'2026-10-20T04:00:00.000Z',enabled:true})});
 const scope={companyId:'c',storeId:'s',frequency:'DAILY'};
@@ -148,6 +148,29 @@ test('event automation refuses an unselected lifecycle profile before reading li
  }
 });
 
+test('scheduled monthly turnover preserves the existing store and admits only the independently configured LAB',()=>{
+ const env={MONTHLY_TURNOVER_REPORT_STORE_ID:'production',MONTHLY_TURNOVER_SCHEDULED_LAB_STORE_ID:'lab',MONTHLY_TURNOVER_LAB_STORE_ID:'manual-lab'};
+ for(const storeId of ['production','lab']){
+  assert.equal(includesScheduledMonthlyTurnover({storeId,frequency:'MONTHLY'},env),true);
+  for(const frequency of ['DAILY','WEEKLY'])assert.equal(includesScheduledMonthlyTurnover({storeId,frequency},env),false);
+ }
+ for(const storeId of ['other','manual-lab'])assert.equal(includesScheduledMonthlyTurnover({storeId,frequency:'MONTHLY'},env),false);
+ assert.equal(includesScheduledMonthlyTurnover({storeId:'lab',frequency:'MONTHLY'},{}),false);
+});
+
+test('adding monthly authority preserves daily dispatch without backdating the monthly cutoff',async()=>{
+ const h=fixture();
+ const {grant,policy,recipients}=h.auth;
+ grant.allowedFrequencies=policy.allowedFrequencies=recipients[0].consent.allowedFrequencies=['DAILY','MONTHLY'];
+ grant.grantedAt=grant.notBefore=NOW;
+ assert.equal(cashGrantPeriodStart(grant,'MONTHLY'),NOW);
+ const read=createAutomaticReportEligibilityReader(h);
+ const daily=await read.readContext(h.tx,scope,NOW);
+ assert.equal(daily.inputs[0].periodFrom,'2026-10-21T04:00:00.000Z');
+ await assert.rejects(read.readContext(h.tx,{...scope,frequency:'MONTHLY'},NOW),{code:'REPORT_DISPATCH_HOLD'});
+ grant.createdAt=NOW;
+ await assert.rejects(read.readContext(h.tx,scope,NOW),{code:'REPORT_DISPATCH_HOLD'});
+});
 test('store schedule gates daily delivery before source work and allows explicit resume in Athens time',async()=>{
  const h=fixture(),read=createAutomaticReportEligibilityReader(h);
  h.configuration.deliverySchedules={cashDaily:{enabled:true,sendTime:'08:00'},cashMonthly:{enabled:false}};

@@ -939,3 +939,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 Εμφάνιση προμηθευτή από καταχωρισμένη αγορά του επιλεγμένου καταστήματος. [Καταγραφή](CHANGES/2026-11-22-product-card-latest-supplier.md).
 
 - 22/11/2026 · Νο 9: [Τιμή προσφοράς στο ανώνυμο καλάθι POS](CHANGES/2026-11-22-no9-pos-anonymous-promotion.md). Draft PR #4152, 12 στοχευμένοι τοπικοί έλεγχοι PASS. Εκκρεμούν πλήρες CI, δοκιμαστική πώληση στο LAB και διασταύρωση Message-ID.
+
+- Νο 9 · [Μηνιαία ταμεία και τζίρος LAB](CHANGES/2026-11-22-lab-monthly-cash-turnover.md). Χωριστή ρύθμιση για τον υπολογισμό τζίρου στο LAB. Εκκρεμεί ανεξάρτητη έναρξη μηνιαίας εξουσιοδότησης.
