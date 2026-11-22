@@ -56,11 +56,12 @@ test('Platform daily cash report preserves pending counts and counted store tota
  const route=source.slice(source.indexOf('router.get("/cash-control/daily"'),source.indexOf('router.get("/cash-control/shortages"'));
  const uncounted={...session,sessionId:'uncounted',storeName:'ΕΣΤΙΑ',closeReconciliationStatus:'AWAITING_COUNT',cashSales:14,cardSales:11,expectedOperational:47,eftposTotal:null,cardVariance:null,actualOperational:null,variance:null};
  const counted={...session,sessionId:'counted',storeName:'Other',storeId:'other',cashSales:12,cardSales:8,eftposTotal:8,actualOperational:0,variance:-5,cardVariance:0};
- let handler;
+ const countedWithoutEftpos={...counted,sessionId:'counted-no-eftpos',storeName:'ΕΣΤΙΑ',storeId:'no-eftpos',closeReconciliationStatus:'COUNTED',eftposTotal:null,cardVariance:null,variance:-2};
+ let handler,reportRows=[uncounted,counted];
  const deps={
   router:{get:(_path,fn)=>{handler=fn}},z,ensureCashControlSchema:async()=>{},
   resolveCashReportPeriod:(_query,date)=>({from:date,to:date}),
-  prisma:{$queryRaw:async strings=>strings.join('').includes('GROUP BY c."id"')?[uncounted,counted]:[]},
+  prisma:{$queryRaw:async strings=>strings.join('').includes('GROUP BY c."id"')?reportRows:[]},
   mapCashReportRows:(rows,fn)=>Promise.all(rows.map(fn)),
   partitionCashAuditEvents,readCashReviewState,readCashExpenseEvidence,cashExpenseFindings,
   readCashReviewEvidence:async()=>({findings:[{code:'AUDIT_FIXTURE'}]})
@@ -81,4 +82,14 @@ test('Platform daily cash report preserves pending counts and counted store tota
  assert.equal(result.stores[0].shortage,null);
  assert.equal(result.stores[1].shortage,5);
  assert.equal(result.stores[1].cardVariance,0);
+ reportRows=[counted,countedWithoutEftpos];
+ await handler({query:{date:'2026-10-12'}},{json:value=>{result=value}},error=>{throw error});
+ assert.equal(result.totals.awaitingCount,0);
+ assert.equal(result.totals.shortage,7);
+ assert.equal(result.totals.variance,-7);
+ assert.equal(result.totals.eftposTotal,null);
+ assert.equal(result.totals.cardVariance,null);
+ assert.equal(result.rows[1].actualCardVariance,null);
+ assert.equal(result.rows[1].cardVariance,null);
+ assert.equal(result.stores[1].cardVariance,null);
 });

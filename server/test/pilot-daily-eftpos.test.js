@@ -7,8 +7,8 @@ const client=fs.readFileSync(new URL("../../client/src/components/cloud/PilotDai
 
 test("daily cash report includes the employee-entered EFTPOS close",()=>{
   assert.match(route,/"eftposTotal","cardVariance"/);
-  assert.match(route,/eftposTotal:awaitingCount\?null:closed\.reduce/);
-  assert.match(route,/cardVarianceTotal:awaitingCount\?null:closed\.reduce/);
+  assert.match(route,/eftposTotal:eftposUnavailable\?null:closed\.reduce/);
+  assert.match(route,/cardVarianceTotal:eftposUnavailable\?null:closed\.reduce/);
   assert.match(route,/companyId"=\$\{req\.user\.companyId\}/);
 });
 
@@ -24,4 +24,9 @@ test("pilot report labels uncounted sessions and renders unknown money as blank 
   assert.match(route,/varianceTotal:awaitingCount\?null:/);
   assert.match(client,/value==null\?"—"/);
   assert.match(client,/Εκκρεμεί καταμέτρηση/);
+});
+
+test("pilot report preserves unavailable EFTPOS after a counted cash close",()=>{
+  assert.match(route,/closeReconciliationStatus==="COUNTED"&&row\.eftposTotal==null/);
+  assert.match(client,/summary\.cardVarianceTotal==null\?"":/);
 });

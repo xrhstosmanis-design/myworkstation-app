@@ -57,7 +57,7 @@ export default function PilotDailyReport({api,store}){
         <article><span>Μετρητά</span><strong>{money(summary.cashSales)}</strong></article>
         <article><span>Κάρτες</span><strong>{money(summary.cardSales)}</strong></article>
         <article><span>EFTPOS</span><strong>{money(summary.eftposTotal)}</strong></article>
-        <article><span>Κάρτες − EFTPOS</span><strong className={Math.abs(Number(summary.cardVarianceTotal||0))>.009?"pilot-negative":"pilot-positive"}>{money(summary.cardVarianceTotal)}</strong></article>
+        <article><span>Κάρτες − EFTPOS</span><strong className={summary.cardVarianceTotal==null?"":Math.abs(summary.cardVarianceTotal)>.009?"pilot-negative":"pilot-positive"}>{money(summary.cardVarianceTotal)}</strong></article>
         <article><span>Αφαιρέθηκαν από ταμείο</span><strong>{money(summary.expensesTotal)}</strong></article>
         {summary.awaitingCount>0&&<article><span>Εκκρεμεί καταμέτρηση</span><strong>{summary.awaitingCount}</strong></article>}
         <article><span>Διαφορά</span><strong className={Number(summary.varianceTotal)<0?"pilot-negative":"pilot-positive"}>{money(summary.varianceTotal)}</strong></article>

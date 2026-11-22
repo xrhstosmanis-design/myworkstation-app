@@ -92,3 +92,25 @@ test("owner reports flag an uncounted closed shift and preserve unknown closing 
   assert.equal(detail.difference.variance,null);
   assert.deepEqual(detail.alerts,[{kind:"AWAITING_COUNT",amount:null,label:"Εκκρεμεί καταμέτρηση"}]);
 });
+
+test("owner reports preserve cash counts when a store has no EFTPOS comparison",async()=>{
+  const {readOwnerShiftReport,readOwnerShiftDetail}=await import("../src/routes/owner-shifts.js");
+  const shift={id:"counted",storeId:"lab",status:"CLOSED",closeReconciliationStatus:"COUNTED",
+    eftposTotal:null,cardVariance:null,actualOperational:10,variance:0};
+  const report=await readOwnerShiftReport("company",{},{
+    db:{store:{findMany:async()=>[]},$queryRaw:async()=>[shift]}
+  });
+  assert.equal(report.summary.awaitingCount,0);
+  assert.equal(report.summary.eftpos,null);
+  assert.equal(report.summary.cardVariance,null);
+  assert.equal(report.summary.variance,0);
+  let first=true;
+  const detail=await readOwnerShiftDetail("company",shift.id,{
+    db:{$queryRaw:async()=>{if(!first)return [];first=false;return [shift];}}
+  });
+  assert.equal(detail.difference.actualOperational,10);
+  assert.equal(detail.difference.variance,0);
+  assert.equal(detail.difference.eftposTotal,null);
+  assert.equal(detail.difference.cardVariance,null);
+  assert.deepEqual(detail.alerts,[]);
+});

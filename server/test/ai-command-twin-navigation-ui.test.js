@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {resolveObjectURL} from "node:buffer";
 import {TWIN_RETURN_KEY} from "../../client/src/components/platform/ai-command-twin-navigation.js";
 
 // The seven real screen components are mounted. APIs, nested business editors,
@@ -22,7 +23,7 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
  const App=module.exports.default,dom=new JSDOM('<div id="root"></div>',{url:"https://isolated.invalid/platform-admin"});
  const keys=["window","document","navigator","HTMLElement","Event","CustomEvent","MutationObserver","localStorage","sessionStorage","fetch","IS_REACT_ACT_ENVIRONMENT"],previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[k]});
- const navigations=[],downloads=[];window.__fixtureNavigate=url=>navigations.push(url);window.HTMLAnchorElement.prototype.click=function(){downloads.push(this.download)};
+ const navigations=[],downloads=[],downloadContents=[];window.__fixtureNavigate=url=>navigations.push(url);window.HTMLAnchorElement.prototype.click=function(){downloads.push(this.download);downloadContents.push(resolveObjectURL(this.href)?.text())};
  localStorage.setItem("token","fixture-platform");localStorage.setItem("platformUser",JSON.stringify({id:"actor",fullName:"Fixture"}));
  const a={id:"company-a",name:"Company A",active:true,plan:"BASIC",modules:[],stores:[{id:"store-a",name:"Store A",active:true}]},b={id:"company-b",name:"Company B",active:true,plan:"BASIC",modules:[],stores:[{id:"store-b",name:"Store B",active:true}]};
  let companies=[a,b],payments=false,bank=false,videoDenied=false,pendingVideo=null;
@@ -45,7 +46,7 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
    const stores=companies.flatMap(c=>c.stores.map(s=>({...totals,storeId:s.id,storeName:s.name,companyId:c.id,companyName:c.name}))).filter(s=>!u.searchParams.get("storeId")||s.storeId===u.searchParams.get("storeId"));
    return reply({date:u.searchParams.get("date"),from:u.searchParams.get("from"),to:u.searchParams.get("to"),fromTime:u.searchParams.get("fromTime"),toTime:u.searchParams.get("toTime"),storeId:u.searchParams.get("storeId")||null,operator:u.searchParams.get("operator")||null,sessionId:u.searchParams.get("sessionId")||null,totals,stores,rows:[]});
   }
-  if(p==="/api/platform/cash-control/shortages")return reply({rows:[],totalShortage:0});
+  if(p==="/api/platform/cash-control/shortages")return reply({rows:[{date:"2026-11-14",companyName:b.name,storeName:"Store B",shortage:5,cardVariance:null}],totalShortage:5});
   if(p==="/api/transactions/supplier-settlements/review")return reply({items:payments?[{id:"payment-b",companyId:b.id,storeId:"store-b",companyName:b.name,storeName:"Store B",supplierName:"Fixture supplier",amount:2,status:"PENDING_REVIEW",allocations:[],automaticCheck:{checks:[]}}]:[],companies,stores:companies.flatMap(c=>c.stores.map(s=>({...s,companyId:c.id})))});
   if(p==="/api/transactions/bank-ledger/review")return reply({items:bank?[{id:"bank-b",storeId:"store-b",companyId:b.id,companyName:b.name,storeName:"Store B",amount:3,status:"CONFIRMED",attachmentFilename:"fixture.pdf",occurredAt:"2026-10-10T07:00:00Z"}]:[]});
   if(p==="/api/transactions/bank-ledger/summary")return reply({items:[],totals:{availableBalance:0,pendingAmount:0,projectedBalance:0}});
@@ -86,6 +87,7 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
    const since=calls.length;await press(area("EFTPOS / Ταμειακές"));assert.match(document.querySelector(".cash-report-search").textContent,/Store B/);assert.equal(document.querySelector(".cash-report-stores"),null);
    await press(button(".cash-report-filters button","Αναζήτηση"));await press(button(".cash-report-filters button","Excel ελλειμμάτων καταστήματος"));
    scoped(since,["/api/platform/cash-control/daily","/api/platform/cash-control/shortages"]);assert.ok(downloads.some(name=>name.includes("Store B")));
+   const csv=await downloadContents.at(-1);assert.match(csv,/"5\.00";""$/);
    await press(document.querySelector(".cash-report-dialog .modal-close"));returned();
   });
   await t.test("Cash follows supplier findings to the canonical scoped supplier center",async()=>{

@@ -437,6 +437,10 @@ export function periodCashTotals(sessions,rule){
   if(totals.awaitingCount){
     for(const key of ["eftposTotal","variance","cardVariance","shortage","surplus"])totals[key]=null;
   }
+  if(sessions.some(row=>row.closeReconciliationStatus==="COUNTED"&&row.eftposTotal==null)){
+    totals.eftposTotal=null;
+    totals.cardVariance=null;
+  }
   return totals;
 }
 
@@ -488,6 +492,9 @@ export async function readCashSessionInvestigation(req,{db=prisma}={}){
   const prisma=db;
   const found=await prisma.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
   const session=normalize(found[0]);if(!session)throw Object.assign(new Error("Δεν βρέθηκε η βάρδια."),{status:404});assertStoreAccess(req,session.storeId);const store=await ownedStore(session.storeId,req.user.companyId,db),controlRule=await cashControlRule(store,req.user.companyId,db),varianceConsidered=controlRule.mode!=="DIFFERENCE_ONLY";
+  const awaitingCount=session.closeReconciliationStatus==="AWAITING_COUNT";
+  const initialVariance=awaitingCount?null:session.variance;
+  const cardVariance=awaitingCount?null:session.cardVariance;
   const transactions=await prisma.$queryRaw`SELECT "id","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",("attachmentData" IS NOT NULL) AS "hasAttachment",CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN "attachmentFilename" ELSE NULL END AS "purchaseDocumentId" FROM "StoreTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "occurredAt"`;
   const tables=await existingAuditTables(prisma),auditEvents=[],auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
   if(tables.operator){const rows=await prisma.$queryRaw`SELECT "id","eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`;for(const row of rows)if(suspiciousOperatorEvent(row.eventType))auditEvents.push({source:"STORE_OPERATOR_AUDIT",type:row.eventType,actorId:row.actorId,operatorId:row.operatorId,at:row.createdAt,details:row.details||{},amount:auditAmount(row.details)})}
@@ -497,36 +504,37 @@ export async function readCashSessionInvestigation(req,{db=prisma}={}){
   auditEvents.splice(0,auditEvents.length,...association.linked);
   const unassignedAuditEvents=association.unassigned;
   const findings=[];
+  if(awaitingCount)findings.push({code:"SHIFT_AWAITING_COUNT",severity:"MEDIUM"});
   if(unassignedAuditEvents.length)findings.push({code:"AUDIT_ASSOCIATION_UNRESOLVED",severity:"MEDIUM",count:unassignedAuditEvents.length});
   const expenseChecks=await readCashExpenseEvidence(prisma,{companyId:req.user.companyId,storeId:session.storeId},transactions);
   findings.push(...cashExpenseFindings(expenseChecks));
   for(const row of transactions){if(row.reversedAt)findings.push({code:"REVERSED_TRANSACTION",severity:"MEDIUM",transactionId:row.id,amount:money(row.amount),actorName:row.reversedByName||row.actorName,at:row.reversedAt,reason:row.reversalReason})}
   for(const event of auditEvents){const high=/CANCEL|RETURN|VOID|DUPLICATE_CONFIRMED|OVERRIDE/i.test(event.type);findings.push({code:`AUDIT_${event.type}`,severity:high?"HIGH":"MEDIUM",...event})}
   const actionEvents=auditEvents.filter(event=>event.source==="POS_ACTION_AUDIT"),actionsByOriginal=new Map();
-  for(const event of actionEvents){if(session.closedAt&&new Date(event.at)>new Date(session.closedAt))findings.push({code:"ACTION_AFTER_SHIFT_CLOSE",severity:"HIGH",...event});if(/RETURN|CANCEL|VOID/i.test(event.type)&&!event.relatedSaleId)findings.push({code:"ACTION_WITHOUT_ORIGINAL_SALE",severity:"HIGH",...event});if(event.relatedSaleId){const related=actionsByOriginal.get(event.relatedSaleId)||[];related.push(event);actionsByOriginal.set(event.relatedSaleId,related)}if(event.actorId&&event.actorId!==session.openedBy&&event.actorId!==session.closedBy)findings.push({code:"ACTION_BY_DIFFERENT_OPERATOR",severity:"MEDIUM",...event});if(event.amount!=null&&Math.abs(Math.abs(Number(event.amount))-Math.abs(money(session.variance)))<=0.01)findings.push({code:"AMOUNT_MATCHES_CASH_DIFFERENCE",severity:"HIGH",...event})}
+  for(const event of actionEvents){if(session.closedAt&&new Date(event.at)>new Date(session.closedAt))findings.push({code:"ACTION_AFTER_SHIFT_CLOSE",severity:"HIGH",...event});if(/RETURN|CANCEL|VOID/i.test(event.type)&&!event.relatedSaleId)findings.push({code:"ACTION_WITHOUT_ORIGINAL_SALE",severity:"HIGH",...event});if(event.relatedSaleId){const related=actionsByOriginal.get(event.relatedSaleId)||[];related.push(event);actionsByOriginal.set(event.relatedSaleId,related)}if(event.actorId&&event.actorId!==session.openedBy&&event.actorId!==session.closedBy)findings.push({code:"ACTION_BY_DIFFERENT_OPERATOR",severity:"MEDIUM",...event});if(event.amount!=null&&initialVariance!=null&&Math.abs(Math.abs(Number(event.amount))-Math.abs(initialVariance))<=0.01)findings.push({code:"AMOUNT_MATCHES_CASH_DIFFERENCE",severity:"HIGH",...event})}
   for(const [relatedSaleId,events] of actionsByOriginal)if(events.length>1)findings.push({code:"MULTIPLE_ACTIONS_ON_SAME_SALE",severity:"HIGH",relatedSaleId,count:events.length,events});
   const amounts=new Map();for(const event of auditEvents){if(event.amount==null)continue;const key=Math.abs(Number(event.amount)).toFixed(2),same=amounts.get(key)||[];same.push(event);amounts.set(key,same)}for(const [amount,events] of amounts)if(events.length>1)findings.push({code:"REPEATED_AUDIT_AMOUNT",severity:"MEDIUM",amount:Number(amount),count:events.length,events});
-  if(Math.abs(money(session.cardVariance))>0.009)findings.unshift({code:"POS_EFTPOS_DIFFERENCE",severity:"HIGH",amount:money(session.cardVariance)});
-  if(varianceConsidered&&Math.abs(money(session.variance))>0.009)findings.unshift({code:money(session.variance)<0?"CASH_SHORTAGE":"CASH_SURPLUS",severity:"HIGH",amount:money(session.variance)});
+  if(cardVariance!=null&&Math.abs(cardVariance)>0.009)findings.unshift({code:"POS_EFTPOS_DIFFERENCE",severity:"HIGH",amount:cardVariance});
+  if(varianceConsidered&&initialVariance!=null&&Math.abs(initialVariance)>0.009)findings.unshift({code:initialVariance<0?"CASH_SHORTAGE":"CASH_SURPLUS",severity:"HIGH",amount:initialVariance});
   const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id,db),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt","id"`;
-  const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,snapshotRecheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
-  const explanationBalance=confirmedExplanationBalance(session.variance,confirmedExplanations,{enabled:varianceConsidered});
-  const reviewBalance=snapshotRecheckRequired?{...explanationBalance,status:"RECHECK_REQUIRED",reason:"STALE_REVIEW",unexplainedVariance:null}:explanationBalance;
+  const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,snapshotRecheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=awaitingCount?[]:reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
+  const explanationBalance=confirmedExplanationBalance(initialVariance,confirmedExplanations,{enabled:varianceConsidered});
+  const reviewBalance=awaitingCount?{initialVariance:null,explainedAmount:null,unexplainedVariance:null,status:"RECHECK_REQUIRED",reason:"SHIFT_AWAITING_COUNT"}:snapshotRecheckRequired?{...explanationBalance,status:"RECHECK_REQUIRED",reason:"STALE_REVIEW",unexplainedVariance:null}:explanationBalance;
   const recheckRequired=snapshotRecheckRequired||reviewBalance.status==="RECHECK_REQUIRED";
   const unexplainedVariance=reviewBalance.unexplainedVariance;
   const finalizedShortage=validReviews.some(row=>row.decision==="CONFIRMED_SHORTAGE");
   // Chat discovery is limited to the existing authenticated Owner review, after
   // company/store authorization. Operators receive no additional chat metadata.
   let chatAllowed=false;
-  if(req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"&&req.license?.licenseAllowed){
+  if(!awaitingCount&&req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"&&req.license?.licenseAllowed){
     try{
       const chatModules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${session.storeId} AND "moduleKey"='STORE_CHAT' LIMIT 1`;
       chatAllowed=effectiveModuleEnabled(Boolean(req.license.activeModules?.includes("STORE_CHAT")),chatModules[0]?{...chatModules[0],configured:true}:{configured:false});
     }catch{/* Missing entitlement evidence never authorizes reading chat. */}
   }
-  const reviewEvidence=req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"
+  const reviewEvidence=!awaitingCount&&req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"
     ?await readCashReviewEvidence(prisma,{...session,sessionId:session.id,auditRule:controlRule},{includeChat:chatAllowed}):null;
-  return ({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
+  return ({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance,cardVariance,expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:awaitingCount?"AWAITING_COUNT":recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
 }
 
 router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{res.json(await readCashSessionInvestigation(req))}));

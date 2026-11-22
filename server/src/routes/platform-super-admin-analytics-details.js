@@ -12,6 +12,7 @@ const findingLimit=500;
 const premiumDuplicateWindowSeconds=40;
 const premiumDuplicateMaxTransactionDistance=2;
 const number=value=>Number(value||0);
+const reportedCardVariance=session=>session.closeReconciliationStatus==="COUNTED"&&session.cardVariance==null?null:number(session.cardVariance);
 const isSuperAdmin=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 
 const filterSchema=z.object({
@@ -95,7 +96,7 @@ async function reviewSnapshot(companyId,storeId,sessionId){
 }
 
 function findingFromSession(session){
-  const cashVariance=number(session.cashVariance),cardVariance=number(session.cardVariance);
+  const cashVariance=number(session.cashVariance),cardVariance=reportedCardVariance(session);
   const cashIssue=Math.abs(cashVariance)>cashTolerance,cardIssue=Math.abs(cardVariance)>cardTolerance;
   const eventCode=cashIssue&&cardIssue?"CASH_AND_POS_EFTPOS_VARIANCE":cashIssue?"CASH_VARIANCE":"POS_EFTPOS_VARIANCE";
   const eventLabel=cashIssue&&cardIssue
@@ -192,7 +193,7 @@ function premiumShiftResult(session,evidence){
       handoverDelta:null,automaticOffset:false,handoverMatched:null,evidence,
       finalStatus:"AWAITING_COUNT",finalLabel:"Εκκρεμεί καταμέτρηση",approvalRequired:false};
   }
-  const cashVariance=number(session.cashVariance),cardVariance=number(session.cardVariance);
+  const cashVariance=number(session.cashVariance),cardVariance=reportedCardVariance(session);
   const handoverDelta=session.nextOpenedAt?number(session.nextOpeningOperational)-number(session.closingOperational):null;
   const automaticOffset=handoverDelta!==null&&Math.abs(cashVariance+handoverDelta)<=cashTolerance;
   const handoverMatched=handoverDelta===null||Math.abs(handoverDelta)<=cashTolerance||automaticOffset;
@@ -206,7 +207,8 @@ function premiumShiftResult(session,evidence){
   const hasVariance=Math.abs(cashVariance)>cashTolerance||Math.abs(cardVariance)>cardTolerance;
   return {...session,cashVariance,cardVariance,handoverDelta,automaticOffset,handoverMatched,evidence,
     finalStatus:evidence.length?"FINAL_WITH_TRACED_EVIDENCE":hasVariance?"FINAL_UNEXPLAINED_VARIANCE":"FINAL_RECONCILED",
-    finalLabel:evidence.length?"Τελικό αποτέλεσμα με τεκμηριωμένες κινήσεις":hasVariance?"Τελικό ανεξήγητο υπόλοιπο":"Τελική συμφωνία",
+    finalLabel:evidence.length?"Τελικό αποτέλεσμα με τεκμηριωμένες κινήσεις":hasVariance?"Τελικό ανεξήγητο υπόλοιπο":
+      cardVariance===null?"Τελική συμφωνία μετρητών":"Τελική συμφωνία",
     approvalRequired:true};
 }
 
@@ -313,6 +315,7 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT s."storeId",s."companyId",COUNT(*)::int AS "shifts",
           COUNT(*) FILTER (WHERE to_jsonb(s)->>'closeReconciliationStatus'='AWAITING_COUNT')::int AS "awaitingCount",
+          COUNT(*) FILTER (WHERE to_jsonb(s)->>'closeReconciliationStatus'='COUNTED' AND s."cardVariance" IS NULL)::int AS "missingCardCount",
           COALESCE(SUM(s."variance"),0)::float AS "cashVariance",
           COALESCE(SUM(s."cardVariance"),0)::float AS "cardVariance"
         FROM "CashShiftSession" s
@@ -326,7 +329,8 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT s."id" AS "sessionId",s."companyId",c."name" AS "companyName",s."storeId",st."name" AS "storeName",
           s."shiftLabel",s."terminalPos",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
-          COALESCE(s."variance",0)::float AS "cashVariance",COALESCE(s."cardVariance",0)::float AS "cardVariance",
+          to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus",
+          COALESCE(s."variance",0)::float AS "cashVariance",s."cardVariance"::float AS "cardVariance",
           review."id" AS "reviewId",review."decision" AS "reviewDecision",COALESCE(review."amount",0)::float AS "reviewAmount",
           review."note" AS "reviewNote",review."actorName" AS "reviewedBy",review."createdAt" AS "reviewedAt",
           review."snapshotJson" AS "reviewSnapshotJson",
@@ -380,7 +384,7 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
     const normalizedRows=rows.map(row=>{
       const awaitingCount=number(row.awaitingCount);
       return {...row,awaitingCount,cashVariance:awaitingCount?null:number(row.cashVariance),
-        cardVariance:awaitingCount?null:number(row.cardVariance)};
+        cardVariance:awaitingCount||number(row.missingCardCount)?null:number(row.cardVariance)};
     });
     const awaitingCount=normalizedRows.reduce((total,row)=>total+row.awaitingCount,0);
     const findings=findingSessions.map(findingFromSession);

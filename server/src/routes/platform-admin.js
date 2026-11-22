@@ -1370,14 +1370,14 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       const auditRule=platformCashStoreRule(row.storeName);
       const awaitingCount=row.closeReconciliationStatus==="AWAITING_COUNT";
       const actualVariance=awaitingCount?null:Number(row.variance||0);
-      const actualCardVariance=awaitingCount?null:Number(row.cardVariance||0);
+      const actualCardVariance=awaitingCount||row.cardVariance==null?null:Number(row.cardVariance);
       return {
         ...row,auditRule,actualVariance,actualCardVariance,
         cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),expenses:Number(row.expenses||0),
         openingOperational:Number(row.openingOperational||0),expectedOpeningOperational:Number(row.expectedOpeningOperational||0),
         openingVariance:Number(row.openingVariance||0),expectedOperational:Number(row.expectedOperational||0),
-        eftposTotal:awaitingCount?null:Number(row.eftposTotal||0),
-        cardVariance:awaitingCount||auditRule.posEftposEnabled?actualCardVariance:0,
+        eftposTotal:awaitingCount||row.eftposTotal==null?null:Number(row.eftposTotal),
+        cardVariance:actualCardVariance===null||auditRule.posEftposEnabled?actualCardVariance:0,
         actualOperational:awaitingCount?null:Number(row.actualOperational||0),
         variance:awaitingCount||auditRule.mode!=="POS_EFTPOS_ONLY"?actualVariance:0,
         duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),
@@ -1405,7 +1405,7 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       summary.variance+=row.variance;
       summary.shortage+=Math.max(0,-row.variance);
       summary.surplus+=Math.max(0,row.variance);
-      summary.cardVariance+=row.cardVariance;
+      summary.cardVariance=summary.cardVariance===null||row.cardVariance===null?null:summary.cardVariance+row.cardVariance;
     };
     const totals={...initialTotals(),cashSales:0,cardSales:0,eftposTotal:0,expenses:0};
     const byStore=new Map();
@@ -1418,7 +1418,7 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       addShift(byStore.get(row.storeId),row);
       totals.cashSales+=row.cashSales;
       totals.cardSales+=row.cardSales;
-      totals.eftposTotal+=row.eftposTotal??0;
+      totals.eftposTotal=totals.eftposTotal===null||row.eftposTotal===null?null:totals.eftposTotal+row.eftposTotal;
       totals.expenses+=row.expenses;
     }
     const stores=[...byStore.values()];
@@ -1427,7 +1427,6 @@ router.get("/cash-control/daily",async(req,res,next)=>{
         for(const field of ["variance","shortage","surplus","cardVariance"])summary[field]=null;
       }
     }
-    if(totals.awaitingCount)totals.eftposTotal=null;
     res.json({date,...period,dateBasis:filters.dateBasis||period.dateBasis,fromTime,toTime,storeIds,storeId:filters.storeId||null,operator:filters.operator||null,timeZone:"Europe/Athens",rows:investigated,stores,totals});
   }catch(error){next(error)}
 });
@@ -1449,7 +1448,7 @@ router.get("/cash-control/shortages",async(req,res,next)=>{try{
       AND (${storeIds.length}::int=0 OR st."id"=ANY(${storeIds}::text[]))
       AND (${range.operator||null}::text IS NULL OR COALESCE(s."openedByName",s."closedByName",'') ILIKE ${range.operator?`%${range.operator}%`:null})
     ORDER BY "date",c."name",st."name",s."openedAt"`;
-  const normalized=rows.map(row=>({...row,variance:Number(row.variance||0),shortage:Math.abs(Number(row.variance||0)),cardVariance:Number(row.cardVariance||0)}));
+  const normalized=rows.map(row=>({...row,variance:Number(row.variance||0),shortage:Math.abs(Number(row.variance||0)),cardVariance:row.cardVariance==null?null:Number(row.cardVariance)}));
   const byOperator=new Map();for(const row of normalized){const name=row.openedByName||row.closedByName||"Χωρίς χειριστή";const current=byOperator.get(name)||{operatorName:name,shifts:0,shortage:0};current.shifts++;current.shortage+=row.shortage;byOperator.set(name,current)}
   res.json({from:range.from,to:range.to,fromTime:range.fromTime,toTime:range.toTime,storeId:range.storeId||null,operator:range.operator||null,rows:normalized,operators:[...byOperator.values()],totalShortage:normalized.reduce((sum,row)=>sum+row.shortage,0),timeZone:"Europe/Athens"});
 }catch(error){next(error)}});
@@ -1566,9 +1565,10 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
     const investigated=await Promise.all(sessions.map(async row=>{
       const auditRule=platformCashStoreRule(row.storeName);
       const awaitingCount=row.closeReconciliationStatus==="AWAITING_COUNT";
+      const unmeasuredCard=row.closeReconciliationStatus==="COUNTED"&&row.cardVariance==null;
       const session={...row,auditRule,
         variance:awaitingCount?null:Number(row.variance||0),
-        cardVariance:awaitingCount?null:auditRule.posEftposEnabled?Number(row.cardVariance||0):0,
+        cardVariance:awaitingCount||unmeasuredCard?null:auditRule.posEftposEnabled?Number(row.cardVariance||0):0,
         openingVariance:row.openingVariance==null?null:Number(row.openingVariance),
         duplicateCandidates:Number(row.duplicateCandidates||0)};
       if(awaitingCount)return {...session,investigation:{conclusion:"AWAITING_COUNT"}};
@@ -1581,12 +1581,12 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
       if(row.closeReconciliationStatus==="AWAITING_COUNT")current.awaitingCount++;
       else {
         current.cashVariance+=row.variance;
-        current.cardVariance+=row.cardVariance;
+        current.cardVariance=current.cardVariance===null||row.cardVariance===null?null:current.cardVariance+row.cardVariance;
       }
       rowsByStore.set(row.storeId,current);
     }
     const rows=[...rowsByStore.values()].map(row=>({...row,cashVariance:row.awaitingCount?null:Number(row.cashVariance.toFixed(2)),
-      cardVariance:row.awaitingCount?null:Number(row.cardVariance.toFixed(2))}));
+      cardVariance:row.awaitingCount||row.cardVariance===null?null:Number(row.cardVariance.toFixed(2))}));
     const awaitingCount=rows.reduce((total,row)=>total+row.awaitingCount,0);
     const findings=investigated.filter(row=>!["AGREEMENT","AWAITING_COUNT"].includes(row.investigation.conclusion)).map(row=>({
       id:row.sessionId,sessionId:row.sessionId,companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,

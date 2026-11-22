@@ -106,11 +106,9 @@ export async function readOwnerShiftReport(scopeCompanyId,rawQuery,{db=prisma}={
     `;
     const shifts=rows.map(normalizeShift);
     const summary=shifts.reduce((a,row)=>{a.count++;if(awaitingCount(row)){a.awaitingCount++;a.alerts++;}if(row.status==="OPEN")a.open++;else a.closed++;a.cashSales+=n(row.cashSales);a.cardSales+=n(row.cardSales);a.eftpos+=n(row.eftposTotal);a.expenses+=n(row.expenses);a.variance+=n(row.variance);a.openingVariance+=n(row.openingVariance);a.cardVariance+=n(row.cardVariance);a.alerts+=(Math.abs(n(row.variance))>.009?1:0)+(Math.abs(n(row.openingVariance))>.009?1:0)+(Math.abs(n(row.cardVariance))>.009?1:0)+n(row.reversedCount);return a},{count:0,open:0,closed:0,awaitingCount:0,cashSales:0,cardSales:0,eftpos:0,expenses:0,variance:0,openingVariance:0,cardVariance:0,alerts:0});
-    if(summary.awaitingCount){
-      summary.eftpos=null;
-      summary.variance=null;
-      summary.cardVariance=null;
-    }
+    if(summary.awaitingCount)summary.variance=null;
+    if(shifts.some(row=>row.status==="CLOSED"&&row.eftposTotal===null))summary.eftpos=null;
+    if(shifts.some(row=>row.status==="CLOSED"&&row.cardVariance===null))summary.cardVariance=null;
     if(shifts.some(row=>row.openingOperational!==null&&row.openingVariance===null))summary.openingVariance=null;
     return ({generatedAt:new Date().toISOString(),from,to,stores,summary,shifts});
 
@@ -182,7 +180,7 @@ export async function readOwnerShiftDetail(scopeCompanyId,sessionId,{db=prisma}=
     const transactions=transactionsRaw.map(normalizeTx),active=transactions.filter(row=>!row.reversedAt),sum=(type,onlyDeducted=false)=>active.filter(row=>row.type===type&&(!onlyDeducted||row.subtractFromShift)).reduce((s,row)=>s+n(row.amount),0);
     const recordedSupplierPayments=sum("SUPPLIER_PAYMENT"),recordedOtherExpenses=sum("OTHER_EXPENSE"),deductedSupplierPayments=sum("SUPPLIER_PAYMENT",true),deductedOtherExpenses=sum("OTHER_EXPENSE",true),percentages=sum("PERCENTAGES");
     const categories=categoriesRaw.map(row=>({...row,quantity:n(row.quantity),revenue:n(row.revenue),sales:n(row.sales)})),paymentMethods=paymentsRaw.map(row=>({...row,amount:n(row.amount),count:n(row.count)})),sales={count:n(salesRaw[0]?.count),total:n(salesRaw[0]?.total),average:n(salesRaw[0]?.average),firstAt:salesRaw[0]?.firstAt||null,lastAt:salesRaw[0]?.lastAt||null};
-    const closeAmount=key=>awaitingCount(shift)?null:n(shift[key]);
+    const closeAmount=key=>awaitingCount(shift)||shift.closeReconciliationStatus==="COUNTED"?shift[key]:n(shift[key]);
     const difference={
       expectedOpening:shift.expectedOpeningOperational,declaredOpening:n(shift.openingOperational),openingVariance:shift.openingVariance,openingDrawer:n(shift.openingDrawer),openingCustody:n(shift.openingCustody),openingCoins:n(shift.openingCoins),openingSafe:n(shift.openingSafe),
       cashSales:n(shift.cashSales),cardSales:n(shift.cardSales),eftposTotal:closeAmount("eftposTotal"),cardVariance:closeAmount("cardVariance"),recordedSupplierPayments,recordedOtherExpenses,deductedSupplierPayments,deductedOtherExpenses,percentages,

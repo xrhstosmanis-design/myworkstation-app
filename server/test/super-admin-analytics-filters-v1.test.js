@@ -84,6 +84,11 @@ test("legacy analytics keeps uncounted variances unavailable without changing me
   assert.equal(measured.automaticConclusion.status,"AGREEMENT");
   assert.equal(measured.rows[0].cashVariance,0);
   assert.equal(measured.rows[0].cardVariance,0);
+  sessions=[counted,{...counted,sessionId:"cash-only",closeReconciliationStatus:"COUNTED",cardVariance:null}];
+  const partial=await execute();
+  assert.equal(partial.rows[0].cashVariance,0);
+  assert.equal(partial.rows[0].cardVariance,null);
+  assert.equal(investigated.at(-1).cardVariance,null);
 });
 
 test("legacy analytics confirmation rejects an uncounted shift before a review is written",async()=>{

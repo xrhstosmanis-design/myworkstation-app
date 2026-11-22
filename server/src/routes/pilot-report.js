@@ -97,6 +97,7 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
   const sumDeductedType=type=>activeTransactions.filter(row=>row.type===type&&row.subtractFromShift).reduce((sum,row)=>sum+row.amount,0);
   const closed=sessions.filter(row=>row.status==="CLOSED");
   const awaitingCount=closed.filter(row=>row.closeReconciliationStatus==="AWAITING_COUNT").length;
+  const eftposUnavailable=awaitingCount>0||closed.some(row=>row.closeReconciliationStatus==="COUNTED"&&row.eftposTotal==null);
   const operators=[...new Set([
     ...transactions.map(row=>row.actorName),
     ...sessions.flatMap(row=>[row.openedByName,row.closedByName])
@@ -120,8 +121,8 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
     sessionsOpened:sessions.length,
     sessionsClosed:closed.length,
     awaitingCount,
-    eftposTotal:awaitingCount?null:closed.reduce((sum,row)=>sum+Number(row.eftposTotal||0),0),
-    cardVarianceTotal:awaitingCount?null:closed.reduce((sum,row)=>sum+Number(row.cardVariance||0),0),
+    eftposTotal:eftposUnavailable?null:closed.reduce((sum,row)=>sum+Number(row.eftposTotal||0),0),
+    cardVarianceTotal:eftposUnavailable?null:closed.reduce((sum,row)=>sum+Number(row.cardVariance||0),0),
     varianceTotal:awaitingCount?null:closed.reduce((sum,row)=>sum+Number(row.variance||0),0),
     openingVarianceTotal:sessions.some(row=>row.openingVariance==null)?null:sessions.reduce((sum,row)=>sum+Number(row.openingVariance||0),0),
     operators

@@ -33,10 +33,12 @@ test("PREMIUM controls are gated, read-only and reconcile only inside one closed
 
 test("analytics treats uncounted closing as pending while a measured zero remains reconciled", async()=>{
   const {default:express}=await import("express");
-  let awaitingCount=1;
+  let awaitingCount=1,missingCardCount=0;
   const calls=[];
   const measured={sessionId:"measured",cashVariance:0,cardVariance:0,closingOperational:80,
     nextOpenedAt:"2026-11-22T12:00:00Z",nextOpeningOperational:80};
+  const countedWithoutCard={...measured,sessionId:"without-card",closeReconciliationStatus:"COUNTED",cardVariance:null};
+  const cashFinding={...countedWithoutCard,sessionId:"cash-finding",cashVariance:7};
   const pending={...measured,sessionId:"pending",closeReconciliationStatus:"AWAITING_COUNT",
     cashVariance:null,cardVariance:null,closingOperational:null};
   const previousPrisma=globalThis.prisma;
@@ -46,8 +48,13 @@ test("analytics treats uncounted closing as pending while a measured zero remain
       const sql=strings.join("?");
       calls.push(sql);
       if(sql.includes('FROM "StorePaidModule"'))return [{moduleKey:"PREMIUM_CHECK",active:true}];
-      if(sql.includes('AS "awaitingCount"'))return [{storeId:"s",companyId:"c",shifts:1+awaitingCount,awaitingCount,cashVariance:0,cardVariance:0}];
-      if(sql.includes('AS "closingOperational"'))return awaitingCount?[pending,measured]:[measured];
+      if(sql.includes('AS "awaitingCount"'))return [{storeId:"s",companyId:"c",shifts:1+awaitingCount+missingCardCount,
+        awaitingCount,missingCardCount,cashVariance:missingCardCount?7:0,cardVariance:0}];
+      if(sql.includes('AS "closingOperational"')){
+        if(awaitingCount)return [pending,measured];
+        return missingCardCount?[countedWithoutCard,cashFinding,measured]:[measured];
+      }
+      if(sql.includes('AS "movementEvidence"'))return missingCardCount?[cashFinding]:[];
       if(sql.includes('WHERE s."id"='))return [{...pending,companyId:"c",storeId:"s",status:"CLOSED"}];
       return [];
     }
@@ -103,6 +110,20 @@ test("analytics treats uncounted closing as pending while a measured zero remain
     assert.equal(countedReport.status,"ΟΚ");
     assert.equal(countedReport.rows[0].cashVariance,0);
     assert.equal(countedReport.rows[0].cardVariance,0);
+    missingCardCount=2;
+    const partialReport=await (await post("/execute")).json();
+    assert.equal(partialReport.rows[0].cardVariance,null);
+    assert.equal(partialReport.rows[0].cashVariance,7);
+    assert.equal(partialReport.findings[0].cashVariance,7);
+    assert.equal(partialReport.findings[0].cardVariance,null);
+    const [cashOnly,other,zero]=partialReport.premium.shiftResults;
+    assert.equal(cashOnly.finalLabel,"Τελική συμφωνία μετρητών");
+    assert.equal(cashOnly.cardVariance,null);
+    assert.equal(cashOnly.cashVariance,0);
+    assert.equal(other.finalStatus,"FINAL_UNEXPLAINED_VARIANCE");
+    assert.equal(zero.finalLabel,"Τελική συμφωνία");
+    assert.equal(zero.cardVariance,0);
+    assert.ok(calls.some(sql=>sql.includes(`'COUNTED' AND s."cardVariance" IS NULL`)));
   }finally{
     await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
   }

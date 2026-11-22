@@ -122,7 +122,7 @@ const cashShiftResult=row=>{
   if(variance<-.009)return `Έλλειμμα ${cashMoney(Math.abs(variance))} — ${row.openedByName||"Χωρίς όνομα"}`;
   if(variance>.009)return `Πλεόνασμα ${cashMoney(variance)} — ${row.openedByName||"Χωρίς όνομα"}`;
   if(Math.abs(cardVariance)>.02)return `Διαφορά POS / EFTPOS ${cashMoney(cardVariance)} — ${row.openedByName||"Χωρίς όνομα"}`;
-  return findings.length?"Βρέθηκε περίεργο συμβάν":"Χωρίς διαφορά";
+  return findings.length?"Βρέθηκε περίεργο συμβάν":row.cardVariance===null?"Χωρίς διαφορά μετρητών":"Χωρίς διαφορά";
 };
 
 async function request(path,options={}){
@@ -656,7 +656,7 @@ export default function PlatformAdminApp(){
       const query=new URLSearchParams({from:cashReport.from||cashReport.date,to:cashReport.to||cashReport.date,fromTime:cashReport.fromTime,toTime:cashReport.toTime,dateBasis:cashReport.dateBasis,...(scopeFor("cash")?{companyId:scopeFor("cash").companyId,storeId:scopeFor("cash").storeId}:store?{storeId:store.storeId}:cashReport.storeIds?.length?{storeIds:cashReport.storeIds.join(",")}:{}),...(cashReport.operator?{operator:cashReport.operator}:{})});
       const result=await requestFor("cash")(`/api/platform/cash-control/shortages?${query}`);
       const cell=value=>`"${String(value??"").replaceAll('"','""')}"`;
-      const lines=[["Ημερομηνία","Άνοιγμα","Κλείσιμο","Εταιρεία","Κατάστημα","POS","Βάρδια","Χειριστής","Έλλειμμα","Διαφορά POS–EFTPOS"],...result.rows.map(row=>[row.date,athensTime(row.openedAt),athensTime(row.closedAt),row.companyName,row.storeName,row.terminalPos||"MAIN",row.shiftLabel,row.openedByName||"—",row.shortage.toFixed(2),row.cardVariance.toFixed(2)])];
+      const lines=[["Ημερομηνία","Άνοιγμα","Κλείσιμο","Εταιρεία","Κατάστημα","POS","Βάρδια","Χειριστής","Έλλειμμα","Διαφορά POS–EFTPOS"],...result.rows.map(row=>[row.date,athensTime(row.openedAt),athensTime(row.closedAt),row.companyName,row.storeName,row.terminalPos||"MAIN",row.shiftLabel,row.openedByName||"—",row.shortage.toFixed(2),row.cardVariance?.toFixed(2)])];
       const blob=new Blob(["\ufeff"+lines.map(line=>line.map(cell).join(";")).join("\n")],{type:"text/csv;charset=utf-8"});
       const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`Ελλείμματα_${store?.storeName||(scopeFor("cash")?twinContext?.store.name:"Όλα-τα-καταστήματα")}_${cashReport.from}_${cashReport.to}.csv`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(link.href);
       setMessage(`Το αρχείο ελλειμμάτων δημιουργήθηκε (${result.rows.length} εγγραφές · ${result.totalShortage.toFixed(2)} €).`);
