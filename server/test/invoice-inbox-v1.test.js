@@ -5,6 +5,7 @@ import {readFile} from "node:fs/promises";
 const commercial=await readFile(new URL("../src/commercial-bootstrap.js",import.meta.url),"utf8");
 const extended=await readFile(new URL("../src/extended-modules-bootstrap.js",import.meta.url),"utf8");
 const route=await readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
+const upload=await readFile(new URL("../src/services/invoice-inbox-upload.js",import.meta.url),"utf8");
 const guard=await readFile(new URL("../src/middleware/commerce-tenant-guard.js",import.meta.url),"utf8");
 const modules=await readFile(new URL("../src/services/module-catalog.js",import.meta.url),"utf8");
 const client=await readFile(new URL("../../client/src/components/commerce/InvoiceInboxPanel.jsx",import.meta.url),"utf8");
@@ -17,10 +18,11 @@ test("invoice inbox schema additions are non destructive",()=>{
 });
 
 test("invoice inbox validates tenant, module, type and size",()=>{
-  assert.match(route,/requireCompanyModule\("DOCUMENTS"\)/);
-  assert.match(route,/application\\\/pdf\|image/);
-  assert.match(route,/bytes\.length>3400000/);
-  assert.match(route,/crypto\.createHash\("sha256"\)/);
+  assert.match(route,/router\.post\("\/documents\/inbox",requireCompanyModule\("DOCUMENTS"\)/);
+  assert.match(route,/uploadInvoiceInboxOriginal\(prisma,req\)/);
+  assert.match(upload,/application\\\/pdf\|image/);
+  assert.match(upload,/bytes\.length>3400000/);
+  assert.match(upload,/crypto\.createHash\("sha256"\)/);
   assert.match(guard,/path==="\/documents\/inbox"/);
   assert.match(modules,/key:"DOCUMENTS"[\s\S]*commercialReady:true/);
 });
