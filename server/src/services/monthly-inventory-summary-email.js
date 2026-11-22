@@ -18,7 +18,7 @@ export function formatMonthlyInventorySummary(receipt, { companyId, storeId, iss
 
   const store = String(storeName || storeId).replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
   const observedAt = new Intl.DateTimeFormat('el-GR', {
-    dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Athens',
+    dateStyle: 'short', timeStyle: 'short', hour12: false, timeZone: 'Europe/Athens',
   }).format(new Date(snapshot.period.sourceObservedAt));
   const lines = [
     `Κατάστημα: ${store}`,
