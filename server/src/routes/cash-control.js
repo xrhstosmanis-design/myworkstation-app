@@ -61,6 +61,7 @@ const tableStatements = [
     "variance" NUMERIC(14,2),
     "nextOpeningTotal" NUMERIC(14,2),
     "closingNote" TEXT,
+    "closeReconciliationStatus" TEXT,
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
@@ -70,6 +71,8 @@ const tableStatements = [
   `ALTER TABLE "CashShiftSession" ALTER COLUMN "expectedOpeningOperational" DROP NOT NULL, ALTER COLUMN "openingVariance" DROP NOT NULL`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closeReconciliationStatus" TEXT`,
+  `ALTER TABLE "CashShiftSession" ALTER COLUMN "eftposTotal" DROP NOT NULL, ALTER COLUMN "cardVariance" DROP NOT NULL`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "terminalPos" TEXT NOT NULL DEFAULT 'MAIN'`,
   `DROP INDEX IF EXISTS "CashShiftSession_one_open_per_store_idx"`,
