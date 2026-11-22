@@ -57,6 +57,7 @@ async function findDuplicateInvoice(tx,{companyId,supplierId,documentNumber}){
 // Runs before commerce-v1 /documents/inbox. Exact same file cannot be stored twice.
 router.post("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{
   try{
+    if(req.user.staffAccess===true)return next();
     const body=z.object({storeId:z.string(),supplierId:z.string().optional().nullable(),file:z.object({dataUrl:z.string(),filename:z.string().optional()})}).passthrough().parse(req.body||{});
     const match=/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(body.file.dataUrl||"");
     if(!match)return next();
