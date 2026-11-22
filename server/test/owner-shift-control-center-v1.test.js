@@ -65,3 +65,22 @@ test("owner shift suite is wired into client server and visual baseline",()=>{
   assert.match(css,/#133f62/);
   assert.match(css,/#2079c7/);
 });
+
+test("owner reports flag an uncounted closed shift and preserve unknown closing amounts",async()=>{
+  const {readOwnerShiftReport,readOwnerShiftDetail}=await import("../src/routes/owner-shifts.js");
+  const shift={id:"uncounted",storeId:"lab",status:"CLOSED",closeReconciliationStatus:"AWAITING_COUNT",cashSales:15,expectedOperational:15,actualOperational:15,eftposTotal:10,variance:0};
+  const report=await readOwnerShiftReport("company",{},{
+    db:{store:{findMany:async()=>[]},$queryRaw:async()=>[shift]}
+  });
+  assert.equal(report.summary.awaitingCount,1);
+  assert.equal(report.summary.alerts,1);
+  assert.equal(report.shifts[0].actualOperational,null);
+  assert.equal(report.shifts[0].eftposTotal,null);
+  let first=true;
+  const detail=await readOwnerShiftDetail("company",shift.id,{
+    db:{$queryRaw:async()=>{if(!first)return [];first=false;return [shift];}}
+  });
+  assert.equal(detail.difference.expectedOperational,15);
+  assert.equal(detail.difference.variance,null);
+  assert.deepEqual(detail.alerts,[{kind:"AWAITING_COUNT",amount:null,label:"Εκκρεμεί καταμέτρηση"}]);
+});
