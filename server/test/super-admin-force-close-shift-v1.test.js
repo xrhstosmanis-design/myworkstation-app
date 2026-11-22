@@ -22,3 +22,12 @@ test("shift center exposes force close only from server-granted management acces
   assert.match(panel,/Κλείσιμο βάρδιας/);
   assert.match(panel,/χωρίς φυσική καταμέτρηση/);
 });
+
+test("administrative close records expected ledger totals and leaves physical amounts unknown",()=>{
+  const writer=route.slice(route.indexOf('router.post("/:sessionId/force-close"'));
+  assert.match(writer,/"closeReconciliationStatus"='AWAITING_COUNT'/);
+  assert.match(writer,/"expectedOperational"=\${expected}/);
+  for(const field of ["eftposTotal","cardVariance","closingDrawer","closingCustody","closingCoins","closingSafe","actualOperational","variance","nextOpeningTotal"]){
+    assert.ok(writer.includes(`"${field}"=NULL`),field);
+  }
+});
