@@ -41,7 +41,7 @@ test("BackOffice keeps opening continuity visible but cannot open a shift",()=>{
 });
 
 test("daily report includes opening continuity in screen and export",()=>{
-  assert.match(report,/openingVarianceTotal:sessions\.reduce/);
+  assert.match(report,/openingVarianceTotal:sessions\.some\(row=>row\.openingVariance==null\)\?null:sessions\.reduce/);
   assert.match(reportUi,/Συνολική διαφορά έναρξης/);
   assert.match(reportUi,/Αναμενόμενη έναρξη/);
   assert.match(reportUi,/Δηλωμένη έναρξη/);
