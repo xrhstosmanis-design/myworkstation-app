@@ -1,4 +1,5 @@
 import {Router} from "express";
+import {staffRequestCapability} from "../../../shared/backoffice-staff.mjs";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {requireStaffGrant,staffError} from "../services/backoffice-staff-access.js";
@@ -25,21 +26,28 @@ export function normalizeAadeResult(xml,taxId){
   return {valid:Boolean(name),taxId,name,address,city,profession,source:"AADE_BASIC_REGISTRY"};
 }
 
+export function staffVatLookupCapability(req,storeId){
+  const query=req.query||{};
+  if(!storeId||query.storeId!==storeId||storeId!==req.user.storeId||typeof query.taxId!=="string"||
+    Object.keys(query).some(key=>!["storeId","taxId","official","localOnly"].includes(key)))throw staffError();
+  const capability=staffRequestCapability("GET","/api/commerce/vat-lookup",{},query);
+  if(!capability||req.staffGrant?.capability!==capability)throw staffError();
+  return capability;
+}
+
 router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId),official=req.query.official==="1",localOnly=req.query.localOnly==="1";
-  if(req.user.staffAccess===true){
-    const capability="invoices.supplier-lookup";
-    if(!storeId||storeId!==req.user.storeId||req.staffGrant?.capability!==capability||!localOnly||official)throw staffError();
-    if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
+  const staff=req.user.staffAccess===true,capability=staff?staffVatLookupCapability(req,storeId):null;
+  const employee=req.user?.tokenType==="STORE_OPERATOR"||req.user?.role==="EMPLOYEE";
+  if(!staff&&employee&&(!req.user.permissions?.includes("SUPPLIER_PAYMENT")||!storeId||String(req.user.storeId)!==storeId))return res.status(403).json({error:"Δεν έχεις δικαίωμα ελέγχου ΑΦΜ σε αυτό το κατάστημα."});
+  if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
+  if(staff&&localOnly){
     const existingSupplier=await prisma.$transaction(async tx=>{
       await requireStaffGrant(tx,req.user,storeId,capability);
       return findInvoiceSupplier(tx,req.user.companyId,taxId);
     });
     return res.json({valid:Boolean(existingSupplier),taxId,name:existingSupplier?.name||"",source:"MYWORKSTATION",existingSupplier,readOnly:true});
   }
-  const employee=req.user?.tokenType==="STORE_OPERATOR"||req.user?.role==="EMPLOYEE";
-  if(employee&&(!req.user.permissions?.includes("SUPPLIER_PAYMENT")||!storeId||String(req.user.storeId)!==storeId))return res.status(403).json({error:"Δεν έχεις δικαίωμα ελέγχου ΑΦΜ σε αυτό το κατάστημα."});
-  if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
   const store=await prisma.store.findFirst({where:{...(storeId?{id:storeId}:{}),companyId:req.user.companyId},select:{id:true},orderBy:{createdAt:"asc"}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const existingRows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
@@ -52,8 +60,11 @@ router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>
     const company=await prisma.company.findUnique({where:{id:req.user.companyId},select:{taxId:true}}),credentials=decryptStoreIntegrationCredentials(configured[0].credentialsEnc),calledBy=clean(company?.taxId);
     if(!/^\d{9}$/.test(calledBy))return res.status(409).json({error:"Για αναζήτηση ΑΑΔΕ πρέπει να έχει καταχωριστεί το ΑΦΜ της επιχείρησης στο MyWorkStation."});
     const envelope=`<?xml version="1.0" encoding="UTF-8"?><env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope" xmlns:ns1="http://rgwspublic2/RgWsPublic2Service" xmlns:ns2="http://rgwspublic2/RgWsPublic2"><env:Header><wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"><wsse:UsernameToken><wsse:Username>${xmlEscape(credentials.accountId)}</wsse:Username><wsse:Password>${xmlEscape(credentials.secret)}</wsse:Password></wsse:UsernameToken></wsse:Security></env:Header><env:Body><ns1:rgWsPublic2AfmMethod><ns1:INPUT_REC><ns2:afm_called_by>${calledBy}</ns2:afm_called_by><ns2:afm_called_for>${taxId}</ns2:afm_called_for></ns1:INPUT_REC></ns1:rgWsPublic2AfmMethod></env:Body></env:Envelope>`;
+    if(staff)await requireStaffGrant(prisma,req.user,storeId,capability);
     const aade=await fetch("https://www1.gsis.gr/wsaade/RgWsPublic2/RgWsPublic2",{method:"POST",headers:{"Content-Type":"application/soap+xml; charset=utf-8; action=\"http://rgwspublic2/RgWsPublic2Service:rgWsPublic2AfmMethod\""},body:envelope,signal:AbortSignal.timeout(15000)});
     const result=normalizeAadeResult(await aade.text(),taxId);
+    if(staff)await requireStaffGrant(prisma,req.user,storeId,capability);
+    if(staff&&result.error)return res.status(aade.ok?422:502).json({error:"Η ΑΑΔΕ δεν επιβεβαίωσε τα στοιχεία για αυτό το ΑΦΜ.",source:result.source});
     if(!aade.ok)return res.status(502).json({error:result.error||`Η υπηρεσία ΑΑΔΕ δεν απάντησε σωστά (${aade.status}). Δεν άλλαξαν στοιχεία.`,source:result.source});
     if(result.error)return res.status(422).json({error:result.error,source:result.source});
     if(!result.valid)return res.status(502).json({error:"Η υπηρεσία ΑΑΔΕ δεν επέστρεψε αναγνώσιμα στοιχεία. Δεν άλλαξαν στοιχεία. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",source:result.source});
