@@ -32,7 +32,6 @@ function requireManager(req,res,next){
   if(!(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='invoices.edit')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Η επίλυση γραμμών τιμολογίου γίνεται μόνο από Ιδιοκτήτη ή Διαχειριστή."});
   next();
 }
-router.use(requireManager);
 
 async function ensureSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrRawText" TEXT`);
@@ -52,7 +51,7 @@ async function ensureSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastMarkupPercent" NUMERIC(12,6)`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,"supplierCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"source" TEXT NOT NULL DEFAULT 'MANUAL',"updatedBy" TEXT,"updatedByName" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("companyId","supplierId","productId"))`);
 }
-router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
+router.use(["/:orderId/ocr-lines","/:orderId/catalog-matches"],requireManager,async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
 
 async function ownedOrder(companyId,orderId){
   const rows=await prisma.$queryRaw`SELECT "id","storeId","supplierId","status","sourceType" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} LIMIT 1`;
