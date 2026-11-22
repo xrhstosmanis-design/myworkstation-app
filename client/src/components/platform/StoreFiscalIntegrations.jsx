@@ -11,6 +11,48 @@ const definitions=[
 const LAB_COMPANY="MYWORKSTATION LAB";
 const LAB_STORE="ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ";
 
+function EfoodLabOrderRun({ url, request }) {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState(null);
+  const [runId, setRunId] = useState(null);
+
+  async function run() {
+    const id = runId || crypto.randomUUID();
+    setRunId(id);
+    setRunning(true);
+    setResult(null);
+    try {
+      const send = step => request(`${url}/lab-order-runs`, {
+        method: "POST", body: JSON.stringify({ runId: id, step }),
+      });
+      const accepted = await send("accept");
+      const replay = await send("accept");
+      const cancelled = await send("cancel");
+      const cancellationReplay = await send("cancel");
+      const passed = [accepted, replay, cancelled, cancellationReplay].every(row =>
+        row.synthetic === true && row.chargeCents === 0) &&
+        accepted.order?.paymentState === "PREPAID" && replay.action === "NONE" &&
+        cancelled.order?.status === "CANCELLED" && cancellationReplay.action === "NONE" &&
+        cancelled.stock === 5 && cancellationReplay.stock === 5 &&
+        (accepted.stock === 4 && replay.stock === 4 ||
+          accepted.action === "NONE" && accepted.order?.status === "CANCELLED" && replay.stock === 5);
+      setResult(passed ? "PASS · Συνθετική παραγγελία LAB" : "FAIL · Συνθετική παραγγελία LAB");
+      if (passed) setRunId(null);
+    } catch (error) {
+      setResult(error.message);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return <div className="platform-form-actions">
+    <button type="button" className="secondary" disabled={running} onClick={run}>
+      {running ? "Εκτέλεση…" : runId ? "Επανάληψη συνθετικής παραγγελίας LAB" : "Δοκιμή συνθετικής παραγγελίας LAB"}
+    </button>
+    {result && <span role="status">{result}</span>}
+  </div>;
+}
+
 export default function StoreFiscalIntegrations({manager,request,onClose,onChanged}){
   const [saving,setSaving]=useState("");
   const [error,setError]=useState("");
@@ -194,8 +236,9 @@ export default function StoreFiscalIntegrations({manager,request,onClose,onChang
             <small>Στο efood Partner χρησιμοποίησε ακριβώς το Callback URL και το Authorization secret. Πάτησε Trigger Test Order μόνο όσο η ένδειξη είναι ΑΝΟΙΧΤΟ. Το πρώτο έγκυρο event αποθηκεύεται κρυπτογραφημένο ως dry-run και κλειδώνει αμέσως το webhook.</small>
 
             {labResult&&<div className={labResult.passed?"terminal-explainer":"platform-error"}><ShieldCheck/><span><b>{labResult.passed?"LAB MOCK PASS":"LAB MOCK FAIL"}</b><br/>Run: {labResult.runId}<br/>READY_FOR_PICKUP: {labResult.ready.processingStatus} · replay idempotent: {String(labResult.replay.idempotent)} · CANCELLED: {labResult.cancelled.processingStatus}<br/>Catalog/Promo/Orders previews: LOCAL/SANDBOX · Events: {labResult.eventCount}<br/>External call: ΟΧΙ · Order/Sale: ΟΧΙ · Stock: ΟΧΙ · Payment/Fiscal: ΟΧΙ</span></div>}
-          </form>{efood&&<EfoodEventPreview key={`${efoodUrl}:${efood.updatedAt||""}`} url={efoodUrl} request={request}/>}</>}
+          </form>{efoodLabAllowed && efood?.metadata?.vendorId === "9344842" && <EfoodLabOrderRun key={efoodUrl} url={efoodUrl} request={request}/>} {efood&&<EfoodEventPreview key={`${efoodUrl}:${efood.updatedAt||""}`} url={efoodUrl} request={request}/>}</>}
     </div>
   </section></div>;
 }
+
 
