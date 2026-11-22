@@ -1,3 +1,5 @@
+- 22/11/2026 · Νο 7 · Αυτόματη ανάγνωση χειρόγραφων πριν από το ημερήσιο email · [Checkpoint](CHANGES/2026-11-22-no7-scheduled-cash-papers.md).
+
 - 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
 
 ## 21/11/2026,20:18Ελλάδας — No02 — recovery source4048 TECHNICAL LIVE / SCOPE GAPS OPEN
@@ -232,6 +234,10 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 21/11 No5 — selectable attendance correction, review and overtime approval plus first schedule draft. Fixed catalogue and all-rights PostgreSQL fixture regressions. Joint CI and LAB acceptance pending. [Checkpoint](CHANGES/2026-11-21-no5-owner-parity.md).
 
 21/11 No5 — delegate assignment editing and schedule preview, approval and publication independently by store. Release scope limited to owner/manager rights. [Checkpoint](CHANGES/2026-11-21-no5-owner-parity.md).
+
+22/11 No5 — opt-in CSV of displayed shifts for the selected store. [Checkpoint](CHANGES/2026-11-22-no5-shift-report-export.md).
+
+22/11 No5 — prioritized delegated editing of individual POS operator permissions. [Checkpoint](CHANGES/2026-11-22-no5-operator-permissions.md).
 
 <!-- NO5-STATUS:END -->
 

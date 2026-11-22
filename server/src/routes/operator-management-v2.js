@@ -3,8 +3,10 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
+import operatorPermissionDelegation from "./operator-permission-delegation.js";
 
 const router=Router();
+router.use(operatorPermissionDelegation);
 let schemaPromise;
 
 const statements=[

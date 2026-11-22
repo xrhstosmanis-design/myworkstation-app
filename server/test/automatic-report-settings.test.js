@@ -31,3 +31,10 @@ test("confirmed effective legacy rule is explicit and changed rules/settings hol
  version=2;const stale=await readAutomaticDailyCashPreview(db,input);assert.equal(stale.groups,null);assert.ok(stale.holds.some(h=>h.code==="REPORT_SETTINGS_CHANGED"));
  version=1;currentRule=rule;const changed=await readAutomaticDailyCashPreview(db,input);assert.equal(changed.groups,null);assert.ok(changed.holds.some(h=>h.code==="CASH_RULE_CHANGED"));
 });
+
+test('automatic paid paper reading requires the selected store reviewed report mode',()=>{
+  const legacy=automaticReportConfigurationSchema.parse(configuration());
+  assert.equal(legacy.automaticPaperReading,undefined);
+  assert.equal(automaticReportConfigurationSchema.safeParse({...legacy,automaticPaperReading:true}).success,false);
+  assert.equal(automaticReportConfigurationSchema.parse({...legacy,reviewedReconciliation:true,automaticPaperReading:true}).automaticPaperReading,true);
+});

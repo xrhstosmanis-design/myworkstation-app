@@ -11,8 +11,10 @@ export const automaticReportConfigurationSchema=z.object({
   dayStartHour:z.number().int().min(5).max(12),secondShiftStartHour:z.number().int().min(6).max(22),thirdShiftStartHour:z.number().int().min(7).max(23).nullable(),
   terminals:z.array(z.object({terminalPos:z.string().trim().min(1).max(120),requiredSlots:z.array(z.union([z.literal(1),z.literal(2),z.literal(3)])).min(1).max(3)}).strict()).min(1).max(100),
   cashRule:cashRuleSchema,
-  reviewedReconciliation:z.boolean().optional()
+  reviewedReconciliation:z.boolean().optional(),
+  automaticPaperReading:z.boolean().optional()
 }).strict().superRefine((config,ctx)=>{
+  if(config.automaticPaperReading===true&&config.reviewedReconciliation!==true)ctx.addIssue({code:"custom",path:["automaticPaperReading"],message:"Η αυτόματη ανάγνωση απαιτεί ελεγμένη αναφορά."});
   try{dailyCashReportReadiness([],{...config,companyId:"validation",storeId:"validation",day:"2026-01-01"},new Date("2026-01-02T12:00:00Z"))}catch(error){ctx.addIssue({code:"custom",message:error.message})}
 });
 export const automaticReportSettingsUpdateSchema=z.object({expectedVersion:z.number().int().min(0).max(2147483646),configuration:automaticReportConfigurationSchema}).strict();

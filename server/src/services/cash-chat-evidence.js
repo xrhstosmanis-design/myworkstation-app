@@ -4,12 +4,20 @@ const supported = new Set(['image/jpeg', 'image/png', 'image/webp', 'application
 const nonempty = value => typeof value === 'string' && value.trim().length > 0;
 const unavailable = reason => ({status:'UNAVAILABLE', reason, sources:[], documentAssociation:'UNVERIFIED', readOnly:true});
 
-export async function readCashChatEvidence(db, {companyId, storeId}) {
+export async function readCashChatEvidence(db, {companyId, storeId}, window=null) {
   if (!nonempty(companyId) || !nonempty(storeId)) return unavailable('MISSING_STORE_SCOPE');
   try {
     // Do not read binary bytes, invoke invoice intake, mark messages read or call AI.
     // Latest uploads are only discovery candidates, including late-uploaded papers.
-    const rows = await db.$queryRaw`
+    const rows = window?await db.$queryRaw`
+      SELECT "id", "companyId", "storeId", "category", "createdAt",
+        "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum"
+      FROM "StoreChatMessage"
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId}
+        AND "createdAt">=${window.from} AND "createdAt"<${window.to}
+        AND "category" IN ('CASH','SHIFT') AND "attachmentData" IS NOT NULL
+        AND "attachmentMimeType" IN ('image/jpeg','image/png','image/webp','application/pdf')
+      ORDER BY "createdAt" DESC, "id" DESC LIMIT 51` : await db.$queryRaw`
       SELECT "id", "companyId", "storeId", "category", "createdAt",
         "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum"
       FROM "StoreChatMessage"

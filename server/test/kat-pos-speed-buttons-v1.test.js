@@ -30,11 +30,13 @@ test("authorized operators can edit quick keys and hierarchical bottom categorie
   const editor=await read("../../client/src/components/store/StorePosButtonEditor.jsx");
   const route=await read("../src/routes/store-pos-catalog.js");
   const management=await read("../../client/src/components/commerce/OperatorManagementPanel.jsx");
+  const permissions=await read("../../shared/pos-operator-permissions.mjs");
   assert.match(editor,/ΣΥΝΔΕΣΗ ΓΡΗΓΟΡΟΥ ΚΟΥΜΠΙΟΥ/);
   assert.match(editor,/Barcode, κωδικός ή περιγραφή προϊόντος/);
   assert.match(editor,/Νέα υποκατηγορία/);
   assert.match(editor,/κατηγορία → υποκατηγορία → προϊόντα/);
   assert.match(route,/POS_BUTTON_LAYOUT_UPDATE/);
   assert.match(route,/editPosButtons/);
-  assert.match(management,/Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών/);
+  assert.match(management,/POS_PERMISSIONS.*pos-operator-permissions/);
+  assert.match(permissions,/Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών/);
 });
