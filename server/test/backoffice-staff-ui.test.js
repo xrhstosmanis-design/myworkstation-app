@@ -372,6 +372,35 @@ test('separately granted provider original download attaches one PDF without reo
     assert.equal(button('Άνοιγμα υπάρχοντος προχείρου'),undefined);
   }finally{await m.close()}
 });
+test('delegated myDATA receiving is manual and submits only the selected store',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read','invoices.sync-mydata']}]};
+    if(options.method==='POST')return {created:1,message:'1 νέα παραστατικά μπήκαν στη θυρίδα.'};
+    return {items:[],total:0,archiveTotal:0,suppliers:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Τιμολόγια').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,300)));
+    assert.ok(!calls.some(c=>c.path.includes('/mydata/')));
+    await m.act(async()=>{
+      const sync=button('Λήψη από myDATA');
+      assert.equal(sync.hidden,false);
+      sync.click();
+      sync.click();
+    });
+    const requests=calls.filter(c=>c.path.includes('/mydata/'));
+    assert.equal(requests.length,1);
+    assert.equal(requests[0].path,'/api/commerce/documents/mydata/sync');
+    assert.equal(requests[0].options.method,'POST');
+    assert.equal(requests[0].options.headers['x-backoffice-store-id'],'a1');
+    assert.deepEqual(JSON.parse(requests[0].options.body),{storeId:'a1'});
+    assert.match(document.body.textContent,/νέα παραστατικά μπήκαν στη θυρίδα/);
+  }finally{await m.close()}
+});
 test('owner entry reuses existing POS operator administration only after explicit same-company store selection',async()=>{
   const Admin=await component('BackofficeStaffAdmin'),calls=[];
   const api=async(path,options={})=>{calls.push({path,options});return path==='/api/backoffice-staff/admin'?{accounts:[],stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}:{operators:[]}};
