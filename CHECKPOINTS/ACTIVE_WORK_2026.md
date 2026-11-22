@@ -233,6 +233,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 21/11 No5 — delegate assignment editing and schedule preview, approval and publication independently by store. Release scope limited to owner/manager rights. [Checkpoint](CHANGES/2026-11-21-no5-owner-parity.md).
 
+22/11 No5 — opt-in CSV of displayed shifts for the selected store. [Checkpoint](CHANGES/2026-11-22-no5-shift-report-export.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
