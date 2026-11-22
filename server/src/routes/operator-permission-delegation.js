@@ -7,6 +7,7 @@ import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from "../../../shared/pos-operator
 
 const router=Router();
 const delegatedOperatorPermission = "operator-profiles.manage-permissions";
+const delegatedPosAccess = "operator-profiles.manage-pos-access";
 const operatorPermissionKeys = [...POS_PERMISSIONS,...POS_MENU_PERMISSIONS].map(([key])=>key);
 const isMenuPermission = key=>key==="orders";
 const permissionEnabled = (profile,key)=>isMenuPermission(key)?profile?.backofficeMenu?.orders===true:Boolean(profile?.permissions?.[key]);
@@ -14,11 +15,11 @@ const permissionChange = z.object({
   key:z.enum(operatorPermissionKeys), enabled:z.boolean(), expected:z.boolean()
 }).strict();
 
-function delegatedPermissionsRoute(handler){
+function delegatedPermissionsRoute(handler,capability=delegatedOperatorPermission){
   return async(req,res,next)=>{
     try{
       if(req.user?.staffAccess!==true)throw staffError();
-      await requireStaffAction(prisma,req,req.params.storeId,delegatedOperatorPermission);
+      await requireStaffAction(prisma,req,req.params.storeId,capability);
       await handler(req,res);
     }catch(error){
       if(error?.name==="ZodError")return res.status(400).json({error:"Μη έγκυρη αλλαγή δικαιώματος."});
@@ -27,10 +28,21 @@ function delegatedPermissionsRoute(handler){
   };
 }
 
+async function lockEmployeeOperator(tx,{companyId,storeId,employeeId,actorId}){
+  const [credential]=await tx.$queryRaw`
+    SELECT c."id" FROM "StoreOperatorCredential" c
+    JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId"
+    WHERE c."companyId"=${companyId} AND c."storeId"=${storeId} AND c."employeeId"=${employeeId}
+      AND c."role"='EMPLOYEE' AND c."active"=true AND e."active"=true AND e."userId" IS DISTINCT FROM ${actorId}
+    FOR UPDATE OF c,e`;
+  if(!credential)throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Δεν βρέθηκε ενεργός χειριστής στο κατάστημα.");
+  return credential;
+}
+
 router.get("/stores/:storeId/employee-permissions",delegatedPermissionsRoute(async(req,res)=>{
   const {companyId,id:actorId}=req.user,storeId=req.params.storeId;
   const rows=await prisma.$queryRaw`
-    SELECT c."employeeId",c."displayName",p."permissions",p."backofficeMenu"
+    SELECT c."employeeId",c."displayName",p."permissions",p."backofficeMenu",p."posAccess"
     FROM "StoreOperatorCredential" c
     JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId"
     LEFT JOIN "StoreOperatorProfile" p ON p."employeeId"=c."employeeId" AND p."storeId"=c."storeId" AND p."companyId"=c."companyId"
@@ -39,7 +51,7 @@ router.get("/stores/:storeId/employee-permissions",delegatedPermissionsRoute(asy
     ORDER BY c."displayName",c."employeeId"`;
   await requireStaffAction(prisma,req,storeId,delegatedOperatorPermission);
   res.json({companyId,storeId,items:rows.map(row=>({
-    employeeId:row.employeeId,displayName:row.displayName,
+    employeeId:row.employeeId,displayName:row.displayName,posAccess:row.posAccess!==false,
     permissions:Object.fromEntries(operatorPermissionKeys.map(key=>[key,permissionEnabled(row,key)]))
   }))});
 }));
@@ -49,13 +61,7 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId",delegatedPermis
   const {key,enabled,expected}=permissionChange.parse(req.body);
   await prisma.$transaction(async tx=>{
     await requireStaffAction(tx,req,storeId,delegatedOperatorPermission);
-    const [credential]=await tx.$queryRaw`
-      SELECT c."id" FROM "StoreOperatorCredential" c
-      JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId"
-      WHERE c."companyId"=${companyId} AND c."storeId"=${storeId} AND c."employeeId"=${employeeId}
-        AND c."role"='EMPLOYEE' AND c."active"=true AND e."active"=true AND e."userId" IS DISTINCT FROM ${actorId}
-      FOR UPDATE OF c,e`;
-    if(!credential)throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Δεν βρέθηκε ενεργός χειριστής στο κατάστημα.");
+    const credential=await lockEmployeeOperator(tx,{companyId,storeId,employeeId,actorId});
     const [profile]=await tx.$queryRaw`
       SELECT "permissions","backofficeMenu" FROM "StoreOperatorProfile"
       WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId} FOR UPDATE`;
@@ -83,5 +89,44 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId",delegatedPermis
   });
   res.json({companyId,storeId,employeeId,key,enabled});
 }));
+
+const accessChange=z.object({enabled:z.boolean(),expected:z.boolean()}).strict();
+
+router.patch("/stores/:storeId/employee-permissions/:employeeId/pos-access",delegatedPermissionsRoute(async(req,res)=>{
+  const {companyId,id:actorId}=req.user,{storeId,employeeId}=req.params;
+  const {enabled,expected}=accessChange.parse(req.body);
+  await prisma.$transaction(async tx=>{
+    await requireStaffAction(tx,req,storeId,delegatedPosAccess);
+    const credential=await lockEmployeeOperator(tx,{companyId,storeId,employeeId,actorId});
+    const [profile]=await tx.$queryRaw`
+      SELECT "posAccess" FROM "StoreOperatorProfile"
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId} FOR UPDATE`;
+    const before=profile?.posAccess!==false;
+    if(before===enabled)return;
+    if(before!==expected)throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Η πρόσβαση POS άλλαξε. Ανανέωσε τη λίστα.");
+    if(!enabled){
+      const [openShift]=await tx.$queryRaw`
+        SELECT "id" FROM "CashShiftSession"
+        WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "openedBy"=${credential.id} AND "status"='OPEN' LIMIT 1`;
+      if(openShift)throw staffError(409,"STAFF_OPERATOR_OPEN_SHIFT","Κλείσε πρώτα την ανοικτή βάρδια του χειριστή.");
+    }
+    const changed=profile?await tx.$executeRaw`
+      UPDATE "StoreOperatorProfile" SET "posAccess"=${enabled},"updatedAt"=NOW()
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId}`
+      :await tx.$executeRaw`
+      INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","posAccess","createdBy")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${employeeId},${enabled},${actorId})
+      ON CONFLICT ("storeId","employeeId") DO NOTHING`;
+    if(changed!==1)throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Η πρόσβαση POS άλλαξε. Ανανέωσε τη λίστα.");
+    if(!enabled)await tx.$executeRaw`
+      UPDATE "StoreOperatorSession" SET "revokedAt"=NOW()
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "operatorId"=${credential.id} AND "revokedAt" IS NULL`;
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${credential.id},${actorId},'OPERATOR_POS_ACCESS_UPDATED',
+        CAST(${JSON.stringify({employeeId,before,enabled})} AS jsonb))`;
+  });
+  res.json({companyId,storeId,employeeId,enabled});
+},delegatedPosAccess));
 
 export default router;
