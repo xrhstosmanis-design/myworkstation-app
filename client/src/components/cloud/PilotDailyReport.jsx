@@ -3,7 +3,7 @@ import {CalendarDays,Download,FileSpreadsheet,RefreshCw,UsersRound} from "lucide
 import "./pilot-report.css";
 
 const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const money=value=>value==null?"—":Number(value).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false,hour:"2-digit",minute:"2-digit"}):"—";
 const escapeCsv=value=>`"${String(value??"").replaceAll('"','""')}"`;
 const typeLabels={SALE_CASH:"Πώληση μετρητών",SALE_CARD:"Πώληση με κάρτα",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπά έξοδα",PERCENTAGES:"Ποσοστά"};
@@ -30,7 +30,7 @@ export default function PilotDailyReport({api,store}){
       ["Πληρωμές προμηθευτών",data.summary.supplierPayments],["Λοιπά έξοδα",data.summary.otherExpenses],
       ["Σύνολο καταγεγραμμένων πληρωμών / εξόδων",data.summary.recordedExpensesTotal],
       ["Αφαιρέθηκαν από τη βάρδια",data.summary.expensesTotal],["Ποσοστά",data.summary.percentages],
-      ["EFTPOS",data.summary.eftposTotal],["Διαφορά καρτών–EFTPOS",data.summary.cardVarianceTotal],
+      ["Βάρδιες με εκκρεμή καταμέτρηση",data.summary.awaitingCount],["EFTPOS",data.summary.eftposTotal],["Διαφορά καρτών–EFTPOS",data.summary.cardVarianceTotal],
       ["Συνολική διαφορά ταμείων",data.summary.varianceTotal],["Ενεργές συναλλαγές",data.summary.transactionCount],
       ["Συνολική διαφορά έναρξης",data.summary.openingVarianceTotal],
       ["Ακυρωμένες συναλλαγές",data.summary.reversedCount],[],
@@ -59,6 +59,7 @@ export default function PilotDailyReport({api,store}){
         <article><span>EFTPOS</span><strong>{money(summary.eftposTotal)}</strong></article>
         <article><span>Κάρτες − EFTPOS</span><strong className={Math.abs(Number(summary.cardVarianceTotal||0))>.009?"pilot-negative":"pilot-positive"}>{money(summary.cardVarianceTotal)}</strong></article>
         <article><span>Αφαιρέθηκαν από ταμείο</span><strong>{money(summary.expensesTotal)}</strong></article>
+        {summary.awaitingCount>0&&<article><span>Εκκρεμεί καταμέτρηση</span><strong>{summary.awaitingCount}</strong></article>}
         <article><span>Διαφορά</span><strong className={Number(summary.varianceTotal)<0?"pilot-negative":"pilot-positive"}>{money(summary.varianceTotal)}</strong></article>
         <article><span>Διαφορά έναρξης</span><strong className={Number(summary.openingVarianceTotal)<0?"pilot-negative":"pilot-positive"}>{money(summary.openingVarianceTotal)}</strong></article>
         <article><span>Βάρδιες</span><strong>{summary.sessionsClosed||0}/{summary.sessionsOpened||0}</strong></article>
