@@ -112,7 +112,7 @@ for(const [path,capability,packageKey,query] of [['schedules','schedule.read','P
     const list=await request();
     assert.deepEqual(list.body.items[0].assignments[0].warningJson,{warnings:[{ruleCode:'DOUBLE_SHIFT'}],approvedRuleCodes:[]});
     assert.equal((await request({...exception,store:'sibling'})).status,403);
-    const decided=await request(exception);assert.equal(decided.status,201,JSON.stringify(decided.body));
+    const decided=await request(exception);assert.equal(decided.status,201,JSON.stringify(decided.body));assert.equal(decided.body.version,4);
     assert.equal((await request(exception)).status,409);
     assert.equal(exceptionWrites,1);
     capabilities=['schedule.read'];
