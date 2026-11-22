@@ -5,6 +5,7 @@ import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../custome
 import {backgroundDrain} from "../server-shutdown.js";
 import crypto from "crypto";
 import * as XLSX from "xlsx";
+import {z} from "zod";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {companyModuleState,requireCompanyModule} from "../middleware/module-access.js";
@@ -13,7 +14,7 @@ import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "
 import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
-import {acquireOriginal,prefillStoredMyDataDraft,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
+import {acquireOriginal,fetchStaffMyDataInboxOriginal,prefillStoredMyDataDraft,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
@@ -36,6 +37,18 @@ async function ensureSchema(){
 }
 const endpoint=environment=>environment==="SANDBOX"?"https://mydataapidev.aade.gr/RequestDocs":"https://mydatapi.aade.gr/myDATA/RequestDocs";
 function syncError(message,status=502){const error=new Error(message);error.status=status;return error}
+
+router.post("/documents/inbox/:inboxId/provider-original",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
+  const capability="invoices.fetch-original";
+  const {storeId}=z.object({storeId:z.string().min(1).max(160)}).strict().parse(req.body);
+  const {companyId,id:actorId}=req.user,inboxId=req.params.inboxId;
+  if(req.user.staffAccess!==true||req.user.storeId!==storeId||req.staffGrant?.capability!==capability||!inboxId||inboxId.length>160)
+    throw syncError("Δεν επιτρέπεται λήψη πρωτοτύπου σε αυτό το κατάστημα.",403);
+  await ensureSchema();
+  const result=await fetchStaffMyDataInboxOriginal(prisma,{companyId,storeId,inboxId,actorId},
+    db=>requireStaffAction(db,req,storeId,capability));
+  res.json(result);
+}catch(error){next(error)}});
 
 router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{
   if(!canSync(req))return res.status(403).json({error:"Ο έλεγχος επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
