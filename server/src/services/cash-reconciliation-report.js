@@ -197,6 +197,7 @@ export function reconciliationText(report){
       if(row.status==='RECHECK_REQUIRED')lines.push('Απαιτείται επανέλεγχος των κινήσεων ή των συνδεδεμένων στοιχείων.');
     }
     lines.push(`POS–EFTPOS: ${row.cardCents===null?'δεν υπάρχουν πλήρη στοιχεία':row.cardCents===0?'χωρίς διαφορά':'διαφορά '+(row.cardCents>0?'+':'−')+money(row.cardCents)}.`);
+    if(Number.isSafeInteger(row.cardCents)&&row.cardCents!==0)lines.push('Χρειάζεται έλεγχο με το αναλυτικό.');
     if(report.paperEvidence){
       const slips=report.paperEvidence.items.filter(item=>item.sessionId===row.sessionId&&item.kind==='EFTPOS'&&(item.status==='MATCHED'||item.reason==='EFTPOS_TOTAL_DIFFERS')&&item.evidenceBasis==='SHIFT_TOTAL'&&Number.isSafeInteger(item.amountCents));
       if(!slips.length)lines.push('Απόκομμα EFTPOS: δεν υπάρχει επαληθευμένο σύνολο αποκόμματος για τη βάρδια.');
