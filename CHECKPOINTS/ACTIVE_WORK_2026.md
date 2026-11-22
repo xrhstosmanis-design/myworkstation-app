@@ -1,4 +1,8 @@
 - 22/11/2026 · Νο 7 · Ένδειξη ελέγχου POS–EFTPOS στην ημερήσια αναφορά · [Checkpoint](CHANGES/2026-11-22-no7-card-detail-review.md).
+## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
+
+Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατάστασης στην κεντρική οθόνη, 18 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-22-central-purchase-status-buttons.md).
+
 - 22/11/2026 · Νο 7 · Αυτόματη ανάγνωση χειρόγραφων πριν από το ημερήσιο email · [Checkpoint](CHANGES/2026-11-22-no7-scheduled-cash-papers.md).
 
 - 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
@@ -917,3 +921,7 @@ Owner /root; feat/owner-cash-withdrawal-implementation-20261121. Before-source c
 
 
 INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes this owner to integrate ONLY dedicated responsible-person recovery and same-original assistant promotion. General No5/No04/No02 ownership retained. New exact mapping/default-off action and canonical writer checks are in the existing recovery checkpoint. Before-source expansion; no new runtime or actual transactions.
+
+## 22/11/2026 — Τελευταίος προμηθευτής είδους
+
+Εμφάνιση προμηθευτή από καταχωρισμένη αγορά του επιλεγμένου καταστήματος. [Καταγραφή](CHANGES/2026-11-22-product-card-latest-supplier.md).

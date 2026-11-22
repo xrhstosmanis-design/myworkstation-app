@@ -9,12 +9,12 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done});
 const response=(orders=[],ok=true)=>({ok,status:ok?200:503,json:async()=>ok?{orders,summary:{count:orders.length}}:{error:"Η ανανέωση απέτυχε"}});
 
 function fixture(){
-  const requests=[],listeners={},notices=[],controls=new Map();
+  const requests=[],listeners={},notices=[],controls=new Map(),viewButtons=[];
   const button={disabled:false,attrs:{},setAttribute(name,value){this.attrs[name]=value},addEventListener(name,handler){this[name]=handler}};
   controls.set("[data-po-refresh]",button);
   controls.set("[data-po-refresh-status]",{textContent:""});
   controls.set("[data-po-search]",{addEventListener(name,handler){this[name]=handler}});
-  const root={isConnected:true,hidden:false,querySelector:selector=>controls.get(selector)||null,querySelectorAll:()=>[]};
+  const root={isConnected:true,hidden:false,querySelector:selector=>controls.get(selector)||null,querySelectorAll:selector=>selector==="[data-po-order-view]"?viewButtons:[]};
   const launch={dataset:{},addEventListener(){}};
   const strip={querySelector:()=>launch,querySelectorAll:()=>[launch]};
   const hub={querySelector:selector=>selector===".commerce-module-strip"?strip:selector===".purchase-orders-suite"?root:null};
@@ -35,7 +35,7 @@ function fixture(){
   const suite=context.suite;
   suite.state.active=true;
   const setFilters=values=>{for(const [key,value] of Object.entries(values))controls.set(`[data-po-${key}]`,{value})};
-  return {suite,root,hub,button,requests,listeners,notices,controls,setFilters};
+  return {suite,root,hub,button,requests,listeners,notices,controls,setFilters,viewButtons};
 }
 
 test("inner refresh reads the visible filters and renders newly returned orders without cache",async()=>{
@@ -119,3 +119,35 @@ test("a response arriving after unmount cannot update another screen",async()=>{
 });
 
 
+
+test("central order views preserve filters and hide previous rows during a status switch",async()=>{
+  const f=fixture();
+  assert.equal(f.suite.state.status,"NEW");
+  const initial=f.suite.loadReport(f.root,true);
+  f.requests[0].resolve(response([{id:"first",invoiceNumber:"NEW-ONLY",status:"NEW"}]));
+  await initial;
+  assert.match(f.root.html,/data-po-order-view="NEW" aria-pressed="true"/);
+  assert.match(f.root.html,/Οριστικοποιημένες προς έλεγχο/);
+  assert.match(f.root.html,/NEW-ONLY/);
+  const buttons=["FINAL","INVOICED"].map(value=>({
+    dataset:{poOrderView:value},
+    addEventListener(name,handler){this[name]=handler}
+  }));
+  f.viewButtons.push(...buttons);
+  f.setFilters({from:"2026-11-01",to:"2026-11-22",store:"lab",supplier:"supplier-1",q:"invoice"});
+  f.suite.bindRoot(f.root);
+  const older=buttons[0].click();
+  assert.doesNotMatch(f.root.html,/NEW-ONLY/);
+  const latest=buttons[1].click();
+  for(const [index,status] of [[1,"FINAL"],[2,"INVOICED"]]){
+    const url=new URL(f.requests[index].url,"https://test.invalid");
+    for(const [key,value] of Object.entries({storeId:"lab",supplierId:"supplier-1",status,q:"invoice"}))assert.equal(url.searchParams.get(key),value);
+  }
+  f.requests[2].resolve(response([{id:"invoiced",invoiceNumber:"INVOICED-ONLY",status:"INVOICED"}]));
+  await latest;
+  f.requests[1].resolve(response([{id:"final",invoiceNumber:"FINAL-ONLY",status:"FINAL",awaitingInvoice:true}]));
+  await older;
+  assert.match(f.root.html,/INVOICED-ONLY/);
+  assert.match(f.root.html,/data-po-order-view="INVOICED" aria-pressed="true"/);
+  assert.doesNotMatch(f.root.html,/FINAL-ONLY|NEW-ONLY/);
+});
