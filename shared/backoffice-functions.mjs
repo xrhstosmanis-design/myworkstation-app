@@ -355,6 +355,17 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "read",
       "create",
+      "upload-original",
+      "fetch-original",
+      "email",
+      "value-only",
+      "correct-supplier",
+      "supplier-lookup",
+      "supplier-lookup-official",
+      "supplier-create",
+      "mydata-prefill",
+      "sync-mydata",
+
       "edit",
       "approve",
       "reopen",
@@ -387,6 +398,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "read",
       "photo-preview",
+      "original-preview",
       "submit",
       "recheck",
       "correct",
