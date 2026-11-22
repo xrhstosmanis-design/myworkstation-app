@@ -5,8 +5,9 @@ import {createHash} from 'node:crypto';
 import {readWorkforceEvaluations,readWorkforcePerformance} from '../src/routes/platform-workforce-v2.js';
 import {readWorkforceScheduleValidation,readWorkforceScheduleForValidation} from '../src/routes/platform-workforce-v2-schedules.js';
 const context={company:{id:'company'},store:{id:'store-a'},requestUser:{id:'staff',role:'EMPLOYEE',staffAccess:true}},employee={id:'employee',fullName:'Visible employee'},forbidden=()=>assert.fail('pure workforce read attempted writer/bootstrap');
-function performanceDb(){
+function performanceDb({pending=false}={}){
  const seen=[],at=new Date(Date.now()-86400000),attendance=[{storeId:'store-a',status:'CLOSED',workedMinutes:60,overtimeMinutes:5,lateMinutes:2,earlyLeaveMinutes:0},{storeId:'store-b',status:'CLOSED',workedMinutes:600,overtimeMinutes:50,lateMinutes:20,earlyLeaveMinutes:0}],shifts=[{id:'shift-a',storeId:'store-a',terminalPos:'MAIN',status:'CLOSED',openedAt:at,closedAt:at,openedInPeriod:true,closedInPeriod:true,cashSales:30,cardSales:0,eftposTotal:0,variance:2,openingVariance:0,cardVariance:0,transactionCount:2,reversedCount:0},{id:'shift-b',storeId:'store-b',terminalPos:'OTHER',status:'CLOSED',openedAt:at,closedAt:at,openedInPeriod:true,closedInPeriod:true,cashSales:300,cardSales:0,eftposTotal:0,variance:20,openingVariance:0,cardVariance:0,transactionCount:20,reversedCount:0}];
+ if(pending)shifts.push({...shifts[0],id:'uncounted',closeReconciliationStatus:'AWAITING_COUNT',openingVariance:null,cashSales:15});
  const db={$executeRaw:forbidden,$executeRawUnsafe:forbidden,$transaction:forbidden,workforceEmployee:{findFirst:async options=>{seen.push({model:'employee',options});return employee}},workforceAttendanceSession:{findMany:async options=>{seen.push({model:'attendance',options});return attendance.filter(row=>!options.where.storeId||row.storeId===options.where.storeId)}},workforceAuditLog:{findMany:async options=>{seen.push({model:'audit',options});return[]}},$queryRaw:async(parts,...values)=>{const sql=parts.join('?');seen.push({sql,values});assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|FOR UPDATE)\b/i);const own=values.includes('store-a');if(sql.includes('FROM "StoreOperatorCredential"'))return(own?['a']:['a','b']).map(id=>({id:'operator-'+id}));if(sql.includes('FROM "CashShiftSession"'))return shifts.filter(row=>!own||row.storeId==='store-a');if(sql.includes('FROM "PosSaleActionAudit"'))return(own?['CANCEL']:['CANCEL','RETURN']).map((actionType,i)=>({id:'action-'+i,actionType,amount:0}));assert.fail(sql)}};
  return {db,seen};
 }
@@ -17,6 +18,19 @@ test('native rolling performance arithmetic is preserved while delegated reads r
 });
 test('actual monthly performance keeps native closed-month totals and warnings without changing the Owner cache-header timing',async()=>{
  const f=performanceDb();let cache=0;const value=await readWorkforcePerformance(context,employee,{month:'2026-11'},{db:f.db,strictStore:true,onMonthlyReady:()=>{assert.equal(f.seen.at(-1).model,'employee');cache++}});assert.equal(cache,1);assert.equal(value.period.month,'2026-11');assert.equal(value.period.timeZone,'Europe/Athens');assert.equal(value.cashier.totalSales,30);assert.equal(value.cashier.closedShifts,1);assert.equal(value.cashier.variance,2);assert.deepEqual(value.warnings,[]);assert.deepEqual(f.seen.find(row=>row.model==='employee').options.select,{id:true,fullName:true});
+});
+test('workforce monthly and rolling reports retain sales and show unresolved count differences as unknown',async()=>{
+ for(const query of [{days:'30'},{month:'2026-11'}]){
+  const f=performanceDb({pending:true});
+  const {cashier}=await readWorkforcePerformance(context,employee,query,{db:f.db,strictStore:true});
+  assert.equal(cashier.totalSales,45);
+  assert.equal(cashier.awaitingCount,1);
+  for(const key of ['variance','cardVariance','eftpos','openingVariance'])assert.equal(cashier[key],null,key);
+  const pending=cashier.recentShifts.find(row=>row.id==='uncounted');
+  assert.equal(pending.closeReconciliationStatus,'AWAITING_COUNT');
+  for(const key of ['variance','cardVariance','eftposTotal','openingVariance'])assert.equal(pending[key],null,key);
+  assert.equal(cashier.recentShifts[0].variance,2);
+ }
 });
 test('monthly employee withdrawal produces the same typed native404 rather than accessing a response inside the pure reader',async()=>{const f=performanceDb();f.db.workforceEmployee.findFirst=async()=>null;await assert.rejects(readWorkforcePerformance(context,employee,{month:'2026-11'},{db:f.db,strictStore:true,onMonthlyReady:forbidden}),{status:404});});
 test('evaluation preparation remains native-only and delegated selection closes store and author company without exposing raw identity columns',async()=>{
@@ -29,7 +43,7 @@ test('schedule validation reuses actual finding calculations with a genuine empl
  assert.equal((await readWorkforceScheduleForValidation(context,'schedule',{db})).id,'schedule');
  const result=await readWorkforceScheduleValidation(context,schedule,{db,employeeLoader:async(ctx,id)=>{assert.equal(ctx.requestUser.role,'EMPLOYEE');assert.equal(id,'employee');return{id,fullName:'Visible employee',rules:[{ruleType:'NEVER_ALONE',active:true,validFrom:null,validTo:null}]}}});assert.equal(result.findings.length,1);assert.equal(result.errors[0].ruleCode,'NEVER_ALONE');assert.equal(result.approvals.length,0);
 });
-test('canonical workforce performance and validation bodies retain independently frozen original calculations and SQL',async()=>{
- const performance=await readFile(new URL('../src/routes/platform-workforce-v2.js',import.meta.url),'utf8'),a=performance.indexOf('export async function readWorkforcePerformance('),start=performance.indexOf('    if(rawQuery.month!==undefined)',a),end=performance.indexOf('}\nrouter.get("/employees/:employeeId/performance"',start),body=performance.slice(start,end);assert.ok(end>start);assert.equal(createHash('sha256').update(body.replace('throw Object.assign(new Error("Δεν βρέθηκε εργαζόμενος στο κατάστημα."),{status:404})','return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος στο κατάστημα."})').replace(/\s/g,'')).digest('hex'),'1b78b31b2c1c9b9f25875e9666ace7465ca08ed57e6f721a8e1e1836142f8eea');
+test('canonical workforce performance and validation bodies match reviewed report calculations and SQL',async()=>{
+ const performance=await readFile(new URL('../src/routes/platform-workforce-v2.js',import.meta.url),'utf8'),a=performance.indexOf('export async function readWorkforcePerformance('),start=performance.indexOf('    if(rawQuery.month!==undefined)',a),end=performance.indexOf('}\nrouter.get("/employees/:employeeId/performance"',start),body=performance.slice(start,end);assert.ok(end>start);assert.equal(createHash('sha256').update(body.replace('throw Object.assign(new Error("Δεν βρέθηκε εργαζόμενος στο κατάστημα."),{status:404})','return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος στο κατάστημα."})').replace(/\s/g,'')).digest('hex'),'7c9f8de65a084c1620128904c81a9de5700f230861f760ff47255520fe2fde2c');
  const validation=await readFile(new URL('../src/routes/platform-workforce-v2-schedules.js',import.meta.url),'utf8'),v=validation.indexOf('export async function readWorkforceScheduleValidation('),vs=validation.indexOf(' const prisma=db;',v)+' const prisma=db;'.length,ve=validation.indexOf('}\n\nconst scheduleValidation=',vs);assert.ok(ve>vs);assert.equal(createHash('sha256').update(validation.slice(vs,ve).replace(/\s/g,'')).digest('hex'),'beaea1b5d1bbafc7e4c0a09445e5df7b3f3baa7f3a7a2b244376d8a2cc920022');
 });

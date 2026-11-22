@@ -1,3 +1,4 @@
+import {z} from "zod";
 import {readCashExpenseEvidence,cashExpenseFindings} from "../src/services/cash-expense-evidence.js";
 import {readCashReviewState,confirmedExplanationBalance} from "../src/services/cash-review-balance.js";
 import test from 'node:test';
@@ -47,4 +48,48 @@ test('actual cloud investigation returns only linked audit findings and preserve
  const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:db,normalize:x=>x,assertStoreAccess:()=>{},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),readCashExpenseEvidence,cashExpenseFindings,existingAuditTables:async()=>({operator:true,actions:true,safety:true}),partitionCashAuditEvents,confirmedExplanationBalance,suspiciousOperatorEvent:()=>true,auditAmount:d=>Number(d?.reversalTotal)||null,money:v=>Number(v||0),reviewSnapshot:async()=>({}),sameSnapshot:()=>true};
  new Function(...Object.keys(deps),route.replace(/^export /gm,''))(...Object.values(deps));let result;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{result=x}});
  assert.equal(result.auditAssociation.linked,1);assert.equal(result.auditAssociation.excluded,1);assert.equal(result.unassignedAuditEvents.length,1);assert.equal(result.auditEvents.length,1);assert.equal(result.initialVariance,-5);assert.equal(result.unexplainedVariance,-5);assert.equal(result.transactions.length,3);assert.equal(result.coverageStatus,'PROVISIONAL');assert.equal(result.findings.filter(f=>f.code==='AUDIT_RETURN_ITEMS').length,1);
+});
+
+test('Platform daily cash report preserves pending counts and counted store totals',async()=>{
+ const source=readFileSync(new URL('../src/routes/platform-admin.js',import.meta.url),'utf8');
+ const investigation=source.slice(source.indexOf('function platformCashAuditAmount('),source.indexOf('function companyView('));
+ const route=source.slice(source.indexOf('router.get("/cash-control/daily"'),source.indexOf('router.get("/cash-control/shortages"'));
+ const uncounted={...session,sessionId:'uncounted',storeName:'ΕΣΤΙΑ',closeReconciliationStatus:'AWAITING_COUNT',cashSales:14,cardSales:11,expectedOperational:47,eftposTotal:null,cardVariance:null,actualOperational:null,variance:null};
+ const counted={...session,sessionId:'counted',storeName:'Other',storeId:'other',cashSales:12,cardSales:8,eftposTotal:8,actualOperational:0,variance:-5,cardVariance:0};
+ const countedWithoutEftpos={...counted,sessionId:'counted-no-eftpos',storeName:'ΕΣΤΙΑ',storeId:'no-eftpos',closeReconciliationStatus:'COUNTED',eftposTotal:null,cardVariance:null,variance:-2};
+ let handler,reportRows=[uncounted,counted];
+ const deps={
+  router:{get:(_path,fn)=>{handler=fn}},z,ensureCashControlSchema:async()=>{},
+  resolveCashReportPeriod:(_query,date)=>({from:date,to:date}),
+  prisma:{$queryRaw:async strings=>strings.join('').includes('GROUP BY c."id"')?reportRows:[]},
+  mapCashReportRows:(rows,fn)=>Promise.all(rows.map(fn)),
+  partitionCashAuditEvents,readCashReviewState,readCashExpenseEvidence,cashExpenseFindings,
+  readCashReviewEvidence:async()=>({findings:[{code:'AUDIT_FIXTURE'}]})
+ };
+ new Function(...Object.keys(deps),investigation+route)(...Object.values(deps));
+ let result;
+ await handler({query:{date:'2026-10-12'}},{json:value=>{result=value}},error=>{throw error});
+ const [pending,regular]=result.rows;
+ for(const field of ['actualOperational','eftposTotal','variance','cardVariance','actualVariance','actualCardVariance'])assert.equal(pending[field],null,field);
+ assert.equal(pending.expectedOperational,47);
+ assert.equal(pending.investigation.conclusion,'AWAITING_COUNT');
+ assert.equal(pending.investigation.reviewBalance.unexplainedVariance,null);
+ assert(pending.investigation.pendingChecks.includes('PHYSICAL_COUNT'));
+ assert.equal(regular.actualOperational,0);
+ assert.equal(result.totals.awaitingCount,1);
+ assert.equal(result.totals.cashSales,26);
+ for(const field of ['eftposTotal','variance','cardVariance','shortage','surplus'])assert.equal(result.totals[field],null,field);
+ assert.equal(result.stores[0].shortage,null);
+ assert.equal(result.stores[1].shortage,5);
+ assert.equal(result.stores[1].cardVariance,0);
+ reportRows=[counted,countedWithoutEftpos];
+ await handler({query:{date:'2026-10-12'}},{json:value=>{result=value}},error=>{throw error});
+ assert.equal(result.totals.awaitingCount,0);
+ assert.equal(result.totals.shortage,7);
+ assert.equal(result.totals.variance,-7);
+ assert.equal(result.totals.eftposTotal,null);
+ assert.equal(result.totals.cardVariance,null);
+ assert.equal(result.rows[1].actualCardVariance,null);
+ assert.equal(result.rows[1].cardVariance,null);
+ assert.equal(result.stores[1].cardVariance,null);
 });

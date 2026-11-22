@@ -10,12 +10,12 @@ import {fileURLToPath} from 'node:url';
 const source=fs.readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
 const middleware=source.slice(source.indexOf('async function requireCashAccess'),source.indexOf('function assertStoreAccess'));
 const boundary=source.slice(source.indexOf('function assertStoreAccess'),source.indexOf('async function ownedStore'));
-const routeSource=source.slice(source.indexOf('router.get("/stores/:storeId/shift-status"'),source.indexOf('router.get("/stores/:storeId/overview"'));
-function fixture(permissions=[]){
+const routeSource=source.slice(source.indexOf('function suggestedShiftOpening'),source.indexOf('router.get("/stores/:storeId/overview"'));
+function fixture(permissions=[],previous={closingSafe:7,closingDrawer:2}){
  let handler;const queries=[];let value;
  const context={router:{get:(_,fn)=>{handler=fn}},route:fn=>fn,
   ownedStore:async(id,company)=>{assert.equal(company,'company');return{id,name:'LAB'}},requestTerminal:async()=> 'BOUND',
-  prisma:{$queryRaw:async(strings,...values)=>{const sql=strings.join('?');queries.push({sql,values});return sql.includes("'CLOSED'")?[{closingSafe:7,closingDrawer:2}]:[{id:'shift',status:'OPEN',openedAt:'now',cashSales:999}]}}};
+  prisma:{$queryRaw:async(strings,...values)=>{const sql=strings.join('?');queries.push({sql,values});return sql.includes("'CLOSED'")?[previous]:[{id:'shift',status:'OPEN',openedAt:'now',cashSales:999}]}}};
  vm.runInNewContext(boundary+routeSource,context);
  return {handler,queries,req:{params:{storeId:'store'},user:{tokenType:'STORE_OPERATOR',storeId:'store',companyId:'company',permissions}},res:{json:x=>{value=x}},get result(){return value}};
 }
@@ -58,4 +58,12 @@ test('actual POS entry shows shift failure and retry recovers without requesting
   await act(async()=>{retry.click();await new Promise(r=>setTimeout(r,25))});
   assert.match(document.body.textContent,/POS CHILD/);assert.equal(tries,2);assert.equal(requests.some(x=>x.endsWith('/overview')),false);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,v] of before){if(v)Object.defineProperty(globalThis,k,v);else delete globalThis[k]}}
+});
+
+
+test('an uncounted close supplies no opening balances',async()=>{
+ const f=fixture(['INITIAL_CASH'],{closeReconciliationStatus:'AWAITING_COUNT',closingSafe:7,closingDrawer:2,nextOpeningTotal:2});
+ await f.handler(f.req,f.res);
+ assert.equal(f.result.suggestedOpening.awaitingPreviousCount,true);
+ for(const key of ['drawer','custody','coins','safe','operational'])assert.equal(f.result.suggestedOpening[key],null);
 });

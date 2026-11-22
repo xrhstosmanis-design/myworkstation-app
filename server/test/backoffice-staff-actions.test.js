@@ -176,7 +176,7 @@ test('delegated invoice cancellation rechecks the grant inside preview and submi
 test('canonical shift report redacts delegated data and revalidates immediately before response',async()=>{
  const source=await readFile(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
  const start=source.indexOf('function staffShiftReportRow(');
- const stop=source.indexOf('export async function readCashDailySummary(',start);
+ const stop=source.indexOf('\n}));',source.indexOf('router.get("/stores/:storeId/reporting-overview"',start))+5;
  assert.ok(start>=0&&stop>start);
  assert.match(source.slice(start,stop),/router\.get\("\/stores\/:storeId\/reporting-overview"/);
  const p=policy();

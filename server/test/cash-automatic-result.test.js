@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import XLSX from 'xlsx';
 import {hash} from '../src/services/cash-reconciliation-contract.js';
-import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
+import {immediateCashPair,projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 import {canAutomaticallyCalculate,calculateCashResult,assertCalculatedCashResult,pendingCashContinuationRows} from '../src/services/cash-automatic-result.js';
 import {projectAutomaticReviewedReport,canSendProvisionalCashReport} from '../src/services/cash-reviewed-automatic-contract.js';
 import {cashArchiveWorkbook} from '../src/services/cash-reviewed-archive.js';
@@ -92,4 +92,31 @@ test('continuation omits current automatic results without trusting flags, appro
  assert.deepEqual(pendingCashContinuationRows([{...r.rows[2],automaticallyCalculated:true}]).map(v=>v.sessionId),['c']);
  assert.deepEqual(pendingCashContinuationRows([{...r.rows[2],reviewed:true}]),[],'preserve existing valid manual-review policy');
  assert.deepEqual(pendingCashContinuationRows([{...r.rows[2],status:'NOT_APPLICABLE'}]),[]);
+});
+
+test('an administrative close stays pending with unknown amounts and cannot be paired for a cash offset',()=>{
+ const source=fixture(),first=source.sessions.get('a'),shift=source.sessions.get('b'),last=source.sessions.get('c');
+ shift.automaticSnapshot.closeReconciliationStatus='AWAITING_COUNT';
+ const report=projectReconciliation(source,[]),row=report.rows[1];
+ assert.equal(row.closeReconciliationStatus,'AWAITING_COUNT');
+ assert.equal(row.status,'RECHECK_REQUIRED');
+ for(const field of ['initialCents','explainedCents','remainingCents','cardCents'])assert.equal(row[field],null,field);
+ assert.equal(row.eligible,false);
+ assert.equal(row.automaticallyCalculated,false);
+ assert.equal(row.reviewed,false);
+ assert.equal(row.automaticAudit,undefined);
+ assert.equal(report.rows[0].automaticAudit.checks.find(c=>c.code==='NEXT_HANDOFF').status,'UNAVAILABLE');
+ assert.equal(report.rows[2].automaticAudit.checks.find(c=>c.code==='PREVIOUS_HANDOFF').status,'UNAVAILABLE');
+ assert.equal(immediateCashPair(first,shift,source.rule),false);
+ assert.equal(immediateCashPair(shift,last,source.rule),false);
+ assert.match(report.text,/Διοικητικό κλείσιμο χωρίς καταμέτρηση/);
+ assert.match(report.text,/POS–EFTPOS: δεν υπάρχουν πλήρη στοιχεία/);
+ const publicReport=projectAutomaticReviewedReport(report);
+ assert.equal(publicReport.rows[1].closeReconciliationStatus,'AWAITING_COUNT');
+ assert.equal(canSendProvisionalCashReport(publicReport),false);
+
+ source.rule={mode:'POS_EFTPOS_ONLY',carryOverEnabled:false};
+ const cardReport=projectReconciliation(source,[]);
+ assert.equal(cardReport.rows[1].status,'RECHECK_REQUIRED');
+ assert.equal(cardReport.calculatedResult.pending,1);
 });

@@ -16,15 +16,22 @@ export function cashierMonthRange(month){
  return {month,timeZone:zone,from:midnight(year,m),to:midnight(m===12?year+1:year,m===12?1:m+1),endExclusive:true};
 }
 const n=v=>Number(v||0),money=v=>Number(n(v).toFixed(2));
+export const cashierShiftAwaitingCount=row=>row.closeReconciliationStatus==='AWAITING_COUNT';
 export function summarizeMonthlyShifts(rows){
- const summary={shifts:rows.length,openShifts:0,closedShifts:0,transactions:0,reversed:0,cashSales:0,cardSales:0,eftpos:0,variance:0,openingVariance:0,cardVariance:0};
+ const summary={shifts:rows.length,openShifts:0,closedShifts:0,awaitingCount:0,transactions:0,reversed:0,cashSales:0,cardSales:0,eftpos:0,variance:0,openingVariance:0,cardVariance:0};
  for(const row of rows){
   if(row.status==='OPEN')summary.openShifts++;
-  if(row.closedInPeriod){summary.closedShifts++;summary.variance+=n(row.variance);summary.cardVariance+=n(row.cardVariance);summary.eftpos+=n(row.eftposTotal)}
+  if(row.closedInPeriod){
+   summary.closedShifts++;
+   if(cashierShiftAwaitingCount(row))summary.awaitingCount++;
+   summary.variance+=n(row.variance);summary.cardVariance+=n(row.cardVariance);summary.eftpos+=n(row.eftposTotal);
+  }
   if(row.openedInPeriod)summary.openingVariance+=n(row.openingVariance);
   summary.transactions+=n(row.transactionCount);summary.reversed+=n(row.reversedCount);summary.cashSales+=n(row.cashSales);summary.cardSales+=n(row.cardSales);
  }
  for(const k of ['cashSales','cardSales','eftpos','variance','openingVariance','cardVariance'])summary[k]=money(summary[k]);
+ if(summary.awaitingCount){summary.variance=null;summary.cardVariance=null;summary.eftpos=null;}
+ if(rows.some(row=>row.openedInPeriod&&row.openingVariance===null))summary.openingVariance=null;
  return {...summary,totalSales:money(summary.cashSales+summary.cardSales)};
 }
 export async function monthlyCashierPerformance(db,{companyId,storeId,employee,month}){
@@ -36,6 +43,7 @@ export async function monthlyCashierPerformance(db,{companyId,storeId,employee,m
   (s."openedAt">=${from} AND s."openedAt"<${to}) AS "openedInPeriod",
   (s."status"='CLOSED' AND s."closedAt">=${from} AND s."closedAt"<${to}) AS "closedInPeriod",
   s."variance",s."openingVariance",s."cardVariance",s."eftposTotal",
+  to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus",
   COUNT(t."id") FILTER (WHERE t."reversedAt" IS NULL)::int AS "transactionCount",
   COUNT(t."id") FILTER (WHERE t."reversedAt" IS NOT NULL)::int AS "reversedCount",
   COALESCE(SUM(t."amount") FILTER (WHERE t."type"='SALE_CASH' AND t."reversedAt" IS NULL),0) AS "cashSales",
@@ -55,7 +63,7 @@ export async function monthlyCashierPerformance(db,{companyId,storeId,employee,m
  const minutes=key=>completed.reduce((sum,x)=>sum+n(x[key]),0);
  return {employee:{id:employee.id,fullName:employee.fullName},period,warnings,
   attendance:{sessions:attendance.length,completed:completed.length,workedMinutes:minutes('workedMinutes'),overtimeMinutes:minutes('overtimeMinutes'),lateMinutes:minutes('lateMinutes'),earlyLeaveMinutes:minutes('earlyLeaveMinutes'),needsReview:attendance.filter(x=>['NEEDS_REVIEW','NEEDS_APPROVAL'].includes(x.status)).length},
-  cashier:{linked:operatorIds.length>0,operatorIds,...summarizeMonthlyShifts(visibleShifts),recentShifts:visibleShifts.map(x=>({...x,cashSales:money(x.cashSales),cardSales:money(x.cardSales),variance:x.closedInPeriod?money(x.variance):null,cardVariance:x.closedInPeriod?money(x.cardVariance):null,transactionCount:n(x.transactionCount),reversedCount:n(x.reversedCount)}))},
+  cashier:{linked:operatorIds.length>0,operatorIds,...summarizeMonthlyShifts(visibleShifts),recentShifts:visibleShifts.map(x=>({...x,cashSales:money(x.cashSales),cardSales:money(x.cardSales),variance:x.closedInPeriod&&!cashierShiftAwaitingCount(x)?money(x.variance):null,cardVariance:x.closedInPeriod&&!cashierShiftAwaitingCount(x)?money(x.cardVariance):null,eftposTotal:cashierShiftAwaitingCount(x)?null:x.eftposTotal,transactionCount:n(x.transactionCount),reversedCount:n(x.reversedCount)}))},
   posActions:{total:actions.length,cancellations:actions.filter(x=>x.actionType==='CANCEL').length,returns:actions.filter(x=>x.actionType==='RETURN').length,delayed:actions.filter(x=>x.actionType==='DELAYED').length,discounts:actions.filter(x=>String(x.actionType).includes('DISCOUNT')).length,items:actions},
   evaluations:{status:'EVIDENCE_FIRST',message:'Η αξιολόγηση παραμένει ανθρώπινη. Δεν υπολογίζεται αυτόματο score.'},recentAudit:[]};
 }

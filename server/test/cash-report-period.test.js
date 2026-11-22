@@ -97,7 +97,7 @@ test("PostgreSQL shortage export assigns the overnight shift to its Athens openi
     await db.$executeRaw`INSERT INTO "Company" VALUES ('c','Company')`;
     await db.$executeRaw`INSERT INTO "Store" VALUES ('a','A','c'),('b','B','c'),('other','Other','c')`;
     await db.$executeRaw`INSERT INTO "CashShiftSession" ("id","storeId","companyId","status","openedAt","closedAt","variance","cardVariance")
-      VALUES ('night','a','c','CLOSED','2026-11-13 22:00+02','2026-11-14 06:00+02',-19,0),
+      VALUES ('night','a','c','CLOSED','2026-11-13 22:00+02','2026-11-14 06:00+02',-19,NULL),
         ('morning','b','c','CLOSED','2026-11-14 06:00+02','2026-11-14 14:00+02',-4,0),
         ('excluded','other','c','CLOSED','2026-11-13 22:00+02','2026-11-14 06:00+02',-8,0)`;
     const source=readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
@@ -116,7 +116,10 @@ test("PostgreSQL shortage export assigns the overnight shift to its Athens openi
     assert.deepEqual(opening.rows.map(row=>[row.sessionId,row.date,row.closedAt.toISOString(),row.shortage]),[
       ["night","2026-11-13","2026-11-14T04:00:00.000Z",19],
     ]);
-    assert.deepEqual((await search("2026-11-14")).rows.map(row=>row.sessionId),["morning"]);
+    assert.equal(opening.rows[0].cardVariance,null);
+    const morning=await search("2026-11-14");
+    assert.deepEqual(morning.rows.map(row=>row.sessionId),["morning"]);
+    assert.equal(morning.rows[0].cardVariance,0);
     assert.deepEqual((await search("2026-11-14","SHIFT_CLOSED_CALENDAR_DAY")).rows.map(row=>row.sessionId),["night","morning"]);
   }finally{
     await db.$disconnect();

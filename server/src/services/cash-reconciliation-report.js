@@ -18,13 +18,21 @@ function fullCoverage(row,papers,kiosk){
     expenses:{status:'COMPLETE',unresolvedCount:row.expenseFindings.length}};
 }
 const timestamp=v=>v?new Date(v).getTime():NaN;
+const awaitsPhysicalCount=source=>source?.session?.status==='CLOSED'&&source.automaticSnapshot?.closeReconciliationStatus==='AWAITING_COUNT';
 export function immediateCashPair(previous,next,rule){
   const a=previous?.session,b=next?.session;
-  return Boolean(a&&b&&rule.mode==='FULL'&&rule.carryOverEnabled===true&&a.status==='CLOSED'&&b.status==='CLOSED'&&a.companyId===b.companyId&&a.storeId===b.storeId&&a.terminalPos===b.terminalPos&&a.nextSession?.id===b.id&&Number.isFinite(timestamp(a.openedAt))&&Number.isFinite(timestamp(a.closedAt))&&Number.isFinite(timestamp(b.openedAt))&&Number.isFinite(timestamp(b.closedAt))&&timestamp(a.openedAt)<=timestamp(a.closedAt)&&timestamp(a.closedAt)<=timestamp(b.openedAt)&&timestamp(b.openedAt)<=timestamp(b.closedAt));
+  return Boolean(a&&b&&!awaitsPhysicalCount(previous)&&!awaitsPhysicalCount(next)&&rule.mode==='FULL'&&rule.carryOverEnabled===true&&a.status==='CLOSED'&&b.status==='CLOSED'&&a.companyId===b.companyId&&a.storeId===b.storeId&&a.terminalPos===b.terminalPos&&a.nextSession?.id===b.id&&Number.isFinite(timestamp(a.openedAt))&&Number.isFinite(timestamp(a.closedAt))&&Number.isFinite(timestamp(b.openedAt))&&Number.isFinite(timestamp(b.closedAt))&&timestamp(a.openedAt)<=timestamp(a.closedAt)&&timestamp(a.closedAt)<=timestamp(b.openedAt)&&timestamp(b.openedAt)<=timestamp(b.closedAt));
 }
 export function projectReconciliation(source,records,paperValidity=new Map()){
   const active=activeRecords(records),activeIds=new Set(active.map(r=>r.id));
   const rows=new Map([...source.sessions].map(([id,s])=>[id,{sessionId:id,sourceHash:s.sourceHash,openedAt:s.session.openedAt,closedAt:s.session.closedAt,terminalPos:s.session.terminalPos,shiftLabel:s.session.shiftLabel||'Βάρδια',operatorId:s.session.openedBy||null,operatorName:s.session.openedByName||'Χωρίς καταγεγραμμένο χειριστή',initialCents:s.initialCents,explainedCents:s.explainedCents,offsetCents:0,remainingCents:s.basisCents,cardCents:s.cardCents,nextClosed:s.nextClosed,recheck:s.reviewStatus!=='VALID',associations:[],offsets:[]} ]));
+  for(const [id,original]of source.sessions){
+    if(!awaitsPhysicalCount(original))continue;
+    Object.assign(rows.get(id),{
+      closeReconciliationStatus:'AWAITING_COUNT',
+      initialCents:null,explainedCents:null,remainingCents:null,cardCents:null,recheck:true
+    });
+  }
   const offsets=active.filter(r=>r.data.kind==='OFFSET'),invalid=new Set();
   const pairs=new Set();for(const r of offsets){const key=JSON.stringify([r.data.previousSessionId,r.data.nextSessionId]);if(pairs.has(key))throw reconcileError('CASH_RECONCILIATION_INVALID_HISTORY');pairs.add(key);}
   for(const r of active.filter(r=>r.data.kind==='ASSOCIATE')){
@@ -43,7 +51,7 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   }
   // Assess before allocating offsets so a contradiction invalidates both halves.
   const automatic=new Map(),full=s=>s?{...s.automaticSnapshot,...s.session}:null;
-  for(const [id,original]of source.sessions)if(original.automaticSnapshot){
+  for(const [id,original]of source.sessions)if(original.automaticSnapshot&&!awaitsPhysicalCount(original)){
     const audit=assessAutomaticCash({session:full(original),transactions:original.automaticTransactions,previous:full(source.sessions.get(original.session.previousSession?.id)),next:full(source.sessions.get(original.session.nextSession?.id)),rule:source.rule,sourceValid:original.reviewStatus==='VALID'});
     automatic.set(id,audit);if(hasCashNumericContradiction(audit))invalid.add(id);
   }
@@ -63,7 +71,7 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     const needsNext=source.rule.mode==='FULL'&&source.rule.carryOverEnabled;
     row.eligible=original.session.status==='CLOSED'&&Number.isFinite(timestamp(row.closedAt))&&timestamp(row.closedAt)>=timestamp(row.openedAt)&&row.remainingCents!==null&&!row.recheck&&(!needsNext||row.nextClosed)&&source.rule.mode!=='POS_EFTPOS_ONLY';
     row.reviewed=Boolean(row.eligible&&lastConfirmation&&activeIds.has(lastConfirmation.id)&&lastConfirmation.data.sourceHash===row.sourceHash&&lastConfirmation.data.planHash===row.planHash);
-    row.status=source.rule.mode==='POS_EFTPOS_ONLY'?'NOT_APPLICABLE':row.recheck?'RECHECK_REQUIRED':needsNext&&!row.nextClosed?'AWAITING_NEXT_SHIFT':row.reviewed?'REVIEWED':'AWAITING_REVIEW';
+    row.status=row.closeReconciliationStatus==='AWAITING_COUNT'?'RECHECK_REQUIRED':source.rule.mode==='POS_EFTPOS_ONLY'?'NOT_APPLICABLE':row.recheck?'RECHECK_REQUIRED':needsNext&&!row.nextClosed?'AWAITING_NEXT_SHIFT':row.reviewed?'REVIEWED':'AWAITING_REVIEW';
     row.reviewedBy=row.reviewed?lastConfirmation.actorName:null;
     row.reviewNote=row.reviewed?lastConfirmation.data.note||null:null;
     const reportTimestamp=source.byOpening?row.openedAt:row.closedAt;
@@ -194,7 +202,8 @@ export function reconciliationText(report){
     else{lines.push(`${row.day} · ${row.shiftLabel} · ${row.operatorName}: ${signedResult(row.remainingCents)}${row.reviewed||row.automaticallyCalculated?'':' — ΥΠΟ ΕΛΕΓΧΟ'}.`);
       if(row.offsetCents)lines.push(`Αρχική διαφορά ${signedResult(row.initialCents)} · επαληθευμένος συμψηφισμός με διαδοχική βάρδια ${money(row.offsetCents)}.`);
       if(row.status==='AWAITING_NEXT_SHIFT')lines.push('Αναμονή κλεισίματος της επόμενης βάρδιας.');
-      if(row.status==='RECHECK_REQUIRED')lines.push('Απαιτείται επανέλεγχος των κινήσεων ή των συνδεδεμένων στοιχείων.');
+      if(row.closeReconciliationStatus==='AWAITING_COUNT')lines.push('Διοικητικό κλείσιμο χωρίς καταμέτρηση. Εκκρεμεί καταμέτρηση μετρητών και επιβεβαίωση EFTPOS.');
+      else if(row.status==='RECHECK_REQUIRED')lines.push('Απαιτείται επανέλεγχος των κινήσεων ή των συνδεδεμένων στοιχείων.');
     }
     lines.push(`POS–EFTPOS: ${row.cardCents===null?'δεν υπάρχουν πλήρη στοιχεία':row.cardCents===0?'χωρίς διαφορά':'διαφορά '+(row.cardCents>0?'+':'−')+money(row.cardCents)}.`);
     if(Number.isSafeInteger(row.cardCents)&&row.cardCents!==0)lines.push('Χρειάζεται έλεγχο με το αναλυτικό.');
