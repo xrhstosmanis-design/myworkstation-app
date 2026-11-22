@@ -138,6 +138,7 @@ router.get("/",async(req,res,next)=>{
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
 
     const q=String(req.query.q||"").trim();
+    const productId=String(req.query.productId||"").trim()||null;
     const text=q?`%${q}%`:null;
     const category=String(req.query.category||"").trim()||null;
     const subcategory=String(req.query.subcategory||"").trim()||null;
@@ -153,31 +154,40 @@ router.get("/",async(req,res,next)=>{
       return res.status(400).json({error:"Συμπλήρωσε έγκυρο εύρος Margin."});
     const {marginMin,marginMax}=bounds.data;
     const filterMargin=marginMin!==undefined||marginMax!==undefined;
+    const purchaseUnitCost=Prisma.sql`CASE WHEN d."documentType" IS DISTINCT FROM 'CREDIT_NOTE' THEN COALESCE(
+      (SELECT sm."unitCost" FROM "StockMovement" sm
+       WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d."id"
+         AND sm."storeId"=d."storeId" AND sm."productId"=l."productId"
+         AND sm."movementType"='PURCHASE_PACK_CORRECTION' AND sm."unitCost">0
+       ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1),
+      (SELECT SUM(pl."netAmount"+COALESCE(pl."exciseTotal",0)) /
+              NULLIF(SUM(pl."quantity"*CASE WHEN pl."invoiceUnit"='PACKAGE' THEN pl."stockUnitsPerInvoiceUnit" ELSE 1 END),0)
+       FROM "PurchaseOrderLine" pl JOIN "PurchaseOrder" po ON po."id"=pl."orderId"
+       WHERE d."sourceType"='PURCHASE_ORDER' AND po."id"=d."id"
+         AND po."companyId"=d."companyId" AND po."storeId"=d."storeId" AND pl."productId"=l."productId"
+       HAVING BOOL_OR(pl."invoiceUnit"='PACKAGE')
+         AND BOOL_AND(pl."quantity">0 AND (pl."invoiceUnit" IS DISTINCT FROM 'PACKAGE' OR COALESCE(pl."stockUnitsPerInvoiceUnit",0)>0))),
+      CASE WHEN l."quantity">0 AND l."netAmount">0 AND (l."unit" IS DISTINCT FROM 'PACKAGE' OR l."unitsPerPackage">0)
+        THEN l."netAmount"/(l."quantity"*CASE WHEN l."unit"='PACKAGE' THEN l."unitsPerPackage" ELSE 1 END)
+      END
+    ) END`;
     const latestCostJoin=Prisma.sql`
       LEFT JOIN LATERAL (
-        SELECT COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
-                         WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d."id"
-                           AND sm."productId"=l."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
-                         ORDER BY sm."createdAt" DESC LIMIT 1),
-                    CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END) AS "unitCost",
+        SELECT ${purchaseUnitCost} AS "unitCost",
                d."documentDate",d."documentNumber",sup."name" AS "supplierName"
         FROM "PurchaseDocumentLine" l
         JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
         LEFT JOIN "Supplier" sup ON sup."id"=d."supplierId"
         WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
-        ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
+        ORDER BY d."documentDate" DESC,d."createdAt" DESC,l."id" DESC LIMIT 1
       ) lp ON true
     `;
     const averageCostJoin=Prisma.sql`
       LEFT JOIN LATERAL (
-        SELECT AVG(COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
-                             WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d2."id"
-                               AND sm."productId"=l2."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
-                             ORDER BY sm."createdAt" DESC LIMIT 1),
-                            CASE WHEN l2."unit"='PACKAGE' THEN l2."unitCost"/NULLIF(l2."unitsPerPackage",0) ELSE l2."unitCost" END)) AS "averagePurchasePrice"
-        FROM "PurchaseDocumentLine" l2 JOIN "PurchaseDocument" d2 ON d2."id"=l2."purchaseDocumentId"
-        WHERE d2."companyId"=${companyId} AND d2."storeId"=${storeId} AND d2."status"='APPROVED' AND l2."productId"=p."id"
-          AND d2."documentDate">=NOW()-INTERVAL '180 days'
+        SELECT AVG(NULLIF(${purchaseUnitCost},0)) AS "averagePurchasePrice"
+        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+        WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
+          AND d."documentDate">=NOW()-INTERVAL '180 days'
       ) ap ON true
     `;
     const saleNet=Prisma.sql`COALESCE(sp."salePrice",p."salePrice",0)::numeric / NULLIF(1+COALESCE(p."vatRate",0)::numeric/100,0)`;
@@ -197,6 +207,7 @@ router.get("/",async(req,res,next)=>{
       ${filterMargin?latestCostJoin:Prisma.empty}
       ${filterMargin?averageCostJoin:Prisma.empty}
       WHERE sp."storeId"=${storeId}
+        AND (${productId}::text IS NULL OR p."id"=${productId})
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
@@ -239,6 +250,7 @@ router.get("/",async(req,res,next)=>{
           AND s."occurredAt">=NOW()-INTERVAL '15 days'
       ) sa ON true
       WHERE sp."storeId"=${storeId}
+        AND (${productId}::text IS NULL OR p."id"=${productId})
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})

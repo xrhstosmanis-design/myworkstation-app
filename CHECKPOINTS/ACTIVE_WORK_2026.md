@@ -2,6 +2,10 @@
 
 PR #4156 · Vendor 9344842. Τοπικά πέρασαν 20 δοκιμές και ο έλεγχος συναλλαγής PGlite. Εκκρεμούν πλήρες CI, έλεγχος στο εγκατεστημένο LAB και δοκιμή μέσω Pelican. [Checkpoint](CHANGES/2026-11-22-no19-efood-lab-order-run.md).
 
+## 22/11/2026 — Κεντρική διόρθωση Margin αποθήκης — AWAITING LAB
+
+Κοινός υπολογισμός για όλα τα καταστήματα. 16 στοχευμένοι έλεγχοι πέρασαν. [Checkpoint](CHANGES/2026-11-22-central-warehouse-net-margin.md).
+
 - 22/11/2026 · Νο 7 · Ένδειξη ελέγχου POS–EFTPOS στην ημερήσια αναφορά · [Checkpoint](CHANGES/2026-11-22-no7-card-detail-review.md).
 ## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
 
