@@ -165,17 +165,27 @@ router.get("/",async(req,res,next)=>{try{
   const context=await contextFor(req),delegated=req.user?.staffAccess===true;
   const q=z.object({from:dateText.optional(),to:dateText.optional(),status:z.string().optional()}).parse(req.query||{});
   const employeeScope={companyId:context.company.id,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]};
+  const canApproveException=delegated&&req.staffGrant?.capabilities?.includes("schedule.approve-exception");
   const selection={
     id:true,companyId:true,storeId:true,periodStart:true,periodEnd:true,periodType:true,status:true,version:true,approvedAt:true,publishedAt:true,createdAt:true,updatedAt:true,
     assignments:{where:{shiftTemplate:{companyId:context.company.id,storeId:context.store.id},OR:[{employeeId:null},{employee:employeeScope}]},select:{
-      id:true,date:true,employeeId:true,shiftTemplateId:true,slot:true,status:true,warningState:true,
+      id:true,date:true,employeeId:true,shiftTemplateId:true,slot:true,status:true,warningState:true,...(canApproveException?{warningJson:true}:{}),
       employee:{select:{id:true,fullName:true}},
       shiftTemplate:{select:{id:true,name:true,category:true,startTime:true,endTime:true,minimumPeople:true,maximumPeople:true,requiredRole:{select:{id:true,name:true}}}}
     },orderBy:[{date:'asc'},{shiftTemplate:{startTime:'asc'}},{slot:'asc'}]}
   };
   const items=await prisma.workforceSchedule.findMany({where:{companyId:context.company.id,storeId:context.store.id,...(q.from?{periodEnd:{gte:dayStart(q.from)}}:{}),...(q.to?{periodStart:{lte:new Date(`${q.to}T23:59:59.999Z`)}}:{}),...(q.status?{status:q.status}:{})},...(delegated?{select:selection}:{include:scheduleInclude}),orderBy:[{periodStart:"desc"},{version:"desc"}],take:100});
   if(delegated)await requireStaffGrant(prisma,req.user,context.store.id,'schedule.read');
-  res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),items:items.map(serialize)});
+  const result=items.map(serialize);
+  if(canApproveException){
+    await requireStaffGrant(prisma,req.user,context.store.id,"schedule.approve-exception");
+    for(const schedule of result)for(const assignment of schedule.assignments){
+      const codes=[...new Set(warningList(assignment).map(warning=>warning.ruleCode))].filter(code=>exceptionCodes.includes(code));
+      assignment.warningJson={warnings:codes.map(ruleCode=>({ruleCode})),
+        approvedRuleCodes:codes.filter(code=>assignment.warningJson?.approvedRuleCodes?.includes(code))};
+    }
+  }
+  res.json({...(delegated?{companyId:context.company.id,storeId:context.store.id}:{}),items:result});
 }catch(error){next(error)}});
 
 router.get("/editor-options",async(req,res,next)=>{try{
@@ -260,6 +270,38 @@ const validation=await scheduleValidation(context,schedule);if(body.status==="PU
   }
   await advanceScheduleVersion(tx,req,context,schedule,{PREVIEWED:"schedule.preview",APPROVED:"schedule.approve",PUBLISHED:"schedule.publish"}[body.status]);
   const item=await tx.workforceSchedule.update({where:{id:schedule.id},data:{status:body.status,...(body.status==="APPROVED"?{approvedByUserId:req.user.id,approvedAt:new Date()}:{}),...(body.status==="PUBLISHED"?{publishedAt:new Date(),lockedAt:new Date()}:{} )},include:scheduleInclude});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:`WORKFORCE_SCHEDULE_${body.status}`,entityType:"WORKFORCE_SCHEDULE",entityId:item.id,before:schedule,after:item,reason:body.reason});if(body.status==="PUBLISHED")await publishScheduleToStoreChat(tx,req,context,item);return item});res.json({item:req.user?.staffAccess===true?{id:updated.id,status:updated.status,version:updated.version}:serialize(updated),validation});}catch(error){next(error)}});
-router.post("/:scheduleId/exceptions",async(req,res,next)=>{try{const context=await contextFor(req);if(!["SUPER_ADMIN","OWNER"].includes(req.user?.role)&&req.user?.platformRole!=="SUPER_ADMIN")throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει εξαίρεση προγράμματος."),{status:403});const body=z.object({assignmentId:z.string().min(1),ruleCode:z.enum(exceptionCodes),reason:z.string().trim().min(3).max(500),confirmed}).parse(req.body||{}),schedule=await loadSchedule(context,req.params.scheduleId),assignment=schedule.assignments.find(item=>item.id===body.assignmentId);if(!assignment)throw Object.assign(new Error("Δεν βρέθηκε η ανάθεση."),{status:404});const warnings=warningList(assignment);if(!warnings.some(item=>item.ruleCode===body.ruleCode))throw Object.assign(new Error("Ο κωδικός εξαίρεσης δεν αντιστοιχεί στην ανάθεση."),{status:409});const approvedRuleCodes=[...new Set([...(assignment.warningJson?.approvedRuleCodes||[]),body.ruleCode])],allApproved=warnings.every(item=>approvedRuleCodes.includes(item.ruleCode));await prisma.$transaction(async tx=>{await tx.workforceScheduleAssignment.update({where:{id:assignment.id},data:{warningState:allApproved?"APPROVED_EXCEPTION":"NEEDS_APPROVAL",warningJson:{warnings,approvedRuleCodes,approvedBy:req.user.id,approvedAt:new Date().toISOString(),reason:body.reason}}});await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_EXCEPTION_APPROVED",entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:assignment.id,after:{ruleCode:body.ruleCode,employeeId:assignment.employeeId,date:iso(assignment.date),shiftTemplateId:assignment.shiftTemplateId},reason:body.reason})});res.status(201).json({approved:true,ruleCode:body.ruleCode,allApproved});}catch(error){next(error)}});
+router.post("/:scheduleId/exceptions",async(req,res,next)=>{try{
+  const context=await contextFor(req),delegated=req.user?.staffAccess===true;
+  if(!delegated&&!["SUPER_ADMIN","OWNER"].includes(req.user?.role)&&req.user?.platformRole!=="SUPER_ADMIN"){
+    throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει εξαίρεση προγράμματος."),{status:403});
+  }
+  const body=z.object({version:z.number().int().positive().optional(),assignmentId:z.string().min(1),
+    ruleCode:z.enum(exceptionCodes),reason:z.string().trim().min(3).max(500),confirmed}).parse(req.body||{});
+  const schedule=await loadSchedule(context,req.params.scheduleId);
+  if(delegated)assertMutable(schedule);
+  if(delegated||body.version!==undefined)assertVersion(schedule,body.version);
+  const assignment=schedule.assignments.find(item=>item.id===body.assignmentId);
+  if(!assignment||delegated&&(assignment.shiftTemplate.companyId!==context.company.id||assignment.shiftTemplate.storeId!==context.store.id||
+    assignment.employeeId&&assignment.employee?.companyId!==context.company.id)){
+    throw Object.assign(new Error("Δεν βρέθηκε η ανάθεση."),{status:404});
+  }
+  const warnings=warningList(assignment);
+  if(!warnings.some(item=>item.ruleCode===body.ruleCode))throw Object.assign(new Error("Ο κωδικός εξαίρεσης δεν αντιστοιχεί στην ανάθεση."),{status:409});
+  const approvedRuleCodes=[...new Set([...(assignment.warningJson?.approvedRuleCodes||[]),body.ruleCode])];
+  const allApproved=warnings.every(item=>approvedRuleCodes.includes(item.ruleCode));
+  await prisma.$transaction(async tx=>{
+    await advanceScheduleVersion(tx,req,context,schedule,"schedule.approve-exception");
+    if(delegated&&assignment.employeeId)await loadEmployeeForAssignment({...context,requestUser:req.user},assignment.employeeId,tx);
+    await tx.workforceScheduleAssignment.update({where:{id:assignment.id},data:{
+      warningState:allApproved?"APPROVED_EXCEPTION":"NEEDS_APPROVAL",
+      warningJson:{warnings,approvedRuleCodes,approvedBy:req.user.id,approvedAt:new Date().toISOString(),reason:body.reason}
+    }});
+    await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_EXCEPTION_APPROVED",
+      entityType:"WORKFORCE_SCHEDULE_ASSIGNMENT",entityId:assignment.id,
+      after:{ruleCode:body.ruleCode,employeeId:assignment.employeeId,date:iso(assignment.date),shiftTemplateId:assignment.shiftTemplateId},reason:body.reason});
+  });
+  res.status(201).json({approved:true,ruleCode:body.ruleCode,allApproved,version:schedule.version+1});
+}catch(error){next(error)}});
+
 
 export default router;

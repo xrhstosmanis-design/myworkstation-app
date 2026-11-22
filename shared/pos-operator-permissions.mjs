@@ -26,3 +26,5 @@ export const POS_PERMISSIONS=[
   ["closeShift","Κλείσιμο βάρδιας (PoS)"],
   ["cards","Κάρτες"]
 ];
+
+export const POS_MENU_PERMISSIONS = [["orders", "Παραγγελίες (Τιμολόγια / Παραλαβές στο PoS)"]];

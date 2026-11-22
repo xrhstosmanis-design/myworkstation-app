@@ -1,9 +1,7 @@
 import React,{useEffect,useState} from 'react';
-import {buildStaffShiftReportCsv,formatShiftTimestamp} from './staff-shift-report-csv.mjs';
+import {buildStaffShiftReportCsv} from './staff-shift-report-csv.mjs';
+import {printStaffShiftReport,staffShiftReportColumns,shiftAmount,shiftTimestamp} from './staff-shift-report-print.mjs';
 
-const euros=new Intl.NumberFormat('el-GR',{style:'currency',currency:'EUR'});
-const timestamp=value=>formatShiftTimestamp(value)||'—';
-const amount=value=>value==null||!Number.isFinite(Number(value))?'—':euros.format(Number(value));
 const transactionLabels={
   SALE_CASH:'Πώληση με μετρητά',
   SALE_CARD:'Πώληση με κάρτα',
@@ -14,7 +12,7 @@ const transactionLabels={
   OTHER_EXPENSE:'Έξοδο'
 };
 
-export default function StaffShiftReport({api,storeId,canExport=false}){
+export default function StaffShiftReport({api,storeId,canExport=false,canPrint=false}){
   const [revision,setRevision]=useState(0);
   const [loaded,setLoaded]=useState(null);
   const result=loaded?.api===api&&loaded.storeId===storeId&&loaded.revision===revision?loaded.data:null;
@@ -47,6 +45,15 @@ export default function StaffShiftReport({api,storeId,canExport=false}){
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
 
+  const printReport=()=>{
+    if(!canPrint||!result?.recent.length)return;
+    if(!printStaffShiftReport(window,result.store.name||storeId,result.recent)){
+      setError('Δεν άνοιξε το παράθυρο εκτύπωσης βαρδιών.');
+    }else{
+      setError('');
+    }
+  };
+
   const selected=result?.recent.find(shift=>shift.id===selectedId);
   const transactions=selected?result.recentTransactions.filter(transaction=>transaction.sessionId===selected.id):[];
 
@@ -54,41 +61,33 @@ export default function StaffShiftReport({api,storeId,canExport=false}){
     <h3 id="staff-shift-report-title">Αναφορά βαρδιών</h3>
     <button type="button" onClick={()=>setRevision(value=>value+1)}>Ανανέωση αναφοράς βαρδιών</button>
     {canExport&&<button type="button" onClick={exportCsv} disabled={!result?.recent.length}>Εξαγωγή εμφανιζόμενων βαρδιών</button>}
+    {canPrint&&<button type="button" onClick={printReport} disabled={!result?.recent.length}>Εκτύπωση εμφανιζόμενων βαρδιών</button>}
     {error&&<p role="alert">{error}</p>}
     {!result&&!error&&<p role="status">Φόρτωση αναφοράς βαρδιών…</p>}
     {result&&<p>Έως 20 πρόσφατες βάρδιες, από όλα τα ταμεία του καταστήματος.</p>}
     {result&&(!result.recent.length?<p>Δεν υπάρχουν καταγεγραμμένες βάρδιες.</p>:<>
       <div style={{overflowX:'auto'}}>
         <table aria-label="Πρόσφατες βάρδιες">
-          <thead><tr>
-            <th scope="col">Χειριστής</th><th scope="col">Ταμείο</th><th scope="col">Βάρδια</th><th scope="col">Έναρξη</th><th scope="col">Λήξη</th>
-            <th scope="col">Μετρητά POS</th><th scope="col">Κάρτες POS</th><th scope="col">EFTPOS</th>
-            <th scope="col">Έξοδα</th><th scope="col">Αναμενόμενα μετρητά</th><th scope="col">Καταμέτρηση</th>
-            <th scope="col">Διαφορά μετρητών</th><th scope="col">Διαφορά καρτών</th><th scope="col">Συναλλαγές</th>
-          </tr></thead>
+          <thead><tr>{staffShiftReportColumns.map(([label])=><th scope="col" key={label}>{label}</th>)}</tr></thead>
           <tbody>{result.recent.map(shift=><tr key={shift.id}>
-            <td>{shift.openedByName||'—'}</td><td>{shift.terminalPos||'—'}</td><td>{shift.shiftLabel||'—'}</td>
-            <td>{timestamp(shift.openedAt)}</td><td>{shift.status==='OPEN'?'Ανοιχτή':timestamp(shift.closedAt)}</td>
-            <td>{amount(shift.cashSales)}</td><td>{amount(shift.cardSales)}</td><td>{amount(shift.status==='CLOSED'?shift.eftposTotal:null)}</td>
-            <td>{amount(shift.expenses)}</td><td>{amount(shift.expectedOperational)}</td><td>{amount(shift.actualOperational)}</td>
-            <td>{amount(shift.variance)}</td><td>{amount(shift.status==='CLOSED'?shift.cardVariance:null)}</td>
+            {staffShiftReportColumns.slice(0,-1).map(([label,read])=><td key={label}>{read(shift)}</td>)}
             <td><button type="button" aria-pressed={selectedId===shift.id} onClick={()=>setSelectedId(shift.id)}>
-              {shift.transactionCount??0} · Προβολή
+              {staffShiftReportColumns.at(-1)[1](shift)} · Προβολή
             </button></td>
           </tr>)}</tbody>
         </table>
       </div>
       {selected&&<div style={{overflowX:'auto'}}>
-        <h4>Πρόσφατες συναλλαγές βάρδιας · {timestamp(selected.openedAt)}</h4>
+        <h4>Πρόσφατες συναλλαγές βάρδιας · {shiftTimestamp(selected.openedAt)}</h4>
         {!transactions.length?<p>Δεν υπάρχουν διαθέσιμες πρόσφατες συναλλαγές για τη βάρδια.</p>:
           <table aria-label="Πρόσφατες συναλλαγές βάρδιας">
             <thead><tr><th scope="col">Ώρα</th><th scope="col">Τύπος</th><th scope="col">Περιγραφή</th>
               <th scope="col">Χειριστής</th><th scope="col">Ποσό</th><th scope="col">Κατάσταση</th>
             </tr></thead>
             <tbody>{transactions.map(transaction=><tr key={transaction.id}>
-              <td>{timestamp(transaction.occurredAt)}</td><td>{transactionLabels[transaction.type]||transaction.type||'—'}</td>
+              <td>{shiftTimestamp(transaction.occurredAt)}</td><td>{transactionLabels[transaction.type]||transaction.type||'—'}</td>
               <td>{transaction.description||transaction.supplierName||'—'}</td><td>{transaction.actorName||'—'}</td>
-              <td>{amount(transaction.amount)}</td><td>{transaction.reversedAt?'Αντιλογισμένη':'—'}</td>
+              <td>{shiftAmount(transaction.amount)}</td><td>{transaction.reversedAt?'Αντιλογισμένη':'—'}</td>
             </tr>)}</tbody>
           </table>}
       </div>}

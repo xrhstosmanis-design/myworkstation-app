@@ -28,6 +28,15 @@ test('native actual PIN/card handlers and auth deny another open-shift owner, pr
   const login=async(method,operator)=>{const r=await fetch(base+'/login/'+method,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(method==='pin'?{storeId:'ss',employeeId:operator==='a'?'ea':'eb',pin:'1234'}:{storeId:'ss',cardCode:'card-'+operator})});return {status:r.status,body:await r.json()}};
   const snapshot=()=>db.$queryRawUnsafe('SELECT * FROM "CashShiftSession" ORDER BY "id"'),before=await snapshot();
   for(const method of ['pin','card']){const denied=await login(method,'b'),owner=await login(method,'a');assert.equal(denied.status,409,JSON.stringify(denied));assert.equal(owner.status,200,JSON.stringify(owner))}
+  await sql(`UPDATE "StoreOperatorProfile" SET "posAccess"=false WHERE "employeeId"='ea'`);
+  const priorSessions=(await db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "StoreOperatorSession" WHERE "operatorId"='a'`))[0].n;
+  for(const method of ['pin','card']){
+    const denied=await login(method,'a');
+    assert.equal(denied.status,403,JSON.stringify(denied));
+    assert.equal(denied.body.code,'STORE_OPERATOR_POS_ACCESS_DISABLED');
+  }
+  assert.equal((await db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "StoreOperatorSession" WHERE "operatorId"='a'`))[0].n,priorSessions);
+  await sql(`UPDATE "StoreOperatorProfile" SET "posAccess"=true WHERE "employeeId"='ea'`);
   assert.equal((await db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "StoreOperatorSession" WHERE "operatorId"='b'`))[0].n,1,'denied login creates no new session');assert.equal(audit.length,2,'only successful owner logins audited');
   const runtime=await fetch(base+'/api/cash/stores/ss/shift-status',{headers:{authorization:'Bearer fixture'}});assert.equal(runtime.status,401);assert.equal((await runtime.json()).code,'POS_SHIFT_OTHER_OPERATOR');
   assert.equal((await fetch(base+'/api/operators/logout',{method:'POST',headers:{authorization:'Bearer fixture'}})).status,200,'auth still permits logout without shift takeover');assert.deepEqual(await snapshot(),before);assert.ok((await db.$queryRawUnsafe(`SELECT \"revokedAt\" FROM \"StoreOperatorSession\" WHERE \"id\"='old'`))[0].revokedAt);

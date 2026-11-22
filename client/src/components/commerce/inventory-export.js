@@ -20,3 +20,33 @@ export const inventoryHistoryColumns={
  purchases:[['supplierName','Προμηθευτής'],['invoicedAt','Ημερομηνία'],['quantity','Ποσότητα'],['unitCost','Καθαρή αγορά'],['initialUnitCost','Αρχική αγορά'],['discount1','Έκπτωση 1'],['discount2','Έκπτωση 2'],['discount3','Έκπτωση 3'],['vatRate','ΦΠΑ'],['grossAmount','Σύνολο'],['invoiceNumber','Τιμολόγιο']],
  'price-history':[['createdAt','Ημερομηνία'],['storeName','Κατάστημα'],['oldPrice','Παλιά λιανική'],['newPrice','Νέα λιανική'],['changeType','Τύπος']]
 };
+
+export function printInventoryArchivePage({storeName,page,rows}){
+ const popup=window.open('','_blank','width=1100,height=760');
+ if(!popup)return false;
+ popup.opener=null;
+ const columns=[
+   ['sku','Κωδικός'],['barcode','Barcode'],['name','Είδος'],['categoryName','Κατηγορία'],
+   ['salePrice','Λιανική'],['currentStock','Απόθεμα']
+ ];
+ const header=columns.map(([,label])=>`<th scope="col">${escape(label)}</th>`).join('');
+ const content=rows.map(row=>`<tr>${columns.map(([key])=>`<td>${escape(row[key]??'—')}</td>`).join('')}</tr>`).join('');
+ popup.document.write(`<!doctype html><html lang="el"><head><meta charset="utf-8">
+ <title>Εκτύπωση αποθήκης</title><style>
+ @page{size:A4 landscape;margin:12mm}
+ body{font:12px Arial,sans-serif;color:#111}
+ h1{font-size:18px}
+ table{width:100%;border-collapse:collapse}
+ th,td{border:1px solid #777;padding:5px;text-align:left;overflow-wrap:anywhere}
+ thead{display:table-header-group}
+ tr{break-inside:avoid}
+ </style></head><body>
+ <h1>Είδη αποθήκης · ${escape(storeName)}</h1>
+ <p>Τρέχουσα σελίδα ${escape(page)} · ${rows.length} είδη</p>
+ <table><thead><tr>${header}</tr></thead><tbody>${content}</tbody></table>
+ </body></html>`);
+ popup.document.close();
+ popup.focus();
+ popup.print();
+ return true;
+}
