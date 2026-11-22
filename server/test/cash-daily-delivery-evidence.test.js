@@ -23,6 +23,7 @@ test('daily evidence publishes only scoped comparisons, aggregates and pending r
   ]}).join('\n');
   assert.match(text,/Βραδινή · MAIN/);
   assert.match(text,/Η διασταύρωση των συνημμένων παραμένει σε εκκρεμότητα/);
+  assert.match(text,/EFTPOS.*Χρειάζεται έλεγχο με το αναλυτικό/);
   assert.match(text,/Ονομαστική αξία Netlink.*εκκρεμεί διασταύρωση/);
   assert.doesNotMatch(JSON.stringify(evidence),/private.pdf|outside|9000|4000/);
   assert.equal(dailyCashEvidenceSchema.safeParse({...evidence,rawPaper:['invalid']}).success,false);

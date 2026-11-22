@@ -1,3 +1,4 @@
+- 22/11/2026 · Νο 7 · Ένδειξη ελέγχου POS–EFTPOS στην ημερήσια αναφορά · [Checkpoint](CHANGES/2026-11-22-no7-card-detail-review.md).
 ## 22/11/2026 — Κεντρικές προβολές παραγγελιών — AWAITING LAB
 
 Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατάστασης στην κεντρική οθόνη, 18 τοπικοί έλεγχοι PASS. [Checkpoint](CHANGES/2026-11-22-central-purchase-status-buttons.md).

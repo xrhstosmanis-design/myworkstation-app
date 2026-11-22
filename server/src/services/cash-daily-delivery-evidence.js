@@ -92,7 +92,7 @@ export function dailyCashEvidenceText(evidence,report){
     for(const item of shift.comparisons){
       const source=item.status==='NETLINK_SUBTOTAL_COMPARISON'?'Ονομαστική αξία Netlink':sources[item.kind];
       lines.push(source+' · συνημμένο '+money(item.amountCents)+' · καταγεγραμμένο '+money(item.recordedAmountCents)
-        +(item.status==='MATCHED'?' · συμφωνεί':' · εκκρεμεί διασταύρωση'));
+        +(item.status==='MATCHED'?' · συμφωνεί':item.status==='EFTPOS_TOTAL_DIFFERS'?' · Χρειάζεται έλεγχο με το αναλυτικό.':' · εκκρεμεί διασταύρωση'));
     }
     if(shift.omittedComparisons)lines.push('Πρόσθετες συγκρίσεις στο BackOffice: '+shift.omittedComparisons);
     if(shift.netlink?.completedCount&&shift.netlink.amountCents!==null){
