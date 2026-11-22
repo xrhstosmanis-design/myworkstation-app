@@ -3,11 +3,12 @@ import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from '../../../../shared/pos-opera
 
 const EDITABLE_POS_PERMISSIONS=[...POS_PERMISSIONS,...POS_MENU_PERMISSIONS];
 
-export default function StaffOperatorPermissions({api,companyId,storeId,canManagePosAccess=false,canProvision=false}){
+export default function StaffOperatorPermissions({api,companyId,storeId,canManagePosAccess=false,canProvision=false,canResetPin=false,canCopyPermissions=false}){
   const base=`/api/operator-management/stores/${encodeURIComponent(storeId)}/employee-permissions`;
   const [loaded,setLoaded]=useState(null),[selected,setSelected]=useState('');
   const [revision,reload]=useState(0),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [busy,setBusy]=useState(false),[showProvision,setShowProvision]=useState(false);
+  const [showPinReset,setShowPinReset]=useState(false),[copySourceId,setCopySourceId]=useState('');
   const provisionId=useRef(null);
   const generation=useRef(0),writing=useRef(false);
   const items=loaded?.api===api&&loaded.base===base&&loaded.revision===revision?loaded.items:null;
@@ -77,6 +78,62 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
     }
   };
 
+  const resetPin=async(event)=>{
+    event.preventDefault();
+    if(!canResetPin||!operator||writing.current)return;
+    const form=event.currentTarget;
+    const pin=new FormData(form).get('pin');
+    const request=generation.current,employeeId=operator.employeeId;
+    writing.current=true;
+    setBusy(true);setError('');setNotice('');
+    form.reset();
+    try{
+      const result=await api(`${base}/${encodeURIComponent(employeeId)}/pin`,{
+        method:'POST',body:JSON.stringify({pin})
+      });
+      if(request!==generation.current)return;
+      if(result?.companyId!==companyId||result.storeId!==storeId||result.employeeId!==employeeId||result.changed!==true){
+        throw Error('Δεν επιβεβαιώθηκε η αλλαγή PIN.');
+      }
+      setShowPinReset(false);
+      setNotice('Το PIN άλλαξε και οι ενεργές συνδέσεις POS του χειριστή έκλεισαν.');
+    }catch(error){
+      if(request===generation.current)setError(error.message);
+    }finally{
+      writing.current=false;setBusy(false);
+    }
+  };
+
+  const copyPermissions=async(event)=>{
+    event.preventDefault();
+    const source=items?.find(item=>item.employeeId===copySourceId);
+    if(!canCopyPermissions||!operator||!source||source===operator||writing.current)return;
+    if(!window.confirm(`Αντιγραφή δικαιωμάτων POS από «${source.displayName}» προς «${operator.displayName}»;`))return;
+    const request=generation.current,employeeId=operator.employeeId;
+    writing.current=true;
+    setBusy(true);setError('');setNotice('');
+    try{
+      const result=await api(`${base}/${encodeURIComponent(employeeId)}/copy-permissions`,{
+        method:'POST',body:JSON.stringify({
+          sourceEmployeeId:source.employeeId,expectedSource:source.permissions,expectedTarget:operator.permissions
+        })
+      });
+      if(request!==generation.current)return;
+      if(result?.companyId!==companyId||result.storeId!==storeId||result.employeeId!==employeeId||result.sourceEmployeeId!==source.employeeId||
+        !EDITABLE_POS_PERMISSIONS.every(([key])=>result.permissions?.[key]===source.permissions[key])){
+        throw Error('Δεν επιβεβαιώθηκε η αντιγραφή δικαιωμάτων POS.');
+      }
+      setLoaded(current=>current?{...current,items:current.items.map(item=>item.employeeId===employeeId?
+        {...item,permissions:result.permissions}:item)}:current);
+      setCopySourceId('');
+      setNotice('Τα δικαιώματα POS αντιγράφηκαν.');
+    }catch(error){
+      if(request===generation.current){setLoaded(null);setError(error.message);}
+    }finally{
+      writing.current=false;setBusy(false);
+    }
+  };
+
   return <section className="panel staff-panel">
     <h3>Δικαιώματα χειριστών POS</h3>
     <button type="button" disabled={busy} onClick={()=>{setNotice('');reload(value=>value+1)}}>Ανανέωση χειριστών</button>
@@ -93,7 +150,7 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
     {notice&&<p role="status">{notice}</p>}
     {!items&&!error&&<p role="status">Φόρτωση χειριστών…</p>}
     {items?.length===0&&<p>Δεν υπάρχουν ενεργοί χειριστές υπάλληλοι στο κατάστημα.</p>}
-    {!!items?.length&&<label>Χειριστής <select disabled={busy} value={operator?selected:''} onChange={event=>{setSelected(event.target.value);setNotice('')}}>
+    {!!items?.length&&<label>Χειριστής <select disabled={busy} value={operator?selected:''} onChange={event=>{setSelected(event.target.value);setShowPinReset(false);setCopySourceId('');setNotice('')}}>
       <option value="">Επίλεξε χειριστή</option>
       {items.map(item=><option key={item.employeeId} value={item.employeeId}>{item.displayName}</option>)}
     </select></label>}
@@ -101,6 +158,24 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
       <input type="checkbox" disabled={busy} checked={operator.posAccess} onChange={event=>change(null,event.target.checked)}/>
       Πρόσβαση στις Πωλήσεις (POS)
     </label>}
+    {operator&&canResetPin&&<button type="button" disabled={busy} onClick={()=>setShowPinReset(value=>!value)}>Αλλαγή PIN χειριστή</button>}
+    {operator&&canResetPin&&showPinReset&&<form key={operator.employeeId} onSubmit={resetPin} autoComplete="off">
+      <fieldset disabled={busy}>
+        <legend>Νέο PIN · {operator.displayName}</legend>
+        <label>Νέο PIN <input name="pin" type="password" autoComplete="new-password" inputMode="numeric" pattern="[0-9]{4,8}" required/></label>
+        <button type="submit">Αποθήκευση PIN</button>
+      </fieldset>
+    </form>}
+    {operator&&canCopyPermissions&&items.length>1&&<form onSubmit={copyPermissions}>
+      <fieldset disabled={busy}>
+        <legend>Αντιγραφή δικαιωμάτων POS προς {operator.displayName}</legend>
+        <label>Αντιγραφή από <select value={copySourceId} required onChange={event=>setCopySourceId(event.target.value)}>
+          <option value="">Επίλεξε χειριστή-πρότυπο</option>
+          {items.filter(item=>item.employeeId!==operator.employeeId).map(item=><option key={item.employeeId} value={item.employeeId}>{item.displayName}</option>)}
+        </select></label>
+        <button type="submit">Αντιγραφή δικαιωμάτων POS</button>
+      </fieldset>
+    </form>}
     {operator&&<fieldset disabled={busy}>
       <legend>Δικαιώματα POS · {operator.displayName}</legend>
       {EDITABLE_POS_PERMISSIONS.map(([key,label])=><label className="staff-check" key={key}>
