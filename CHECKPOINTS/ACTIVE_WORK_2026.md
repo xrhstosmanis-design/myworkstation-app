@@ -239,6 +239,9 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 22/11 No5 — prioritized delegated editing of individual POS operator permissions. [Checkpoint](CHANGES/2026-11-22-no5-operator-permissions.md).
 
+22/11 No5 — combined manager rights follow-up for POS invoice access, schedule exceptions, attendance CSV, shift print and warehouse print. [Checkpoint](CHANGES/2026-11-22-no5-rights-batch.md).
+22/11 No5 — delegated print of the loaded inventory archive page. [Checkpoint](CHANGES/2026-11-22-no5-warehouse-print.md).
+
 <!-- NO5-STATUS:END -->
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
