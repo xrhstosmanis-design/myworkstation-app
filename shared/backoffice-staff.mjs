@@ -295,6 +295,10 @@ export function staffRequestCapability(method,path,body={},query={}){
   if(method==='POST'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/issuer-supplier$/.test(path))return 'invoices.supplier-create';
   if(method==='GET'&&(path==='/api/purchase-orders/report'||/^\/api\/purchase-orders\/[^/]+\/detail$/.test(path)))return 'invoices.read';
   if(method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/lines\/[^/]+\/product-reference$/.test(path))return 'invoices.read';
+  const invoiceProductCompanyPath=/^\/api\/purchase-orders\/[^/]+\/lines\/[^/]+\/product-company-(card|barcodes)$/.test(path);
+  if(invoiceProductCompanyPath&&method==='GET')return 'invoices.read';
+  if(invoiceProductCompanyPath&&method==='PATCH')return 'invoices.edit';
+
   if(method==='GET'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/ocr-lines\/[^/]+\/catalog-matches$/.test(path))return 'invoices.edit';
   if(method==='PATCH'&&/^\/api\/purchase-orders\/[^/]+$/.test(path))return (['FINAL','INVOICED'].includes(body.status)||body.status==='NEW'&&body.returnForCorrection===true)?'invoices.approve':body.status===undefined?'invoices.edit':null;
   if(method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/assistant-line-transfer$/.test(path))return 'invoices.edit';
