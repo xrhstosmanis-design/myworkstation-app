@@ -118,22 +118,38 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
 
 const syncInFlight=new Map(),syncStatus=new Map();
 const syncStatusKey=(companyId,storeId,generation)=>JSON.stringify([companyId,storeId,generation]);
+const delegatedSyncCapability="invoices.sync-mydata";
+export async function verifyDelegatedMyDataSync(db,req,verify=requireStaffAction){
+  const {companyId,storeId}=req.user;
+  if(req.user.staffAccess!==true||!companyId||!storeId||storeId!==req.body?.storeId||req.staffGrant?.capability!==delegatedSyncCapability)
+    throw syncError("Δεν επιτρέπεται συγχρονισμός myDATA σε αυτό το κατάστημα.",403);
+  await verify(db,req,storeId,delegatedSyncCapability);
+  const stores=await db.store.findMany({where:{companyId},select:{id:true},take:2});
+  if(stores.length!==1||stores[0].id!==storeId)
+    throw syncError("Το myDATA παραλαμβάνει παραστατικά ανά ΑΦΜ εταιρείας. Με περισσότερα καταστήματα, εκτέλεσε τη λήψη ως Ιδιοκτήτης.",409);
+}
 export function syncMyDataStore(req,{db=prisma}={}){
   assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
   const scope={companyId:req.user.companyId,storeId:req.body.storeId};
   if(typeof scope.companyId!=='string'||!scope.companyId||typeof scope.storeId!=='string'||!scope.storeId)throw syncError('Απαιτείται συγκεκριμένη εταιρεία και κατάστημα.',400);
   const generation=lifecycleContext()[scope.storeId]??'0',key=syncStatusKey(scope.companyId,scope.storeId,generation);
-  if(syncInFlight.has(key))return syncInFlight.get(key);
+  const delegated=req.user.staffAccess===true,running=syncInFlight.get(key);
+  if(running)return delegated||running.delegated
+    ?Promise.reject(syncError("Υπάρχει ήδη λήψη myDATA σε εξέλιξη.",409)):running.promise;
   let admitted=false;
   const run=db.$transaction(async lock=>{
     const held=await lock.$queryRaw`SELECT pg_try_advisory_xact_lock(hashtextextended(${lifecycleMyDataLockKey(scope)},0)) AS "held"`;
     if(!held[0]?.held)throw syncError("Υπάρχει ήδη λήψη myDATA σε εξέλιξη.",409);
     assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
     if(req.user.companyId!==scope.companyId||req.body.storeId!==scope.storeId)throw syncError('Η επιλογή καταστήματος άλλαξε πριν από τη λήψη.',409);
-    await assertLifecycleMutation(lock,scope,generation);admitted=true;
+    await assertLifecycleMutation(lock,scope,generation);
+    // Keep the live grant out of the long-lived advisory lock transaction:
+    // revocations must be able to take effect between receiving pages.
+    if(delegated)await verifyDelegatedMyDataSync(db,req);
+    admitted=true;
     return performSync(req);
   },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{if(admitted)syncStatus.set(key,{...syncStatus.get(key),lastSyncError:error.code==='MYDATA_HTTP_ERROR'?error.message:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
-  syncInFlight.set(key,run);return run;
+  syncInFlight.set(key,{promise:run,delegated});return run;
 }
 // Opt-in historical recovery for verified provider URL formats.
 const originalRecoveryVersion = "verified-provider-formats-202611-v1";
@@ -192,6 +208,7 @@ export async function recoverHistoricalOriginals({
 
 async function performSync(req){
   assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
+  const delegated=req.user.staffAccess===true;
   await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);const storeId=String(req.body?.storeId||"");
   const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true,name:true,company:{select:{taxId:true}}}});
   if(!store)throw syncError("Δεν βρέθηκε το κατάστημα.",404);
@@ -210,7 +227,8 @@ async function performSync(req){
     const url=new URL(endpoint(integration.environment));url.searchParams.set("mark",mark);
     if(page){url.searchParams.set("nextPartitionKey",page.partition);url.searchParams.set("nextRowKey",page.row)}
     assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:store.id});
-    const response=await fetch(url,{headers:{"aade-user-id":credentials.accountId,"Ocp-Apim-Subscription-Key":credentials.secret,"Accept":"application/xml"},signal:AbortSignal.timeout(30000)});
+    if(delegated)await verifyDelegatedMyDataSync(prisma,req);
+    const response=await fetch(url,{headers:{"aade-user-id":credentials.accountId,"Ocp-Apim-Subscription-Key":credentials.secret,"Accept":"application/xml"},signal:AbortSignal.timeout(30000),...(delegated?{redirect:"error"}:{})});
     const responseXml=await response.text();if(!response.ok){
       const error=myDataHttpError({status:response.status,body:responseXml,environment:integration.environment});
       console.warn('myDATA receiving HTTP failure',error.diagnostic);
@@ -223,6 +241,7 @@ async function performSync(req){
     const doc=invoiceSummary(invoice);if(!doc.mark){ignored++;missingMark++;continue}
     if(doc.counterpartVat!==companyVat){ignored++;ignoredVat++;continue}
     const result=await prisma.$transaction(async tx=>{
+      if(delegated)await verifyDelegatedMyDataSync(tx,req);
       const existing=await tx.$queryRaw`SELECT "inboxId" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "mark"=${doc.mark} LIMIT 1`;
       if(existing[0])return null;
       const suppliers=doc.issuerVat?await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "taxId"=${doc.issuerVat} LIMIT 1`:[];
@@ -239,6 +258,12 @@ async function performSync(req){
     if(page){const key=`${page.partition}:${page.row}`;if(pages.has(key))throw syncError("Η σελιδοποίηση myDATA επανέλαβε την ίδια σελίδα.");pages.add(key)}
     if(pages.size>=100)throw syncError("Η λήψη σταμάτησε στο όριο 100 σελίδων. Επαναλάβετε τον συγχρονισμό.");
   }while(page);
+  if(delegated){
+    await verifyDelegatedMyDataSync(prisma,req);
+    const message=created.length?`${created.length} νέα παραστατικά μπήκαν στη θυρίδα.`:"Δεν βρέθηκαν νέα παραστατικά για τη θυρίδα.";
+    return {ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,
+      documents:created,originalsDownloaded:0,originalsFailed:0,existingPhotosLinked:0,stockUpdated:false,fiscalTransmission:false,message};
+  }
   // Bounded retries only for records received after this feature; no historic mass ingestion.
   const pending=await prisma.$queryRaw`SELECT m."inboxId" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id} AND m."rawPayload"->>'originalPending'='true' AND i."attachmentId" IS NULL AND i."status"='RECEIVED' AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)<3 ORDER BY m."fetchedAt" ASC LIMIT 3`;
   let originalsDownloaded=0,originalsFailed=0;
@@ -282,7 +307,11 @@ async function performSync(req){
 }
 
 router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
-  if(!canSync(req))return res.status(403).json({error:"Ο συγχρονισμός myDATA επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
+  if(req.user.staffAccess===true){
+    const {storeId}=z.object({storeId:z.string().min(1).max(160)}).strict().parse(req.body);
+    if(req.user.storeId!==storeId||req.staffGrant?.capability!==delegatedSyncCapability)
+      throw syncError("Δεν επιτρέπεται συγχρονισμός myDATA σε αυτό το κατάστημα.",403);
+  }else if(!canSync(req))return res.status(403).json({error:"Ο συγχρονισμός myDATA επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
   res.json(await syncMyDataStore(req));
 }catch(error){next(error)}});
 
