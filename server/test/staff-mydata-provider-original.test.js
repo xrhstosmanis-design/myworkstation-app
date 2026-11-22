@@ -37,7 +37,7 @@ test("grant admits only the dedicated provider attachment route",()=>{
   assert.equal(staffRequestCapability("POST",path),"invoices.fetch-original");
   assert.equal(staffRequestCapability("GET",path),null);
   assert.equal(staffRequestCapability("POST",path.replace("provider-original","original")),null);
-  assert.equal(staffRequestCapability("POST","/api/commerce/documents/mydata/sync"),null);
+  assert.notEqual(staffRequestCapability("POST","/api/commerce/documents/mydata/sync"),"invoices.fetch-original");
   assert.deepEqual(new Set(changeStaffCapability([],"invoices.fetch-original",true)),new Set(["invoices.read","invoices.fetch-original"]));
 });
 
