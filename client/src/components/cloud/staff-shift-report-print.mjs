@@ -22,6 +22,12 @@ export const staffShiftReportColumns = [
 ];
 
 export function printStaffShiftReport(browserWindow, storeName, shifts) {
+  const headings = staffShiftReportColumns.map(([label]) => label);
+  const rows = shifts.map(shift => staffShiftReportColumns.map(([, read]) => read(shift)));
+  return printStaffReport(browserWindow, 'Αναφορά βαρδιών', storeName, headings, rows);
+}
+
+export function printStaffReport(browserWindow, title, subtitle, headings, rows) {
   const printWindow = browserWindow.open('', '_blank');
   if (!printWindow) return false;
 
@@ -33,7 +39,7 @@ export function printStaffShiftReport(browserWindow, storeName, shifts) {
       if (value !== undefined) node.textContent = String(value);
       return node;
     };
-    doc.title = 'Αναφορά βαρδιών';
+    doc.title = title;
     doc.documentElement.lang = 'el';
     doc.head.append(element('style', `
       @page { size: A4 landscape; margin: 10mm; }
@@ -47,21 +53,21 @@ export function printStaffShiftReport(browserWindow, storeName, shifts) {
     const table = element('table');
     const thead = element('thead');
     const header = element('tr');
-    for (const [label] of staffShiftReportColumns) {
+    for (const label of headings) {
       const cell = element('th', label);
       cell.scope = 'col';
       header.append(cell);
     }
     thead.append(header);
     const tbody = element('tbody');
-    for (const shift of shifts) {
+    for (const values of rows) {
       const row = element('tr');
-      for (const [, read] of staffShiftReportColumns) row.append(element('td', read(shift)));
+      for (const value of values) row.append(element('td', value ?? '—'));
       tbody.append(row);
     }
     table.append(thead, tbody);
 
-    doc.body.append(element('h1', 'Αναφορά βαρδιών'), element('p', storeName), table);
+    doc.body.append(element('h1', title), element('p', subtitle), table);
     printWindow.addEventListener('afterprint', () => printWindow.close(), {once:true});
     printWindow.focus();
     printWindow.print();
