@@ -1,7 +1,8 @@
+import CompanySupplierManualCreate from './CompanySupplierManualCreate.jsx';
 import CompanySupplierAccountActions from './CompanySupplierAccountActions.jsx';
 import CompanySupplierRelatedRecordsEditor from './CompanySupplierRelatedRecordsEditor.jsx';
 import CompanySupplierContactEditor from './CompanySupplierContactEditor.jsx';
-import {supplierAddressCapability,supplierBalanceAdjustCapability,supplierContactCapability,supplierDeactivateCapability,supplierUnitCapability} from '../../../../shared/backoffice-staff-company.mjs';
+import {supplierAddressCapability,supplierBalanceAdjustCapability,supplierContactCapability,supplierDeactivateCapability,supplierManualCreateCapability,supplierReactivateCapability,supplierUnitCapability} from '../../../../shared/backoffice-staff-company.mjs';
 import CompanyFinalPassiveReadView from './CompanyFinalPassiveReadView.jsx';
 import {finalPassiveCompanyActions} from '../../../../shared/backoffice-staff-final-passive.mjs';
 import CompanyProductCenterReadView from './CompanyProductCenterReadView.jsx';
@@ -61,8 +62,9 @@ export default function CompanyDirectoryView(props){
  if(observerLogisticsActions.some(action=>action.key===props.capability))return <CompanyObserverLogisticsReadView {...props}/>;
  if(companyWholesaleActions.some(action=>action.key===props.capability))return <CompanyWholesaleReadView {...props}/>;
  if([supplierAddressCapability,supplierUnitCapability].includes(props.capability))return <CompanySupplierRelatedRecordsEditor {...props}/>;
+ if(props.capability===supplierManualCreateCapability)return <CompanySupplierManualCreate {...props}/>;
  if(props.capability===supplierContactCapability)return <CompanySupplierContactEditor {...props}/>;
- if([supplierBalanceAdjustCapability,supplierDeactivateCapability].includes(props.capability))return <CompanySupplierAccountActions {...props}/>;
+ if([supplierBalanceAdjustCapability,supplierDeactivateCapability,supplierReactivateCapability].includes(props.capability))return <CompanySupplierAccountActions {...props}/>;
  if(companyPartyControlActions.some(action=>action.key===props.capability))return <CompanyPartyControlReadView {...props}/>;
  if(['dashboard.read','master-catalog.read','financial-store-options.read','financial-supplier-options.read'].includes(props.capability))return <CompanyOwnerOverviewReadView {...props}/>;
  if(['owner-shifts.read','owner-payments-report.read','business-picture.read'].includes(props.capability))return <CompanyOwnerFinancialReadView {...props}/>;
