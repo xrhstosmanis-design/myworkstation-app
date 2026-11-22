@@ -1,5 +1,6 @@
 import {Router} from "express";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireStaffAction,staffError} from "../services/backoffice-staff-access.js";
@@ -128,5 +129,47 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId/pos-access",dele
   });
   res.json({companyId,storeId,employeeId,enabled});
 },delegatedPosAccess));
+
+const delegatedProvisioning="operator-profiles.create-employee";
+const provisionBody=z.object({
+  fullName:z.string().trim().min(2).max(160),
+  initialPin:z.string().regex(/^\d{4,8}$/),
+  requestId:z.string().uuid()
+}).strict();
+
+router.post("/stores/:storeId/employee-provisioning",delegatedPermissionsRoute(async(req,res)=>{
+  const {companyId,id:actorId}=req.user,storeId=req.params.storeId;
+  const {fullName,initialPin,requestId}=provisionBody.parse(req.body);
+  const employeeId=crypto.createHash("sha256").update(JSON.stringify([companyId,storeId,actorId,requestId])).digest("hex");
+  const pinHash=await bcrypt.hash(initialPin,12);
+  const created=await prisma.$transaction(async tx=>{
+    await requireStaffAction(tx,req,storeId,delegatedProvisioning);
+    await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${"pos-provision:"+employeeId},0))`;
+    const existing=await tx.employee.findFirst({where:{id:employeeId,storeId},select:{fullName:true}});
+    if(existing){
+      const [credential]=await tx.$queryRaw`
+        SELECT "pinHash" FROM "StoreOperatorCredential"
+        WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId} AND "createdBy"=${actorId}`;
+      if(existing.fullName!==fullName||!credential?.pinHash||!await bcrypt.compare(initialPin,credential.pinHash)){
+        throw staffError(409,"STAFF_OPERATOR_PROVISION_CONFLICT","Η ίδια αίτηση έχει ήδη χρησιμοποιηθεί με άλλα στοιχεία.");
+      }
+      return false;
+    }
+    await tx.employee.create({data:{id:employeeId,storeId,fullName,position:"Εργαζόμενος",active:true}});
+    const credentialId=crypto.randomUUID();
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","pinHash","active","createdBy")
+      VALUES (${credentialId},${companyId},${storeId},${employeeId},${fullName},'EMPLOYEE',${pinHash},TRUE,${actorId})`;
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","posAccess","createdBy")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${employeeId},FALSE,${actorId})`;
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${credentialId},${actorId},'OPERATOR_EMPLOYEE_PROVISIONED',
+        jsonb_build_object('employeeId',${employeeId}::text,'posAccess',FALSE))`;
+    return true;
+  });
+  res.status(created?201:200).json({companyId,storeId,employeeId});
+},delegatedProvisioning));
 
 export default router;
