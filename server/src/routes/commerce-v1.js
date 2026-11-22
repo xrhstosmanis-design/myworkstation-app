@@ -7,6 +7,7 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule,requireStoreModule} from "../middleware/module-access.js";
 import {readSupplierComparison} from "../services/supplier-comparison-report.js";
+import {createInvoiceIssuerSupplier} from "../services/invoice-supplier-directory.js";
 import {mobileUploads} from "./mobile-invoice-upload.js";
 import orderSuggestionsRouter from "./order-suggestions.js";
 import lowValueProductsRouter from "./low-value-products.js";
@@ -109,6 +110,13 @@ router.patch("/products/:productId",requireCompanyModule("INVENTORY"),async(req,
 
 router.get("/suppliers",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{res.json(await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","city","active" FROM "Supplier" WHERE "companyId"=${req.user.companyId} ORDER BY "name"`)}catch(error){next(error)}
+});
+
+router.post("/purchase-orders/:orderId/issuer-supplier",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const supplier=await createInvoiceIssuerSupplier(prisma,req,req.params.orderId,req.body||{});
+    res.status(supplier.created?201:200).json(supplier);
+  }catch(error){next(error)}
 });
 
 router.get("/supplier-price-comparison",requireStoreModule("INVENTORY"),async(req,res,next)=>{
