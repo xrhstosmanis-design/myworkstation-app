@@ -4,7 +4,6 @@ import {Router} from "express";
 import {z} from "zod";
 import { postedSupplierPayment } from "../lib/supplier-payment-reporting.js";
 import {prisma} from "../prisma.js";
-import {createStaffSupplierValueInvoice} from "../services/staff-supplier-value-invoice.js";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -50,13 +49,6 @@ export async function ensureSupplierControlSchema(){
   return schemaPromise;
 }
 function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η πλήρης διαχείριση προμηθευτών είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});next()}
-router.post("/:supplierId/value-only-invoice",async(req,res,next)=>{
-  if(req.user?.staffAccess!==true)return next("route");
-  try{
-    const draft=await createStaffSupplierValueInvoice(prisma,req,req.params.supplierId,req.body);
-    return res.status(draft.reused?200:201).json(draft);
-  }catch(error){next(error)}
-});
 router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureSupplierControlSchema();next()}catch(error){next(error)}});
 async function owned(companyId,supplierId){const rows=await prisma.$queryRaw`SELECT * FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} LIMIT 1`;return rows[0]||null}
