@@ -8,7 +8,7 @@ const money=value=>{
   let raw=String(value).trim().replace(/\s/g,"").replace(/€/g,"");
   if(raw.includes(",")){raw=raw.replace(/\./g,"").replace(",",".")}
   else raw=raw.replace(/[^0-9.-]/g,"");
-  const n=Number(raw);return Number.isFinite(n)?Math.abs(n):0;
+  const n=Number(raw);return Number.isFinite(n)?n:0;
 };
 function dateValue(value){
   if(value instanceof Date&&Number.isFinite(value.getTime()))return value;
