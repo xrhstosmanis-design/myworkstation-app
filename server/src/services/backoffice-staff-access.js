@@ -101,9 +101,9 @@ export async function enforceBackofficeStaff(db,req,res){
     const rows=await db.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${order[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
-  const close=path.match(/^\/api\/cash\/sessions\/([^/]+)\/close$/);
+  const close=path.match(/^\/api\/(?:cash\/sessions\/([^/]+)\/close|owner-shifts\/([^/]+)\/force-close)$/);
   if(close){
-    const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${close[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
+    const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${close[1]??close[2]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
   const paymentContext=path.match(/^\/api\/backoffice-staff\/payments\/stores\/([^/]+)$/);

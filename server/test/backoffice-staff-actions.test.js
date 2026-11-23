@@ -16,7 +16,7 @@ function policy({profile='AUDITOR',grantedStore=null}={}){
    if(sql.includes('FROM "BackofficeStaffGrant" g'))return grantedStore&&values[2]!==grantedStore?[]:[{profile,capabilities}];
    if(sql.includes('FROM "StorePaidModule"')&&values.includes('INVENTORY'))return inventoryEnabled?[]:[{active:false}];
    if(sql.includes('FROM "PurchaseOrder"'))return values.includes('foreign')?[]:[{id:'order',storeId:'a1',status}];
-   if(sql.includes('FROM "CashShiftSession"'))return [{id:'shift'}];
+   if(sql.includes('FROM "CashShiftSession"'))return values.includes('foreign')?[]:[{id:'shift'}];
    if(sql.includes('FROM "Product" p'))return values.includes('foreign')?[]:[{id:'product'}];
    return [];
   },$queryRawUnsafe:async()=>[{schema:'isolated',fence:null}]};
@@ -55,7 +55,7 @@ test('manager and another staff profile get the same four exact permissions only
  }
 });
 test('new actions remain explicit, dependency-closed and absent from every existing role preset',()=>{
- for(const key of ['invoices.edit','invoices.approve','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']){
+ for(const key of ['invoices.edit','invoices.approve','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close','shifts.force-close']){
   const rights=changeStaffCapability([],key,true);assert.ok(validStaffCapabilities(rights));if(key==='shifts.close')assert.deepEqual(rights,[key]);else assert.ok(rights.length>1);
   for(const profile of Object.values(staffProfiles))assert.equal(profile.capabilities.includes(key),false);
  }
@@ -69,7 +69,7 @@ test('new actions remain explicit, dependency-closed and absent from every exist
  assert.equal(staffRequestCapability('POST','/api/transactions/stores/a1',expense),'payments.expense');
  for(const body of [{...expense,type:'SALE_CASH'},{...expense,amount:-2},{...expense,deferredInvoice:{}},{...expense,evidenceMode:'LEGACY'}])assert.equal(staffRequestCapability('POST','/api/transactions/stores/a1',body),null);
 });
-test('actual admission binds actions to selected store/object and never grants overrides, reviews, force-close or fiscal return',async()=>{
+test('actual admission binds actions to selected store/object and never grants overrides, reviews or fiscal return',async()=>{
  const p=policy(),app=express();app.use(express.json());let reached=0;
  app.use(async(req,res,next)=>{req.user={...p.user};try{await enforceBackofficeStaff(p.db,req,res);next()}catch(error){next(error)}});
  app.use((req,res)=>{reached++;res.json({capability:req.staffGrant?.capability})});
@@ -90,6 +90,7 @@ test('actual admission binds actions to selected store/object and never grants o
    ['/api/transactions/stores/a1','POST',expense,'payments.expense'],
    ['/api/transactions/stores/a1/supplier-settlements','POST',{},'payments.supplier'],
    ['/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'CANCEL'},'sales.cancel'],
+   ['/api/owner-shifts/shift/force-close','POST',{reason:'Synthetic'},'shifts.force-close'],
    ['/api/cash/sessions/shift/close','POST',{},'shifts.close']]){
    const r=await send(path,method,body);assert.equal(r.status,200,JSON.stringify(r));assert.equal(r.body.capability,cap);
   }
@@ -117,11 +118,14 @@ test('actual admission binds actions to selected store/object and never grants o
    ['/api/transactions/tx/reverse','POST',{}],
    ['/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'RETURN'}],
    ['/api/store-pos/stores/a1/sales/sale/internal-return','POST',{}],
-   ['/api/owner-shifts/shift/force-close','POST',{}],
+   ['/api/owner-shifts/foreign/force-close','POST',{}],
+   ['/api/owner-shifts/shift/closing-count','POST',{}],
    ['/api/commerce/purchases/doc/approve','POST',{}],
    ['/api/purchase-orders/order','DELETE',{}]
   ])assert.ok([403,404].includes((await send(path,method,body)).status),path);
   assert.equal(reached,before);
+  p.grant(['shifts.read','shifts.close']);
+  assert.equal((await send('/api/owner-shifts/shift/force-close')).status,403);
   p.grant(['sales.read','payments.read','payments.expense']);
   assert.equal((await send('/api/transactions/stores/a1','POST',{...expense,paymentSource:'CASH_SHIFT',paymentMethod:'CASH_SHIFT'})).status,403);
   assert.equal((await send('/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'CANCEL'})).status,403);
