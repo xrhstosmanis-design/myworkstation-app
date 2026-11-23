@@ -968,3 +968,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 23/11/2026 · Νο 5 · Πρόσβαση υπευθύνου στη διόρθωση προμηθευτή · [Καταγραφή](CHANGES/2026-11-23-no5-staff-supplier-correction-admission.md).
 
 - 23/11/2026 · Νο 5 · [Εκχώρηση διοικητικού κλεισίματος](CHANGES/2026-11-23-no5-delegated-administrative-close.md).
+
+- 23/11/2026 · Νο 5 · [myDATA ανά υποκατάστημα](CHANGES/2026-11-23-no5-mydata-recipient-branch.md).

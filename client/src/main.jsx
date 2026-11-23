@@ -176,7 +176,7 @@ function App(){
  {page==="dashboard"&&<>{ownerDirectory&&<OwnerStoreDirectory companies={ownerCompanies} switching={switchingOwnerCompany} onSelect={selectOwnerStore}/>}<div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
  {page==="workforce"&&<OwnerWorkforceHub key={`${user.companyId||user.company?.id}:${workforceStoreId}`} company={{id:user.companyId||user.company?.id,name:companyName}} stores={stores} initialStoreId={workforceStoreId} request={scopedApi}/>}
  {page==="stores"&&(selectedStore?<div className="owner-store-view" ref={ownerDirectory?ownerStoreView:null}>
-   <StoreCloudPage api={scopedApi} store={selectedStore} onWorkforce={()=>openWorkforce(selectedStore)} onBack={()=>setSelectedStore(null)}/>
+   <StoreCloudPage canConfigureMyDataBranch={ownerDirectory} api={scopedApi} store={selectedStore} onWorkforce={()=>openWorkforce(selectedStore)} onBack={()=>setSelectedStore(null)}/>
  </div>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
  {page==="chat"&&activeModules.includes("STORE_CHAT")&&<ChatStores rows={stores} onOpen={setChatStore}/>}
  {chatStore&&<StoreChatPanel api={scopedApi} store={chatStore} onClose={()=>setChatStore(null)}/>}

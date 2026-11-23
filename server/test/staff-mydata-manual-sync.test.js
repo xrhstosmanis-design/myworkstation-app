@@ -3,26 +3,27 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../src/mydata-xml.js";
+import {invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../src/mydata-xml.js";
 import {changeStaffCapability,staffRequestCapability} from "../../shared/backoffice-staff.mjs";
 
 const path="/api/commerce/documents/mydata/sync";
 const req={user:{id:"manager",companyId:"company",storeId:"store",staffAccess:true},staffGrant:{capability:"invoices.sync-mydata"},body:{storeId:"store"}};
 const rawResponse=`<RequestedDoc><invoice><mark>123</mark><issuer><vatNumber>111111111</vatNumber></issuer><counterpart><vatNumber>222222222</vatNumber></counterpart><invoiceHeader><series>A</series><aa>1</aa><issueDate>2026-11-22</issueDate><invoiceType>1.1</invoiceType></invoiceHeader><invoiceSummary><totalNetValue>12.34</totalNetValue><totalVatAmount>2.96</totalVatAmount><totalGrossValue>15.30</totalGrossValue></invoiceSummary></invoice></RequestedDoc>`;
 
-async function fixture({stores=[{id:"store"}],denyWrites=false,providerBarrier,responseXml=rawResponse}={}){
+async function fixture({stores=[{id:"store"}],branch=null,denyWrites=false,providerBarrier,responseXml=rawResponse}={}){
   const calls=[];
   const writer=(label)=>({
     label,
     store:{findMany:async query=>{assert.deepEqual(query,{where:{companyId:"company"},select:{id:true},take:2});calls.push({type:"scope",label});return stores}},
     async $queryRaw(parts,...args){
       const sql=parts.join("?");
+      if(sql.includes("pg_advisory_xact_lock_shared"))return [{locked:1}];
       if(sql.includes("pg_try_advisory_xact_lock"))return [{held:true}];
       if(sql.includes('FROM "StoreIntegrationCredential"')){
         assert.deepEqual(args,["company","store"]);
         return [{enabled:true,environment:"SANDBOX",credentialsEnc:"fixture-ciphertext"}];
       }
-      if(sql.includes('MAX(NULLIF("mark"')){assert.deepEqual(args,["company","store","AADE_MYDATA_SANDBOX"]);return [{lastMark:"7"}]}
+      if(sql.includes('MAX(NULLIF("mark"')){assert.deepEqual(args,branch===null?["company","store","AADE_MYDATA_SANDBOX"]:["company","store","AADE_MYDATA_SANDBOX",String(branch)]);return [{lastMark:"7"}]}
       if(sql.includes('FROM "MyDataInboundDocument"')||sql.includes('FROM "Supplier"'))return [];
       throw new Error(sql);
     },
@@ -37,7 +38,8 @@ async function fixture({stores=[{id:"store"}],denyWrites=false,providerBarrier,r
   database.$executeRawUnsafe=async()=>{};
   const routes={};
   const inputs={
-    z,crypto:{randomUUID},invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml,
+    z,crypto:{randomUUID},invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,unwrapMyDataXml,
+    ensureMyDataBranchSchema:async()=>{},readMyDataBranchForStore:async()=>branch,
     prisma:database,Router:()=>({get(){},post(path,...handlers){routes[path]=handlers.at(-1)}}),
     requireCompanyModule:()=>()=>{},ensureStoreIntegrationSchema:async()=>{},
     decryptStoreIntegrationCredentials:encrypted=>{assert.equal(encrypted,"fixture-ciphertext");return {accountId:"fixture",secret:"fixture"}},
@@ -103,4 +105,20 @@ test("delegated caller cannot coalesce with another request's result",async()=>{
     await assert.rejects(f.api.syncMyDataStore({user:{id:"owner",companyId:"company"},body:{storeId:"store"}}),{status:409});
   }finally{release();await running}
   assert.equal(f.calls.filter(x=>x.type==="provider").length,1);
+});
+
+
+test("delegated multi-store receipt routes only the configured explicit recipient branch",async()=>{
+  const invoice=rawResponse.match(/<invoice>.*<\/invoice>/)[0];
+  const withBranch=(mark,branch)=>invoice.replace("<mark>123</mark>",`<mark>${mark}</mark>`)
+    .replace("</counterpart>",`<branch>${branch}</branch></counterpart>`);
+  const f=await fixture({stores:[{id:"store"},{id:"sibling"}],branch:0,
+    responseXml:`<RequestedDoc>${withBranch(124,0)}${withBranch(125,2)}${invoice}</RequestedDoc>`});
+  const result=await f.api.syncMyDataStore(req);
+  assert.equal(result.created,1);
+  assert.equal(result.ignoredBranch,2);
+  assert.deepEqual(result.documents.map(doc=>doc.mark),["124"]);
+  const writes=f.calls.filter(x=>x.type==="write");
+  assert.equal(writes.length,2);
+  assert.equal(JSON.parse(writes[1].args.at(-1)).recipientBranch,0);
 });

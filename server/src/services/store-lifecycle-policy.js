@@ -47,6 +47,7 @@ export const STORE_TABLES=new Set([
   "KioskAuditEvent",
   "ModifierInventoryPrice",
   "MyDataInboundDocument",
+  "MyDataStoreBranch",
   "NetlinkCancellationRequest",
   "OfflineSaleSyncEvidence",
   "OnlineOrder",
@@ -134,7 +135,7 @@ export const STORE_TABLES=new Set([
   "WorkforceShiftTemplate",
   "WorkforceTimeClockEntry"
 ]);
-export const RESET_KEEP=new Set(["MonthlyInventorySnapshot", "BackofficeStaffGrant", "AiOwnerWalletEntry", "Store", "ShiftType", "StorePaidModule", "StoreInstallationTerminal", "StoreFiscalDevice", "StoreEftposDevice", "StoreRbsInstallationSettings", "StoreIntegrationCredential", "StoreLabelSettings", "StorePosLayout", "CloudDevice", "ConnectorDevice", "OnlineOrderingConfig", "StoreTableServiceConfig", "StoreVideoCamera", "StoreVideoConnection", "AutomaticReportSettings", "StoreOnlineRadioConfig", "StoreChatSettings", "InventoryZone", "StoreBakingPolicy"]);
+export const RESET_KEEP=new Set(["MyDataStoreBranch", "MonthlyInventorySnapshot", "BackofficeStaffGrant", "AiOwnerWalletEntry", "Store", "ShiftType", "StorePaidModule", "StoreInstallationTerminal", "StoreFiscalDevice", "StoreEftposDevice", "StoreRbsInstallationSettings", "StoreIntegrationCredential", "StoreLabelSettings", "StorePosLayout", "CloudDevice", "ConnectorDevice", "OnlineOrderingConfig", "StoreTableServiceConfig", "StoreVideoCamera", "StoreVideoConnection", "AutomaticReportSettings", "StoreOnlineRadioConfig", "StoreChatSettings", "InventoryZone", "StoreBakingPolicy"]);
 // Explicit latest new-start profile. The original prospective RESET remains
 // unchanged for historical callers; this profile removes business configuration
 // such as shifts/zones/baking rules while retaining both register installations.

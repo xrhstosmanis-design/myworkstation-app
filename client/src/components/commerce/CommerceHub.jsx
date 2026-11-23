@@ -24,7 +24,7 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled,warehouseOrders,onWarehouseOrdersHandled}){
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules,onOpenInvoiceOrder,initialInvoiceOrder,onInitialInvoiceOrderHandled,canConfigureMyDataBranch=false,warehouseOrders,onWarehouseOrdersHandled}){
   const commerceRoot=useRef(null);
   useEffect(()=>{
     if(!initialInvoiceOrder||!commerceRoot.current)return;
@@ -207,7 +207,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
 
   const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
 
-  if(initialTab==="documents")return <div className="commerce-hub">{active.has("DOCUMENTS")&&<InvoiceInboxPanel api={api} stores={stores} onOpenOrder={onOpenInvoiceOrder}/>}</div>;
+  if(initialTab==="documents")return <div className="commerce-hub">{active.has("DOCUMENTS")&&<InvoiceInboxPanel canConfigureMyDataBranch={canConfigureMyDataBranch} api={api} stores={stores} onOpenOrder={onOpenInvoiceOrder}/>}</div>;
 
   return <div ref={commerceRoot} data-active-store-id={activeStoreId} className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}${tab==="lowValue"?" low-value-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
     <section className="panel">
@@ -278,7 +278,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
       setMessage(`Κατάστημα: ${row.storeName} · Αναγνωριστικό: ${row.sourceId}`);
     }}/>}
 
-    {tab==="documents"&&<InvoiceInboxPanel key={pendingSourceStoreId} api={api} stores={pendingSourceStoreId?[...stores].sort((a,b)=>(a.id===pendingSourceStoreId?-1:b.id===pendingSourceStoreId?1:0)):stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
+    {tab==="documents"&&<InvoiceInboxPanel key={pendingSourceStoreId} canConfigureMyDataBranch={canConfigureMyDataBranch} api={api} stores={pendingSourceStoreId?[...stores].sort((a,b)=>(a.id===pendingSourceStoreId?-1:b.id===pendingSourceStoreId?1:0)):stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
 
     {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi} focusJobId={aiFocusJobId}/>}
 
