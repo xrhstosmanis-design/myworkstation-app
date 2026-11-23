@@ -363,8 +363,8 @@ async function addPurchaseLine(tx,req,found,body){
   await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","supplierCode","description","quantity","unitCost","invoiceUnit","stockUnitsPerInvoiceUnit","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount") VALUES (${lineId},${found.id},${body.productId||null},${body.supplierCode||null},${created.description},${c.quantity},${c.unitCost},${created.invoiceUnit},${created.stockUnitsPerInvoiceUnit},${c.discount1},${c.discount2},${c.discount3},${c.exciseTotal},${c.vatRate},${body.gift||false},${c.unitCost},${c.markupPercent},${c.proposedSalePrice},${c.netAmount},${c.vatAmount},${c.grossAmount})`;if(rounded.rawText)await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "ocrRawText"=${rounded.rawText} WHERE "id"=${lineId}`;await writePurchaseAudit(tx,req,{storeId:found.storeId,eventType:"PURCHASE_ORDER_LINE_ADDED",details:{orderId:found.id,lineId,invoiceNumber:found.invoiceNumber,line:auditLineState(created)}})
   return {id:lineId,...c};
 }
-async function patchPurchaseLine(tx,req,found,current,body){
-  if(body.productTaxonomy&&(req.user?.staffAccess===true||req.user?.tokenType==="STORE_OPERATOR"))throw purchaseBatchError(403,"Η αλλαγή στοιχείων είδους απαιτεί διαχειριστή.");
+async function patchPurchaseLine(tx,req,found,current,body,{allowDelegatedTaxonomy=false}={}){
+  if(body.productTaxonomy&&(req.user?.staffAccess===true&&!allowDelegatedTaxonomy||req.user?.tokenType==="STORE_OPERATOR"))throw purchaseBatchError(403,"Η αλλαγή στοιχείων είδους απαιτεί διαχειριστή.");
   const companyId=found.companyId;if(body.productId&&!await product(companyId,body.productId,tx))throw purchaseBatchError(404,"Δεν βρέθηκε το προϊόν.");const rounded=purchasePrintedRounding(found,body,current,calc(body,current)),c=rounded.calculated;
   if(current.invoiceUnit==="PACKAGE"&&current.stockUnitsPerInvoiceUnit!=null&&n(current.stockUnitsPerInvoiceUnit)===0&&body.stockUnitsPerInvoiceUnit==null&&body.invoiceUnit!=="PIECE"){
     throw purchaseBatchError(409,"Επιβεβαίωσε τα τεμάχια ανά κιβώτιο πριν αποθηκεύσεις τη γραμμή.");
@@ -393,7 +393,14 @@ router.patch("/:orderId/lines/:lineId",async(req,res,next)=>{try{
   if(!found||!current||current.orderId!==found.id)throw purchaseBatchError(404,"Δεν βρέθηκε η γραμμή παραγγελίας.");
   editable(found);
   const body=lineSchema.partial().parse(req.body||{});
-  res.json(await withPurchaseLineEdits(req,found,tx=>patchPurchaseLine(tx,req,found,current,body)));
+  res.json(await withPurchaseLineEdits(req,found,async tx=>{
+    if(!body.productTaxonomy||req.user.staffAccess!==true)return patchPurchaseLine(tx,req,found,current,body);
+    const [lockedLine]=await tx.$queryRaw`SELECT * FROM "PurchaseOrderLine"
+      WHERE "orderId"=${found.id} AND "id"=${current.id} FOR UPDATE`;
+    if(!lockedLine)throw purchaseBatchError(404,"Δεν βρέθηκε η γραμμή παραγγελίας.");
+    if(lockedLine.productId!==current.productId)throw purchaseBatchError(409,"Το είδος της γραμμής άλλαξε. Άνοιξε ξανά τη γραμμή.");
+    return patchPurchaseLine(tx,req,found,lockedLine,body,{allowDelegatedTaxonomy:true});
+  }));
 }catch(error){next(error)}});
 
 router.delete("/:orderId/lines/:lineId",async(req,res,next)=>{try{

@@ -1,3 +1,5 @@
+- 23/11/2026 · Νο 5 · ΦΠΑ και ταξινόμηση είδους από γραμμή τιμολογίου · [Καταγραφή](CHANGES/2026-11-23-no5-staff-invoice-line-taxonomy.md).
+
 - 22/11/2026 · POS · Ευκολότερο σύρσιμο κοινών διαχωριστικών · [Checkpoint](CHANGES/2026-11-22-pos-divider-drag.md).
 
 - 22/11/2026 · POS · Χρώμα σε όλη την επιφάνεια του γρήγορου πλήκτρου · [Checkpoint](CHANGES/2026-11-22-pos-full-key-color.md).
