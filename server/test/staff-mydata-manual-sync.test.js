@@ -4,14 +4,18 @@ import {readFile} from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
 import {invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../src/mydata-xml.js";
+import {myDataReceivingScope,readMyDataReceivingContinuation,saveMyDataReceivingContinuation} from "../src/services/mydata-receiving-continuation.js";
 import {changeStaffCapability,staffRequestCapability} from "../../shared/backoffice-staff.mjs";
 
 const path="/api/commerce/documents/mydata/sync";
 const req={user:{id:"manager",companyId:"company",storeId:"store",staffAccess:true},staffGrant:{capability:"invoices.sync-mydata"},body:{storeId:"store"}};
 const rawResponse=`<RequestedDoc><invoice><mark>123</mark><issuer><vatNumber>111111111</vatNumber></issuer><counterpart><vatNumber>222222222</vatNumber></counterpart><invoiceHeader><series>A</series><aa>1</aa><issueDate>2026-11-22</issueDate><invoiceType>1.1</invoiceType></invoiceHeader><invoiceSummary><totalNetValue>12.34</totalNetValue><totalVatAmount>2.96</totalVatAmount><totalGrossValue>15.30</totalGrossValue></invoiceSummary></invoice></RequestedDoc>`;
 
-async function fixture({stores=[{id:"store"}],branch=null,changedWriteBranch=branch,denyWrites=false,providerBarrier,responseXml=rawResponse}={}){
+async function fixture({stores=[{id:"store"}],branch=null,changedWriteBranch=branch,denyWrites=false,providerBarrier,responseXml=rawResponse,failDocument=false}={}){
   const calls=[];
+  const metadataJson={myDataBranchMappingRevision:"initial"};
+  const setMappingRevision=revision=>{metadataJson.myDataBranchMappingRevision=revision};
+  let failing=failDocument;
   const writer=(label)=>({
     label,
     store:{findMany:async query=>{assert.deepEqual(query,{where:{companyId:"company"},select:{id:true},take:2});calls.push({type:"scope",label});return stores}},
@@ -21,13 +25,19 @@ async function fixture({stores=[{id:"store"}],branch=null,changedWriteBranch=bra
       if(sql.includes("pg_try_advisory_xact_lock"))return [{held:true}];
       if(sql.includes('FROM "StoreIntegrationCredential"')){
         assert.deepEqual(args,["company","store"]);
-        return [{enabled:true,environment:"SANDBOX",credentialsEnc:"fixture-ciphertext"}];
+        return [{enabled:true,environment:"SANDBOX",credentialsEnc:"fixture-ciphertext",metadataJson:structuredClone(metadataJson)}];
       }
       if(sql.includes('MAX(NULLIF("mark"')){assert.deepEqual(args,branch===null?["company","store","AADE_MYDATA_SANDBOX"]:["company","store","AADE_MYDATA_SANDBOX",String(branch)]);return [{lastMark:"7"}]}
       if(sql.includes('FROM "MyDataInboundDocument"')||sql.includes('FROM "Supplier"'))return [];
       throw new Error(sql);
     },
-    async $executeRaw(parts,...args){calls.push({type:"write",sql:parts.join("?"),args});return 1}
+    async $executeRaw(parts,...args){
+      const sql=parts.join("?");
+      if(sql.includes("myDataReceivingContinuation"))metadataJson.myDataReceivingContinuation=JSON.parse(args[0]);
+      if(failing&&sql.includes('INSERT INTO "MyDataInboundDocument"')){failing=false;throw new Error("inbound write failed")}
+      calls.push({type:"write",sql,args});
+      return 1;
+    }
   });
   const database=writer("database");
   database.store.findFirst=async query=>{
@@ -38,7 +48,7 @@ async function fixture({stores=[{id:"store"}],branch=null,changedWriteBranch=bra
   database.$executeRawUnsafe=async()=>{};
   const routes={};
   const inputs={
-    z,crypto:{randomUUID},invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,unwrapMyDataXml,
+    z,crypto:{randomUUID},myDataReceivingScope,readMyDataReceivingContinuation,saveMyDataReceivingContinuation,invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,unwrapMyDataXml,
     ensureMyDataBranchSchema:async()=>{},hasMyDataBranchMappings:async()=>false,readMyDataBranchForStore:async db=>db.label==="write"?changedWriteBranch:branch,
     prisma:database,Router:()=>({get(){},post(path,...handlers){routes[path]=handlers.at(-1)}}),
     requireCompanyModule:()=>()=>{},ensureStoreIntegrationSchema:async()=>{},
@@ -55,13 +65,13 @@ async function fixture({stores=[{id:"store"}],branch=null,changedWriteBranch=bra
     fetch:async(url,options)=>{
       calls.push({type:"provider",url,options});
       if(providerBarrier)await providerBarrier;
-      return {ok:true,text:async()=>responseXml};
+      return {ok:true,text:async()=>typeof responseXml==="function"?responseXml(url,setMappingRevision):responseXml};
     }
   };
   const source=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8");
   const stripped=source.replace(/^import .*;\r?\n/gm,"").replace(/\bexport default router;/,"").replace(/^export /gm,"");
   const api=new Function(...Object.keys(inputs),stripped+"\nreturn {syncMyDataStore,verifyDelegatedMyDataSync};")(...Object.values(inputs));
-  return {api,calls,routes};
+  return {api,calls,routes,metadataJson};
 }
 
 test("manual receipt is a distinct store grant and writes only the inbox and inbound metadata",async()=>{
@@ -119,8 +129,9 @@ test("delegated multi-store receipt routes only the configured explicit recipien
   assert.equal(result.ignoredBranch,2);
   assert.deepEqual(result.documents.map(doc=>doc.mark),["124"]);
   const writes=f.calls.filter(x=>x.type==="write");
-  assert.equal(writes.length,2);
+  assert.equal(writes.length,3);
   assert.equal(JSON.parse(writes[1].args.at(-1)).recipientBranch,0);
+  assert.equal(f.metadataJson.myDataReceivingContinuation.row,null);
 });
 
 test("a changed branch mapping blocks the write after the AADE response",async()=>{
@@ -128,5 +139,39 @@ test("a changed branch mapping blocks the write after the AADE response",async()
     responseXml:rawResponse.replace("</counterpart>","<branch>2</branch></counterpart>")});
   await assert.rejects(f.api.syncMyDataStore(req),{status:409});
   assert.equal(f.calls.filter(x=>x.type==="provider").length,1);
+  assert.equal(f.calls.filter(x=>x.type==="write").length,0);
+});
+
+test("100 unmatched pages persist exact next keys and resume at the original MARK even after a failed matching page",async()=>{
+  const key=index=>`page-${index}:/ +=`;
+  const invoice=rawResponse.match(/<invoice>.*<\/invoice>/)[0];
+  const branchInvoice=(mark,branch)=>invoice.replace("<mark>123</mark>",`<mark>${mark}</mark>`)
+    .replace("</counterpart>",`<branch>${branch}</branch></counterpart>`);
+  const f=await fixture({branch:0,failDocument:true,responseXml(url){
+    assert.equal(url.searchParams.get("mark"),"7");
+    const row=url.searchParams.get("nextRowKey");
+    const index=row?Number(row.match(/page-(\d+):/)[1]):0;
+    if(index===100)return `<RequestedDoc>${branchInvoice(1100,0)}</RequestedDoc>`;
+    return `<RequestedDoc>${branchInvoice(index+100,2)}<nextPartitionKey>constant/ +=</nextPartitionKey><nextRowKey>${key(index+1)}</nextRowKey></RequestedDoc>`;
+  }});
+  const first=await f.api.syncMyDataStore(req);
+  assert.deepEqual([first.continuationPending,first.fetched,first.ignoredBranch,first.created],[true,100,100,0]);
+  assert.equal(f.metadataJson.myDataReceivingContinuation.row,key(100));
+  assert.equal(f.metadataJson.myDataReceivingContinuation.partition,"constant/ +=");
+  assert.equal(f.metadataJson.myDataReceivingContinuation.startMark,"7");
+  await assert.rejects(f.api.syncMyDataStore(req),/inbound write failed/);
+  assert.equal(f.metadataJson.myDataReceivingContinuation.row,key(100));
+  const result=await f.api.syncMyDataStore(req);
+  assert.deepEqual([result.continuationPending,result.created,result.documents[0].mark],[false,1,"1100"]);
+  assert.equal(f.metadataJson.myDataReceivingContinuation.row,null);
+});
+
+test("same-branch mapping revision changes during an unmatched page reject checkpoint advancement",async()=>{
+  const f=await fixture({branch:0,responseXml(_url,setRevision){
+    setRevision("new-mapping");
+    return "<RequestedDoc><nextPartitionKey>a</nextPartitionKey><nextRowKey>b</nextRowKey></RequestedDoc>";
+  }});
+  await assert.rejects(f.api.syncMyDataStore(req),{status:409});
+  assert.equal(f.metadataJson.myDataReceivingContinuation,undefined);
   assert.equal(f.calls.filter(x=>x.type==="write").length,0);
 });

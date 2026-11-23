@@ -1,3 +1,4 @@
+import {randomUUID} from "node:crypto";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -66,7 +67,8 @@ router.put(path,requireOwner,requireCompanyModule("DOCUMENTS"),async(req,res,nex
         SET "metadataJson"=(CASE WHEN ${branch}::integer IS NULL
           THEN "metadataJson"-'myDataRecipientBranch'
           ELSE jsonb_set("metadataJson",'{myDataRecipientBranch}',to_jsonb(${branch}::integer)) END)
-          || '{"myDataBranchRoutingEnabled":true}'::jsonb
+          - 'myDataReceivingContinuation'
+          || jsonb_build_object('myDataBranchRoutingEnabled',true,'myDataBranchMappingRevision',${randomUUID()}::text)
         WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "kind"='MYDATA'
       `;
       if(changed!==1)throw error("Η σύνδεση myDATA άλλαξε. Άνοιξε ξανά τη ρύθμιση.",409,"MYDATA_BRANCH_STALE");

@@ -19,6 +19,8 @@ import {acquireOriginal,fetchStaffMyDataInboxOriginal,prefillStoredMyDataDraft,p
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
+import {myDataReceivingScope,readMyDataReceivingContinuation,saveMyDataReceivingContinuation} from "../services/mydata-receiving-continuation.js";
+
 const router=Router();
 let schemaPromise;
 
@@ -228,7 +230,7 @@ async function performSync(req,branch=null){
   if(!store)throw syncError("Δεν βρέθηκε το κατάστημα.",404);
   const companyVat=String(store.company?.taxId||"").replace(/\s/g,"");
   if(!/^\d{9}$/.test(companyVat))throw syncError("Πρέπει πρώτα να οριστεί το εννεαψήφιο ΑΦΜ της εταιρείας για ασφαλή λήψη myDATA.",409);
-  const rows=await prisma.$queryRaw`SELECT "environment","credentialsEnc","enabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
+  const rows=await prisma.$queryRaw`SELECT "environment","credentialsEnc","enabled","metadataJson" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
   const integration=rows[0];if(!integration?.enabled)throw syncError("Δεν έχει ενεργοποιηθεί σύνδεση myDATA για αυτό το κατάστημα.",409);
   if(!["SANDBOX","PRODUCTION"].includes(integration.environment))throw syncError("Μη έγκυρο περιβάλλον myDATA.",409);
   const credentials=decryptStoreIntegrationCredentials(integration.credentialsEnc);
@@ -236,8 +238,53 @@ async function performSync(req,branch=null){
   const source=`AADE_MYDATA_${integration.environment}`;
   const previous=branch===null?await prisma.$queryRaw`SELECT COALESCE(MAX(NULLIF("mark",'')::numeric),0)::text AS "lastMark" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "rawPayload"->>'source'=${source}`
     :await prisma.$queryRaw`SELECT COALESCE(MAX(NULLIF("mark",'')::numeric),0)::text AS "lastMark" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "rawPayload"->>'source'=${source} AND "rawPayload"->>'recipientBranch'=${String(branch)}`;
-  const mark=previous[0]?.lastMark||"0",created=[];let duplicates=0,ignored=0,ignoredVat=0,ignoredBranch=0,missingMark=0,fetched=0,page=null;
-  const pages=new Set();
+  const scope=branch===null?null:myDataReceivingScope(integration,{companyId:req.user.companyId,storeId:store.id,companyVat,branch});
+  const continuation=scope?readMyDataReceivingContinuation(integration,scope):null;
+  const mark=continuation?.startMark||previous[0]?.lastMark||"0";
+  const created=[];
+  let duplicates=0,ignored=0,ignoredVat=0,ignoredBranch=0,missingMark=0,fetched=0;
+  let page=continuation,processedPages=0,continuationPending=false;
+  const pageKey=page=>scope?JSON.stringify([page.partition,page.row]):`${page.partition}:${page.row}`;
+  const pages=new Set(page?[pageKey(page)]:[]);
+  async function verifyPageWrites(tx){
+    await tx.$queryRaw`SELECT 1 AS "locked" WHERE pg_advisory_xact_lock_shared(hashtextextended(${"mydata-branch-map:"+req.user.companyId},0)) IS NULL`;
+    const currentBranch=delegated?await verifyDelegatedMyDataSync(tx,req):await resolveMyDataRecipientBranch(tx,req.user.companyId,store.id,false);
+    if(currentBranch!==branch)throw syncError("Η αντιστοίχιση υποκαταστήματος myDATA άλλαξε. Ξεκίνα ξανά τη λήψη.",409);
+    if(scope){
+      const [current]=await tx.$queryRaw`
+        SELECT "environment","credentialsEnc","enabled","metadataJson" FROM "StoreIntegrationCredential"
+        WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "kind"='MYDATA'
+        FOR UPDATE
+      `;
+      if(!current?.enabled||current.environment!==scope.environment||current.credentialsEnc!==integration.credentialsEnc||
+         (current.metadataJson?.myDataBranchMappingRevision??null)!==scope.mappingRevision)
+        throw syncError("Η σύνδεση myDATA άλλαξε. Ξεκίνα ξανά τη λήψη.",409);
+    }
+  }
+  async function writeInvoice(tx,invoice,doc){
+      const existing=await tx.$queryRaw`SELECT "inboxId" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "mark"=${doc.mark} LIMIT 1`;
+      if(existing[0])return null;
+      const suppliers=doc.issuerVat?await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "taxId"=${doc.issuerVat} LIMIT 1`:[];
+      const supplier=suppliers[0]||null;
+      const inboxId=crypto.randomUUID(),recordId=crypto.randomUUID(),title=["myDATA",doc.series,doc.documentNumber].filter(Boolean).join(" ");
+      const note=`${title} • MARK ${doc.mark} • ${doc.totalGross.toFixed(2)} € • Πρόχειρο — απαιτείται πρωτότυπο PDF/OCR και επιβεβαίωση πριν την αποθήκη`;
+      await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","status","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${store.id},${supplier?.id||null},'RECEIVED',${note},'Αυτόματη λήψη myDATA',${req.user.id})`;
+      await tx.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","uid","issuerVat","counterpartVat","series","documentNumber","issueDate","invoiceType","currency","totalNet","totalVat","totalGross","rawPayload") VALUES (${recordId},${req.user.companyId},${store.id},${inboxId},${doc.mark},${doc.uid},${doc.issuerVat},${doc.counterpartVat},${doc.series},${doc.documentNumber},${doc.issueDate?new Date(`${doc.issueDate}T00:00:00Z`):null},${doc.invoiceType},${doc.currency},${doc.totalNet},${doc.totalVat},${doc.totalGross},${JSON.stringify({source,xml:invoice,originalPending:true,...(branch===null?{}:{recipientBranch:branch})})}::jsonb)`;
+      return {id:inboxId,...doc,supplierName:supplier?.name||null};
+  }
+  function matchingInvoices(invoices){
+    fetched+=invoices.length;
+    const matching=[];
+    for(const invoice of invoices){
+      const doc=invoiceSummary(invoice);
+      if(!doc.mark){ignored++;missingMark++;continue}
+      if(doc.counterpartVat!==companyVat){ignored++;ignoredVat++;continue}
+      if(branch!==null&&invoiceRecipientBranch(invoice)!==branch){ignored++;ignoredBranch++;continue}
+      matching.push({invoice,doc});
+    }
+    return matching;
+  }
+  function collect(result){if(result)created.push(result);else duplicates++}
   do{
     const url=new URL(endpoint(integration.environment));url.searchParams.set("mark",mark);
     if(page){url.searchParams.set("nextPartitionKey",page.partition);url.searchParams.set("nextRowKey",page.row)}
@@ -252,36 +299,37 @@ async function performSync(req,branch=null){
     }
     const xml=unwrapMyDataXml(responseXml);
     const remoteError=myDataError(xml);if(remoteError)throw syncError(`Το myDATA δεν ολοκλήρωσε τη λήψη: ${remoteError}`,409);
-    const invoices=invoiceNodes(xml);fetched+=invoices.length;
-  for(const invoice of invoices){
-    const doc=invoiceSummary(invoice);if(!doc.mark){ignored++;missingMark++;continue}
-    if(doc.counterpartVat!==companyVat){ignored++;ignoredVat++;continue}
-    if(branch!==null&&invoiceRecipientBranch(invoice)!==branch){ignored++;ignoredBranch++;continue}
-    const result=await prisma.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT 1 AS "locked" WHERE pg_advisory_xact_lock_shared(hashtextextended(${"mydata-branch-map:"+req.user.companyId},0)) IS NULL`;
-      const currentBranch=delegated?await verifyDelegatedMyDataSync(tx,req):await resolveMyDataRecipientBranch(tx,req.user.companyId,store.id,false);
-      if(currentBranch!==branch)
-        throw syncError("Η αντιστοίχιση υποκαταστήματος myDATA άλλαξε. Ξεκίνα ξανά τη λήψη.",409);
-      const existing=await tx.$queryRaw`SELECT "inboxId" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "mark"=${doc.mark} LIMIT 1`;
-      if(existing[0])return null;
-      const suppliers=doc.issuerVat?await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "taxId"=${doc.issuerVat} LIMIT 1`:[];
-      const supplier=suppliers[0]||null;
-      const inboxId=crypto.randomUUID(),recordId=crypto.randomUUID(),title=["myDATA",doc.series,doc.documentNumber].filter(Boolean).join(" ");
-      const note=`${title} • MARK ${doc.mark} • ${doc.totalGross.toFixed(2)} € • Πρόχειρο — απαιτείται πρωτότυπο PDF/OCR και επιβεβαίωση πριν την αποθήκη`;
-      await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","status","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${store.id},${supplier?.id||null},'RECEIVED',${note},'Αυτόματη λήψη myDATA',${req.user.id})`;
-      await tx.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","uid","issuerVat","counterpartVat","series","documentNumber","issueDate","invoiceType","currency","totalNet","totalVat","totalGross","rawPayload") VALUES (${recordId},${req.user.companyId},${store.id},${inboxId},${doc.mark},${doc.uid},${doc.issuerVat},${doc.counterpartVat},${doc.series},${doc.documentNumber},${doc.issueDate?new Date(`${doc.issueDate}T00:00:00Z`):null},${doc.invoiceType},${doc.currency},${doc.totalNet},${doc.totalVat},${doc.totalGross},${JSON.stringify({source,xml:invoice,originalPending:true,...(branch===null?{}:{recipientBranch:branch})})}::jsonb)`;
-      return {id:inboxId,...doc,supplierName:supplier?.name||null};
-    });
-    if(result)created.push(result);else duplicates++;
-  }
-    page=nextPage(xml);
-    if(page){const key=`${page.partition}:${page.row}`;if(pages.has(key))throw syncError("Η σελιδοποίηση myDATA επανέλαβε την ίδια σελίδα.");pages.add(key)}
-    if(pages.size>=100)throw syncError("Η λήψη σταμάτησε στο όριο 100 σελίδων. Επαναλάβετε τον συγχρονισμό.");
+    const matching=matchingInvoices(invoiceNodes(xml));
+    if(scope){
+      const next=nextPage(xml);
+      if(next&&pages.has(pageKey(next)))throw syncError("Η σελιδοποίηση myDATA επανέλαβε την ίδια σελίδα.",409);
+      const results=await prisma.$transaction(async tx=>{
+        await verifyPageWrites(tx);
+        const written=[];
+        for(const {invoice,doc} of matching)written.push(await writeInvoice(tx,invoice,doc));
+        await saveMyDataReceivingContinuation(tx,scope,mark,next);
+        return written;
+      },{timeout:30000});
+      results.forEach(collect);
+      page=next;
+      if(page)pages.add(pageKey(page));
+      if(++processedPages===100&&page){continuationPending=true;break}
+    }else{
+      for(const {invoice,doc} of matching){
+        collect(await prisma.$transaction(async tx=>{
+          await verifyPageWrites(tx);
+          return writeInvoice(tx,invoice,doc);
+        }));
+      }
+      page=nextPage(xml);
+      if(page){const key=pageKey(page);if(pages.has(key))throw syncError("Η σελιδοποίηση myDATA επανέλαβε την ίδια σελίδα.");pages.add(key)}
+      if(pages.size>=100)throw syncError("Η λήψη σταμάτησε στο όριο 100 σελίδων. Επαναλάβετε τον συγχρονισμό.");
+    }
   }while(page);
-  if(delegated){
-    await verifyDelegatedMyDataSync(prisma,req);
-    const message=created.length?`${created.length} νέα παραστατικά μπήκαν στη θυρίδα.`:"Δεν βρέθηκαν νέα παραστατικά για τη θυρίδα.";
-    return {ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,ignoredBranch,missingMark,
+  if(delegated||continuationPending){
+    if(delegated)await verifyDelegatedMyDataSync(prisma,req);
+    const message=continuationPending?"Η λήψη έφτασε τις 100 σελίδες. Θα συνεχιστεί από την επόμενη σελίδα στον επόμενο συγχρονισμό.":created.length?`${created.length} νέα παραστατικά μπήκαν στη θυρίδα.`:"Δεν βρέθηκαν νέα παραστατικά για τη θυρίδα.";
+    return {ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,ignoredBranch,missingMark,...(scope?{continuationPending}:{}),
       documents:created,originalsDownloaded:0,originalsFailed:0,existingPhotosLinked:0,stockUpdated:false,fiscalTransmission:false,message};
   }
   // Bounded retries only for records received after this feature; no historic mass ingestion.

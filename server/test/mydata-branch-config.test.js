@@ -1,3 +1,4 @@
+import {randomUUID} from "node:crypto";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
@@ -31,8 +32,10 @@ test("owner-only myDATA mapping preserves zero, rejects stale edits and prevents
     async $executeRaw(parts,...values){
       assert.equal(held,true);
       assert.match(parts.join(""),/jsonb_set/);
-      assert.match(parts.join(""),/"myDataBranchRoutingEnabled":true/);
-      const [branch,duplicate,company,storeId]=values;
+      assert.match(parts.join(""),/'myDataBranchRoutingEnabled',true,'myDataBranchMappingRevision'/);
+      assert.match(parts.join(""),/myDataReceivingContinuation/);
+      const [branch,duplicate,revision,company,storeId]=values;
+      assert.match(revision,/^[a-f0-9-]{36}$/);
       assert.equal(branch,duplicate);
       assert.equal(company,"company");
       if(branch===null)records.delete(storeId);
@@ -43,8 +46,8 @@ test("owner-only myDATA mapping preserves zero, rejects stale edits and prevents
   };
   const source=readFileSync(new URL("../src/routes/commerce-mydata-branch.js",import.meta.url),"utf8")
     .replace(/^import .*;\n/gm,"").replace(/^export default router;\n/m,"");
-  const run=new Function("Router","z","prisma","requireCompanyModule","ensureMyDataBranchSchema","readMyDataBranchForStore","lifecycleContext","assertLifecycleMutation",source);
-  run(()=>router,z,prisma,()=>((_req,_res,next)=>next()),async()=>{},async (_db,_company,store)=>records.get(store)??null,()=>({}),async()=>{assert.equal(held,true)});
+  const run=new Function("Router","z","randomUUID","prisma","requireCompanyModule","ensureMyDataBranchSchema","readMyDataBranchForStore","lifecycleContext","assertLifecycleMutation",source);
+  run(()=>router,z,randomUUID,prisma,()=>((_req,_res,next)=>next()),async()=>{},async (_db,_company,store)=>records.get(store)??null,()=>({}),async()=>{assert.equal(held,true)});
 
   async function invoke(method,body,user=owner){
     let status=200,result;
