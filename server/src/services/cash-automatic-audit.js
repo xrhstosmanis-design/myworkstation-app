@@ -61,7 +61,7 @@ export function assessAutomaticCash({session,transactions,previous=null,next=nul
  const bankCard=valid&&ledger.iris===0?sum([ledger.card,value('eftposTotal')===null?null:-value('eftposTotal')]):null;
  if(rule?.mode==='FULL'&&rule.carryOverEnabled===true){
   const handoff=(a,b,code)=>{
-   if(!a||!b||!same(a,b)||a.nextSession?.id!==b.id||a.status!=='CLOSED'||!Number.isFinite(at(a.openedAt))||!Number.isFinite(at(a.closedAt))||at(a.closedAt)<at(a.openedAt)||!Number.isFinite(at(b.openedAt))||!Number.isFinite(at(b.closedAt))||at(b.closedAt)<at(b.openedAt)||at(a.closedAt)>at(b.openedAt)){
+   if(!a||!b||a.closeReconciliationStatus==='AWAITING_COUNT'||b.closeReconciliationStatus==='AWAITING_COUNT'||!same(a,b)||a.nextSession?.id!==b.id||a.status!=='CLOSED'||!Number.isFinite(at(a.openedAt))||!Number.isFinite(at(a.closedAt))||at(a.closedAt)<at(a.openedAt)||!Number.isFinite(at(b.openedAt))||!Number.isFinite(at(b.closedAt))||at(b.closedAt)<at(b.openedAt)||at(a.closedAt)>at(b.openedAt)){
     checks.push({code,status:'UNAVAILABLE',differenceCents:null});return;
    }
    compare(code,exactCents(b.openingOperational),exactCents(a.actualOperational));

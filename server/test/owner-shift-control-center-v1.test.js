@@ -65,3 +65,52 @@ test("owner shift suite is wired into client server and visual baseline",()=>{
   assert.match(css,/#133f62/);
   assert.match(css,/#2079c7/);
 });
+
+test("owner reports flag an uncounted closed shift and preserve unknown closing amounts",async()=>{
+  const {readOwnerShiftReport,readOwnerShiftDetail}=await import("../src/routes/owner-shifts.js");
+  const shift={id:"uncounted",storeId:"lab",status:"CLOSED",closeReconciliationStatus:"AWAITING_COUNT",cashSales:15,expectedOperational:15,actualOperational:15,eftposTotal:10,variance:0};
+  const counted={id:"counted",storeId:"lab",status:"CLOSED",cashSales:25,openingOperational:10,openingVariance:0,eftposTotal:7,variance:0,cardVariance:0};
+  const unverifiedOpening={...counted,id:"later",status:"OPEN",openingVariance:null};
+  const getReport=rows=>readOwnerShiftReport("company",{},{
+    db:{store:{findMany:async()=>[]},$queryRaw:async()=>rows}
+  });
+  const report=await getReport([shift,counted,unverifiedOpening]);
+  assert.equal(report.summary.awaitingCount,1);
+  assert.equal(report.summary.alerts,1);
+  assert.equal(report.summary.cashSales,65);
+  for(const key of ["eftpos","variance","cardVariance","openingVariance"])assert.equal(report.summary[key],null,key);
+  const known=(await getReport([counted])).summary;
+  assert.equal(known.eftpos,7);
+  for(const key of ["variance","cardVariance","openingVariance"])assert.equal(known[key],0,key);
+  assert.equal(report.shifts[0].actualOperational,null);
+  assert.equal(report.shifts[0].eftposTotal,null);
+  let first=true;
+  const detail=await readOwnerShiftDetail("company",shift.id,{
+    db:{$queryRaw:async()=>{if(!first)return [];first=false;return [shift];}}
+  });
+  assert.equal(detail.difference.expectedOperational,15);
+  assert.equal(detail.difference.variance,null);
+  assert.deepEqual(detail.alerts,[{kind:"AWAITING_COUNT",amount:null,label:"Εκκρεμεί καταμέτρηση"}]);
+});
+
+test("owner reports preserve cash counts when a store has no EFTPOS comparison",async()=>{
+  const {readOwnerShiftReport,readOwnerShiftDetail}=await import("../src/routes/owner-shifts.js");
+  const shift={id:"counted",storeId:"lab",status:"CLOSED",closeReconciliationStatus:"COUNTED",
+    eftposTotal:null,cardVariance:null,actualOperational:10,variance:0};
+  const report=await readOwnerShiftReport("company",{},{
+    db:{store:{findMany:async()=>[]},$queryRaw:async()=>[shift]}
+  });
+  assert.equal(report.summary.awaitingCount,0);
+  assert.equal(report.summary.eftpos,null);
+  assert.equal(report.summary.cardVariance,null);
+  assert.equal(report.summary.variance,0);
+  let first=true;
+  const detail=await readOwnerShiftDetail("company",shift.id,{
+    db:{$queryRaw:async()=>{if(!first)return [];first=false;return [shift];}}
+  });
+  assert.equal(detail.difference.actualOperational,10);
+  assert.equal(detail.difference.variance,0);
+  assert.equal(detail.difference.eftposTotal,null);
+  assert.equal(detail.difference.cardVariance,null);
+  assert.deepEqual(detail.alerts,[]);
+});

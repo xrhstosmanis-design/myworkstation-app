@@ -13,13 +13,28 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
    <label>ΑΦΜ <input value="${esc(issuerVat)}" readonly></label>
    <button type="button" data-create-mydata-supplier>Δημιουργία προμηθευτή</button>
   </details>`:'';
- const m=modal(`<div class="po-modal-title blue"><h2>Διόρθωση προμηθευτή τιμολογίου</h2><button data-po-close>×</button></div><form data-supplier-correction style="padding:20px;display:grid;gap:16px;font-size:18px"><p>Παραστατικό <b>${esc(order.invoiceNumber||'')}</b> · ${esc(order.supplierName||'Χωρίς προμηθευτή')}</p><label>Αναζήτηση προμηθευτή<input type="search" name="supplierSearch" placeholder="Επωνυμία ή ΑΦΜ"></label><label>Σωστός προμηθευτής<select name="supplierId" required style="display:block;width:100%;min-height:48px;font-size:18px"><option value="">Επίλεξε βάσει πρωτοτύπου και ΑΦΜ</option>${suppliers.filter(s=>s.id!==order.supplierId&&/^\d{9}$/.test(String(s.taxId||'').trim())).map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ΑΦΜ ${esc(s.taxId)}</option>`).join('')}</select></label>${lookupButton}${officialLookup?'<button type="button" data-official-supplier>Έλεγχος ΑΦΜ στην ΑΑΔΕ</button><p data-official-supplier-result role="status"></p>':""}${issuerForm}<button type="button" data-preview>Έλεγχος διόρθωσης</button><div data-preview-result style="display:grid;gap:14px"></div><p role="alert"></p><button type="button" data-po-close>Άκυρο</button><button type="submit" class="primary" disabled>Επιβεβαίωση διόρθωσης προμηθευτή</button></form>`);
+ const m=modal(`<div class="po-modal-title blue"><h2>Διόρθωση προμηθευτή τιμολογίου</h2><button data-po-close>×</button></div><form data-supplier-correction novalidate style="padding:20px;display:grid;gap:16px;font-size:18px"><p>Παραστατικό <b>${esc(order.invoiceNumber||'')}</b> · ${esc(order.supplierName||'Χωρίς προμηθευτή')}</p><label>Αναζήτηση προμηθευτή<input type="search" name="supplierSearch" placeholder="Επωνυμία ή ΑΦΜ"></label><label>Σωστός προμηθευτής<select name="supplierId" required style="display:block;width:100%;min-height:48px;font-size:18px"><option value="">Επίλεξε βάσει πρωτοτύπου και ΑΦΜ</option>${suppliers.filter(s=>s.id!==order.supplierId&&/^\d{9}$/.test(String(s.taxId||'').trim())).map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ΑΦΜ ${esc(s.taxId)}</option>`).join('')}</select></label>${lookupButton}${officialLookup?'<button type="button" data-official-supplier>Έλεγχος ΑΦΜ στην ΑΑΔΕ</button><p data-official-supplier-result role="status"></p>':""}${issuerForm}<button type="button" data-preview>Έλεγχος διόρθωσης</button><div data-preview-result style="display:grid;gap:14px"></div><p role="alert" tabindex="-1"></p><p data-save-status role="status"></p><button type="button" data-po-close>Άκυρο</button><button type="submit" class="primary" disabled>Αποθήκευση διόρθωσης προμηθευτή</button></form>`);
  const form=m.querySelector('[data-supplier-correction]'),select=form.elements.supplierId,previewButton=form.querySelector('[data-preview]'),host=form.querySelector('[data-preview-result]'),submit=form.querySelector('[type=submit]'),error=form.querySelector('[role=alert]');
  let preview=null,busy=false,generation=0;
  const alive=()=>valid()&&m.isConnected;
- const update=()=>{submit.disabled=busy||!preview||!form.elements.reason?.value.trim()||form.elements.reason.value.trim().length<5||!form.elements.original?.checked||Boolean(preview.payment)&&!form.elements.payment?.checked};
+ const status=form.querySelector('[data-save-status]');
+ let issuerSelected=false;
+ const update=()=>{
+  let message='';
+  if(busy)message='Η ενέργεια εκτελείται…';
+  else if(!select.value)message='Επίλεξε τον σωστό προμηθευτή.';
+  else if(!preview)message='Πάτησε «Έλεγχος διόρθωσης» πριν την αποθήκευση.';
+  else if(!form.elements.original?.checked)message='Επιβεβαίωσε ότι έλεγξες το πρωτότυπο.';
+  else if(preview.payment&&!form.elements.payment?.checked)message='Επιβεβαίωσε χωριστά τη σύνδεση της υπάρχουσας πληρωμής.';
+  else if((form.elements.reason?.value.trim().length??0)>500)message='Η αιτιολογία μπορεί να έχει έως 500 χαρακτήρες.';
+  else if((form.elements.reason?.value.trim().length??0)<5)message='Συμπλήρωσε αιτιολογία με τουλάχιστον 5 χαρακτήρες.';
+  submit.disabled=Boolean(message);
+  status.textContent=message||(issuerSelected?'Ο προμηθευτής επιλέχθηκε. Πάτησε «Αποθήκευση διόρθωσης προμηθευτή».':'');
+ };
+ const showError=e=>{error.textContent=e.message;error.focus()};
+ update();
  const invalidate=()=>{generation++;preview=null;host.innerHTML='';error.textContent='';update()};
- select.addEventListener('change',invalidate);
+ select.addEventListener('change',()=>{issuerSelected=false;invalidate()});
  const search=form.elements.supplierSearch;
  const fold=value=>String(value||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase('el').trim();
  search.addEventListener('input',()=>{
@@ -73,37 +88,42 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
    if(!supplier?.id)throw new Error('Δεν βρέθηκε η καρτέλα προμηθευτή.');
    supplierId=supplier.id;
    if(!Array.from(select.options).some(option=>option.value===supplierId)){
-    const option=document.createElement('option');
+    const option=select.ownerDocument.createElement('option');
     option.value=supplierId;option.dataset.taxId=issuerVat;option.textContent=`${supplier.name||issuerName} · ΑΦΜ ${issuerVat}`;
     select.appendChild(option);
    }
    select.value=supplierId;
+   search.value='';
+   for(const option of select.options)option.hidden=false;
+   issuerSelected=true;
    officialGeneration++;
    if(officialResult)officialResult.textContent='';
    updateOfficial();
    if(createButton)createButton.closest('details').hidden=true;
-  }catch(e){if(alive())error.textContent=e.message}
+  }catch(e){if(alive())showError(e)}
   finally{busy=false;if(alive()){select.disabled=false;if(createButton)createButton.disabled=false;findButton.disabled=false;previewButton.disabled=false;update()}}
-  if(alive()&&supplierId)previewButton.click();
+  if(alive()&&supplierId)await loadPreview();
  }
  findButton?.addEventListener('click',()=>resolveIssuer(false));
  createButton?.addEventListener('click',()=>resolveIssuer(true));
- previewButton.addEventListener('click',async()=>{
+ async function loadPreview(){
   if(!alive()||busy||!select.value)return;
   invalidate();const request=++generation,supplierId=select.value;previewButton.disabled=true;
   try{
    const p=await api(`/api/purchase-orders/${encodeURIComponent(order.id)}/supplier-correction-preview?storeId=${encodeURIComponent(order.storeId)}&supplierId=${encodeURIComponent(supplierId)}`);
    if(!alive()||request!==generation||supplierId!==select.value)return;
    preview=p;host.innerHTML=`<p><b>${esc(p.beforeSupplier?.name||'Χωρίς προμηθευτή')}</b> → <b>${esc(p.targetSupplier.name)} · ΑΦΜ ${esc(p.targetSupplier.taxId)}</b></p><p>Αξία τιμολογίου ${money(p.totalGross)}. Η κατάσταση της αγοράς και το απόθεμα διατηρούνται.</p>${p.payment?`<p>Υπάρχουσα πληρωμή ${money(p.payment.amount)}. Θα αλλάξει μόνο η σύνδεσή της στον σωστό προμηθευτή· ποσό, βάρδια και ημερομηνία διατηρούνται.</p><label><input name="payment" type="checkbox"> Επιβεβαιώνω ότι η ίδια αρχική πληρωμή αφορά τον σωστό προμηθευτή. Δεν γίνεται νέα χρέωση.</label>`:'<p>Δεν υπάρχει συνδεδεμένη πληρωμή. Δεν δημιουργείται πληρωμή.</p>'}<label><input name="original" type="checkbox"> Έλεγξα το πρωτότυπο, τον αριθμό τιμολογίου και το ΑΦΜ του σωστού προμηθευτή.</label><label>Αιτιολογία<textarea name="reason" minlength="5" maxlength="500" required style="display:block;width:100%;min-height:80px;font-size:18px"></textarea></label>`;update();
-  }catch(e){if(alive()&&request===generation)error.textContent=e.message}finally{if(alive())previewButton.disabled=false}
- });
+  }catch(e){if(alive()&&request===generation)showError(e)}finally{if(alive())previewButton.disabled=false}
+ }
+ previewButton.addEventListener('click',loadPreview);
  form.addEventListener('submit',async event=>{
   event.preventDefault();update();if(!alive()||submit.disabled||busy||!preview)return;
   busy=true;update();select.disabled=true;previewButton.disabled=true;error.textContent='';
   try{
-   await api(`/api/purchase-orders/${encodeURIComponent(order.id)}/supplier-correction`,{method:'POST',body:JSON.stringify({storeId:order.storeId,supplierId:select.value,version:preview.version,reason:form.elements.reason.value.trim(),confirmOriginal:form.elements.original.checked,confirmPaymentSupplier:Boolean(form.elements.payment?.checked)})});
+   const result=await api(`/api/purchase-orders/${encodeURIComponent(order.id)}/supplier-correction`,{method:'POST',body:JSON.stringify({storeId:order.storeId,supplierId:select.value,version:preview.version,reason:form.elements.reason.value.trim(),confirmOriginal:form.elements.original.checked,confirmPaymentSupplier:Boolean(form.elements.payment?.checked)})});
+   if(result?.ok!==true)throw new Error('Η αποθήκευση δεν επιβεβαιώθηκε. Έλεγξε ξανά τη διόρθωση.');
    if(!alive())return;m.remove();delete parent.dataset.supplierCorrectionBusy;await refresh();
-  }catch(e){if(alive()){error.textContent=e.message;preview=null;submit.disabled=true}}finally{busy=false;if(alive()){select.disabled=false;previewButton.disabled=false;update()}}
+  }catch(e){if(alive()){showError(e);preview=null;submit.disabled=true}}finally{busy=false;if(alive()){select.disabled=false;previewButton.disabled=false;update()}}
  });
  return m;
 }

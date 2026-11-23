@@ -8,7 +8,7 @@ const route=await readFile(new URL('../src/routes/owner-shifts.js',import.meta.u
 const start=route.indexOf('router.get("/:sessionId/detail",'),source=route.slice(start,route.indexOf('\nrouter.post(',start));
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 const n=v=>Number(v||0);
-function handler(db){let fn;vm.runInNewContext(source,{router:{get(_,f){fn=f}},prisma:db,readOwnerShiftDetail:(companyId,sessionId)=>readOwnerShiftDetail(companyId,sessionId,{db}),ensureSchema:async()=>{},normalizeShift:r=>r,normalizeTx:r=>({...r,amount:n(r.amount)}),n});return fn}
+function handler(db){let fn;vm.runInNewContext(source,{router:{get(_,f){fn=f}},prisma:db,readOwnerShiftDetail:(companyId,sessionId)=>readOwnerShiftDetail(companyId,sessionId,{db}),ensureSchema:async()=>{},canEnterClosingCount:()=>false,normalizeShift:r=>r,normalizeTx:r=>({...r,amount:n(r.amount)}),n});return fn}
 async function read(db,sessionId='online',companyId='C'){let body,status,error;await handler(db)({params:{sessionId},user:{companyId}},{status(v){status=v;return this},json(v){body=v}},e=>error=e);if(error)throw error;return{body,status}}
 test('historical detail rejects an absent or foreign session before aggregate reads',async()=>{let reads=0;const result=await read({$queryRaw:async()=>{reads++;return[]}},'foreign');assert.equal(result.status,404);assert.equal(reads,1)});
 test('native actual historical detail isolates overlapping shifts and counts mixed sale once',{skip:!isolated()},async()=>{

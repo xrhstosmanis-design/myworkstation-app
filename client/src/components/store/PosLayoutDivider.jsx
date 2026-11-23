@@ -6,7 +6,7 @@ export default function PosLayoutDivider({storeId, type, label}) {
   const storageKey = `mws-pos-width:${storeId}:${type}`;
   const property = `--pos-${type}-width`;
   const isRail = type === "categories";
-  const min = isRail ? 64 : 30;
+  const min = isRail ? 64 : 15;
   const max = isRail ? 230 : 60;
 
   useLayoutEffect(() => {
@@ -42,10 +42,14 @@ export default function PosLayoutDivider({storeId, type, label}) {
       tabIndex={0}
       onPointerDown={event => {
         if (event.button !== 0 || drag.current) return;
+        const parent = event.currentTarget.parentElement;
+        const scale = parent.getBoundingClientRect().width / parent.offsetWidth || 1;
+        const panel = event.currentTarget.previousElementSibling;
         drag.current = {
           id: event.pointerId,
           x: event.clientX,
-          width: event.currentTarget.previousElementSibling.getBoundingClientRect().width,
+          width: panel.offsetWidth || panel.getBoundingClientRect().width,
+          scale,
         };
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
@@ -54,14 +58,14 @@ export default function PosLayoutDivider({storeId, type, label}) {
         if (start?.id !== event.pointerId) return;
         if (event.clientX === start.x && !start.moved) return;
         start.moved = true;
-        setWidth(event, start.width + event.clientX - start.x);
+        setWidth(event, start.width + (event.clientX - start.x) / start.scale);
       }}
       onLostPointerCapture={() => { drag.current = null; }}
       onKeyDown={event => {
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
         event.stopPropagation();
-        const width = event.currentTarget.previousElementSibling.getBoundingClientRect().width;
+        const width = event.currentTarget.previousElementSibling.offsetWidth;
         setWidth(event, width + (event.key === "ArrowLeft" ? -16 : 16));
       }}
     />

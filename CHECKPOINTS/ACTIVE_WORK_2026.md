@@ -1,3 +1,5 @@
+- 22/11/2026 · POS · Ευκολότερο σύρσιμο κοινών διαχωριστικών · [Checkpoint](CHANGES/2026-11-22-pos-divider-drag.md).
+
 - 22/11/2026 · POS · Χρώμα σε όλη την επιφάνεια του γρήγορου πλήκτρου · [Checkpoint](CHANGES/2026-11-22-pos-full-key-color.md).
 
 - 22/11/2026 · POS · Πλάτος κατηγοριών και γρήγορων πλήκτρων, δεύτερη σελίδα και χρώματα · /root · 22 τοπικοί έλεγχοι, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-22-pos-quick-pages-resize.md).
@@ -18,6 +20,12 @@ Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατ
 - 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
 
 - 22/11/2026 · Νο 5 · Δικαιώματα τιμολογίων και προμηθευτών · [Καταγραφή](CHANGES/2026-11-22-no5-invoice-supplier-rights.md).
+
+- 22/11/2026 · Νο 5 · Διόρθωση δημιουργίας προμηθευτή από τιμολόγιο · [Καταγραφή](CHANGES/2026-11-22-no5-supplier-correction-fix.md).
+
+- 23/11/2026 · Νο 5 · Νέος προμηθευτής στο ίδιο τιμολόγιο · [Καταγραφή](CHANGES/2026-11-23-no5-supplier-same-screen.md).
+
+- 22/11/2026 · Νο 5 · Διοικητικό κλείσιμο χωρίς καταμέτρηση · Εκκρεμής και μεταγενέστερη καταμέτρηση, αναφορές Ιδιοκτήτη και χειριστών · 138 στοχευμένοι έλεγχοι με PostgreSQL · [Έλεγχοι](CHANGES/2026-11-22-no5-uncounted-close.md).
 
 ## 21/11/2026,20:18Ελλάδας — No02 — recovery source4048 TECHNICAL LIVE / SCOPE GAPS OPEN
 

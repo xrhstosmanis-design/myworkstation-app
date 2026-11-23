@@ -85,7 +85,7 @@ export default function AiCommandCenter({onOpenAssistant,onOpenTwinDestination,n
   },[companies]);
   const problemSummary=useMemo(()=>{
     const cashTotals=problems.cash?.totals||{};
-    const cashIssues=(Number(cashTotals.shortage||0)>.009?1:0)+(Math.abs(Number(cashTotals.cardVariance||0))>.009?1:0)+Number(cashTotals.expensesWithoutDocument||0)+Number(cashTotals.duplicateCandidates||0);
+    const cashIssues=Number(cashTotals.awaitingCount||0)+(Number(cashTotals.shortage||0)>.009?1:0)+(Math.abs(Number(cashTotals.cardVariance||0))>.009?1:0)+Number(cashTotals.expensesWithoutDocument||0)+Number(cashTotals.duplicateCandidates||0);
     const paymentItems=problems.payments?.items||[];
     const bankItems=problems.bank?.items||[];
     return{cashIssues,payments:paymentItems.length,paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bank:bankItems.length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,total:cashIssues+paymentItems.length+bankItems.length};
@@ -98,7 +98,7 @@ export default function AiCommandCenter({onOpenAssistant,onOpenTwinDestination,n
     return companies.flatMap(company=>(company.stores||[]).map(store=>{
       const cash=cashByStore.get(store.id),payments=paymentsByStore.get(store.id)||[],bank=bankByStore.get(store.id)||[];
       const cashDanger=(Number(cash?.shortage||0)>.009?1:0)+(Math.abs(Number(cash?.cardVariance||0))>.009?1:0);
-      const cashReview=Number(cash?.expensesWithoutDocument||0)+Number(cash?.duplicateCandidates||0);
+      const cashReview=Number(cash?.awaitingCount||0)+Number(cash?.expensesWithoutDocument||0)+Number(cash?.duplicateCandidates||0);
       const discrepancies=payments.filter(item=>item.status==="DISCREPANCY").length+bank.filter(item=>item.status==="DISCREPANCY").length;
       const pending=payments.length+bank.length-discrepancies;
       const inactive=!company.active||store.active===false,missingCash=!cash;
@@ -152,6 +152,7 @@ export default function AiCommandCenter({onOpenAssistant,onOpenTwinDestination,n
     const add=(id,state,title,context,detail,open)=>items.push({id,state,title,context,detail,open});
     for(const store of cashStores){
       const name=store.storeName||"Κατάστημα";
+      if(store.awaitingCount>0)add(`awaiting-count:${store.storeId}`,"warn",name,"Εκκρεμεί φυσική καταμέτρηση",`Βάρδιες σε αναμονή καταμέτρησης: ${store.awaitingCount}.`,onOpenCash);
       if(Number(store.shortage||0)>.009)add(`cash-shortage:${store.storeId}`,"danger",name,"Έλλειμμα μετρητών",`${commandMoney(store.shortage)} € λιγότερα από το αναμενόμενο κλείσιμο. Χρειάζεται έλεγχος της υπάρχουσας βάρδιας και των κινήσεων.`,onOpenCash);
       if(Number(store.surplus||0)>.009)add(`cash-surplus:${store.storeId}`,"warn",name,"Πλεόνασμα μετρητών",`${commandMoney(store.surplus)} € περισσότερα από το αναμενόμενο κλείσιμο. Δεν γίνεται αυτόματος συμψηφισμός.`,onOpenCash);
       if(Math.abs(Number(store.cardVariance||0))>.009)add(`card:${store.storeId}`,"danger",name,"Διαφορά POS–EFTPOS",`${commandMoney(Math.abs(Number(store.cardVariance)))} € μεταξύ καταγεγραμμένων καρτών και EFTPOS.`,onOpenCash);
@@ -161,7 +162,7 @@ export default function AiCommandCenter({onOpenAssistant,onOpenTwinDestination,n
     for(const item of paymentItems.filter(row=>row.status==="DISCREPANCY")){const reasons=item.automaticCheck?.checks||item.checks||[];add(`payment:${item.id}`,"danger",item.supplierName||item.storeName||"Πληρωμή προμηθευτή","Καταγεγραμμένη απόκλιση πληρωμής",reasons.join(" · ")||`Η υπάρχουσα πληρωμή ${commandMoney(item.amount)} € χρειάζεται έλεγχο μαζί με το παραστατικό της.`,onOpenPayments)}
     for(const item of bankItems.filter(row=>row.status==="DISCREPANCY")){const reasons=item.automaticCheck?.checks||item.checks||[];add(`bank:${item.id}`,"danger",item.storeName||item.bankName||"Τραπεζική κίνηση","Καταγεγραμμένη τραπεζική απόκλιση",reasons.join(" · ")||`Η υπάρχουσα τραπεζική κίνηση ${commandMoney(item.amount)} € χρειάζεται έλεγχο.`,onOpenBank)}
     const weight={danger:0,warn:1};items.sort((a,b)=>weight[a.state]-weight[b.state]||a.title.localeCompare(b.title,"el"));
-    return{shortage:Number(totals.shortage||0),surplus:Number(totals.surplus||0),cardVariance:Number(totals.cardVariance||0),withoutEvidence:Number(totals.expensesWithoutDocument||0),duplicates:Number(totals.duplicateCandidates||0),paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,items:items.slice(0,5)};
+    return{shortage:totals.shortage===null?null:Number(totals.shortage||0),surplus:totals.surplus===null?null:Number(totals.surplus||0),cardVariance:totals.cardVariance===null?null:Number(totals.cardVariance||0),withoutEvidence:Number(totals.expensesWithoutDocument||0),duplicates:Number(totals.duplicateCandidates||0),paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,items:items.slice(0,5)};
   },[onOpenBank,onOpenCash,onOpenPayments,problems]);
   const stockIntel=useMemo(()=>{
     const stores=companies.flatMap(company=>(company.stores||[]).map(store=>({company,store,summary:store.stockSummary||{}}))),items=[];
@@ -360,7 +361,7 @@ export default function AiCommandCenter({onOpenAssistant,onOpenTwinDestination,n
 
       <section className="ai-command-cash-intel">
         <div className="ai-command-panel-title"><div><small>AI ΤΑΜΕΙΩΝ &amp; ΠΛΗΡΩΜΩΝ · ΦΑΣΗ 7</small><h2>{problems.loading?"Ανάλυση αποκλίσεων…":cashPaymentIntel.items.length?`${cashPaymentIntel.items.length} οικονομικά σημεία εξηγούνται`:`Δεν υπάρχει καταγεγραμμένη οικονομική απόκλιση`}</h2><p>Εξήγηση από τους υπάρχοντες ελέγχους Ταμείων, Πληρωμών και Τράπεζας· χωρίς αυτόματη απόφαση ή μεταβολή.</p></div><WalletCards/></div>
-        <div className="ai-cash-metrics"><span><small>Έλλειμμα μετρητών</small><b>{commandMoney(cashPaymentIntel.shortage)} €</b></span><span><small>Πλεόνασμα</small><b>{commandMoney(cashPaymentIntel.surplus)} €</b></span><span><small>Διαφορά POS–EFTPOS</small><b>{commandMoney(cashPaymentIntel.cardVariance)} €</b></span><span><small>Χωρίς αποδεικτικό</small><b>{cashPaymentIntel.withoutEvidence}</b></span><span><small>Πιθανά διπλά</small><b>{cashPaymentIntel.duplicates}</b></span><span><small>Αποκλίσεις πληρωμών / τράπεζας</small><b>{cashPaymentIntel.paymentDiscrepancies+cashPaymentIntel.bankDiscrepancies}</b></span></div>
+        <div className="ai-cash-metrics"><span><small>Έλλειμμα μετρητών</small><b>{cashPaymentIntel.shortage===null?"—":`${commandMoney(cashPaymentIntel.shortage)} €`}</b></span><span><small>Πλεόνασμα</small><b>{cashPaymentIntel.surplus===null?"—":`${commandMoney(cashPaymentIntel.surplus)} €`}</b></span><span><small>Διαφορά POS–EFTPOS</small><b>{cashPaymentIntel.cardVariance===null?"—":`${commandMoney(cashPaymentIntel.cardVariance)} €`}</b></span><span><small>Χωρίς αποδεικτικό</small><b>{cashPaymentIntel.withoutEvidence}</b></span><span><small>Πιθανά διπλά</small><b>{cashPaymentIntel.duplicates}</b></span><span><small>Αποκλίσεις πληρωμών / τράπεζας</small><b>{cashPaymentIntel.paymentDiscrepancies+cashPaymentIntel.bankDiscrepancies}</b></span></div>
         {!problems.loading&&!problems.error&&(cashPaymentIntel.items.length?<div className="ai-cash-list">{cashPaymentIntel.items.map(item=><button type="button" key={item.id} onClick={item.open}><span className={`ai-state-dot ${item.state}`}/><div><b>{item.title} · {item.context}</b><small>{item.detail}</small></div><strong className={item.state}>{item.state==="danger"?"ΠΡΟΒΛΗΜΑ":"ΕΛΕΓΧΟΣ"}</strong><ChevronRight/></button>)}</div>:<div className="ai-daily-clear"><CheckCircle2/><div><b>Οι διαθέσιμοι έλεγχοι συμφωνούν</b><span>Δεν βρέθηκε απόκλιση στα σημερινά κλεισίματα ή στις ανοικτές πληρωμές και τραπεζικές κινήσεις.</span></div></div>)}
         <div className="ai-cash-open"><button type="button" onClick={onOpenCash}><WalletCards/>Άνοιγμα Ταμείων<ChevronRight/></button><button type="button" onClick={onOpenPayments}><ReceiptText/>Άνοιγμα Πληρωμών<ChevronRight/></button><button type="button" onClick={onOpenBank}><Landmark/>Άνοιγμα Τράπεζας<ChevronRight/></button></div>
         <small className="ai-daily-source">Μόνο ανάγνωση: δεν εγκρίνεται, δεν διορθώνεται, δεν συμψηφίζεται και δεν δημιουργείται πληρωμή ή χρέωση από εδώ.</small>

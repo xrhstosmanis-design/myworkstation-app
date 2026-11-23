@@ -40,8 +40,8 @@ const tableStatements = [
     "openingCoins" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingSafe" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
-    "expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
-    "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "expectedOpeningOperational" NUMERIC(14,2) DEFAULT 0,
+    "openingVariance" NUMERIC(14,2) DEFAULT 0,
     "openingNote" TEXT,
     "closedBy" TEXT,
     "closedByName" TEXT,
@@ -61,14 +61,18 @@ const tableStatements = [
     "variance" NUMERIC(14,2),
     "nextOpeningTotal" NUMERIC(14,2),
     "closingNote" TEXT,
+    "closeReconciliationStatus" TEXT,
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
-  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0`,
-  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "expectedOpeningOperational" NUMERIC(14,2) DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openingVariance" NUMERIC(14,2) DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ALTER COLUMN "expectedOpeningOperational" DROP NOT NULL, ALTER COLUMN "openingVariance" DROP NOT NULL`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closeReconciliationStatus" TEXT`,
+  `ALTER TABLE "CashShiftSession" ALTER COLUMN "eftposTotal" DROP NOT NULL, ALTER COLUMN "cardVariance" DROP NOT NULL`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "terminalPos" TEXT NOT NULL DEFAULT 'MAIN'`,
   `DROP INDEX IF EXISTS "CashShiftSession_one_open_per_store_idx"`,
@@ -297,6 +301,27 @@ router.post("/stores/:storeId/attendance-pin/submit",route(async(req,res)=>{
   res.status(201).json({ok:true,...result});
 }));
 
+export function shiftOpeningContinuity(previous,input,declared){
+  const actual=declared.drawer+declared.custody+declared.coins;
+  if(previous?.closeReconciliationStatus==="AWAITING_COUNT"){
+    const missingCount=["drawer","custody","coins","safe"].some(key=>
+      typeof input?.[key]!=="number"&&(typeof input?.[key]!=="string"||!input[key].trim()));
+    return {missingCount,expectedOpening:null,openingVariance:null,previousSafe:null,safeDelta:null};
+  }
+  const expectedOpening=previous?money(previous.nextOpeningTotal):actual;
+  const previousSafe=previous?money(previous.closingSafe):declared.safe;
+  return {missingCount:false,expectedOpening,openingVariance:actual-expectedOpening,previousSafe,
+    safeDelta:Number((declared.safe-previousSafe).toFixed(2))};
+}
+
+export function suggestedShiftOpening(previous){
+  if(previous?.closeReconciliationStatus==="AWAITING_COUNT"){
+    return {drawer:null,custody:null,coins:null,safe:null,operational:null,awaitingPreviousCount:true};
+  }
+  return {drawer:Number(previous?.closingDrawer||0),custody:Number(previous?.closingCustody||0),
+    coins:Number(previous?.closingCoins||0),safe:Number(previous?.closingSafe||0),operational:Number(previous?.nextOpeningTotal||0)};
+}
+
 router.get("/stores/:storeId/shift-status",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
@@ -304,9 +329,8 @@ router.get("/stores/:storeId/shift-status",route(async(req,res)=>{
   const open=rows[0];
   const result={store:{id:store.id,name:store.name},openSession:open?{id:open.id,status:open.status,openedAt:open.openedAt}:null};
   if(req.user.tokenType!=="STORE_OPERATOR"||(req.user.permissions||[]).includes("INITIAL_CASH")){
-    const closed=await prisma.$queryRaw`SELECT "closingDrawer","closingCustody","closingCoins","closingSafe","nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
-    const last=closed[0];
-    result.suggestedOpening={drawer:Number(last?.closingDrawer||0),custody:Number(last?.closingCustody||0),coins:Number(last?.closingCoins||0),safe:Number(last?.closingSafe||0),operational:Number(last?.nextOpeningTotal||0)};
+    const closed=await prisma.$queryRaw`SELECT s."closingDrawer",s."closingCustody",s."closingCoins",s."closingSafe",s."nextOpeningTotal",to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus" FROM "CashShiftSession" s WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
+    result.suggestedOpening=suggestedShiftOpening(closed[0]);
   }
   res.json(result);
 }));
@@ -329,7 +353,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     return res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession,recent:recentRows.map(normalize)});
   }
   const pendingInvoices=openSession&&(req.user.tokenType!=="STORE_OPERATOR"||openSession.openedBy===req.user.id)?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
-  const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
+  const counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:suggestedShiftOpening(lastClosedRows[0])});
 }));
 
 router.get("/stores/:storeId/close-context",route(async(req,res)=>{
@@ -392,6 +416,37 @@ router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
   res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent,openSessions:recent.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
 }));
 
+export function periodCashTotals(sessions,rule){
+  const totals={
+    cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,cardVariance:0,
+    shortage:0,surplus:0,duplicateCandidates:0,awaitingCount:0
+  };
+  for(const row of sessions){
+    totals.cashSales+=money(row.cashSales);
+    totals.cardSales+=money(row.cardSales);
+    totals.expenses+=money(row.expenses);
+    totals.duplicateCandidates+=(row.duplicateReview||[]).length;
+    if(row.closeReconciliationStatus==="AWAITING_COUNT"){
+      totals.awaitingCount++;
+      continue;
+    }
+    const variance=money(row.effectiveVariance);
+    totals.eftposTotal+=money(row.eftposTotal);
+    totals.variance+=variance;
+    totals.cardVariance+=rule.posEftposEnabled?money(row.cardVariance):0;
+    totals.shortage+=Math.max(0,-variance);
+    totals.surplus+=Math.max(0,variance);
+  }
+  if(totals.awaitingCount){
+    for(const key of ["eftposTotal","variance","cardVariance","shortage","surplus"])totals[key]=null;
+  }
+  if(sessions.some(row=>row.closeReconciliationStatus==="COUNTED"&&row.eftposTotal==null)){
+    totals.eftposTotal=null;
+    totals.cardVariance=null;
+  }
+  return totals;
+}
+
 export async function readCashDailySummary(req,{db=prisma,prepareSource=null}={}){
   const prisma=db;
   assertStoreAccess(req,req.params.storeId);
@@ -423,10 +478,11 @@ export async function readCashDailySummary(req,{db=prisma,prepareSource=null}={}
     prisma.$queryRaw`SELECT f."saleId" FROM "FiscalDocument" f JOIN "Sale" s ON s."id"=f."saleId" WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND (s."occurredAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date`,
     prisma.$queryRaw`SELECT "actionType","details","createdAt" FROM "PosSaleActionAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND ("createdAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date ORDER BY "createdAt","id"`
   ]);
-  const sessions=sessionRows.map(row=>{const session=normalize(row),delivery=String(session.terminalPos||"").toUpperCase().includes(String(rule.deliveryTerminalPattern||"DELIVERY").toUpperCase());return {...session,delivery,varianceConsidered:rule.mode!=="POS_EFTPOS_ONLY",effectiveVariance:rule.mode==="POS_EFTPOS_ONLY"?0:money(session.variance)}});
+  const sessions=sessionRows.map(row=>{const session=normalize(row),delivery=String(session.terminalPos||"").toUpperCase().includes(String(rule.deliveryTerminalPattern||"DELIVERY").toUpperCase());return {...session,delivery,varianceConsidered:rule.mode!=="POS_EFTPOS_ONLY",effectiveVariance:session.closeReconciliationStatus==="AWAITING_COUNT"?null:rule.mode==="POS_EFTPOS_ONLY"?0:money(session.variance)}});
   const expenseChecks=await readCashExpenseEvidence(prisma,{companyId:req.user.companyId,storeId:store.id},expenseRows);
-  const totals=sessions.reduce((sum,row)=>{const variance=money(row.effectiveVariance),cardVariance=rule.posEftposEnabled?money(row.cardVariance):0;sum.cashSales+=money(row.cashSales);sum.cardSales+=money(row.cardSales);sum.eftposTotal+=money(row.eftposTotal);sum.expenses+=money(row.expenses);sum.variance+=variance;sum.cardVariance+=cardVariance;sum.shortage+=variance<0?Math.abs(variance):0;sum.surplus+=variance>0?variance:0;sum.duplicateCandidates+=(row.duplicateReview||[]).length;return sum},{cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,cardVariance:0,shortage:0,surplus:0,duplicateCandidates:0});
+  const totals=periodCashTotals(sessions,rule);
   const alerts=[];
+  for(const row of sessions)if(row.closeReconciliationStatus==="AWAITING_COUNT")alerts.push({type:"SHIFT_AWAITING_COUNT",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel});
   for(const row of sessions){if(rule.carryOverEnabled&&Math.abs(money(row.openingVariance))>0.009)alerts.push({type:"OPENING_CONTINUITY",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.openingVariance),scope:row.delivery?"DELIVERY_TO_DELIVERY":"SAME_POS_ONLY"});if(row.varianceConsidered&&Math.abs(money(row.variance))>0.009)alerts.push({type:money(row.variance)<0?"SHORTAGE":"SURPLUS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.variance)});if(rule.posEftposEnabled&&Math.abs(money(row.cardVariance))>0.009)alerts.push({type:"POS_EFTPOS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.cardVariance)});if((row.duplicateReview||[]).length)alerts.push({type:"DUPLICATE_REVIEW",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,count:row.duplicateReview.length})}
   for(const expense of expenseChecks){if(!["MATCHED","PARTIALLY_PAID","REVERSED"].includes(expense.status))alerts.push({type:expense.status,transactionId:expense.id,sessionId:expense.sessionId,amount:expense.amount,difference:expense.difference})}
   const reconciliation=buildKatShiftReconciliation({sessions,auditEvents:auditRows,paymentAttempts:attemptRows,fiscalDocuments:fiscalRows,actionEvents:actionRows});
@@ -439,6 +495,9 @@ export async function readCashSessionInvestigation(req,{db=prisma}={}){
   const prisma=db;
   const found=await prisma.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
   const session=normalize(found[0]);if(!session)throw Object.assign(new Error("Δεν βρέθηκε η βάρδια."),{status:404});assertStoreAccess(req,session.storeId);const store=await ownedStore(session.storeId,req.user.companyId,db),controlRule=await cashControlRule(store,req.user.companyId,db),varianceConsidered=controlRule.mode!=="DIFFERENCE_ONLY";
+  const awaitingCount=session.closeReconciliationStatus==="AWAITING_COUNT";
+  const initialVariance=awaitingCount?null:session.variance;
+  const cardVariance=awaitingCount?null:session.cardVariance;
   const transactions=await prisma.$queryRaw`SELECT "id","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",("attachmentData" IS NOT NULL) AS "hasAttachment",CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN "attachmentFilename" ELSE NULL END AS "purchaseDocumentId" FROM "StoreTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "occurredAt"`;
   const tables=await existingAuditTables(prisma),auditEvents=[],auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
   if(tables.operator){const rows=await prisma.$queryRaw`SELECT "id","eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`;for(const row of rows)if(suspiciousOperatorEvent(row.eventType))auditEvents.push({source:"STORE_OPERATOR_AUDIT",type:row.eventType,actorId:row.actorId,operatorId:row.operatorId,at:row.createdAt,details:row.details||{},amount:auditAmount(row.details)})}
@@ -448,44 +507,46 @@ export async function readCashSessionInvestigation(req,{db=prisma}={}){
   auditEvents.splice(0,auditEvents.length,...association.linked);
   const unassignedAuditEvents=association.unassigned;
   const findings=[];
+  if(awaitingCount)findings.push({code:"SHIFT_AWAITING_COUNT",severity:"MEDIUM"});
   if(unassignedAuditEvents.length)findings.push({code:"AUDIT_ASSOCIATION_UNRESOLVED",severity:"MEDIUM",count:unassignedAuditEvents.length});
   const expenseChecks=await readCashExpenseEvidence(prisma,{companyId:req.user.companyId,storeId:session.storeId},transactions);
   findings.push(...cashExpenseFindings(expenseChecks));
   for(const row of transactions){if(row.reversedAt)findings.push({code:"REVERSED_TRANSACTION",severity:"MEDIUM",transactionId:row.id,amount:money(row.amount),actorName:row.reversedByName||row.actorName,at:row.reversedAt,reason:row.reversalReason})}
   for(const event of auditEvents){const high=/CANCEL|RETURN|VOID|DUPLICATE_CONFIRMED|OVERRIDE/i.test(event.type);findings.push({code:`AUDIT_${event.type}`,severity:high?"HIGH":"MEDIUM",...event})}
   const actionEvents=auditEvents.filter(event=>event.source==="POS_ACTION_AUDIT"),actionsByOriginal=new Map();
-  for(const event of actionEvents){if(session.closedAt&&new Date(event.at)>new Date(session.closedAt))findings.push({code:"ACTION_AFTER_SHIFT_CLOSE",severity:"HIGH",...event});if(/RETURN|CANCEL|VOID/i.test(event.type)&&!event.relatedSaleId)findings.push({code:"ACTION_WITHOUT_ORIGINAL_SALE",severity:"HIGH",...event});if(event.relatedSaleId){const related=actionsByOriginal.get(event.relatedSaleId)||[];related.push(event);actionsByOriginal.set(event.relatedSaleId,related)}if(event.actorId&&event.actorId!==session.openedBy&&event.actorId!==session.closedBy)findings.push({code:"ACTION_BY_DIFFERENT_OPERATOR",severity:"MEDIUM",...event});if(event.amount!=null&&Math.abs(Math.abs(Number(event.amount))-Math.abs(money(session.variance)))<=0.01)findings.push({code:"AMOUNT_MATCHES_CASH_DIFFERENCE",severity:"HIGH",...event})}
+  for(const event of actionEvents){if(session.closedAt&&new Date(event.at)>new Date(session.closedAt))findings.push({code:"ACTION_AFTER_SHIFT_CLOSE",severity:"HIGH",...event});if(/RETURN|CANCEL|VOID/i.test(event.type)&&!event.relatedSaleId)findings.push({code:"ACTION_WITHOUT_ORIGINAL_SALE",severity:"HIGH",...event});if(event.relatedSaleId){const related=actionsByOriginal.get(event.relatedSaleId)||[];related.push(event);actionsByOriginal.set(event.relatedSaleId,related)}if(event.actorId&&event.actorId!==session.openedBy&&event.actorId!==session.closedBy)findings.push({code:"ACTION_BY_DIFFERENT_OPERATOR",severity:"MEDIUM",...event});if(event.amount!=null&&initialVariance!=null&&Math.abs(Math.abs(Number(event.amount))-Math.abs(initialVariance))<=0.01)findings.push({code:"AMOUNT_MATCHES_CASH_DIFFERENCE",severity:"HIGH",...event})}
   for(const [relatedSaleId,events] of actionsByOriginal)if(events.length>1)findings.push({code:"MULTIPLE_ACTIONS_ON_SAME_SALE",severity:"HIGH",relatedSaleId,count:events.length,events});
   const amounts=new Map();for(const event of auditEvents){if(event.amount==null)continue;const key=Math.abs(Number(event.amount)).toFixed(2),same=amounts.get(key)||[];same.push(event);amounts.set(key,same)}for(const [amount,events] of amounts)if(events.length>1)findings.push({code:"REPEATED_AUDIT_AMOUNT",severity:"MEDIUM",amount:Number(amount),count:events.length,events});
-  if(Math.abs(money(session.cardVariance))>0.009)findings.unshift({code:"POS_EFTPOS_DIFFERENCE",severity:"HIGH",amount:money(session.cardVariance)});
-  if(varianceConsidered&&Math.abs(money(session.variance))>0.009)findings.unshift({code:money(session.variance)<0?"CASH_SHORTAGE":"CASH_SURPLUS",severity:"HIGH",amount:money(session.variance)});
+  if(cardVariance!=null&&Math.abs(cardVariance)>0.009)findings.unshift({code:"POS_EFTPOS_DIFFERENCE",severity:"HIGH",amount:cardVariance});
+  if(varianceConsidered&&initialVariance!=null&&Math.abs(initialVariance)>0.009)findings.unshift({code:initialVariance<0?"CASH_SHORTAGE":"CASH_SURPLUS",severity:"HIGH",amount:initialVariance});
   const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id,db),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt","id"`;
-  const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,snapshotRecheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
-  const explanationBalance=confirmedExplanationBalance(session.variance,confirmedExplanations,{enabled:varianceConsidered});
-  const reviewBalance=snapshotRecheckRequired?{...explanationBalance,status:"RECHECK_REQUIRED",reason:"STALE_REVIEW",unexplainedVariance:null}:explanationBalance;
+  const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,snapshotRecheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=awaitingCount?[]:reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
+  const explanationBalance=confirmedExplanationBalance(initialVariance,confirmedExplanations,{enabled:varianceConsidered});
+  const reviewBalance=awaitingCount?{initialVariance:null,explainedAmount:null,unexplainedVariance:null,status:"RECHECK_REQUIRED",reason:"SHIFT_AWAITING_COUNT"}:snapshotRecheckRequired?{...explanationBalance,status:"RECHECK_REQUIRED",reason:"STALE_REVIEW",unexplainedVariance:null}:explanationBalance;
   const recheckRequired=snapshotRecheckRequired||reviewBalance.status==="RECHECK_REQUIRED";
   const unexplainedVariance=reviewBalance.unexplainedVariance;
   const finalizedShortage=validReviews.some(row=>row.decision==="CONFIRMED_SHORTAGE");
   // Chat discovery is limited to the existing authenticated Owner review, after
   // company/store authorization. Operators receive no additional chat metadata.
   let chatAllowed=false;
-  if(req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"&&req.license?.licenseAllowed){
+  if(!awaitingCount&&req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"&&req.license?.licenseAllowed){
     try{
       const chatModules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${session.storeId} AND "moduleKey"='STORE_CHAT' LIMIT 1`;
       chatAllowed=effectiveModuleEnabled(Boolean(req.license.activeModules?.includes("STORE_CHAT")),chatModules[0]?{...chatModules[0],configured:true}:{configured:false});
     }catch{/* Missing entitlement evidence never authorizes reading chat. */}
   }
-  const reviewEvidence=req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"
+  const reviewEvidence=!awaitingCount&&req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"
     ?await readCashReviewEvidence(prisma,{...session,sessionId:session.id,auditRule:controlRule},{includeChat:chatAllowed}):null;
-  return ({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
+  return ({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance,cardVariance,expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:awaitingCount?"AWAITING_COUNT":recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
 }
 
 router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{res.json(await readCashSessionInvestigation(req))}));
 
 router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Μόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να οριστικοποιήσει τον έλεγχο."});
-  const body=reviewSchema.parse(req.body||{}),found=await prisma.$queryRaw`SELECT s."id",s."storeId",s."variance",s."status" FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
+  const body=reviewSchema.parse(req.body||{}),found=await prisma.$queryRaw`SELECT s."id",s."storeId",s."variance",s."status",to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus" FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} LIMIT 1`;
   const session=found[0];if(!session)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια."});if(session.status!=="CLOSED")return res.status(409).json({error:"Ο έλεγχος οριστικοποιείται μόνο σε κλεισμένη βάρδια."});
+  if(session.closeReconciliationStatus==="AWAITING_COUNT")return res.status(409).json({error:"Εκκρεμεί η πραγματική καταμέτρηση της βάρδιας."});
   if(body.decision==="CONFIRMED_SHORTAGE"&&money(session.variance)>=-0.009)return res.status(409).json({error:"Η βάρδια δεν έχει έλλειμμα για οριστικοποίηση."});
   const id=crypto.randomUUID(),actorName=req.user.fullName||req.user.email||"Διαχειριστής",snapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id);
   const rows=await prisma.$queryRaw`INSERT INTO "CashControlReview" ("id","companyId","storeId","sessionId","decision","amount","note","actorId","actorName","snapshotJson") VALUES (${id},${req.user.companyId},${session.storeId},${session.id},${body.decision},${body.amount},${body.note},${req.user.id},${actorName},${JSON.stringify(snapshot)}::jsonb) RETURNING *`;
@@ -502,14 +563,14 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});
   // KAT_SAFE_VAULT_ADJUSTMENT_ALERT_V2
   const operational=body.drawer+body.custody+body.coins; // ΧΡΗΜΑΤΟΚΙΒΩΤΙΟ ΔΕΝ ΜΕΤΡΑΕΙ ΣΤΟ ΛΕΙΤΟΥΡΓΙΚΟ ΤΑΜΕΙΟ
-  const lastClosedRows=await prisma.$queryRaw`SELECT "nextOpeningTotal","closingSafe" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
-  const previousSafe=lastClosedRows[0]?money(lastClosedRows[0].closingSafe):body.safe;
-  const safeDelta=Number((body.safe-previousSafe).toFixed(2));
+  const lastClosedRows=await prisma.$queryRaw`SELECT s."nextOpeningTotal",s."closingSafe",to_jsonb(s)->>'closeReconciliationStatus' AS "closeReconciliationStatus" FROM "CashShiftSession" s WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
+  const {missingCount,previousSafe,safeDelta,expectedOpening,openingVariance}=shiftOpeningContinuity(lastClosedRows[0],req.body,body);
+  if(missingCount)return res.status(400).json({error:"Καταχώρισε τη νέα καταμέτρηση για συρτάρι, φύλαξη, κέρματα και χρηματοκιβώτιο.",code:"OPENING_COUNT_REQUIRED"});
   const safeReason=String(body.safeReason||body.note||"").trim();
-  if(safeDelta < -0.009 && !safeReason){
+  if(safeDelta!==null&&safeDelta < -0.009 && !safeReason){
     return res.status(409).json({error:`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν ανοίξει η βάρδια.`,code:"SAFE_DECREASE_REASON_REQUIRED",previousSafe,newSafe:body.safe,delta:safeDelta});
   }
-  const expectedOpening=lastClosedRows[0]?money(lastClosedRows[0].nextOpeningTotal):operational,openingVariance=operational-expectedOpening,actorName=req.user.fullName||"Χρήστης";
+  const actorName=req.user.fullName||"Χρήστης";
   const sessionId=crypto.randomUUID();
   const insertSession=db=>db.$queryRaw`
     INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
@@ -532,7 +593,7 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   if(!rows)return res.status(403).json({error:"Η πρόσβαση POS του χειριστή δεν είναι πλέον ενεργή.",code:"STORE_OPERATOR_POS_ACCESS_DISABLED"});
 
   let safeChange=null;
-  if(Math.abs(safeDelta)>0.009){
+  if(safeDelta!==null&&Math.abs(safeDelta)>0.009){
     const description=[`Χρηματοκιβώτιο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");
     await prisma.$executeRaw`
       INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt")
@@ -584,7 +645,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
       if(!body.forceCloseWithShortage)return {recountRequired:true,sessionId:session.id,storeId:session.storeId,expectedOperational:expected,actualOperational:actual,variance,shortage};
     }
     const duplicateReview=Math.abs(cardVariance)>0.009?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date()):[],duplicateReviewJson=JSON.stringify(duplicateReview);
-    if(Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
+    if(safeDelta!==null&&Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
     const rows=await tx.$queryRaw`
       UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
         "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
