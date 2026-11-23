@@ -1,7 +1,10 @@
+import {randomUUID} from "node:crypto";
 import {Router} from "express";
 import {z} from "zod";
 import {createNetlinkConnectionStore,connectionScope} from "../integrations/netlink/store-connection.js";
 import {NetlinkClient} from "../integrations/netlink/client.js";
+
+import {netlinkConnectionFailure} from "../integrations/netlink/connection-diagnostics.js";
 
 const credentialsSchema=z.object({username:z.string().trim().min(1).max(300),password:z.string().min(1).max(2000),stationId:z.string().trim().min(1).max(160),enabled:z.boolean().default(false)}).strict();
 
@@ -32,8 +35,12 @@ export function createPlatformNetlinkConnectionsRouter(db,{provider=config=>new 
   router.post(`${path}/check`,async(req,res,next)=>{try{
     const tenant=await context(req),config=await connections.credentials(tenant,{allowDisabled:true});
     // Only the documented read-only catalogue. Never prepare/execute or invent a report URL.
-    try{await provider(config).menu()}catch{
-      return res.status(502).json({error:"Ο έλεγχος πρόσβασης Netlink απέτυχε. Έλεγξε τα στοιχεία καταστήματος και τις ρυθμίσεις παρόχου.",code:"NETLINK_CONNECTION_CHECK_FAILED"});
+    let stage="CONFIG";
+    try{const client=provider(config);stage="CATALOGUE";await client.menu()}catch(error){
+      const diagnosticId=randomUUID(),failure=netlinkConnectionFailure(error,{stage,diagnosticId});
+      // Never log the raw error, provider body, request, URL, token or credentials.
+      console.warn("[NETLINK_CONNECTION_CHECK_FAILED]",JSON.stringify({...tenant,...failure.diagnostic}));
+      return res.status(502).json(failure);
     }
     res.json({ok:true,storeId:tenant.storeId,stationId:config.stationId,checkedAt:new Date().toISOString(),check:"AUTH_AND_CATALOGUE",storeIdentityVerified:false,message:"Η πρόσβαση στον κατάλογο Netlink επιβεβαιώθηκε. Η ταυτοποίηση καταστήματος εκκρεμεί με αναφορά της Netlink. Δεν εκδόθηκε κάρτα."});
   }catch(error){next(error)}});

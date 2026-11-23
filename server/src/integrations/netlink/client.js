@@ -8,6 +8,7 @@ function required(value,name){
     const error=new Error(`Λείπει η ρύθμιση ${name} για το Netlink connector.`);
     error.status=503;
     error.code="NETLINK_NOT_CONFIGURED";
+    error.setting=name;
     throw error;
   }
   return String(value).trim();
@@ -56,12 +57,12 @@ export class NetlinkClient{
     this.stationId=String(config.stationId||process.env.NETLINK_STATION_ID||"").trim();
     this.accessToken=null;this.refreshToken=null;this.expiresAt=0;
   }
-  async obtainToken(){assertCustomerDemoOutboundAllowed(this.tenant);const payload=new URLSearchParams({grant_type:"password",client_id:this.clientId,client_secret:this.clientSecret,username:this.username,password:this.password});const response=await fetch(this.tokenUrl,{method:"POST",redirect:"error",signal:AbortSignal.timeout(15000),headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});const body=await parseResponse(response);this.setToken(body);return body}
-  async refreshAccessToken(){assertCustomerDemoOutboundAllowed(this.tenant);if(!this.refreshToken)return this.obtainToken();const payload=new URLSearchParams({grant_type:"refresh_token",client_id:this.clientId,client_secret:this.clientSecret,refresh_token:this.refreshToken});const response=await fetch(this.tokenUrl,{method:"POST",redirect:"error",signal:AbortSignal.timeout(15000),headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});if(response.status===400||response.status===401)return this.obtainToken();const body=await parseResponse(response);this.setToken(body);return body}
+  async obtainToken(){try{assertCustomerDemoOutboundAllowed(this.tenant);const payload=new URLSearchParams({grant_type:"password",client_id:this.clientId,client_secret:this.clientSecret,username:this.username,password:this.password});const response=await fetch(this.tokenUrl,{method:"POST",redirect:"error",signal:AbortSignal.timeout(15000),headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});const body=await parseResponse(response);this.setToken(body);return body}catch(error){error.netlinkCheckStage="AUTH";throw error}}
+  async refreshAccessToken(){try{assertCustomerDemoOutboundAllowed(this.tenant);if(!this.refreshToken)return this.obtainToken();const payload=new URLSearchParams({grant_type:"refresh_token",client_id:this.clientId,client_secret:this.clientSecret,refresh_token:this.refreshToken});const response=await fetch(this.tokenUrl,{method:"POST",redirect:"error",signal:AbortSignal.timeout(15000),headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});if(response.status===400||response.status===401)return this.obtainToken();const body=await parseResponse(response);this.setToken(body);return body}catch(error){error.netlinkCheckStage="AUTH";throw error}}
   setToken(body={}){if(typeof body.access_token!=="string"||!body.access_token.trim())throw Object.assign(new Error("Η Netlink δεν επέστρεψε έγκυρο token πρόσβασης."),{status:502,code:"NETLINK_INVALID_TOKEN"});this.accessToken=body.access_token;this.refreshToken=body.refresh_token||this.refreshToken||null;const expiresIn=Math.max(30,Number(body.expires_in||300));this.expiresAt=Date.now()+expiresIn*1000}
   async token(){if(!this.accessToken)return (await this.obtainToken()).access_token;if(Date.now()>=this.expiresAt-30000)return (await this.refreshAccessToken()).access_token;return this.accessToken}
   async request(path,{method="GET",body,requestId}={}){assertCustomerDemoOutboundAllowed(this.tenant);let token=await this.token();const call=()=>fetch(`${this.apiBase}${path}`,{method,...(method==="GET"?{redirect:"error",signal:AbortSignal.timeout(15000)}:{}),headers:{Authorization:`Bearer ${token}`,Accept:"application/json",...(body!==undefined?{"Content-Type":"application/json"}:{}),...(requestId?{"X-Request-Id":requestId}:{}),...(this.stationId?{"X-Station-Id":this.stationId}:{})},body:body!==undefined?JSON.stringify(body):undefined});let response=await call();if(response.status===401){token=(await this.refreshAccessToken()).access_token;response=await call()}return parseResponse(response)}
-  menu(){return this.request("/menu")}
+  async menu(){try{return await this.request("/menu")}catch(error){error.netlinkCheckStage ||= "CATALOGUE";throw error}}
   prepare(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/prepare`,{method:"POST",requestId,body:{...(payload||{})}})}
   execute(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/execute`,{method:"POST",requestId,body:{requestId,payload:payload||{}}})}
 }
