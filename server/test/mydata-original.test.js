@@ -100,6 +100,10 @@ test("only verified provider host and path combinations are allowed for inbound 
     `https://epsilondigital-nbg.epsilonnet.gr/fd/${short}:109`,
     `https://epsilondigitalsmart10.epsilonnet.gr/fd/${short}:227`,
     `https://epsilondigitalsmart9.epsilonnet.gr/fd/${short}:217`,
+    `https://epsilondigital2.epsilonnet.gr/fd/${short}:72`,
+    `https://epsilondigital18.epsilonnet.gr/fd/${short}:172`,
+    `https://epsilondigital-3rdpartd.epsilonnet.gr/fd/${short}:159`,
+    `https://epsilondigital24.epsilonnet.gr/fd/${short}:209`,
     eInvoicing,
     vitality,
   ];
