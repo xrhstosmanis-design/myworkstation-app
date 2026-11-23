@@ -1,3 +1,7 @@
+## 23/11/2026 — Netlink Αχαρνών: ασφαλής διάγνωση αποτυχίας / AWAITING CI AND LIVE CHECK
+
+Retained owner /root, `fix/netlink-connection-diagnostics-20261123`. Existing source4016 merged366ac15; newer23Nov user connection check FAIL, successful Netlink-app login does not establish API access. Safe CONFIG/AUTH/CATALOGUE diagnostics, numeric HTTP/allowlisted missing setting and correlated ID; no secrets or raw provider output.35 local Node20 tests PASS,1 native PG SKIP. No actual API root cause proven, source deploy, credential/enablement/SQL change or card issuance. [Checkpoint](CHANGES/2026-11-23-netlink-connection-diagnostics.md).
+
 - 23/11/2026 · Νο 5 · ΦΠΑ και ταξινόμηση είδους από γραμμή τιμολογίου · [Καταγραφή](CHANGES/2026-11-23-no5-staff-invoice-line-taxonomy.md).
 
 - 22/11/2026 · POS · Ευκολότερο σύρσιμο κοινών διαχωριστικών · [Checkpoint](CHANGES/2026-11-22-pos-divider-drag.md).
