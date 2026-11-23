@@ -968,3 +968,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 23/11/2026 · Νο 5 · Πρόσβαση υπευθύνου στη διόρθωση προμηθευτή · [Καταγραφή](CHANGES/2026-11-23-no5-staff-supplier-correction-admission.md).
 
 - 23/11/2026 · Νο 5 · [Εκχώρηση διοικητικού κλεισίματος](CHANGES/2026-11-23-no5-delegated-administrative-close.md).
+
+- Πανόρμου · Ανάκτηση PDF Epsilon 72, 159, 172 και 209 · [Checkpoint](CHANGES/2026-11-22-panormou-epsilon-72-172.md).
