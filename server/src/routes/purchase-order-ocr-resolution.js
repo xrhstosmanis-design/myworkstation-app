@@ -1,3 +1,4 @@
+import {requireStaffAction} from "../services/backoffice-staff-access.js";
 import {validateInvoiceTaxonomy} from "../lib/invoice-line-taxonomy.js";
 import {lockEditablePurchaseOrder} from "../services/purchase-order-reopen.js";
 import {customerCostMeter,revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
@@ -177,11 +178,15 @@ router.get("/:orderId/catalog-matches",(req,res,next)=>{
 router.get("/:orderId/ocr-lines/:lineId/catalog-matches",createInvoiceCatalogLookup(prisma));
 
 router.get("/:orderId/ocr-lines/:lineId/options",async(req,res,next)=>{try{
+  const delegated=req.user.staffAccess===true;
   const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});
-  if(req.query.storeId&&req.query.storeId!==line.storeId||req.user.tokenType==='STORE_OPERATOR'&&req.user.storeId!==line.storeId)return res.status(404).json({error:"Δεν βρέθηκε στο επιλεγμένο κατάστημα."});
+  if(req.query.storeId&&req.query.storeId!==line.storeId||(delegated||req.user.tokenType==='STORE_OPERATOR')&&req.user.storeId!==line.storeId)return res.status(404).json({error:"Δεν βρέθηκε στο επιλεγμένο κατάστημα."});
+  if(delegated)await requireStaffAction(prisma,req,line.storeId,"invoices.edit");
   const [categories,subcategories,vatDepartments]=await Promise.all([prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`,prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`,prisma.$queryRaw`SELECT "id","description","vatRate" FROM "ManagementVatDepartment" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "description"`]);
   const productId=String(req.query.productId||''),products=productId?await prisma.$queryRaw`SELECT COALESCE(sp."categoryIdOverride",p."categoryId") AS "categoryId",CASE WHEN sp."categoryIdOverride" IS NULL THEN p."subcategoryId" ELSE sp."subcategoryIdOverride" END AS "subcategoryId",COALESCE(sp."vatDepartmentIdOverride",p."vatDepartmentId") AS "vatDepartmentId" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${line.storeId} AND sp."active"=true WHERE p."id"=${productId} AND p."companyId"=${req.user.companyId} AND p."active"=true LIMIT 1`:[];
   if(productId&&!products[0])return res.status(404).json({error:"Το είδος δεν είναι ενεργό στο επιλεγμένο κατάστημα."});
+  if(delegated)await requireStaffAction(prisma,req,line.storeId,"invoices.edit");
+  res.set("Cache-Control","no-store");
   res.json({categories,subcategories,vatDepartments,product:products[0]||null});
 }catch(error){next(error)}});
 

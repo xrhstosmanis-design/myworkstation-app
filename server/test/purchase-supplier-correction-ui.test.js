@@ -130,3 +130,19 @@ test('supplier creation reaches its own handler without opening OCR mutation acc
   await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
  }
 });
+
+test('purchase router admits the delegated correction grant only to preview and save',async()=>{
+ const {default:purchaseOrders}=await import('../src/routes/purchase-orders.js');
+ const gate=purchaseOrders.stack.find(layer=>layer.name==='requireAccess').handle;
+ const decide=(method,path,capability)=>{
+  let status;
+  gate({method,path,user:{role:'EMPLOYEE',staffAccess:true},staffGrant:{capability}},
+   {status(code){status=code;return this},json(){}},()=>{status=200});
+  return status;
+ };
+ assert.equal(decide('GET','/order/supplier-correction-preview','invoices.correct-supplier'),200);
+ assert.equal(decide('POST','/order/supplier-correction','invoices.correct-supplier'),200);
+ assert.equal(decide('POST','/order/lines','invoices.correct-supplier'),403);
+ assert.equal(decide('POST','/order/supplier-correction-preview','invoices.correct-supplier'),403);
+ assert.equal(decide('GET','/order/supplier-correction-preview','invoices.supplier-create'),403);
+});
