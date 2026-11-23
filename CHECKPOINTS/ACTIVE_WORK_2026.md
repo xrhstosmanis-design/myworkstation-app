@@ -972,3 +972,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - Πανόρμου · Ανάκτηση PDF Epsilon 72, 159, 172 και 209 · [Checkpoint](CHANGES/2026-11-22-panormou-epsilon-72-172.md).
 
 - 24/11/2026 · Πανόρμου · Αυτόματη ανάκτηση προχείρων myDATA · [Checkpoint](CHANGES/2026-11-24-panormou-automatic-mydraft.md).
+
+- 24/11/2026 · Νέες εγκαταστάσεις myDATA · Σταθερή ημερομηνία έναρξης από την πρώτη του μήνα της αρχικής ρύθμισης · [Checkpoint](CHANGES/2026-11-24-mydata-new-store-start-month.md).
