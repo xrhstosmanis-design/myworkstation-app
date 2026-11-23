@@ -55,11 +55,11 @@ test('owner shift extraction preserves independent original SQL, approved select
  assert.equal(sha(originalRoute.slice(0,originalA)+originalRoute.slice(originalB)),OUTSIDE_SELECTION_SHA256);
  assert.equal(sha(candidate),APPROVED_SELECTION_SHA256,'the previously approved set-based SQL must remain verbatim');
  assert.notEqual(candidate,ORIGINAL_SELECTION);
- const boundary='router.use(requireOwner);',prefix=route.slice(0,route.indexOf(boundary)+boundary.length);
+ const boundary='\nexport async function readOwnerShiftReport',prefix=route.slice(0,route.indexOf(boundary));
  // The administrative-close contract intentionally changes only the owner route
  // prefix and the dedicated force-close writer. Preserve the original artifact
  // independently and keep all other canonical SQL comparisons intact.
- assert.equal(sha(prefix),'a2d4fed8c28f500b77240113a5d39e8848cca0fd808f526dfb649a4483aa9da6','approved owner auth, schema and normalization prefix');
+ assert.equal(sha(prefix),'1269549989978122f4f5e09440c305e3ee6683d32b7b0b7563641e169d199632','approved owner auth, schema and normalization prefix');
  const writerBoundary='\nrouter.post("/:sessionId/force-close",';
  const sqls=source=>Array.from(source.matchAll(/prisma\.\$(?:queryRaw|executeRaw)`[\s\S]*?`/g),m=>m[0]);
  const outside=route.slice(0,a)+route.slice(b,route.indexOf(writerBoundary)),oldOutside=originalRoute.slice(0,originalA)+originalRoute.slice(originalB,originalRoute.indexOf(writerBoundary));

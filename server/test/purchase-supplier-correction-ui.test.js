@@ -26,6 +26,40 @@ test('mounted supplier correction requires original/reason/payment review, escap
  }finally{f.dom.window.close()}
 });
 
+test('staff selects a newly created issuer and saves on the same invoice screen',async()=>{
+ const dom=new JSDOM('<main></main><section></section>');
+ const document=dom.window.document,calls=[];
+ let refreshes=0;
+ const supplier={id:'new',name:'Issuer',taxId:'099939837'};
+ try{
+  const modal=html=>{const element=document.createElement('div');element.innerHTML=html;document.body.append(element);return element};
+  const screen=showPurchaseSupplierCorrection({
+   root:document.querySelector('main'),parent:document.querySelector('section'),
+   order:{id:'order',storeId:'s',mydataIssuerVat:supplier.taxId,mydataIssuerName:supplier.name},
+   suppliers:[],staff:true,modal,esc,money:String,current:()=>true,refresh:()=>refreshes++,
+   api:async(path,options)=>{
+    calls.push([path,options]);
+    if(path.includes('localOnly'))return {};
+    if(path.endsWith('/issuer-supplier'))return supplier;
+    if(path.includes('supplier-correction-preview'))return {targetSupplier:supplier,version:'a'.repeat(64)};
+    return {ok:true};
+   }
+  });
+  screen.querySelector('[data-create-mydata-supplier]').click();
+  await tick();
+  const form=screen.querySelector('form');
+  assert.equal(form.elements.supplierId.value,'new');
+  assert.match(calls.at(-1)[0],/supplier-correction-preview.*supplierId=new/);
+  form.elements.original.checked=true;
+  form.elements.reason.value='Verified issuer';
+  form.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+  form.querySelector('[type=submit]').click();
+  await tick();
+  assert.equal(JSON.parse(calls.at(-1)[1].body).supplierId,'new');
+  assert.equal(refreshes,1);
+ }finally{dom.window.close()}
+});
+
 test("official AFM check is optional, read-only and discards results after selection changes",async()=>{
  const disabled=mount(),enabled=mount({officialLookup:true});
  try{
@@ -95,4 +129,20 @@ test('supplier creation reaches its own handler without opening OCR mutation acc
  }finally{
   await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
  }
+});
+
+test('purchase router admits the delegated correction grant only to preview and save',async()=>{
+ const {default:purchaseOrders}=await import('../src/routes/purchase-orders.js');
+ const gate=purchaseOrders.stack.find(layer=>layer.name==='requireAccess').handle;
+ const decide=(method,path,capability)=>{
+  let status;
+  gate({method,path,user:{role:'EMPLOYEE',staffAccess:true},staffGrant:{capability}},
+   {status(code){status=code;return this},json(){}},()=>{status=200});
+  return status;
+ };
+ assert.equal(decide('GET','/order/supplier-correction-preview','invoices.correct-supplier'),200);
+ assert.equal(decide('POST','/order/supplier-correction','invoices.correct-supplier'),200);
+ assert.equal(decide('POST','/order/lines','invoices.correct-supplier'),403);
+ assert.equal(decide('POST','/order/supplier-correction-preview','invoices.correct-supplier'),403);
+ assert.equal(decide('GET','/order/supplier-correction-preview','invoices.supplier-create'),403);
 });

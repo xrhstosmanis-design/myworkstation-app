@@ -292,6 +292,58 @@ test('actual invoice editor separates read, edit and approval controls and locks
   }finally{release();await m.close()}
  }
 });
+test('staff line editor saves VAT department and category metadata together in the selected store',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+ const store={id:'a1',name:'A1'},productId='p';
+ const order={id:'order',storeId:store.id,storeName:store.name,supplierId:'sup',supplierName:'Synthetic',status:'NEW',sourceType:'POS_OCR_DRAFT',invoiceNumber:'SYN-2'};
+ const line={id:'line',orderId:order.id,productId,description:'Synthetic row',quantity:1,unitCost:1,netAmount:1,grossAmount:1.24,vatRate:24};
+ const api=async(path,options={})=>{
+  calls.push({path,options});
+  if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['invoices.read','invoices.edit']}]};
+  if(path.startsWith('/api/purchase-orders/report?'))return {stores:[store],suppliers:[{id:'sup',name:'Synthetic'}],orders:[order],summary:{count:1}};
+  if(path.endsWith('/detail'))return {order,lines:[line],totals:{quantity:1,net:1,gross:1.24}};
+  if(path.includes('/ocr-lines/line/options?'))return {product:{categoryId:'old',subcategoryId:'old-sub',vatDepartmentId:'old-vat'},
+   categories:[{id:'old',name:'Old'},{id:'new',name:'New'}],
+   subcategories:[{id:'old-sub',categoryId:'old',name:'Old sub'},{id:'new-sub',categoryId:'new',name:'New sub'}],
+   vatDepartments:[{id:'old-vat',description:'Old VAT'},{id:'new-vat',description:'New VAT'}]};
+  if(options.method==='PATCH')return {ok:true};
+  return {items:[],suppliers:[],total:0,archiveTotal:0};
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  window.alert=globalThis.alert=message=>assert.fail(message);
+  await m.act(async()=>{const select=document.querySelector('select');select.value=store.id;select.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Τιμολόγια').click());
+  await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());
+  await m.act(async()=>document.querySelector('[data-po-open]').click());
+  await m.act(async()=>document.querySelector('[data-line-edit]').click());
+  const form=document.querySelector('.po-line-form');
+  const optionsCall=calls.find(call=>call.path.includes('/ocr-lines/line/options?'));
+  assert.match(optionsCall.path,/storeId=a1&productId=p$/);
+  assert.equal(optionsCall.options.headers['x-backoffice-store-id'],store.id);
+  const {categoryId,subcategoryId,vatDepartmentId}=form.elements;
+  assert.equal(categoryId.value,'old');
+  assert.equal(subcategoryId.value,'old-sub');
+  assert.equal(vatDepartmentId.value,'old-vat');
+  for(const field of [categoryId,subcategoryId,vatDepartmentId])assert.equal(field.disabled,false);
+  assert.equal(calls.filter(call=>call.options.method).length,0);
+  await m.act(async()=>{categoryId.value='new';categoryId.dispatchEvent(new Event('change',{bubbles:true}))});
+  assert.deepEqual([...subcategoryId.options].map(option=>option.value),['','new-sub']);
+  await m.act(async()=>{
+   subcategoryId.value='new-sub';subcategoryId.dispatchEvent(new Event('change',{bubbles:true}));
+   vatDepartmentId.value='new-vat';vatDepartmentId.dispatchEvent(new Event('change',{bubbles:true}));
+   form.querySelector('[type=submit]').click();
+  });
+  const writes=calls.filter(call=>call.options.method);
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].path,'/api/purchase-orders/order/lines/line');
+  assert.equal(writes[0].options.headers['x-backoffice-store-id'],store.id);
+  const body=JSON.parse(writes[0].options.body);
+  assert.deepEqual(body.productTaxonomy,{categoryId:'new',subcategoryId:'new-sub',vatDepartmentId:'new-vat'});
+  assert.equal(body.productId,productId);
+  assert.equal(body.vatRate,24,'item VAT department is separate from the invoice line VAT rate');
+ }finally{await m.close()}
+});
 test('invoice-only operator reads the existing inbox and safe original preview without sync, delete, review or AI writes',async()=>{
   const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
   const item={id:'invoice',filename:'Synthetic.pdf',issueDate:'2026-10-31',receivedAt:'2026-10-31T08:00:00Z',supplierName:'Synthetic',status:'RECEIVED',processingStatus:'PENDING',hasAttachment:true,mark:'SYNTHETIC',linkedOrderId:'order'};

@@ -1,3 +1,5 @@
+- 23/11/2026 · Νο 5 · ΦΠΑ και ταξινόμηση είδους από γραμμή τιμολογίου · [Καταγραφή](CHANGES/2026-11-23-no5-staff-invoice-line-taxonomy.md).
+
 - 22/11/2026 · POS · Ευκολότερο σύρσιμο κοινών διαχωριστικών · [Checkpoint](CHANGES/2026-11-22-pos-divider-drag.md).
 
 - 22/11/2026 · POS · Χρώμα σε όλη την επιφάνεια του γρήγορου πλήκτρου · [Checkpoint](CHANGES/2026-11-22-pos-full-key-color.md).
@@ -22,6 +24,8 @@ Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατ
 - 22/11/2026 · Νο 5 · Δικαιώματα τιμολογίων και προμηθευτών · [Καταγραφή](CHANGES/2026-11-22-no5-invoice-supplier-rights.md).
 
 - 22/11/2026 · Νο 5 · Διόρθωση δημιουργίας προμηθευτή από τιμολόγιο · [Καταγραφή](CHANGES/2026-11-22-no5-supplier-correction-fix.md).
+
+- 23/11/2026 · Νο 5 · Νέος προμηθευτής στο ίδιο τιμολόγιο · [Καταγραφή](CHANGES/2026-11-23-no5-supplier-same-screen.md).
 
 - 22/11/2026 · Νο 5 · Διοικητικό κλείσιμο χωρίς καταμέτρηση · Εκκρεμής και μεταγενέστερη καταμέτρηση, αναφορές Ιδιοκτήτη και χειριστών · 138 στοχευμένοι έλεγχοι με PostgreSQL · [Έλεγχοι](CHANGES/2026-11-22-no5-uncounted-close.md).
 
@@ -342,6 +346,7 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 - 22/11/2026 · Νο 7 · Προγραμματισμός αυτόματων αποστολών ανά κατάστημα · [Checkpoint](CHANGES/2026-11-22-no7-automatic-delivery-schedules.md).
+- 23/11/2026 · Νο 7 · Ανάγνωση χειρογράφων στην προγραμματισμένη ώρα · [Checkpoint](CHANGES/2026-11-23-no7-scheduled-paper-window.md).
 
 - 2026-11-17 · Νο 27 · Κεντρική Διαχείριση και σελίδα Ιδιοκτήτη · [Checkpoint](CHANGES/2026-11-17-no27-central-owner.md) · Τοπική υλοποίηση στο `work/no27-central-owner`, 96 συνδυασμένοι τοπικοί έλεγχοι και build PASS · CI και LAB εκκρεμούν.
 
@@ -959,3 +964,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - Νο 9 · [Μηνιαία ταμεία και τζίρος LAB](CHANGES/2026-11-22-lab-monthly-cash-turnover.md). Χωριστή ρύθμιση για τον υπολογισμό τζίρου στο LAB. Εκκρεμεί ανεξάρτητη έναρξη μηνιαίας εξουσιοδότησης.
 
 - 22/11/2026 · Πανόρμου · myDATA Smart 9 / 217 και αναδρομική ανάκτηση από 1/1/2026 · CI και πραγματικό PDF σε εκκρεμότητα · [Checkpoint](CHANGES/2026-11-22-panormou-mydata-smart9-recovery.md).
+
+- 23/11/2026 · Νο 5 · Πρόσβαση υπευθύνου στη διόρθωση προμηθευτή · [Καταγραφή](CHANGES/2026-11-23-no5-staff-supplier-correction-admission.md).
+
+- 23/11/2026 · Νο 5 · [Εκχώρηση διοικητικού κλεισίματος](CHANGES/2026-11-23-no5-delegated-administrative-close.md).
