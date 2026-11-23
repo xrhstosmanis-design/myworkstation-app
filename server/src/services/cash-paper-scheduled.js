@@ -6,7 +6,7 @@ import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-ac
 import {walletActivitySchema} from './ai-wallet-activity.js';
 
 const maxAttachments=3;
-const graceMs=90*60_000;
+const maxCompletedPeriodAgeMs=24*60*60_000;
 
 async function canReadChatPapers(db,{companyId,storeId}){
   const license=await companyModuleState(companyId,{db});
@@ -29,7 +29,7 @@ export function createScheduledCashPaperReader(db,{
   return async ({companyId,storeId},period)=>{
     const now=Date.parse(period.now),from=Date.parse(period.from),to=Date.parse(period.to);
     if(env.AI_OWNER_WALLET_ENABLED!=='true'||!Number.isFinite(from)||!Number.isFinite(to)||!Number.isFinite(now)||
-      from>=to||now<to||now>to+graceMs)return 'DONE';
+      from>=to||now<to||now>=to+maxCompletedPeriodAgeMs)return 'DONE';
     const scope={companyId,storeId,generation:period.generation};
     try{
       if(await repository.generation(scope)!==scope.generation)return 'DONE';
