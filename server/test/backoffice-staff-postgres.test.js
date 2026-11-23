@@ -332,7 +332,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const stocks=await db.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`;assert.deepEqual(stocks.map(r=>[r.storeId,Number(r.currentStock)]),[['a1',12],['a2',42]]);
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement" WHERE "id"='control'`)[0].quantity),42);
     });
-    await t.test('native canonical delegated expense is pending, attributed, atomic and single-write; stale grant, cash and foreign store refuse',async()=>{
+    await t.test('native canonical delegated expense is confirmed, attributed, atomic and single-write; stale grant, cash and foreign store refuse',async()=>{
       for(const sql of [
         'CREATE TABLE "StoreTransaction" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric,"description" text,"supplierId" text,"supplierName" text,"invoiceDocumentNumber" text,"invoicePaymentKey" text,"subtractFromShift" boolean,"paymentMethod" text,"actorId" text REFERENCES "User"("id"),"actorName" text,"attachmentData" text,"attachmentMimeType" text,"attachmentFilename" text,"attachmentChecksum" text,"occurredAt" timestamptz DEFAULT now(),"createdAt" timestamptz DEFAULT now(),"reversedAt" timestamptz)',
         'CREATE TABLE "OtherExpenseReview" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"transactionId" text UNIQUE,"status" text,"reviewedBy" text,"reviewedAt" timestamptz,"reviewNote" text)',
@@ -357,7 +357,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const invoke=async overrides=>{const req={user:principal,staffGrant:{capability:'payments.expense'},params:{storeId:'a1'},body:{...body,...overrides},get:()=> 'POS2'},out={status:200};const res={status(value){out.status=value;return this},json(value){out.body=value;return this}};try{await handler(req,res)}catch(error){out.status=error.status||(['23505','P2010'].includes(error.code)?409:500);out.body={code:error.code,error:error.message}}return out};
       const controls=async()=>JSON.stringify({sale:await db.$queryRaw`SELECT * FROM "Sale" ORDER BY "id"`,stock:await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`,movement:await db.$queryRaw`SELECT * FROM "StockMovement" ORDER BY "id"`});
       const before=await controls();const first=await invoke();assert.equal(first.status,201,JSON.stringify(first));assert.equal(first.body.amount,2.15);assert.equal(first.body.actorId,created.id);assert.equal(first.body.sessionId,null);
-      const review=(await db.$queryRaw`SELECT * FROM "OtherExpenseReview"`)[0];assert.equal(review.status,'PENDING_REVIEW');assert.equal(review.reviewedBy,null);
+      const review=(await db.$queryRaw`SELECT * FROM "OtherExpenseReview"`)[0];assert.equal(review.status,'CONFIRMED');assert.equal(review.reviewedBy,created.id);
       const audit=(await db.$queryRaw`SELECT * FROM "StoreOperatorAudit" WHERE "eventType"='BACKOFFICE_STAFF_EXPENSE_RECORDED'`)[0];assert.equal(audit.actorId,created.id);assert.equal(audit.details.responsibilityAcknowledged,true);
       assert.equal((await invoke()).status,409);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count),1);
       assert.equal((await invoke({idempotencyKey:'no-declaration',responsibilityAcknowledged:false})).status,400);
