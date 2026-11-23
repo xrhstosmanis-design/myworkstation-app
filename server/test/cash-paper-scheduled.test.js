@@ -48,7 +48,7 @@ test('no provider call after a delivery slot, with disabled wallet or without sc
     assert.deepEqual(calls,[]);
   }
   const {run,calls}=fixture();
-  assert.equal(await run(scope,{...period,now:'2026-11-22T05:00:00.000Z'}),'DONE');
+  assert.equal(await run(scope,{...period,now:'2026-11-23T03:00:00.000Z'}),'DONE');
   assert.deepEqual(calls,[]);
 });
 
@@ -59,4 +59,10 @@ test('a concurrent read delays the report briefly and an old uncertain request i
   const stale=fixture({pendingAt:'2026-11-22T03:02:00.000Z'});
   assert.equal(await stale.run(scope,period),'MORE');
   assert.deepEqual(stale.calls,[['read','b']]);
+});
+
+test('the reader still runs when the daily delivery is scheduled at 08:00 Athens',async()=>{
+  const {run,calls}=fixture();
+  assert.equal(await run(scope,{...period,now:'2026-11-22T06:00:00.000Z'}),'MORE');
+  assert.deepEqual(calls,[['reread','a']]);
 });

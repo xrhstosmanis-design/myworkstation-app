@@ -12,12 +12,13 @@ const transactionLabels={
   OTHER_EXPENSE:'Έξοδο'
 };
 
-export default function StaffShiftReport({api,storeId,canExport=false,canPrint=false}){
+export default function StaffShiftReport({api,storeId,canExport=false,canPrint=false,canForceClose=false}){
   const [revision,setRevision]=useState(0);
   const [loaded,setLoaded]=useState(null);
   const result=loaded?.api===api&&loaded.storeId===storeId&&loaded.revision===revision?loaded.data:null;
   const [error,setError]=useState('');
   const [selectedId,setSelectedId]=useState('');
+  const [closing,setClosing]=useState(false);
 
   useEffect(()=>{
     let current=true;
@@ -55,6 +56,20 @@ export default function StaffShiftReport({api,storeId,canExport=false,canPrint=f
   };
 
   const selected=result?.recent.find(shift=>shift.id===selectedId);
+  const submitAdministrativeClose=async event=>{
+    event.preventDefault();
+    if(!canForceClose||closing||selected?.status!=='OPEN')return;
+    const reason=new FormData(event.currentTarget).get('reason').trim();
+    if(reason.length<3)return;
+    setClosing(true);
+    setError('');
+    try{
+      const response=await api(`/api/owner-shifts/${encodeURIComponent(selected.id)}/force-close`,{method:'POST',body:JSON.stringify({reason})});
+      if(response?.ok!==true)throw Error('Δεν επιβεβαιώθηκε το κλείσιμο.');
+      setRevision(value=>value+1);
+    }catch(error){setError(error.message)}
+    finally{setClosing(false)}
+  };
   const transactions=selected?result.recentTransactions.filter(transaction=>transaction.sessionId===selected.id):[];
 
   return <section className="panel staff-panel" aria-labelledby="staff-shift-report-title">
@@ -79,6 +94,11 @@ export default function StaffShiftReport({api,storeId,canExport=false,canPrint=f
       </div>
       {selected&&<div style={{overflowX:'auto'}}>
         <h4>Πρόσφατες συναλλαγές βάρδιας · {shiftTimestamp(selected.openedAt)}</h4>
+        {canForceClose&&selected.status==='OPEN'&&<form key={selected.id} onSubmit={submitAdministrativeClose}>
+          <p>Η βάρδια θα κλείσει με εκκρεμή καταμέτρηση.</p>
+          <label>Αιτιολογία <input name="reason" required minLength={3} maxLength={500} disabled={closing}/></label>
+          <button type="submit" disabled={closing}>Διοικητικό κλείσιμο χωρίς καταμέτρηση</button>
+        </form>}
         {!transactions.length?<p>Δεν υπάρχουν διαθέσιμες πρόσφατες συναλλαγές για τη βάρδια.</p>:
           <table aria-label="Πρόσφατες συναλλαγές βάρδιας">
             <thead><tr><th scope="col">Ώρα</th><th scope="col">Τύπος</th><th scope="col">Περιγραφή</th>

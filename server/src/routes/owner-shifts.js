@@ -1,4 +1,5 @@
 import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
+import {requireStaffAction} from "../services/backoffice-staff-access.js";
 import {Router} from "express";
 import crypto from "crypto";
 import {z} from "zod";
@@ -77,7 +78,11 @@ function range(query){
 }
 async function assertStore(companyId,storeId,{db=prisma}={}){if(!storeId)return null;const store=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα.");error.status=404;throw error}return store}
 
-router.use(requireOwner);
+const delegatedForceClose=req=>req.user?.staffAccess===true&&req.user.tokenType==="BACKOFFICE_USER"&&req.staffGrant?.capability==="shifts.force-close"&&Boolean(req.user.storeId);
+router.use((req,res,next)=>{
+  if(delegatedForceClose(req)&&req.method==="POST"&&/^\/[^/]+\/force-close$/.test(req.path))return next();
+  return requireOwner(req,res,next);
+});
 export async function readOwnerShiftReport(scopeCompanyId,rawQuery,{db=prisma}={}){
  const prisma=db;const query=querySchema.parse(rawQuery||{}),{from,to}=range(query),companyId=scopeCompanyId,storeId=query.storeId||null,status=query.status,q=query.q||null;
     await assertStore(companyId,storeId,{db:prisma});
@@ -207,15 +212,18 @@ router.post("/:sessionId/force-close",async(req,res,next)=>{
   try{
     await ensureSchema();
     const canForceClose=req.user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER"].includes(req.user?.role);
-    if(!canForceClose)return res.status(403).json({error:"Μόνο ο Super Admin ή ο ιδιοκτήτης μπορεί να κλείσει διοικητικά παλιά ανοικτή βάρδια."});
+    const delegated=delegatedForceClose(req);
+    if(!canForceClose&&!delegated)return res.status(403).json({error:"Μόνο ο Super Admin ή ο ιδιοκτήτης μπορεί να κλείσει διοικητικά παλιά ανοικτή βάρδια."});
     const body=z.object({reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),companyId=req.user.companyId,actorName=req.user.fullName||req.user.email||(req.user.role==="OWNER"?"Ιδιοκτήτης":"Super Admin"),actorRole=req.user.role;
     const result=await prisma.$transaction(async tx=>{
-      const rows=await tx.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
+      const scopedStore=delegated?req.user.storeId:null;
+      if(delegated)await requireStaffAction(tx,req,scopedStore,"shifts.force-close");
+      const rows=await tx.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${companyId} AND (${scopedStore}::text IS NULL OR s."storeId"=${scopedStore}) AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
       const shift=rows[0];if(!shift)return null;
       const ledger=await tx.$queryRaw`SELECT "type","amount","subtractFromShift","reversedAt" FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${shift.storeId} AND "sessionId"=${shift.id}`;
       const active=ledger.filter(row=>!row.reversedAt),sum=(type,predicate=()=>true)=>active.filter(row=>row.type===type&&predicate(row)).reduce((total,row)=>total+n(row.amount),0);
       const cashSales=sum("SALE_CASH")+sum("CUSTOMER_RECEIPT_CASH"),cardSales=sum("SALE_CARD")+sum("SALE_IRIS")+sum("CUSTOMER_RECEIPT_CARD"),transferIn=sum("TRANSFER_AMOUNT"),expenses=sum("SUPPLIER_PAYMENT",row=>row.subtractFromShift)+sum("OTHER_EXPENSE",row=>row.subtractFromShift)+sum("BANK_DEPOSIT",row=>row.subtractFromShift),expected=n(shift.openingOperational)+cashSales+transferIn-sum("TRANSFER_OUT")-expenses;
-      const note=`Διοικητικό κλείσιμο ${actorRole==="OWNER"?"Ιδιοκτήτη":"Super Admin"} χωρίς φυσική καταμέτρηση · ${body.reason}`;
+      const note=`Διοικητικό κλείσιμο ${delegated?"Υπευθύνου":actorRole==="OWNER"?"Ιδιοκτήτη":"Super Admin"} χωρίς φυσική καταμέτρηση · ${body.reason}`;
       const closed=await tx.$queryRaw`UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),"cashSales"=${cashSales},"cardSales"=${cardSales},"eftposTotal"=NULL,"cardVariance"=NULL,"expenses"=${expenses},"closingDrawer"=NULL,"closingCustody"=NULL,"closingCoins"=NULL,"closingSafe"=NULL,"expectedOperational"=${expected},"actualOperational"=NULL,"variance"=NULL,"nextOpeningTotal"=NULL,"closeReconciliationStatus"='AWAITING_COUNT',"closingNote"=${note},"updatedAt"=NOW() WHERE "id"=${shift.id} AND "companyId"=${companyId} AND "status"='OPEN' RETURNING *`;
       if(!closed[0])return null;
       await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
