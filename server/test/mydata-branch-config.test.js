@@ -11,7 +11,7 @@ test("owner-only myDATA mapping preserves zero, rejects stale edits and prevents
   };
   const path="/documents/mydata/branch";
   const owner={id:"owner",companyId:"company",role:"OWNER",tokenType:"BACKOFFICE_USER"};
-  const records=new Map(),stores=new Set(["a","b"]);
+  const records=new Map(),stores=new Set(["a","b","unconfigured"]);
   let held=false;
   const prisma={
     authAudit:{create:async ({data})=>audit.push(data)},
@@ -23,14 +23,21 @@ test("owner-only myDATA mapping preserves zero, rejects stale edits and prevents
         return [];
       }
       if(sql.includes('FROM "Store"'))return values[0]==="company"&&stores.has(values[1])?[{id:values[1]}]:[];
+      if(sql.includes('SELECT "id" FROM "StoreIntegrationCredential"'))return values[1]==="unconfigured"?[]:[{id:"integration"}];
       assert.equal(held,true);
-      const [,branch,storeId]=values;
+      const [,storeId,branch]=values;
       return [...records].filter(([id,code])=>id!==storeId&&code===branch).map(([id])=>({storeId:id}));
     },
     async $executeRaw(parts,...values){
       assert.equal(held,true);
-      if(parts.join("").startsWith('DELETE'))records.delete(values[1]);
-      else records.set(values[1],values[2]);
+      assert.match(parts.join(""),/jsonb_set/);
+      assert.match(parts.join(""),/"myDataBranchRoutingEnabled":true/);
+      const [branch,duplicate,company,storeId]=values;
+      assert.equal(branch,duplicate);
+      assert.equal(company,"company");
+      if(branch===null)records.delete(storeId);
+      else records.set(storeId,branch);
+      return 1;
     },
     async $transaction(fn){try{return await fn(this)}finally{held=false}}
   };
@@ -58,6 +65,7 @@ test("owner-only myDATA mapping preserves zero, rejects stale edits and prevents
   for(const user of [{...owner,role:"MANAGER"},{...owner,staffAccess:true},{...owner,supportContext:{}},{...owner,isSuperAdmin:true},{...owner,tokenType:"STORE_OPERATOR"}]){
     assert.equal((await invoke("PUT",expected("a",0,null),user)).status,403);
   }
+  await assert.rejects(invoke("PUT",expected("unconfigured",0,null)),error=>error.code==="MYDATA_BRANCH_INTEGRATION_REQUIRED");
   assert.equal((await invoke("GET",{storeId:"a"})).result.branch,null);
   assert.equal((await invoke("PUT",expected("a",0,null))).result.branch,0);
   assert.equal((await invoke("GET",{storeId:"a"})).result.branch,0);

@@ -127,13 +127,15 @@ export async function verifyDelegatedMyDataSync(db,req,verify=requireStaffAction
   await verify(db,req,storeId,delegatedSyncCapability);
   return resolveMyDataRecipientBranch(db,companyId,storeId,true);
 }
+const missingMyDataBranch=()=>syncError("Ο Ιδιοκτήτης πρέπει να αντιστοιχίσει το υποκατάστημα myDATA πριν από τη λήψη.",409);
 async function resolveMyDataRecipientBranch(db,companyId,storeId,delegated){
   const branch=await readMyDataBranchForStore(db,companyId,storeId);
   if(branch!==null)return branch;
-  if(!delegated&&!await hasMyDataBranchMappings(db,companyId))return null;
+  if(await hasMyDataBranchMappings(db,companyId))throw missingMyDataBranch();
+  if(!delegated)return null;
   const stores=await db.store.findMany({where:{companyId},select:{id:true},take:2});
   if(stores.length===1&&stores[0].id===storeId)return null;
-  throw syncError("Ο Ιδιοκτήτης πρέπει να αντιστοιχίσει το υποκατάστημα myDATA πριν από τη λήψη.",409);
+  throw missingMyDataBranch();
 }
 export function syncMyDataStore(req,{db=prisma}={}){
   assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});

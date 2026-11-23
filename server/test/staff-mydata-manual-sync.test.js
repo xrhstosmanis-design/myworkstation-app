@@ -10,7 +10,7 @@ const path="/api/commerce/documents/mydata/sync";
 const req={user:{id:"manager",companyId:"company",storeId:"store",staffAccess:true},staffGrant:{capability:"invoices.sync-mydata"},body:{storeId:"store"}};
 const rawResponse=`<RequestedDoc><invoice><mark>123</mark><issuer><vatNumber>111111111</vatNumber></issuer><counterpart><vatNumber>222222222</vatNumber></counterpart><invoiceHeader><series>A</series><aa>1</aa><issueDate>2026-11-22</issueDate><invoiceType>1.1</invoiceType></invoiceHeader><invoiceSummary><totalNetValue>12.34</totalNetValue><totalVatAmount>2.96</totalVatAmount><totalGrossValue>15.30</totalGrossValue></invoiceSummary></invoice></RequestedDoc>`;
 
-async function fixture({stores=[{id:"store"}],branch=null,denyWrites=false,providerBarrier,responseXml=rawResponse}={}){
+async function fixture({stores=[{id:"store"}],branch=null,changedWriteBranch=branch,denyWrites=false,providerBarrier,responseXml=rawResponse}={}){
   const calls=[];
   const writer=(label)=>({
     label,
@@ -39,7 +39,7 @@ async function fixture({stores=[{id:"store"}],branch=null,denyWrites=false,provi
   const routes={};
   const inputs={
     z,crypto:{randomUUID},invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,unwrapMyDataXml,
-    ensureMyDataBranchSchema:async()=>{},readMyDataBranchForStore:async()=>branch,
+    ensureMyDataBranchSchema:async()=>{},hasMyDataBranchMappings:async()=>false,readMyDataBranchForStore:async db=>db.label==="write"?changedWriteBranch:branch,
     prisma:database,Router:()=>({get(){},post(path,...handlers){routes[path]=handlers.at(-1)}}),
     requireCompanyModule:()=>()=>{},ensureStoreIntegrationSchema:async()=>{},
     decryptStoreIntegrationCredentials:encrypted=>{assert.equal(encrypted,"fixture-ciphertext");return {accountId:"fixture",secret:"fixture"}},
@@ -121,4 +121,12 @@ test("delegated multi-store receipt routes only the configured explicit recipien
   const writes=f.calls.filter(x=>x.type==="write");
   assert.equal(writes.length,2);
   assert.equal(JSON.parse(writes[1].args.at(-1)).recipientBranch,0);
+});
+
+test("a changed branch mapping blocks the write after the AADE response",async()=>{
+  const f=await fixture({stores:[{id:"store"},{id:"sibling"}],branch:2,changedWriteBranch:3,
+    responseXml:rawResponse.replace("</counterpart>","<branch>2</branch></counterpart>")});
+  await assert.rejects(f.api.syncMyDataStore(req),{status:409});
+  assert.equal(f.calls.filter(x=>x.type==="provider").length,1);
+  assert.equal(f.calls.filter(x=>x.type==="write").length,0);
 });
