@@ -723,7 +723,7 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
     // are still awaiting their first proof and must be uploadable exactly once.
     const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount","sourceTransactionId" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW') AND "attachmentData" IS NULL FOR UPDATE`;
     if(!pending[0])return [];
-    const expectedAmount=Number(pending[0].amount||0),proofAmount=parsedAmount??body.proofAmount??null;
+    const expectedAmount=Math.abs(Number(pending[0].amount||0)),proofAmount=parsedAmount??body.proofAmount??null;
     const difference=proofAmount==null?0:Number((proofAmount-expectedAmount).toFixed(2));
     const declaredDifference=parsedAmount!=null&&body.proofAmount!=null?Number((body.proofAmount-parsedAmount).toFixed(2)):0;
     const status=Math.abs(difference)>1.005||Math.abs(declaredDifference)>1.005?'DISCREPANCY':proofAmount!=null?'CONFIRMED':'PENDING_REVIEW';
@@ -770,7 +770,7 @@ router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,rou
   const status="CONFIRMED";
   const rows=await prisma.$transaction(async tx=>{
     if(status==="CONFIRMED"){
-      const missingProof=await tx.$queryRaw`SELECT "id" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status"='PENDING_PROOF' AND "attachmentData" IS NULL LIMIT 1`;
+      const missingProof=await tx.$queryRaw`SELECT "id" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND "attachmentData" IS NULL LIMIT 1`;
       if(missingProof[0]){const error=new Error("Ανέβασε πρώτα την απόδειξη κατάθεσης πριν από την επιβεβαίωση.");error.status=409;throw error}
     }
     const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
