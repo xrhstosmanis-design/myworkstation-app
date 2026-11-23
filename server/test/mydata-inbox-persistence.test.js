@@ -16,6 +16,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     async $queryRaw(strings,...values){
       const sql=strings.join("?");queries.push({sql,values});
       if(sql.includes("pg_try_advisory_xact_lock"))return [{held:true}];
+      if(sql.includes("pg_advisory_xact_lock_shared"))return [{locked:1}];
       if(sql.includes('FROM "MyDataInboundDocument"'))return alreadyExists?[{inboxId:"existing"}]:[];
       if(sql.includes('FROM "Supplier"'))return matchingSupplier?[{id:"supplier-one",name:"Supplier One"}]:[];
       throw new Error(`Unexpected transaction query: ${sql}`);
@@ -41,6 +42,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,linkStoredPosInvoicePhotos,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
     const requireCompanyModule=()=>()=>{};
     const ensureStoreIntegrationSchema=async()=>{};
+    const ensureMyDataBranchSchema=async()=>{},hasMyDataBranchMappings=async()=>false,readMyDataBranchForStore=async()=>null;
     const decryptStoreIntegrationCredentials=()=>({accountId:"fixture",secret:"fixture"});\n`;
   try{await import(`data:text/javascript;base64,${Buffer.from(injected+source.replace(/^import .*;\r?\n/gm,"")).toString("base64")}`)}finally{delete globalThis[key]}
   const handler=routes.get("/documents/mydata/sync");assert.equal(typeof handler,"function");
