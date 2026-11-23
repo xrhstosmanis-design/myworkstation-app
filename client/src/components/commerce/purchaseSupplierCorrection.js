@@ -18,6 +18,7 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
  let preview=null,busy=false,generation=0;
  const alive=()=>valid()&&m.isConnected;
  const status=form.querySelector('[data-save-status]');
+ let issuerSelected=false;
  const update=()=>{
   let message='';
   if(busy)message='Η ενέργεια εκτελείται…';
@@ -28,12 +29,12 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
   else if((form.elements.reason?.value.trim().length??0)>500)message='Η αιτιολογία μπορεί να έχει έως 500 χαρακτήρες.';
   else if((form.elements.reason?.value.trim().length??0)<5)message='Συμπλήρωσε αιτιολογία με τουλάχιστον 5 χαρακτήρες.';
   submit.disabled=Boolean(message);
-  status.textContent=message;
+  status.textContent=message||(issuerSelected?'Ο προμηθευτής επιλέχθηκε. Πάτησε «Αποθήκευση διόρθωσης προμηθευτή».':'');
  };
  const showError=e=>{error.textContent=e.message;error.focus()};
  update();
  const invalidate=()=>{generation++;preview=null;host.innerHTML='';error.textContent='';update()};
- select.addEventListener('change',invalidate);
+ select.addEventListener('change',()=>{issuerSelected=false;invalidate()});
  const search=form.elements.supplierSearch;
  const fold=value=>String(value||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase('el').trim();
  search.addEventListener('input',()=>{
@@ -87,22 +88,25 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
    if(!supplier?.id)throw new Error('Δεν βρέθηκε η καρτέλα προμηθευτή.');
    supplierId=supplier.id;
    if(!Array.from(select.options).some(option=>option.value===supplierId)){
-    const option=document.createElement('option');
+    const option=select.ownerDocument.createElement('option');
     option.value=supplierId;option.dataset.taxId=issuerVat;option.textContent=`${supplier.name||issuerName} · ΑΦΜ ${issuerVat}`;
     select.appendChild(option);
    }
    select.value=supplierId;
+   search.value='';
+   for(const option of select.options)option.hidden=false;
+   issuerSelected=true;
    officialGeneration++;
    if(officialResult)officialResult.textContent='';
    updateOfficial();
    if(createButton)createButton.closest('details').hidden=true;
   }catch(e){if(alive())showError(e)}
   finally{busy=false;if(alive()){select.disabled=false;if(createButton)createButton.disabled=false;findButton.disabled=false;previewButton.disabled=false;update()}}
-  if(alive()&&supplierId)previewButton.click();
+  if(alive()&&supplierId)await loadPreview();
  }
  findButton?.addEventListener('click',()=>resolveIssuer(false));
  createButton?.addEventListener('click',()=>resolveIssuer(true));
- previewButton.addEventListener('click',async()=>{
+ async function loadPreview(){
   if(!alive()||busy||!select.value)return;
   invalidate();const request=++generation,supplierId=select.value;previewButton.disabled=true;
   try{
@@ -110,7 +114,8 @@ export function showPurchaseSupplierCorrection({root,parent,order,suppliers,api,
    if(!alive()||request!==generation||supplierId!==select.value)return;
    preview=p;host.innerHTML=`<p><b>${esc(p.beforeSupplier?.name||'Χωρίς προμηθευτή')}</b> → <b>${esc(p.targetSupplier.name)} · ΑΦΜ ${esc(p.targetSupplier.taxId)}</b></p><p>Αξία τιμολογίου ${money(p.totalGross)}. Η κατάσταση της αγοράς και το απόθεμα διατηρούνται.</p>${p.payment?`<p>Υπάρχουσα πληρωμή ${money(p.payment.amount)}. Θα αλλάξει μόνο η σύνδεσή της στον σωστό προμηθευτή· ποσό, βάρδια και ημερομηνία διατηρούνται.</p><label><input name="payment" type="checkbox"> Επιβεβαιώνω ότι η ίδια αρχική πληρωμή αφορά τον σωστό προμηθευτή. Δεν γίνεται νέα χρέωση.</label>`:'<p>Δεν υπάρχει συνδεδεμένη πληρωμή. Δεν δημιουργείται πληρωμή.</p>'}<label><input name="original" type="checkbox"> Έλεγξα το πρωτότυπο, τον αριθμό τιμολογίου και το ΑΦΜ του σωστού προμηθευτή.</label><label>Αιτιολογία<textarea name="reason" minlength="5" maxlength="500" required style="display:block;width:100%;min-height:80px;font-size:18px"></textarea></label>`;update();
   }catch(e){if(alive()&&request===generation)showError(e)}finally{if(alive())previewButton.disabled=false}
- });
+ }
+ previewButton.addEventListener('click',loadPreview);
  form.addEventListener('submit',async event=>{
   event.preventDefault();update();if(!alive()||submit.disabled||busy||!preview)return;
   busy=true;update();select.disabled=true;previewButton.disabled=true;error.textContent='';
