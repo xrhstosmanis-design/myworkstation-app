@@ -92,6 +92,11 @@ export async function ensurePurchaseOrderSchema(){
   return schemaPromise;
 }
 function requireAccess(req,res,next){
+  if(req.user?.staffAccess===true&&req.staffGrant?.capability==="invoices.correct-supplier"){
+    const correctionPath=req.method==="GET"?/^\/[^/]+\/supplier-correction-preview$/:/^\/[^/]+\/supplier-correction$/;
+    if(["GET","POST"].includes(req.method)&&correctionPath.test(req.path))return next();
+    return res.status(403).json({error:"Δεν έχεις δικαίωμα για αυτή την ενέργεια αγορών."});
+  }
   if(!(req.user?.staffAccess===true&&['invoices.read','invoices.edit'].includes(req.staffGrant?.capability))&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Οι Παραγγελίες & Αγορές είναι διαθέσιμες μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
