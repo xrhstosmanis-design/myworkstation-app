@@ -64,6 +64,22 @@ test('native delegated invoice metadata and canonical approval preserve one post
    learnConfirmedLineCorrection:()=>assert.fail('store-only staff edit must not change company supplier learning'),learnCentralInvoiceCorrection:()=>assert.fail('store-only staff edit must not change cross-company learning')};
   new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(source.indexOf('function purchaseBatchError('),source.indexOf('router.post("/:orderId/lines",'))+source.slice(lineStart,lineEnd)+assistantTransferSource(source))(...Object.values(lineBindings));
   const changedLine=await invoke(editLine,'invoices.edit',{description:'Reviewed store-only line',quantity:3});assert.ifError(changedLine.failure);assert.equal(changedLine.result.ok,true);assert.equal(changedLine.result.mappingLearned,false);assert.equal(changedLine.result.centralLearning.learned,false);assert.equal(await f.snapshot(),before);
+  await db.$executeRawUnsafe('CREATE TABLE "ProductCategory" ("id" text,"companyId" text,"active" boolean)');
+  await db.$executeRawUnsafe('CREATE TABLE "ProductSubcategory" ("id" text,"categoryId" text,"companyId" text,"active" boolean)');
+  await db.$executeRawUnsafe('CREATE TABLE "ManagementVatDepartment" ("id" text,"companyId" text,"active" boolean)');
+  await db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN "categoryIdOverride" text, ADD COLUMN "subcategoryIdOverride" text, ADD COLUMN "vatDepartmentIdOverride" text, ADD COLUMN IF NOT EXISTS "updatedAt" timestamptz');
+  await db.$executeRaw`INSERT INTO "ProductCategory" VALUES ('cat','c',true),('foreign','other',true)`;
+  await db.$executeRaw`INSERT INTO "ProductSubcategory" VALUES ('sub','cat','c',true)`;
+  await db.$executeRaw`INSERT INTO "ManagementVatDepartment" VALUES ('vat','c',true)`;
+  const productTaxonomy={categoryId:'cat',subcategoryId:'sub',vatDepartmentId:'vat'};
+  assert.equal((await invoke(editLine,'invoices.edit',{productTaxonomy:{...productTaxonomy,categoryId:'foreign'}})).failure?.status,400);
+  assert.ifError((await invoke(editLine,'invoices.edit',{productTaxonomy})).failure);
+  const taxonomy=await db.$queryRaw`SELECT "storeId","categoryIdOverride","subcategoryIdOverride","vatDepartmentIdOverride" FROM "StoreProduct" ORDER BY "storeId"`;
+  assert.deepEqual(taxonomy,[
+   {storeId:'control',categoryIdOverride:null,subcategoryIdOverride:null,vatDepartmentIdOverride:null},
+   {storeId:'s',categoryIdOverride:'cat',subcategoryIdOverride:'sub',vatDepartmentIdOverride:'vat'}
+  ]);
+  const beforeApproval=await f.snapshot();
   const [draft]=await db.$queryRaw`SELECT "storeId","sourceDocumentId","reopenVersion" FROM "PurchaseOrder" WHERE "id"='pos'`;
   const rowSnapshot=()=>db.$queryRaw`SELECT "id","description","updatedAt" FROM "PurchaseOrderLine" WHERE "orderId"='pos'`;
   const linesBefore=await rowSnapshot();
@@ -83,10 +99,10 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(db,requireStaffAction);
   const bindings={applyPackStockCorrectionInTransaction,Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
   const approve=(status='FINAL')=>invoke(handlers['/:orderId'],'invoices.approve',{status});
-  assert.equal((await approve()).failure?.status,403);assert.equal(await f.snapshot(),before);
+  assert.equal((await approve()).failure?.status,403);assert.equal(await f.snapshot(),beforeApproval);
   await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["invoices.read","invoices.edit","invoices.approve"]'::jsonb`;
   assert.equal((await approve()).result.awaitingInvoice,true);
-  assert.equal(await f.snapshot(),before);
+  assert.equal(await f.snapshot(),beforeApproval);
   const results=await Promise.all([approve('INVOICED'),approve('INVOICED')]);for(const r of results){assert.ifError(r.failure);assert.equal(r.result.status,'INVOICED')}
   assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StockMovement"`)[0].count),1);
   assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "InvoiceStockPosting"`)[0].count),1);

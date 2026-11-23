@@ -79,6 +79,8 @@ test('actual admission binds actions to selected store/object and never grants o
  try{
   for(const [path,method,body,cap]of [
    ['/api/purchase-orders/order','PATCH',{description:'edit'},'invoices.edit'],
+   ['/api/commerce/purchase-orders/order/ocr-lines/line/options?storeId=a1','GET',{},'invoices.edit'],
+   ['/api/purchase-orders/order/lines/line','PATCH',{productTaxonomy:{categoryId:'cat',subcategoryId:null,vatDepartmentId:'vat'}},'invoices.edit'],
    ['/api/purchase-orders/order','PATCH',{status:'FINAL'},'invoices.approve'],
    ['/api/cash-control/stores/a1/reporting-overview','GET',{},'shifts.read'],
    ['/api/cash/stores/a1/reporting-overview','GET',{},'shifts.read'],
@@ -94,6 +96,10 @@ test('actual admission binds actions to selected store/object and never grants o
   const before=reached;
   for(const [path,method,body]of [
    ['/api/purchase-orders/foreign','PATCH',{description:'other store'}],
+   ['/api/commerce/purchase-orders/foreign/ocr-lines/line/options?storeId=a1','GET',{}],
+   ['/api/commerce/purchase-orders/order/ocr-lines/line/options?storeId=a2','GET',{}],
+   ['/api/commerce/purchase-orders/order/ocr-lines/line/options?storeId=a1','POST',{}],
+   ['/api/purchase-orders/foreign/lines/line','PATCH',{productTaxonomy:{categoryId:'cat',subcategoryId:null,vatDepartmentId:'vat'}}],
    ['/api/purchase-orders/foreign/cancel-preview?storeId=a1','GET',{}],
    ['/api/purchase-orders/foreign/cancel','POST',{storeId:'a1'}],
    ['/api/purchase-orders/order/cancel-preview?storeId=a2','GET',{}],
@@ -120,6 +126,8 @@ test('actual admission binds actions to selected store/object and never grants o
   assert.equal((await send('/api/transactions/stores/a1','POST',{...expense,paymentSource:'CASH_SHIFT',paymentMethod:'CASH_SHIFT'})).status,403);
   assert.equal((await send('/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'CANCEL'})).status,403);
   p.grant(['invoices.read','invoices.reopen']);
+  assert.equal((await send('/api/commerce/purchase-orders/order/ocr-lines/line/options?storeId=a1','GET')).status,403);
+  assert.equal((await send('/api/purchase-orders/order/lines/line','PATCH',{productTaxonomy:{categoryId:'cat',subcategoryId:null,vatDepartmentId:'vat'}})).status,403);
   assert.equal((await send('/api/purchase-orders/order/cancel-preview?storeId=a1','GET')).status,403);
   assert.equal((await send('/api/purchase-orders/order/cancel','POST',{storeId:'a1'})).status,403);
   p.grant(['invoices.read','invoices.cancel']);
