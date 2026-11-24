@@ -63,8 +63,13 @@ export function staffSupplierContactId(method,path){
  const route=staffSupplierManagementRoute(method,path);
  return route?.capability===supplierContactCapability?route.supplierId:null;
 }
-export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','vat-departments.read','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read','reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read','reports-stocktakes.read','reports-stock-snapshot.read','reports-item-snapshot.read','reports-stock-analysis.read','reports-sales-analysis.read','reports-payroll-expenses.read','reports-supplier-invoices.read','reports-supplier-payments.read','reports-supplier-purchases.read','reports-customer-turnover.read',...companyConfigurationActions.map(action=>action.key),...companyOwnerReportActions.map(action=>action.key),...companyPartyControlActions.map(action=>action.key),...companyWholesaleActions.map(action=>action.key),...observerLogisticsActions.map(action=>action.key),...companyProductCenterActions.map(action=>action.key),...finalPassiveCompanyActions.map(action=>action.key),supplierContactCapability,supplierAddressCapability,supplierUnitCapability,supplierBalanceAdjustCapability,supplierDeactivateCapability,supplierReactivateCapability,supplierManualCreateCapability,supplierFiscalCapability,supplierTransferCapability,supplierTaxIdCapability,invoiceProductCardCapability,invoiceProductBarcodesCapability]);
-export const staffCompanyModules=Object.freeze({[invoiceProductCardCapability]:'INVENTORY',[invoiceProductBarcodesCapability]:'INVENTORY',[supplierTaxIdCapability]:'INVENTORY',[supplierFiscalCapability]:'INVENTORY',[supplierManualCreateCapability]:'INVENTORY',[supplierBalanceAdjustCapability]:'INVENTORY',[supplierDeactivateCapability]:'INVENTORY',[supplierReactivateCapability]:'INVENTORY',[supplierAddressCapability]:'INVENTORY',[supplierUnitCapability]:'INVENTORY',[supplierContactCapability]:'INVENTORY','stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY','reports-deactivations.read':null,'reports-logins.read':'INVENTORY','reports-sale-deletions.read':null,'reports-pos-sale-actions.read':null,'reports-destructions.read':null,'reports-movements.read':'INVENTORY','reports-stocktakes.read':'INVENTORY','reports-stock-snapshot.read':'INVENTORY','reports-item-snapshot.read':'INVENTORY','reports-stock-analysis.read':'INVENTORY','reports-sales-analysis.read':'INVENTORY','reports-payroll-expenses.read':'INVENTORY','reports-supplier-invoices.read':'INVENTORY','reports-supplier-payments.read':'INVENTORY','reports-supplier-purchases.read':'INVENTORY','reports-customer-turnover.read':'CORE',...Object.fromEntries(companyConfigurationActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyOwnerReportActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyPartyControlActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyWholesaleActions.map(action=>[action.key,action.module])),...Object.fromEntries(observerLogisticsActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyProductCenterActions.map(action=>[action.key,action.module])),...Object.fromEntries(finalPassiveCompanyActions.map(action=>[action.key,action.module]))});
+export const companyCategoryManageCapability='categories.manage';
+export const companyVatManageCapability='vat-departments.manage';
+export const companyVatActivateCapability='vat-departments.activate-draft';
+export const staffDisplayNameCapability='staff-display-name.edit';
+export const staffAccountStatusCapability='staff-account-status.manage';
+export const staffCompanyCapabilities=Object.freeze(['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read',companyCategoryManageCapability,staffDisplayNameCapability,staffAccountStatusCapability,'vat-departments.read',companyVatManageCapability,companyVatActivateCapability,'product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read','workforce-role-registry.read','reports-price-changes.read','reports-departments.read','reports-documents.read','reports-delivery.read','reports-deactivations.read','reports-logins.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','reports-movements.read','reports-stocktakes.read','reports-stock-snapshot.read','reports-item-snapshot.read','reports-stock-analysis.read','reports-sales-analysis.read','reports-payroll-expenses.read','reports-supplier-invoices.read','reports-supplier-payments.read','reports-supplier-purchases.read','reports-customer-turnover.read',...companyConfigurationActions.map(action=>action.key),...companyOwnerReportActions.map(action=>action.key),...companyPartyControlActions.map(action=>action.key),...companyWholesaleActions.map(action=>action.key),...observerLogisticsActions.map(action=>action.key),...companyProductCenterActions.map(action=>action.key),...finalPassiveCompanyActions.map(action=>action.key),supplierContactCapability,supplierAddressCapability,supplierUnitCapability,supplierBalanceAdjustCapability,supplierDeactivateCapability,supplierReactivateCapability,supplierManualCreateCapability,supplierFiscalCapability,supplierTransferCapability,supplierTaxIdCapability,invoiceProductCardCapability,invoiceProductBarcodesCapability]);
+export const staffCompanyModules=Object.freeze({[staffDisplayNameCapability]:null,[staffAccountStatusCapability]:null,[companyCategoryManageCapability]:'INVENTORY',[companyVatManageCapability]:'INVENTORY',[companyVatActivateCapability]:'INVENTORY',[invoiceProductCardCapability]:'INVENTORY',[invoiceProductBarcodesCapability]:'INVENTORY',[supplierTaxIdCapability]:'INVENTORY',[supplierFiscalCapability]:'INVENTORY',[supplierManualCreateCapability]:'INVENTORY',[supplierBalanceAdjustCapability]:'INVENTORY',[supplierDeactivateCapability]:'INVENTORY',[supplierReactivateCapability]:'INVENTORY',[supplierAddressCapability]:'INVENTORY',[supplierUnitCapability]:'INVENTORY',[supplierContactCapability]:'INVENTORY','stores.read':'INVENTORY','suppliers.read':'INVENTORY','customers.read':'POS','expense-categories.read':'CASH_CONTROL','customer-categories.read':'CORE','professions.read':'CORE','shipping-methods.read':'CORE','categories.read':'INVENTORY','vat-departments.read':'INVENTORY','product-companies.read':'INVENTORY','banks.read':'CORE','company-products.read':'INVENTORY','purchases.read':'INVENTORY','recipes.read':'INVENTORY','supplier-details.read':'INVENTORY','workforce-role-registry.read':'PERSONNEL_BASIC','reports-price-changes.read':'INVENTORY','reports-departments.read':'INVENTORY','reports-documents.read':'INVENTORY','reports-delivery.read':'INVENTORY','reports-deactivations.read':null,'reports-logins.read':'INVENTORY','reports-sale-deletions.read':null,'reports-pos-sale-actions.read':null,'reports-destructions.read':null,'reports-movements.read':'INVENTORY','reports-stocktakes.read':'INVENTORY','reports-stock-snapshot.read':'INVENTORY','reports-item-snapshot.read':'INVENTORY','reports-stock-analysis.read':'INVENTORY','reports-sales-analysis.read':'INVENTORY','reports-payroll-expenses.read':'INVENTORY','reports-supplier-invoices.read':'INVENTORY','reports-supplier-payments.read':'INVENTORY','reports-supplier-purchases.read':'INVENTORY','reports-customer-turnover.read':'CORE',...Object.fromEntries(companyConfigurationActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyOwnerReportActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyPartyControlActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyWholesaleActions.map(action=>[action.key,action.module])),...Object.fromEntries(observerLogisticsActions.map(action=>[action.key,action.module])),...Object.fromEntries(companyProductCenterActions.map(action=>[action.key,action.module])),...Object.fromEntries(finalPassiveCompanyActions.map(action=>[action.key,action.module]))});
 export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:'Εταιρικές προβολές',actions:Object.freeze([
   {key:'stores.read',label:'Προβολή καταστημάτων εταιρείας',description:'Βλέπει τον κατάλογο καταστημάτων της εταιρείας, χωρίς ρυθμίσεις ή είσοδο στη διαχείρισή τους.'},
   {key:'suppliers.read',label:'Προβολή προμηθευτών εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας και ΑΦΜ προμηθευτών της εταιρείας, χωρίς πληρωμές ή αλλαγές.'},
@@ -73,7 +78,10 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   {key:'professions.read',label:'Προβολή εταιρικών επαγγελμάτων',description:'Βλέπει επαγγέλματα και το πλήθος πελατών ανά επάγγελμα στην εταιρεία, χωρίς αλλαγές.'},
   {key:'shipping-methods.read',label:'Προβολή εταιρικών τρόπων αποστολής',description:'Βλέπει τους ενεργούς τρόπους αποστολής της εταιρείας, χωρίς αλλαγές ή στοιχεία τραπεζών/POS.'},
   {key:'categories.read',label:'Προβολή εταιρικών κατηγοριών προϊόντων',description:'Βλέπει κατηγορίες, υποκατηγορίες και πλήθη προϊόντων της εταιρείας, χωρίς ταξινόμηση ή αλλαγές.'},
+  {key:companyCategoryManageCapability,contextOnly:true,label:'Δημιουργία και μετονομασία κατηγοριών',description:'Δημιουργεί και μετονομάζει κοινές κατηγορίες και υποκατηγορίες ειδών της εταιρείας.',requires:['categories.read']},
   {key:'vat-departments.read',label:'Προβολή εταιρικών τμημάτων ΦΠΑ',description:'Βλέπει τμήματα ΦΠΑ, καταχωρισμένους συντελεστές και απαλλαγές, χωρίς αλλαγές.'},
+  {key:companyVatManageCapability,contextOnly:true,label:'Δημιουργία και μετονομασία τμήματος ΦΠΑ',description:'Δημιουργεί ανενεργό τμήμα ΦΠΑ και μετονομάζει τμήματα της εταιρείας.',requires:['vat-departments.read']},
+  {key:companyVatActivateCapability,contextOnly:true,label:'Ρύθμιση συντελεστή και ενεργοποίηση νέου τμήματος ΦΠΑ',description:'Ορίζει θετικό συντελεστή και ενεργοποιεί ανενεργό, αχρησιμοποίητο τμήμα ΦΠΑ χωρίς φορολογική αντιστοίχιση.',requires:['vat-departments.read']},
   {key:'product-companies.read',label:'Προβολή εταιρειών προϊόντων',description:'Βλέπει τις εταιρείες προϊόντων και τα πλήθη τους στην εταιρεία, χωρίς αντιστοιχίσεις ή αλλαγές.'},
   {key:'banks.read',label:'Προβολή εταιρικού καταλόγου τραπεζών',description:'Βλέπει τις ενεργές εγγραφές τραπεζών και τους λογιστικούς κωδικούς τους, χωρίς λογαριασμούς ή κινήσεις.'},
   {key:'company-products.read',label:'Προβολή εταιρικών προϊόντων και τιμών κόστους',description:'Βλέπει έως 500 εταιρικά προϊόντα ή αποτελέσματα αναζήτησης, με τιμές πώλησης και κόστους, χωρίς αλλαγές.'},
@@ -120,6 +128,8 @@ export const staffCompanyPermissionSections=Object.freeze([{key:'company',label:
   ...observerLogisticsActions.map(({module,...action})=>action),
   ...companyProductCenterActions.map(({module,...action})=>action),
   ...finalPassiveCompanyActions.map(({module,...action})=>action),
+  {key:staffAccountStatusCapability,contextOnly:true,requires:['staff-policy.read'],label:'Ενεργοποίηση και απενεργοποίηση χειριστών',description:'Αλλάζει την κατάσταση άλλων προσωπικών λογαριασμών της ίδιας εταιρείας και τερματίζει τις ενεργές συνεδρίες τους.'},
+  {key:staffDisplayNameCapability,contextOnly:true,requires:['staff-policy.read'],label:'Διόρθωση εμφανιζόμενου ονοματεπωνύμου χειριστή',description:'Αλλάζει μόνο το εμφανιζόμενο ονοματεπώνυμο άλλου υπάρχοντος χειριστή της ίδιας εταιρείας.'},
   {key:'customers.read',label:'Προβολή πελατών, υπολοίπων και πιστωτικών ορίων εταιρείας',description:'Βλέπει στοιχεία επικοινωνίας, έκπτωση, οικονομικό υπόλοιπο και πιστωτικό όριο πελατών όλης της εταιρείας, χωρίς κινήσεις ή αλλαγές.'}
 ])}]);
 export function validStaffCompanyCapabilities(value){
@@ -159,7 +169,46 @@ export function staffCompanyReportProductId(path,family){
  const match=pattern?.exec(path);if(!match)return null;let value;try{value=decodeURIComponent(match[1])}catch{return null}
  return value&&value.length<=160&&value.trim()===value&&!/[\/\\\u0000-\u001f\u007f]/.test(value)?value:null;
 }
+export const companyCategoryManagePrefix='/api/backoffice-staff/company/taxonomy';
+export function companyCategoryManageRoute(method,path){
+  if(typeof path!=='string'||/[?#]/.test(path)||!path.startsWith(companyCategoryManagePrefix+'/'))return null;
+  const [kind,rawId,...extra]=path.slice(companyCategoryManagePrefix.length+1).split('/');
+  if(extra.length||!['categories','subcategories'].includes(kind))return null;
+  if(method==='POST'&&rawId===undefined)return {kind};
+  if(method!=='PATCH'||!rawId)return null;
+  const id=supplierRouteId(rawId);
+  return id?{kind,id}:null;
+}
+export const companyVatManagePath=companyCategoryManagePrefix+'/vat-departments';
+export function companyVatManageRoute(method,path){
+  if(typeof path!=='string'||/[?#]/.test(path))return null;
+  if(method==='POST'&&path===companyVatManagePath)return {};
+  if(method!=='PATCH'||!path.startsWith(companyVatManagePath+'/'))return null;
+  const id=supplierRouteId(path.slice(companyVatManagePath.length+1));
+  return id?{id}:null;
+}
+export const staffDisplayNamePrefix='/api/backoffice-staff/company/staff-display-names';
+export function staffDisplayNameTarget(method,path){
+  if(method!=='PATCH'||typeof path!=='string'||/[?#]/.test(path)||!path.startsWith(staffDisplayNamePrefix+'/'))return null;
+  return supplierRouteId(path.slice(staffDisplayNamePrefix.length+1));
+}
+export const staffAccountStatusPrefix='/api/backoffice-staff/company/staff-account-status';
+export function staffAccountStatusTarget(method,path){
+  if(method!=='PATCH'||typeof path!=='string'||/[?#]/.test(path)||!path.startsWith(staffAccountStatusPrefix+'/'))return null;
+  return supplierRouteId(path.slice(staffAccountStatusPrefix.length+1));
+}
+export function companyVatActivateRoute(method,path){
+  if(method!=='POST'||typeof path!=='string'||/[?#]/.test(path)||!path.startsWith(companyVatManagePath+'/')||!path.endsWith('/activate-draft'))return null;
+  const id=supplierRouteId(path.slice(companyVatManagePath.length+1,-'/activate-draft'.length));
+  return id?{id}:null;
+}
 export function staffCompanyRequestCapability(method,path){
+  if(companyVatManageRoute(method,path))return companyVatManageCapability;
+  if(staffAccountStatusTarget(method,path))return staffAccountStatusCapability;
+  if(companyVatManageRoute(method,path))return companyVatManageCapability;
+  if(companyVatActivateRoute(method,path))return companyVatActivateCapability;
+  if(staffDisplayNameTarget(method,path))return staffDisplayNameCapability;
+  if(companyCategoryManageRoute(method,path))return companyCategoryManageCapability;
   const supplierWrite=staffSupplierManagementRoute(method,path);
   if(supplierWrite)return supplierWrite.capability;
   if(method!=='GET')return null;

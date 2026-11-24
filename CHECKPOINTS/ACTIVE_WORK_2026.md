@@ -1,4 +1,12 @@
-- 22/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · /root · DRAFT, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
+- 24/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · Ενσωμάτωση πριν από την κεντρική εγκατάσταση · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
+
+- 24/11/2026 · Νέο κεντρικό εβδομαδιαίο alarm stock και πρόταση παραγγελίας μπροστινού POS με ανακλητό δικαίωμα χειριστή · /root · CLAIM PROPOSED / SOURCE NOT STARTED. [Scope και εμπόδιο τοπικής εγγραφής Git](CHANGES/2026-11-24-central-weekly-stock-alarm-claim.md). Συνέχεια μητρώων: [Αναθέσεις](../docs/roadmap/OPEN_WORK_TRACKER_2026-11-24_STOCK_ALARM.md) / [Εκκρεμότητες](../docs/roadmap/PENDING_WORK_2026-11-24_STOCK_ALARM.md). Προηγούμενοι owners διατηρούνται.
+
+- 24/11/2026 · Νο 7 · ASSIGNED /root · Μία βάρδια την Κυριακή στο Ριζαρίου · [Checkpoint](CHANGES/2026-11-24-rizariou-sunday-shift.md) · Live #4190, προεπισκοπήσεις 22/11 (μία βάρδια) και 23/11 (δύο) επιβεβαιώθηκαν. Παραλαβή της πρώτης κυριακάτικης αναφοράς εκκρεμεί.
+
+- 24/11/2026 · Νο 5 · [Εκχώρηση διαχείρισης εταιρικών κατηγοριών](CHANGES/2026-11-24-no5-company-category-delegation.md).
+
+- 23/11/2026 · POS / Super Admin · Κεντρικός κανόνας εκκρεμών εγκρίσεων: τραπεζική κατάθεση χωρίς αποδεικτικό ή διαφορά πληρωμής >1,00€. Draft PR #4180, CI/LAB σε αναμονή, καμία μεταβολή πραγματικών οικονομικών εγγραφών. [Checkpoint](CHANGES/2026-11-23-payment-approval-policy-lab.md).
 
 - 23/11/2026 · Νο 5 · ΦΠΑ και ταξινόμηση είδους από γραμμή τιμολογίου · [Καταγραφή](CHANGES/2026-11-23-no5-staff-invoice-line-taxonomy.md).
 
@@ -979,3 +987,11 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - Πανόρμου · Ανάκτηση PDF Epsilon 72, 159, 172 και 209 · [Checkpoint](CHANGES/2026-11-22-panormou-epsilon-72-172.md).
 
 - 24/11/2026 · Νο 5 · [Νέο είδος με barcode από πρόχειρο τιμολόγιο](CHANGES/2026-11-24-no5-draft-new-item-barcode.md).
+
+- 24/11/2026 · Πανόρμου · Προφίλ ΦΠΑ RBS βάσει Kiosk · [Checkpoint](CHANGES/2026-11-24-panormou-rbs-vat-profile.md).
+
+- 24/11/2026 · Νο 5 · [Εκχωρήσεις καταμέτρησης, διπλοεγγραφών και λιανικής](CHANGES/2026-11-24-no5-owner-delegation-store-actions.md).
+
+- 24/11/2026 · Νο 5 · [Εταιρικές εκχωρήσεις ΦΠΑ και ονόματος χειριστή](CHANGES/2026-11-24-no5-company-vat-staff-delegation.md).
+
+- 24/11/2026 · Νο 5 · [Εκχώρηση ενεργοποίησης τμημάτων ΦΠΑ και χειριστών](CHANGES/2026-11-24-no5-company-vat-activation-staff-status.md).

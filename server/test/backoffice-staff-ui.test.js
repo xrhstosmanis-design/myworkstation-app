@@ -1716,3 +1716,62 @@ test('delegated draft item creation sends one same-store request with scanned or
   }finally{await m.close()}
  }
 });
+
+test('delegated closing count is independent of force close and writes the selected pending shift only once',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace');
+  const store={id:'a1',name:'A1',profile:'MANAGER',capabilities:['shifts.read','shifts.closing-count']};
+  const other={id:'a2',name:'A2',profile:'MANAGER',capabilities:['shifts.read','shifts.force-close']};
+  const shift={id:'shift',status:'CLOSED',closeReconciliationStatus:'AWAITING_COUNT',openedByName:'Fixture operator',transactionCount:0,openedAt:'2026-11-16T08:00:00Z',terminalPos:'MAIN'};
+  const sibling={...shift,id:'sibling'};
+  const calls=[];
+  let counted=false;
+  const api=async(path,options={})=>{
+    calls.push({path,options});
+    if(path.endsWith('/me'))return {...identity,stores:[store,other]};
+    const scope=options.headers['x-backoffice-store-id'];
+    if(path===`/api/cash-control/stores/${scope}/reporting-overview`)return {
+      store:{id:scope},recent:scope==='a1'?[{...shift,closeReconciliationStatus:counted?'COUNTED':'AWAITING_COUNT'}]:[sibling],
+      openSessions:[],recentTransactions:[]
+    };
+    assert.equal(scope,'a1');
+    if(path==='/api/owner-shifts/shift/detail'){
+      assert.equal(options.method||'GET','GET');
+      return {shift:{id:'shift',storeId:'a1',closeReconciliationStatus:'AWAITING_COUNT'},countEntry:{requiresEftpos:true}};
+    }
+    if(path==='/api/owner-shifts/shift/closing-count'){
+      assert.equal(options.method,'POST');
+      assert.deepEqual(JSON.parse(options.body),{storeId:'a1',drawer:'0',custody:'1,20',coins:'0',safe:'20',eftposTotal:'0',note:'Καταμέτρηση LAB'});
+      counted=true;
+      return {ok:true,shift:{id:'shift',storeId:'a1',closeReconciliationStatus:'COUNTED'}};
+    }
+    assert.fail('Unexpected request '+path);
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  const selectStore=storeId=>m.act(async()=>{
+    const select=document.querySelector('[aria-label="Κατάστημα"]');
+    select.value=storeId;
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  try{
+    await selectStore('a1');
+    await m.act(async()=>button('Αναφορά βαρδιών').click());
+    await m.act(async()=>button('0 · Προβολή').click());
+    assert.equal(button('Διοικητικό κλείσιμο χωρίς καταμέτρηση'),undefined);
+    const form=document.querySelector('[aria-label="Καταχώριση πραγματικής καταμέτρησης"] form');
+    assert.ok(form);
+    for(const [name,value] of Object.entries({drawer:'0',custody:'1,20',coins:'0',safe:'20',eftposTotal:'0',note:'Καταμέτρηση LAB'})){
+      form.elements[name].value=value;
+    }
+    await m.act(async()=>{
+      for(let click=0;click<2;click++)form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+    });
+    assert.equal(calls.filter(call=>call.options.method==='POST').length,1);
+    assert.match(document.body.textContent,/Η καταμέτρηση αποθηκεύτηκε/);
+    assert.equal(document.querySelector('[aria-label="Καταχώριση πραγματικής καταμέτρησης"]'),null);
+    await selectStore('a2');
+    if(!button('0 · Προβολή'))await m.act(async()=>button('Αναφορά βαρδιών').click());
+    await m.act(async()=>button('0 · Προβολή').click());
+    assert.equal(document.querySelector('[aria-label="Καταχώριση πραγματικής καταμέτρησης"]'),null);
+    assert.equal(calls.some(call=>call.path.startsWith('/api/owner-shifts/sibling')),false);
+  }finally{await m.close()}
+});

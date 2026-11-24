@@ -79,8 +79,13 @@ function range(query){
 async function assertStore(companyId,storeId,{db=prisma}={}){if(!storeId)return null;const store=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα.");error.status=404;throw error}return store}
 
 const delegatedForceClose=req=>req.user?.staffAccess===true&&req.user.tokenType==="BACKOFFICE_USER"&&req.staffGrant?.capability==="shifts.force-close"&&Boolean(req.user.storeId);
+const delegatedClosingCount=req=>req.user?.staffAccess===true&&req.user.tokenType==="BACKOFFICE_USER"&&req.staffGrant?.capability==="shifts.closing-count"&&Boolean(req.user.storeId);
 router.use((req,res,next)=>{
   if(delegatedForceClose(req)&&req.method==="POST"&&/^\/[^/]+\/force-close$/.test(req.path))return next();
+  if(delegatedClosingCount(req)){
+    if(req.method==="GET"&&/^\/[^/]+\/detail$/.test(req.path))return next();
+    if(req.method==="POST"&&/^\/[^/]+\/closing-count$/.test(req.path))return next();
+  }
   return requireOwner(req,res,next);
 });
 export async function readOwnerShiftReport(scopeCompanyId,rawQuery,{db=prisma}={}){
@@ -199,6 +204,19 @@ export async function readOwnerShiftDetail(scopeCompanyId,sessionId,{db=prisma}=
 router.get("/:sessionId/detail",async(req,res,next)=>{
   try{
     await ensureSchema();
+    if(delegatedClosingCount(req)){
+      const {companyId,storeId}=req.user;
+      await requireStaffAction(prisma,req,storeId,"shifts.closing-count");
+      const [row]=await prisma.$queryRaw`SELECT s."id",s."storeId",s."status",s."closeReconciliationStatus",st."name"
+        FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId"
+        WHERE s."id"=${req.params.sessionId} AND s."companyId"=${companyId} AND s."storeId"=${storeId}
+        LIMIT 1`;
+      if(!row)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια στο επιλεγμένο κατάστημα."});
+      const shift={id:row.id,storeId:row.storeId,closeReconciliationStatus:row.closeReconciliationStatus};
+      const countEntry=awaitingCount(row)?{requiresEftpos:(await readCashControlRule(prisma,{id:storeId,companyId,name:row.name})).posEftposEnabled}:null;
+      await requireStaffAction(prisma,req,storeId,"shifts.closing-count");
+      return res.set("Cache-Control","private, no-store").json({shift,countEntry});
+    }
     const detail=await readOwnerShiftDetail(req.user.companyId,req.params.sessionId);
     if(canEnterClosingCount(req.user)&&awaitingCount(detail.shift)){
       const store={id:detail.shift.storeId,companyId:req.user.companyId,name:detail.shift.storeName};
@@ -245,13 +263,16 @@ const closingCountSchema=z.object({
 const roundToCents=value=>Math.round(value*100)/100;
 const countError=(status,message)=>Object.assign(new Error(message),{status});
 
-export async function recordPendingClosingCount(db,user,sessionId,input){
-  if(!canEnterClosingCount(user)||!user.companyId||!user.id){
-    throw countError(403,"Μόνο ο Ιδιοκτήτης ή ο Super Admin μπορεί να καταχωρίσει την καταμέτρηση.");
-  }
+const countPermissionDenied=()=>countError(403,"Απαιτείται δικαίωμα καταχώρισης εκκρεμούς καταμέτρησης.");
+
+export async function recordPendingClosingCount(db,user,sessionId,input,{verify}={}){
+  const delegated=user?.staffAccess===true&&user.tokenType==="BACKOFFICE_USER"&&Boolean(user.storeId)&&typeof verify==="function";
+  if((!canEnterClosingCount(user)&&!delegated)||!user?.companyId||!user.id)throw countPermissionDenied();
   const body=closingCountSchema.parse(input);
+  if(delegated&&user.storeId!==body.storeId)throw countPermissionDenied();
   return db.$transaction(async tx=>{
     const companyId=user.companyId;
+    if(delegated)await verify(tx,body.storeId);
     const rows=await tx.$queryRaw`SELECT s.*,st."name" AS "storeName"
       FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId"
       WHERE s."id"=${sessionId} AND s."companyId"=${companyId} AND s."storeId"=${body.storeId}
@@ -291,10 +312,13 @@ export async function recordPendingClosingCount(db,user,sessionId,input){
 
 router.post("/:sessionId/closing-count",async(req,res,next)=>{
   try{
-    if(!canEnterClosingCount(req.user))throw countError(403,"Μόνο ο Ιδιοκτήτης ή ο Super Admin μπορεί να καταχωρίσει την καταμέτρηση.");
+    const delegated=delegatedClosingCount(req);
+    if(!canEnterClosingCount(req.user)&&!delegated)throw countPermissionDenied();
     await ensureSchema();
-    const shift=await recordPendingClosingCount(prisma,req.user,req.params.sessionId,req.body||{});
-    res.json({ok:true,shift});
+    const verify=delegated?(tx,storeId)=>requireStaffAction(tx,req,storeId,"shifts.closing-count"):undefined;
+    const shift=await recordPendingClosingCount(prisma,req.user,req.params.sessionId,req.body||{},{verify});
+    const result=delegated?{id:shift.id,storeId:shift.storeId,closeReconciliationStatus:shift.closeReconciliationStatus}:shift;
+    res.json({ok:true,shift:result});
   }catch(error){
     if(error?.name==="ZodError")return res.status(400).json({error:"Συμπλήρωσε τα τέσσερα ποσά καταμέτρησης και την αιτιολογία."});
     if(error?.status)return res.status(error.status).json({error:error.message});

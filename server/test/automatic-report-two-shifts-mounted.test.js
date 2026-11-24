@@ -34,8 +34,15 @@ test('mounted two-shift form saves null, reopens it and requires third hour only
   await act(async()=>document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));
   assert.deepEqual(saved.configuration.terminals,[{terminalPos:'TWO',requiredSlots:[1,2]}]);assert.equal(saved.configuration.thirdShiftStartHour,null);
   await act(async()=>button('Ανανέωση ρυθμίσεων').click());assert.equal(document.querySelector('[aria-label="Έναρξη 3ης βάρδιας"]').value,'');assert.equal(slots()[2].checked,false);
+  const sunday=()=>[...document.querySelectorAll('label')].find(label=>label.textContent==='Κυριακή μόνο 1η βάρδια').querySelector('input');
+  assert.equal(sunday().checked,false);
+  await act(async()=>sunday().click());
+  await act(async()=>document.querySelector('.report-settings-confirm input').click());
+  await act(async()=>document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));
+  assert.deepEqual(saved.configuration.terminals,[{terminalPos:'TWO',requiredSlots:[1,2],sundayFirstShiftOnly:true}]);
+  await act(async()=>button('Ανανέωση ρυθμίσεων').click());assert.equal(sunday().checked,true);assert.equal(slots()[1].checked,true);
   await act(async()=>slots()[2].click());assert.equal(document.querySelector('[aria-label="Έναρξη 3ης βάρδιας"]').required,true);assert.equal(document.querySelector('form').checkValidity(),false);
   await change('Έναρξη 3ης βάρδιας','23');assert.equal(document.querySelector('form').checkValidity(),true);
-  assert.equal(calls.filter(c=>c.method==='PUT').length,1);assert.equal(calls.filter(c=>c.method==='POST').length,0);
+  assert.equal(calls.filter(c=>c.method==='PUT').length,2);assert.equal(calls.filter(c=>c.method==='POST').length,0);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [key,descriptor] of previous){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}}
 });

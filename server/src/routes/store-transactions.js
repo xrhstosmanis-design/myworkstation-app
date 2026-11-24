@@ -508,7 +508,7 @@ router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
     const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transactionId} LIMIT 1`;if(existing[0]){const error=new Error("Η ίδια κατάθεση έχει ήδη καταχωρηθεί.");error.status=409;throw error}
     const rows=await tx.$queryRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum","occurredAt") SELECT ${transactionId},${req.user.companyId},${store.id},shift."id",'BANK_DEPOSIT',${body.amount},${`Κατάθεση τράπεζας · ${account.bankName} · ${body.depositor}`},true,'CASH_SHIFT',${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null},${body.depositedAt} FROM "CashShiftSession" shift WHERE shift."companyId"=${req.user.companyId} AND shift."storeId"=${store.id} AND shift."terminalPos"=${terminalPos} AND shift."status"='OPEN' ORDER BY shift."openedAt" DESC LIMIT 1 FOR KEY SHARE OF shift RETURNING *`;
     if(!rows[0]){const error=new Error("Απαιτείται ενεργή βάρδια για κατάθεση μετρητών.");error.status=409;throw error}
-    const status=attachment?'PENDING_REVIEW':'PENDING_PROOF';
+    const status=attachment?'CONFIRMED':'PENDING_PROOF';
     const ledger=await tx.$queryRaw`INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account.id},'CASH_DEPOSIT',${body.amount},${status},${transactionId},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${body.depositedAt},${req.user.id},${actorName}) RETURNING *`;
     return {transaction:normalize(rows[0]),ledger:ledger[0],account};
   });
@@ -593,7 +593,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const settlementId=crypto.randomUUID(),actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   // Document-backed owner payments keep existing automatic confirmation.
   // A responsibility statement is not proof and always waits for human review.
-  const initialStatus=ownerPayment&&!noDocument?"CONFIRMED":"PENDING_REVIEW";
+  const initialStatus=(body.paymentMethod==="BANK_TRANSFER"&&!attachment)||Math.abs(advanceAmount)>1.005?"PENDING_REVIEW":"CONFIRMED";
   const result=await prisma.$transaction(async tx=>{
     if(req.user?.staffAccess===true)await requireStaffAction(tx,req,store.id,'payments.supplier');
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${transactionId},0))::text AS locked`;
@@ -723,10 +723,10 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
     // are still awaiting their first proof and must be uploadable exactly once.
     const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount","sourceTransactionId" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW') AND "attachmentData" IS NULL FOR UPDATE`;
     if(!pending[0])return [];
-    const expectedAmount=Number(pending[0].amount||0),proofAmount=parsedAmount??body.proofAmount??null;
+    const expectedAmount=Math.abs(Number(pending[0].amount||0)),proofAmount=parsedAmount??body.proofAmount??null;
     const difference=proofAmount==null?0:Number((proofAmount-expectedAmount).toFixed(2));
     const declaredDifference=parsedAmount!=null&&body.proofAmount!=null?Number((body.proofAmount-parsedAmount).toFixed(2)):0;
-    const status=Math.abs(difference)>.005||Math.abs(declaredDifference)>.005?'DISCREPANCY':parsedAmount!=null?'CONFIRMED':'PENDING_REVIEW';
+    const status=Math.abs(difference)>1.005||Math.abs(declaredDifference)>1.005?'DISCREPANCY':proofAmount!=null?'CONFIRMED':'PENDING_REVIEW';
     const note=status==='CONFIRMED'?'Συμφωνία με ποσό αναγνωσμένου αποδεικτικού PDF':status==='DISCREPANCY'?`Διαφορά ποσού: κατάθεση ${expectedAmount.toFixed(2)} €, αποδεικτικό ${proofAmount?.toFixed(2)} €, δηλωμένο ${body.proofAmount?.toFixed(2)??'άγνωστο'} €.`:'Το περιεχόμενο του αποδεικτικού δεν αναγνωρίστηκε. Απαιτείται ανθρώπινος έλεγχος.';
     const reviewedBy=status==='PENDING_REVIEW'?null:req.user.id;
     const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"proofAmount"=${proofAmount},"status"=${status},"reviewedBy"=${reviewedBy},"reviewedAt"=${status==='PENDING_REVIEW'?null:new Date()},"reviewNote"=${note} WHERE "id"=${pending[0].id} RETURNING "id","status","companyId","storeId","amount","proofAmount"`;
@@ -770,7 +770,7 @@ router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,rou
   const status="CONFIRMED";
   const rows=await prisma.$transaction(async tx=>{
     if(status==="CONFIRMED"){
-      const missingProof=await tx.$queryRaw`SELECT "id" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status"='PENDING_PROOF' AND "attachmentData" IS NULL LIMIT 1`;
+      const missingProof=await tx.$queryRaw`SELECT "id" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND "attachmentData" IS NULL LIMIT 1`;
       if(missingProof[0]){const error=new Error("Ανέβασε πρώτα την απόδειξη κατάθεσης πριν από την επιβεβαίωση.");error.status=409;throw error}
     }
     const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
@@ -804,6 +804,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR EXISTS(SELECT 1 FROM "PurchaseDocument" scoped WHERE scoped."id"=a."purchaseDocumentId" AND scoped."companyId"=ss."companyId" AND scoped."storeId"=ss."storeId"))
     LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR p."storeId"=ss."storeId")
     WHERE ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
+      AND ((ss."paymentMethod"='BANK_TRANSFER' AND t."attachmentData" IS NULL) OR ABS(t."amount"-COALESCE((SELECT SUM(aa."amount") FROM "SupplierPaymentAllocation" aa WHERE aa."settlementId"=ss."id"),0))>1.005)
       AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR ss."companyId"=${filters.companyId})
       AND (${filters.storeId}='' OR ss."storeId"=${filters.storeId})
@@ -918,6 +919,7 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
     JOIN "Company" c ON c."id"=er."companyId"
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
     WHERE er."status" IN ('PENDING_REVIEW','DISCREPANCY')
+      AND t."paymentMethod"='BANK_TRANSFER' AND t."attachmentData" IS NULL
       AND (${scopeCompanyId}::text IS NULL OR er."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR er."companyId"=${filters.companyId})
       AND (${filters.storeId}='' OR er."storeId"=${filters.storeId})
@@ -1248,7 +1250,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
     if(Number(bound)!==1){const error=new Error("Η κατηγορία εξόδου δεν αποθηκεύτηκε. Η πληρωμή δεν καταχωρίστηκε.");error.status=409;throw error}
     transaction.expenseCategoryId=body.expenseCategoryId;
   }
-  const expenseStatus=req.user.staffAccess===true?"PENDING_REVIEW":expenseReviewStatus(req.user);
+  const expenseStatus=selectedPaymentMethod==="BANK_TRANSFER"&&!legacyAttachment?"PENDING_REVIEW":"CONFIRMED";
   if(body.type==="OTHER_EXPENSE")await tx.$executeRaw`
     INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status","reviewedBy","reviewedAt","reviewNote")
     VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${transaction.id},${expenseStatus},${expenseStatus==="CONFIRMED"?req.user.id:null},${expenseStatus==="CONFIRMED"?new Date():null},${expenseStatus==="CONFIRMED"?"Καταχώριση από ιδιοκτήτη / υπερδιαχειριστή":null})

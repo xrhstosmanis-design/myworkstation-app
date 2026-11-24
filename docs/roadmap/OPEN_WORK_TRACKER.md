@@ -793,6 +793,10 @@ Evidence reviewed: AGENTS, current owned tracker/active/pending records, ftext m
 
 Same retained owner feat/ai-owner-wallet-20261022 / current /root / feat/ai-wallet-commercial-waiver-20261103; no transfer. Explicit owner approval and synthetic before record PR3580/head01759810 passed applicable docs CI (3SUCCESS/2classifiedSKIP) and merged97fb72fd16f1f8051dda7067f0333c4720e38ab9 BEFORE the action. Live revision2a8db9d5c4fcfa2742d8601c54f747bf1d918e53 / Renderdep-dbkilsnb9u1s73fgenpg verified native health; four affected runtime files byte-identical to source3563/accepted3a710176.
 
+### 24/11/2026 12:07 Αθήνας — Νο 7 · Βάρδιες Κυριακής Ριζαρίου
+
+**Ανάληψη** /root, `fix/report-sunday-shifts-20261124`, επιβεβαιωμένη Κυριακή 1 βάρδια και λοιπές ημέρες 2. Προσθήκη προαιρετικής ρύθμισης ανά τερματικό για την ετοιμότητα του ημερήσιου, εβδομαδιαίου και μηνιαίου report. Live #4190 και ρύθμιση 7. **Επαλήθευση 24/11** δύο πραγματικές προεπισκοπήσεις, Κυριακή 22/11 μία βάρδια και Δευτέρα 23/11 δύο. Εκκρεμεί η πρώτη αυτόματη παράδοση Κυριακής. Checkpoint `CHECKPOINTS/CHANGES/2026-11-24-rizariou-sunday-shift.md`.
+
 ### 03/11/2026 14:45:58 Ελλάδας - AI-WALLET-COMMERCIAL-WAIVER-01 / SCOPED AUTHORIZED CUSTOMER LIVE PASS
 
 Same retained owner feat/ai-owner-wallet-20261022 / current /root continuation feat/ai-wallet-commercial-waiver-20261103. The owner now explicitly approved the exact previously described private batch and amount, preserving the excluded holds, and a confirmation image in this chat. This supersedes only the prior approval boundary for that same batch; no broader financial or private-data publication authorization.

@@ -44,3 +44,22 @@ test('two-shift day boundaries retain Greek DST and original source identities',
   assert.deepEqual(source,before);
  }
 });
+
+test('only the selected terminal can use one shift on Sunday, with the ordinary closure checks',()=>{
+ const sunday='2026-11-22',monday='2026-11-23',sundayNow=new Date('2026-11-23T08:00:00+02:00');
+ const terminal={...configuration.terminals[0],sundayFirstShiftOnly:true};
+ const sundayConfig=automaticReportConfigurationSchema.parse({...configuration,terminals:[terminal]});
+ assert.equal(sundayConfig.terminals[0].sundayFirstShiftOnly,true);
+ assert.equal(automaticReportConfigurationSchema.safeParse({...configuration,terminals:[{...terminal,sundayFirstShiftOnly:'true'}]}).success,false);
+ const sundaySettings={...settings,...sundayConfig,day:sunday};
+ const sundayShift={...rows()[0],openedAt:`${sunday}T10:18:37+02:00`,closedAt:`${sunday}T23:47:44+02:00`};
+ assert.equal(dailyCashReportReadiness([sundayShift],sundaySettings,sundayNow).ready,true);
+ assert.ok(dailyCashReportReadiness([sundayShift],{...settings,day:sunday},sundayNow).holds.some(h=>h.slot===2));
+ assert.equal(dailyCashReportReadiness([{...sundayShift,status:'OPEN',closedAt:null}],sundaySettings,sundayNow).ready,false);
+ assert.equal(dailyCashReportReadiness([],sundaySettings,sundayNow).ready,false);
+ const mondayShift={...sundayShift,openedAt:`${monday}T07:00:00+02:00`,closedAt:`${monday}T15:03:00+02:00`};
+ const mondayAfternoon={...rows()[1],openedAt:`${monday}T15:04:00+02:00`,closedAt:`${monday}T23:54:00+02:00`};
+ const mondayNow=new Date('2026-11-24T08:00:00+02:00');
+ assert.ok(dailyCashReportReadiness([mondayShift],{...sundaySettings,day:monday},mondayNow).holds.some(h=>h.slot===2));
+ assert.equal(dailyCashReportReadiness([mondayShift,mondayAfternoon],{...sundaySettings,day:monday},mondayNow).ready,true);
+});

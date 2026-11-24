@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import StaffShiftClosingCount from './StaffShiftClosingCount.jsx';
 import {buildStaffShiftReportCsv} from './staff-shift-report-csv.mjs';
 import {printStaffShiftReport,staffShiftReportColumns,shiftAmount,shiftTimestamp} from './staff-shift-report-print.mjs';
 
@@ -12,11 +13,12 @@ const transactionLabels={
   OTHER_EXPENSE:'Έξοδο'
 };
 
-export default function StaffShiftReport({api,storeId,canExport=false,canPrint=false,canForceClose=false}){
+export default function StaffShiftReport({api,storeId,canExport=false,canPrint=false,canForceClose=false,canEnterClosingCount=false}){
   const [revision,setRevision]=useState(0);
   const [loaded,setLoaded]=useState(null);
   const result=loaded?.api===api&&loaded.storeId===storeId&&loaded.revision===revision?loaded.data:null;
   const [error,setError]=useState('');
+  const [notice,setNotice]=useState('');
   const [selectedId,setSelectedId]=useState('');
   const [closing,setClosing]=useState(false);
 
@@ -78,6 +80,7 @@ export default function StaffShiftReport({api,storeId,canExport=false,canPrint=f
     {canExport&&<button type="button" onClick={exportCsv} disabled={!result?.recent.length}>Εξαγωγή εμφανιζόμενων βαρδιών</button>}
     {canPrint&&<button type="button" onClick={printReport} disabled={!result?.recent.length}>Εκτύπωση εμφανιζόμενων βαρδιών</button>}
     {error&&<p role="alert">{error}</p>}
+    {notice&&<p role="status">{notice}</p>}
     {!result&&!error&&<p role="status">Φόρτωση αναφοράς βαρδιών…</p>}
     {result&&<p>Έως 20 πρόσφατες βάρδιες, από όλα τα ταμεία του καταστήματος.</p>}
     {result&&(!result.recent.length?<p>Δεν υπάρχουν καταγεγραμμένες βάρδιες.</p>:<>
@@ -86,7 +89,7 @@ export default function StaffShiftReport({api,storeId,canExport=false,canPrint=f
           <thead><tr>{staffShiftReportColumns.map(([label])=><th scope="col" key={label}>{label}</th>)}</tr></thead>
           <tbody>{result.recent.map(shift=><tr key={shift.id}>
             {staffShiftReportColumns.slice(0,-1).map(([label,read])=><td key={label}>{read(shift)}</td>)}
-            <td><button type="button" aria-pressed={selectedId===shift.id} onClick={()=>setSelectedId(shift.id)}>
+            <td><button type="button" aria-pressed={selectedId===shift.id} onClick={()=>{setSelectedId(shift.id);setNotice('')}}>
               {staffShiftReportColumns.at(-1)[1](shift)} · Προβολή
             </button></td>
           </tr>)}</tbody>
@@ -99,6 +102,11 @@ export default function StaffShiftReport({api,storeId,canExport=false,canPrint=f
           <label>Αιτιολογία <input name="reason" required minLength={3} maxLength={500} disabled={closing}/></label>
           <button type="submit" disabled={closing}>Διοικητικό κλείσιμο χωρίς καταμέτρηση</button>
         </form>}
+        {canEnterClosingCount&&selected.status==='CLOSED'&&selected.closeReconciliationStatus==='AWAITING_COUNT'&&
+          <StaffShiftClosingCount key={selected.id} api={api} storeId={storeId} sessionId={selected.id} onSaved={()=>{
+            setNotice('Η καταμέτρηση αποθηκεύτηκε.');
+            setRevision(value=>value+1);
+          }}/>}
         {!transactions.length?<p>Δεν υπάρχουν διαθέσιμες πρόσφατες συναλλαγές για τη βάρδια.</p>:
           <table aria-label="Πρόσφατες συναλλαγές βάρδιας">
             <thead><tr><th scope="col">Ώρα</th><th scope="col">Τύπος</th><th scope="col">Περιγραφή</th>

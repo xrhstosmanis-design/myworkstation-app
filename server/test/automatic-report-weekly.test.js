@@ -46,3 +46,16 @@ test("missing midweek shift, Sunday open/late closure, earlier unresolved, dupli
  }
  const r=await readAutomaticCashPreview(fixture(week()).db,{...args(),now:new Date("2026-10-19T06:59:59+03:00")});assert.equal(r.ready,false);assert.ok(r.holds.some(h=>h.day==="2026-10-18"&&h.code==="BUSINESS_DAY_NOT_FINISHED"));
 });
+
+test("weekly preview applies the Sunday exception only to the selected terminal and business day",async()=>{
+ const scopedArgs={...args(),configuration:{...configuration,terminals:[{terminalPos:"MAIN",requiredSlots:[1,2,3],sundayFirstShiftOnly:true},configuration.terminals[1]]}};
+ const rows=week().filter(row=>!["6-1","6-2"].includes(row.id));
+ const result=await readAutomaticCashPreview(fixture(rows).db,scopedArgs);
+ assert.equal(result.ready,true);
+ assert.equal(result.sourceCount,26);
+ const incomplete=rows.filter(row=>!["5-1","6-delivery"].includes(row.id));
+ const held=await readAutomaticCashPreview(fixture(incomplete).db,scopedArgs);
+ assert.equal(held.ready,false);
+ assert.ok(held.holds.some(h=>h.day==="2026-10-17"&&h.terminalPos==="MAIN"&&h.slot===2));
+ assert.ok(held.holds.some(h=>h.day==="2026-10-18"&&h.terminalPos==="DELIVERY"&&h.slot===1));
+});

@@ -42,3 +42,22 @@ test("real checkout command builder uses authenticated identity and emits one wa
   assert.throws(()=>call(identity.companyId,"another-store"),/do not match/);
   assert.throws(()=>call(identity.companyId,identity.storeId,[{...items[0],fiscalVatRate:24}]),/VAT does not match/);
 });
+
+test("Panormou accepts the exact local VAT mapping, including a blank imported legacy ID",()=>{
+  const panormou={companyId:"cmwqvuxru001gs8g43mop69tt",storeId:"cmwqvuxrx001is8g4uqlyzwg2"};
+  for(const [vatCode,department,vatRate] of [
+    ["12",1,0],["45",2,0],["72",3,0],["42",4,13],["15",5,24],
+    ["64",6,6],["73",7,24],["66",8,24],["63",10,0],
+  ]){
+    assert.deepEqual(resolveRbsCapDriverFiscalProfile({...panormou,vatCode,department,vatRate}),{department,vatRate});
+    assert.deepEqual(resolveRbsCapDriverFiscalProfile({...panormou,vatCode:null,department,vatRate}),{department,vatRate});
+  }
+  const water={...panormou,vatCode:null,department:4,vatRate:13};
+  for(const change of [{vatCode:"4"},{vatCode:"42",department:5},{vatRate:24},{department:9},
+    {companyId:"another-company"},{storeId:"another-store"},{department:1,vatRate:null}]){
+    assert.throws(()=>resolveRbsCapDriverFiscalProfile({...water,...change}),/do not match/);
+  }
+  const command=buildRbsCapDriverV1Command({items:[{description:"ΖΑΓΟΡΙ ΝΕΡΟ 500ML",quantity:1,unitPrice:0.4,
+    fiscalDepartment:resolveRbsCapDriverFiscalProfile(water).department,vatRate:13}],paymentMethod:"CASH",paymentCode:"1",total:0.4});
+  assert.ok(command.text.includes("SL/ΖΑΓΟΡΙ ΝΕΡΟ 500ML//1.000/0.40/4/13.0"));
+});

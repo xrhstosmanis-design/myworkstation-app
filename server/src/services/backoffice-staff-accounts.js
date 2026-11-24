@@ -71,6 +71,10 @@ export async function createStaffAccount(db,user,input){
     return {id:userId,username:b.username,revision:1};
   },{timeout:15000});
 }
+export async function revokeStaffSessions(tx,userId,passwordHash=null){
+  await tx.user.update({where:{id:userId},data:{sessionVersion:{increment:1},...(passwordHash?{passwordHash}:{})},select:{id:true}});
+  await tx.userSession.updateMany({where:{userId,revokedAt:null},data:{revokedAt:new Date()}});
+}
 export async function updateStaffAccount(db,user,userId,input){
   const b=updateStaffInput.parse(input);
   const passwordHash=b.password?await bcrypt.hash(b.password,12):null,pinHash=b.pin?await bcrypt.hash(b.pin,12):null;
@@ -86,8 +90,7 @@ export async function updateStaffAccount(db,user,userId,input){
     if(companyChanged)await tx.$executeRaw`UPDATE "BackofficeStaffAccount" SET "companyCapabilities"=${JSON.stringify(b.companyCapabilities)}::jsonb WHERE "userId"=${userId} AND "companyId"=${user.companyId}`;
     if(pinHash)await tx.$executeRaw`UPDATE "BackofficeStaffAccount" SET "pinHash"=${pinHash} WHERE "userId"=${userId} AND "companyId"=${user.companyId}`;
     await writeGrants(tx,user.companyId,userId,b.grants);
-    await tx.user.update({where:{id:userId},data:{sessionVersion:{increment:1},...(passwordHash?{passwordHash}:{})},select:{id:true}});
-    await tx.userSession.updateMany({where:{userId,revokedAt:null},data:{revokedAt:new Date()}});
+    await revokeStaffSessions(tx,userId,passwordHash);
     await audit(tx,user,userId,'UPDATED',{before:{active:before.active,revision:before.revision,grants:previous,...(companyChanged?{companyCapabilities:companyBefore}:{})},after:{active:b.active,revision:before.revision+1,grants:b.grants,...(companyChanged?{companyCapabilities:b.companyCapabilities}:{})},passwordChanged:Boolean(passwordHash),pinChanged:Boolean(pinHash)});
     return {id:userId,revision:before.revision+1};
   },{timeout:15000});

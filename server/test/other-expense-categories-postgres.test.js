@@ -125,7 +125,7 @@ test('native registered expense route binds only active same-company categories 
     assert.equal((await db.$queryRaw`SELECT "expenseCategoryId" FROM "StoreTransaction" WHERE id=${lockedExpense.data.id}`)[0].expenseCategoryId,'active');
     assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(t)::text AS value FROM "StoreTransaction" t WHERE id='control-row'`,controlBefore);
     const reviews=await db.$queryRaw`SELECT status FROM "OtherExpenseReview" WHERE "transactionId"=${first.data.id}`;
-    assert.equal(reviews.length,1);assert.equal(reviews[0].status,'PENDING_REVIEW');
+    assert.equal(reviews.length,1);assert.equal(reviews[0].status,'CONFIRMED');
     assert.equal((await counts()).payments,10);assert.equal((await counts()).reviews,9);assert.equal((await counts()).bank,1);
   }finally{
     await other.$disconnect();await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();

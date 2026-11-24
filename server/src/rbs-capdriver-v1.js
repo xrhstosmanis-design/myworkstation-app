@@ -56,13 +56,32 @@ const ACHARNON_VAT_PROFILES=new Map([
   ["18",{department:18,vatRate:24}]
 ]);
 
+// Panormou DCR: the Kiosk Manager ID and the RBS department are distinct.
+const PANORMOU_VAT_PROFILES=new Map([
+  ["12",{department:1,vatRate:0}],
+  ["45",{department:2,vatRate:0}],
+  ["72",{department:3,vatRate:0}],
+  ["42",{department:4,vatRate:13}],
+  ["15",{department:5,vatRate:24}],
+  ["64",{department:6,vatRate:6}],
+  ["73",{department:7,vatRate:24}],
+  ["66",{department:8,vatRate:24}],
+  ["63",{department:10,vatRate:0}]
+]);
+
 export function resolveRbsCapDriverFiscalProfile({companyId,storeId,storeCompanyId,vatCode,department,vatRate}={}){
   const acharnon=storeId==="cmw0pwyvo000uokg2jrjm1p0c"
     &&typeof companyId==="string"&&companyId.length>0&&companyId===storeCompanyId;
-  const profiles=acharnon?ACHARNON_VAT_PROFILES
+  const panormou=companyId==="cmwqvuxru001gs8g43mop69tt"&&storeId==="cmwqvuxrx001is8g4uqlyzwg2";
+  const profiles=panormou?PANORMOU_VAT_PROFILES:acharnon?ACHARNON_VAT_PROFILES
     :companyId==="cmulmjjoa000oqlbfyi0h53ju"&&storeId==="cmulmjjoc000qqlbf2bn2ifj0"
       ?DIADOXOU_VAT_PROFILES:RBS_CAP_DRIVER_KIOSK_VAT_PROFILES;
-  const profile=profiles.get(String(vatCode??"").trim());
+  const code=String(vatCode??"").trim();
+  // Panormou's imported catalogue omitted legacy IDs. A blank code can
+  // resolve only by an exact, confirmed RBS department and VAT pair.
+  const profile=panormou&&!code
+    ?[...profiles.values()].find(entry=>entry.department===Number(department)&&entry.vatRate===Number(vatRate)&&String(vatRate??"").trim()!=="")
+    :profiles.get(code);
   if(!profile||Number(department)!==profile.department||!Number.isFinite(Number(vatRate))||Math.abs(Number(vatRate)-profile.vatRate)>0.001)throw new Error("Kiosk VAT code, register department and VAT rate do not match the confirmed register profile");
   return profile;
 }

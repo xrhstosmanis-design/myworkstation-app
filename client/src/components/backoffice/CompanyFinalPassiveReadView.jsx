@@ -1,8 +1,8 @@
-import React,{useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {greeceDateInput,greeceRangeDate} from '../../../../shared/greece-time.mjs';
 import {finalPassiveCompanyActions as actions,finalPassiveCompanyPrefix as prefix,passiveTaxonomyProductFields,passiveMovementFields} from '../../../../shared/backoffice-staff-final-passive.mjs';
 import {staffProfiles,staffPermissionSections} from '../../../../shared/backoffice-staff.mjs';
-import {staffCompanyPermissionSections} from '../../../../shared/backoffice-staff-company.mjs';
+import {staffCompanyPermissionSections,staffDisplayNameCapability,staffDisplayNamePrefix,staffAccountStatusCapability,staffAccountStatusPrefix} from '../../../../shared/backoffice-staff-company.mjs';
 import useCompanyConfigurationRead from './useCompanyConfigurationRead.js';
 import useProductCenterChoice from './useProductCenterChoice.jsx';
 import {companyFinalPassiveValid as validate} from './companyFinalPassiveValidation.js';
@@ -11,9 +11,121 @@ import {ProductReadTable} from './ProductCenterReadPresentation.jsx';
 import CompanyPassiveAuditReadView from './CompanyPassiveAuditReadView.jsx';
 function useRead(props,path,kind,context={},enabled=true){return useCompanyConfigurationRead({...props,path,enabled,validate,context:{kind,...context}})}
 const storeLabels=new Map(staffPermissionSections.flatMap(section=>section.actions).map(action=>[action.key,action.label])),companyLabels=new Map(staffCompanyPermissionSections.flatMap(section=>section.actions).map(action=>[action.key,action.label]));
-function Policy(props){const read=useRead(props,prefix+'/staff-policy','policy'),[chosen,setChosen]=useState(''),[grantId,setGrant]=useState(''),selected=read.data?.items.find(row=>row.id===chosen),grant=selected?.grants.find(row=>row.storeId===grantId);return <><ReadState read={read}/>{read.data&&<><p>Μόνο ανάγνωση παραχωρήσεων. Η εμφάνιση δικαιωμάτων άλλου λογαριασμού δεν τα παραχωρεί στον δικό σου λογαριασμό. Δεν εμφανίζονται κωδικοί, PIN ή συνεδρίες.</p><Table label="Προσωπικοί λογαριασμοί και παραχωρήσεις" items={read.data.items} columns={[["fullName","Ονοματεπώνυμο"],["username","Όνομα σύνδεσης"],["active","Ενεργός",yes],["revision","Έκδοση πολιτικής"],["id","Δικαιώματα",(_,row)=><button type="button" onClick={()=>{setChosen(row.id);setGrant('')}}>Δικαιώματα: {row.fullName}</button>]]}/>{selected&&<section aria-label="Παραχωρήσεις επιλεγμένου προσωπικού λογαριασμού"><h4>{selected.fullName}</h4><h5>Εταιρικές προβολές</h5>{selected.companyCapabilities.length?<ul>{selected.companyCapabilities.map(key=><li key={key}>{companyLabels.get(key)||'Μη αναγνωρισμένη προβολή'}</li>)}</ul>:<p>Δεν έχουν παραχωρηθεί εταιρικές προβολές.</p>}<Table label="Παραχωρήσεις καταστημάτων επιλεγμένου λογαριασμού" items={selected.grants.map(row=>({...row,id:row.storeId}))} columns={[["storeName","Κατάστημα"],["profile","Πρότυπο",value=>staffProfiles[value]?.label||value],["revision","Έκδοση"],["storeId","Προβολές",(_,row)=><button type="button" onClick={()=>setGrant(row.storeId)}>Λειτουργίες: {row.storeName}</button>]]}/>{grant&&<><h5>{grant.storeName}</h5><ul>{grant.capabilities.map(key=><li key={key}>{storeLabels.get(key)||'Μη αναγνωρισμένη λειτουργία'}</li>)}</ul></>}</section>}</>}</>}
+function DisplayNameEditor({api,companyId,account,onSaved,onCancel}){
+  const [name,setName]=useState(account.fullName),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const pending=useRef(null),active=useRef(false);
+  useEffect(()=>{
+    active.current=true;
+    return ()=>{active.current=false;pending.current?.abort()};
+  },[]);
+  const fullName=name.trim();
+  const valid=fullName!==account.fullName&&fullName.length>=2&&fullName.length<=180&&!/[\u0000-\u001f\u007f]/.test(fullName);
+  async function save(event){
+    event.preventDefault();
+    if(!valid||pending.current)return;
+    const request=new AbortController();
+    pending.current=request;
+    setBusy(true);setError('');
+    try{
+      const result=await api(staffDisplayNamePrefix+'/'+encodeURIComponent(account.id),{
+        method:'PATCH',
+        headers:{'x-backoffice-company-id':companyId},
+        body:JSON.stringify({fullName,expectedFullName:account.fullName}),
+        signal:request.signal
+      });
+      if(!active.current||request.signal.aborted)return;
+      if(result?.ok!==true||result.companyId!==companyId||result.id!==account.id||result.fullName!==fullName){
+        throw Error('Δεν επιβεβαιώθηκε η αλλαγή. Ανανέωσε τον κατάλογο.');
+      }
+      onSaved();
+    }catch(failure){
+      if(active.current&&!request.signal.aborted)setError(failure.message);
+    }finally{
+      pending.current=null;
+      if(active.current)setBusy(false);
+    }
+  }
+  return <form aria-label="Διόρθωση ονοματεπωνύμου χειριστή" onSubmit={save}>
+    <label>Εμφανιζόμενο ονοματεπώνυμο <input value={name} onChange={event=>setName(event.target.value)} minLength={2} maxLength={180} required disabled={busy}/></label>
+    <button type="submit" disabled={!valid||busy}>Αποθήκευση ονοματεπωνύμου</button>
+    <button type="button" disabled={busy} onClick={onCancel}>Άκυρο</button>
+    {error&&<p role="alert">{error}</p>}
+  </form>;
+}
+function AccountStatusEditor({api,companyId,account,onSaved,onCancel}){
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  const pending=useRef(null);
+  useEffect(()=>()=>pending.current?.abort(),[]);
+  const active=!account.active;
+  const action=active?'Ενεργοποίηση':'Απενεργοποίηση';
+  async function save(event){
+    event.preventDefault();
+    if(pending.current)return;
+    const controller=new AbortController();
+    pending.current=controller;
+    setBusy(true);setError('');
+    try{
+      const result=await api(staffAccountStatusPrefix+'/'+encodeURIComponent(account.id),{
+        method:'PATCH',headers:{'x-backoffice-company-id':companyId},
+        body:JSON.stringify({active,expectedRevision:account.revision}),signal:controller.signal
+      });
+      if(controller.signal.aborted)return;
+      if(result?.ok!==true||result.companyId!==companyId||result.id!==account.id||
+         result.active!==active||result.revision!==account.revision+1)throw Error('Δεν επιβεβαιώθηκε η αλλαγή. Ανανέωσε τον κατάλογο.');
+      onSaved();
+    }catch(failure){
+      if(!controller.signal.aborted)setError(failure.message);
+    }finally{
+      if(!controller.signal.aborted){pending.current=null;setBusy(false)}
+    }
+  }
+  return <form aria-label="Επιβεβαίωση κατάστασης χειριστή" onSubmit={save}>
+    <p>{action} λογαριασμού για {account.fullName}. Τυχόν ενεργές συνδέσεις του θα τερματιστούν.</p>
+    <button type="submit" disabled={busy}>Επιβεβαίωση</button>
+    <button type="button" disabled={busy} onClick={onCancel}>Άκυρο</button>
+    {error&&<p role="alert">{error}</p>}
+  </form>;
+}
+function Policy(props){
+  const read=useRead(props,prefix+'/staff-policy','policy');
+  const [chosen,setChosen]=useState(''),[grantId,setGrant]=useState(''),[editing,setEditing]=useState(''),[statusId,setStatusId]=useState(''),[notice,setNotice]=useState('');
+  const selected=read.data?.items.find(row=>row.id===chosen),grant=selected?.grants.find(row=>row.storeId===grantId);
+  const mayRename=Boolean(props.staffActorId&&props.companyCapabilities?.includes(staffDisplayNameCapability));
+  const mayChangeStatus=Boolean(props.staffActorId&&props.companyCapabilities?.includes(staffAccountStatusCapability));
+  const columns=[["fullName","Ονοματεπώνυμο"],["username","Όνομα σύνδεσης"],["active","Ενεργός",yes],["revision","Έκδοση πολιτικής"],
+    ["id","Δικαιώματα",(_,row)=><button type="button" onClick={()=>{setChosen(row.id);setGrant('');setEditing('');setStatusId('')}}>Δικαιώματα: {row.fullName}</button>]];
+  if(mayRename)columns.push(["displayNameAction","Διόρθωση",(_,row)=>row.id!==props.staffActorId&&
+    <button type="button" onClick={()=>{setEditing(row.id);setStatusId('');setNotice('')}}>Διόρθωση ονόματος: {row.fullName}</button>]);
+  if(mayChangeStatus)columns.push(["statusAction","Κατάσταση πρόσβασης",(_,row)=>row.id!==props.staffActorId&&
+    <button type="button" onClick={()=>{setStatusId(row.id);setEditing('');setNotice('')}}>
+      {row.active?'Απενεργοποίηση':'Ενεργοποίηση'}: {row.fullName}
+    </button>]);
+  const statusAccount=mayChangeStatus&&statusId!==props.staffActorId?read.data?.items.find(row=>row.id===statusId):null;
+  const account=mayRename&&editing!==props.staffActorId?read.data?.items.find(row=>row.id===editing):null;
+  return <><ReadState read={read}/>
+    {notice&&<p role="status">{notice}</p>}
+    {read.data&&<>
+      <p>Η εμφάνιση δικαιωμάτων άλλου λογαριασμού δεν τα παραχωρεί στον δικό σου λογαριασμό.</p>
+      <Table label="Προσωπικοί λογαριασμοί και παραχωρήσεις" items={read.data.items} columns={columns}/>
+      {account&&<DisplayNameEditor key={JSON.stringify([account.id,account.fullName])} api={props.api} companyId={props.companyId}
+        account={account} onCancel={()=>setEditing('')} onSaved={()=>{setEditing('');setNotice('Το ονοματεπώνυμο αποθηκεύτηκε.');read.refresh()}}/>}
+      {statusAccount&&<AccountStatusEditor key={JSON.stringify([statusAccount.id,statusAccount.revision])} api={props.api}
+        companyId={props.companyId} account={statusAccount} onCancel={()=>setStatusId('')}
+        onSaved={()=>{setStatusId('');setNotice('Η κατάσταση του λογαριασμού αποθηκεύτηκε.');read.refresh()}}/>}
+      {selected&&<section aria-label="Παραχωρήσεις επιλεγμένου προσωπικού λογαριασμού">
+        <h4>{selected.fullName}</h4><h5>Εταιρικές προβολές</h5>
+        {selected.companyCapabilities.length?<ul>{selected.companyCapabilities.map(key=><li key={key}>{companyLabels.get(key)||'Μη αναγνωρισμένη προβολή'}</li>)}</ul>:<p>Δεν έχουν παραχωρηθεί εταιρικές προβολές.</p>}
+        <Table label="Παραχωρήσεις καταστημάτων επιλεγμένου λογαριασμού" items={selected.grants.map(row=>({...row,id:row.storeId}))}
+          columns={[["storeName","Κατάστημα"],["profile","Πρότυπο",value=>staffProfiles[value]?.label||value],["revision","Έκδοση"],
+            ["storeId","Προβολές",(_,row)=><button type="button" onClick={()=>setGrant(row.storeId)}>Λειτουργίες: {row.storeName}</button>]]}/>
+        {grant&&<><h5>{grant.storeName}</h5><ul>{grant.capabilities.map(key=><li key={key}>{storeLabels.get(key)||'Μη αναγνωρισμένη λειτουργία'}</li>)}</ul></>}
+      </section>}
+    </>}
+  </>;
+}
+
 const parentConfig={'category-products.read':['categories.read','/api/management/categories'],'vat-department-products.read':['vat-departments.read','/api/management/vat-departments'],'product-company-products.read':['product-companies.read','/api/management/product-companies']};
 function Taxonomy(props){const [parentCapability,parentPath]=parentConfig[props.capability],category=props.capability==='category-products.read',[selectedId,setSelected]=useState(''),[subcategoryId,setSubcategory]=useState(''),[storeId,setStore]=useState(''),[draft,setDraft]=useState(''),[q,setQuery]=useState(''),[page,setPage]=useState(1),[error,setError]=useState(''),options=useRead(props,parentPath+(category&&selectedId?'?'+new URLSearchParams({categoryId:selectedId}):''),'taxonomy-options',{parentCapability,categoryId:category?selectedId:''}),rows=options.data?(category?options.data.categories:options.data.items):[],selected=rows.find(row=>row.id===selectedId),selectedName=selected?.name??selected?.description??'',storeAllowed=props.companyCapabilities?.includes('stores.read'),stores=useRead(props,'/api/owner-products/stores','stores',{},Boolean(storeAllowed)),store=stores.data?.items.find(row=>row.id===storeId&&row.active),dirty=draft.trim()!==q,enabled=Boolean(selected&&!dirty&&(!storeId||store)),query=new URLSearchParams({q,page:String(page),pageSize:'100',...(store?{storeId}:{}),...(category?{categoryId:selectedId,...(subcategoryId?{subcategoryId}:{})}:{})}),path=category?'/category-products':props.capability==='vat-department-products.read'?'/vat-departments/'+encodeURIComponent(selectedId)+'/products':'/product-companies/'+encodeURIComponent(selectedId)+'/products',read=useRead(props,enabled?prefix+path+'?'+query:null,'taxonomy',{category,selectedId,selectedName,subcategoryId,storeId:store?.id??null,q,page},enabled);return <><ReadState read={options}/>{options.data&&<label>Ονομασία κατηγορίας προβολής<select aria-label="Ονομασία επιλεγμένης ταξινόμησης προϊόντων" value={selectedId} onChange={e=>{setSelected(e.target.value);setSubcategory('');setPage(1)}}><option value="">Επίλεξε ονομασία από τον επιτρεπόμενο κατάλογο</option>{rows.map(row=><option key={row.id} value={row.id}>{row.name??row.description}{row.active?'':' · Ανενεργή'}</option>)}</select></label>}{category&&selected&&options.data&&<label>Υποκατηγορία<select aria-label="Ονομασία υποκατηγορίας προβολής προϊόντων" value={subcategoryId} onChange={e=>{setSubcategory(e.target.value);setPage(1)}}><option value="">Όλες οι υποκατηγορίες της κατηγορίας</option>{options.data.subcategories.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}{storeAllowed&&<ReadState read={stores}/>} {storeAllowed&&stores.data&&<label>Κατάστημα<select aria-label="Ονομασία καταστήματος ταξινομημένων προϊόντων" value={storeId} onChange={e=>{setStore(e.target.value);setPage(1)}}><option value="">Όλη η εταιρεία</option>{stores.data.items.filter(row=>row.active).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}<form onSubmit={e=>{e.preventDefault();setError('');const value=draft.trim();if(value.length>120||/[\u0000-\u001f\u007f]/.test(value)){setError('Η αναζήτηση δέχεται έως 120 χαρακτήρες.');return}setQuery(value);setPage(1);read.refresh()}}><label>Περιγραφή / εσωτερικός κωδικός<input aria-label="Αναζήτηση ταξινομημένων προϊόντων" value={draft} maxLength={120} onChange={e=>{setDraft(e.target.value);setPage(1);setError('')}}/></label><button type="submit">Αναζήτηση ταξινομημένων προϊόντων</button></form>{error&&<p role="alert">{error}</p>}{enabled&&<ReadState read={read}/>} {read.data&&<><h4>{selectedName}</h4><p>{read.data.total} είδη · σελίδα {page} από {read.data.pages}. Επιστρέφονται έως 100 προϊόντα ανά αίτημα, χωρίς αλλαγές κατηγοριοποίησης ή μαζική μεταφορά.</p><ProductReadTable label="Προϊόντα επιλεγμένης ταξινόμησης" items={read.data.items} fields={passiveTaxonomyProductFields}/>{read.data.pages>1&&<nav aria-label="Σελίδες ταξινομημένων προϊόντων"><button type="button" disabled={page<=1} onClick={()=>setPage(page-1)}>Προηγούμενα ταξινομημένα προϊόντα</button><button type="button" disabled={page>=read.data.pages} onClick={()=>setPage(page+1)}>Επόμενα ταξινομημένα προϊόντα</button></nav>}</>}</>}
 function Movements(props){const choice=useProductCenterChoice(props),selected=choice.selected,stores=useRead(props,'/api/owner-products/stores','stores'),[storeId,setStore]=useState(''),today=greeceDateInput(),[draft,setDraft]=useState({from:today.slice(0,7)+'-01',to:today}),[request,setRequest]=useState(null),[error,setError]=useState(''),store=stores.data?.items.find(row=>row.id===storeId&&row.active),current=request&&selected?.id===request.productId&&store?.id===request.storeId?request:null,read=useRead(props,current?prefix+'/product-movements/'+encodeURIComponent(current.productId)+'?'+new URLSearchParams({storeId:current.storeId,from:current.from,to:current.to}):null,'movements',current||{},Boolean(current));const change=patch=>{setRequest(null);setError('');setDraft({...draft,...patch})};return <>{choice.controls}<ReadState read={stores}/>{stores.data&&<label>Κατάστημα φυσικών κινήσεων<select aria-label="Ονομασία καταστήματος φυσικών κινήσεων" value={storeId} onChange={e=>{setStore(e.target.value);setRequest(null)}}><option value="">Επίλεξε κατάστημα με το όνομά του</option>{stores.data.items.filter(row=>row.active).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}<form onSubmit={e=>{e.preventDefault();setError('');if(!selected||!store||!greeceRangeDate(draft.from)||!greeceRangeDate(draft.to)||draft.from>draft.to||draft.from<'2000-01-01'||draft.to>'2100-12-31'){setRequest(null);setError('Επίλεξε προϊόν, κατάστημα και έγκυρο ημερολογιακό διάστημα.');return}setRequest({...draft,productId:selected.id,storeId:store.id});read.refresh()}}><label>Από<input aria-label="Φυσικές κινήσεις προϊόντος από" type="date" value={draft.from} onChange={e=>change({from:e.target.value})}/></label><label>Έως<input aria-label="Φυσικές κινήσεις προϊόντος έως" type="date" value={draft.to} onChange={e=>change({to:e.target.value})}/></label><button type="submit">Προβολή φυσικών κινήσεων προϊόντος</button></form>{error&&<p role="alert">{error}</p>}{current&&<ReadState read={read}/>} {read.data&&<><h4>{read.data.product.name}</h4><p>Έως 1.000 φυσικές κινήσεις. Η άγκυρα είναι το τρέχον απόθεμα: {read.data.product.currentStock}. Τα εμφανιζόμενα υπόλοιπα υπολογίζονται αφαιρώντας αντίστροφα μόνο τις επιστρεφόμενες κινήσεις. Δεν είναι ιστορικό απόθεμα στο τέλος του διαστήματος ή συμφωνία του εμπλουτισμένου καθολικού.</p><p>Βασική τιμή πώλησης προϊόντος: {money(read.data.product.salePrice)} · Βασικό κόστος: {money(read.data.product.costPrice)}. Άγνωστο κόστος κίνησης παραμένει μη διαθέσιμο.</p><ProductReadTable label="Φυσικές κινήσεις επιλεγμένου προϊόντος" items={read.data.items} fields={passiveMovementFields}/></>}</>}
 function required(key,seen=new Set()){if(seen.has(key))return seen;seen.add(key);for(const parent of actions.find(row=>row.key===key)?.requires??[])required(parent,seen);return seen}
-export default function CompanyFinalPassiveReadView(props){const action=actions.find(row=>row.key===props.capability),allowed=Boolean(action&&props.companyId&&[...required(action.key)].every(key=>props.companyCapabilities?.includes(key)));if(!allowed)return <p role="alert">Δεν επιβεβαιώθηκε η εταιρική προβολή και οι ρητές ονομαστικές επιλογές.</p>;const identity=JSON.stringify([props.companyId,props.authorityKey,props.capability,props.companyCapabilities]),next={...props,authorityKey:identity};return <section aria-label="Συμπληρωματικές εταιρικές προβολές μόνο ανάγνωση"><h3>{action.label}</h3><p>Μόνο καταχωρισμένα στοιχεία της τρέχουσας εταιρείας, χωρίς αλλαγές, έγκριση, διαπιστευτήρια ή εντολές.</p>{props.capability==='staff-policy.read'?<Policy key={identity} {...next}/>:props.capability==='audit-event-context.read'?<CompanyPassiveAuditReadView key={identity} {...next}/>:props.capability==='product-movements.read'?<Movements key={identity} {...next}/>:<Taxonomy key={identity} {...next}/>}</section>}
+export default function CompanyFinalPassiveReadView(props){const action=actions.find(row=>row.key===props.capability),allowed=Boolean(action&&props.companyId&&[...required(action.key)].every(key=>props.companyCapabilities?.includes(key)));if(!allowed)return <p role="alert">Δεν επιβεβαιώθηκε η εταιρική προβολή και οι ρητές ονομαστικές επιλογές.</p>;const canRename=props.capability==='staff-policy.read'&&props.companyCapabilities.includes(staffDisplayNameCapability),canChangeStatus=props.capability==='staff-policy.read'&&props.companyCapabilities.includes(staffAccountStatusCapability),identity=JSON.stringify([props.companyId,props.authorityKey,props.capability,props.companyCapabilities]),next={...props,authorityKey:identity};return <section aria-label="Συμπληρωματικές εταιρικές προβολές μόνο ανάγνωση"><h3>{action.label}</h3><p>{canChangeStatus?"Επιτρέπεται η αλλαγή κατάστασης άλλου προσωπικού λογαριασμού.":canRename?"Επιτρέπεται η διόρθωση του εμφανιζόμενου ονοματεπωνύμου άλλου χειριστή.":"Μόνο καταχωρισμένα στοιχεία της τρέχουσας εταιρείας, χωρίς αλλαγές, έγκριση, διαπιστευτήρια ή εντολές."}</p>{props.capability==='staff-policy.read'?<Policy key={identity} {...next}/>:props.capability==='audit-event-context.read'?<CompanyPassiveAuditReadView key={identity} {...next}/>:props.capability==='product-movements.read'?<Movements key={identity} {...next}/>:<Taxonomy key={identity} {...next}/>}</section>}
