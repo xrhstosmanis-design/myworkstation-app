@@ -42,7 +42,7 @@ test('actual supplier route rejects missing declaration and foreign/unauthorized
  assert.equal(writes,0);
 });
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
-test('native supplier declaration atomically persists pending payment, audit and allocations, rejects replay/overpayment and rolls back', {skip:!isolated()},async()=>{
+test('native supplier declaration atomically persists confirmed matching payment, audit and allocations, rejects replay/overpayment and rolls back', {skip:!isolated()},async()=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schemaName='supplier_declaration_'+crypto.randomBytes(6).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schemaName);
  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schemaName}"`);const db=new PrismaClient({datasources:{db:{url:url.toString()}}});
  let auditFail=false;const wrapped=new Proxy(db,{get(target,key){
@@ -61,7 +61,7 @@ test('native supplier declaration atomically persists pending payment, audit and
   await db.$executeRaw`INSERT INTO "CashShiftSession" ("id","companyId","storeId","openedBy","terminalPos") VALUES ('shift','company','store','actor','MAIN')`;
   const reset=async()=>{auditFail=false;await db.$executeRawUnsafe('TRUNCATE "SupplierPaymentAllocation","SupplierPaymentSettlement","StoreTransaction","StoreOperatorAudit","BankLedgerEntry" CASCADE');await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN'`;};
   const state=async()=>({payments:await db.$queryRaw`SELECT * FROM "StoreTransaction"`,settlements:await db.$queryRaw`SELECT * FROM "SupplierPaymentSettlement"`,allocations:await db.$queryRaw`SELECT * FROM "SupplierPaymentAllocation"`,events:await db.$queryRaw`SELECT * FROM "StoreOperatorAudit"`,bank:await db.$queryRaw`SELECT * FROM "BankLedgerEntry"`});
-  const first=request();const result=await run(first);assert.equal(result.status,201);assert.equal(result.data.status,'PENDING_REVIEW');let s=await state();
+  const first=request();const result=await run(first);assert.equal(result.status,201);assert.equal(result.data.status,'CONFIRMED');let s=await state();
   assert.equal(s.payments.length,1);assert.equal(s.settlements.length,1);assert.equal(s.allocations.length,1);assert.equal(s.events.length,1);assert.equal(s.payments[0].attachmentData,null);assert.equal(s.payments[0].sessionId,'shift');assert.equal(s.payments[0].actorId,'actor');assert.equal(Number(s.payments[0].amount),6);assert.match(s.payments[0].description,/ΧΩΡΙΣ ΑΠΟΔΕΙΚΤΙΚΟ/);assert.match(s.settlements[0].note,/πραγματοποίησα την πληρωμή 6.00/);assert.equal(s.events[0].details.evidenceMode,'NO_DOCUMENT');assert.equal(s.events[0].details.actorName,'Virtual operator');assert.ok(s.events[0].details.acceptedAt);assert.match(s.events[0].details.responsibilityDeclaration,/VIRTUAL SUPPLIER/);assert.equal(s.events[0].eventType,'SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED');
   assert.equal((await run(first)).status,409);assert.equal((await state()).payments.length,1);
   await reset();const concurrent=await Promise.all([run(request()),run(request())]);assert.deepEqual(concurrent.map(r=>r.status).sort(),[201,409]);assert.equal((await state()).payments.length,1);
