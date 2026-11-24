@@ -999,3 +999,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 24/11/2026 · Νο 5 · [Εκχώρηση ενεργοποίησης τμημάτων ΦΠΑ και χειριστών](CHANGES/2026-11-24-no5-company-vat-activation-staff-status.md).
 
 - 24/11/2026 · Νο 5 · [Όρια εκχώρησης δικαιωμάτων POS ανά κατάστημα](CHANGES/2026-11-24-no5-pos-permission-ceiling.md).
+
+- 24/11/2026 · Νο 5 · [Όρια επανεκχώρησης προβολών BackOffice](CHANGES/2026-11-24-no5-backoffice-read-delegation.md).

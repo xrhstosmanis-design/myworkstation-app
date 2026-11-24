@@ -116,3 +116,30 @@ test('POS ceiling disables protected toggles and rejects a copy that would chang
     assert.equal(calls.length,1);
   }finally{await m.close()}
 });
+
+test('delegated read controls bind the target, store and revision and never offer self or other permissions',async()=>{
+  const Panel=await component('backoffice/StaffReadDelegation');
+  const calls=[];
+  const api=async(path,options)=>{
+    calls.push({path,options});
+    if(options.method==='PATCH')return {storeId:'s',userId:'peer',revision:5,capabilities:['invoices.read']};
+    return {storeId:'s',editableKeys:['invoices.read'],items:[
+      {userId:'self',fullName:'Self',revision:1,capabilities:[]},
+      {userId:'peer',fullName:'Peer',revision:4,capabilities:[]}
+    ]};
+  };
+  const m=await mount(Panel,{api,storeId:'s',userId:'self'});
+  try{
+    assert.deepEqual([...document.querySelectorAll('option')].map(option=>option.value),['','peer']);
+    await m.act(async()=>{
+      const select=document.querySelector('select');
+      select.value='peer';select.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    const checkbox=document.querySelector('fieldset input');
+    assert.equal(document.querySelectorAll('fieldset input').length,1);
+    await m.act(async()=>checkbox.click());
+    assert.equal(calls[1].path,'/api/backoffice-staff/stores/s/delegated-reads/peer');
+    assert.deepEqual(JSON.parse(calls[1].options.body),{key:'invoices.read',enabled:true,expectedRevision:4});
+    assert.equal(document.querySelector('fieldset input').checked,true);
+  }finally{await m.close()}
+});

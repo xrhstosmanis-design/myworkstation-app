@@ -102,6 +102,8 @@ export async function enforceBackofficeStaff(db,req,res){
     const rows=await db.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${order[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
+  const delegationStore=path.match(/^\/api\/backoffice-staff\/stores\/([^/]+)\/delegated-reads(?:\/[^/]+)?$/);
+  if(delegationStore&&delegationStore[1]!==storeId)throw staffError();
   const close=path.match(/^\/api\/(?:cash\/sessions\/([^/]+)\/close|owner-shifts\/([^/]+)\/(?:force-close|closing-count|detail))$/);
   if(close){
     const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${close[1]??close[2]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
@@ -148,6 +150,7 @@ function modulesForCapability(capability){
  if(storeReportCapabilities.includes(capability))return freeStoreReportCapabilities.includes(capability)?[]:['INVENTORY'];
  if(capability==='unsold-products.read')return ['SALES_ANALYTICS'];
  if(['operator-profiles.manage-permissions','operator-profiles.manage-pos-access','operator-profiles.create-employee','operator-profiles.reset-pin','operator-profiles.copy-permissions'].includes(capability))return ['STORE_MODE'];
+ if(capability==='staff-grants.manage-reads')return [];
  if(capability==='payments.import-kiosk')return ['CASH_CONTROL'];
  if(['invoices.upload-original','invoices.fetch-original','invoices.sync-mydata'].includes(capability))return ['DOCUMENTS'];
  if(['invoice-ai.photo-preview','invoices.mydata-prefill'].includes(capability))return ['AI_READER','DOCUMENTS','INVENTORY'];

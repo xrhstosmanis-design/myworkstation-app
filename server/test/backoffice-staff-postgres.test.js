@@ -172,7 +172,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       await updateStaffAccount(db,owner,actorId,{expectedRevision:2,active:true,grants:[a1,a2]});
       const persisted=await db.$queryRaw`SELECT "storeId","capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${actorId} ORDER BY "storeId"`;
       assert.deepEqual(persisted.map(row=>decodeStoredStaffCapabilities(row.capabilities)),[
-        {capabilities,posPermissionCeiling:['orders']},{capabilities,posPermissionCeiling:[]}
+        {capabilities,posPermissionCeiling:['orders'],backofficeReadDelegationCeiling:[]},{capabilities,posPermissionCeiling:[],backofficeReadDelegationCeiling:[]}
       ]);
       const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username:name,pin:input.pin}});
       assert.equal(login.status,200,JSON.stringify(login.data));
@@ -226,6 +226,64 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       await updateStaffAccount(db,owner,actorId,{expectedRevision:3,active:true,grants:[{...a1,posPermissionCeiling:[]},a2]});
       await assert.rejects(toggle('orders',true),{code:'STAFF_SESSION_INVALID'});
       assert.equal((await db.$queryRaw`SELECT "id" FROM "StoreOperatorAudit"`).length,2);
+    });
+    await t.test('BackOffice read subdelegation is owner bounded, preserves other grants and revokes the target session',async()=>{
+      const {decodeStoredStaffCapabilities}=await import('../src/services/staff-pos-permission-ceiling.js');
+      const cap='staff-grants.manage-reads',actorName='delegated.reads.fixture',targetName='delegated.target.fixture';
+      const a1={storeId:'a1',profile:'AUDITOR'};
+      const actorGrant={...a1,capabilities:[cap,'products.read','invoices.read','inventory.read']};
+      const targetGrant={...a1,capabilities:['products.read','products.create'],posPermissionCeiling:['orders']};
+      const target=await createStaffAccount(db,owner,{...input,username:targetName,grants:[targetGrant,
+        {storeId:'a2',profile:'AUDITOR',capabilities:['invoices.read']}]});
+      const bounded=await createStaffAccount(db,owner,{...input,username:actorName,grants:[
+        {...actorGrant,backofficeReadDelegationCeiling:['products.read','invoices.read','shifts.read']}]});
+      await updateStaffAccount(db,owner,bounded.id,{expectedRevision:1,active:true,grants:[actorGrant]});
+      const signIn=async username=>{
+        const result=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
+        assert.equal(result.status,200,JSON.stringify(result.data));return result.data.token;
+      };
+      const targetToken=await signIn(targetName),actorToken=await signIn(actorName);
+      const path='/api/backoffice-staff/stores/a1/delegated-reads';
+      const invoke=(suffix='',method='GET',body,storeId='a1')=>request(path+suffix,{token:actorToken,method,body,storeId});
+      const change=(userId,key,enabled,expectedRevision)=>invoke('/'+userId,'PATCH',{key,enabled,expectedRevision});
+      const visible=await invoke();
+      assert.equal(visible.status,200,JSON.stringify(visible.data));
+      assert.deepEqual(visible.data.editableKeys,['products.read','invoices.read']);
+      assert.equal(visible.data.items.some(item=>item.userId===bounded.id),false);
+      assert.doesNotMatch(JSON.stringify(visible.data),/products.create|mws:/);
+      const listed=visible.data.items.find(item=>item.userId===target.id);
+      assert.ok(listed);
+      assert.equal((await change(target.id,cap,true,listed.revision)).status,400);
+      assert.equal((await change(target.id,'shifts.read',true,listed.revision)).status,403);
+      assert.equal((await change(target.id,'inventory.read',true,listed.revision)).status,403);
+      assert.equal((await change(bounded.id,'invoices.read',true,listed.revision)).status,403);
+      assert.equal((await invoke('', 'GET',undefined,'a2')).status,403);
+      const dependent=await change(target.id,'products.read',false,listed.revision);
+      assert.equal(dependent.status,409);assert.equal(dependent.data.code,'STAFF_READ_DELEGATION_DEPENDENCY');
+      assert.equal((await request('/api/backoffice-staff/me',{token:targetToken})).status,200);
+      const control=await db.$queryRaw`SELECT "capabilities","revision" FROM "BackofficeStaffGrant" WHERE "userId"=${target.id} AND "storeId"='a2'`;
+      const permitted=await change(target.id,'invoices.read',true,listed.revision);
+      assert.equal(permitted.status,200,JSON.stringify(permitted.data));
+      assert.deepEqual(permitted.data,{storeId:'a1',userId:target.id,revision:listed.revision+1,capabilities:['products.read','invoices.read']});
+      const row=(await db.$queryRaw`SELECT "capabilities","revision" FROM "BackofficeStaffGrant" WHERE "userId"=${target.id} AND "storeId"='a1'`)[0];
+      assert.deepEqual(decodeStoredStaffCapabilities(row.capabilities),{
+        capabilities:['products.read','products.create','invoices.read'],posPermissionCeiling:['orders'],backofficeReadDelegationCeiling:[]
+      });
+      assert.deepEqual(await db.$queryRaw`SELECT "capabilities","revision" FROM "BackofficeStaffGrant" WHERE "userId"=${target.id} AND "storeId"='a2'`,control);
+      assert.equal((await request('/api/backoffice-staff/me',{token:targetToken})).status,401);
+      assert.equal((await change(target.id,'invoices.read',false,listed.revision)).status,409);
+      const freshTargetToken=await signIn(targetName);
+      const noOp=await change(target.id,'invoices.read',true,listed.revision+1);
+      assert.equal(noOp.status,200);assert.equal(noOp.data.revision,listed.revision+1);
+      assert.equal((await request('/api/backoffice-staff/me',{token:freshTargetToken})).status,200);
+      const audit=await db.$queryRaw`SELECT "actorId","targetUserId","detail" FROM "BackofficeStaffAudit" WHERE "event"='BACKOFFICE_READ_DELEGATED'`;
+      assert.deepEqual(audit,[{actorId:bounded.id,targetUserId:target.id,
+        detail:{storeId:'a1',key:'invoices.read',before:false,enabled:true,revision:listed.revision+1}}]);
+      await assert.rejects(updateStaffAccount(db,owner,target.id,{expectedRevision:1,active:true,grants:[targetGrant]}),{code:'STAFF_STALE'});
+      await updateStaffAccount(db,owner,bounded.id,{expectedRevision:2,active:true,grants:[{...actorGrant,backofficeReadDelegationCeiling:[]}]});
+      assert.equal((await change(target.id,'invoices.read',false,listed.revision+1)).status,401);
+      const freshActor=await signIn(actorName);
+      assert.deepEqual((await request(path,{token:freshActor,storeId:'a1'})).data,{storeId:'a1',editableKeys:[],items:[]});
     });
     await t.test('native auditor HTTP admits only own read projection and manager label cannot restore unchecked actions',async()=>{
       for(const [profile,capabilities] of [['AUDITOR',['cash.read']],['MANAGER',['inventory.read']]]){

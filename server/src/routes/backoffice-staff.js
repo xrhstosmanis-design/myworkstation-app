@@ -16,6 +16,7 @@ import {inventoryListCursor,personalInventoryListPage} from '../services/backoff
 import {Router} from 'express';
 import {staffProfiles} from '../../../shared/backoffice-staff.mjs';
 import {liveStaff,requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {listDelegatedStaffReads,changeDelegatedStaffRead} from '../services/backoffice-staff-read-delegation.js';
 import {decodeStoredStaffCapabilities} from '../services/staff-pos-permission-ceiling.js';
 import {authorizeStaffAdmin,createStaffAccount,updateStaffAccount,verifyStaffLogin} from '../services/backoffice-staff-accounts.js';
 import {periodSchema} from '../services/cash-reconciliation-contract.js';
@@ -144,6 +145,13 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     if(companyInstalled&&!await isBackofficeCompanyInstalled(db))throw staffError(503,'STAFF_COMPANY_UNAVAILABLE');
     res.json({userId:account.userId,companyId:account.companyId,username:account.username,fullName:account.fullName,stores:stores.map(store=>({...store,capabilities:decodeStoredStaffCapabilities(store.capabilities).capabilities})),...(companyInstalled?{revision:account.revision,companyAuthority:companyAuthorityDescription(),companyCapabilities}:{})});
   }catch(error){failure(res,error)}});
+  router.get('/stores/:storeId/delegated-reads',async(req,res)=>{try{
+    const result=await listDelegatedStaffReads(db,req,req.params.storeId);
+    res.set("Cache-Control","private, no-store").json(result);
+  }catch(error){failure(res,error)}});
+  router.patch('/stores/:storeId/delegated-reads/:userId',async(req,res)=>{try{
+    res.json(await changeDelegatedStaffRead(db,req,req.params.storeId,req.params.userId));
+  }catch(error){failure(res,error)}});
   router.get('/admin',async(req,res)=>{try{
     const actor=await authorizeStaffAdmin(db,req.user);
     const companyInstalled=actor.role==='OWNER'&&await isBackofficeCompanyInstalled(db);
@@ -151,8 +159,8 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     const grants=await db.$queryRaw`SELECT "userId","storeId","profile","capabilities","active","revision" FROM "BackofficeStaffGrant" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "userId","storeId" LIMIT 50001`;
     const canEditPosPermissionCeiling=actor.role==='OWNER';
     const visibleGrants=grants.map(grant=>{
-      const {capabilities,posPermissionCeiling}=decodeStoredStaffCapabilities(grant.capabilities);
-      return {...grant,capabilities,...(canEditPosPermissionCeiling?{posPermissionCeiling}:{})};
+      const {capabilities,posPermissionCeiling,backofficeReadDelegationCeiling}=decodeStoredStaffCapabilities(grant.capabilities);
+      return {...grant,capabilities,...(canEditPosPermissionCeiling?{posPermissionCeiling,backofficeReadDelegationCeiling}:{})};
     });
     const companyPolicies=companyInstalled?await db.$queryRaw`SELECT "userId","companyCapabilities","revision" FROM "BackofficeStaffAccount" WHERE "companyId"=${req.user.companyId} ORDER BY "userId" LIMIT 501`:[];
     if(accounts.length>500||grants.length>50000)throw staffError(503,'STAFF_LIMIT');
@@ -160,7 +168,7 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     if(stores.length>100)throw staffError(503,'STAFF_LIMIT');
     await authorizeStaffAdmin(db,req.user);
     if(companyInstalled&&(!await isBackofficeCompanyInstalled(db)||companyPolicies.length!==accounts.length||accounts.some(a=>!companyPolicies.some(p=>p.userId===a.id&&p.revision===a.revision))))throw staffError(409,'STAFF_STALE');
-    res.json({companyId:req.user.companyId,canEditPosPermissionCeiling,accounts:accounts.map(a=>({...a,grants:visibleGrants.filter(g=>g.userId===a.id),...(companyInstalled?{companyCapabilities:companyPolicies.find(p=>p.userId===a.id).companyCapabilities}:{})})),stores,profiles:staffProfiles,...(companyInstalled?{companyAuthority:companyAuthorityDescription()}:{})});
+    res.json({companyId:req.user.companyId,canEditPosPermissionCeiling,canEditBackofficeReadDelegationCeiling:canEditPosPermissionCeiling,accounts:accounts.map(a=>({...a,grants:visibleGrants.filter(g=>g.userId===a.id),...(companyInstalled?{companyCapabilities:companyPolicies.find(p=>p.userId===a.id).companyCapabilities}:{})})),stores,profiles:staffProfiles,...(companyInstalled?{companyAuthority:companyAuthorityDescription()}:{})});
   }catch(error){failure(res,error)}});
   router.post('/admin/accounts',async(req,res)=>{try{res.status(201).json(await createStaffAccount(db,req.user,req.body))}catch(error){failure(res,error)}});
   router.put('/admin/accounts/:userId',async(req,res)=>{try{res.json(await updateStaffAccount(db,req.user,req.params.userId,req.body))}catch(error){failure(res,error)}});
