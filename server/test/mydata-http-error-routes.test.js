@@ -30,6 +30,7 @@ async function fixture(){
   const dependencies={...xml,crypto,myDataHttpError,prisma,assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,
     backgroundDrain:{stopping:false},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(path,...handlers){routes.set(path,handlers.at(-1))}}),
     requireCompanyModule:()=>()=>{},companyModuleState:async()=>({licenseAllowed:true,activeModules:['DOCUMENTS']}),
+    ensureMyDataBranchSchema:async()=>{},hasMyDataBranchMappings:async()=>false,readMyDataBranchForStore:async()=>null,
     ensureStoreIntegrationSchema:async()=>{},decryptStoreIntegrationCredentials:()=>({accountId:'PRIVATE_USER',secret:'PRIVATE_KEY'}),
     acquireOriginal:async()=>{throw new Error('Original acquisition must not run on failure')},
     fetch:async(url,options)=>{requests.push({url,options});return {ok:status===200,status,text:async()=>body}},

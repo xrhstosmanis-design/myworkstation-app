@@ -1,6 +1,7 @@
 import {inboxBusinessLabel} from "../../../../shared/invoice-inbox-state.mjs";
 import InvoiceCommonDraftReview from "./InvoiceCommonDraftReview.jsx";
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
+import MyDataBranchSettings from "./MyDataBranchSettings.jsx";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {CloudDownload,Eye,Inbox,RefreshCw,RotateCw,Search,Trash2} from "lucide-react";
 import "./invoice-inbox.css";
@@ -11,7 +12,7 @@ const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe
 const dayKey=value=>{if(!value)return "Χωρίς ημερομηνία";const d=new Date(value);return Number.isNaN(d.getTime())?"Χωρίς ημερομηνία":d.toLocaleDateString("el-GR",{...({year:"numeric",month:"2-digit",day:"2-digit"}),timeZone:"Europe/Athens"})};
 const isoDay=value=>{if(!value)return "";const d=new Date(value);return Number.isNaN(d.getTime())?"":greeceDateInput(d)};
 
-export default function InvoiceInboxPanel({api,stores=[],onOpenAi,onOpenOrder,readOnly=false,canUploadOriginal=false,canFetchOriginal=false,canSyncMyData=false}){
+export default function InvoiceInboxPanel({api,stores=[],onOpenAi,onOpenOrder,readOnly=false,canUploadOriginal=false,canFetchOriginal=false,canSyncMyData=false,canConfigureMyDataBranch=false}){
   const [storeId,setStoreId]=useState(stores[0]?.id||"");
   const [items,setItems]=useState([]);
   const [inboxView,setInboxView]=useState("today");
@@ -125,6 +126,7 @@ export default function InvoiceInboxPanel({api,stores=[],onOpenAi,onOpenOrder,re
     {!readOnly&&reconcileItem&&<InvoiceCommonDraftReview key={`${storeId}:${reconcileItem.id}`} api={api} storeId={storeId} item={reconcileItem} onClose={()=>setReconcileItem(null)} onComplete={result=>{if(!current(scope))return;setReconcileItem(null);setMessage(result.reused?"Άνοιγμα κοινής αγοράς.":"Τα πρωτότυπα συνδέθηκαν σε ένα κοινό πρόχειρο. Δεν έγινε πληρωμή ή κίνηση αποθήκης.");load();if(result.orderId)navigateOrder({orderId:result.orderId,storeId,readOnly:result.readOnly===true})}}/>}
     <section className="invoice-inbox-head"><div><h2><Inbox/>Θυρίδα Τιμολογίων / Αρχείο</h2><p>Τα παραστατικά myDATA μπαίνουν πρώτα ως πρόχειρα. Η αποθήκη ενημερώνεται μόνο μετά τον έλεγχο του πρωτοτύπου.</p>{myDataStatus&&<small className={`mydata-state ${myDataStatus.enabled&&!myDataStatus.labLocked?"ready":"locked"}`}>myDATA: {myDataStatus.enabled?(myDataStatus.labLocked?"κλειδωμένο — μη έγκυρη ρύθμιση":myDataStatus.environment==="PRODUCTION"?"Παραγωγή — λήψη παραστατικών":"LAB/SANDBOX ενεργό"):"δεν έχει ενεργοποιηθεί"}{myDataStatus.lastSyncError&&` · ${myDataStatus.lastSyncError}`}{myDataStatus.lastSyncAt?` · έλεγχος ανά 15 λεπτά · τελευταίος έλεγχος ${when(myDataStatus.lastSyncAt)}`:""}</small>}</div><div><select value={storeId} onChange={e=>{setStoreId(e.target.value);setInboxView("today");setOffset(0);setTodayOffset(0);setTodayItems([]);setItems([]);setMyDataStatus(null);setReconcileItem(null)}}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><button type="button" hidden={readOnly&&!canSyncMyData} onClick={()=>syncMyData(false)} disabled={!!workingId||(!readOnly&&(!myDataStatus?.enabled||myDataStatus?.labLocked))}><CloudDownload/>{workingId==="MYDATA"?"Έλεγχος…":"Λήψη από myDATA"}</button><button onClick={load}><RefreshCw/>Ανανέωση</button></div></section>
     {canUploadOriginal&&storeId&&<section className="commerce-box"><label>Μεταφόρτωση πρωτοτύπου τιμολογίου <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={!!workingId} onChange={uploadOriginal}/></label></section>}
+    {!readOnly&&canConfigureMyDataBranch&&storeId&&<MyDataBranchSettings key={storeId} api={api} storeId={storeId}/>}
     {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
     <nav className="invoice-view-switch" aria-label="Προβολή τιμολογίων"><button type="button" aria-pressed={inboxView==="today"} onClick={()=>setInboxView("today")}>Τιμολόγια ημέρας</button><button type="button" aria-pressed={inboxView==="archive"} onClick={()=>setInboxView("archive")}>Παλιά τιμολόγια</button></nav>
     <nav className="invoice-view-switch" aria-label="Κατάσταση καταχώρησης">{[["PENDING","Εκκρεμότητες"],["REGISTERED","Τιμολογημένα / καταχωρισμένα"],["ALL","Όλα"]].map(([value,label])=><button key={value} type="button" aria-pressed={processing===value} onClick={()=>{setProcessing(value);setOffset(0);setTodayOffset(0)}}>{label}</button>)}</nav>

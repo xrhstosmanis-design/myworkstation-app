@@ -969,6 +969,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 23/11/2026 · Νο 5 · [Εκχώρηση διοικητικού κλεισίματος](CHANGES/2026-11-23-no5-delegated-administrative-close.md).
 
+- 23/11/2026 · Νο 5 · [myDATA ανά υποκατάστημα](CHANGES/2026-11-23-no5-mydata-recipient-branch.md).
 - Πανόρμου · Ανάκτηση PDF Epsilon 72, 159, 172 και 209 · [Checkpoint](CHANGES/2026-11-22-panormou-epsilon-72-172.md).
 
 - 24/11/2026 · Πανόρμου · Αυτόματη ανάκτηση προχείρων myDATA · [Checkpoint](CHANGES/2026-11-24-panormou-automatic-mydraft.md).
