@@ -42,3 +42,9 @@ Claim4193 με CI45394068624SUCCESS και εγκεκριμένο merge20ecc946 
 ## Τελικός προστατευμένος τοπικός έλεγχος
 
 Node20.20.2/PostgreSQL18.7/ReactDOM:26PASS,0FAIL,0SKIP (637.6ms). Περιλαμβάνει production-profile503 με ανεξάρτητο POS200 και καθαρό workerOFF πριν από schema admission, χωρίς σάρωση/DDL. Native SQL/factory δοκιμή χρησιμοποιεί ρητή fixture admission μόνο στην απομονωμένη βάση· δεν ισχυρίζεται πραγματική production admission. Συμβατότητα υφιστάμενων και νέων suites:57PASS,0FAIL,0SKIP (925.5ms), με επικάλυψη. Frontend/TABLE_SERVICE build PASS, git diff --check PASS. Νέο πλήρες source CI απαραίτητο.
+
+## CI45405211118 — διακοπή και αιτιώδης διόρθωση POS
+
+Στο head037208b το full CI διακόπηκε στα25λεπτά, χωρίς καταγεγραμμένο not-ok. Η έξοδος σταμάτησε μετά το checkpoint-policy.test.js (1787 top-level PASS). Αναπαραγωγή της επόμενης πραγματικής mounted σουίτας coffee-fee-ui μαζί με τα επόμενα τρία αρχεία: οι δοκιμές έγραφαν PASS, αλλά ο child δεν τερμάτιζε εντός30s και εξέπεμπε επανειλημμένα duplicate React key A. Η νέα PosOrderSuggestions είχε key=store.id, ίδιο sibling key με το υπάρχον PosOnlineRadioPlayer. Η ταυτότητα του νέου component άλλαξε σε order-suggestions:<storeId>. Η ίδια πλήρης αναπαραγωγή πλέον ολοκληρώνεται με9PASS/0FAIL/0SKIP, exit0 σε2561.4ms και χωρίς duplicate-key προειδοποίηση. Δεν αλλάχθηκε/παρακάμφθηκε η υφιστάμενη δοκιμή.
+
+Το schema admission παραμένει πραγματικό ξεχωριστό εμπόδιο. Νέο πλήρες source CI απαιτείται για τη διορθωμένη έκδοση. Η προηγούμενη ακύρωση δεν αποτελεί ούτε πράσινο CI ούτε γενικό PASS εφαρμογής.

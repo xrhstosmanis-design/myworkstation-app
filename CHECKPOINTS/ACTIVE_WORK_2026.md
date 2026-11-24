@@ -1,3 +1,5 @@
+- 24/11/2026 · PR4194 · Διορθώθηκε πραγματικό CI hang από σύγκρουση React key της νέας επιλογής POS με το radio. Ίδια mounted σουίτα:9PASS,exit0/2,56s,χωρίς duplicate-key warning. Νέο full CI απαιτείται· εβδομαδιαίο alarm παραμένει BLOCKED ON SCHEMA ADMISSION.
+
 - 24/11/2026 · Νεότερο όριο: BLOCKED ON SCHEMA ADMISSION για εβδομαδιαίο alarm. Οι τρεις νέοι πίνακες λείπουν από όλα τα τρέχοντα lifecycle profiles· καμία αυτόματη δημιουργία/παράκαμψη. Απαιτείται συντονισμένη versioned ένταξη από τους διατηρούμενους No7/lifecycle και No14 owners. Το POS υποσύνολο παραμένει ανεξάρτητο, AWAITING CI/LAB. PR4194.
 
 - 24/11/2026 · Κεντρικό εβδομαδιαίο alarm stock / POS · /root · Claim #4193 merged `20ecc946`. Υποψήφια υλοποίηση με εταιρική/καταστηματική ρύθμιση, σταθερές εξαιρέσεις, προεπισκόπηση/αναζήτηση, εβδομαδιαίο ιστορικό και ανακλητό `orderSuggestionsPos`. Native PostgreSQL/Node20 και React έλεγχοι πέρασαν· πλήρες CI/εγκατάσταση/LAB εκκρεμούν. Οι μειώσεις αναστέλλονται χωρίς πλήρες ιστορικό διαθεσιμότητας/προσφορών. [Υλοποίηση και όρια](CHANGES/2026-11-24-central-weekly-stock-alarm-implementation.md).

@@ -20,7 +20,7 @@ export async function requirePosOrderSuggestion(db,user,storeId){
 }
 export function createWeeklyStockAlarmRouter({db=defaultPrisma,readiness=weeklyStockAlarmReadiness}={}){
 const prisma=db,router=Router();
-const schemaGuard=async(req,res,next)=>{try{const state=await readiness(prisma);if(!state.ready)throw fail(503,'Το εβδομαδιαίο alarm περιμένει ελεγχόμενη ένταξη των πινάκων του στο σχήμα εγκατάστασης. Η πρόταση POS παραμένει διαθέσιμη με δικαίωμα.');next()}catch(error){next(error)}};
+const schemaGuard=async(req,res,next)=>{try{const state=await readiness(prisma);if(!state.ready)throw fail(503,'Το αυτόματο alarm stock δεν είναι ακόμη διαθέσιμο σε αυτή την εγκατάσταση. Η πρόταση στο POS είναι ξεχωριστή επιλογή με δικαίωμα.');next()}catch(error){next(error)}};
 const owner=(req,res,next)=>{
  if(req.user?.staffAccess===true||req.user?.tokenType==='STORE_OPERATOR'||(!isPlatformSuperAdmin(req.user)&&!['OWNER','ADMIN'].includes(req.user?.role)))return next(fail(403,'Οι ρυθμίσεις διαχειρίζονται κεντρικά από Ιδιοκτήτη ή Διαχειριστή.'));
  next();
