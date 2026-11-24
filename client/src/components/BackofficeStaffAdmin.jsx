@@ -1,9 +1,12 @@
+import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from '../../../shared/pos-operator-permissions.mjs';
 import CompanyAuthorityReadiness,{companyAuthoritySupported} from './backoffice/CompanyAuthorityReadiness.jsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {staffProfiles,staffCapabilities,staffPermissionSections,changeStaffCapability} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
 import {staffCompanyCapabilities,staffCompanyPermissionSections,validStaffCompanyCapabilities,changeStaffCompanyCapability} from '../../../shared/backoffice-staff-company.mjs';
 const OperatorManagementPanel=React.lazy(()=>import('./commerce/OperatorManagementPanel.jsx'));
+const posPermissions=[...POS_PERMISSIONS,...POS_MENU_PERMISSIONS];
+const hasPosEditor=grant=>grant.capabilities.some(key=>key==='operator-profiles.manage-permissions'||key==='operator-profiles.copy-permissions');
 const viewCapabilities=staffCapabilities.filter(capability=>capability.endsWith('.read'));
 
 function capabilitiesMatch(expected,stored){
@@ -13,7 +16,8 @@ function capabilitiesMatch(expected,stored){
 function grantsMatch(expected,stored){
   return Array.isArray(stored)&&expected.length===stored.length&&expected.every(grant=>{
     const match=stored.find(row=>row.storeId===grant.storeId);
-    return match?.profile===grant.profile&&capabilitiesMatch(grant.capabilities,match.capabilities);
+    return match?.profile===grant.profile&&capabilitiesMatch(grant.capabilities,match.capabilities)&&
+      (!Object.hasOwn(grant,'posPermissionCeiling')||(grant.posPermissionCeiling===null?match.posPermissionCeiling==null:capabilitiesMatch(grant.posPermissionCeiling,match.posPermissionCeiling)));
   });
 }
 
@@ -21,6 +25,7 @@ export default function BackofficeStaffAdmin({api}){
   const [area,setArea]=useState('BACKOFFICE'),[posStoreId,setPosStoreId]=useState('');
   const [data,setData]=useState(null),[edit,setEdit]=useState(null),[grants,setGrants]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [companyCapabilities,setCompanyCapabilities]=useState([]);
+  const canEditPosPermissionCeiling=data?.canEditPosPermissionCeiling===true;
   const companySupported=companyAuthoritySupported(data?.companyAuthority);
   const currentApi=useRef(api),formApi=useRef(null);currentApi.current=api;
   const sequence=useRef(0),saving=useRef(false);
@@ -35,8 +40,10 @@ export default function BackofficeStaffAdmin({api}){
     }catch(e){if(id===sequence.current)setError(e.message);return null}
   };
   useEffect(()=>{load();return()=>{sequence.current++}},[api]);
-  const open=account=>{formApi.current=api;setCompanyCapabilities(Array.isArray(account?.companyCapabilities)?[...account.companyCapabilities]:[]);setEdit(account||{id:null,active:true});setGrants((account?.grants||[]).map(({storeId,profile,capabilities})=>({storeId,profile,capabilities})));setError('');setMessage('')};
+  const open=account=>{formApi.current=api;setCompanyCapabilities(Array.isArray(account?.companyCapabilities)?[...account.companyCapabilities]:[]);setEdit(account||{id:null,active:true});setGrants((account?.grants||[]).map(({storeId,profile,capabilities,posPermissionCeiling})=>({storeId,profile,capabilities,...(canEditPosPermissionCeiling&&posPermissionCeiling!==undefined?{posPermissionCeiling}:{})})));setError('');setMessage('')};
   const toggleStore=(storeId,on)=>setGrants(rows=>on?[...rows,{storeId,profile:'STOCKTAKER',capabilities:[]}]:rows.filter(r=>r.storeId!==storeId));
+  const setPosCeiling=(storeId,ceiling)=>setGrants(rows=>rows.map(row=>
+    row.storeId===storeId?{...row,posPermissionCeiling:ceiling}:row));
   const changeProfile=(storeId,profile)=>setGrants(rows=>rows.map(r=>r.storeId===storeId?{...r,profile}:r));
   const applyProfile=storeId=>setGrants(rows=>rows.map(r=>r.storeId===storeId?{...r,capabilities:[...staffProfiles[r.profile].capabilities]}:r));
   const selectStoreCapabilities=(storeId,capabilities)=>setGrants(rows=>rows.map(row=>
@@ -120,6 +127,22 @@ export default function BackofficeStaffAdmin({api}){
                   </label>)}
                 </fieldset>)}
               </div>
+              {canEditPosPermissionCeiling&&hasPosEditor(grant)&&<details className="staff-permission-ceiling">
+                <summary>Όριο αλλαγής δικαιωμάτων POS · {store.name}</summary>
+                <label className="staff-check">
+                  <input type="checkbox" checked={Array.isArray(grant.posPermissionCeiling)}
+                    onChange={event=>setPosCeiling(store.id,event.target.checked?[]:null)}/>
+                  Περιορισμός σε συγκεκριμένα δικαιώματα POS
+                </label>
+                {Array.isArray(grant.posPermissionCeiling)&&<fieldset>
+                  <legend>Δικαιώματα που μπορεί να αλλάζει ή να αντιγράφει ο Υπεύθυνος</legend>
+                  {posPermissions.map(([key,label])=><label className="staff-check" key={key}>
+                    <input type="checkbox" checked={grant.posPermissionCeiling.includes(key)} onChange={event=>setPosCeiling(store.id,
+                      event.target.checked?[...grant.posPermissionCeiling,key]:grant.posPermissionCeiling.filter(value=>value!==key))}/>
+                    {label}
+                  </label>)}
+                </fieldset>}
+              </details>}
               <p className="staff-permission-summary">{grant.capabilities.length?`${grant.capabilities.filter(capability=>viewCapabilities.includes(capability)).length} προβολές · ${grant.capabilities.filter(capability=>!viewCapabilities.includes(capability)).length} ενέργειες`:'Καμία λειτουργία επιλεγμένη'}</p>
             </>}
           </div>;
