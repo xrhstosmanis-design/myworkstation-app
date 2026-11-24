@@ -1,3 +1,4 @@
+import posOrderSuggestionsRoutes from './routes/pos-order-suggestions.js';
 import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
 import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
 import {readStaffWorkforceView} from './services/backoffice-staff-workforce.js';
@@ -402,6 +403,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceMyDataBranchRoutes,comm
 app.use("/api/commerce",auth,commerceTenantGuard,commerceVatLookupRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
+app.use("/api/pos-order-suggestions",auth,posOrderSuggestionsRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);

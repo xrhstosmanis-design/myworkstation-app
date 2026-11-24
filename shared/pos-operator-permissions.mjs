@@ -1,4 +1,5 @@
 export const POS_PERMISSIONS=[
+  ["orderSuggestionsPos","Πρόταση παραγγελίας στο POS"],
   ["inventoryPos","Αποθήκη από POS"],
   ["inventoryMerge","Συγχώνευση διπλοεγγραφών από POS"],
   ["editDescription","Επεξεργασία στοιχείων ειδών (PoS)"],
