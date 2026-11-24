@@ -47,6 +47,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
   {key:"shift-templates",label:"Πρότυπα βαρδιών καταστήματος",scope:"STORE",actions:["read","manage"]},
   {key:"workforce-audit",label:"Ιστορικό προσωπικού καταστήματος",scope:"STORE",actions:["read"]},
   {key:"operator-profiles",label:"Δικαιώματα χειριστών POS",scope:"STORE",actions:["manage-permissions","manage-pos-access","create-employee","reset-pin","copy-permissions"]},
+  {key:"staff-grants",label:"Ανάθεση πρόσβασης προβολής",scope:"STORE",actions:["manage-reads"]},
   {key:"payroll",label:"Μισθοδοσία",scope:"STORE",actions:["read"]},
   {
     "key": "low-value-products",

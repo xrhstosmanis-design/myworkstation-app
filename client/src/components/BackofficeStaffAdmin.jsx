@@ -1,3 +1,4 @@
+import {delegatedReadOptions,readDelegationRight} from './backoffice/StaffReadDelegation.jsx';
 import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from '../../../shared/pos-operator-permissions.mjs';
 import CompanyAuthorityReadiness,{companyAuthoritySupported} from './backoffice/CompanyAuthorityReadiness.jsx';
 import React,{useEffect,useRef,useState} from 'react';
@@ -17,7 +18,8 @@ function grantsMatch(expected,stored){
   return Array.isArray(stored)&&expected.length===stored.length&&expected.every(grant=>{
     const match=stored.find(row=>row.storeId===grant.storeId);
     return match?.profile===grant.profile&&capabilitiesMatch(grant.capabilities,match.capabilities)&&
-      (!Object.hasOwn(grant,'posPermissionCeiling')||(grant.posPermissionCeiling===null?match.posPermissionCeiling==null:capabilitiesMatch(grant.posPermissionCeiling,match.posPermissionCeiling)));
+      (!Object.hasOwn(grant,'posPermissionCeiling')||(grant.posPermissionCeiling===null?match.posPermissionCeiling==null:capabilitiesMatch(grant.posPermissionCeiling,match.posPermissionCeiling)))&&
+      (!Object.hasOwn(grant,'backofficeReadDelegationCeiling')||capabilitiesMatch(grant.backofficeReadDelegationCeiling,match.backofficeReadDelegationCeiling));
   });
 }
 
@@ -25,6 +27,7 @@ export default function BackofficeStaffAdmin({api}){
   const [area,setArea]=useState('BACKOFFICE'),[posStoreId,setPosStoreId]=useState('');
   const [data,setData]=useState(null),[edit,setEdit]=useState(null),[grants,setGrants]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [companyCapabilities,setCompanyCapabilities]=useState([]);
+  const canEditReadDelegationCeiling=data?.canEditBackofficeReadDelegationCeiling===true;
   const canEditPosPermissionCeiling=data?.canEditPosPermissionCeiling===true;
   const companySupported=companyAuthoritySupported(data?.companyAuthority);
   const currentApi=useRef(api),formApi=useRef(null);currentApi.current=api;
@@ -40,7 +43,7 @@ export default function BackofficeStaffAdmin({api}){
     }catch(e){if(id===sequence.current)setError(e.message);return null}
   };
   useEffect(()=>{load();return()=>{sequence.current++}},[api]);
-  const open=account=>{formApi.current=api;setCompanyCapabilities(Array.isArray(account?.companyCapabilities)?[...account.companyCapabilities]:[]);setEdit(account||{id:null,active:true});setGrants((account?.grants||[]).map(({storeId,profile,capabilities,posPermissionCeiling})=>({storeId,profile,capabilities,...(canEditPosPermissionCeiling&&posPermissionCeiling!==undefined?{posPermissionCeiling}:{})})));setError('');setMessage('')};
+  const open=account=>{formApi.current=api;setCompanyCapabilities(Array.isArray(account?.companyCapabilities)?[...account.companyCapabilities]:[]);setEdit(account||{id:null,active:true});setGrants((account?.grants||[]).map(({storeId,profile,capabilities,posPermissionCeiling,backofficeReadDelegationCeiling})=>({storeId,profile,capabilities,...(canEditPosPermissionCeiling&&posPermissionCeiling!==undefined?{posPermissionCeiling}:{}),...(canEditReadDelegationCeiling&&Array.isArray(backofficeReadDelegationCeiling)?{backofficeReadDelegationCeiling}:{})})));setError('');setMessage('')};
   const toggleStore=(storeId,on)=>setGrants(rows=>on?[...rows,{storeId,profile:'STOCKTAKER',capabilities:[]}]:rows.filter(r=>r.storeId!==storeId));
   const setPosCeiling=(storeId,ceiling)=>setGrants(rows=>rows.map(row=>
     row.storeId===storeId?{...row,posPermissionCeiling:ceiling}:row));
@@ -127,6 +130,21 @@ export default function BackofficeStaffAdmin({api}){
                   </label>)}
                 </fieldset>)}
               </div>
+              {canEditReadDelegationCeiling&&grant.capabilities.includes(readDelegationRight)&&<details>
+                <summary>Προβολές που μπορεί να παραχωρεί ο Υπεύθυνος · {store.name}</summary>
+                <fieldset>
+                  <legend>Επιτρεπόμενες προβολές</legend>
+                  {delegatedReadOptions.map(([key,label])=>{
+                    const ceiling=grant.backofficeReadDelegationCeiling??[];
+                    return <label className="staff-check" key={key}>
+                      <input type="checkbox" checked={ceiling.includes(key)} disabled={!ceiling.includes(key)&&!grant.capabilities.includes(key)}
+                        onChange={event=>setGrants(rows=>rows.map(row=>row.storeId===store.id?{...row,backofficeReadDelegationCeiling:
+                          event.target.checked?[...ceiling,key]:ceiling.filter(value=>value!==key)}:row))}/>
+                      {label}
+                    </label>;
+                  })}
+                </fieldset>
+              </details>}
               {canEditPosPermissionCeiling&&hasPosEditor(grant)&&<details className="staff-permission-ceiling">
                 <summary>Όριο αλλαγής δικαιωμάτων POS · {store.name}</summary>
                 <label className="staff-check">
