@@ -81,6 +81,7 @@ export function dailyCashReportReadiness(sessions,{companyId,storeId,day,dayStar
   if(!Array.isArray(sessions)||!Array.isArray(terminals)||terminals.length>100)fail("Μη έγκυρη λίστα βαρδιών ή τερματικών.");
   const policies=terminals.map(value=>typeof value==="string"?{terminalPos:value.trim(),requiredSlots:[1,2,3]}:value);
   if(policies.some(p=>!p||typeof p.terminalPos!=="string"||!p.terminalPos.trim()||p.terminalPos!==p.terminalPos.trim()||p.terminalPos.length>120||!Array.isArray(p.requiredSlots)||!p.requiredSlots.length||p.requiredSlots.some(slot=>![1,2,3].includes(slot))||new Set(p.requiredSlots).size!==p.requiredSlots.length))fail("Μη έγκυρος κανόνας βαρδιών τερματικού.");
+  if(policies.some(p=>p.sundayFirstShiftOnly!==undefined&&typeof p.sundayFirstShiftOnly!=="boolean"))fail("Μη έγκυρος κανόνας βαρδιών Κυριακής.");
   const expected=policies.map(p=>p.terminalPos);
   if(new Set(expected).size!==expected.length)fail("Διπλός κανόνας τερματικού.");
   if(!expected.length)holds.push({code:"TERMINALS_NOT_CONFIGURED"});
@@ -103,9 +104,10 @@ export function dailyCashReportReadiness(sessions,{companyId,storeId,day,dayStar
     if(row.status!=="CLOSED"||!closed||!Number.isFinite(closed.getTime())||closed<at||closed>now)holds.push({code:"SHIFT_NOT_CLOSED",sessionId:row.id});
     if(!knownAmount(row.variance))holds.push({code:"SHIFT_VARIANCE_UNKNOWN",sessionId:row.id});
   }
-  for(const terminalPos of expected){
+  const isSunday=new Date(day+"T12:00:00Z").getUTCDay()===0;
+  for(const {terminalPos,requiredSlots,sundayFirstShiftOnly} of policies){
     const rows=accepted.filter(row=>row.terminalPos===terminalPos);
-    const required=policies.find(p=>p.terminalPos===terminalPos).requiredSlots;
+    const required=isSunday&&sundayFirstShiftOnly?[1]:requiredSlots;
     // Closed history can overlap even though the live one-OPEN-per-terminal
     // guard held at opening time. Compare actual positive UTC intervals, not
     // shift slots or a caller-supplied cash chain. Empty intervals stay empty.
