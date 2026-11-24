@@ -13,3 +13,11 @@ Proposed source only: count VAT0 products with NULL categoryId separately for re
 Claim4203 merged c655d222e85e89b9bc3aee5d3d881a6f15cb19f6 before source. Source branch fix/pos-proposal-vat-null-category-source. Count only NULL categoryId AND VAT0 for canonical no-write recognition. Explicit other categories remain rejected. Exact historical mutation guards and SQL updates unchanged. Existing business records are not repaired by this patch.
 
 Node20.20.2/PostgreSQL18.7 isolated native execution:7PASS/0FAIL/0SKIP,206.6ms. Real actual-script SQL recognizes570/568/2 without row changes; nonzero/NULL VAT, explicit other category and wrong register reject. Adapter regressions retain original legacy repair and rollback count. Owned random test schema removed and local PostgreSQL stopped. diff-check PASS. FullCI, merge and successful Render deployment pending. NOT INSTALLED / NOT LAB PASS.
+
+## 24/11/2026 19:12 Europe/Athens — SOURCE LIVE / LAB acceptance pending
+
+POS4197 plus bounded startup correction4204 installed at678e4645c566be048f205e4a3b642a1a740b7d25. Claim4203 was merged before source. FullPRCI45441724091:all5jobsSUCCESS atd0339e1d8cb906dac55348e006eab6431cbafb09. Renderdep-dc2sa7lg1s2s739ou4ngLIVE17:12:38Z; independentapi/healthok=true/exact678e4645. Prior faileddep-dc2rqbcs728c73bf2cug is retained as failure evidence.
+
+Readonly production recheck after deployment:570 associated tobacco-department products,568 classified tobacco plus2NULLcategory/VAT0;0rate mismatches, same aggregates as before. This does not prove all startup scripts were globally write-free. No product/category/VAT correction submitted by this page.
+
+The new read-only POS proposal and per-operator permission are SOURCE LIVE. HostedOwner/operator/physicalPOS/scanner/revocation arithmetic acceptance remainsNOT TESTED, grouped in existingLAB perdocs/testing/pos-order-proposals-lab-acceptance.md. No request to switch logins for partial acceptance. Default absent permission staysOFF; no mass grants performed. Weeklyalarm4194stillBLOCKED on independent schema/runtime admission No7/No14; no weekly tables/worker deployed.
