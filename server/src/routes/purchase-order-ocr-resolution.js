@@ -233,7 +233,7 @@ router.post("/:orderId/ocr-lines/:lineId/create-product",async(req,res,next)=>{
     if(body.categoryId){const c=(await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${body.categoryId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`)[0];if(!c)return res.status(400).json({error:"Η Κατηγορία δεν είναι έγκυρη."})}if(body.subcategoryId){const s=(await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${body.subcategoryId} AND "categoryId"=${body.categoryId||''} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`)[0];if(!s)return res.status(400).json({error:"Η Υποκατηγορία δεν ανήκει στην Κατηγορία."})}
     const supplierCode=body.supplierCode!==undefined?body.supplierCode:line.supplierCode,unitCost=Math.max(0,Number(body.unitCost??line.unitCost??0)),packSize=body.invoiceUnit==="PACKAGE"?Math.max(1,Number(body.unitsPerPackage||1)):1,quantity=Math.max(0.0001,Number(body.quantity??line.quantity??1)),factor=(1-body.discount1/100)*(1-body.discount2/100)*(1-body.discount3/100),excise=Math.max(0,Number(body.exciseTotal||0)),net=quantity*unitCost*factor,pieceCost=(net+excise)/(quantity*packSize),vat=(net+excise)*body.vatRate/100;
     const productId=id();
-    const fingerprint=crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex");
+    const fingerprint=delegated?crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex"):null;
     const result=await prisma.$transaction(async tx=>{
       if(delegated){
         await requireStaffAction(tx,req,line.storeId,"invoices.edit");
@@ -259,7 +259,10 @@ router.post("/:orderId/ocr-lines/:lineId/create-product",async(req,res,next)=>{
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId+":barcode:"+savedBarcode}))`;
         const [duplicate]=await tx.$queryRaw`SELECT p."id",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId"
           WHERE p."companyId"=${companyId} AND pb."barcode"=${savedBarcode} LIMIT 1`;
-        if(duplicate)throw staffError(409,"INVOICE_PRODUCT_DUPLICATE_BARCODE",`Το barcode υπάρχει ήδη στο «${duplicate.name}». Χρησιμοποίησε αντιστοίχιση.`);
+        if(duplicate){
+          if(!delegated)return {error:`Το barcode υπάρχει ήδη στο «${duplicate.name}». Χρησιμοποίησε Συγχώνευση/Αντιστοίχιση.`};
+          throw staffError(409,"INVOICE_PRODUCT_DUPLICATE_BARCODE",`Το barcode υπάρχει ήδη στο «${duplicate.name}». Χρησιμοποίησε αντιστοίχιση.`);
+        }
       }
       const nextSkuRows=await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS "next" FROM "Product" WHERE "companyId"=${req.user.companyId}`;
       const sku=String(nextSkuRows[0]?.next||10001);
@@ -277,6 +280,7 @@ router.post("/:orderId/ocr-lines/:lineId/create-product",async(req,res,next)=>{
       await learnCentralInvoiceCorrection(tx,{actor:req.user,companyId:req.user.companyId,supplierId:line.supplierId,line:{...line,supplierCode,description:body.name,quantity,gift:body.gift??line.gift??false,unitCost,invoiceUnit:body.invoiceUnit,stockUnitsPerInvoiceUnit:packSize,discount1:body.discount1,discount2:body.discount2,discount3:body.discount3,exciseTotal:excise,netAmount:net,proposedSalePrice:body.salePrice,barcode:savedBarcode}});
       return {ok:true,productId,barcode:savedBarcode,barcodeMode:body.barcodeMode,mappingLearned:Boolean(line.supplierId&&String(supplierCode||"").trim())};
     });
+    if(result.error)return res.status(409).json(result);
     res.status(result.replayed?200:201).json(result);
   }catch(error){next(error)}
 });
