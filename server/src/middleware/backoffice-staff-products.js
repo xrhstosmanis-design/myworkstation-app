@@ -1,3 +1,4 @@
+import {saveStaffStoreProductPrice,staffStoreProductPriceCapability,staffStoreProductPricePath} from "../services/staff-store-product-price.js";
 import {staffRequestCapability} from '../../../shared/backoffice-staff.mjs';
 import {Router} from 'express';
 import {createOwnerProductsRouter} from '../routes/owner-products.js';
@@ -16,6 +17,16 @@ import {readInventoryNewCardOptions} from '../lib/inventory-new-card-options.js'
 // both canonical services recheck current grant/session/licence themselves.
 export function createStaffProductBridge(db){
   return async(req,res,next)=>{
+    if(req.user?.staffAccess===true&&req.staffGrant?.capability===staffStoreProductPriceCapability){
+      try{
+        const match=staffStoreProductPricePath.exec(req.path);
+        if(req.method!=='PATCH'||!match)throw staffError();
+        return res.json(await saveStaffStoreProductPrice(db,req,decodeURIComponent(match[1])));
+      }catch(error){
+        if(error?.name==='ZodError'||error instanceof URIError)return res.status(400).json({error:'Έλεγξε την τιμή και το κατάστημα.'});
+        return next(error);
+      }
+    }
     if(req.user?.staffAccess===true&&req.staffGrant?.capability==='products.edit'){
       try{
         const {companyId,storeId}=req.user;

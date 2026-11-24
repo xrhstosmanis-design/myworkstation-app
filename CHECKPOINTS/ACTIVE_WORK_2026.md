@@ -981,3 +981,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 24/11/2026 · Νο 5 · [Νέο είδος με barcode από πρόχειρο τιμολόγιο](CHANGES/2026-11-24-no5-draft-new-item-barcode.md).
 
 - 24/11/2026 · Πανόρμου · Προφίλ ΦΠΑ RBS βάσει Kiosk · [Checkpoint](CHANGES/2026-11-24-panormou-rbs-vat-profile.md).
+
+- 24/11/2026 · Νο 5 · [Εκχωρήσεις καταμέτρησης, διπλοεγγραφών και λιανικής](CHANGES/2026-11-24-no5-owner-delegation-store-actions.md).

@@ -3,6 +3,7 @@ import {inventoryCsv,printInventoryRows,printInventoryArchivePage,inventoryHisto
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {ArrowRightLeft,Barcode,ChevronLeft,ChevronRight,ClipboardList,Edit3,FileSpreadsheet,PackagePlus,Printer,RefreshCw,Search,Truck,X} from "lucide-react";
+import InventoryDuplicateGroup from './InventoryDuplicateGroup.jsx';
 import InventoryBarcodeLookup from "./InventoryBarcodeLookup.jsx";
 import InventoryNewProductCard from './InventoryNewProductCard.jsx';
 import InventorySetProductPicker from "./InventorySetProductPicker.jsx";
@@ -35,34 +36,7 @@ const newCardBlank=()=>({name:"",sku:"",description:"",categoryId:"",subcategory
 
 function Modal({title,children,onClose,wide=false,className=""}){return <div className="ia-modal-backdrop"><section className={`ia-modal ${wide?"wide":""} ${className}`} ><header><b>{title}</b><button onClick={onClose}><X/></button></header>{children}</section></div>}
 
-function DuplicateGroup({group, canMerge, onMerge}) {
-  const [selectedIds, setSelectedIds] = useState(() =>
-    group.items.length <= 4 ? group.items.map(item => item.id) : []
-  );
-  const label = {BARCODE:"Ίδιο barcode", SKU:"Ίδιος κωδικός", NAME:"Ίδια περιγραφή"}[group.kind];
-
-  return <section>
-    <h4>{label} · {group.value}</h4>
-    <ul>{group.items.map(item => <li key={item.id}>
-      <label>
-        {canMerge && <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={event => {
-          const checked = event.target.checked;
-          setSelectedIds(ids => checked ? [...ids, item.id] : ids.filter(id => id !== item.id));
-        }}/>}
-        {item.name} · SKU {item.sku || "—"} · Στοκ {qty(item.stock)}
-      </label>
-    </li>)}</ul>
-    {canMerge && <>
-      {group.items.length > 4 && <p>Επίλεξε 2 έως 4 είδη για συγχώνευση.</p>}
-      <button type="button" disabled={selectedIds.length < 2 || selectedIds.length > 4}
-        onClick={() => onMerge(group.items.filter(item => selectedIds.includes(item.id)))}>
-        Συγχώνευση επιλεγμένων
-      </button>
-    </>}
-  </section>;
-}
-
-export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null,staffCardEdit=false,staffPrint=false,stockMovementRead=false,companyId=null}){
+export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled,readOnly=false,operatorCapabilities=null,onOrders=null,staffCardEdit=false,staffPriceEdit=false,staffPrint=false,stockMovementRead=false,companyId=null}){
   const operatorMode=operatorCapabilities!==null;
   const can=key=>!operatorMode||operatorCapabilities[key]===true;
   const [operatorMenu,setOperatorMenu]=useState(null),[history,setHistory]=useState(null);
@@ -94,6 +68,38 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   useEffect(()=>()=>{archiveGeneration.current++},[]);
   const openingProductRef=useRef("");
   const cardScopeRef=useRef(storeId);cardScopeRef.current=storeId;
+  const [storePrice,setStorePrice]=useState(null);
+  const storePriceBusy=useRef(false);
+  function openStorePrice(){
+    if(!staffPriceEdit||data.store?.id!==storeId||!selected?.storeActive)return;
+    const expectedPrice=Number(selected.salePrice);
+    setStorePrice({storeId,productId:selected.productId,name:selected.name,expectedPrice,value:String(expectedPrice),error:"",saving:false});
+  }
+  async function saveStorePrice(event){
+    event.preventDefault();
+    const draft=storePrice;
+    if(!staffPriceEdit||!draft||draft.storeId!==storeId||storePriceBusy.current)return;
+    const entered=draft.value.trim().replace(",",".");
+    if(!/^\d+(?:\.\d{1,2})?$/.test(entered)||Number(entered)>9999999999){
+      setStorePrice({...draft,error:"Βάλε τιμή με έως δύο δεκαδικά ψηφία."});
+      return;
+    }
+    storePriceBusy.current=true;
+    setStorePrice({...draft,saving:true,error:""});
+    try{
+      await api(`/api/owner-products/${encodeURIComponent(draft.productId)}/store-price`,{
+        method:"PATCH",body:JSON.stringify({storeId:draft.storeId,expectedPrice:draft.expectedPrice,salePrice:Number(entered)})
+      });
+      if(cardScopeRef.current!==draft.storeId)return;
+      setStorePrice(null);
+      setSelected(null);
+      await load();
+      if(cardScopeRef.current===draft.storeId)setMessage("Η λιανική του καταστήματος αποθηκεύτηκε.");
+    }catch(failure){
+      if(cardScopeRef.current===draft.storeId)setStorePrice({...draft,saving:false,error:failure.message});
+    }finally{storePriceBusy.current=false;}
+  }
+
   const newCardGeneration=useRef(0);
   const savingCardRef=useRef(false);
   useEffect(()=>{newCardGeneration.current++;setModal(null);setEdit(null);setChecked([]);setExportIds(null);setSelected(null);setBulk(bulkBlank());setData({items:[],categories:[],subcategories:[],taxonomy:{categories:[],subcategories:[]},page:1,pages:1,total:0,totals:{}});setMerge(null);return()=>{newCardGeneration.current++}},[storeId]);
@@ -387,6 +393,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
       {!loading&&!data.items.length&&<div className="ia-empty">Δεν βρέθηκαν είδη με τα συγκεκριμένα κριτήρια.</div>}
     </div></div><footer className="ia-totals"><span>Σελίδα: {data.items.length} είδη</span><b>Stock {qty(pageTotals.stock)}</b><b>Λιανική {money(pageTotals.retailStockValue)}</b><b>Κόστος {money(pageTotals.costStockValue)}</b></footer></section>
     <footer className="ia-toolbar"><label className="ia-horizontal-control"><ChevronLeft/><span>Οριζόντια κύλιση</span><input aria-label="Οριζόντια κύλιση ειδών" type="range" min="0" max={scrollMax} value={scrollX} onChange={e=>moveHorizontal(e.target.value)}/><ChevronRight/></label><div className="ia-toolbar-actions"><button onClick={onClose}><X/>Κλείσιμο</button>
+      {staffPriceEdit&&<button type="button" disabled={!selected?.storeActive||loading} onClick={openStorePrice}>Αλλαγή λιανικής καταστήματος</button>}
       {stockMovementRead&&<button type="button" disabled={!selected||loading} onClick={openStockMovements}>Κινήσεις είδους</button>}
       <button type="button" disabled={!storeId||!can("read")} onClick={checkDuplicates}>Έλεγχος διπλοεγγραφών</button>
       <button disabled={!storeId||loading||exporting} onClick={()=>exportCatalog()}><FileSpreadsheet/>Excel όλων των ειδών</button>
@@ -399,6 +406,14 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
 
 
 
+    {staffPriceEdit&&storePrice?.storeId===storeId&&<Modal title="Αλλαγή λιανικής καταστήματος" onClose={()=>{if(!storePriceBusy.current)setStorePrice(null)}}>
+      <form className="ia-form-grid" onSubmit={saveStorePrice}>
+        <p>{storePrice.name} · {data.store?.name||stores.find(store=>store.id===storeId)?.name}</p>
+        <label>Νέα λιανική (€)<input required inputMode="decimal" value={storePrice.value} disabled={storePrice.saving} onChange={event=>setStorePrice({...storePrice,value:event.target.value})}/></label>
+        {storePrice.error&&<p role="alert">{storePrice.error}</p>}
+        <button type="submit" disabled={storePrice.saving}>Αποθήκευση τιμής</button>
+      </form>
+    </Modal>}
     {duplicates && modal!=="merge" && <Modal title="Έλεγχος διπλοεγγραφών" wide onClose={() => {
       duplicateRequest.current++;
       setDuplicates(null);
@@ -408,7 +423,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
         {duplicates.loading && <p role="status">Γίνεται έλεγχος…</p>}
         {duplicates.error && <p role="alert">{duplicates.error}</p>}
         {duplicates.groups?.length === 0 && <p>Δεν βρέθηκαν πιθανές διπλοεγγραφές.</p>}
-        {duplicates.groups?.map(group => <DuplicateGroup key={`${group.kind}:${group.value}`}
+        {duplicates.groups?.map(group => <InventoryDuplicateGroup key={`${group.kind}:${group.value}`}
           group={group} canMerge={!readOnly && can("merge") && !loading}
           onMerge={items => startMerge(items, true)}/>)}
       </div>

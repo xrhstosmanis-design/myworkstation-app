@@ -162,6 +162,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "edit",
       "delete",
       "opening-stock",
+      "price-edit",
       "import",
       "export",
       "print"
@@ -241,6 +242,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "read",
       "history.read",
+      "duplicates.read",
       "expected.read",
       "count",
       "clear",
@@ -454,6 +456,7 @@ export const backofficeFunctionCatalogue=Object.freeze([
       "open",
       "close",
       "force-close",
+      "closing-count",
       "export",
       "print"
     ]

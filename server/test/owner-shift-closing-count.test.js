@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {staffRequestCapability,changeStaffCapability} from "../../shared/backoffice-staff.mjs";
 import {recordPendingClosingCount} from "../src/routes/owner-shifts.js";
 
 const owner={id:"owner",role:"OWNER",companyId:"A"};
@@ -14,6 +15,32 @@ test("post-close count rejects unauthorized, incomplete or inexact input before 
   for(const input of [{...count,drawer:" "},{...count,custody:null},{...count,coins:-1},{...count,safe:1.111},{...count,storeId:""}]){
     await assert.rejects(recordPendingClosingCount(noQuery,owner,"shift",input),{name:"ZodError"});
   }
+});
+
+test("deferred count is independent from force close and scoped to the detail and count endpoints",()=>{
+  assert.deepEqual(new Set(changeStaffCapability([],"shifts.closing-count",true)),new Set(["shifts.read","shifts.closing-count"]));
+  assert.deepEqual(new Set(changeStaffCapability([],"shifts.force-close",true)),new Set(["shifts.read","shifts.force-close"]));
+  assert.equal(staffRequestCapability("GET","/api/owner-shifts/shift/detail"),"shifts.closing-count");
+  assert.equal(staffRequestCapability("POST","/api/owner-shifts/shift/closing-count"),"shifts.closing-count");
+  assert.equal(staffRequestCapability("POST","/api/owner-shifts/shift/force-close"),"shifts.force-close");
+  for(const [method,path] of [
+    ["GET","/api/owner-shifts/shift/closing-count"],["PATCH","/api/owner-shifts/shift/closing-count"],
+    ["POST","/api/owner-shifts/shift/detail"],["GET","/api/owner-shifts/report"]
+  ])assert.equal(staffRequestCapability(method,path),null);
+});
+const staff={id:"staff",role:"EMPLOYEE",companyId:"A",storeId:"S",tokenType:"BACKOFFICE_USER",staffAccess:true};
+test("delegated count requires route authorization, matching selected store and a live grant in the transaction",async()=>{
+  await assert.rejects(recordPendingClosingCount(noQuery,staff,"shift",count),{status:403});
+  const verify=async()=>assert.fail("store drift may not enter the writer");
+  await assert.rejects(recordPendingClosingCount(noQuery,staff,"shift",{...count,storeId:"T"},{verify}),{status:403});
+  const tx={$queryRaw:async()=>assert.fail("revoked grant must fail before reading the shift")};
+  const revoked=Object.assign(Error("revoked"),{status:403});
+  const db={$transaction:fn=>fn(tx)};
+  await assert.rejects(recordPendingClosingCount(db,staff,"shift",count,{verify:async(client,storeId)=>{
+    assert.equal(client,tx);
+    assert.equal(storeId,staff.storeId);
+    throw revoked;
+  }}),error=>error===revoked);
 });
 
 const canUseDatabase=()=>{
@@ -55,10 +82,16 @@ test("native count completes one pending store shift atomically and leaves next-
     await assert.rejects(recordPendingClosingCount(db,owner,"foreign",{...count,storeId:"F"}),{status:404});
     await assert.rejects(recordPendingClosingCount(db,owner,"next",count),{status:409});
     await assert.rejects(recordPendingClosingCount(db,owner,"shift",{...count,eftposTotal:undefined}),{status:400});
+    const verificationStores=[];
+    const verify=async(tx,storeId)=>{
+      assert.notEqual(tx,db);
+      verificationStores.push(storeId);
+    };
     const results=await Promise.allSettled([
-      recordPendingClosingCount(db,owner,"shift",count),
-      recordPendingClosingCount(db,owner,"shift",count)
+      recordPendingClosingCount(db,staff,"shift",count,{verify}),
+      recordPendingClosingCount(db,staff,"shift",count,{verify})
     ]);
+    assert.deepEqual(verificationStores,["S","S"]);
     const success=results.find(result=>result.status==="fulfilled");
     assert.equal(results.filter(result=>result.status==="fulfilled").length,1);
     assert.equal(results.find(result=>result.status==="rejected")?.reason.status,409);
@@ -73,7 +106,7 @@ test("native count completes one pending store shift atomically and leaves next-
     let audit=await db.$queryRaw`SELECT "eventType","actorId","details" FROM "StoreOperatorAudit"`;
     assert.equal(audit.length,1);
     assert.equal(audit[0].eventType,"SHIFT_CLOSING_COUNT_RECORDED");
-    assert.equal(audit[0].actorId,owner.id);
+    assert.equal(audit[0].actorId,staff.id);
     assert.equal(audit[0].details.note,count.note);
     assert.equal(audit[0].details.eftposTotal,0);
     const later=(await db.$queryRaw`SELECT "openingOperational","expectedOpeningOperational","openingVariance"
@@ -87,7 +120,7 @@ test("native count completes one pending store shift atomically and leaves next-
     assert.equal(differenceOnly.cardVariance,null);
     assert.equal(differenceOnly.closeReconciliationStatus,"COUNTED");
     audit=await db.$queryRaw`SELECT "actorId" FROM "StoreOperatorAudit" WHERE "eventType"='SHIFT_CLOSING_COUNT_RECORDED'`;
-    assert.deepEqual(audit.map(row=>row.actorId).sort(),["owner","super"]);
+    assert.deepEqual(audit.map(row=>row.actorId).sort(),["staff","super"]);
   }finally{
     await db.$disconnect();
     await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

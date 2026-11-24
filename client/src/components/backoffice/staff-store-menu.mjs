@@ -21,6 +21,7 @@ const views = [
   ["sales.read", "cash", "sales", "Πωλήσεις και βάρδιες"],
   ["payments.read", "cash", "payments", "Πληρωμές"],
   ["products.read", "stock", "products", "Είδη και αποθήκη"],
+  ["inventory.duplicates.read", "stock", "inventory-duplicates", "Έλεγχος διπλοεγγραφών"],
   ["inventory.read", "stock", "inventory", "Απογραφή"],
   ["monthly-inventory.read", "stock", "monthly-inventory", "Μηνιαία παρατήρηση αποθήκης"],
   ["chat.read", "support", "chat", "Chat καταστήματος"],
