@@ -1,3 +1,4 @@
+import {companyCategoryManageRoute} from "../../../shared/backoffice-staff-company.mjs";
 import {finalPassiveCompanyFilters,readFinalPassiveCompany} from './backoffice-staff-final-passive-company.js';
 import {companyProductCenterFilters,readCompanyProductCenter} from './backoffice-staff-company-product-center.js';
 import {observerLogisticsFilters,readObserverLogistics} from './backoffice-staff-company-observer-logistics.js';
@@ -69,7 +70,7 @@ export async function enforceStaffCompanyRequest(db,req){
  const companyId=req.get('x-backoffice-company-id'),path=String(req.originalUrl||req.path||'').split('?')[0];
  const capability=staffCompanyRequestCapability(req.method,path);
  if(!capability||companyId!==req.user?.companyId||req.get('x-backoffice-store-id')!==undefined||req.user?.storeId||!validCompanyQuery(req.query,capability,path))throw staffError();
- if(!(req.method!=='GET'&&staffSupplierManagementRoute(req.method,path))&&(req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length))throw staffError();
+ if(!(req.method!=='GET'&&(staffSupplierManagementRoute(req.method,path)||companyCategoryManageRoute(req.method,path)))&&(req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length))throw staffError();
  req.staffCompanyGrant=await requireStaffCompanyGrant(db,req.user,capability);
  return true;
 }
