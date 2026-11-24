@@ -1,3 +1,5 @@
+- 23/11/2026 · POS / Super Admin · Κεντρικός κανόνας εκκρεμών εγκρίσεων: τραπεζική κατάθεση χωρίς αποδεικτικό ή διαφορά πληρωμής >1,00€. Draft PR #4180, CI/LAB σε αναμονή, καμία μεταβολή πραγματικών οικονομικών εγγραφών. [Checkpoint](CHANGES/2026-11-23-payment-approval-policy-lab.md).
+
 - 23/11/2026 · Νο 5 · ΦΠΑ και ταξινόμηση είδους από γραμμή τιμολογίου · [Καταγραφή](CHANGES/2026-11-23-no5-staff-invoice-line-taxonomy.md).
 
 - 22/11/2026 · POS · Ευκολότερο σύρσιμο κοινών διαχωριστικών · [Checkpoint](CHANGES/2026-11-22-pos-divider-drag.md).
@@ -977,5 +979,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - Πανόρμου · Ανάκτηση PDF Epsilon 72, 159, 172 και 209 · [Checkpoint](CHANGES/2026-11-22-panormou-epsilon-72-172.md).
 
 - 24/11/2026 · Νο 5 · [Νέο είδος με barcode από πρόχειρο τιμολόγιο](CHANGES/2026-11-24-no5-draft-new-item-barcode.md).
+
+- 24/11/2026 · Πανόρμου · Προφίλ ΦΠΑ RBS βάσει Kiosk · [Checkpoint](CHANGES/2026-11-24-panormou-rbs-vat-profile.md).
 
 - 24/11/2026 · Νο 5 · [Εκχωρήσεις καταμέτρησης, διπλοεγγραφών και λιανικής](CHANGES/2026-11-24-no5-owner-delegation-store-actions.md).
