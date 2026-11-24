@@ -47,3 +47,45 @@ test('legacy null proof metadata keeps a named date choice and validated derived
 test('Owner explicitly saves finite STORE7/COMPANY6 and verifies parent rights while pending/proofs avoid invented source grants',async()=>{const Admin=await component('BackofficeStaffAdmin');let submitted;const account={id:'u',username:'usr',fullName:'User',active:true,revision:1,grants:[{storeId:'store',profile:'AUDITOR',capabilities:[]}],companyCapabilities:[]},api=async(path,opts={})=>{if(opts.method){submitted=JSON.parse(opts.body);account.revision=2;account.grants=submitted.grants;account.companyCapabilities=submitted.companyCapabilities;return{id:'u',revision:2}}return{accounts:[account],stores:[{id:'store',name:'Named store'}],companyAuthority:{protocol:'MWS_BACKOFFICE_COMPANY_V1',capabilities:[...staffCompanyCapabilities]}}},m=await mount(Admin,{api});try{await click(m,'Δικαιώματα /');const storeCheck=key=>{const section=staffPermissionSections.find(s=>s.actions.some(a=>a.key===key)),action=section.actions.find(a=>a.key===key);return document.querySelector(`[aria-label="Named store: ${section.label} — ${action.label}"]`)},companyAll=staffCompanyPermissionSections.flatMap(s=>s.actions),companyCheck=key=>document.querySelector(`[aria-label="Εταιρεία: ${companyAll.find(a=>a.key===key).label}"]`);for(const action of storeActions)await m.act(async()=>storeCheck(action.key).click());for(const action of companyActions)if(!companyCheck(action.key).checked)await m.act(async()=>companyCheck(action.key).click());assert.equal(storeCheck('employees.read').checked,true);assert.equal(storeCheck('schedule.read').checked,true);for(const key of ['invoices.read','approvals.read','products.read','payments.read','sales.read'])assert.equal(storeCheck(key).checked,false);assert.match(document.body.textContent,/προσωπικά ή τραπεζικά στοιχεία/);await m.act(async()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.deepEqual(new Set(submitted.grants[0].capabilities),new Set([...storeActions.map(a=>a.key),'employees.read','schedule.read']));assert.equal(submitted.companyCapabilities.length,12);assert.match(document.body.textContent,/Αποθηκεύτηκε και επαληθεύτηκε/)}finally{await m.close()}});
 test('actual workspace navigates finite STORE and COMPANY panes, preserving original company/store headers independently',async()=>{const Workspace=await component('BackofficeStaffWorkspace'),calls=[],api=async(path,opts={})=>{calls.push(path);if(path.endsWith('/me'))return{userId:'u',companyId:'a',revision:2,stores:[{id:'store',name:'Named store',capabilities:['cloud-overview.read']}],companyAuthority:{protocol:'MWS_BACKOFFICE_COMPANY_V1',capabilities:[...staffCompanyCapabilities]},companyCapabilities:['staff-policy.read']};if(path.startsWith(storePrefix)){assert.deepEqual(opts.headers,{'x-backoffice-store-id':'store'});return storePassiveFixture(path)}assert.deepEqual(opts.headers,{'x-backoffice-company-id':'a'});return companyPassiveFixture(path)},m=await mount(Workspace,{api,user:{id:'u'},onLogout(){}});try{await click(m,'Άνοιγμα καταστήματος');await click(m,storeActions.find(a=>a.key==='cloud-overview.read').label);assert.match(document.body.textContent,/WRITER OFFLINE/);await click(m,'Εταιρεία: '+companyActions.find(a=>a.key==='staff-policy.read').label);assert.match(document.body.textContent,/named-account/);assert.equal(document.querySelector('[aria-label="Παθητική κατάσταση Cloud"]'),null);assert.ok(calls.includes(storePrefix+'/store/cloud'));assert.ok(calls.includes(companyPrefix+'/staff-policy'))}finally{await m.close()}});
 test('supplier month/year invoice contexts reuse exactly existing named supplier report grant and date query',async()=>{const Panel=await component('backoffice/CompanyPartyReportsReadView'),calls=[],today=greeceDateInput(),api=async path=>{calls.push(path);if(path==='/api/commerce/suppliers')return{scope:'COMPANY',companyId:'a',items:[{id:'supplier',name:'Named supplier',taxId:null,email:null,phone:null,city:null,active:true}]};const p=new URL(path,'https://isolated.invalid').searchParams;return{scope:'COMPANY',companyId:'a',from:p.get('from'),to:p.get('to'),supplierId:p.get('supplierId'),q:p.get('q')||'',items:[],count:0,summary:{count:0,net:0,vat:0,gross:0},window:{limit:3000,kind:'NATIVE_WINDOW'}}},m=await mount(Panel,{api,companyId:'a',capability:'reports-supplier-invoices.read',companyCapabilities:['suppliers.read','reports-supplier-invoices.read'],authorityKey:'u:a:1'});try{await change(m,'Όνομα συναλλασσομένου αναφοράς','supplier');await click(m,'Τιμολογήσεις τρέχοντος μήνα');let q=new URL(calls.at(-1),'https://isolated.invalid').searchParams;assert.equal(q.get('supplierId'),'supplier');assert.equal(q.get('from'),today.slice(0,7)+'-01');assert.equal(q.get('to'),today);await click(m,'Τιμολογήσεις τρέχοντος έτους');q=new URL(calls.at(-1),'https://isolated.invalid').searchParams;assert.equal(q.get('from'),today.slice(0,4)+'-01-01');assert.ok(calls.slice(1).every(path=>path.startsWith('/api/supplier-control/reports/invoices?')));assert.equal(document.querySelector('[role="alert"]'),null)}finally{await m.close()}});
+
+test('staff policy supports a display-name-only action for another account with its independent grant',async()=>{
+  const Panel=await component('backoffice/CompanyFinalPassiveReadView');
+  const reads=[],patches=[];
+  let otherName='Other staff';
+  const api=async(path,options)=>{
+    assert.equal(options.headers['x-backoffice-company-id'],'company');
+    assert.equal(options.headers['x-backoffice-store-id'],undefined);
+    if(options.method==='PATCH'){
+      patches.push(path);
+      assert.equal(path,'/api/backoffice-staff/company/staff-display-names/other');
+      assert.deepEqual(JSON.parse(options.body),{fullName:'Corrected staff',expectedFullName:'Other staff'});
+      otherName='Corrected staff';
+      return {ok:true,companyId:'company',id:'other',fullName:otherName};
+    }
+    reads.push(path);
+    return {scope:'COMPANY',companyId:'company',window:{accountLimit:500,grantLimit:50000,kind:'COMPLETE_SOURCE'},items:[
+      {id:'self',fullName:'My staff name',username:'self-fixture',active:true,revision:1,companyCapabilities:[],grants:[]},
+      {id:'other',fullName:otherName,username:'other-fixture',active:true,revision:1,companyCapabilities:[],grants:[]}
+    ]};
+  };
+  const props={api,companyId:'company',authorityKey:'fixture',capability:'staff-policy.read',staffActorId:'self',companyCapabilities:['staff-policy.read']};
+  const m=await mount(Panel,props);
+  try{
+    assert.equal(button('Διόρθωση ονόματος:'),undefined);
+    await m.render({...props,companyCapabilities:[...props.companyCapabilities,'staff-display-name.edit']});
+    assert.equal(button('Διόρθωση ονόματος: My staff name'),undefined);
+    await click(m,'Διόρθωση ονόματος: Other staff');
+    const form=document.querySelector('form[aria-label="Διόρθωση ονοματεπωνύμου χειριστή"]');
+    assert.equal(form.querySelectorAll('input').length,1);
+    await m.act(async()=>{
+      const input=form.querySelector('input');
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'Corrected staff');
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    await click(m,'Αποθήκευση ονοματεπωνύμου');
+    assert.equal(patches.length,1);
+    assert.equal(reads.length,3);
+    assert.match(document.body.textContent,/Corrected staff/);
+    assert.match(document.body.textContent,/Το ονοματεπώνυμο αποθηκεύτηκε/);
+  }finally{await m.close()}
+});
