@@ -1,3 +1,5 @@
+- 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE NOT STARTED / NOT INSTALLED. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
+
 - 24/11/2026 · ASSIGNED /root · Ανεξάρτητη πρόταση παραγγελίας POS με ανακλητό orderSuggestionsPos · feat/pos-order-proposals-20261124 · claim4193. Χρήση μόνο υπαρχόντων πινάκων/υπολογισμού, χωρίς weekly schema/worker/ρυθμίσεις. Native HTTP/PostgreSQL + React8PASS, υπάρχον editor/header/coffee + POS UI11PASS. AWAITING FULL CI / NOT INSTALLED. Το αυτόματο alarm διατηρείται BLOCKED ON SCHEMA ADMISSION στο4194. [Checkpoint](CHANGES/2026-11-24-pos-order-proposals-release.md).
 - 24/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
 
