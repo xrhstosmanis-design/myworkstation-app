@@ -176,6 +176,20 @@ export default function CommerceLauncher(){
     setSupportStoreId(storeId);
     setLegacyView("operations");setMode("legacy");
   };
+  useEffect(()=>{
+    const workspace=workspaceElementRef.current;
+    if(!workspace||mode!=="legacy"||minimized)return;
+    const openCard=event=>{
+      const {productId,storeId}=event.detail||{};
+      if(!productId||!storeId||!stores.some(store=>store.id===storeId)||wholesaleLockRef.current)return;
+      event.preventDefault();
+      setInventoryInitialProduct({productId});
+      setInventoryStoreId(storeId);
+      setMode("inventory");
+    };
+    workspace.addEventListener("mws:price-catalog-full-card",openCard);
+    return ()=>workspace.removeEventListener("mws:price-catalog-full-card",openCard);
+  },[visible,minimized,mode,stores]);
   const interceptWarehouse=event=>{
     if(mode!=="legacy"||legacyView!=="operations")return;
     const button=event.target.closest?.(".commerce-hub .commerce-module-strip button");

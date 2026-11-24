@@ -13,16 +13,103 @@ function deactivate(hub,button){state.active=false;button.classList.remove("acti
 function tabs(){const x=[["prices","▣ Έλεγχος τιμών πώλησης"],["leaflet","🎟 Προσφορές φυλλαδίου"],["gifts","🎁 Προσφορές και δώρα"],["wholesale","🔖 Τιμές χονδρικής"]];return `<div class="pc-tabs">${x.map(([id,l])=>`<button data-pc-tab="${id}" class="${state.tab===id?"active":""}>${l}</button>`).join("")}</div>`}
 const storeOptions=()=>`<option value="">Βασική τιμή / όλα τα καταστήματα</option>${state.lookups.stores.map(s=>`<option value="${esc(s.id)}" ${state.storeId===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}`;
 const customerOptions=(selected="")=>`<option value="">Όλοι οι πελάτες</option>${state.lookups.customers.map(c=>`<option value="${esc(c.id)}" ${selected===c.id?"selected":""}>${esc(c.name)}${c.taxId?` · ${esc(c.taxId)}`:""}</option>`).join("")}`;
-function priceView(){const d=state.products;return `${tabs()}<section class="pc-filter"><b>Κριτήρια αναζήτησης</b><div><label>Περιγραφή / SKU / Barcode<input data-pc-q value="${esc(state.q)}"></label><label>Κατάστημα<select data-pc-store>${storeOptions()}</select></label><button data-pc-search>🔍 Αναζήτηση</button><button data-pc-clear>✕</button><button data-pc-refresh>↻ Ανανέωση</button></div></section><section class="pc-panel"><div class="pc-table prices"><div class="row head"><span></span><span>Περιγραφή</span><span>MARGIN (τελ. αγορά)</span><span>MARKUP</span><span>Τελ. αγορά</span><span>Πώληση (χ. ΦΠΑ)</span><span>Πώληση (με ΦΠΑ)</span><span>% ΦΠΑ</span><span>Κατηγορία</span><span>Υποκατηγορία</span><span>Τελ. προμηθευτής</span><span>Εσωτ. κωδικός</span></div>${d.items.map(r=>`<div class="row"><span><input type="checkbox" data-pc-select="${r.id}"></span><span title="${esc(r.name)}"><b>${esc(r.name)}</b></span><strong class="${r.margin<0?"neg":""}">${pct(r.margin)}</strong><strong class="${r.markup<0?"neg":""}">${pct(r.markup)}</strong><span>${money(r.lastCost)}</span><span>${money(r.saleNet)}</span><span><button class="pc-price-pencil" data-pc-price="${r.id}">${money(r.salePrice)} ✎</button></span><span>${n(r.vatRate).toLocaleString("el-GR")}</span><span>${esc(r.categoryName||"—")}</span><span>${esc(r.subcategoryName||"—")}</span><span>${esc(r.lastSupplierName||"—")}</span><span>${esc(r.sku||"—")}</span></div>`).join("")||'<div class="pc-empty">Δεν βρέθηκαν είδη.</div>'}</div></section><div class="pc-footer"><strong>${n(d.total).toLocaleString("el-GR")} είδη</strong><div class="pc-pages"><button data-pc-prev ${state.page<=1?"disabled":""}>◀</button><span>Σελίδα ${state.page} / ${d.pages||1}</span><button data-pc-next ${state.page>=d.pages?"disabled":""}>▶</button></div><button data-pc-export>Excel / CSV</button><button data-pc-close>Κλείσιμο</button></div>`}
+function priceView(){const d=state.products;return `${tabs()}<section class="pc-filter"><b>Κριτήρια αναζήτησης</b><div><label>Περιγραφή / SKU / Barcode<input data-pc-q value="${esc(state.q)}"></label><label>Κατάστημα<select data-pc-store>${storeOptions()}</select></label><button data-pc-search>🔍 Αναζήτηση</button><button data-pc-clear>✕</button><button data-pc-refresh>↻ Ανανέωση</button></div></section><section class="pc-panel"><div class="pc-table prices"><div class="row head"><span></span><span>Περιγραφή</span><span>MARGIN (τελ. αγορά)</span><span>MARKUP</span><span>Τελ. αγορά</span><span>Πώληση (χ. ΦΠΑ)</span><span>Πώληση (με ΦΠΑ)</span><span>% ΦΠΑ</span><span>Κατηγορία</span><span>Υποκατηγορία</span><span>Τελ. προμηθευτής</span><span>Εσωτ. κωδικός</span></div>${d.items.map(r=>`<div class="row"><span><input type="checkbox" data-pc-select="${r.id}"></span><span title="${esc(r.name)}"><button type="button" class="pc-price-pencil" data-pc-price="${esc(r.id)}">${esc(r.name)}</button></span><strong class="${r.margin<0?"neg":""}">${pct(r.margin)}</strong><strong class="${r.markup<0?"neg":""}">${pct(r.markup)}</strong><span>${money(r.lastCost)}</span><span>${money(r.saleNet)}</span><span><button class="pc-price-pencil" data-pc-price="${r.id}">${money(r.salePrice)} ✎</button></span><span>${n(r.vatRate).toLocaleString("el-GR")}</span><span>${esc(r.categoryName||"—")}</span><span>${esc(r.subcategoryName||"—")}</span><span>${esc(r.lastSupplierName||"—")}</span><span>${esc(r.sku||"—")}</span></div>`).join("")||'<div class="pc-empty">Δεν βρέθηκαν είδη.</div>'}</div></section><div class="pc-footer"><strong>${n(d.total).toLocaleString("el-GR")} είδη</strong><div class="pc-pages"><button data-pc-prev ${state.page<=1?"disabled":""}>◀</button><span>Σελίδα ${state.page} / ${d.pages||1}</span><button data-pc-next ${state.page>=d.pages?"disabled":""}>▶</button></div><button data-pc-export>Excel / CSV</button><button data-pc-close>Κλείσιμο</button></div>`}
 function promoView(type){const leaflet=type==="LEAFLET";return `${tabs()}<section class="pc-filter"><b>${leaflet?"Καταχωρημένες προσφορές φυλλαδίου":"Καταχωρημένες προσφορές ειδών / δώρα"}</b><div><button data-pc-new-promo="${type}">＋ Νέα εγγραφή</button><button data-pc-refresh>↻ Ανανέωση</button><button data-pc-export>Excel / CSV</button></div></section><section class="pc-panel"><div class="pc-table ${leaflet?"leaflet":"gifts"}"><div class="row head"><span></span><span></span><span>Υποκατηγορία</span><span>Περιγραφή</span>${leaflet?'<span>Αρχική τιμή</span><span>Νέα τιμή</span><span>Έκπτωση (%)</span><span>Ισχύει από</span><span>Ισχύει έως και</span><span>Πόντοι πελάτη</span><span>BARCODE</span>':'<span>Λιανική</span><span>Απόθεμα</span><span>Τμχ Πώλησης</span><span>Επιπλέον Τμχ</span><span>Έκπτωση (%)</span><span>Ισχύει από</span><span>Ισχύει έως και</span><span>Χειριστής</span>'}</div>${state.promotions.map(r=>`<div class="row"><span><button data-pc-edit-promo="${r.id}">✎</button></span><span><button class="danger" data-pc-delete-promo="${r.id}">🗑</button></span><span>${esc(r.subcategoryName||"—")}</span><span><b>${esc(r.name)}</b></span>${leaflet?`<span>${money(r.originalPrice)}</span><strong>${money(r.offerPrice)}</strong><span>${pct(r.discountPercent)}</span><span>${fmt(r.validFrom)}</span><span>${fmt(r.validUntil)}</span><span>${n(r.customerPoints).toLocaleString("el-GR")}</span><span>${esc(r.barcode||"")}</span>`:`<span>${money(r.salePrice)}</span><span>${n(r.currentStock).toLocaleString("el-GR")}</span><strong>${n(r.saleQuantity).toLocaleString("el-GR")}</strong><strong>${n(r.bonusQuantity).toLocaleString("el-GR")}</strong><span>${pct(r.discountPercent)}</span><span>${fmt(r.validFrom)}</span><span>${fmt(r.validUntil)}</span><span>${esc(r.createdByName||"—")}</span>`}</div>`).join("")||'<div class="pc-empty">Δεν υπάρχουν καταχωρημένες προσφορές.</div>'}</div></section><div class="pc-footer"><strong>${state.promotions.length} προσφορές</strong><button data-pc-export>Excel / CSV</button><button data-pc-close>Κλείσιμο</button></div>`}
 function wholesaleView(){return `${tabs()}<section class="pc-filter"><b>Κριτήρια αναζήτησης</b><div><label>Είδος<input data-pc-wholesale-q value="${esc(state.wholesaleQ)}"></label><label>Πελάτης<select data-pc-wholesale-customer>${customerOptions(state.wholesaleCustomerId)}</select></label><button data-pc-wholesale-search>🔍 Αναζήτηση</button><button data-pc-new-wholesale>＋ Νέα εγγραφή</button><button data-pc-refresh>↻ Ανανέωση</button></div></section><section class="pc-panel"><div class="pc-table wholesale"><div class="row head"><span></span><span></span><span>Πελάτης</span><span>Εσωτ. κωδικός</span><span>Περιγραφή είδους</span><span>Χονδρική πελάτη</span><span>Τελ. αγορά</span><span>Margin πελάτη</span><span>Margin είδους</span><span>Χονδρική (χ. ΦΠΑ)</span><span>Λιανική (χ. ΦΠΑ)</span><span>Λιανική (με ΦΠΑ)</span><span>Τελευταία αγορά</span></div>${state.wholesale.map(r=>`<div class="row"><span><button data-pc-edit-wholesale="${r.id}">✎</button></span><span><button class="danger" data-pc-delete-wholesale="${r.id}">🗑</button></span><span><b>${esc(r.customerName)}</b></span><span>${esc(r.sku||"—")}</span><span>${esc(r.productName)}</span><strong>${money(r.wholesalePrice)}</strong><span>${money(r.lastCost)}</span><strong class="${r.customerMargin<0?"neg":""}">${pct(r.customerMargin)}</strong><span>${pct(r.productMargin)}</span><span>${money(r.wholesaleNet)}</span><span>${money(r.retailNet)}</span><span>${money(r.salePrice)}</span><span>${fmt(r.lastPurchaseAt)}</span></div>`).join("")||'<div class="pc-empty">Δεν υπάρχουν τιμές χονδρικής.</div>'}</div></section><div class="pc-footer"><strong>${state.wholesale.length} εγγραφές</strong><button data-pc-export>Excel / CSV</button><button data-pc-close>Κλείσιμο</button></div>`}
 function render(root){root.innerHTML=state.tab==="prices"?priceView():state.tab==="leaflet"?promoView("LEAFLET"):state.tab==="gifts"?promoView("GIFT"):wholesaleView();bind(root)}
 async function loadLookups(){if(state.lookups.stores.length||state.lookups.customers.length)return;state.lookups=await api("/api/price-catalog/lookups")}
-async function loadProducts(root){try{const q=new URLSearchParams({q:state.q,storeId:state.storeId,page:String(state.page),pageSize:String(state.pageSize)});state.products=await api(`/api/price-catalog/products?${q}`);render(root)}catch(e){notice(root,e.message,true)}}
+let priceLoadGeneration=0;
+async function loadProducts(root){
+  const generation=++priceLoadGeneration;
+  const storeId=state.storeId;
+  const q=new URLSearchParams({q:state.q,storeId,page:String(state.page),pageSize:String(state.pageSize)});
+  try{
+    const result=await api(`/api/price-catalog/products?${q}`);
+    if(generation!==priceLoadGeneration||!root.isConnected||!state.active||state.tab!=="prices"||state.storeId!==storeId)return;
+    state.products={...result,storeId};
+    render(root);
+  }catch(e){if(generation===priceLoadGeneration&&root.isConnected)notice(root,e.message,true)}
+}
+
 async function loadPromotions(root,type){try{state.promotions=(await api(`/api/price-catalog/promotions?type=${type}`)).items||[];render(root)}catch(e){notice(root,e.message,true)}}
 async function loadWholesale(root){try{const q=new URLSearchParams({q:state.wholesaleQ,customerId:state.wholesaleCustomerId});state.wholesale=(await api(`/api/price-catalog/wholesale?${q}`)).items||[];render(root)}catch(e){notice(root,e.message,true)}}
 async function loadCurrent(root){if(state.tab==="prices")return loadProducts(root);if(state.tab==="leaflet")return loadPromotions(root,"LEAFLET");if(state.tab==="gifts")return loadPromotions(root,"GIFT");return loadWholesale(root)}
-function priceModal(root,row){const m=modal(`<div class="pc-modal-title"><h2>Διόρθωση τιμής πώλησης</h2><button data-pc-close-modal>×</button></div><div class="pc-product-title">${esc(row.name)}</div><form class="pc-form" data-pc-price-form><label>Τελ. αγορά<input value="${n(row.lastCost).toFixed(4)}" disabled></label><label>% ΦΠΑ<input value="${n(row.vatRate)}" disabled></label><label>Πώληση με ΦΠΑ<input name="salePrice" type="number" min="0" step="0.01" value="${n(row.salePrice).toFixed(2)}" required></label><label>Πώληση χωρίς ΦΠΑ<input data-pc-net disabled></label><label>Margin<input data-pc-margin disabled></label><label>Markup<input data-pc-markup disabled></label><label class="check wide"><input name="syncAllStores" type="checkbox"> Εφαρμογή της ίδιας τιμής σε όλα τα καταστήματα</label><div class="pc-modal-actions wide"><button type="button" data-pc-close-modal>Επιστροφή</button><button class="primary">Καταχώρηση</button></div></form>`);const f=m.querySelector("form"),price=f.salePrice,recalc=()=>{const gross=n(price.value),net=gross/(1+n(row.vatRate)/100),margin=net>0?((net-n(row.lastCost))/net)*100:0,markup=n(row.lastCost)>0?((net-n(row.lastCost))/n(row.lastCost))*100:0;m.querySelector("[data-pc-net]").value=net.toFixed(4);m.querySelector("[data-pc-margin]").value=`${margin.toFixed(2)}%`;m.querySelector("[data-pc-markup]").value=`${markup.toFixed(2)}%`};price.addEventListener("input",recalc);recalc();f.onsubmit=async e=>{e.preventDefault();try{await api(`/api/price-catalog/products/${row.id}/price`,{method:"PATCH",body:JSON.stringify({salePrice:n(price.value),storeId:state.storeId||null,syncAllStores:!!f.syncAllStores.checked})});m.remove();loadProducts(root)}catch(err){alert(err.message)}}}
+function priceModal(root,row){
+  if(state.products.storeId!==state.storeId)return;
+  const storeId=state.products.storeId||null;
+  const scope=state.lookups.stores.find(store=>store.id===storeId)?.name||"Βασική τιμή";
+  const cost=n(row.lastCost), vatFactor=1+n(row.vatRate)/100;
+  const m=modal(`<div class="pc-modal-title"><h2>Καρτέλα είδους · Τιμές</h2><button data-pc-close-modal aria-label="Κλείσιμο">×</button></div>
+    <div class="pc-product-title">${esc(row.name)} · ${esc(row.sku||"—")} · ${esc(scope)}</div>
+    <form class="pc-form" data-pc-price-form>
+      <label>Τελ. αγορά χωρίς ΦΠΑ<input value="${cost.toFixed(4)}" readonly></label>
+      <label>% ΦΠΑ<input value="${n(row.vatRate)}" readonly></label>
+      <label>Πώληση με ΦΠΑ<input name="salePrice" type="number" min="0" step="0.01" value="${n(row.salePrice).toFixed(2)}" required></label>
+      <label>Πώληση χωρίς ΦΠΑ<input name="netPrice" readonly></label>
+      <label>Margin % χωρίς ΦΠΑ<input name="margin" type="number" step="any" ${cost>0?"":"disabled"}></label>
+      <label>Markup % χωρίς ΦΠΑ<input name="markup" type="number" step="any" ${cost>0?"":"disabled"}></label>
+      ${cost>0?"":'<p class="wide">Χρειάζεται καταχωρημένο κόστος αγοράς για υπολογισμό από Margin ή Markup.</p>'}
+      <label class="check wide"><input name="syncAllStores" type="checkbox"> Εφαρμογή της ίδιας τιμής σε όλα τα καταστήματα</label>
+      <p class="wide" role="alert" data-pc-price-error hidden></p>
+      <div class="pc-modal-actions wide"><button type="button" data-pc-close-modal>Επιστροφή</button>${storeId?'<button type="button" data-pc-full-card>Πλήρης καρτέλα είδους</button>':""}<button class="primary">Καταχώρηση</button></div>
+    </form>`);
+  const form=m.querySelector("form");
+  const {salePrice,netPrice,margin,markup,syncAllStores}=form.elements;
+  const error=form.querySelector("[data-pc-price-error]");
+  const save=form.querySelector("button.primary");
+  function recalculate(edited){
+    const value=edited?.valueAsNumber;
+    if(edited===margin){
+      margin.setCustomValidity(!Number.isFinite(value)||value>=100?"Το Margin πρέπει να είναι μικρότερο από 100%.":"");
+      if(!margin.validity.valid)return;
+      salePrice.value=(cost/(1-value/100)*vatFactor).toFixed(2);
+    }
+    if(edited===markup){
+      markup.setCustomValidity(!Number.isFinite(value)||value< -100?"Το Markup πρέπει να είναι τουλάχιστον −100%.":"");
+      if(!markup.validity.valid)return;
+      salePrice.value=(cost*(1+value/100)*vatFactor).toFixed(2);
+    }
+    const net=n(salePrice.value)/vatFactor;
+    netPrice.value=net.toFixed(4);
+    if(edited!==margin){
+      margin.setCustomValidity("");
+      margin.value=cost>0&&net>0?((net-cost)/net*100).toFixed(2):"";
+    }
+    if(edited!==markup){
+      markup.setCustomValidity("");
+      markup.value=cost>0?((net-cost)/cost*100).toFixed(2):"";
+    }
+  }
+  for(const input of [salePrice,margin,markup]){
+    input.addEventListener("input",()=>recalculate(input));
+    input.addEventListener("change",()=>{if(input.validity.valid)recalculate()});
+  }
+  recalculate();
+  form.querySelector("[data-pc-full-card]")?.addEventListener("click",()=>{
+    if(root.dispatchEvent(new CustomEvent("mws:price-catalog-full-card",{
+      bubbles:true,cancelable:true,detail:{productId:row.id,storeId}
+    })))return;
+    m.remove();
+  });
+  form.onsubmit=async event=>{
+    event.preventDefault();
+    if(save.disabled||!form.reportValidity())return;
+    save.disabled=true;
+    error.hidden=true;
+    try{
+      await api(`/api/price-catalog/products/${encodeURIComponent(row.id)}/price`,{
+        method:"PATCH",
+        body:JSON.stringify({salePrice:salePrice.valueAsNumber,storeId,syncAllStores:syncAllStores.checked})
+      });
+      m.remove();
+      if(root.isConnected&&state.active&&state.tab==="prices")await loadProducts(root);
+    }catch(err){
+      error.textContent=err.message;
+      error.hidden=false;
+    }finally{save.disabled=false}
+  };
+}
+
 async function findProducts(term){const q=new URLSearchParams({q:term,page:"1",pageSize:"100"});return (await api(`/api/price-catalog/products?${q}`)).items||[]}
 function promotionModal(root,type,row=null){const leaflet=type==="LEAFLET",m=modal(`<div class="pc-modal-title"><h2>${row?"Διόρθωση":"Νέα"} ${leaflet?"προσφορά φυλλαδίου":"προσφορά / δώρο"}</h2><button data-pc-close-modal>×</button></div><form class="pc-form" data-pc-promo-form>${row?`<div class="pc-product-title wide">${esc(row.name)}</div>`:`<label class="wide">Αναζήτηση είδους<div class="pc-search-line"><input name="productSearch"><button type="button" data-pc-find-product>🔍</button></div></label><label class="wide">Είδος<select name="productId" required><option value="">Αναζήτησε πρώτα είδος</option></select></label>`}${leaflet?`<label class="wide">Τρόπος υπολογισμού<select name="offerMode"><option value="DISCOUNT_PERCENT" ${row?.offerMode==="DISCOUNT_PERCENT"?"selected":""}>Ποσοστό ανά λιανική καταστήματος</option><option value="DISCOUNT_AMOUNT" ${row?.offerMode==="DISCOUNT_AMOUNT"?"selected":""}>Έκπτωση ποσού ανά λιανική καταστήματος</option><option value="FIXED_PRICE" ${!row||row?.offerMode==="FIXED_PRICE"?"selected":""}>Σταθερή τελική τιμή</option></select></label><label>Αρχική τιμή<input data-pc-original value="${row?row.originalPrice:""}" disabled></label><label>Νέα τιμή<input name="offerPrice" type="number" min="0" step="0.01" value="${row?.offerPrice??""}"></label><label>Έκπτωση %<input name="discountPercent" type="number" min="0" max="100" step="0.01" value="${row?.discountPercent??0}"></label><label>Έκπτωση €<input name="discountAmount" type="number" min="0" step="0.01" value="${row?.discountAmount??0}"></label><label>Πόντοι πελάτη<input name="customerPoints" type="number" min="0" step="0.01" value="${row?.customerPoints??0}"></label>`:`<label>Τμχ Πώλησης<input name="saleQuantity" type="number" min="0.001" step="1" value="${row?.saleQuantity??1}" required></label><label>Επιπλέον Τμχ<input name="bonusQuantity" type="number" min="0" step="1" value="${row?.bonusQuantity??1}"></label><label>Έκπτωση %<input name="discountPercent" type="number" min="0" max="100" step="0.01" value="${row?.discountPercent??100}"></label>`}<label>Ισχύει από<input name="validFrom" lang="en-GB" type="datetime-local" value="${dtLocal(row?.validFrom)}" required></label><label>Ισχύει έως και<input name="validUntil" lang="en-GB" type="datetime-local" value="${row?.validUntil?dtLocal(row.validUntil):""}"></label><label class="check"><input name="active" type="checkbox" ${row?.active===false?"":"checked"}> Ενεργή</label><div class="pc-modal-actions wide"><button type="button" data-pc-close-modal>Επιστροφή</button><button class="primary">Καταχώρηση</button></div></form>`);const f=m.querySelector("form");let selectedProduct=row?{id:row.productId,name:row.name,salePrice:n(row.originalPrice||row.salePrice)}:null;if(!row){m.querySelector("[data-pc-find-product]").onclick=async()=>{try{const items=await findProducts(f.productSearch.value.trim()),select=f.productId;select.innerHTML=`<option value="">Επιλογή είδους</option>${items.map(x=>`<option value="${esc(x.id)}" data-price="${n(x.salePrice)}">${esc(x.name)} · ${money(x.salePrice)}</option>`).join("")}`;select.onchange=()=>{const x=items.find(i=>i.id===select.value);selectedProduct=x||null;if(leaflet&&x){m.querySelector("[data-pc-original]").value=n(x.salePrice).toFixed(2);f.offerPrice.value=n(x.salePrice).toFixed(2);f.discountPercent.value="0"}}}catch(err){alert(err.message)}}}
 if(leaflet){const recalcDiscount=()=>{const original=n(selectedProduct?.salePrice??row?.originalPrice),offer=n(f.offerPrice.value);if(original>0)f.discountPercent.value=Math.max(0,Math.min(100,(original-offer)/original*100)).toFixed(2)},recalcPrice=()=>{const original=n(selectedProduct?.salePrice??row?.originalPrice),discount=n(f.discountPercent.value);if(original>=0)f.offerPrice.value=Math.max(0,original*(1-discount/100)).toFixed(2)};f.offerPrice.addEventListener("input",recalcDiscount);f.discountPercent.addEventListener("input",recalcPrice)}

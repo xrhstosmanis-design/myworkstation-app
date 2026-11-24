@@ -1,3 +1,7 @@
+## 24/11/2026 - Price catalog product card - LAB pending
+
+Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the full product card for a selected store. [Checkpoint](CHANGES/2026-11-24-price-catalog-product-card.md).
+
 - 24/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
 
 - 24/11/2026 · POS / Super Admin · Συμφωνία 53 ιστορικών πληρωμών μετρητών Αχαρνών/Ριζαρείου — απομονωμένο PostgreSQL test, LAB HOLD, καμία αλλαγή παραγωγής. [Checkpoint](CHANGES/2026-11-24-historical-cash-approval-reconciliation.md).
