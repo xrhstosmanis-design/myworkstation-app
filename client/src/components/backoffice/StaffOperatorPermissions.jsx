@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from '../../../../shared/pos-operator-permissions.mjs';
 
 const EDITABLE_POS_PERMISSIONS=[...POS_PERMISSIONS,...POS_MENU_PERMISSIONS];
+const knownKeys=new Set(EDITABLE_POS_PERMISSIONS.map(([key])=>key));
 
 export default function StaffOperatorPermissions({api,companyId,storeId,canManagePosAccess=false,canProvision=false,canResetPin=false,canCopyPermissions=false}){
   const base=`/api/operator-management/stores/${encodeURIComponent(storeId)}/employee-permissions`;
@@ -13,6 +14,11 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
   const generation=useRef(0),writing=useRef(false);
   const items=loaded?.api===api&&loaded.base===base&&loaded.revision===revision?loaded.items:null;
   const operator=items?.find(item=>item.employeeId===selected);
+  const editableKeys=items?loaded.editableKeys:[];
+  const copySource=items?.find(item=>item.employeeId===copySourceId);
+  const hasProtectedDifference=source=>EDITABLE_POS_PERMISSIONS.some(([key])=>
+    !editableKeys.includes(key)&&Boolean(source.permissions[key])!==Boolean(operator.permissions[key]));
+  const copyBlocked=Boolean(operator&&copySource&&hasProtectedDifference(copySource));
 
   useEffect(()=>{
     const request=++generation.current;
@@ -22,7 +28,9 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
       if(result?.companyId!==companyId||result.storeId!==storeId||!Array.isArray(result.items)){
         throw Error('Δεν επιβεβαιώθηκε το κατάστημα των χειριστών.');
       }
-      setLoaded({api,base,revision,items:result.items});
+      const keys=result.editableKeys;
+      const editableKeys=Array.isArray(keys)&&keys.every(key=>knownKeys.has(key))?keys:[];
+      setLoaded({api,base,revision,items:result.items,editableKeys});
     }).catch(error=>{
       if(request===generation.current)setError(error.message);
     });
@@ -32,6 +40,7 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
   const change=async(key,enabled)=>{
     if(writing.current||!operator)return;
     const accessChange=key===null;
+    if(!accessChange&&!editableKeys.includes(key))return;
     if(accessChange&&(!canManagePosAccess||(!enabled&&!window.confirm(`Απενεργοποίηση πρόσβασης POS για «${operator.displayName}»;`))))return;
     const request=generation.current,employeeId=operator.employeeId;
     writing.current=true;
@@ -106,8 +115,8 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
 
   const copyPermissions=async(event)=>{
     event.preventDefault();
-    const source=items?.find(item=>item.employeeId===copySourceId);
-    if(!canCopyPermissions||!operator||!source||source===operator||writing.current)return;
+    const source=copySource;
+    if(!canCopyPermissions||!operator||!source||source===operator||writing.current||!editableKeys.length||copyBlocked)return;
     if(!window.confirm(`Αντιγραφή δικαιωμάτων POS από «${source.displayName}» προς «${operator.displayName}»;`))return;
     const request=generation.current,employeeId=operator.employeeId;
     writing.current=true;
@@ -166,20 +175,21 @@ export default function StaffOperatorPermissions({api,companyId,storeId,canManag
         <button type="submit">Αποθήκευση PIN</button>
       </fieldset>
     </form>}
-    {operator&&canCopyPermissions&&items.length>1&&<form onSubmit={copyPermissions}>
+    {operator&&canCopyPermissions&&editableKeys.length>0&&items.length>1&&<form onSubmit={copyPermissions}>
       <fieldset disabled={busy}>
         <legend>Αντιγραφή δικαιωμάτων POS προς {operator.displayName}</legend>
         <label>Αντιγραφή από <select value={copySourceId} required onChange={event=>setCopySourceId(event.target.value)}>
           <option value="">Επίλεξε χειριστή-πρότυπο</option>
           {items.filter(item=>item.employeeId!==operator.employeeId).map(item=><option key={item.employeeId} value={item.employeeId}>{item.displayName}</option>)}
         </select></label>
-        <button type="submit">Αντιγραφή δικαιωμάτων POS</button>
+        {copyBlocked&&<p role="status">Η αντιγραφή θα άλλαζε δικαιώματα εκτός του ορίου που έχει ορίσει ο Ιδιοκτήτης.</p>}
+        <button type="submit" disabled={!copySource||copyBlocked}>Αντιγραφή δικαιωμάτων POS</button>
       </fieldset>
     </form>}
     {operator&&<fieldset disabled={busy}>
       <legend>Δικαιώματα POS · {operator.displayName}</legend>
       {EDITABLE_POS_PERMISSIONS.map(([key,label])=><label className="staff-check" key={key}>
-        <input type="checkbox" checked={Boolean(operator.permissions[key])} onChange={event=>change(key,event.target.checked)}/>
+        <input type="checkbox" disabled={!editableKeys.includes(key)} checked={Boolean(operator.permissions[key])} onChange={event=>change(key,event.target.checked)}/>
         {label}
       </label>)}
     </fieldset>}

@@ -1,4 +1,6 @@
-- 24/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · Ενσωμάτωση πριν από την κεντρική εγκατάσταση · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
+- 24/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
+
+- 24/11/2026 · POS / Super Admin · Συμφωνία 53 ιστορικών πληρωμών μετρητών Αχαρνών/Ριζαρείου — απομονωμένο PostgreSQL test, LAB HOLD, καμία αλλαγή παραγωγής. [Checkpoint](CHANGES/2026-11-24-historical-cash-approval-reconciliation.md).
 
 - 24/11/2026 · Νέο κεντρικό εβδομαδιαίο alarm stock και πρόταση παραγγελίας μπροστινού POS με ανακλητό δικαίωμα χειριστή · /root · CLAIM PROPOSED / SOURCE NOT STARTED. [Scope και εμπόδιο τοπικής εγγραφής Git](CHANGES/2026-11-24-central-weekly-stock-alarm-claim.md). Συνέχεια μητρώων: [Αναθέσεις](../docs/roadmap/OPEN_WORK_TRACKER_2026-11-24_STOCK_ALARM.md) / [Εκκρεμότητες](../docs/roadmap/PENDING_WORK_2026-11-24_STOCK_ALARM.md). Προηγούμενοι owners διατηρούνται.
 
@@ -995,3 +997,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 24/11/2026 · Νο 5 · [Εταιρικές εκχωρήσεις ΦΠΑ και ονόματος χειριστή](CHANGES/2026-11-24-no5-company-vat-staff-delegation.md).
 
 - 24/11/2026 · Νο 5 · [Εκχώρηση ενεργοποίησης τμημάτων ΦΠΑ και χειριστών](CHANGES/2026-11-24-no5-company-vat-activation-staff-status.md).
+
+- 24/11/2026 · Νο 5 · [Όρια εκχώρησης δικαιωμάτων POS ανά κατάστημα](CHANGES/2026-11-24-no5-pos-permission-ceiling.md).
