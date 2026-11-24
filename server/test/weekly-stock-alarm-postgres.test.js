@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PrismaClient} from '@prisma/client';
 import express from 'express';
-import {ensureWeeklyStockAlarmSchema} from '../src/services/weekly-stock-alarm-schema.js';
+import {ensureWeeklyStockAlarmSchema,weeklyStockAlarmReadiness} from '../src/services/weekly-stock-alarm-schema.js';
 import {runWeeklyStockAlarmBatch,readStockAlarmPolicy} from '../src/services/weekly-stock-alarm.js';
 const url=process.env.WEEKLY_STOCK_ALARM_TEST_DATABASE_URL;
 test('weekly stock alarm actual PostgreSQL: settings, replay, overrides, audit, tenant/grant HTTP', {skip:!url,timeout:60000},async t=>{
@@ -50,8 +50,9 @@ test('weekly stock alarm actual PostgreSQL: settings, replay, overrides, audit, 
   await db.$executeRawUnsafe(`INSERT INTO "Employee" VALUES ('e','a1',true)`);
   await db.$executeRawUnsafe(`INSERT INTO "StoreOperatorCredential" VALUES ('op','a','a1','e',true)`);
   await db.$executeRawUnsafe(`INSERT INTO "StoreOperatorProfile" VALUES ('a','a1','e','{"orderSuggestionsPos":true}',true)`);
-  const {default:router}=await import('../src/routes/weekly-stock-alarm.js');
-  const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.get('x-actor')==='owner'?{id:'owner',companyId:'a',role:'OWNER'}:{id:'op',operatorId:'op',companyId:'a',storeId:'a1',tokenType:'STORE_OPERATOR',role:'EMPLOYEE',permissions:[]};next()});app.use(router);app.use((e,req,res,next)=>res.status(e.status||500).json({error:e.message}));
+  const {createWeeklyStockAlarmRouter}=await import('../src/routes/weekly-stock-alarm.js');
+  const router=createWeeklyStockAlarmRouter({db,readiness:async()=>({ready:true})});
+  const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.get('x-actor')==='owner'?{id:'owner',companyId:'a',role:'OWNER'}:{id:'op',operatorId:'op',companyId:'a',storeId:'a1',tokenType:'STORE_OPERATOR',role:'EMPLOYEE',permissions:[]};next()});app.use('/unadmitted',createWeeklyStockAlarmRouter({db}));app.use(router);app.use((e,req,res,next)=>res.status(e.status||500).json({error:e.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const root=`http://127.0.0.1:${server.address().port}`;
   const request=async(path,options={})=>fetch(root+path,options);
   await t.test('real permission HTTP admits only same store and currently granted employee',async()=>{
@@ -70,6 +71,12 @@ test('weekly stock alarm actual PostgreSQL: settings, replay, overrides, audit, 
    const next=await (await request('/stores/a1/preview?after='+encodeURIComponent(first.nextAfter),{headers})).json();assert.equal(next.rows.length,6);assert.equal(next.nextAfter,null);
    const selected=await (await request('/stores/a1/preview?q=PAGE-105',{headers})).json();assert.equal(selected.rows.length,1);assert.equal(selected.rows[0].sku,'PAGE-105');
    const bad=await (await request('/stores/a1/preview?q='+encodeURIComponent("';DROP TABLE Product;--"),{headers})).json();assert.equal(bad.rows.length,0);
+  });
+  await t.test('unadmitted production profile blocks central schema use while POS remains independent',async()=>{
+   const headers={'x-actor':'owner'};
+   assert.equal((await request('/unadmitted/stores/a1/settings',{headers})).status,503);
+   assert.equal((await request('/unadmitted/stores/a1/permission',{headers})).status,200);
+   const state=await weeklyStockAlarmReadiness(db,{manifest:()=>({knownTables:['WeeklyStockAlarmPolicy','WeeklyStockAlarmProduct','WeeklyStockAlarmHistory']})});assert.equal(state.ready,true);
   });
   await t.test('owner policy optimistic conflict is 409 and tenant mismatch rejected',async()=>{
    const body={scope:'STORE',expectedVersion:0,settings:{...settings,enabled:false}},headers={'x-actor':'owner','content-type':'application/json'};

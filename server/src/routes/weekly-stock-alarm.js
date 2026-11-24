@@ -1,12 +1,12 @@
 import {Router} from 'express';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {prisma} from '../prisma.js';
+import {prisma as defaultPrisma} from '../prisma.js';
+import {weeklyStockAlarmReadiness} from '../services/weekly-stock-alarm-schema.js';
 import {requireStoreModule,isPlatformSuperAdmin} from '../middleware/module-access.js';
 import {readOrderSuggestions} from './order-suggestions.js';
 import {stockAlarmPolicy,calculateWeeklyStockAlarm,stockAlarmWeek} from '../lib/weekly-stock-alarm.js';
 import {readStockAlarmPolicy,stockAlarmRows} from '../services/weekly-stock-alarm.js';
-const router=Router();
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 export async function requirePosOrderSuggestion(db,user,storeId){
  if(user?.staffAccess===true)throw fail(403,'Απαιτείται σύνδεση χειριστή POS.');
@@ -18,6 +18,9 @@ export async function requirePosOrderSuggestion(db,user,storeId){
  const [row]=await db.$queryRaw`SELECT p."permissions",p."posAccess" FROM "StoreOperatorCredential" c JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId" LEFT JOIN "StoreOperatorProfile" p ON p."companyId"=c."companyId" AND p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${user.operatorId||user.id} AND c."companyId"=${user.companyId} AND c."storeId"=${storeId} AND c."active"=TRUE AND e."active"=TRUE`;
  if(!row||row.posAccess===false||row.permissions?.orderSuggestionsPos!==true)throw fail(403,'Δεν έχεις δικαίωμα «Πρόταση παραγγελίας στο POS».');
 }
+export function createWeeklyStockAlarmRouter({db=defaultPrisma,readiness=weeklyStockAlarmReadiness}={}){
+const prisma=db,router=Router();
+const schemaGuard=async(req,res,next)=>{try{const state=await readiness(prisma);if(!state.ready)throw fail(503,'Το εβδομαδιαίο alarm περιμένει ελεγχόμενη ένταξη των πινάκων του στο σχήμα εγκατάστασης. Η πρόταση POS παραμένει διαθέσιμη με δικαίωμα.');next()}catch(error){next(error)}};
 const owner=(req,res,next)=>{
  if(req.user?.staffAccess===true||req.user?.tokenType==='STORE_OPERATOR'||(!isPlatformSuperAdmin(req.user)&&!['OWNER','ADMIN'].includes(req.user?.role)))return next(fail(403,'Οι ρυθμίσεις διαχειρίζονται κεντρικά από Ιδιοκτήτη ή Διαχειριστή.'));
  next();
@@ -33,14 +36,14 @@ router.get('/stores/:storeId/proposal',posAdmission,moduleGuard,route(async(req,
  const result=await readOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options});
  await requirePosOrderSuggestion(prisma,req.user,req.params.storeId);res.json(result);
 }));
-router.get('/stores/:storeId/settings',owner,moduleGuard,route(async(req,res)=>{
+router.get('/stores/:storeId/settings',owner,moduleGuard,schemaGuard,route(async(req,res)=>{
  const {companyId,id:storeId}=req.targetStore,policy=await readStockAlarmPolicy(prisma,companyId,storeId);
  const stores=await prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:'asc'}});
  const history=await prisma.$queryRaw`SELECT "productId","week","previousMinimum","nextMinimum","status","details","createdAt" FROM "WeeklyStockAlarmHistory" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 50`;
  res.json({storeId,stores,policy,history});
 }));
 const settingsSchema=z.object({scope:z.enum(['COMPANY','STORE']),expectedVersion:z.number().int().min(0),settings:z.object({enabled:z.boolean(),historyDays:z.number().int().min(7).max(90),leadDays:z.number().int().min(0).max(30),safetyDays:z.number().int().min(0).max(30),floor:z.number().min(0).max(1e8)}).strict()}).strict();
-router.put('/stores/:storeId/settings',owner,moduleGuard,route(async(req,res)=>{
+router.put('/stores/:storeId/settings',owner,moduleGuard,schemaGuard,route(async(req,res)=>{
  const body=settingsSchema.parse(req.body),{companyId,id:storeId}=req.targetStore,scope=body.scope==='COMPANY'?'COMPANY':storeId,settings=stockAlarmPolicy(body.settings);
  await prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId}),0)`;
@@ -50,14 +53,14 @@ router.put('/stores/:storeId/settings',owner,moduleGuard,route(async(req,res)=>{
   await tx.$executeRaw`INSERT INTO "WeeklyStockAlarmHistory" ("id","companyId","storeId","week","status","details","actorId") VALUES (${randomUUID()},${companyId},${storeId},${stockAlarmWeek()},'POLICY',${JSON.stringify({scope,before:before?.settings||null,after:settings})}::jsonb,${req.user.id})`;
  });res.json({ok:true,storeId});
 }));
-router.get('/stores/:storeId/preview',owner,moduleGuard,route(async(req,res)=>{
+router.get('/stores/:storeId/preview',owner,moduleGuard,schemaGuard,route(async(req,res)=>{
  const {companyId,id:storeId}=req.targetStore,policy=await readStockAlarmPolicy(prisma,companyId,storeId),now=new Date();
  const query=z.object({q:z.string().max(120).default(''),after:z.string().max(160).default('')}).parse(req.query);
  const batch=await stockAlarmRows(prisma,{companyId,storeId,settings:policy.settings,now,limit:101,query:query.q,after:query.after}),rows=batch.slice(0,100);
  res.json({storeId,limit:100,nextAfter:batch.length>100?rows.at(-1).productId:null,rows:rows.map(row=>({...row,result:calculateWeeklyStockAlarm(row,{...policy.settings,leadDays:row.leadDays==null?policy.settings.leadDays:Number(row.leadDays)},now)}))});
 }));
 const productSchema=z.object({mode:z.enum(['AUTO','MANUAL']),floor:z.number().min(0).max(1e8).nullable(),leadDays:z.number().int().min(0).max(30).nullable()}).strict();
-router.put('/stores/:storeId/products/:productId',owner,moduleGuard,route(async(req,res)=>{
+router.put('/stores/:storeId/products/:productId',owner,moduleGuard,schemaGuard,route(async(req,res)=>{
  const body=productSchema.parse(req.body),{companyId,id:storeId}=req.targetStore,productId=req.params.productId;
  await prisma.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId}),0)`;
@@ -67,4 +70,6 @@ router.put('/stores/:storeId/products/:productId',owner,moduleGuard,route(async(
   await tx.$executeRaw`INSERT INTO "WeeklyStockAlarmHistory" ("id","companyId","storeId","week","status","details","actorId") VALUES (${randomUUID()},${companyId},${storeId},${stockAlarmWeek()},'PRODUCT_RULE',${JSON.stringify({productId,...body})}::jsonb,${req.user.id})`;
  });res.json({ok:true,storeId,productId});
 }));
-export default router;
+return router;
+}
+export default createWeeklyStockAlarmRouter();

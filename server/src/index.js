@@ -1,5 +1,4 @@
 import weeklyStockAlarmRoutes from './routes/weekly-stock-alarm.js';
-import {ensureWeeklyStockAlarmSchema} from './services/weekly-stock-alarm-schema.js';
 import {createWeeklyStockAlarmScheduler} from './services/weekly-stock-alarm-scheduler.js';
 import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
 import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
@@ -442,7 +441,6 @@ try{await ensurePlatformSchema();await ensureCashControlSchema();await ensureAut
 await ensureStorePaidModulesSchema();
 await ensureStoreChatSchema();
 await ensureBackofficeStaffSchema(prisma);
-await ensureWeeklyStockAlarmSchema(prisma);
 await ensurePosInvoiceBackgroundWorkerSchema();
 await clearKatStuckRbsRequest();
 const automaticReportActivationProvider=()=>readActivation(process.env);
