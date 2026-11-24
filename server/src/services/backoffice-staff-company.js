@@ -1,4 +1,4 @@
-import {companyCategoryManageRoute,companyVatManageRoute,staffDisplayNameCapability,staffDisplayNameTarget} from "../../../shared/backoffice-staff-company.mjs";
+import {staffAccountStatusCapability,staffAccountStatusTarget,companyCategoryManageRoute,companyVatManageRoute,companyVatActivateRoute,staffDisplayNameCapability,staffDisplayNameTarget} from "../../../shared/backoffice-staff-company.mjs";
 import {finalPassiveCompanyFilters,readFinalPassiveCompany} from './backoffice-staff-final-passive-company.js';
 import {companyProductCenterFilters,readCompanyProductCenter} from './backoffice-staff-company-product-center.js';
 import {observerLogisticsFilters,readObserverLogistics} from './backoffice-staff-company-observer-logistics.js';
@@ -20,7 +20,7 @@ export async function readStaffCompanyPolicy(db,userId,companyId){
  if(rows.length!==1||!validStaffCompanyCapabilities(rows[0].companyCapabilities))throw staffError();
  return [...rows[0].companyCapabilities];
 }
-const nativeFree=[staffDisplayNameCapability,'staff-policy.read','audit-event-context.read','product-set.read','product-stock-package.read','reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','license-status.read','audit-events.read'];
+const nativeFree=[staffAccountStatusCapability,staffDisplayNameCapability,'staff-policy.read','audit-event-context.read','product-set.read','product-stock-package.read','reports-deactivations.read','reports-sale-deletions.read','reports-pos-sale-actions.read','reports-destructions.read','license-status.read','audit-events.read'];
 export async function requireStaffCompanyGrant(db,user,capability){
  const account=await liveStaff(db,user);
  if(account.mustChangePassword||!staffCompanyCapabilities.includes(capability)||user.storeId||user.platformRole==='SUPER_ADMIN')throw staffError();
@@ -70,7 +70,7 @@ export async function enforceStaffCompanyRequest(db,req){
  const companyId=req.get('x-backoffice-company-id'),path=String(req.originalUrl||req.path||'').split('?')[0];
  const capability=staffCompanyRequestCapability(req.method,path);
  if(!capability||companyId!==req.user?.companyId||req.get('x-backoffice-store-id')!==undefined||req.user?.storeId||!validCompanyQuery(req.query,capability,path))throw staffError();
- if(!(req.method!=='GET'&&(staffSupplierManagementRoute(req.method,path)||companyCategoryManageRoute(req.method,path)||companyVatManageRoute(req.method,path)||staffDisplayNameTarget(req.method,path)))&&(req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length))throw staffError();
+ if(!(req.method!=='GET'&&(staffSupplierManagementRoute(req.method,path)||companyCategoryManageRoute(req.method,path)||companyVatManageRoute(req.method,path)||companyVatActivateRoute(req.method,path)||staffDisplayNameTarget(req.method,path)||staffAccountStatusTarget(req.method,path)))&&(req.headers?.['transfer-encoding']||Number(req.headers?.['content-length']||0)>0||req.body&&Object.keys(req.body).length))throw staffError();
  req.staffCompanyGrant=await requireStaffCompanyGrant(db,req.user,capability);
  return true;
 }
