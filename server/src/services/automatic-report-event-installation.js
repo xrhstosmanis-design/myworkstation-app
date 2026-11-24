@@ -22,10 +22,11 @@ const copy=value=>{
 const text=value=>typeof value==='string'&&value.trim()===value&&value.length>0&&value.length<=160&&!/[\u0000-\u001f\u007f]/.test(value);
 const migrations=['automatic-report-supplier-comparison.sql','automatic-report-promotion-result.sql','automatic-report-inventory-result.sql'].flatMap(name=>readFileSync(new URL('../../scripts/sql/'+name,import.meta.url),'utf8').split(';').map(sql=>sql.trim()).filter(sql=>sql&&sql!=='BEGIN'&&sql!=='COMMIT'));
 export function createAutomaticReportEventInstallation(db,{sourceRevision,enabled=false,profile='BASE',expectedSchema='public'}={}){
- if(!/^[a-f0-9]{40}$/.test(sourceRevision||'')||typeof enabled!=='boolean'||!['BASE','CAPTURE','CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4'].includes(profile))fail();
+ if(!/^[a-f0-9]{40}$/.test(sourceRevision||'')||typeof enabled!=='boolean'||!['BASE','CAPTURE','CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4','REPORTS_ONLY_V4_TO_V5'].includes(profile))fail();
  const securityTransition=profile==='REPORTS_ONLY_V3_TO_V4';
- const source=securityTransition?selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3'}):profile!=='BASE'?selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_V1'}):reviewedFreshStoreManifest();
- const targetProfile={BASE:'AUTOMATIC_EVENT_REPORTS_V1',CAPTURE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1',CAPTURE_REPORTS_ONLY:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1',CAPTURE_REPORTS_ONLY_V2:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2',CAPTURE_REPORTS_ONLY_V3:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3',REPORTS_ONLY_V3_TO_V4:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'}[profile];
+ const monthlyInventoryTransition=profile==='REPORTS_ONLY_V4_TO_V5';
+ const source=monthlyInventoryTransition?selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'}):securityTransition?selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3'}):profile!=='BASE'?selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_V1'}):reviewedFreshStoreManifest();
+ const targetProfile={BASE:'AUTOMATIC_EVENT_REPORTS_V1',CAPTURE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1',CAPTURE_REPORTS_ONLY:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1',CAPTURE_REPORTS_ONLY_V2:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2',CAPTURE_REPORTS_ONLY_V3:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3',REPORTS_ONLY_V3_TO_V4:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4',REPORTS_ONLY_V4_TO_V5:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'}[profile];
  const target=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:targetProfile});
  const sourceCore=createLifecycleInstallationCore(source,{sourceRevision}),targetCore=createLifecycleInstallationCore(target,{sourceRevision});
  const oldPlanHash=sourceCore.describe().planHash,targetPlanHash=targetCore.describe().planHash;
@@ -54,7 +55,10 @@ export function createAutomaticReportEventInstallation(db,{sourceRevision,enable
   const installed=hashes.has(targetPlanHash);
   const additions=await tx.$queryRawUnsafe(`SELECT name FROM unnest($1::text[]) name WHERE to_regclass(format('%I.%I',$2,name)) IS NOT NULL ORDER BY name`,['AutomaticReportSupplierComparisonConsent','AutomaticReportEventConsent'],schema);
   let metadata;
-  if(securityTransition){
+  if(monthlyInventoryTransition){
+   if(schema!==expectedSchema||!global.fences.some(fence=>fence.companyId===scope.companyId&&fence.storeId===scope.storeId))fail('REPORT_EVENT_INSTALL_UNKNOWN_ENROLLMENT');
+   metadata=await (installed?targetCore:sourceCore).inspectInTransaction(tx,actor);
+  }else if(securityTransition){
    if(schema!==expectedSchema)fail('REPORT_SECURITY_SCHEMA_CHANGED');
    if(!global.fences.some(fence=>fence.companyId===scope.companyId&&fence.storeId===scope.storeId))fail('REPORT_SECURITY_SOURCE_ENROLLMENT_REQUIRED');
    if(installed)metadata=await targetCore.inspectInTransaction(tx,actor);
@@ -83,13 +87,16 @@ export function createAutomaticReportEventInstallation(db,{sourceRevision,enable
     for(const name of ordered)await tx.$executeRawUnsafe(`LOCK TABLE ${quote(schema)}.${quote(name)} IN EXCLUSIVE MODE NOWAIT`);
     const before=await observe(tx,admittedActor,scope);if(JSON.stringify(before.packet)!==JSON.stringify(packet))fail('REPORT_EVENT_INSTALL_STATE_CHANGED');
     if(!packet.installed){
-     if(!securityTransition)for(const sql of migrations)await tx.$executeRawUnsafe(sql);
+     const statements=monthlyInventoryTransition
+      ? readFileSync(new URL('../../scripts/sql/automatic-report-monthly-inventory-summary.sql',import.meta.url),'utf8').split(';').map(sql=>sql.trim()).filter(sql=>sql&&sql!=='BEGIN'&&sql!=='COMMIT')
+      : securityTransition?[]:migrations;
+     for(const sql of statements)await tx.$executeRawUnsafe(sql);
      for(const fence of before.global.fences){
       const changed=await tx.$executeRawUnsafe(`UPDATE ${quote(schema)}."StoreLifecycleFence" SET "planHash"=$1 WHERE "storeId"=$2 AND "companyId"=$3 AND "planHash"=$4 AND "generation"=$5::bigint AND NOT "maintenance" AND NOT "retired" AND "operationId" IS NULL`,targetPlanHash,fence.storeId,fence.companyId,oldPlanHash,fence.generation);
       if(changed!==1)fail('REPORT_EVENT_INSTALL_STATE_CHANGED');
      }
     }
-    if(!securityTransition)await targetCore.installInTransaction(tx,admittedActor,scope);
+    if(!securityTransition&&!monthlyInventoryTransition)await targetCore.installInTransaction(tx,admittedActor,scope);
     const after=await observe(tx,admittedActor,scope);if(!after.packet.installed)fail();
     for(const fence of before.global.fences){const next=after.global.fences.find(row=>row.storeId===fence.storeId);if(!next||next.generation!==fence.generation||next.companyId!==fence.companyId)fail();}
     return {...description,installed:true,enrolled:true,companyId:scope.companyId,storeId:scope.storeId,transitionedEnrollments:packet.installed?0:before.global.fences.length,catalogueSignature:after.packet.catalogueSignature,productionActivated:false};

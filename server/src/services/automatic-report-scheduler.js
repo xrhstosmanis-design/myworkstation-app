@@ -2,7 +2,7 @@
 // No timers or database work run at import or factory construction.
 export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',activationProvider,work,clock=()=>new Date().toISOString(),intervalMs=60000,batchSize=5,maxAttempts=15,timers={setInterval,clearInterval},readPromotionEvents,readInventoryEvents}){
  if(!db||!dispatcher||typeof dispatcher.dispatch!=='function'||typeof activationProvider!=='function'||!work||typeof work.track!=='function'||typeof work.onStop!=='function'||!Number.isInteger(intervalMs)||intervalMs<60000||!Number.isInteger(batchSize)||batchSize<1||batchSize>20||!Number.isInteger(maxAttempts)||maxAttempts<1||maxAttempts>60)throw new TypeError('Bounded scheduler dependencies required');
- const frequencies={CASH:['DAILY','WEEKLY','MONTHLY'],SUPPLIER_COMPARISON:['MONTHLY'],PROMOTION_RESULT:['EVENT'],INVENTORY_RESULT:['EVENT']};
+ const frequencies={CASH:['DAILY','WEEKLY','MONTHLY'],SUPPLIER_COMPARISON:['MONTHLY'],MONTHLY_INVENTORY_SUMMARY:['MONTHLY'],PROMOTION_RESULT:['EVENT'],INVENTORY_RESULT:['EVENT']};
  if(!Object.hasOwn(frequencies,reportType))throw new TypeError('Unsupported scheduled report type');
  let timer=null,inflight=null,stopped=false,cursor=null;
  const eventCursors=new Map();
