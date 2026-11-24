@@ -1,3 +1,5 @@
+import {saveStaffCompanyVatDepartment} from "../services/backoffice-staff-company-vat.js";
+import {saveStaffDisplayName} from "../services/backoffice-staff-display-name.js";
 import {saveStaffCompanyCategory} from "../services/backoffice-staff-company-taxonomy.js";
 import {correctStaffSupplierTaxId} from '../services/backoffice-staff-supplier-tax-id.js';
 import {updateStaffSupplierFiscal} from '../services/backoffice-staff-supplier-fiscal.js';
@@ -75,6 +77,16 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     res.json(result.session);
   }catch(error){failure(res,error)}});
   router.use(authenticate);
+  router.post('/company/taxonomy/vat-departments',async(req,res)=>{
+    try{res.status(201).json(await saveStaffCompanyVatDepartment(db,req))}catch(error){failure(res,error)}
+  });
+  router.patch('/company/taxonomy/vat-departments/:id',async(req,res)=>{
+    try{res.json(await saveStaffCompanyVatDepartment(db,req))}catch(error){failure(res,error)}
+  });
+
+  router.patch('/company/staff-display-names/:id',async(req,res)=>{
+    try{res.json(await saveStaffDisplayName(db,req))}catch(error){failure(res,error)}
+  });
   router.post(['/company/taxonomy/categories','/company/taxonomy/subcategories'],async(req,res)=>{
     try{res.status(201).json(await saveStaffCompanyCategory(db,req))}catch(error){failure(res,error)}
   });
