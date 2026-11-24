@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import {greeceDateInput} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -42,6 +43,7 @@ export async function ensureStoreIntegrationSchema(){
       "credentialsEnc" TEXT NOT NULL,"accountHint" TEXT,"enabled" BOOLEAN NOT NULL DEFAULT TRUE,
       "updatedBy" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE ("storeId","kind"))`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "receiveFromDate" DATE`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreIntegrationCredential_company_store_idx" ON "StoreIntegrationCredential" ("companyId","storeId")`);
   })().catch(error=>{schemaPromise=undefined;throw error});
   return schemaPromise;
@@ -63,7 +65,8 @@ router.get("/companies/:companyId/stores/:storeId/integrations",async(req,res,ne
 router.put("/companies/:companyId/stores/:storeId/integrations/:kind",async(req,res,next)=>{try{
   await ensureStoreIntegrationSchema();const kind=String(req.params.kind||"").toUpperCase();if(!kinds.has(kind))return res.status(404).json({error:"Άγνωστος τύπος διασύνδεσης."});
   const store=await context(req.params.companyId,req.params.storeId),body=bodySchema.parse(req.body||{}),id=crypto.randomUUID(),credentialsEnc=encryptCredentials({accountId:body.accountId,secret:body.secret}),hint=`••••${body.accountId.slice(-4)}`;
-  const rows=await prisma.$queryRaw`INSERT INTO "StoreIntegrationCredential" ("id","companyId","storeId","kind","providerName","environment","credentialsEnc","accountHint","enabled","updatedBy") VALUES (${id},${store.companyId},${store.id},${kind},${body.providerName},${body.environment},${credentialsEnc},${hint},${body.enabled},${req.user.id||req.user.email||"platform-admin"}) ON CONFLICT ("storeId","kind") DO UPDATE SET "providerName"=EXCLUDED."providerName","environment"=EXCLUDED."environment","credentialsEnc"=EXCLUDED."credentialsEnc","accountHint"=EXCLUDED."accountHint","enabled"=EXCLUDED."enabled","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW() RETURNING "kind","providerName","environment","accountHint","enabled","updatedAt"`;
+  const receiveFromDate=kind==="MYDATA"?`${greeceDateInput().slice(0,7)}-01`:null;
+  const rows=await prisma.$queryRaw`INSERT INTO "StoreIntegrationCredential" ("id","companyId","storeId","kind","providerName","environment","credentialsEnc","accountHint","enabled","updatedBy","receiveFromDate") VALUES (${id},${store.companyId},${store.id},${kind},${body.providerName},${body.environment},${credentialsEnc},${hint},${body.enabled},${req.user.id||req.user.email||"platform-admin"},${receiveFromDate}::date) ON CONFLICT ("storeId","kind") DO UPDATE SET "providerName"=EXCLUDED."providerName","environment"=EXCLUDED."environment","credentialsEnc"=EXCLUDED."credentialsEnc","accountHint"=EXCLUDED."accountHint","enabled"=EXCLUDED."enabled","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW() RETURNING "kind","providerName","environment","accountHint","enabled","updatedAt"`;
   await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`STORE_INTEGRATION_CONFIGURED:${store.companyId}:${store.id}:${kind}`,success:true,deviceName:req.headers["x-device-name"]||null,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
   res.json({ok:true,integration:view(rows[0])});
 }catch(error){next(error)}});

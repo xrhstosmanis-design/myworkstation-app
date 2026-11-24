@@ -1,6 +1,6 @@
 import {ensureMyDataBranchSchema,hasMyDataBranchMappings,readMyDataBranchForStore} from "../services/mydata-store-branch.js";
 import {readMyDataPdfDraftReadiness} from '../lib/mydata-pdf-draft-readiness.js';
-import {greeceExportRows} from "../../../shared/greece-time.mjs";
+import {greeceDateInput,greeceExportRows} from "../../../shared/greece-time.mjs";
 import {requireStaffAction,requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain} from "../server-shutdown.js";
@@ -230,7 +230,7 @@ async function performSync(req,branch=null){
   if(!store)throw syncError("Δεν βρέθηκε το κατάστημα.",404);
   const companyVat=String(store.company?.taxId||"").replace(/\s/g,"");
   if(!/^\d{9}$/.test(companyVat))throw syncError("Πρέπει πρώτα να οριστεί το εννεαψήφιο ΑΦΜ της εταιρείας για ασφαλή λήψη myDATA.",409);
-  const rows=await prisma.$queryRaw`SELECT "environment","credentialsEnc","enabled","metadataJson" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
+  const rows=await prisma.$queryRaw`SELECT "environment","credentialsEnc","enabled","metadataJson","receiveFromDate"::text AS "receiveFromDate" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
   const integration=rows[0];if(!integration?.enabled)throw syncError("Δεν έχει ενεργοποιηθεί σύνδεση myDATA για αυτό το κατάστημα.",409);
   if(!["SANDBOX","PRODUCTION"].includes(integration.environment))throw syncError("Μη έγκυρο περιβάλλον myDATA.",409);
   const credentials=decryptStoreIntegrationCredentials(integration.credentialsEnc);
@@ -238,8 +238,12 @@ async function performSync(req,branch=null){
   const source=`AADE_MYDATA_${integration.environment}`;
   const previous=branch===null?await prisma.$queryRaw`SELECT COALESCE(MAX(NULLIF("mark",'')::numeric),0)::text AS "lastMark" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "rawPayload"->>'source'=${source}`
     :await prisma.$queryRaw`SELECT COALESCE(MAX(NULLIF("mark",'')::numeric),0)::text AS "lastMark" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "rawPayload"->>'source'=${source} AND "rawPayload"->>'recipientBranch'=${String(branch)}`;
+  const receiveFromDate=integration.environment==="PRODUCTION"?integration.receiveFromDate??null:null;
   const scope=branch===null?null:myDataReceivingScope(integration,{companyId:req.user.companyId,storeId:store.id,companyVat,branch});
+  if(scope&&receiveFromDate)scope.receiveFromDate=receiveFromDate;
   const continuation=scope?readMyDataReceivingContinuation(integration,scope):null;
+  const receiveThroughDate=receiveFromDate?(continuation?.receiveThroughDate??greeceDateInput()):null;
+  const aadeDate=date=>date.split("-").reverse().join("/");
   const mark=continuation?.startMark||previous[0]?.lastMark||"0";
   const created=[];
   let duplicates=0,ignored=0,ignoredVat=0,ignoredBranch=0,missingMark=0,fetched=0;
@@ -280,6 +284,7 @@ async function performSync(req,branch=null){
       if(!doc.mark){ignored++;missingMark++;continue}
       if(doc.counterpartVat!==companyVat){ignored++;ignoredVat++;continue}
       if(branch!==null&&invoiceRecipientBranch(invoice)!==branch){ignored++;ignoredBranch++;continue}
+      if(receiveFromDate&&(!doc.issueDate||doc.issueDate<receiveFromDate||doc.issueDate>receiveThroughDate)){ignored++;continue}
       matching.push({invoice,doc});
     }
     return matching;
@@ -287,6 +292,11 @@ async function performSync(req,branch=null){
   function collect(result){if(result)created.push(result);else duplicates++}
   do{
     const url=new URL(endpoint(integration.environment));url.searchParams.set("mark",mark);
+    // RequestDocs treats a single date parameter as an exact day.
+    if(receiveFromDate){
+      url.searchParams.set("dateFrom",aadeDate(receiveFromDate));
+      url.searchParams.set("dateTo",aadeDate(receiveThroughDate));
+    }
     if(page){url.searchParams.set("nextPartitionKey",page.partition);url.searchParams.set("nextRowKey",page.row)}
     assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:store.id});
     if(delegated&&await verifyDelegatedMyDataSync(prisma,req)!==branch)
@@ -307,7 +317,7 @@ async function performSync(req,branch=null){
         await verifyPageWrites(tx);
         const written=[];
         for(const {invoice,doc} of matching)written.push(await writeInvoice(tx,invoice,doc));
-        await saveMyDataReceivingContinuation(tx,scope,mark,next);
+        await saveMyDataReceivingContinuation(tx,receiveFromDate?{...scope,receiveThroughDate}:scope,mark,next);
         return written;
       },{timeout:30000});
       results.forEach(collect);
@@ -333,7 +343,16 @@ async function performSync(req,branch=null){
       documents:created,originalsDownloaded:0,originalsFailed:0,existingPhotosLinked:0,stockUpdated:false,fiscalTransmission:false,message};
   }
   // Bounded retries only for records received after this feature; no historic mass ingestion.
-  const pending=await prisma.$queryRaw`SELECT m."inboxId" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id} AND m."rawPayload"->>'originalPending'='true' AND i."attachmentId" IS NULL AND i."status"='RECEIVED' AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)<3 ORDER BY m."fetchedAt" ASC LIMIT 3`;
+  const panormouProduction=store.id===panormouStoreId && source==="AADE_MYDATA_PRODUCTION";
+  const panormouProviderPattern=panormouProduction?providerOriginalRecoveryLinkPattern({includeExistingImpact:true}):null;
+  const pending=await prisma.$queryRaw`SELECT m."inboxId" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id} AND m."rawPayload"->>'originalPending'='true' AND i."attachmentId" IS NULL AND i."status"='RECEIVED' AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)<3
+    AND (${receiveFromDate}::date IS NULL OR (m."issueDate">=${receiveFromDate}::date AND m."rawPayload"->>'source'=${source}))
+    AND (NOT ${panormouProduction} OR (
+      m."issueDate">=DATE '2026-11-01'
+      AND m."rawPayload"->>'source'=${source}
+      AND m."rawPayload"->>'xml' ~* ${panormouProviderPattern}
+    ))
+    ORDER BY m."fetchedAt" ASC LIMIT 3`;
   let originalsDownloaded=0,originalsFailed=0;
   for(const item of pending){try{
     const result=await acquireOriginal(prisma,req.user.companyId,store.id,item.inboxId,req.user.id,Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY"))));
