@@ -19,13 +19,15 @@ try {
     const state = await tx.$queryRaw`
       SELECT COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE c."name"='ΚΑΠΝΙΚΑ' AND p."vatRate"=0)::int AS tobacco,
+        COUNT(*) FILTER (WHERE p."categoryId" IS NULL AND p."vatRate"=0)::int AS uncategorized_zero,
         COUNT(*) FILTER (WHERE c."name" IS DISTINCT FROM 'ΚΑΠΝΙΚΑ' AND p."vatRate"=24)::int AS other
       FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       WHERE p."companyId"=${companyId} AND p."vatDepartmentId"=${tobacco.id}`;
-    const {total, tobacco:zeroCount, other} = state[0];
+    const {total, tobacco:zeroCount, uncategorized_zero:uncategorizedZero, other} = state[0];
     // Catalogue membership can grow after the one-time repair. Recognize the
-    // verified mapping and all associated tobacco/zero-rate products, not its old size.
-    if (total === zeroCount && other === 0 && Number(tobacco.vatRate) === 0 &&
+    // verified mapping and VAT0 tobacco products, including not-yet-categorized items.
+    // Explicitly different categories or any nonzero/NULL VAT remain rejected.
+    if (total === zeroCount + uncategorizedZero && other === 0 && Number(tobacco.vatRate) === 0 &&
         tobacco.cashRegisterDepartment === 1 && tobacco.legacyVatCode === "12") return;
     if (total !== 585 || zeroCount !== 565 || other !== 20 || Number(tobacco.vatRate) !== 24 ||
         tobacco.cashRegisterDepartment !== null || tobacco.legacyVatCode !== null)
