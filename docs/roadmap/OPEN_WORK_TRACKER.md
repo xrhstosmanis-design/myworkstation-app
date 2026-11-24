@@ -795,7 +795,7 @@ Same retained owner feat/ai-owner-wallet-20261022 / current /root / feat/ai-wall
 
 ### 24/11/2026 12:07 Αθήνας — Νο 7 · Βάρδιες Κυριακής Ριζαρίου
 
-**Ανάληψη** /root, `fix/report-sunday-shifts-20261124`, επιβεβαιωμένη Κυριακή 1 βάρδια και λοιπές ημέρες 2. Προσθήκη προαιρετικής ρύθμισης ανά τερματικό για την ετοιμότητα του ημερήσιου, εβδομαδιαίου και μηνιαίου report. BEFORE SOURCE · LAB NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-11-24-rizariou-sunday-shift.md`.
+**Ανάληψη** /root, `fix/report-sunday-shifts-20261124`, επιβεβαιωμένη Κυριακή 1 βάρδια και λοιπές ημέρες 2. Προσθήκη προαιρετικής ρύθμισης ανά τερματικό για την ετοιμότητα του ημερήσιου, εβδομαδιαίου και μηνιαίου report. Live #4190 και ρύθμιση 7. **Επαλήθευση 24/11** δύο πραγματικές προεπισκοπήσεις, Κυριακή 22/11 μία βάρδια και Δευτέρα 23/11 δύο. Εκκρεμεί η πρώτη αυτόματη παράδοση Κυριακής. Checkpoint `CHECKPOINTS/CHANGES/2026-11-24-rizariou-sunday-shift.md`.
 
 ### 03/11/2026 14:45:58 Ελλάδας - AI-WALLET-COMMERCIAL-WAIVER-01 / SCOPED AUTHORIZED CUSTOMER LIVE PASS
 
