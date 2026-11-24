@@ -1,3 +1,5 @@
+- 24/11/2026 · Νο 7 · ASSIGNED /root · Μία βάρδια την Κυριακή στο Ριζαρίου · [Checkpoint](CHANGES/2026-11-24-rizariou-sunday-shift.md) · BEFORE SOURCE, LAB NOT TESTED.
+
 - 24/11/2026 · Νο 5 · [Εκχώρηση διαχείρισης εταιρικών κατηγοριών](CHANGES/2026-11-24-no5-company-category-delegation.md).
 
 - 23/11/2026 · POS / Super Admin · Κεντρικός κανόνας εκκρεμών εγκρίσεων: τραπεζική κατάθεση χωρίς αποδεικτικό ή διαφορά πληρωμής >1,00€. Draft PR #4180, CI/LAB σε αναμονή, καμία μεταβολή πραγματικών οικονομικών εγγραφών. [Checkpoint](CHANGES/2026-11-23-payment-approval-policy-lab.md).
