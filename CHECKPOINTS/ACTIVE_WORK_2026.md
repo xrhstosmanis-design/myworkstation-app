@@ -1,4 +1,4 @@
-- 24/11/2026 · Νέο κεντρικό εβδομαδιαίο alarm stock και πρόταση παραγγελίας μπροστινού POS με ανακλητό δικαίωμα χειριστή · /root · CLAIM PROPOSED / SOURCE NOT STARTED. [Scope και εμπόδιο τοπικής εγγραφής Git](CHANGES/2026-11-24-central-weekly-stock-alarm-claim.md). Οι μεγάλες λίστες δεν έχουν δημοσιευτεί ακόμη· προηγούμενοι owners διατηρούνται.
+- 24/11/2026 · Νέο κεντρικό εβδομαδιαίο alarm stock και πρόταση παραγγελίας μπροστινού POS με ανακλητό δικαίωμα χειριστή · /root · CLAIM PROPOSED / SOURCE NOT STARTED. [Scope και εμπόδιο τοπικής εγγραφής Git](CHANGES/2026-11-24-central-weekly-stock-alarm-claim.md). Συνέχεια μητρώων: [Αναθέσεις](../docs/roadmap/OPEN_WORK_TRACKER_2026-11-24_STOCK_ALARM.md) / [Εκκρεμότητες](../docs/roadmap/PENDING_WORK_2026-11-24_STOCK_ALARM.md). Προηγούμενοι owners διατηρούνται.
 
 - 24/11/2026 · Νο 7 · ASSIGNED /root · Μία βάρδια την Κυριακή στο Ριζαρίου · [Checkpoint](CHANGES/2026-11-24-rizariou-sunday-shift.md) · Live #4190, προεπισκοπήσεις 22/11 (μία βάρδια) και 23/11 (δύο) επιβεβαιώθηκαν. Παραλαβή της πρώτης κυριακάτικης αναφοράς εκκρεμεί.
 
