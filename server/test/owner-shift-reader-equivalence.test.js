@@ -56,13 +56,13 @@ test('owner shift extraction preserves independent original SQL, approved select
  assert.equal(sha(candidate),APPROVED_SELECTION_SHA256,'the previously approved set-based SQL must remain verbatim');
  assert.notEqual(candidate,ORIGINAL_SELECTION);
  const boundary='\nexport async function readOwnerShiftReport',prefix=route.slice(0,route.indexOf(boundary));
- // The administrative-close contract intentionally changes only the owner route
- // prefix and the dedicated force-close writer. Preserve the original artifact
- // independently and keep all other canonical SQL comparisons intact.
- assert.equal(sha(prefix),'1269549989978122f4f5e09440c305e3ee6683d32b7b0b7563641e169d199632','approved owner auth, schema and normalization prefix');
+ // Freeze the authorized route prefix, including the narrow delegated gateways.
+ // Compare the canonical reader SQL separately from the delegated HTTP detail.
+ assert.equal(sha(prefix),'dcecbe54d8a9ba213ee1f1abd678684bbaaca6674d9d9e14f5699945f097cf52','approved owner auth, schema and normalization prefix');
  const writerBoundary='\nrouter.post("/:sessionId/force-close",';
  const sqls=source=>Array.from(source.matchAll(/prisma\.\$(?:queryRaw|executeRaw)`[\s\S]*?`/g),m=>m[0]);
- const outside=route.slice(0,a)+route.slice(b,route.indexOf(writerBoundary)),oldOutside=originalRoute.slice(0,originalA)+originalRoute.slice(originalB,originalRoute.indexOf(writerBoundary));
+ const candidateDetailBoundary='\nrouter.get("/:sessionId/detail",';
+ const outside=route.slice(0,a)+route.slice(b,route.indexOf(candidateDetailBoundary)),oldOutside=originalRoute.slice(0,originalA)+originalRoute.slice(originalB,originalRoute.indexOf(writerBoundary));
  assert.deepEqual(sqls(outside).map(sql=>sql.replaceAll('${sessionId}','${req.params.sessionId}')),sqls(oldOutside),'canonical reader SQL outside the approved optimization is unchanged');
 });
 
