@@ -1,3 +1,5 @@
+- 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE NOT STARTED / NOT INSTALLED. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
+
 ## 24/11/2026 — Ξεχωριστό POS υποσύνολο
 
 Ίδιος owner /root και claim4193. Branchfeat/pos-order-proposals-20261124 στη βάση61c2a64. Πρόταση POS read-only με υπάρχοντα δεδομένα και ανεξάρτητο ανακλητό δικαίωμα· κανένας νέος πίνακας/weekly worker. Το αυτόματο alarm παραμένει στο4194, BLOCKED ON SCHEMA ADMISSION με No7/No14 owners διατηρημένους. [Release checkpoint](../../CHECKPOINTS/CHANGES/2026-11-24-pos-order-proposals-release.md). Δεν υπάρχει εγκατάσταση ή νέο LAB PASS.
