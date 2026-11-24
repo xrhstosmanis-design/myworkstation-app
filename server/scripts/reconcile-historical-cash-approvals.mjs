@@ -56,7 +56,15 @@ try {
           const n=await tx.$executeRaw`UPDATE "SupplierPaymentSettlement" SET "status"='CONFIRMED',
             "reviewedBy"=NULL,"reviewedAt"=NULL,
             "reviewNote"='Αυτόματη συμφωνία παλαιάς πληρωμής με κανόνα 24/11/2026: μετρητά, χωρίς απόκλιση >1€'
-            WHERE "id"=${row.id} AND "companyId"=${row.companyId} AND "storeId"=${store.id} AND "status"='PENDING_REVIEW'`;
+            WHERE "id"=${row.id} AND "companyId"=${row.companyId} AND "storeId"=${store.id} AND "status"='PENDING_REVIEW'
+            AND "paymentMethod"='CASH_SHIFT'
+            AND EXISTS(SELECT 1 FROM "StoreTransaction" t WHERE t."id"=${row.transactionId}
+              AND t."companyId"=${row.companyId} AND t."storeId"=${store.id}
+              AND t."type"='SUPPLIER_PAYMENT' AND t."paymentMethod"='CASH_SHIFT'
+              AND t."reversedAt" IS NULL AND t."sessionId" IS NOT NULL
+              AND NOT EXISTS(SELECT 1 FROM "BankLedgerEntry" b WHERE b."sourceTransactionId"=t."id")
+              AND EXISTS(SELECT 1 FROM "SupplierPaymentAllocation" a WHERE a."settlementId"=${row.id})
+              AND ABS(t."amount"-(SELECT COALESCE(SUM(a."amount"),0) FROM "SupplierPaymentAllocation" a WHERE a."settlementId"=${row.id}))<=1.00)`;
           if(n!==1)throw Error('Supplier row changed');
           await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
             VALUES (${crypto.randomUUID()},${row.companyId},${store.id},NULL,'SYSTEM','HISTORICAL_CASH_REVIEW_RECONCILED',
@@ -66,7 +74,12 @@ try {
           const n=await tx.$executeRaw`UPDATE "OtherExpenseReview" SET "status"='CONFIRMED',
             "reviewedBy"=NULL,"reviewedAt"=NULL,
             "reviewNote"='Αυτόματη συμφωνία παλαιού εξόδου με κανόνα 24/11/2026: μετρητά'
-            WHERE "id"=${row.id} AND "companyId"=${row.companyId} AND "storeId"=${store.id} AND "status"='PENDING_REVIEW'`;
+            WHERE "id"=${row.id} AND "companyId"=${row.companyId} AND "storeId"=${store.id} AND "status"='PENDING_REVIEW'
+            AND EXISTS(SELECT 1 FROM "StoreTransaction" t WHERE t."id"=${row.transactionId}
+              AND t."companyId"=${row.companyId} AND t."storeId"=${store.id}
+              AND t."type"='OTHER_EXPENSE' AND t."paymentMethod"='CASH_SHIFT'
+              AND t."reversedAt" IS NULL AND t."sessionId" IS NOT NULL
+              AND NOT EXISTS(SELECT 1 FROM "BankLedgerEntry" b WHERE b."sourceTransactionId"=t."id"))`;
           if(n!==1)throw Error('Expense row changed');
           await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
             VALUES (${crypto.randomUUID()},${row.companyId},${store.id},NULL,'SYSTEM','HISTORICAL_CASH_REVIEW_RECONCILED',
