@@ -1,3 +1,4 @@
+import {saveStaffCompanyCategory} from "../services/backoffice-staff-company-taxonomy.js";
 import {correctStaffSupplierTaxId} from '../services/backoffice-staff-supplier-tax-id.js';
 import {updateStaffSupplierFiscal} from '../services/backoffice-staff-supplier-fiscal.js';
 import {createStaffSupplierManually} from '../services/backoffice-staff-supplier-manual.js';
@@ -74,6 +75,13 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     res.json(result.session);
   }catch(error){failure(res,error)}});
   router.use(authenticate);
+  router.post(['/company/taxonomy/categories','/company/taxonomy/subcategories'],async(req,res)=>{
+    try{res.status(201).json(await saveStaffCompanyCategory(db,req))}catch(error){failure(res,error)}
+  });
+  router.patch(['/company/taxonomy/categories/:id','/company/taxonomy/subcategories/:id'],async(req,res)=>{
+    try{res.json(await saveStaffCompanyCategory(db,req))}catch(error){failure(res,error)}
+  });
+
   router.get(['/company/passive/staff-policy', '/company/passive/category-products', '/company/passive/vat-departments/:id/products', '/company/passive/product-companies/:id/products', '/company/passive/product-movements/:id', '/company/passive/audit-context/:sourceType/:id', '/company/passive/audit-online'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
   router.get(['/passive/stores/:storeId/employees', '/passive/stores/:storeId/schedules', '/passive/stores/:storeId/evaluations/:id', '/passive/stores/:storeId/performance/:id', '/passive/stores/:storeId/validation/:id', '/passive/stores/:storeId/operators', '/passive/stores/:storeId/cloud', '/passive/stores/:storeId/proofs', '/passive/stores/:storeId/proofs/:id', '/passive/stores/:storeId/pending-sources','/passive/stores/:storeId/cash-daily-summary','/passive/stores/:storeId/cash-investigation/:id','/passive/stores/:storeId/barcode-price-requests','/passive/stores/:storeId/barcode-sales'],async(req,res)=>{try{res.json(await readFinalPassiveStore(db,req))}catch(error){failure(res,error)}});
   router.get(['/company/product-center/catalog', '/company/product-center/set-options', '/company/product-center/package-options', '/company/product-center/audience-discounts', '/company/product-center/price-catalog', '/company/product-center/customer-wholesale-prices', '/company/product-center/products/:productId/card', '/company/product-center/products/:productId/barcodes', '/company/product-center/products/:productId/details', '/company/product-center/products/:productId/set', '/company/product-center/products/:productId/stock-package', '/company/product-center/products/:productId/delivery', '/company/product-center/products/:productId/price-history', '/company/product-center/products/:productId/purchases'],async(req,res)=>{try{res.json(await readCompanyDirectory(db,req))}catch(error){failure(res,error)}});
