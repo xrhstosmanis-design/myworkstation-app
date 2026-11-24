@@ -48,7 +48,7 @@ try {
     if(snapshot.some((s,i)=>s.suppliers!==stores[i].suppliers||s.expenses!==stores[i].expenses))
       throw Error('Live candidates changed: refuse all writes and re-audit');
     await prisma.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('cash-review-reconcile-20261124'))`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('cash-review-reconcile-20261124'))::text AS lock`;
       for(const store of stores){
         const suppliers=await eligibleSupplier(tx,store.id),expenses=await eligibleExpense(tx,store.id);
         if(suppliers.length!==store.suppliers||expenses.length!==store.expenses)throw Error('Concurrent change detected');
