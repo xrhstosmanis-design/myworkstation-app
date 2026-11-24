@@ -16,3 +16,6 @@
 - Πριν από οποιαδήποτε πραγματική εκτέλεση: backup, επανέλεγχος πλήθους, εγγραφή audit, συνολικό verification μετά.
 - Καμία εφαρμογή σε παραγωγική βάση έγινε από αυτό το PR.
 - Δεν περιλαμβάνει την ανεξάρτητη διόρθωση duplicate/myDATA.
+
+## 24/11 — Απομονωμένο PostgreSQL E2E
+Προστέθηκε `server/test/historical-cash-approval-reconcile-postgres.test.js`: συνθετικές 53 εκκρεμότητες, μία τραπεζική εκκρεμότητα εκτός, preview χωρίς write, άρνηση apply χωρίς guard, 53 audit records, αναλλοίωτο StoreTransaction/allocations και replay refusal. Απαιτείται νέα CI εκτέλεση στο HEAD του PR και PASS πριν από οποιοδήποτε merge/apply.
