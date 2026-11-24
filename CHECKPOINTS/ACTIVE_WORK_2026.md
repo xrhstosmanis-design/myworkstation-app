@@ -1,3 +1,5 @@
+- 24/11/2026 · Πανόρμου · Προφίλ ΦΠΑ RBS βάσει Kiosk · [Checkpoint](CHANGES/2026-11-24-panormou-rbs-vat-profile.md).
+
 - 23/11/2026 · Νο 5 · ΦΠΑ και ταξινόμηση είδους από γραμμή τιμολογίου · [Καταγραφή](CHANGES/2026-11-23-no5-staff-invoice-line-taxonomy.md).
 
 - 22/11/2026 · POS · Ευκολότερο σύρσιμο κοινών διαχωριστικών · [Checkpoint](CHANGES/2026-11-22-pos-divider-drag.md).
