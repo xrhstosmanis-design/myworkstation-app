@@ -370,9 +370,9 @@ router.get("/stores/:storeId/close-context",route(async(req,res)=>{
 }));
 
 function staffShiftReportRow(row){
-  const {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,cashSales,cardSales,expenses,
+  const {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,closeReconciliationStatus,cashSales,cardSales,expenses,
     actualOperational,expectedOperational,variance,eftposTotal,cardVariance,transactionCount}=row;
-  return {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,cashSales,cardSales,expenses,
+  return {id,terminalPos,openedByName,shiftLabel,openedAt,closedAt,status,closeReconciliationStatus,cashSales,cardSales,expenses,
     actualOperational,expectedOperational,variance,eftposTotal,cardVariance,transactionCount};
 }
 

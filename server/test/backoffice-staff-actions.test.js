@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import express from 'express';
+import {createInventoryArchiveRouter} from '../src/routes/inventory-archive.js';
+import {staffStoreMenu} from '../../client/src/components/backoffice/staff-store-menu.mjs';
 import {staffCapabilities,staffProfiles,changeStaffCapability,validStaffCapabilities,staffRequestCapability} from '../../shared/backoffice-staff.mjs';
 import {previewPurchaseOrderCancel,cancelPurchaseOrder} from '../src/services/purchase-order-reopen.js';
 import {enforceBackofficeStaff,requireStaffGrant,requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
@@ -54,8 +56,49 @@ test('manager and another staff profile get the same four exact permissions only
   assert.equal(await request('GET','/api/commerce/documents/inbox/archive?storeId=a1'),'invoices.read');
  }
 });
+test('inventory duplicate checks require their own read-only grant and are bound to the selected store',async()=>{
+ const capability='inventory.duplicates.read', endpoint='/api/inventory-archive/duplicates';
+ assert.deepEqual(changeStaffCapability([],capability,true),[capability]);
+ assert.ok(Object.values(staffProfiles).every(profile=>!profile.capabilities.includes(capability)));
+ assert.ok(JSON.stringify(staffStoreMenu([capability])).includes('inventory-duplicates'));
+ assert.ok(!JSON.stringify(staffStoreMenu(['products.read'])).includes('inventory-duplicates'));
+
+ const p=policy({grantedStore:'a1'});
+ p.db.store={findFirst:async({where})=>where.active&&where.companyId==='a'&&where.id==='a1'?{id:'a1'}:null};
+ const groups=[{kind:'NAME',value:'test',items:[{id:'one'},{id:'two'}]}];
+ const query=p.db.$queryRaw;
+ let checked=0;
+ p.db.$queryRaw=async(strings,...values)=>{
+  if(!strings.join('?').includes('WITH items AS'))return query(strings,...values);
+  assert.deepEqual(values,['a1','a']);
+  checked++;
+  return groups;
+ };
+ const app=express();
+ app.use(async(req,res,next)=>{req.user={...p.user};try{await enforceBackofficeStaff(p.db,req,res);next()}catch(error){next(error)}});
+ app.use('/api/inventory-archive',createInventoryArchiveRouter({db:p.db}));
+ app.use((error,_req,res,_next)=>res.status(error.status||500).json({code:error.code}));
+ const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))});
+ const send=(path,store='a1',method='GET')=>fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,headers:{'x-backoffice-store-id':store}});
+ try{
+  p.grant(['products.read']);
+  assert.equal((await send(endpoint+'?storeId=a1')).status,403);
+  p.grant([capability]);
+  const response=await send(endpoint+'?storeId=a1');
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{groups});
+  assert.equal((await send(endpoint)).status,403);
+  assert.equal((await send(endpoint+'?storeId=a2')).status,403);
+  assert.equal((await send(endpoint+'?storeId=a2','a2')).status,403);
+  assert.equal((await send(endpoint+'?storeId=a1','a1','POST')).status,403);
+  assert.equal((await send('/api/inventory-archive?storeId=a1')).status,403);
+  p.disableInventory();
+  assert.equal((await send(endpoint+'?storeId=a1')).status,403);
+  assert.equal(checked,1);
+ }finally{await new Promise(resolve=>server.close(resolve))}
+});
 test('new actions remain explicit, dependency-closed and absent from every existing role preset',()=>{
- for(const key of ['invoices.edit','invoices.approve','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close','shifts.force-close']){
+ for(const key of ['invoices.edit','invoices.approve','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close','shifts.force-close','shifts.closing-count']){
   const rights=changeStaffCapability([],key,true);assert.ok(validStaffCapabilities(rights));if(key==='shifts.close')assert.deepEqual(rights,[key]);else assert.ok(rights.length>1);
   for(const profile of Object.values(staffProfiles))assert.equal(profile.capabilities.includes(key),false);
  }
@@ -91,6 +134,8 @@ test('actual admission binds actions to selected store/object and never grants o
    ['/api/transactions/stores/a1/supplier-settlements','POST',{},'payments.supplier'],
    ['/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'CANCEL'},'sales.cancel'],
    ['/api/owner-shifts/shift/force-close','POST',{reason:'Synthetic'},'shifts.force-close'],
+   ['/api/owner-shifts/shift/detail','GET',{},'shifts.closing-count'],
+   ['/api/owner-shifts/shift/closing-count','POST',{storeId:'a1'},'shifts.closing-count'],
    ['/api/cash/sessions/shift/close','POST',{},'shifts.close']]){
    const r=await send(path,method,body);assert.equal(r.status,200,JSON.stringify(r));assert.equal(r.body.capability,cap);
   }
@@ -119,12 +164,19 @@ test('actual admission binds actions to selected store/object and never grants o
    ['/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'RETURN'}],
    ['/api/store-pos/stores/a1/sales/sale/internal-return','POST',{}],
    ['/api/owner-shifts/foreign/force-close','POST',{}],
-   ['/api/owner-shifts/shift/closing-count','POST',{}],
+   ['/api/owner-shifts/foreign/detail','GET',{}],
+   ['/api/owner-shifts/foreign/closing-count','POST',{storeId:'a1'}],
+   ['/api/owner-shifts/shift/closing-count','POST',{storeId:'a2'}],
    ['/api/commerce/purchases/doc/approve','POST',{}],
    ['/api/purchase-orders/order','DELETE',{}]
   ])assert.ok([403,404].includes((await send(path,method,body)).status),path);
   assert.equal(reached,before);
   p.grant(['shifts.read','shifts.close']);
+  assert.equal((await send('/api/owner-shifts/shift/force-close')).status,403);
+  p.grant(['shifts.read','shifts.force-close']);
+  assert.equal((await send('/api/owner-shifts/shift/detail','GET')).status,403);
+  assert.equal((await send('/api/owner-shifts/shift/closing-count')).status,403);
+  p.grant(['shifts.read','shifts.closing-count']);
   assert.equal((await send('/api/owner-shifts/shift/force-close')).status,403);
   p.grant(['sales.read','payments.read','payments.expense']);
   assert.equal((await send('/api/transactions/stores/a1','POST',{...expense,paymentSource:'CASH_SHIFT',paymentMethod:'CASH_SHIFT'})).status,403);

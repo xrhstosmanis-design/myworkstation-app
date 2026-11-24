@@ -15,7 +15,12 @@ const n=value=>Number(value||0);
 
 function requireAccess(req,res,next){
   if(scope?.kind==='POS_INVENTORY')return next();
-  if(req.user?.staffAccess===true&&(req.method==='GET'||(req.method==='POST'&&req.path==='/export-xlsx'))&&req.staffGrant?.capability==='products.read')return next();
+  if(req.user?.staffAccess===true){
+    const capability=req.staffGrant?.capability;
+    if(req.method==='GET'&&req.path==='/duplicates'&&capability==='inventory.duplicates.read')return next();
+    if(capability==='products.read'&&((req.method==='GET'&&req.path!=='/duplicates')||(req.method==='POST'&&req.path==='/export-xlsx')))return next();
+    return res.sendStatus(403);
+  }
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Το Αρχείο ειδών είναι διαθέσιμο μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
@@ -96,6 +101,10 @@ router.get("/duplicates", async (req, res, next) => {
     const storeId = String(req.query.storeId || "").trim();
     if (!storeId) return res.status(400).json({error:"Δεν επιλέχθηκε κατάστημα."});
     if (scope && scope.storeId !== storeId) return res.sendStatus(403);
+    if (req.user?.staffAccess === true) {
+      if (req.user.storeId !== storeId) return res.sendStatus(403);
+      await requireStaffGrant(prisma,req.user,storeId,'inventory.duplicates.read');
+    }
     const store = await prisma.store.findFirst({
       where:{id:storeId,companyId,active:true}, select:{id:true}
     });
