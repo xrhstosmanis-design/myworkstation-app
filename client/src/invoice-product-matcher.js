@@ -1,4 +1,4 @@
-export function installInvoiceProductMatcher({modal,orderId,storeId,lineId,description,api,onSelect,esc,money}){
+export function installInvoiceProductMatcher({modal,orderId,storeId,lineId,description,api,onSelect,esc,money,generateOnSave=false}){
  const query=modal.querySelector('[data-product-q]'),results=modal.querySelector('[data-product-results]'),search=modal.querySelector('[data-product-search]'),form=modal.querySelector('form'),barcode=form.elements.barcode;
  const panel=modal.querySelector('[data-new-product-barcode]');
  const note=document.createElement('p');note.setAttribute('role','status');note.dataset.barcodeCheck='';panel.appendChild(note);
@@ -27,7 +27,9 @@ export function installInvoiceProductMatcher({modal,orderId,storeId,lineId,descr
   try{const data=await lookup({q,offset:String(offset)});if(current!==revision||!modal.isConnected)return;if(data.rows.length)render(data,{exactBarcode:data.barcode||null});else results.textContent='Δεν βρέθηκε υπάρχον είδος στο κατάστημα με αυτή την αναζήτηση.'}catch(error){if(current===revision&&modal.isConnected)results.textContent=error.message}
  }
  async function checkBarcode({saving=false}={}){
-  const mode=form.elements.barcodeMode.value;if(mode==='NONE')return;
+  const mode=form.elements.barcodeMode.value;
+  if(generateOnSave&&mode==='GENERATED'){note.textContent='Το εσωτερικό barcode θα δημιουργηθεί με την Καταχώρηση.';return}
+  if(mode==='NONE')return;
   const value=barcode.value.trim(),current=++revision;clearTimeout(timer);
   if(!/^\d{6,18}$/.test(value)){note.textContent='Συμπλήρωσε barcode 6–18 ψηφίων.';if(saving)throw Error(note.textContent);return}
   note.textContent='Έλεγχος barcode στην αποθήκη…';
@@ -47,7 +49,7 @@ export function installInvoiceProductMatcher({modal,orderId,storeId,lineId,descr
  barcode.addEventListener('input',()=>{revision++;clearTimeout(timer);if(barcodeSelection){onSelect(null);barcodeSelection=null;panel.hidden=false}note.textContent='';timer=setTimeout(()=>checkBarcode(),250)});
  barcode.addEventListener('change',()=>checkBarcode());
  barcode.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();event.stopPropagation();checkBarcode()}});
- form.querySelectorAll('[name="barcodeMode"]').forEach(radio=>radio.addEventListener('change',()=>{revision++;clearTimeout(timer);note.textContent='';barcodeSelection=null}));
+ form.querySelectorAll('[name="barcodeMode"]').forEach(radio=>radio.addEventListener('change',()=>{revision++;clearTimeout(timer);note.textContent=generateOnSave&&radio.value==='GENERATED'?'Το εσωτερικό barcode θα δημιουργηθεί με την Καταχώρηση.':'';barcodeSelection=null}));
  const observer=new MutationObserver(()=>{if(!modal.isConnected){revision++;clearTimeout(timer);observer.disconnect()}});observer.observe(document.body,{childList:true});
  query.value=description;findNames();
  return {beforeSave:()=>checkBarcode({saving:true})};

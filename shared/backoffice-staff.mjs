@@ -282,6 +282,7 @@ export function staffRequestCapability(method,path,body={},query={}){
   if(method==='POST'&&/^\/api\/supplier-control\/[^/]+\/value-only-invoice$/.test(path))return 'invoices.value-only';
   if(method==='POST'&&/^\/api\/purchase-orders\/[^/]+\/email$/.test(path))return 'invoices.email';
   if(method==='POST'&&path==='/api/purchase-orders')return 'invoices.create';
+  if(method==='POST'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/ocr-lines\/[^/]+\/create-product$/.test(path))return 'invoices.edit';
   if(method==='POST'&&path==='/api/commerce/documents/inbox')return 'invoices.upload-original';
   if(method==='POST'&&path==='/api/commerce/documents/mydata/sync')return 'invoices.sync-mydata';
   if(method==='POST'&&/^\/api\/commerce\/documents\/inbox\/[^/]+\/provider-original$/.test(path))return 'invoices.fetch-original';

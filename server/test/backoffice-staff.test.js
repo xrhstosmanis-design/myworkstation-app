@@ -161,3 +161,16 @@ test('shift report viewing is an independent exact read grant',()=>{
    assert.equal(staffRequestCapability('GET',path+'/extra'),null);
   }
 });
+
+test('invoice item creation has exact draft-line admission and never unlocks sibling OCR actions',()=>{
+  const line='/api/commerce/purchase-orders/order/ocr-lines/line';
+  const action=line+'/create-product';
+  assert.equal(staffRequestCapability('POST',action),'invoices.edit');
+  for(const [method,path] of [
+    ['GET',action],['PATCH',action],['DELETE',action],['POST',action+'/'],
+    ['POST',line+'/resolve-existing'],['GET',line+'/google-barcode-search'],
+    ['POST','/api/commerce/purchase-orders/order/create-product'],
+    ['POST','/api/purchase-orders/order/ocr-lines/line/create-product'],
+    ['POST','/api/commerce/purchase-orders/order/ocr-lines/create-product']
+  ])assert.equal(staffRequestCapability(method,path),null,`${method} ${path}`);
+});

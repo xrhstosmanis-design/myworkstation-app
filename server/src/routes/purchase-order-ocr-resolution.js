@@ -1,4 +1,4 @@
-import {requireStaffAction} from "../services/backoffice-staff-access.js";
+import {requireStaffAction,requireStaffGrant,staffError} from "../services/backoffice-staff-access.js";
 import {validateInvoiceTaxonomy} from "../lib/invoice-line-taxonomy.js";
 import {lockEditablePurchaseOrder} from "../services/purchase-order-reopen.js";
 import {customerCostMeter,revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
@@ -30,7 +30,9 @@ const normCode=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replac
 const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 
 function requireManager(req,res,next){
-  if(!(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='invoices.edit')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Η επίλυση γραμμών τιμολογίου γίνεται μόνο από Ιδιοκτήτη ή Διαχειριστή."});
+  const delegated=req.user?.staffAccess===true&&req.staffGrant?.capability==='invoices.edit';
+  const delegatedCreate=delegated&&req.method==='POST'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/ocr-lines\/[^/]+\/create-product$/.test(String(req.originalUrl||'').split('?')[0]);
+  if(!(delegated&&req.method==='GET')&&!delegatedCreate&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Η επίλυση γραμμών τιμολογίου γίνεται μόνο από Ιδιοκτήτη ή Διαχειριστή."});
   next();
 }
 
@@ -216,15 +218,66 @@ router.post("/:orderId/ocr-lines/:lineId/resolve-existing",async(req,res,next)=>
 
 router.post("/:orderId/ocr-lines/:lineId/create-product",async(req,res,next)=>{
   try{
-    const body=z.object({name:z.string().trim().min(2).max(250),supplierCode:z.string().trim().max(100).optional().nullable(),barcodeMode:z.enum(["PROVIDED","GENERATED","NONE"]).optional().default("NONE"),barcode:z.string().trim().max(80).optional().nullable(),quantity:z.coerce.number().positive().max(1000000).optional(),gift:z.boolean().optional(),unitCost:z.coerce.number().min(0).max(1000000).optional(),invoiceUnit:z.enum(["PIECE","PACKAGE"]).optional().default("PIECE"),unitsPerPackage:z.coerce.number().min(1).max(100000).optional().default(1),discount1:z.coerce.number().min(0).max(100).default(0),discount2:z.coerce.number().min(0).max(100).default(0),discount3:z.coerce.number().min(0).max(100).default(0),exciseTotal:z.coerce.number().min(0).max(1000000).default(0),vatRate:z.coerce.number().min(0).max(100).default(24),markupPercent:z.coerce.number().min(-100).max(10000).default(0),salePrice:z.coerce.number().min(0).default(0),categoryId:z.string().optional().nullable(),subcategoryId:z.string().optional().nullable(),vatDepartmentId:z.string().optional().nullable()}).parse(req.body||{});
-    const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});if(line.status!=="NEW")return res.status(409).json({error:"Νέο προϊόν από τιμολόγιο δημιουργείται μόνο πριν την Οριστικοποίηση."});const barcode=body.barcodeMode!=="NONE"?String(body.barcode||"").trim():"";
+    const body=z.object({storeId:z.string().min(1).max(160).optional(),name:z.string().trim().min(2).max(250),supplierCode:z.string().trim().max(100).optional().nullable(),barcodeMode:z.enum(["PROVIDED","GENERATED","NONE"]).optional().default("NONE"),barcode:z.string().trim().max(80).optional().nullable(),quantity:z.coerce.number().positive().max(1000000).optional(),gift:z.boolean().optional(),unitCost:z.coerce.number().min(0).max(1000000).optional(),invoiceUnit:z.enum(["PIECE","PACKAGE"]).optional().default("PIECE"),unitsPerPackage:z.coerce.number().min(1).max(100000).optional().default(1),discount1:z.coerce.number().min(0).max(100).default(0),discount2:z.coerce.number().min(0).max(100).default(0),discount3:z.coerce.number().min(0).max(100).default(0),exciseTotal:z.coerce.number().min(0).max(1000000).default(0),vatRate:z.coerce.number().min(0).max(100).default(24),markupPercent:z.coerce.number().min(-100).max(10000).default(0),salePrice:z.coerce.number().min(0).default(0),categoryId:z.string().optional().nullable(),subcategoryId:z.string().optional().nullable(),vatDepartmentId:z.string().optional().nullable()}).parse(req.body||{});
+    const delegated=req.user.staffAccess===true,{companyId}=req.user;
+    if(delegated&&(!body.storeId||body.storeId!==req.user.storeId))throw staffError();
+    if(delegated&&body.barcodeMode==="NONE")throw staffError(400,"INVOICE_PRODUCT_BARCODE_REQUIRED","Επίλεξε κανονικό barcode ή δημιουργία barcode MyWorkStation.");
+    if(delegated&&body.barcodeMode==="GENERATED"&&body.barcode)throw staffError(400,"INVOICE_PRODUCT_BARCODE_GENERATED","Άφησε το MyWorkStation να δημιουργήσει το barcode κατά την καταχώριση.");
+    if(delegated){
+      await requireStaffAction(prisma,req,body.storeId,"invoices.edit");
+      await requireStaffGrant(prisma,req.user,body.storeId,"products.create");
+    }
+    const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});if((body.storeId&&body.storeId!==line.storeId)||(delegated&&req.user.storeId!==line.storeId))throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Δεν βρέθηκε στο επιλεγμένο κατάστημα.");if(line.status!=="NEW")return res.status(409).json({error:"Νέο προϊόν από τιμολόγιο δημιουργείται μόνο πριν την Οριστικοποίηση."});const barcode=body.barcodeMode!=="NONE"?String(body.barcode||"").trim():"";
     if(body.barcodeMode==="PROVIDED"&&!/^\d{6,18}$/.test(String(body.barcode||"").trim()))return res.status(400).json({error:"Βάλε έγκυρο barcode 6–18 ψηφίων ή επίλεξε εσωτερικό/χωρίς barcode."});
     if(body.barcodeMode==="GENERATED"&&barcode&&(!/^29\d{11}$/.test(barcode)||ean13(barcode.slice(0,12))!==barcode))return res.status(400).json({error:"Το εσωτερικό barcode δεν είναι έγκυρο. Πάτησε ξανά Generate Barcode."});
     if(body.categoryId){const c=(await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${body.categoryId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`)[0];if(!c)return res.status(400).json({error:"Η Κατηγορία δεν είναι έγκυρη."})}if(body.subcategoryId){const s=(await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${body.subcategoryId} AND "categoryId"=${body.categoryId||''} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`)[0];if(!s)return res.status(400).json({error:"Η Υποκατηγορία δεν ανήκει στην Κατηγορία."})}
-    if(barcode){const d=await prisma.$queryRaw`SELECT p."id",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${req.user.companyId} AND pb."barcode"=${barcode} LIMIT 1`;if(d[0])return res.status(409).json({error:`Το barcode υπάρχει ήδη στο «${d[0].name}». Χρησιμοποίησε Συγχώνευση/Αντιστοίχιση.`})}
     const supplierCode=body.supplierCode!==undefined?body.supplierCode:line.supplierCode,unitCost=Math.max(0,Number(body.unitCost??line.unitCost??0)),packSize=body.invoiceUnit==="PACKAGE"?Math.max(1,Number(body.unitsPerPackage||1)):1,quantity=Math.max(0.0001,Number(body.quantity??line.quantity??1)),factor=(1-body.discount1/100)*(1-body.discount2/100)*(1-body.discount3/100),excise=Math.max(0,Number(body.exciseTotal||0)),net=quantity*unitCost*factor,pieceCost=(net+excise)/(quantity*packSize),vat=(net+excise)*body.vatRate/100;
-    const productId=id();let savedBarcode="";await prisma.$transaction(async tx=>{await lockEditablePurchaseOrder(tx,{id:line.orderId,companyId:req.user.companyId,storeId:line.storeId,reopenVersion:line.reopenVersion});await validateInvoiceTaxonomy(tx,req.user.companyId,{categoryId:body.categoryId||null,subcategoryId:body.subcategoryId||null,vatDepartmentId:body.vatDepartmentId||null});savedBarcode=body.barcodeMode==="GENERATED"?(barcode||await generateInternalBarcode(tx,req.user.companyId)):body.barcodeMode==="PROVIDED"?barcode:"";const nextSkuRows=await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS "next" FROM "Product" WHERE "companyId"=${req.user.companyId}`;const sku=String(nextSkuRows[0]?.next||10001);await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","vatDepartmentId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${req.user.companyId},${body.categoryId||null},${body.subcategoryId||null},${body.vatDepartmentId||null},${sku},${body.name},'PIECE',${body.vatRate},true,${body.salePrice},${pieceCost},true,true)`;if(savedBarcode)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${id()},${productId},${savedBarcode},1)`;await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${id()},${line.storeId},${productId},${body.salePrice},0,true) ON CONFLICT ("storeId","productId") DO NOTHING`;await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=${productId},"supplierCode"=${supplierCode||null},"description"=${body.name},"quantity"=${quantity},"gift"=${body.gift??line.gift??false},"unitCost"=${unitCost},"invoiceUnit"=${body.invoiceUnit},"stockUnitsPerInvoiceUnit"=${packSize},"discount1"=${body.discount1},"discount2"=${body.discount2},"discount3"=${body.discount3},"exciseTotal"=${excise},"vatRate"=${body.vatRate},"markupPercent"=${body.markupPercent},"netAmount"=${net},"vatAmount"=${vat},"grossAmount"=${net+excise+vat},"proposedSalePrice"=${body.salePrice},"resolutionStatus"='MATCHED',"updatedAt"=NOW() WHERE "id"=${line.id}`;await learnSupplierMapping(tx,{companyId:req.user.companyId,supplierId:line.supplierId,supplierCode,productId,barcode:savedBarcode,description:body.name,userId:req.user.id,actor:req.user,unitCost:pieceCost,unitsPerPackage:packSize,discount1:body.discount1,discount2:body.discount2,discount3:body.discount3,excisePerInvoiceUnit:excise/quantity,markupPercent:body.markupPercent});await learnCentralInvoiceCorrection(tx,{actor:req.user,companyId:req.user.companyId,supplierId:line.supplierId,line:{...line,supplierCode,description:body.name,quantity,gift:body.gift??line.gift??false,unitCost,invoiceUnit:body.invoiceUnit,stockUnitsPerInvoiceUnit:packSize,discount1:body.discount1,discount2:body.discount2,discount3:body.discount3,exciseTotal:excise,netAmount:net,proposedSalePrice:body.salePrice,barcode:savedBarcode}}) });
-    res.status(201).json({ok:true,productId,barcode:savedBarcode,barcodeMode:body.barcodeMode,mappingLearned:Boolean(line.supplierId&&String(supplierCode||"").trim())});
+    const productId=id();
+    const fingerprint=crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex");
+    const result=await prisma.$transaction(async tx=>{
+      if(delegated){
+        await requireStaffAction(tx,req,line.storeId,"invoices.edit");
+        await requireStaffGrant(tx,req.user,line.storeId,"products.create");
+      }
+      await lockEditablePurchaseOrder(tx,{id:line.orderId,companyId,storeId:line.storeId,reopenVersion:line.reopenVersion});
+      const [current]=await tx.$queryRaw`SELECT "id","productId","updatedAt" FROM "PurchaseOrderLine" WHERE "id"=${line.id} AND "orderId"=${line.orderId} FOR UPDATE`;
+      if(!current)throw staffError(404,"STAFF_OBJECT_NOT_FOUND","Δεν βρέθηκε η γραμμή.");
+      if(delegated&&current.productId){
+        const [prior]=await tx.$queryRaw`SELECT "details" FROM "StoreOperatorAudit"
+          WHERE "companyId"=${companyId} AND "storeId"=${line.storeId} AND "actorId"=${req.user.id}
+            AND "eventType"='INVOICE_LINE_PRODUCT_CREATED' AND "details"->>'orderId'=${line.orderId}
+            AND "details"->>'lineId'=${line.id} AND "details"->>'productId'=${current.productId}
+          ORDER BY "createdAt" DESC LIMIT 1`;
+        if(prior?.details?.fingerprint===fingerprint)return {ok:true,productId:current.productId,barcode:prior.details.barcode,barcodeMode:body.barcodeMode,mappingLearned:false,replayed:true};
+        throw staffError(409,"INVOICE_PRODUCT_ALREADY_LINKED","Η γραμμή έχει ήδη συνδεθεί με είδος. Άνοιξέ την ξανά.");
+      }
+      if(delegated&&String(current.updatedAt)!==String(line.updatedAt))throw staffError(409,"INVOICE_PRODUCT_LINE_CHANGED","Η γραμμή άλλαξε. Άνοιξέ την ξανά.");
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId+":product-sku"}))`;
+      await validateInvoiceTaxonomy(tx,req.user.companyId,{categoryId:body.categoryId||null,subcategoryId:body.subcategoryId||null,vatDepartmentId:body.vatDepartmentId||null});
+      const savedBarcode=body.barcodeMode==="GENERATED"?(barcode||await generateInternalBarcode(tx,req.user.companyId)):body.barcodeMode==="PROVIDED"?barcode:"";
+      if(savedBarcode){
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId+":barcode:"+savedBarcode}))`;
+        const [duplicate]=await tx.$queryRaw`SELECT p."id",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId"
+          WHERE p."companyId"=${companyId} AND pb."barcode"=${savedBarcode} LIMIT 1`;
+        if(duplicate)throw staffError(409,"INVOICE_PRODUCT_DUPLICATE_BARCODE",`Το barcode υπάρχει ήδη στο «${duplicate.name}». Χρησιμοποίησε αντιστοίχιση.`);
+      }
+      const nextSkuRows=await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS "next" FROM "Product" WHERE "companyId"=${req.user.companyId}`;
+      const sku=String(nextSkuRows[0]?.next||10001);
+      await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","vatDepartmentId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${req.user.companyId},${body.categoryId||null},${body.subcategoryId||null},${body.vatDepartmentId||null},${sku},${body.name},'PIECE',${body.vatRate},true,${body.salePrice},${pieceCost},true,true)`;
+      if(savedBarcode)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${id()},${productId},${savedBarcode},1)`;
+      await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${id()},${line.storeId},${productId},${body.salePrice},0,true) ON CONFLICT ("storeId","productId") DO NOTHING`;
+      await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=${productId},"supplierCode"=${supplierCode||null},"description"=${body.name},"quantity"=${quantity},"gift"=${body.gift??line.gift??false},"unitCost"=${unitCost},"invoiceUnit"=${body.invoiceUnit},"stockUnitsPerInvoiceUnit"=${packSize},"discount1"=${body.discount1},"discount2"=${body.discount2},"discount3"=${body.discount3},"exciseTotal"=${excise},"vatRate"=${body.vatRate},"markupPercent"=${body.markupPercent},"netAmount"=${net},"vatAmount"=${vat},"grossAmount"=${net+excise+vat},"proposedSalePrice"=${body.salePrice},"resolutionStatus"='MATCHED',"updatedAt"=NOW() WHERE "id"=${line.id} AND "orderId"=${line.orderId}`;
+      if(delegated){
+        await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+          VALUES (${id()},${companyId},${line.storeId},NULL,${req.user.id},'INVOICE_LINE_PRODUCT_CREATED',
+            ${JSON.stringify({orderId:line.orderId,lineId:line.id,productId,barcode:savedBarcode,barcodeMode:body.barcodeMode,fingerprint,stockChanged:false})}::jsonb)`;
+        return {ok:true,productId,barcode:savedBarcode,barcodeMode:body.barcodeMode,mappingLearned:false};
+      }
+      await learnSupplierMapping(tx,{companyId:req.user.companyId,supplierId:line.supplierId,supplierCode,productId,barcode:savedBarcode,description:body.name,userId:req.user.id,actor:req.user,unitCost:pieceCost,unitsPerPackage:packSize,discount1:body.discount1,discount2:body.discount2,discount3:body.discount3,excisePerInvoiceUnit:excise/quantity,markupPercent:body.markupPercent});
+      await learnCentralInvoiceCorrection(tx,{actor:req.user,companyId:req.user.companyId,supplierId:line.supplierId,line:{...line,supplierCode,description:body.name,quantity,gift:body.gift??line.gift??false,unitCost,invoiceUnit:body.invoiceUnit,stockUnitsPerInvoiceUnit:packSize,discount1:body.discount1,discount2:body.discount2,discount3:body.discount3,exciseTotal:excise,netAmount:net,proposedSalePrice:body.salePrice,barcode:savedBarcode}});
+      return {ok:true,productId,barcode:savedBarcode,barcodeMode:body.barcodeMode,mappingLearned:Boolean(line.supplierId&&String(supplierCode||"").trim())};
+    });
+    res.status(result.replayed?200:201).json(result);
   }catch(error){next(error)}
 });
 
