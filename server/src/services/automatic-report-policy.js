@@ -4,6 +4,16 @@ const zone="Europe/Athens";
 const parts=date=>Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(date).map(p=>[p.type,p.value]));
 const fail=message=>{throw Object.assign(new Error(message),{status:400})};
 const knownAmount=value=>value!==null&&value!==undefined&&typeof value!=="boolean"&&String(value).trim()!==""&&Number.isFinite(Number(value));
+export function reportScheduleAllows(now,reportType,frequency,configuration){
+  const scheduleKey=reportType==="CASH"?{DAILY:"cashDaily",WEEKLY:"cashWeekly",MONTHLY:"cashMonthly"}[frequency]
+    :{SUPPLIER_COMPARISON:"supplierMonthly",PROMOTION_RESULT:"promotionResult",INVENTORY_RESULT:"inventoryResult"}[reportType];
+  const schedule=configuration?.deliverySchedules?.[scheduleKey];
+  if(schedule?.enabled===false)return false;
+  const sendTime=schedule?.sendTime??(scheduleKey==="cashDaily"?configuration?.dailySendTime:undefined);
+  if(sendTime===undefined)return true;
+  const {hour,minute}=parts(now);
+  return `${hour}:${minute}`>=sendTime;
+}
 export function reportDayOffset(day,offset){
   businessPictureCalendarRange(day,day);
   if(!Number.isInteger(offset)||Math.abs(offset)>366)fail("Μη έγκυρη μετατόπιση ημέρας αναφοράς.");

@@ -35,40 +35,52 @@
 /* One existing reset indicator belongs to the top of the current basket. */
 .mws-standard-pos.pos-modern .pos-modern-cart>.pos-last-transaction{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;width:100%;min-height:40px;height:auto;flex:none;padding:6px 10px;border:0;border-bottom:1px solid #476184;border-radius:0;text-align:left;cursor:pointer}.mws-standard-pos.pos-modern .pos-modern-cart>.pos-last-transaction>span{font-size:calc(10px * var(--pos-text-scale,1));line-height:1.2}.mws-standard-pos.pos-modern .pos-modern-cart>.pos-last-transaction>strong{font-size:calc(20px * var(--pos-text-scale,1));line-height:1.1;white-space:nowrap}.mws-standard-pos.pos-modern .pos-modern-cart>.pos-last-transaction:focus-visible{outline:3px solid #16a3ae;outline-offset:-3px}
 
-/* Keep the grips inside the existing gaps so they do not change grid placement. */
+/* Center the grips on the existing gaps without changing grid placement. */
 .pos-modern .standard-pos-grid,.pos-modern-catalog{position:relative}
 .pos-layout-divider{
-  position:absolute;grid-column:2;grid-row:1;left:-8px;top:0;bottom:0;width:8px;
+  position:absolute;grid-column:2;grid-row:1;left:-14px;top:0;bottom:0;width:20px;
   display:grid;place-items:center;z-index:2;cursor:col-resize;touch-action:none;
 }
-.pos-layout-divider::after{content:"";width:2px;height:32px;border-radius:2px;background:#869ab0}
+.pos-layout-divider::after{content:"";width:3px;height:44px;border-radius:2px;background:#869ab0}
 .pos-layout-divider:hover::after,.pos-layout-divider:focus-visible::after{background:#213b60;width:3px}
 .pos-modern .pos-modern-catalog{
   grid-template-columns:minmax(0,min(var(--pos-categories-width,104px),45%)) minmax(0,1fr);
 }
 .pos-modern .standard-pos-grid[style*="--pos-catalog-width"]{
-  grid-template-columns:clamp(310px,var(--pos-catalog-width),calc(100% - 440px - 12px)) minmax(440px,1fr)!important;
+  grid-template-columns:clamp(240px,var(--pos-catalog-width),calc(100% - 440px - 12px)) minmax(440px,1fr)!important;
 }
 @media(max-width:1150px){
   .pos-modern .pos-modern-catalog{grid-template-columns:minmax(0,min(var(--pos-categories-width,86px),45%)) minmax(0,1fr)}
   .pos-modern .standard-pos-grid[style*="--pos-catalog-width"]{
-    grid-template-columns:clamp(310px,var(--pos-catalog-width),calc(100% - 420px - 8px)) minmax(420px,1fr)!important;
+    grid-template-columns:clamp(240px,var(--pos-catalog-width),calc(100% - 420px - 8px)) minmax(420px,1fr)!important;
   }
 }
 @media(max-width:820px){
   .pos-modern .pos-modern-catalog{grid-template-columns:minmax(0,min(var(--pos-categories-width,64px),45%)) minmax(0,1fr)}
   .pos-modern .standard-pos-grid[style*="--pos-catalog-width"]{
-    grid-template-columns:clamp(274px,var(--pos-catalog-width),calc(100% - 355px - 8px)) minmax(355px,1fr)!important;
+    grid-template-columns:clamp(220px,var(--pos-catalog-width),calc(100% - 355px - 8px)) minmax(355px,1fr)!important;
   }
 }
-.pos-modern .pos-modern-catalog .pos-layout-divider{width:7px;left:-7px}
+.pos-modern .pos-modern-catalog .pos-layout-divider{left:-13px}
 .pos-quick-pages{display:flex;align-items:center;gap:5px;flex:none}
 .pos-quick-pages button{padding:5px 10px;border:1px solid #cbd7e4;border-radius:5px;background:#fff;color:#213b60;font:inherit;cursor:pointer}
 .pos-quick-pages button[aria-pressed="true"]{background:#213b60;color:#fff;border-color:#213b60}
-.pos-modern .pos-modern-catalog .standard-quick>div>button:not(:disabled){
+.pos-modern .pos-modern-catalog .standard-quick>div>button{
   background:color-mix(in srgb,var(--product-color,#fff) 30%, white)!important;
 }
-.pos-modern .pos-modern-catalog .standard-category-strip>div>button:not([aria-pressed="true"]):not(:disabled),
+.pos-modern .pos-modern-catalog .pos-modern-rail .standard-category-strip>div>button,
 .pos-modern .pos-modern-product-grid>.pos-modern-subcategory{
   background:color-mix(in srgb,var(--category-color,#fff) 30%, white)!important;
+}
+
+.pos-modern .pos-modern-catalog .standard-quick > div > button .pos-modern-picture {
+  background: transparent;
+}
+
+.pos-modern .pos-modern-catalog .pos-modern-rail .standard-category-strip > div > button[aria-pressed="true"] {
+  color: #213b60;
+  box-shadow: inset 0 0 0 2px #213b60;
+}
+.pos-modern .pos-modern-catalog .pos-modern-rail .standard-category-strip > div > button[aria-pressed="true"] :is(svg, small) {
+  color: inherit;
 }

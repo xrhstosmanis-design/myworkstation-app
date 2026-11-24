@@ -1,5 +1,11 @@
 - 22/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · /root · DRAFT, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
 
+- 23/11/2026 · Νο 5 · ΦΠΑ και ταξινόμηση είδους από γραμμή τιμολογίου · [Καταγραφή](CHANGES/2026-11-23-no5-staff-invoice-line-taxonomy.md).
+
+- 22/11/2026 · POS · Ευκολότερο σύρσιμο κοινών διαχωριστικών · [Checkpoint](CHANGES/2026-11-22-pos-divider-drag.md).
+
+- 22/11/2026 · POS · Χρώμα σε όλη την επιφάνεια του γρήγορου πλήκτρου · [Checkpoint](CHANGES/2026-11-22-pos-full-key-color.md).
+
 - 22/11/2026 · POS · Πλάτος κατηγοριών και γρήγορων πλήκτρων, δεύτερη σελίδα και χρώματα · /root · 22 τοπικοί έλεγχοι, LAB NOT TESTED · [Checkpoint](CHANGES/2026-11-22-pos-quick-pages-resize.md).
 
 - 22/11/2026 · Νο 5 · Αλλαγή PIN χειριστή POS · 22 τοπικοί έλεγχοι πέρασαν · [Checkpoint](CHANGES/2026-11-22-no5-operator-pin-reset.md).
@@ -16,6 +22,14 @@ Owner /root, fix/central-purchase-status-buttons. Τρία κουμπιά κατ
 - 22/11/2026 · Νο 7 · Αυτόματη ανάγνωση χειρόγραφων πριν από το ημερήσιο email · [Checkpoint](CHANGES/2026-11-22-no7-scheduled-cash-papers.md).
 
 - 21/11/2026 · Νο 7 · CASH-UNIFIED-AUDIT-15 · Τρεις βάρδιες ανά χειρόγραφο του Chat · 78 τοπικοί έλεγχοι PASS · CI και τελική κοινή δοκιμή εκκρεμούν · [Checkpoint](CHANGES/2026-11-21-no7-cash-chat-three-shifts.md).
+
+- 22/11/2026 · Νο 5 · Δικαιώματα τιμολογίων και προμηθευτών · [Καταγραφή](CHANGES/2026-11-22-no5-invoice-supplier-rights.md).
+
+- 22/11/2026 · Νο 5 · Διόρθωση δημιουργίας προμηθευτή από τιμολόγιο · [Καταγραφή](CHANGES/2026-11-22-no5-supplier-correction-fix.md).
+
+- 23/11/2026 · Νο 5 · Νέος προμηθευτής στο ίδιο τιμολόγιο · [Καταγραφή](CHANGES/2026-11-23-no5-supplier-same-screen.md).
+
+- 22/11/2026 · Νο 5 · Διοικητικό κλείσιμο χωρίς καταμέτρηση · Εκκρεμής και μεταγενέστερη καταμέτρηση, αναφορές Ιδιοκτήτη και χειριστών · 138 στοχευμένοι έλεγχοι με PostgreSQL · [Έλεγχοι](CHANGES/2026-11-22-no5-uncounted-close.md).
 
 ## 21/11/2026,20:18Ελλάδας — No02 — recovery source4048 TECHNICAL LIVE / SCOPE GAPS OPEN
 
@@ -333,6 +347,8 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · Νο 4 · POS → Βοηθός → BackOffice · [Checkpoint](CHANGES/2026-11-17-no4-pos-assistant-backoffice.md) · Ενιαία συναλλαγή μεταφοράς, 64 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
 
 - 2026-11-17 · Νο 7 CASH-UNIFIED-AUDIT-15 · Ημερήσια αυτόματη αναφορά με ελεγμένα ευρήματα · [Checkpoint](CHANGES/2026-11-17-daily-cash-delivery-evidence.md) · 43 τοπικοί έλεγχοι PASS, CI και LAB εκκρεμούν.
+- 22/11/2026 · Νο 7 · Προγραμματισμός αυτόματων αποστολών ανά κατάστημα · [Checkpoint](CHANGES/2026-11-22-no7-automatic-delivery-schedules.md).
+- 23/11/2026 · Νο 7 · Ανάγνωση χειρογράφων στην προγραμματισμένη ώρα · [Checkpoint](CHANGES/2026-11-23-no7-scheduled-paper-window.md).
 
 - 2026-11-17 · Νο 27 · Κεντρική Διαχείριση και σελίδα Ιδιοκτήτη · [Checkpoint](CHANGES/2026-11-17-no27-central-owner.md) · Τοπική υλοποίηση στο `work/no27-central-owner`, 96 συνδυασμένοι τοπικοί έλεγχοι και build PASS · CI και LAB εκκρεμούν.
 
@@ -948,3 +964,18 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 22/11/2026 · Νο 9: [Τιμή προσφοράς στο ανώνυμο καλάθι POS](CHANGES/2026-11-22-no9-pos-anonymous-promotion.md). Draft PR #4152, 12 στοχευμένοι τοπικοί έλεγχοι PASS. Εκκρεμούν πλήρες CI, δοκιμαστική πώληση στο LAB και διασταύρωση Message-ID.
 
 - Νο 9 · [Μηνιαία ταμεία και τζίρος LAB](CHANGES/2026-11-22-lab-monthly-cash-turnover.md). Χωριστή ρύθμιση για τον υπολογισμό τζίρου στο LAB. Εκκρεμεί ανεξάρτητη έναρξη μηνιαίας εξουσιοδότησης.
+
+- 22/11/2026 · Πανόρμου · myDATA Smart 9 / 217 και αναδρομική ανάκτηση από 1/1/2026 · CI και πραγματικό PDF σε εκκρεμότητα · [Checkpoint](CHANGES/2026-11-22-panormou-mydata-smart9-recovery.md).
+
+- 24/11/2026 · Πανόρμου · Αυτόματη ανάκτηση προχείρων myDATA · [Checkpoint](CHANGES/2026-11-24-panormou-automatic-mydraft.md).
+
+- 24/11/2026 · Νέες εγκαταστάσεις myDATA · Σταθερή ημερομηνία έναρξης από την πρώτη του μήνα της αρχικής ρύθμισης · [Checkpoint](CHANGES/2026-11-24-mydata-new-store-start-month.md).
+
+- 23/11/2026 · Νο 5 · Πρόσβαση υπευθύνου στη διόρθωση προμηθευτή · [Καταγραφή](CHANGES/2026-11-23-no5-staff-supplier-correction-admission.md).
+
+- 23/11/2026 · Νο 5 · [Εκχώρηση διοικητικού κλεισίματος](CHANGES/2026-11-23-no5-delegated-administrative-close.md).
+
+- 23/11/2026 · Νο 5 · [myDATA ανά υποκατάστημα](CHANGES/2026-11-23-no5-mydata-recipient-branch.md).
+- Πανόρμου · Ανάκτηση PDF Epsilon 72, 159, 172 και 209 · [Checkpoint](CHANGES/2026-11-22-panormou-epsilon-72-172.md).
+
+- 24/11/2026 · Νο 5 · [Νέο είδος με barcode από πρόχειρο τιμολόγιο](CHANGES/2026-11-24-no5-draft-new-item-barcode.md).

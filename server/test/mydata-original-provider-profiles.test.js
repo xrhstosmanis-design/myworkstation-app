@@ -21,7 +21,7 @@ for(const [host,format] of profiles)test(`verified Epsilon exact host/format ${h
  assert.equal(matches(new URL(`https://${host}/fd/${id}:0${format}`),vat),false);
 });
 test('unverified and redirect-only Epsilon formats stay disabled',()=>{
- for(const [host,format] of [['epsilondigital-3rdpartd.epsilonnet.gr','159'],['epsilondigital23.epsilonnet.gr','201'],['epsilondigitalsmart2.epsilonnet.gr','128'],['other.epsilonnet.gr','8']]){
+ for(const [host,format] of [['epsilondigital-3rdpartd.epsilonnet.gr','158'],['epsilondigital23.epsilonnet.gr','201'],['epsilondigitalsmart2.epsilonnet.gr','128'],['other.epsilonnet.gr','8']]){
   assert.equal(matches(new URL(`https://${host}/fd/${id}:${format}`),vat),false);
   assert.throws(()=>originalDownloadUrl(`<downloadingInvoiceUrl>https://${host}/fd/${id}:${format}</downloadingInvoiceUrl>`,vat));
  }

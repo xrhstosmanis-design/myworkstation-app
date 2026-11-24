@@ -16,6 +16,15 @@ export function unwrapMyDataXml(value){
 export function myDataError(xml){return /<(?:[A-Za-z0-9_-]+:)?error(?:\s[^>]*)?>/i.test(String(xml||""))?(tag(xml,"message")||"Ελέγξτε τους κωδικούς και το δοκιμαστικό περιβάλλον."):null}
 export function invoiceNodes(xml){return [...String(xml||"").matchAll(/<(?:[A-Za-z0-9_-]+:)?invoice(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z0-9_-]+:)?invoice>/gi)].map(match=>match[1])}
 export function nextPage(xml){const partition=clean(tag(xml,"nextPartitionKey")),row=clean(tag(xml,"nextRowKey"));if(Boolean(partition)!==Boolean(row))throw new Error("Η απάντηση myDATA περιέχει ελλιπή στοιχεία σελιδοποίησης.");return partition?{partition,row}:null}
+// A missing recipient branch does not identify the head office.
+export function invoiceRecipientBranch(invoiceXml){
+  const counterpart=tag(String(invoiceXml??""),"counterpart");
+  const branch=counterpart===null?null:clean(tag(counterpart,"branch"));
+  if(branch===null||!/^\d+$/.test(branch))return null;
+  const parsed=Number(branch);
+  return Number.isSafeInteger(parsed)?parsed:null;
+}
+
 export function invoiceSummary(invoiceXml){
   const header=tag(invoiceXml,"invoiceHeader")||"",summary=tag(invoiceXml,"invoiceSummary")||"",issuer=tag(invoiceXml,"issuer")||"",counterpart=tag(invoiceXml,"counterpart")||"";
   const totalNet=number(tag(summary,"totalNetValue")),totalVat=number(tag(summary,"totalVatAmount"));

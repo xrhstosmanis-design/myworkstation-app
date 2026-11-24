@@ -27,7 +27,19 @@ export function buildKatShiftReconciliation({sessions=[],auditEvents=[],paymentA
     sales.push({saleId,sessionId:details.sessionId||null,terminalPos:details.terminalPos||null,total,fiscalCount,eftposAttemptId:attempt?.id||null,status:issues.some(row=>row.saleId===saleId)?'NEEDS_REVIEW':'AGREEMENT'});
   }
   for(const event of actionEvents){const type=String(event.actionType||event.eventType||'').toUpperCase(),value=Math.abs(amount(event.amount||event.details?.reversalTotal||event.details?.total));if(type.includes('RETURN'))totals.returns=round(totals.returns+value);if(type.includes('VOID')||type.includes('CANCEL'))totals.voids=round(totals.voids+value)}
-  const terminals=sessions.map(row=>({sessionId:row.id,terminalPos:row.terminalPos,status:row.status,cashSales:amount(row.cashSales),cardSales:amount(row.cardSales),eftposTotal:amount(row.eftposTotal),variance:amount(row.variance),cardVariance:amount(row.cardVariance),closedAt:row.closedAt||null}));
-  for(const row of terminals){if(row.status!=='CLOSED')issues.push({code:'SHIFT_NOT_CLOSED',sessionId:row.sessionId,terminalPos:row.terminalPos});if(Math.abs(row.variance)>0.009)issues.push({code:'SHIFT_VARIANCE',sessionId:row.sessionId,terminalPos:row.terminalPos,amount:row.variance});if(Math.abs(row.cardVariance)>0.009)issues.push({code:'POS_EFTPOS_VARIANCE',sessionId:row.sessionId,terminalPos:row.terminalPos,amount:row.cardVariance})}
+  const terminals=sessions.map(row=>{
+    const awaitingCount=row.status==='CLOSED'&&row.closeReconciliationStatus==='AWAITING_COUNT';
+    return {sessionId:row.id,terminalPos:row.terminalPos,status:row.status,
+      ...(awaitingCount?{closeReconciliationStatus:'AWAITING_COUNT'}:{}),
+      cashSales:amount(row.cashSales),cardSales:amount(row.cardSales),eftposTotal:awaitingCount?null:amount(row.eftposTotal),
+      variance:awaitingCount?null:amount(row.variance),cardVariance:awaitingCount?null:amount(row.cardVariance),closedAt:row.closedAt||null};
+  });
+  for(const row of terminals){
+    const context={sessionId:row.sessionId,terminalPos:row.terminalPos};
+    if(row.status!=='CLOSED')issues.push({code:'SHIFT_NOT_CLOSED',...context});
+    if(row.closeReconciliationStatus==='AWAITING_COUNT')issues.push({code:'SHIFT_AWAITING_COUNT',...context});
+    if(Math.abs(row.variance)>0.009)issues.push({code:'SHIFT_VARIANCE',...context,amount:row.variance});
+    if(Math.abs(row.cardVariance)>0.009)issues.push({code:'POS_EFTPOS_VARIANCE',...context,amount:row.cardVariance});
+  }
   return {status:issues.length?'NEEDS_REVIEW':'AGREEMENT',totals:{...totals,eftposByDevice},terminals,sales,issues};
 }

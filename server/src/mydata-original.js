@@ -36,6 +36,11 @@ const epsilonOriginalFormats = new Map([
   ["epsilondigital-enetgroup.epsilonnet.gr", "107"],
   ["epsilondigital-nbg.epsilonnet.gr", "109"],
   ["epsilondigitalsmart10.epsilonnet.gr", "227"],
+  ["epsilondigitalsmart9.epsilonnet.gr", "217"],
+  ["epsilondigital2.epsilonnet.gr", "72"],
+  ["epsilondigital18.epsilonnet.gr", "172"],
+  ["epsilondigital-3rdpartd.epsilonnet.gr", "159"],
+  ["epsilondigital24.epsilonnet.gr", "209"],
 ]);
 
 function originalRecoveryLinkPattern(formats) {
@@ -183,26 +188,87 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
   });
 }
 
+const providerOriginalIdentity=row=>JSON.stringify([
+  ['id','companyId','storeId','inboxId','mark','issuerVat','counterpartVat','series','documentNumber','invoiceType','currency','totalNet','totalVat','totalGross']
+    .map(key=>row[key]==null?null:String(row[key])),
+  row.issueDate?new Date(row.issueDate).toISOString():null,row.rawPayload?.xml??null
+]);
+
+function lookupProviderInbox(db,{companyId,storeId,inboxId},{lock=false}={}){
+  return lock?db.$queryRaw`
+    SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i
+      ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+    WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId}
+    LIMIT 2 FOR UPDATE OF m,i`
+  :db.$queryRaw`
+    SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i
+      ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+    WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId}
+    LIMIT 2`;
+}
+
+async function storeProviderInboxAttachment(tx,scope,row,pdf){
+  const {companyId,storeId,inboxId}=scope,attachmentId=crypto.randomUUID();
+  await tx.$executeRaw`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES (${attachmentId},${companyId},${storeId},'AI_READER_SOURCE',${pdf.filename},'application/pdf',${'DATABASE:'+pdf.checksum},${pdf.checksum},${'data:application/pdf;base64,'+pdf.bytes.toString('base64')})`;
+  await tx.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=${attachmentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=("rawPayload"-'originalPending'-'originalError')||jsonb_build_object('originalDownloaded',true) WHERE "id"=${row.id} AND "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  return attachmentId;
+}
+
+export async function fetchStaffMyDataInboxOriginal(db,scope,verify,download=fetchOriginalPdf){
+  assertCustomerDemoOutboundAllowed(scope);
+  const {companyId,storeId,inboxId,actorId}=scope;
+  await verify(db);
+  const sources=await lookupProviderInbox(db,scope);
+  if(sources.length!==1)throw error("Δεν βρέθηκε το παραστατικό στο επιλεγμένο κατάστημα.",404);
+  const source=sources[0];
+  if(typeof source.rawPayload?.xml!=="string"||(!source.attachmentId&&source.status!=="RECEIVED"))
+    throw error("Το παραστατικό χρειάζεται έλεγχο πριν από τη λήψη πρωτοτύπου.");
+  const pdf=source.attachmentId?null:await download(source);
+  return db.$transaction(async tx=>{
+    await verify(tx);
+    await lockInvoiceStore(tx,companyId,storeId);
+    const current=await lookupProviderInbox(tx,scope,{lock:true}),row=current[0];
+    if(current.length!==1||providerOriginalIdentity(row)!==providerOriginalIdentity(source))
+      throw error("Τα στοιχεία του παραστατικού άλλαξαν. Ανανεώστε τη θυρίδα πριν από νέα λήψη.");
+    if(row.invoiceType==="9.3"){
+      const snapshot=await readStandaloneOriginalSnapshot(tx,scope,row);
+      if(!evaluateStandaloneDeliveryAttachment(snapshot,scope).eligible)
+        throw error("Το δελτίο αποστολής χρειάζεται έλεγχο ταυτότητας ή συνδέσεων.");
+    }
+    if(row.attachmentId){
+      const [stored]=await tx.$queryRaw`
+        SELECT "id" FROM "DocumentAttachment" WHERE "id"=${row.attachmentId} AND "companyId"=${companyId}
+          AND "storeId"=${storeId} AND "contentData" IS NOT NULL LIMIT 1`;
+      if(!stored)throw error("Το συνημμένο πρωτότυπο δεν είναι πλέον διαθέσιμο.");
+      return {id:inboxId,downloaded:false,reused:true,attachmentOnly:true};
+    }
+    if(row.status!=="RECEIVED"||!pdf)throw error("Η θυρίδα άλλαξε. Ανανέωσε πριν από νέα λήψη.");
+    const attachmentId=await storeProviderInboxAttachment(tx,scope,row,pdf);
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},${actorId},'MYDATA_PROVIDER_ORIGINAL_ATTACHED',
+        ${JSON.stringify({inboxId,attachmentId,mark:row.mark})}::jsonb)`;
+    return {id:inboxId,downloaded:true,reused:false,attachmentOnly:true};
+  },{timeout:30000});
+}
+
 // Ordinary UI only. The existing false/bulk and invoice paths above retain
 // their draft/worker contract. No job, purchase or financial writer is called.
 async function acquireStandaloneOriginal(prisma,source,scope,download){
   if(typeof source.rawPayload?.xml!=='string')throw error('Τα στοιχεία ταυτότητας του πρωτοτύπου χρειάζονται χειροκίνητο έλεγχο.');
   const pdf=source.attachmentId?null:await download(source);
-  const identity=row=>JSON.stringify([['id','companyId','storeId','inboxId','mark','issuerVat','counterpartVat','series','documentNumber','invoiceType','currency','totalNet','totalVat','totalGross'].map(key=>row[key]==null?null:String(row[key])),row.issueDate?new Date(row.issueDate).toISOString():null,row.rawPayload?.xml??null]);
   return prisma.$transaction(async tx=>{
     await lockInvoiceStore(tx,scope.companyId,scope.storeId);
     const rows=await tx.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${scope.companyId} AND m."storeId"=${scope.storeId} AND m."inboxId"=${scope.inboxId} FOR UPDATE OF m,i`;
     const row=rows[0];
-    if(rows.length!==1||identity(row)!==identity(source))throw error('Τα στοιχεία του παραστατικού άλλαξαν. Ανανεώστε τη θυρίδα πριν από νέα λήψη.');
+    if(rows.length!==1||providerOriginalIdentity(row)!==providerOriginalIdentity(source))throw error('Τα στοιχεία του παραστατικού άλλαξαν. Ανανεώστε τη θυρίδα πριν από νέα λήψη.');
     const snapshot=await readStandaloneOriginalSnapshot(tx,scope,row);
     const decision=evaluateStandaloneDeliveryAttachment(snapshot,scope);
     if(!decision.eligible)throw error('Το δελτίο αποστολής χρειάζεται έλεγχο ταυτότητας ή συνδέσεων. Δεν δημιουργήθηκε αγορά.');
     if(decision.replay)return {downloaded:false,reused:true,attachmentOnly:true};
     if(!pdf)throw error('Το πρωτότυπο δεν είναι πλέον διαθέσιμο. Ανανεώστε τη θυρίδα.');
-    const attachmentId=crypto.randomUUID();
-    await tx.$executeRaw`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES (${attachmentId},${scope.companyId},${scope.storeId},'AI_READER_SOURCE',${pdf.filename},'application/pdf',${'DATABASE:'+pdf.checksum},${pdf.checksum},${'data:application/pdf;base64,'+pdf.bytes.toString('base64')})`;
-    await tx.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=${attachmentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${scope.inboxId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
-    await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=("rawPayload"-'originalPending'-'originalError')||jsonb_build_object('originalDownloaded',true) WHERE "id"=${row.id} AND "inboxId"=${scope.inboxId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
+    await storeProviderInboxAttachment(tx,scope,row,pdf);
     return {downloaded:true,reused:false,attachmentOnly:true};
   });
 }
@@ -287,6 +353,42 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό"},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
   await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataDraftOrderId:orderId,mydataDraftDocumentId:documentId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
   return {reused:true,downloaded:false,jobId,purchaseOrderId:orderId};
+}
+
+// For delegated prefill, the source is already attached to the specific
+// draft. Never invoke the download, draft creation or reconciliation paths.
+export async function prefillStoredMyDataDraft(db,{companyId,storeId,orderId,actorId},verify){
+  return db.$transaction(async tx=>{
+    await verify(tx);
+    await lockInvoiceStore(tx,companyId,storeId);
+    const sources=await tx.$queryRaw`SELECT m.*,i."attachmentId",o."supplierId",o."sourceDocumentId"
+      FROM "MyDataInboundDocument" m
+      JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+      JOIN "PurchaseOrder" o ON o."id"=m."rawPayload"->>'mydataDraftOrderId' AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
+      JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."id"=m."rawPayload"->>'mydataDraftDocumentId'
+        AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
+      JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=m."companyId" AND a."storeId"=m."storeId"
+      WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND o."id"=${orderId} AND i."status"='IN_REVIEW'
+        AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT' AND d."documentType"='INVOICE'
+        AND COALESCE(to_jsonb(o)->>'reopenVersion','0')='0'
+      LIMIT 2 FOR UPDATE OF m,i,o,d`;
+    const row=sources[0];
+    if(sources.length!==1||!/^(?:1\.[1-6]|2\.[1-4])$/.test(String(row.invoiceType||""))||
+      (row.currency&&row.currency!=="EUR")||!(Number(row.totalGross)>0)){
+      throw error("Δεν βρέθηκε μοναδικό ανοιχτό πρόχειρο τιμολογίου myDATA με συνημμένο πρωτότυπο.",409);
+    }
+    const jobs=await tx.$queryRaw`SELECT "id","companyId","storeId","attachmentId","purchaseDocumentId","resultJson"
+      FROM "AiReaderJob" WHERE "attachmentId"=${row.attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId}
+        AND "purchaseDocumentId"=${row.sourceDocumentId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
+    const filled=await prefillReviewDraft(tx,row,jobs[0],companyId,storeId,orderId,row.supplierId);
+    const [count]=await tx.$queryRaw`SELECT COUNT(*)::int AS "lineCount" FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;
+    const lineCount=count.lineCount;
+    if(!filled)return {lineCount};
+    const details=JSON.stringify({orderId,documentId:row.sourceDocumentId,inboxId:row.inboxId,lineCount});
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${companyId},${storeId},NULL,${actorId},'PURCHASE_MYDATA_PREFILLED',${details}::jsonb)`;
+    return {lineCount};
+  },{timeout:30000});
 }
 
 async function prefillReviewDraft(tx,row,job,companyId,storeId,orderId,supplierId){

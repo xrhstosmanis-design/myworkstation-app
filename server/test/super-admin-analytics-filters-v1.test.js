@@ -43,3 +43,75 @@ test("backend analytics remains filtered, audited and non-mutating",()=>{
   assert.match(analytics,/Μόνο για ανάγνωση/);
   assert.match(analytics,/δεν αποδίδει αυτόματα ευθύνη σε εργαζόμενο/);
 });
+
+test("legacy analytics keeps uncounted variances unavailable without changing measured zero",async()=>{
+  const {z}=await import("zod");
+  const start=route.indexOf('router.post("/super-admin-analytics/execute"');
+  const end=route.indexOf('router.post("/super-admin-analytics/sessions/',start);
+  const counted={sessionId:"zero",storeId:"s",companyId:"c",variance:0,cardVariance:0};
+  const pending={...counted,sessionId:"waiting",closeReconciliationStatus:"AWAITING_COUNT",variance:null,cardVariance:null};
+  const queryCalls=[],investigated=[];
+  let sessions=[counted,pending];
+  const prisma={
+    $queryRaw:async strings=>{
+      const sql=strings.join("?");
+      queryCalls.push(sql);
+      return sql.includes('FROM "CashShiftSession"')?sessions:[{}];
+    },
+    authAudit:{create:async()=>{}}
+  };
+  let handler;
+  const router={post:(_name,fn)=>{handler=fn}};
+  new Function("router","ensureCashControlSchema","z","prisma","platformCashStoreRule","platformCashInvestigation","automaticConclusionLabels",route.slice(start,end))(
+    router,async()=>{},z,prisma,()=>({posEftposEnabled:true}),
+    async row=>{investigated.push(row);return {conclusion:"AGREEMENT"}},{});
+  const execute=()=>new Promise((resolve,reject)=>{
+    handler({body:{companyId:"c",storeId:"s"},user:{id:"admin"},headers:{}},{json:resolve},reject);
+  });
+  const mixed=await execute();
+  assert.ok(queryCalls[0].includes('AS "closeReconciliationStatus"'));
+  assert.deepEqual(mixed.rows,[{companyId:"c",storeId:"s",shifts:2,awaitingCount:1,cashVariance:null,cardVariance:null}]);
+  assert.equal(mixed.awaitingCount,1);
+  assert.equal(mixed.automaticConclusion.status,"AWAITING_COUNT");
+  assert.equal(mixed.status,"Εκκρεμεί καταμέτρηση");
+  assert.match(mixed.automaticConclusion.summary,/Εκκρεμεί καταμέτρηση για 1 από τις 2 βάρδιες/);
+  assert.deepEqual(mixed.automaticConclusion.conclusionCounts,{AGREEMENT:1,AWAITING_COUNT:1});
+  assert.deepEqual(mixed.findings,[]);
+  assert.deepEqual(investigated.map(row=>row.sessionId),["zero"]);
+  sessions=[counted];
+  const measured=await execute();
+  assert.equal(measured.awaitingCount,0);
+  assert.equal(measured.automaticConclusion.status,"AGREEMENT");
+  assert.equal(measured.rows[0].cashVariance,0);
+  assert.equal(measured.rows[0].cardVariance,0);
+  sessions=[counted,{...counted,sessionId:"cash-only",closeReconciliationStatus:"COUNTED",cardVariance:null}];
+  const partial=await execute();
+  assert.equal(partial.rows[0].cashVariance,0);
+  assert.equal(partial.rows[0].cardVariance,null);
+  assert.equal(investigated.at(-1).cardVariance,null);
+});
+
+test("legacy analytics confirmation rejects an uncounted shift before a review is written",async()=>{
+  const {z}=await import("zod");
+  const start=route.indexOf('router.post("/super-admin-analytics/sessions/:sessionId/confirmation"');
+  const end=route.indexOf("const platformHistoryTurns",start);
+  let handler;
+  const router={post:(_name,fn)=>{handler=fn}};
+  const calls=[];
+  const prisma={
+    $queryRaw:async strings=>{
+      calls.push(strings.join("?"));
+      return [{id:"waiting",companyId:"c",storeId:"s",closeReconciliationStatus:"AWAITING_COUNT"}];
+    }
+  };
+  new Function("router","ensureCashControlSchema","z","prisma",route.slice(start,end))(router,async()=>{},z,prisma);
+  let status;
+  const body=await new Promise((resolve,reject)=>{
+    const res={status:code=>{status=code;return res},json:resolve};
+    handler({body:{companyId:"c",storeId:"s"},params:{sessionId:"waiting"}},res,reject);
+  });
+  assert.equal(status,409);
+  assert.equal(body.code,"SHIFT_AWAITING_COUNT");
+  assert.equal(calls.length,1);
+  assert.ok(calls[0].includes('AS "closeReconciliationStatus"'));
+});

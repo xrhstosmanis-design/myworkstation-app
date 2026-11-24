@@ -88,7 +88,7 @@ test('multi-page or existing non-OCR provider identity failures do not enter OCR
 });
 
 test('unknown profile, host, query and issuer refusal precede provider or OCR calls',async()=>{
- const urls=[urlFor('epsilondigital-3rdpartd.epsilonnet.gr','159'),urlFor(profiles[0][0],'22'),urlFor(profiles[1][0],'169'),urlFor(profiles[0][0]+'.invalid','169'),urlFor(profiles[0][0],'169')+'?next=1',urlFor(profiles[0][0],'169')+'#fragment',urlFor(profiles[0][0],'169').replace('https:','http:')];
+ const urls=[urlFor('epsilondigital-3rdpartd.epsilonnet.gr','158'),urlFor(profiles[0][0],'22'),urlFor(profiles[1][0],'169'),urlFor(profiles[0][0]+'.invalid','169'),urlFor(profiles[0][0],'169')+'?next=1',urlFor(profiles[0][0],'169')+'#fragment',urlFor(profiles[0][0],'169').replace('https:','http:')];
  const rows=urls.map(url=>({...identity,rawPayload:{xml:`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`}}));
  rows.push(rowFor(undefined,undefined,{issuerVat:'invalid'}));
  for(const row of rows){let fetches=0,ocrs=0;

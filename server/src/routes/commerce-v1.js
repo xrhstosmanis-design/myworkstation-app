@@ -7,6 +7,8 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule,requireStoreModule} from "../middleware/module-access.js";
 import {readSupplierComparison} from "../services/supplier-comparison-report.js";
+import {createInvoiceIssuerSupplier} from "../services/invoice-supplier-directory.js";
+import {uploadInvoiceInboxOriginal} from "../services/invoice-inbox-upload.js";
 import {mobileUploads} from "./mobile-invoice-upload.js";
 import orderSuggestionsRouter from "./order-suggestions.js";
 import lowValueProductsRouter from "./low-value-products.js";
@@ -109,6 +111,13 @@ router.patch("/products/:productId",requireCompanyModule("INVENTORY"),async(req,
 
 router.get("/suppliers",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{res.json(await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","city","active" FROM "Supplier" WHERE "companyId"=${req.user.companyId} ORDER BY "name"`)}catch(error){next(error)}
+});
+
+router.post("/purchase-orders/:orderId/issuer-supplier",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const supplier=await createInvoiceIssuerSupplier(prisma,req,req.params.orderId,req.body||{});
+    res.status(supplier.created?201:200).json(supplier);
+  }catch(error){next(error)}
 });
 
 router.get("/supplier-price-comparison",requireStoreModule("INVENTORY"),async(req,res,next)=>{
@@ -355,7 +364,7 @@ router.get("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,ne
 });
 
 router.post("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{
-  try{const body=z.object({storeId:z.string(),supplierId:z.string().optional().nullable(),responsibleName:z.string().trim().max(180).optional().nullable(),note:z.string().trim().max(1000).optional().nullable(),file:z.object({dataUrl:z.string().max(4600000),filename:z.string().trim().min(1).max(180)})}).parse(req.body||{});const store=await ownedStore(req.user.companyId,body.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const match=/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(body.file.dataUrl);if(!match)return res.status(400).json({error:"Το αρχείο πρέπει να είναι PDF, JPEG, PNG ή WEBP."});const bytes=Buffer.from(match[2],"base64");if(bytes.length<100||bytes.length>3400000)return res.status(400).json({error:"Το αρχείο πρέπει να είναι έως 3,4 MB."});const attachmentId=id(),inboxId=id(),checksum=crypto.createHash("sha256").update(bytes).digest("hex");await prisma.$transaction(async tx=>{await tx.$executeRaw`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES (${attachmentId},${req.user.companyId},${store.id},'INVOICE_INBOX',${body.file.filename},${match[1]},${`DATABASE:${checksum}`},${checksum},${body.file.dataUrl})`;await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${store.id},${body.supplierId||null},${attachmentId},'RECEIVED',${body.note||null},${body.responsibleName||null},${req.user.id})`});res.status(201).json({id:inboxId,status:"RECEIVED"})}catch(error){next(error)}
+  try{res.status(201).json(await uploadInvoiceInboxOriginal(prisma,req));}catch(error){next(error)}
 });
 
 router.patch("/documents/inbox/:inboxId",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{

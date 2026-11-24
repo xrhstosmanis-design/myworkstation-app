@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import {normalizeViesResult} from "../src/routes/commerce-vat-lookup.js";
+import {normalizeViesResult,staffVatLookupCapability} from "../src/routes/commerce-vat-lookup.js";
+import {staffRequestCapability} from "../../shared/backoffice-staff.mjs";
 
 test("normalizes verified VIES supplier data without writing it",()=>{
   assert.deepEqual(normalizeViesResult({isValid:true,name:"  ΔΟΚΙΜΗ ΑΕ ",address:"ΑΘΗΝΑ\nΕΛΛΑΔΑ",requestDate:"2026-09-10"},"123456789"),{valid:true,taxId:"123456789",name:"ΔΟΚΙΜΗ ΑΕ",address:"ΑΘΗΝΑ ΕΛΛΑΔΑ",source:"EU_VIES",requestDate:"2026-09-10"});
@@ -70,4 +71,23 @@ test("AADE credentials use the official WS-Security UsernameToken header",()=>{
   assert.match(route,/<wsse:Username>\$\{xmlEscape\(credentials\.accountId\)\}/);
   assert.match(route,/<wsse:Password>\$\{xmlEscape\(credentials\.secret\)\}/);
   assert.doesNotMatch(route,/<ns2:AuthenticationHeader>/);
+});
+
+test("delegated official lookup requires its own live scoped grant and explicit mode",()=>{
+  const query={storeId:"lab",taxId:"123456789",official:"1"};
+  const req={query,user:{storeId:"lab"},staffGrant:{capability:"invoices.supplier-lookup-official"}};
+  assert.equal(staffVatLookupCapability(req,"lab"),"invoices.supplier-lookup-official");
+  assert.throws(()=>staffVatLookupCapability(req,"foreign"),{status:403});
+  assert.throws(()=>staffVatLookupCapability({...req,staffGrant:{capability:"invoices.supplier-lookup"}},"lab"),{status:403});
+  for(const patch of [{localOnly:"1"},{storeId:["lab"]},{official:["1"]},{taxId:["123456789"]},{companyId:"foreign"}]){
+    assert.throws(()=>staffVatLookupCapability({...req,query:{...query,...patch}},"lab"),{status:403});
+  }
+  assert.equal(staffRequestCapability("GET","/api/commerce/vat-lookup",{},{localOnly:"1"}),"invoices.supplier-lookup");
+  assert.equal(staffRequestCapability("GET","/api/commerce/vat-lookup",{official:"1"},{}),null);
+  const route=fs.readFileSync(new URL("../src/routes/commerce-vat-lookup.js",import.meta.url),"utf8");
+  const grant='if(staff)await requireStaffGrant(prisma,req.user,storeId,capability);';
+  const aade=route.indexOf('const aade=await fetch("https://www1.gsis.gr/');
+  assert.ok(route.indexOf(grant)<aade&&route.lastIndexOf(grant)>aade);
+  assert.match(route,/"companyId"=\$\{req\.user\.companyId\} AND "storeId"=\$\{store\.id\} AND "kind"='VAT_LOOKUP'/);
+  assert.ok(route.indexOf("if(official)return res.status(409)")<route.indexOf("const response=await fetch"));
 });

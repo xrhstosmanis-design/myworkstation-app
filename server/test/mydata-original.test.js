@@ -99,6 +99,11 @@ test("only verified provider host and path combinations are allowed for inbound 
     `https://epsilondigital-enetgroup.epsilonnet.gr/fd/${short}:107`,
     `https://epsilondigital-nbg.epsilonnet.gr/fd/${short}:109`,
     `https://epsilondigitalsmart10.epsilonnet.gr/fd/${short}:227`,
+    `https://epsilondigitalsmart9.epsilonnet.gr/fd/${short}:217`,
+    `https://epsilondigital2.epsilonnet.gr/fd/${short}:72`,
+    `https://epsilondigital18.epsilonnet.gr/fd/${short}:172`,
+    `https://epsilondigital-3rdpartd.epsilonnet.gr/fd/${short}:159`,
+    `https://epsilondigital24.epsilonnet.gr/fd/${short}:209`,
     eInvoicing,
     vitality,
   ];
@@ -111,6 +116,7 @@ test("only verified provider host and path combinations are allowed for inbound 
     providers[1].replace(":84", ":160"),
     providers[1].replace("epsilondigital3", "epsilondigital23"),
     providers[4].replace("epsilonnet.gr", "epsilonnet.gr.example"),
+    `https://epsilondigitalsmart9.epsilonnet.gr/fd/${short}:227`,
     eInvoicing.replace("/-1/", "/1/"),
     vitality.replace("/test_1~", "/test_2~"),
   ]) {

@@ -34,7 +34,7 @@ export default function StoreCloudPage(props){
   return <StoreWorkspace key={props.store.id} {...props}/>;
 }
 
-function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCommerce,navigationLocked=false,primaryView,onPrimaryChange}){
+function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCommerce,navigationLocked=false,canConfigureMyDataBranch=false,primaryView,onPrimaryChange}){
   const delegated=Array.isArray(capabilities);
   const can=key=>!delegated||capabilities.includes(key);
   const salesAllowed=can('sales.read');
@@ -183,7 +183,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
     {!delegated&&invoiceEntryMessage&&<p role="alert">{invoiceEntryMessage}</p>}
     {!delegated&&invoiceOpen&&<section ref={invoiceRegionRef} aria-label="Θυρίδα επιλεγμένου καταστήματος">
       <button className="owner-tool-close" type="button" disabled={navigationLocked} onClick={closeInvoices}>Κλείσιμο θυρίδας τιμολογίων</button>
-      <StoreInvoiceEntry api={api} storeId={store.id} onOpenOrder={openInvoiceOrder}/>
+      <StoreInvoiceEntry canConfigureMyDataBranch={!delegated&&canConfigureMyDataBranch} api={api} storeId={store.id} onOpenOrder={openInvoiceOrder}/>
     </section>}
 
     <nav className="owner-primary-nav" aria-label="Βάρδιες και πληρωμές">

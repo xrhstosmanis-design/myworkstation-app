@@ -6,14 +6,14 @@ import {readCashDailySummary,readCashSessionInvestigation} from '../src/routes/c
 
 const req=(params={},query={})=>({user:{role:'EMPLOYEE',companyId:'C',storeId:'S',staffAccess:true},params,query});
 const session={id:'shift',companyId:'C',storeId:'S',status:'CLOSED',openedAt:new Date('2026-11-01T08:00Z'),closedAt:new Date('2026-11-01T16:00Z'),cashSales:'20',cardSales:'0',eftposTotal:'2',expenses:'3',variance:'-10',cardVariance:'-2',openingVariance:'0',terminalPos:'POS',duplicateReviewJson:[]};
-function database({investigation=false,stale=false}={}){
+function database({investigation=false,stale=false,shiftFields={},eftposEnabled=true}={}){
  const queries=[];const snapshot={transactionCount:0,activeTotal:0,expenseTotal:0,reversedCount:0,lastMovementAt:null};
- return {queries,store:{findFirst:async args=>{assert.deepEqual(args.where,{id:'S',companyId:'C',active:true});return{id:'S',name:'Store'}}},$queryRaw:async(parts,...values)=>{const sql=parts.join('?');queries.push(sql);assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i);if(sql.includes('FROM "CashControlStoreRule"'))return[{mode:'FULL',deliveryTerminalPattern:'DELIVERY',carryOverEnabled:true,posEftposEnabled:true}];if(sql.includes('FROM "CashShiftSession"')){assert.ok(values.includes('C'));return[{...session}]}if(sql.includes('to_regclass'))return[{operator:null,actions:null,safety:null}];if(sql.includes('COUNT(*)::int'))return[snapshot];if(sql.includes('FROM "CashControlReview"'))return[{id:'review',decision:'EXPLANATION',amount:'5',snapshotJson:stale?{...snapshot,transactionCount:1}:snapshot,createdAt:new Date('2026-11-02Z')}];return[]}};
+ return {queries,store:{findFirst:async args=>{assert.deepEqual(args.where,{id:'S',companyId:'C',active:true});return{id:'S',name:'Store'}}},$queryRaw:async(parts,...values)=>{const sql=parts.join('?');queries.push(sql);assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i);if(sql.includes('FROM "CashControlStoreRule"'))return[{mode:'FULL',deliveryTerminalPattern:'DELIVERY',carryOverEnabled:true,posEftposEnabled:eftposEnabled}];if(sql.includes('FROM "CashShiftSession"')){assert.ok(values.includes('C'));return[{...session,...shiftFields}]}if(sql.includes('to_regclass'))return[{operator:null,actions:null,safety:null}];if(sql.includes('COUNT(*)::int'))return[snapshot];if(sql.includes('FROM "CashControlReview"'))return[{id:'review',decision:'EXPLANATION',amount:'5',snapshotJson:stale?{...snapshot,transactionCount:1}:snapshot,createdAt:new Date('2026-11-02Z')}];return[]}};
 }
 
-test('cash canonical complete pre-extraction bodies remain unchanged outside injection/response boundaries',async()=>{
+test('cash canonical reader bodies match the reviewed report contracts outside injection/response boundaries',async()=>{
  const original=JSON.parse(await readFile(new URL('./fixtures/backoffice-cash-original-bodies.json',import.meta.url),'utf8'));
- const hashes={readCashDailySummary:'02a441a24a6b7047ba58d054eb1fc703aaf8e11ea4c6f990f543320737aa00d4',readCashSessionInvestigation:'202e27262867e360855ae900e838dca2f335557db2b1460c2cf055ae9a699ca6'};
+ const hashes={readCashDailySummary:'148bf75dad729e1f09f6cd9b3ab5c4e7ab59f2f7fc50e139079fd7ce1dade9f3',readCashSessionInvestigation:'d2bb99266baad6cafee1d768ff61e8ced954fa1a794956bbdc085f98c778170c'};
  const source=await readFile(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
  for(const [name,body]of Object.entries(original)){
   assert.equal(createHash('sha256').update(body).digest('hex'),hashes[name]);
@@ -34,4 +34,30 @@ test('actual investigation preserves review balance and stale proof semantics fo
 test('native selected-store and missing-session errors survive pure-reader extraction',async()=>{
  await assert.rejects(readCashDailySummary(req({storeId:'OTHER'}),{db:database()}),error=>error.status===403);
  const db=database();db.$queryRaw=async()=>[];await assert.rejects(readCashSessionInvestigation(req({sessionId:'missing'}),{db}),error=>error.status===404);
+});
+
+test('pending shift investigation cannot treat an uncounted shift or earlier review as reconciled',async()=>{
+ const db=database({investigation:true,shiftFields:{closeReconciliationStatus:'AWAITING_COUNT',variance:null,cardVariance:null,eftposTotal:null}});
+ const result=await readCashSessionInvestigation(req({sessionId:'shift'}),{db});
+ assert.equal(result.session.closeReconciliationStatus,'AWAITING_COUNT');
+ assert.equal(result.status,'AWAITING_COUNT');
+ assert.equal(result.recheckRequired,true);
+ assert.equal(result.reviewBalance.reason,'SHIFT_AWAITING_COUNT');
+ assert.equal(result.initialVariance,null);
+ assert.equal(result.cardVariance,null);
+ assert.equal(result.unexplainedVariance,null);
+ assert.equal(result.finalizedShortage,false);
+ assert.deepEqual(result.confirmedExplanations,[]);
+ assert.ok(result.findings.some(row=>row.code==='SHIFT_AWAITING_COUNT'));
+});
+test('counted shift without EFTPOS keeps card values unavailable and cash variance known',async()=>{
+ const db=database({shiftFields:{closeReconciliationStatus:'COUNTED',variance:0,eftposTotal:null,cardVariance:null},eftposEnabled:false});
+ const daily=await readCashDailySummary(req({storeId:'S'},{date:'2026-11-01'}),{db});
+ assert.equal(daily.totals.awaitingCount,0);
+ assert.equal(daily.totals.variance,0);
+ assert.equal(daily.totals.eftposTotal,null);
+ assert.equal(daily.totals.cardVariance,null);
+ const result=await readCashSessionInvestigation(req({sessionId:'shift'}),{db});
+ assert.equal(result.initialVariance,0);
+ assert.equal(result.cardVariance,null);
 });

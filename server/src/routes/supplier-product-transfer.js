@@ -3,6 +3,10 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 
+import {staffSupplierManagementRoute,supplierTransferCapability} from "../../../shared/backoffice-staff-company.mjs";
+import {staffError} from "../services/backoffice-staff-access.js";
+import {requireStaffCompanyGrant} from "../services/backoffice-staff-company.js";
+
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const id=()=>crypto.randomUUID();
@@ -43,6 +47,13 @@ async function ensureSchema(){
   return schemaPromise;
 }
 function requireAccess(req,res,next){
+  if(req.user?.staffAccess===true){
+    const grant=staffSupplierManagementRoute(req.method,String(req.originalUrl||'').split('?')[0]);
+    if(grant?.capability!==supplierTransferCapability||req.staffCompanyGrant?.capability!==supplierTransferCapability||
+      req.staffCompanyGrant.companyId!==req.user.companyId)return next(staffError());
+    return next();
+  }
+
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η μεταφορά ειδών/κωδικών είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
@@ -89,6 +100,10 @@ router.get("/:supplierId/transfer-candidates",async(req,res,next)=>{
         LEFT JOIN "SupplierProductLink" link ON link."companyId"=${companyId} AND link."supplierId"=${source.id} AND link."productId"=p."id"
         ORDER BY p."name"`
     ]);
+    if(req.user.staffAccess===true){
+      const grant=await requireStaffCompanyGrant(prisma,req.user,supplierTransferCapability);
+      if(grant.revision!==req.staffCompanyGrant.revision)throw staffError();
+    }
     res.json({source,targets,items:rows.map(row=>({...row,supplierCode:row.linkedSupplierCode||row.lastOrderSupplierCode||null,salePrice:Number(row.salePrice||0),linkActive:row.linkActive==null?null:Boolean(row.linkActive)}))});
   }catch(error){next(error)}
 });
@@ -96,11 +111,14 @@ router.get("/:supplierId/transfer-candidates",async(req,res,next)=>{
 router.post("/:supplierId/transfer",async(req,res,next)=>{
   try{
     const companyId=req.user.companyId,fromSupplierId=req.params.supplierId;
-    const body=z.object({
+    const schema=z.object({
       toSupplierId:z.string().min(1),
       mode:z.enum(["ITEMS","CODES","ITEMS_CODES"]),
       productIds:z.array(z.string().min(1)).min(1).max(1000)
-    }).parse(req.body||{});
+    });
+    const delegated=req.user.staffAccess===true;
+    const body=(delegated?schema.extend({operationId:z.string().uuid(),confirmed:z.literal(true)}).strict():schema).parse(req.body||{});
+
     if(body.toSupplierId===fromSupplierId)return res.status(400).json({error:"Ο προμηθευτής προορισμού πρέπει να είναι διαφορετικός."});
     const [fromSupplier,toSupplier]=await Promise.all([supplier(companyId,fromSupplierId),supplier(companyId,body.toSupplierId)]);
     if(!fromSupplier||!toSupplier)return res.status(404).json({error:"Δεν βρέθηκε προμηθευτής προέλευσης ή προορισμού."});
@@ -109,8 +127,35 @@ router.post("/:supplierId/transfer",async(req,res,next)=>{
     const products=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "id"=ANY(${unique}::text[])`;
     if(products.length!==unique.length)return res.status(404).json({error:"Ένα ή περισσότερα είδη δεν ανήκουν στην εταιρεία."});
     const actorName=req.user.fullName||"Χρήστης";
+    const operationKey=delegated?'staff-supplier-transfer-'+crypto.createHash('sha256').update(JSON.stringify([companyId,req.user.id,fromSupplierId,body.operationId])).digest('hex'):id();
+    const selected=delegated?[...unique].sort():unique;
     await prisma.$transaction(async tx=>{
-      for(const productId of unique){
+      if(delegated){
+        const grant=await requireStaffCompanyGrant(tx,req.user,supplierTransferCapability);
+        if(grant.revision!==req.staffCompanyGrant.revision)throw staffError();
+        const suppliers=await tx.$queryRaw`SELECT "id","active" FROM "Supplier"
+          WHERE "companyId"=${companyId} AND "id"=ANY(${[fromSupplierId,body.toSupplierId]}::text[])
+          ORDER BY "id" FOR UPDATE`;
+        if(suppliers.length!==2||!suppliers.find(row=>row.id===body.toSupplierId)?.active)
+          throw staffError(409,"SUPPLIER_TRANSFER_CHANGED","Ο προμηθευτής προέλευσης ή προορισμού άλλαξε.");
+        const [prior]=await tx.$queryRaw`SELECT "toSupplierId","mode","productIdsJson" FROM "SupplierProductTransfer"
+          WHERE "id"=${operationKey} AND "companyId"=${companyId}`;
+        if(prior){
+          if(prior.toSupplierId===body.toSupplierId&&prior.mode===body.mode&&JSON.stringify(prior.productIdsJson)===JSON.stringify(selected))return;
+          throw staffError(409,"SUPPLIER_TRANSFER_CHANGED","Έχει ήδη καταχωριστεί μεταφορά με διαφορετικά στοιχεία.");
+        }
+        const eligible=await tx.$queryRaw`SELECT p."id" FROM "Product" p
+          WHERE p."companyId"=${companyId} AND p."id"=ANY(${selected}::text[])
+          AND (EXISTS (SELECT 1 FROM "SupplierProductLink" l WHERE l."companyId"=p."companyId"
+            AND l."supplierId"=${fromSupplierId} AND l."productId"=p."id" AND l."active"=true)
+          OR EXISTS (SELECT 1 FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId"
+            WHERE o."companyId"=p."companyId" AND o."supplierId"=${fromSupplierId} AND l."productId"=p."id")
+          OR EXISTS (SELECT 1 FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+            WHERE d."companyId"=p."companyId" AND d."supplierId"=${fromSupplierId} AND l."productId"=p."id"))
+          ORDER BY p."id" FOR SHARE OF p`;
+        if(eligible.length!==selected.length)throw staffError(409,"SUPPLIER_TRANSFER_CHANGED","Κάποιο είδος δεν συνδέεται με τον προμηθευτή προέλευσης.");
+      }
+      for(const productId of selected){
         const codeRows=await tx.$queryRaw`
           SELECT COALESCE(link."supplierCode",(
             SELECT pol."supplierCode" FROM "PurchaseOrderLine" pol JOIN "PurchaseOrder" po ON po."id"=pol."orderId"
@@ -139,7 +184,7 @@ router.post("/:supplierId/transfer",async(req,res,next)=>{
           await tx.$executeRaw`UPDATE "SupplierProductLink" SET "supplierCode"=NULL,"updatedBy"=${req.user.id},"updatedByName"=${actorName},"updatedAt"=NOW() WHERE "companyId"=${companyId} AND "supplierId"=${fromSupplierId} AND "productId"=${productId}`;
         }
       }
-      await tx.$executeRaw`INSERT INTO "SupplierProductTransfer" ("id","companyId","fromSupplierId","toSupplierId","mode","productIdsJson","actorId","actorName") VALUES (${id()},${companyId},${fromSupplierId},${body.toSupplierId},${body.mode},${JSON.stringify(unique)}::jsonb,${req.user.id},${actorName})`;
+      await tx.$executeRaw`INSERT INTO "SupplierProductTransfer" ("id","companyId","fromSupplierId","toSupplierId","mode","productIdsJson","actorId","actorName") VALUES (${operationKey},${companyId},${fromSupplierId},${body.toSupplierId},${body.mode},${JSON.stringify(selected)}::jsonb,${req.user.id},${actorName})`;
     });
     res.json({ok:true,fromSupplier:{id:fromSupplier.id,name:fromSupplier.name},toSupplier:{id:toSupplier.id,name:toSupplier.name},mode:body.mode,count:unique.length,message:`Μεταφέρθηκαν ${unique.length} είδη/κωδικοί χωρίς αλλαγή ιστορικών παραστατικών.`});
   }catch(error){next(error)}

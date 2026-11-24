@@ -58,3 +58,11 @@ test('BackOffice exposes printable reconciliation totals and explicit alerts',()
   assert.match(operator,/Επιβεβαίωση παραλαβής — Άνοιγμα βάρδιας και POS/);
   assert.match(shiftOpenCss,/shift-receipt-declaration[\s\S]*#dc2626/);
 });
+
+test("uncounted administrative closure requires review and retains unknown totals",()=>{
+  const result=buildKatShiftReconciliation({sessions:[{...session("pending","POS-1"),closeReconciliationStatus:"AWAITING_COUNT"}]});
+  assert.equal(result.status,"NEEDS_REVIEW");
+  assert.deepEqual(result.issues,[{code:"SHIFT_AWAITING_COUNT",sessionId:"pending",terminalPos:"POS-1"}]);
+  assert.equal(result.terminals[0].eftposTotal,null);
+  assert.equal(result.terminals[0].variance,null);
+});

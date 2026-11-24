@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
-import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../src/mydata-xml.js";
+import {invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../src/mydata-xml.js";
 
 const route=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8");
 const ui=await readFile(new URL("../../client/src/components/commerce/InvoiceInboxPanel.jsx",import.meta.url),"utf8");
@@ -49,4 +49,21 @@ test("wrapped errors and empty results remain distinct",()=>{
   assert.equal(myDataError(unwrapMyDataXml(envelope("<Response><error><message>Invalid credentials</message></error></Response>"))),"Invalid credentials");
   assert.deepEqual(invoiceNodes(unwrapMyDataXml(envelope("<RequestedDoc></RequestedDoc>"))),[]);
   assert.throws(()=>unwrapMyDataXml(envelope("not XML")),/περιτύλιγμα/);
+});
+
+test("recipient branch reads the counterpart only and preserves a declared zero",()=>{
+  const source=counterpart=>`<RequestedDoc><m:invoice><m:issuer><m:branch>91</m:branch></m:issuer>${counterpart}</m:invoice></RequestedDoc>`;
+  for(const [branch,expected] of [["0",0],["  6  ",6],["003",3]]){
+    const xml=unwrapMyDataXml(envelope(source(`<m:counterpart xmlns:m="urn:fixture"><m:vatNumber>088888888</m:vatNumber><m:branch>${branch}</m:branch></m:counterpart>`)));
+    assert.equal(invoiceRecipientBranch(invoiceNodes(xml)[0]),expected);
+  }
+  assert.equal(invoiceRecipientBranch(invoiceNodes(source(""))[0]),null);
+  assert.equal(invoiceRecipientBranch(invoiceNodes(source("<counterpart><vatNumber>088888888</vatNumber></counterpart>"))[0]),null);
+});
+
+test("invalid recipient branches cannot alias a valid store branch",()=>{
+  for(const branch of [""," ","-1","1.0","0.00","1,2","0e0","0x0","0foo","９","9007199254740992"]){
+    assert.equal(invoiceRecipientBranch(`<counterpart><branch>${branch}</branch></counterpart>`),null,JSON.stringify(branch));
+  }
+  assert.equal(invoiceRecipientBranch("<counterpart><branch/></counterpart>"),null);
 });

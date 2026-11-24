@@ -7,12 +7,23 @@ import {lifecycleContext} from "./store-lifecycle-context.js";
 
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
 const cashRuleSchema=z.object({mode:z.enum(["FULL","DIFFERENCE_ONLY","POS_EFTPOS_ONLY"]),deliveryTerminalPattern:z.string().min(1).max(120),carryOverEnabled:z.boolean(),posEftposEnabled:z.boolean()}).strict();
+const sendTimeSchema=z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
+const deliveryScheduleSchema=z.object({enabled:z.boolean(),sendTime:sendTimeSchema.optional()}).strict();
 export const automaticReportConfigurationSchema=z.object({
   dayStartHour:z.number().int().min(5).max(12),secondShiftStartHour:z.number().int().min(6).max(22),thirdShiftStartHour:z.number().int().min(7).max(23).nullable(),
   terminals:z.array(z.object({terminalPos:z.string().trim().min(1).max(120),requiredSlots:z.array(z.union([z.literal(1),z.literal(2),z.literal(3)])).min(1).max(3)}).strict()).min(1).max(100),
   cashRule:cashRuleSchema,
   reviewedReconciliation:z.boolean().optional(),
-  automaticPaperReading:z.boolean().optional()
+  automaticPaperReading:z.boolean().optional(),
+  dailySendTime:sendTimeSchema.optional(),
+  deliverySchedules:z.object({
+    cashDaily:deliveryScheduleSchema.optional(),
+    cashWeekly:deliveryScheduleSchema.optional(),
+    cashMonthly:deliveryScheduleSchema.optional(),
+    supplierMonthly:deliveryScheduleSchema.optional(),
+    promotionResult:deliveryScheduleSchema.optional(),
+    inventoryResult:deliveryScheduleSchema.optional()
+  }).strict().optional()
 }).strict().superRefine((config,ctx)=>{
   if(config.automaticPaperReading===true&&config.reviewedReconciliation!==true)ctx.addIssue({code:"custom",path:["automaticPaperReading"],message:"Η αυτόματη ανάγνωση απαιτεί ελεγμένη αναφορά."});
   try{dailyCashReportReadiness([],{...config,companyId:"validation",storeId:"validation",day:"2026-01-01"},new Date("2026-01-02T12:00:00Z"))}catch(error){ctx.addIssue({code:"custom",message:error.message})}

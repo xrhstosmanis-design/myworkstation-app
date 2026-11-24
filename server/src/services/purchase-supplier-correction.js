@@ -10,8 +10,8 @@ const hash=value=>crypto.createHash("sha256").update(JSON.stringify(value)).dige
 const number=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const scopeSchema=z.object({storeId:z.string().min(1).max(160),supplierId:z.string().min(1).max(160)}).strict();
 export const supplierCorrectionSchema=scopeSchema.extend({version:z.string().regex(/^[a-f0-9]{64}$/),reason:z.string().trim().min(5).max(500),confirmOriginal:z.literal(true),confirmPaymentSupplier:z.boolean().optional()}).strict();
-export function requireSupplierCorrectionActor(actor,storeId){
- if(!actor?.id||!actor.companyId||actor.tokenType==="STORE_OPERATOR"||!roles.has(actor.role))throw fail("Η διόρθωση προμηθευτή επιτρέπεται μόνο σε εξουσιοδοτημένη διαχείριση BackOffice.",403);
+export function requireSupplierCorrectionActor(actor,storeId,verify){
+ if(!actor?.id||!actor.companyId||actor.tokenType==="STORE_OPERATOR"||(actor.staffAccess===true?typeof verify!=="function":!roles.has(actor.role)))throw fail("Η διόρθωση προμηθευτή επιτρέπεται μόνο σε εξουσιοδοτημένη διαχείριση BackOffice.",403);
  if(!storeId||actor.storeId&&String(actor.storeId)!==storeId)throw fail("Επίλεξε το επιτρεπόμενο κατάστημα της αγοράς.",403);
 }
 // Fence the older metadata form against an in-flight reviewed correction.
@@ -68,14 +68,14 @@ async function load(tx,actor,orderId,{storeId,supplierId}){
  return {snapshot,version:hash(snapshot)};
 }
 function publicPreview(data){const s=data.snapshot;return {version:data.version,orderId:s.order.id,storeId:s.order.storeId,invoiceNumber:s.order.invoiceNumber,status:s.order.status,beforeSupplier:s.beforeSupplier,targetSupplier:s.target,totalGross:Number(s.documents.find(d=>d.id===s.order.sourceDocumentId).totalGross),payment:s.payment?{id:s.payment.id,amount:Number(s.payment.amount),occurredAt:s.payment.occurredAt}:null,stockChanged:false,moneyChanged:false}}
-export async function previewPurchaseSupplierCorrection(db,actor,orderId,input){
- const body=scopeSchema.parse(input);requireSupplierCorrectionActor(actor,body.storeId);
- return db.$transaction(async tx=>{await lockInvoiceStore(tx,actor.companyId,body.storeId);const data=await load(tx,actor,orderId,body);if(data.snapshot.order.supplierId===body.supplierId)throw fail("Ο προμηθευτής είναι ήδη επιλεγμένος.",400);return publicPreview(data)},{timeout:30000});
+export async function previewPurchaseSupplierCorrection(db,actor,orderId,input,{verify}={}){
+ const body=scopeSchema.parse(input);requireSupplierCorrectionActor(actor,body.storeId,verify);
+ return db.$transaction(async tx=>{if(actor.staffAccess===true)await verify(tx,body.storeId);await lockInvoiceStore(tx,actor.companyId,body.storeId);const data=await load(tx,actor,orderId,body);if(data.snapshot.order.supplierId===body.supplierId)throw fail("Ο προμηθευτής είναι ήδη επιλεγμένος.",400);return publicPreview(data)},{timeout:30000});
 }
-export async function correctPurchaseSupplier(db,actor,orderId,input){
- const body=supplierCorrectionSchema.parse(input);requireSupplierCorrectionActor(actor,body.storeId);
+export async function correctPurchaseSupplier(db,actor,orderId,input,{verify}={}){
+ const body=supplierCorrectionSchema.parse(input);requireSupplierCorrectionActor(actor,body.storeId,verify);
  return db.$transaction(async tx=>{
-  await lockInvoiceStore(tx,actor.companyId,body.storeId);
+  if(actor.staffAccess===true)await verify(tx,body.storeId);await lockInvoiceStore(tx,actor.companyId,body.storeId);
   const data=await load(tx,actor,orderId,body),s=data.snapshot;
   const prior=await raw(tx,`SELECT "details" FROM "StoreOperatorAudit" WHERE "companyId"=$1 AND "storeId"=$2 AND "eventType"='PURCHASE_SUPPLIER_CORRECTED' AND "details"->>'orderId'=$3 AND "details"->>'version'=$4 LIMIT 1`,actor.companyId,body.storeId,orderId,body.version);
   if(prior[0]){const d=prior[0].details;if(d.supplierId!==body.supplierId||d.afterVersion!==data.version)throw fail("Η προηγούμενη διόρθωση ολοκληρώθηκε αλλά η αγορά άλλαξε ξανά. Ανανέωσε.");return {...d.result,idempotent:true}}

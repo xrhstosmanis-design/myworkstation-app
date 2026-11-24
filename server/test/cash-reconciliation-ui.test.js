@@ -59,7 +59,19 @@ test('actual Platform parent mounts the real review panel for an explicitly sele
  globalThis.fetch=async(path,options={})=>{calls.push({path,...options});assert(!options.method||options.method==='GET');const url=new URL(path,'https://isolated.invalid');let data;
   if(url.pathname==='/api/platform/overview')data={stats:{},companies:[{id:'co',name:'Company',active:true,plan:'BASIC',stores:[{id:'A',name:'Store A',active:true},{id:'B',name:'Store B',active:true}]}]};
   else if(url.pathname==='/api/platform/owners')data={owners:[]};else if(url.pathname==='/api/platform/backup-monitoring')data={configured:false};
-  else if(url.pathname==='/api/platform/cash-control/daily')data={...Object.fromEntries(url.searchParams),storeIds:url.searchParams.get("storeIds")?.split(",")||[],totals:{shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0},rows:[],stores:[]};
+  else if(url.pathname==='/api/platform/cash-control/daily'){
+   const storeIds=url.searchParams.get("storeIds")?.split(",")||[];
+   const totals={shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0};
+   data={...Object.fromEntries(url.searchParams),storeIds,totals,rows:[],stores:[]};
+   if(storeIds.join(',')==='B'||url.searchParams.get('storeId')==='B'){
+    const pending={...totals,shifts:1,awaitingCount:1,shortage:null,surplus:null,variance:null,cardVariance:null};
+    data={...data,totals:pending,stores:[{...pending,storeId:'B',storeName:'Store B'}],rows:[{
+     storeId:'B',sessionId:'uncounted',openedByName:'Pending operator',openedAt:'2026-10-22T08:00:00Z',closedAt:'2026-10-22T12:00:00Z',
+     closeReconciliationStatus:'AWAITING_COUNT',variance:null,cardVariance:null,
+     investigation:{conclusion:'AWAITING_COUNT',reviewBalance:{status:'AWAITING_COUNT'}}
+    }]};
+   }
+  }
   else if(url.pathname.startsWith('/api/cash-reconciliation/stores/'))data=report(url.pathname.split('/').at(-1),{from:url.searchParams.get('from'),to:url.searchParams.get('to')});else throw Error('Unexpected route '+path);
   return {ok:true,status:200,text:async()=>JSON.stringify(data)};
  };
@@ -68,7 +80,7 @@ test('actual Platform parent mounts the real review panel for an explicitly sele
   await act(async()=>root.render(React.createElement(Component)));await click(button('Οικονομικά & Έλεγχοι'));await click(button('Ταμεία'));assert.equal(document.querySelector('.cash-reconciliation-panel'),null);
   await select('A');assert.ok(button('Έλεγχος με επανυπολογισμούς'));assert(!calls.some(c=>c.path.startsWith('/api/cash-reconciliation')));
   await click(button('Έλεγχος με επανυπολογισμούς'));assert.match(calls.at(-1).path,/^\/api\/cash-reconciliation\/stores\/A\?/);assert.equal(calls.at(-1).headers.Authorization,'Bearer synthetic');
-  await select('B');assert.doesNotMatch(document.body.textContent,/SERVER REPORT A/);await click(button('Έλεγχος με επανυπολογισμούς'));assert.match(calls.at(-1).path,/^\/api\/cash-reconciliation\/stores\/B\?/);
+  await select('B');await click(button('Αναζήτηση'));assert.match(document.body.textContent,/Εκκρεμεί φυσική καταμέτρηση/);assert.equal(document.querySelector('tbody tr td:nth-child(4)').textContent,'—');assert.doesNotMatch(document.body.textContent,/SERVER REPORT A/);await click(button('Έλεγχος με επανυπολογισμούς'));assert.match(calls.at(-1).path,/^\/api\/cash-reconciliation\/stores\/B\?/);
  }finally{await m.cleanup();}
 });
 test('actual Backoffice parent uses the applied report period and current store for the real review panel',async()=>{

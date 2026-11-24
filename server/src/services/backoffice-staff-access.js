@@ -63,7 +63,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(user?.tokenType!=='BACKOFFICE_USER'||user.staffAccess!==true)return true;
   if(req.get?.('x-backoffice-company-id')!==undefined)return enforceStaffCompanyRequest(db,req);
   await liveStaff(db,user);
-  const path=String(req.originalUrl||'').split('?')[0],capability=staffRequestCapability(req.method,path,req.body||{});
+  const path=String(req.originalUrl||'').split('?')[0],capability=staffRequestCapability(req.method,path,req.body||{},req.query||{});
   if(!capability)throw staffError();
   req.user={...user,staffAccess:true};
   res.setHeader('Cache-Control','private, no-store');
@@ -101,9 +101,9 @@ export async function enforceBackofficeStaff(db,req,res){
     const rows=await db.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${order[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
-  const close=path.match(/^\/api\/cash\/sessions\/([^/]+)\/close$/);
+  const close=path.match(/^\/api\/(?:cash\/sessions\/([^/]+)\/close|owner-shifts\/([^/]+)\/force-close)$/);
   if(close){
-    const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${close[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
+    const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${close[1]??close[2]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
   const paymentContext=path.match(/^\/api\/backoffice-staff\/payments\/stores\/([^/]+)$/);
@@ -148,7 +148,8 @@ function modulesForCapability(capability){
  if(capability==='unsold-products.read')return ['SALES_ANALYTICS'];
  if(['operator-profiles.manage-permissions','operator-profiles.manage-pos-access','operator-profiles.create-employee','operator-profiles.reset-pin','operator-profiles.copy-permissions'].includes(capability))return ['STORE_MODE'];
  if(capability==='payments.import-kiosk')return ['CASH_CONTROL'];
- if(capability==='invoice-ai.photo-preview')return ['AI_READER','DOCUMENTS','INVENTORY'];
+ if(['invoices.upload-original','invoices.fetch-original','invoices.sync-mydata'].includes(capability))return ['DOCUMENTS'];
+ if(['invoice-ai.photo-preview','invoices.mydata-prefill'].includes(capability))return ['AI_READER','DOCUMENTS','INVENTORY'];
  if(capability==='sales-journal.read')return ['STORE_MODE'];
   return capability==='chat.read'?['STORE_CHAT']:capability==='radio.read'?['STORE_MODE','ONLINE_RADIO']:['approvals.read','approvals.expense-confirm','approvals.supplier-recovery'].includes(capability)?['STORE_MODE','CASH_CONTROL']:capability==='wholesale.read'?['WHOLESALE_B2B']:capability==='video.read'?['VIDEO_EVENTS']:capability==='printers.read'?['STORE_MODE']:capability==='stock-transfers.read'?['STORE_MODE']:capability==='invoice-ai.read'?['AI_READER']:capability==='online-orders.read'?['ONLINE_ORDERING']:capability==='table-service.read'?['STORE_MODE','TABLE_SERVICE']:capability==='baking.read'?['STORE_MODE']:capability==='pending.read'?['PENDING_CENTER']:['employees.read','employees.edit','schedule.read','schedule.create','schedule.edit','schedule.preview','schedule.approve','schedule.publish','schedule.approve-exception','attendance.read','attendance.clock','attendance.correct','attendance.approve-review','attendance.approve-overtime','leaves.read','leaves.create','leaves.approve','leaves.reject','leaves.cancel','payroll.read','workforce-roles.read','workforce-rules.read','workforce-rules.manage','shift-templates.read','shift-templates.manage','workforce-audit.read'].includes(capability)?[]:capability==='handover.read'?['SHIFT_HANDOVER']:capability==='analytics.read'?['SALES_ANALYTICS','STORE_MODE','CASH_CONTROL']:capability==='order-suggestions.read'?['ORDER_SUGGESTIONS']:capability==='low-value-products.read'?['LOW_VALUE_PRODUCTS']:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability.startsWith('shifts.')?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
 }
