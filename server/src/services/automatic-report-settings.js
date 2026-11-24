@@ -11,7 +11,11 @@ const sendTimeSchema=z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
 const deliveryScheduleSchema=z.object({enabled:z.boolean(),sendTime:sendTimeSchema.optional()}).strict();
 export const automaticReportConfigurationSchema=z.object({
   dayStartHour:z.number().int().min(5).max(12),secondShiftStartHour:z.number().int().min(6).max(22),thirdShiftStartHour:z.number().int().min(7).max(23).nullable(),
-  terminals:z.array(z.object({terminalPos:z.string().trim().min(1).max(120),requiredSlots:z.array(z.union([z.literal(1),z.literal(2),z.literal(3)])).min(1).max(3)}).strict()).min(1).max(100),
+  terminals:z.array(z.object({
+    terminalPos:z.string().trim().min(1).max(120),
+    requiredSlots:z.array(z.union([z.literal(1),z.literal(2),z.literal(3)])).min(1).max(3),
+    sundayFirstShiftOnly:z.boolean().optional()
+  }).strict()).min(1).max(100),
   cashRule:cashRuleSchema,
   reviewedReconciliation:z.boolean().optional(),
   automaticPaperReading:z.boolean().optional(),
