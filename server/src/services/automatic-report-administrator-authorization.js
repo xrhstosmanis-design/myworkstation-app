@@ -41,8 +41,8 @@ export async function authorizeAdministratorRecipient({tx,scope:s,actor,records,
  if(actor?.role!=='SUPER_ADMIN'||actor.id!==s.actorId)fail('REPORT_SUPER_ADMIN_REQUIRED',403);
  if(/[,;\r\n]/.test(input.email)||!validFrequencies(input.allowedFrequencies))fail('REPORT_RECIPIENT_INVALID',400);
  const allowed=[...input.allowedFrequencies].sort();
- if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)||reportType==='SUPPLIER_COMPARISON'&&!same(allowed,['MONTHLY'])||['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)&&!same(allowed,['EVENT'])||reportType==='CASH'&&allowed.includes('EVENT'))fail('REPORT_FREQUENCIES_INVALID',400);
- const event=['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType);
+ if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT','INVENTORY_RESULT','MONTHLY_INVENTORY_SUMMARY'].includes(reportType)||['SUPPLIER_COMPARISON','MONTHLY_INVENTORY_SUMMARY'].includes(reportType)&&!same(allowed,['MONTHLY'])||['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)&&!same(allowed,['EVENT'])||reportType==='CASH'&&allowed.includes('EVENT'))fail('REPORT_FREQUENCIES_INVALID',400);
+ const event=['PROMOTION_RESULT','INVENTORY_RESULT','MONTHLY_INVENTORY_SUMMARY'].includes(reportType);
  const consentTable=Prisma.raw(event?'"AutomaticReportEventConsent"':reportType==='CASH'?'"AutomaticReportRecipientConsent"':'"AutomaticReportSupplierComparisonConsent"');
  expect(records.grant?.revision,input.expectedGrantRevision);expect(records.policy?.revision,input.expectedPolicyRevision);
  if(!activation?.valid||!iso(activation.issuedAt)||!iso(activation.notBefore)||now<new Date(activation.issuedAt))fail('REPORT_ACTIVATION_REQUIRED');

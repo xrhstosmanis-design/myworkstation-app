@@ -4,12 +4,12 @@ import bcrypt from "bcryptjs";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireStaffAction,staffError} from "../services/backoffice-staff-access.js";
-import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from "../../../shared/pos-operator-permissions.mjs";
+import {POS_PERMISSIONS} from "../../../shared/pos-operator-permissions.mjs";
+import {posPermissionKeys as operatorPermissionKeys} from "../services/staff-pos-permission-ceiling.js";
 
 const router=Router();
 const delegatedOperatorPermission = "operator-profiles.manage-permissions";
 const delegatedPosAccess = "operator-profiles.manage-pos-access";
-const operatorPermissionKeys = [...POS_PERMISSIONS,...POS_MENU_PERMISSIONS].map(([key])=>key);
 const isMenuPermission = key=>key==="orders";
 const permissionEnabled = (profile,key)=>isMenuPermission(key)?profile?.backofficeMenu?.orders===true:Boolean(profile?.permissions?.[key]);
 const permissionChange = z.object({
@@ -27,6 +27,13 @@ function delegatedPermissionsRoute(handler,capability=delegatedOperatorPermissio
       next(error);
     }
   };
+}
+
+function requireCeilingAllows(grant,keys){
+  const ceiling=grant?.posPermissionCeiling;
+  if(ceiling!==null&&(!Array.isArray(ceiling)||keys.some(key=>!ceiling.includes(key)))){
+    throw staffError(403,"STAFF_POS_PERMISSION_CEILING","Μία ή περισσότερες αλλαγές ξεπερνούν τα δικαιώματα που όρισε ο Ιδιοκτήτης.");
+  }
 }
 
 async function lockEmployeeOperator(tx,{companyId,storeId,employeeId,actorId}){
@@ -50,8 +57,9 @@ router.get("/stores/:storeId/employee-permissions",delegatedPermissionsRoute(asy
     WHERE c."companyId"=${companyId} AND c."storeId"=${storeId} AND c."role"='EMPLOYEE'
       AND c."active"=true AND e."active"=true AND e."userId" IS DISTINCT FROM ${actorId}
     ORDER BY c."displayName",c."employeeId"`;
-  await requireStaffAction(prisma,req,storeId,delegatedOperatorPermission);
-  res.json({companyId,storeId,items:rows.map(row=>({
+  const grant=await requireStaffAction(prisma,req,storeId,delegatedOperatorPermission);
+  const editableKeys=grant.posPermissionCeiling===null?operatorPermissionKeys:grant.posPermissionCeiling;
+  res.json({companyId,storeId,editableKeys,items:rows.map(row=>({
     employeeId:row.employeeId,displayName:row.displayName,posAccess:row.posAccess!==false,
     permissions:Object.fromEntries(operatorPermissionKeys.map(key=>[key,permissionEnabled(row,key)]))
   }))});
@@ -61,7 +69,7 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId",delegatedPermis
   const {companyId,id:actorId}=req.user,{storeId,employeeId}=req.params;
   const {key,enabled,expected}=permissionChange.parse(req.body);
   await prisma.$transaction(async tx=>{
-    await requireStaffAction(tx,req,storeId,delegatedOperatorPermission);
+    const grant=await requireStaffAction(tx,req,storeId,delegatedOperatorPermission);
     const credential=await lockEmployeeOperator(tx,{companyId,storeId,employeeId,actorId});
     const [profile]=await tx.$queryRaw`
       SELECT "permissions","backofficeMenu" FROM "StoreOperatorProfile"
@@ -69,6 +77,7 @@ router.patch("/stores/:storeId/employee-permissions/:employeeId",delegatedPermis
     const before=permissionEnabled(profile,key);
     if(before===enabled)return;
     if(before!==expected)throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Το δικαίωμα άλλαξε. Ανανέωσε τη λίστα.");
+    requireCeilingAllows(grant,[key]);
     const menuPermission=isMenuPermission(key);
     const changed=profile?await tx.$executeRaw`
       UPDATE "StoreOperatorProfile" SET
@@ -144,7 +153,7 @@ router.post("/stores/:storeId/employee-permissions/:employeeId/copy-permissions"
   const {sourceEmployeeId,expectedSource,expectedTarget}=copyBody.parse(req.body);
   if(sourceEmployeeId===employeeId)throw staffError(400,"STAFF_OPERATOR_COPY_SAME_EMPLOYEE","Επίλεξε δύο διαφορετικούς χειριστές.");
   const copied=await prisma.$transaction(async tx=>{
-    await requireStaffAction(tx,req,storeId,delegatedCopy);
+    const grant=await requireStaffAction(tx,req,storeId,delegatedCopy);
     const credentialByEmployee=new Map();
     for(const id of [employeeId,sourceEmployeeId].sort()){
       credentialByEmployee.set(id,await lockEmployeeOperator(tx,{companyId,storeId,employeeId:id,actorId}));
@@ -155,18 +164,21 @@ router.post("/stores/:storeId/employee-permissions/:employeeId/copy-permissions"
       ORDER BY "employeeId" FOR UPDATE`;
     const source=operatorPermissionSnapshot(profiles.find(item=>item.employeeId===sourceEmployeeId));
     const target=operatorPermissionSnapshot(profiles.find(item=>item.employeeId===employeeId));
-    if(operatorPermissionKeys.every(key=>source[key]===target[key]))return source;
+    const changedKeys=operatorPermissionKeys.filter(key=>source[key]!==target[key]);
+    if(!changedKeys.length)return source;
     if(operatorPermissionKeys.some(key=>source[key]!==expectedSource[key]||target[key]!==expectedTarget[key])){
       throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Τα δικαιώματα άλλαξαν. Ανανέωσε τη λίστα.");
     }
-    const permissions=JSON.stringify(Object.fromEntries(POS_PERMISSIONS.map(([key])=>[key,source[key]])));
+    requireCeilingAllows(grant,changedKeys);
+    const permissions=JSON.stringify(Object.fromEntries(POS_PERMISSIONS.map(([key])=>key).filter(key=>changedKeys.includes(key)).map(key=>[key,source[key]])));
+    const copyOrders=changedKeys.includes("orders");
     const changed=await tx.$executeRaw`
       INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","permissions","backofficeMenu","createdBy")
       VALUES (${crypto.randomUUID()},${companyId},${storeId},${employeeId},CAST(${permissions} AS jsonb),
-        jsonb_build_object('orders',${source.orders}::boolean),${actorId})
+        CASE WHEN ${copyOrders} THEN jsonb_build_object('orders',${source.orders}::boolean) ELSE '{}'::jsonb END,${actorId})
       ON CONFLICT ("storeId","employeeId") DO UPDATE SET
         "permissions"="StoreOperatorProfile"."permissions" || EXCLUDED."permissions",
-        "backofficeMenu"=jsonb_set("StoreOperatorProfile"."backofficeMenu",'{orders}',EXCLUDED."backofficeMenu"->'orders'),
+        "backofficeMenu"=CASE WHEN ${copyOrders} THEN jsonb_set("StoreOperatorProfile"."backofficeMenu",'{orders}',EXCLUDED."backofficeMenu"->'orders') ELSE "StoreOperatorProfile"."backofficeMenu" END,
         "updatedAt"=NOW()
       WHERE "StoreOperatorProfile"."companyId"=${companyId}`;
     if(changed!==1)throw staffError(409,"STAFF_OPERATOR_PERMISSION_CHANGED","Τα δικαιώματα άλλαξαν. Ανανέωσε τη λίστα.");

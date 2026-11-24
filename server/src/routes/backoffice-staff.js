@@ -16,6 +16,7 @@ import {inventoryListCursor,personalInventoryListPage} from '../services/backoff
 import {Router} from 'express';
 import {staffProfiles} from '../../../shared/backoffice-staff.mjs';
 import {liveStaff,requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
+import {decodeStoredStaffCapabilities} from '../services/staff-pos-permission-ceiling.js';
 import {authorizeStaffAdmin,createStaffAccount,updateStaffAccount,verifyStaffLogin} from '../services/backoffice-staff-accounts.js';
 import {periodSchema} from '../services/cash-reconciliation-contract.js';
 import {createCashReconciliationRepository} from '../services/cash-reconciliation-repository.js';
@@ -141,20 +142,25 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     const after=await liveStaff(db,req.user);
     if(after.revision!==account.revision)throw staffError();
     if(companyInstalled&&!await isBackofficeCompanyInstalled(db))throw staffError(503,'STAFF_COMPANY_UNAVAILABLE');
-    res.json({userId:account.userId,companyId:account.companyId,username:account.username,fullName:account.fullName,stores,...(companyInstalled?{revision:account.revision,companyAuthority:companyAuthorityDescription(),companyCapabilities}:{})});
+    res.json({userId:account.userId,companyId:account.companyId,username:account.username,fullName:account.fullName,stores:stores.map(store=>({...store,capabilities:decodeStoredStaffCapabilities(store.capabilities).capabilities})),...(companyInstalled?{revision:account.revision,companyAuthority:companyAuthorityDescription(),companyCapabilities}:{})});
   }catch(error){failure(res,error)}});
   router.get('/admin',async(req,res)=>{try{
     const actor=await authorizeStaffAdmin(db,req.user);
     const companyInstalled=actor.role==='OWNER'&&await isBackofficeCompanyInstalled(db);
     const accounts=await db.$queryRaw`SELECT a."userId" AS "id",a."username",a."active",a."revision",u."fullName" FROM "BackofficeStaffAccount" a JOIN "User" u ON u."id"=a."userId" AND u."companyId"=a."companyId" WHERE a."companyId"=${req.user.companyId} ORDER BY u."fullName" LIMIT 501`;
     const grants=await db.$queryRaw`SELECT "userId","storeId","profile","capabilities","active","revision" FROM "BackofficeStaffGrant" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "userId","storeId" LIMIT 50001`;
+    const canEditPosPermissionCeiling=actor.role==='OWNER';
+    const visibleGrants=grants.map(grant=>{
+      const {capabilities,posPermissionCeiling}=decodeStoredStaffCapabilities(grant.capabilities);
+      return {...grant,capabilities,...(canEditPosPermissionCeiling?{posPermissionCeiling}:{})};
+    });
     const companyPolicies=companyInstalled?await db.$queryRaw`SELECT "userId","companyCapabilities","revision" FROM "BackofficeStaffAccount" WHERE "companyId"=${req.user.companyId} ORDER BY "userId" LIMIT 501`:[];
     if(accounts.length>500||grants.length>50000)throw staffError(503,'STAFF_LIMIT');
     const stores=await db.store.findMany({where:{companyId:req.user.companyId,active:true},select:{id:true,name:true},orderBy:{name:'asc'},take:101});
     if(stores.length>100)throw staffError(503,'STAFF_LIMIT');
     await authorizeStaffAdmin(db,req.user);
     if(companyInstalled&&(!await isBackofficeCompanyInstalled(db)||companyPolicies.length!==accounts.length||accounts.some(a=>!companyPolicies.some(p=>p.userId===a.id&&p.revision===a.revision))))throw staffError(409,'STAFF_STALE');
-    res.json({companyId:req.user.companyId,accounts:accounts.map(a=>({...a,grants:grants.filter(g=>g.userId===a.id),...(companyInstalled?{companyCapabilities:companyPolicies.find(p=>p.userId===a.id).companyCapabilities}:{})})),stores,profiles:staffProfiles,...(companyInstalled?{companyAuthority:companyAuthorityDescription()}:{})});
+    res.json({companyId:req.user.companyId,canEditPosPermissionCeiling,accounts:accounts.map(a=>({...a,grants:visibleGrants.filter(g=>g.userId===a.id),...(companyInstalled?{companyCapabilities:companyPolicies.find(p=>p.userId===a.id).companyCapabilities}:{})})),stores,profiles:staffProfiles,...(companyInstalled?{companyAuthority:companyAuthorityDescription()}:{})});
   }catch(error){failure(res,error)}});
   router.post('/admin/accounts',async(req,res)=>{try{res.status(201).json(await createStaffAccount(db,req.user,req.body))}catch(error){failure(res,error)}});
   router.put('/admin/accounts/:userId',async(req,res)=>{try{res.json(await updateStaffAccount(db,req.user,req.params.userId,req.body))}catch(error){failure(res,error)}});

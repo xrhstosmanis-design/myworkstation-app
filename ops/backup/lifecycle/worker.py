@@ -24,7 +24,7 @@ def selected_manifest_file(env=None):
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
     if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_BASE_V1'):
         filename = 'manifest.json'
-    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'):
+    elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5', 'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'):
         filename = 'monthly-inventory-capture-manifest.proposed.json'
     else:
         raise ValueError('Invalid store lifecycle profile')
@@ -41,7 +41,7 @@ def selected_manifest_document(env=None):
     if profile in ('BACKOFFICE_COMPANY_BASE_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1'):
         from backoffice_company_profile import company_manifest
         return company_manifest(document, 'BASE' if profile == 'BACKOFFICE_COMPANY_BASE_V1' else 'CAPTURE')
-    if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'):
+    if profile not in ('AUTOMATIC_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'):
         return document
     extension_file = pathlib.Path(__file__).resolve().parent / 'automatic-report-consent-extension.proposed.json'
     extension = json.loads(extension_file.read_text())
@@ -60,7 +60,7 @@ def selected_manifest_document(env=None):
         document['reviewedColumns'].extend(name + '.' + column for column in ('recipientId', 'consentedBy', 'revokedBy', 'updatedBy'))
     document['id'] += '__AUTOMATIC_EVENT_REPORTS_V1'
     document['valueGuards'].append({'table': 'AutomaticReportEventConsent', 'column': 'reportType', 'allowed': ['PROMOTION_RESULT', 'INVENTORY_RESULT']})
-    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'):
+    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'):
         operational = json.loads((pathlib.Path(__file__).resolve().parent / 'report-operational-compatibility.proposed.json').read_text())
         document['id'] += '__REPORTS_ONLY_OPERATIONAL_V1'
         document['executionDisabled'] = True
@@ -73,14 +73,14 @@ def selected_manifest_document(env=None):
             document['knownColumns'][table['name']] = table['columns']
         stock = next(table for table in document['tables'] if table['name'] == 'StoreProduct')
         stock['existingTriggers'] = stock.get('existingTriggers', []) + [operational['packageTrigger']]
-    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'):
+    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'):
         columns = json.loads((pathlib.Path(__file__).resolve().parent / 'report-column-compatibility.proposed.json').read_text())
         document['id'] += '__REVIEWED_REPORT_COLUMNS_V1'
         document['reviewedColumnExtensions'] = [table['name'] + '.' + column[0] for table in columns['tables'] for column in table['columns']]
         for table in columns['tables']:
             document['knownColumns'][table['name']].extend(table['columns'])
         document['reviewedColumns'].extend(columns['reviewedColumns'])
-    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'):
+    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'):
         chat = json.loads((pathlib.Path(__file__).resolve().parent / 'report-chat-compatibility.proposed.json').read_text())
         document['id'] += '__REVIEWED_REPORT_CHAT_V1'
         document['preservedReportChatTables'] = [table['name'] for table in chat['tables']]
@@ -91,7 +91,7 @@ def selected_manifest_document(env=None):
                 raise ValueError('Report chat table already declared')
             document['knownTables'].append(table['name'])
             document['knownColumns'][table['name']] = table['columns']
-    if profile == 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4':
+    if profile in ('MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'):
         definition_bytes = (pathlib.Path(__file__).resolve().parent / 'report-security-profile.proposed.json').read_bytes()
         definition_hash = '467ebede27b7b9b8e0aefddfb274b5c32e89a0a056f65eb4e7443c42f651a074'
         source_hash = '54ceb10a4383faf7367d07bd3b8ad1c066b85c025a23e937c610d1f473423828'
@@ -111,6 +111,12 @@ def selected_manifest_document(env=None):
         document['knownColumns'][name] = definition['columns']
         document['reviewedColumns'].extend(definition['reviewedColumns'])
         document['reportSecurityCompatibility'] = {'format': definition['format'], 'definitionSha256': definition_hash}
+    if profile == 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5':
+        guard = next(guard for guard in document['valueGuards']
+                     if guard['table'] == 'AutomaticReportEventConsent' and guard['column'] == 'reportType')
+        guard['allowed'].append('MONTHLY_INVENTORY_SUMMARY')
+        document['id'] += '__MONTHLY_INVENTORY_SUMMARY_V1'
+
     return document
 
 

@@ -1,4 +1,7 @@
-import {automaticReportEventLifecycleReady} from './automatic-report-event-schema.js';
+import {readSettledMonthlySnapshotForReport} from './monthly-inventory-snapshot-repository.js';
+import {buildMonthlyInventorySummaryPayload} from './monthly-inventory-summary-email.js';
+import {monthlyInventorySnapshotPeriod} from './monthly-inventory-snapshot-period.js';
+import {automaticReportEventLifecycleReady,monthlyInventorySummaryLifecycleReady} from './automatic-report-event-schema.js';
 import {readInventoryResultEvent,buildAutomaticInventoryPayload} from './inventory-result-email.js';
 import {readPromotionResultEvent,buildAutomaticPromotionPayload} from './promotion-result-email.js';
 import {readDailyTurnover,readShiftTurnover} from './daily-turnover-report.js';
@@ -43,15 +46,16 @@ export function includesScheduledMonthlyTurnover({frequency,storeId},env){
 }
 export function createAutomaticReportEligibilityReader({activationProvider,persistence,reportType='CASH',env=process.env}){
  if(typeof activationProvider!=='function'||!persistence)throw new TypeError('Trusted dispatch dependencies required');
- if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType))throw new TypeError('Unsupported report type');
+ if(!['CASH','SUPPLIER_COMPARISON','PROMOTION_RESULT','INVENTORY_RESULT','MONTHLY_INVENTORY_SUMMARY'].includes(reportType))throw new TypeError('Unsupported report type');
  const supplier=reportType==='SUPPLIER_COMPARISON',promotion=reportType==='PROMOTION_RESULT',inventory=reportType==='INVENTORY_RESULT';
+ const monthlyInventory=reportType==='MONTHLY_INVENTORY_SUMMARY';
  const eventReport=promotion||inventory;
- const nonCash=supplier||eventReport;
+ const nonCash=supplier||monthlyInventory||eventReport;
  const moduleKey=nonCash?'INVENTORY':'CASH_CONTROL';
  async function context(tx,raw,now){
   const scope=automaticReportScopeInput(raw);now=iso(now);
-  if(eventReport&&!automaticReportEventLifecycleReady(env))hold();
-  if(supplier&&scope.frequency!=='MONTHLY'||eventReport&&scope.frequency!=='EVENT'||!eventReport&&scope.frequency==='EVENT')hold();
+  if(eventReport&&!automaticReportEventLifecycleReady(env)||monthlyInventory&&!monthlyInventorySummaryLifecycleReady(env))hold();
+  if((supplier||monthlyInventory)&&scope.frequency!=='MONTHLY'||eventReport&&scope.frequency!=='EVENT'||!eventReport&&scope.frequency==='EVENT')hold();
   const control=activationProvider();if(!control?.valid||!control.enabled)hold();
   const lifecycle=await lockAutomaticReportBoundary(tx,scope);
   const [company]=await tx.$queryRaw`SELECT "id","active","licenseStatus","subscriptionEndsAt" FROM "Company" WHERE "id"=${scope.companyId} FOR SHARE NOWAIT`;
@@ -76,17 +80,30 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   const {policy,grant,recipients}=authorization||{};
   if(!policy||!grant||!Array.isArray(recipients)||!recipients.length||recipients.length>5||policy.dispatchEnabled!==true||policy.allowsProvisional!==true||grant.active!==true||grant.revokedAt||principal?.role!=='SUPER_ADMIN'||principal.id!==grant.principalId||String(principal.sessionVersion)!==String(grant.principalSessionVersion)||policy.lifecycleGeneration!==lifecycle.generation||grant.lifecycleGeneration!==lifecycle.generation||!policy.allowedFrequencies?.includes(scope.frequency)||!grant.allowedFrequencies?.includes(scope.frequency))hold();
   safe(policy.revision);safe(grant.revision);
-  const month=supplier?completedSupplierReportMonth(new Date(now)):null;
+  const month=supplier||monthlyInventory?completedSupplierReportMonth(new Date(now)):null;
   const monthBoundary=value=>new Date(Date.parse(invoiceAuditEmailPeriod(value).nominalScheduledAt)+60000);
+  function inventoryMonthPeriod(month){
+   const schedule=monthlyInventorySnapshotPeriod(month);
+   if(Date.parse(now)<Date.parse(schedule.scheduledFor))hold();
+   const previous=completedSupplierReportMonth(Date.parse(month+'-15T12:00:00Z'));
+   return {from:monthBoundary(previous),to:monthBoundary(month)};
+  }
   const event=inventory?await readInventoryResultEvent(tx,{...scope,now}):promotion?await readPromotionResultEvent(tx,{...scope,now}):null;
-  const period=eventReport?{from:new Date(event.from),to:new Date(event.to)}:supplier
+  const period=eventReport?{from:new Date(event.from),to:new Date(event.to)}:monthlyInventory
+   ? inventoryMonthPeriod(month)
+   :supplier
    ? {from:monthBoundary(completedSupplierReportMonth(Date.parse(month+'-15T12:00:00Z'))),to:monthBoundary(month)}
    : completedReportPeriod(new Date(now),scope.frequency,configuration);
   const from=period.from.toISOString(),to=period.to.toISOString();
   if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<(nonCash?iso(grant.notBefore):cashGrantPeriodStart(grant,scope.frequency)))hold();
   const settingsVersion=nonCash?safe(policy.revision):settings.version;
   let payload;
-  if(inventory)payload=await buildAutomaticInventoryPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
+  if(monthlyInventory){
+   const receipt=await readSettledMonthlySnapshotForReport(tx,{...scope,lifecycleGeneration:lifecycle.generation,issueMonth:month});
+   if(!receipt)hold();
+   payload=buildMonthlyInventorySummaryPayload(receipt,{...scope,storeName:store.name,issueMonth:month,period:{from,to},settingsVersion});
+  }
+  else if(inventory)payload=await buildAutomaticInventoryPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
   else if(promotion)payload=await buildAutomaticPromotionPayload(tx,{...scope,storeName:store.name,period:{from,to},settingsVersion,now});
   else if(supplier)payload=await buildAutomaticSupplierPayload(tx,{...scope,storeName:store.name,month,period:{from,to},settingsVersion});
   else{

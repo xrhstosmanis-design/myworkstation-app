@@ -6,9 +6,11 @@ import {staffError} from './backoffice-staff-access.js';
 import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
 import {staffCompanyCapabilities,validStaffCompanyCapabilities} from '../../../shared/backoffice-staff-company.mjs';
 import {isBackofficeCompanyInstalled} from './backoffice-company-profile.js';
+import {decodeStoredStaffCapabilities,encodeStoredStaffCapabilities,posPermissionKeys,validPosPermissionCeiling} from './staff-pos-permission-ceiling.js';
 const pin=z.string().regex(/^\d{4,12}$/,'Το PIN πρέπει να έχει 4–12 ψηφία.');
 const password=z.string().min(10).max(100).refine(value=>Buffer.byteLength(value,'utf8')<=72,'Ο κωδικός είναι πολύ μεγάλος.');
-const grants=z.array(z.object({storeId:z.string().trim().min(1).max(200),profile:z.enum(['MANAGER','STOCKTAKER','AUDITOR']),capabilities:z.array(z.enum(staffCapabilities)).max(staffCapabilities.length)}).strict()).max(100).refine(rows=>new Set(rows.map(r=>r.storeId)).size===rows.length,'Διπλό κατάστημα.').refine(rows=>rows.every(r=>validStaffCapabilities(r.capabilities)),'Μη έγκυρα δικαιώματα χειριστή.');
+const posPermissionCeiling=z.array(z.enum(posPermissionKeys)).max(posPermissionKeys.length).refine(validPosPermissionCeiling).nullable().optional();
+const grants=z.array(z.object({storeId:z.string().trim().min(1).max(200),profile:z.enum(['MANAGER','STOCKTAKER','AUDITOR']),capabilities:z.array(z.enum(staffCapabilities)).max(staffCapabilities.length),posPermissionCeiling}).strict()).max(100).refine(rows=>new Set(rows.map(r=>r.storeId)).size===rows.length,'Διπλό κατάστημα.').refine(rows=>rows.every(r=>validStaffCapabilities(r.capabilities)),'Μη έγκυρα δικαιώματα χειριστή.');
 const companyPolicy=z.array(z.enum(staffCompanyCapabilities)).max(staffCompanyCapabilities.length).refine(validStaffCompanyCapabilities,'Μη έγκυρες εταιρικές παραχωρήσεις.');
 export const createStaffInput=z.object({username:z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{2,79}$/),fullName:z.string().trim().min(2).max(180),password:password.optional(),pin,grants,companyCapabilities:companyPolicy.optional()}).strict();
 export const updateStaffInput=z.object({expectedRevision:z.number().int().positive(),active:z.boolean(),grants,password:password.optional(),pin:pin.optional(),companyCapabilities:companyPolicy.optional()}).strict();
@@ -42,31 +44,45 @@ async function validateGrants(tx,companyId,rows){
   const stores=await tx.store.findMany({where:{id:{in:rows.map(r=>r.storeId)},companyId,active:true},select:{id:true}});
   if(stores.length!==rows.length)throw staffError(400,'STAFF_STORE_INVALID','Επίλεξε μόνο ενεργά καταστήματα της εταιρείας.');
 }
-async function writeGrants(tx,companyId,userId,rows){
+async function writeGrants(tx,user,userId,revision,rows){
+  const {companyId}=user;
   // Security configuration is derived anew under its account revision fence.
   // Lock all referenced store epochs before writing any retained grant rows.
-  const old=await tx.$queryRaw`SELECT "storeId" FROM "BackofficeStaffGrant" WHERE "userId"=${userId} AND "companyId"=${companyId}`;
+  const old=await tx.$queryRaw`SELECT "storeId","capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${userId} AND "companyId"=${companyId}`;
   const stores=[...new Set([...old.map(r=>r.storeId),...rows.map(r=>r.storeId)])].sort(),generations={};
   for(const storeId of stores){const state=await bindFreshLifecycleRead(tx,{companyId,storeId});generations[storeId]=state.generation;}
   if(stores.length)await tx.$executeRaw`SELECT set_config('mws.lifecycle_generations',${JSON.stringify(generations)},true)`;
   await tx.$executeRaw`UPDATE "BackofficeStaffGrant" SET "active"=false,"revision"="revision"+1,"updatedAt"=NOW() WHERE "userId"=${userId} AND "companyId"=${companyId}`;
-  for(const row of rows)await tx.$executeRaw`INSERT INTO "BackofficeStaffGrant" ("userId","companyId","storeId","profile","capabilities") VALUES (${userId},${companyId},${row.storeId},${row.profile},${JSON.stringify(row.capabilities)}::jsonb) ON CONFLICT ("userId","storeId") DO UPDATE SET "active"=true,"profile"=EXCLUDED."profile","capabilities"=EXCLUDED."capabilities","updatedAt"=NOW()`;
+  const previousByStore=new Map(old.map(row=>[row.storeId,decodeStoredStaffCapabilities(row.capabilities).posPermissionCeiling]));
+  for(const row of rows){
+    const before=previousByStore.get(row.storeId)??null;
+    const ceiling=Object.hasOwn(row,"posPermissionCeiling")?row.posPermissionCeiling:before;
+    const stored=encodeStoredStaffCapabilities(row.capabilities,ceiling);
+    await tx.$executeRaw`INSERT INTO "BackofficeStaffGrant" ("userId","companyId","storeId","profile","capabilities") VALUES (${userId},${companyId},${row.storeId},${row.profile},${JSON.stringify(stored)}::jsonb) ON CONFLICT ("userId","storeId") DO UPDATE SET "active"=true,"profile"=EXCLUDED."profile","capabilities"=EXCLUDED."capabilities","updatedAt"=NOW()`;
+    if(Object.hasOwn(row,"posPermissionCeiling")&&JSON.stringify(before)!==JSON.stringify(ceiling)){
+      await audit(tx,user,userId,"POS_PERMISSION_CEILING_CHANGED",{storeId:row.storeId,revision,before,ceiling});
+    }
+  }
 }
 async function audit(tx,user,target,event,detail){
   await tx.$executeRaw`INSERT INTO "BackofficeStaffAudit" ("id","companyId","actorId","targetUserId","event","detail") VALUES (${crypto.randomUUID()},${user.companyId},${user.id},${target},${event},${JSON.stringify(detail)}::jsonb)`;
 }
+function authorizePosPermissionCeiling(actor,grants){
+  if(actor.role!=="OWNER"&&grants.some(row=>Object.hasOwn(row,"posPermissionCeiling")))throw staffError();
+}
+
 export async function createStaffAccount(db,user,input){
   const b=createStaffInput.parse(input),userId=crypto.randomUUID();
   // PIN-only identities never reuse the short PIN as an ordinary password.
   // The random fallback is not returned, stored in plaintext or shared.
   const [passwordHash,pinHash]=await Promise.all([bcrypt.hash(b.password??crypto.randomBytes(32).toString('hex'),12),bcrypt.hash(b.pin,12)]);
   return db.$transaction(async tx=>{
-    const actor=await authorizeStaffAdmin(tx,user);const companyChanged=await authorizeCompanyPolicy(tx,actor,b);await validateGrants(tx,user.companyId,b.grants);
+    const actor=await authorizeStaffAdmin(tx,user);const companyChanged=await authorizeCompanyPolicy(tx,actor,b);authorizePosPermissionCeiling(actor,b.grants);await validateGrants(tx,user.companyId,b.grants);
     // New identity only: never attach privileges to an existing company User.
     await tx.user.create({data:{id:userId,email:`${userId}@staff.myworkstation.invalid`,fullName:b.fullName,passwordHash,role:'EMPLOYEE',companyId:user.companyId,mustChangePassword:false},select:{id:true}});
     await tx.$executeRaw`INSERT INTO "BackofficeStaffAccount" ("userId","companyId","username","pinHash") VALUES (${userId},${user.companyId},${b.username},${pinHash})`;
     if(companyChanged)await tx.$executeRaw`UPDATE "BackofficeStaffAccount" SET "companyCapabilities"=${JSON.stringify(b.companyCapabilities)}::jsonb WHERE "userId"=${userId} AND "companyId"=${user.companyId}`;
-    await writeGrants(tx,user.companyId,userId,b.grants);
+    await writeGrants(tx,user,userId,1,b.grants);
     await audit(tx,user,userId,'CREATED',{username:b.username,fullName:b.fullName,active:true,grants:b.grants,...(companyChanged?{companyCapabilities:b.companyCapabilities}:{})});
     return {id:userId,username:b.username,revision:1};
   },{timeout:15000});
@@ -79,7 +95,7 @@ export async function updateStaffAccount(db,user,userId,input){
   const b=updateStaffInput.parse(input);
   const passwordHash=b.password?await bcrypt.hash(b.password,12):null,pinHash=b.pin?await bcrypt.hash(b.pin,12):null;
   return db.$transaction(async tx=>{
-    const actor=await authorizeStaffAdmin(tx,user);const companyChanged=await authorizeCompanyPolicy(tx,actor,b);await validateGrants(tx,user.companyId,b.grants);
+    const actor=await authorizeStaffAdmin(tx,user);const companyChanged=await authorizeCompanyPolicy(tx,actor,b);authorizePosPermissionCeiling(actor,b.grants);await validateGrants(tx,user.companyId,b.grants);
     const rows=await tx.$queryRaw`SELECT "userId","active","revision" FROM "BackofficeStaffAccount" WHERE "userId"=${userId} AND "companyId"=${user.companyId} FOR UPDATE`;
     const before=rows[0];if(!before)throw staffError(404,'STAFF_NOT_FOUND','Δεν βρέθηκε ο λογαριασμός.');
     if(before.revision!==b.expectedRevision)throw staffError(409,'STAFF_STALE','Υπάρχει νεότερη αλλαγή. Ανανέωσε πριν αποθηκεύσεις.');
@@ -89,9 +105,9 @@ export async function updateStaffAccount(db,user,userId,input){
     await tx.$executeRaw`UPDATE "BackofficeStaffAccount" SET "active"=${b.active},"revision"="revision"+1,"updatedAt"=NOW() WHERE "userId"=${userId} AND "companyId"=${user.companyId}`;
     if(companyChanged)await tx.$executeRaw`UPDATE "BackofficeStaffAccount" SET "companyCapabilities"=${JSON.stringify(b.companyCapabilities)}::jsonb WHERE "userId"=${userId} AND "companyId"=${user.companyId}`;
     if(pinHash)await tx.$executeRaw`UPDATE "BackofficeStaffAccount" SET "pinHash"=${pinHash} WHERE "userId"=${userId} AND "companyId"=${user.companyId}`;
-    await writeGrants(tx,user.companyId,userId,b.grants);
+    await writeGrants(tx,user,userId,before.revision+1,b.grants);
     await revokeStaffSessions(tx,userId,passwordHash);
-    await audit(tx,user,userId,'UPDATED',{before:{active:before.active,revision:before.revision,grants:previous,...(companyChanged?{companyCapabilities:companyBefore}:{})},after:{active:b.active,revision:before.revision+1,grants:b.grants,...(companyChanged?{companyCapabilities:b.companyCapabilities}:{})},passwordChanged:Boolean(passwordHash),pinChanged:Boolean(pinHash)});
+    await audit(tx,user,userId,'UPDATED',{before:{active:before.active,revision:before.revision,grants:previous.map(row=>({...row,...decodeStoredStaffCapabilities(row.capabilities)})),...(companyChanged?{companyCapabilities:companyBefore}:{})},after:{active:b.active,revision:before.revision+1,grants:b.grants,...(companyChanged?{companyCapabilities:b.companyCapabilities}:{})},passwordChanged:Boolean(passwordHash),pinChanged:Boolean(pinHash)});
     return {id:userId,revision:before.revision+1};
   },{timeout:15000});
 }

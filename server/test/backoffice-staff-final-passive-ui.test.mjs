@@ -89,3 +89,30 @@ test('staff policy supports a display-name-only action for another account with 
     assert.match(document.body.textContent,/Το ονοματεπώνυμο αποθηκεύτηκε/);
   }finally{await m.close()}
 });
+
+test('POS ceiling disables protected toggles and rejects a copy that would change them',async()=>{
+  const Panel=await component('backoffice/StaffOperatorPermissions');
+  const calls=[];
+  const api=async(path,options)=>{
+    calls.push({path,options});
+    return {companyId:'c',storeId:'s',editableKeys:['orders'],items:[
+      {employeeId:'target',displayName:'Target',permissions:{orders:false,cash:false}},
+      {employeeId:'source',displayName:'Source',permissions:{orders:true,cash:true}}
+    ]};
+  };
+  const m=await mount(Panel,{api,companyId:'c',storeId:'s',canCopyPermissions:true});
+  try{
+    const pick=async(index,value)=>m.act(async()=>{
+      const select=document.querySelectorAll('select')[index];
+      select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    await pick(0,'target');
+    const check=label=>[...document.querySelectorAll('label')].find(node=>node.textContent.trim()===label).querySelector('input');
+    assert.equal(check('Μετρητά').disabled,true);
+    assert.equal(check('Παραγγελίες (Τιμολόγια / Παραλαβές στο PoS)').disabled,false);
+    await pick(1,'source');
+    assert.equal(button('Αντιγραφή δικαιωμάτων POS').disabled,true);
+    assert.match(document.body.textContent,/εκτός του ορίου/);
+    assert.equal(calls.length,1);
+  }finally{await m.close()}
+});
