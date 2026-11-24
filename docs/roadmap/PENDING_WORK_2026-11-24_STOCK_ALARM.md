@@ -1,4 +1,4 @@
-- 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE NOT STARTED / NOT INSTALLED. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
+- 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE READY / native PostgreSQL + adapter 7PASS / AWAITING FULL CI / NOT INSTALLED. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
 
 ## 24/11/2026 — Ξεχωριστό POS υποσύνολο
 
