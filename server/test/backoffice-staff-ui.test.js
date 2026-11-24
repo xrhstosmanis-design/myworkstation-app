@@ -1651,3 +1651,68 @@ test('invoice line product and barcode views require the store product grant and
   assert.equal(calls.some(item=>item.options.method&&item.options.method!=='GET'),false);
  }finally{await m.close()}
 });
+
+test('delegated draft item creation sends one same-store request with scanned or generated barcode',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const mode of [null,'PROVIDED','GENERATED']){
+  const store={id:'a1',name:'A1'},calls=[];
+  const order={id:'order',storeId:store.id,storeName:store.name,supplierId:'sup',supplierName:'Synthetic',status:'NEW',sourceType:'POS_OCR_DRAFT',invoiceNumber:'SYN-NEW'};
+  const line={id:'line',orderId:order.id,description:'Synthetic new item',quantity:1,unitCost:1,netAmount:1,grossAmount:1.24,vatRate:24};
+  const capabilities=['invoices.read','invoices.edit',...(mode?['products.create']:[])];
+  const api=async(path,options={})=>{
+   calls.push({path,options});
+   if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities}]};
+   if(path.startsWith('/api/purchase-orders/report?'))return {stores:[store],suppliers:[{id:'sup',name:'Synthetic'}],orders:[order],summary:{count:1}};
+   if(path.endsWith('/detail'))return {order,lines:[line],totals:{quantity:1,net:1,gross:1.24}};
+   if(path.includes('/ocr-lines/line/options?'))return {product:null,categories:[],subcategories:[],vatDepartments:[]};
+   if(path.endsWith('/create-product'))return {ok:true,productId:'created',barcode:'5200123456789',barcodeMode:mode,mappingLearned:false};
+   return {items:[],suppliers:[],total:0,archiveTotal:0,rows:[]};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+  try{
+   const messages=[];
+   window.alert=globalThis.alert=message=>messages.push(message);
+   await m.act(async()=>{const select=document.querySelector('select');select.value=store.id;select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button('Τιμολόγια').click());
+   await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());
+   await m.act(async()=>document.querySelector('[data-po-open]').click());
+   await m.act(async()=>document.querySelector('[data-line-edit]').click());
+   const form=document.querySelector('.po-line-form');
+   const scanner=form.querySelector('[name="barcode"]');
+   const radio=form.querySelector('[name="barcodeMode"][value="'+(mode||'PROVIDED')+'"]');
+   const submit=form.querySelector('[type=submit]');
+   assert.equal(calls.filter(call=>call.options.method).length,0);
+   if(!mode){
+    assert.ok(!radio||radio.hidden||radio.closest('[hidden]'),'editing alone does not grant creation from an invoice');
+    await m.act(async()=>submit.click());
+    assert.equal(calls.filter(call=>call.options.method).length,0);
+    continue;
+   }
+   assert.ok(radio&&!radio.hidden&&!radio.closest('[hidden]'));
+   await m.act(async()=>submit.click());
+   assert.equal(calls.filter(call=>call.options.method).length,0,'a barcode choice is required');
+   messages.length=0;
+   await m.act(async()=>{radio.click()});
+   if(mode==='PROVIDED'){
+    assert.equal(scanner.disabled,false);
+    await m.act(async()=>submit.click());
+    assert.equal(calls.filter(call=>call.options.method).length,0,'a scanned barcode cannot be empty');
+    messages.length=0;
+    scanner.value='5200123456789';
+    scanner.dispatchEvent(new Event('input',{bubbles:true}));
+   }
+   await m.act(async()=>{submit.click();submit.click()});
+   assert.deepEqual(messages,[]);
+   const writes=calls.filter(call=>call.options.method);
+   assert.equal(writes.length,1);
+   assert.equal(writes[0].path,'/api/commerce/purchase-orders/order/ocr-lines/line/create-product');
+   assert.equal(writes[0].options.method,'POST');
+   assert.equal(writes[0].options.headers['x-backoffice-store-id'],store.id);
+   const body=JSON.parse(writes[0].options.body);
+   assert.equal(body.storeId,store.id);
+   assert.equal(body.barcodeMode,mode);
+   if(mode==='PROVIDED')assert.equal(body.barcode,'5200123456789');
+   else assert.ok(!body.barcode,'the server allocates the generated barcode');
+  }finally{await m.close()}
+ }
+});

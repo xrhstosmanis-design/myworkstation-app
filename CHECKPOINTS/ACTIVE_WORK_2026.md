@@ -965,6 +965,10 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 22/11/2026 · Πανόρμου · myDATA Smart 9 / 217 και αναδρομική ανάκτηση από 1/1/2026 · CI και πραγματικό PDF σε εκκρεμότητα · [Checkpoint](CHANGES/2026-11-22-panormou-mydata-smart9-recovery.md).
 
+- 24/11/2026 · Πανόρμου · Αυτόματη ανάκτηση προχείρων myDATA · [Checkpoint](CHANGES/2026-11-24-panormou-automatic-mydraft.md).
+
+- 24/11/2026 · Νέες εγκαταστάσεις myDATA · Σταθερή ημερομηνία έναρξης από την πρώτη του μήνα της αρχικής ρύθμισης · [Checkpoint](CHANGES/2026-11-24-mydata-new-store-start-month.md).
+
 - 23/11/2026 · Νο 5 · Πρόσβαση υπευθύνου στη διόρθωση προμηθευτή · [Καταγραφή](CHANGES/2026-11-23-no5-staff-supplier-correction-admission.md).
 
 - 23/11/2026 · Νο 5 · [Εκχώρηση διοικητικού κλεισίματος](CHANGES/2026-11-23-no5-delegated-administrative-close.md).
@@ -972,6 +976,4 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 23/11/2026 · Νο 5 · [myDATA ανά υποκατάστημα](CHANGES/2026-11-23-no5-mydata-recipient-branch.md).
 - Πανόρμου · Ανάκτηση PDF Epsilon 72, 159, 172 και 209 · [Checkpoint](CHANGES/2026-11-22-panormou-epsilon-72-172.md).
 
-- 24/11/2026 · Πανόρμου · Αυτόματη ανάκτηση προχείρων myDATA · [Checkpoint](CHANGES/2026-11-24-panormou-automatic-mydraft.md).
-
-- 24/11/2026 · Νέες εγκαταστάσεις myDATA · Σταθερή ημερομηνία έναρξης από την πρώτη του μήνα της αρχικής ρύθμισης · [Checkpoint](CHANGES/2026-11-24-mydata-new-store-start-month.md).
+- 24/11/2026 · Νο 5 · [Νέο είδος με barcode από πρόχειρο τιμολόγιο](CHANGES/2026-11-24-no5-draft-new-item-barcode.md).
