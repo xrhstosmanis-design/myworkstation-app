@@ -25,3 +25,11 @@
 Τελικό Work-safe frontend/TABLE_SERVICE build:PASS,12.33s. Με ξεχωριστό CSS/URLητελική πραγματικήReactεπαλήθευσημένει11PASS/0FAIL/0SKIP. diff-checkPASS.
 
 Πρόσθετος έλεγχος ακριβούς target: body/query storeId που διαφέρει από το URL απορρίπτεται400 πριν από module lookup, ώστε η γενική προτεραιότητα body του module guard να μη μεταφέρει ανάγνωση Owner σε άλλο κατάστημα. Native GET με πραγματικό JSON body και query mismatch ελέγχονται, μαζί με ρητό κενό target.
+
+## 24/11/2026 19:12 Europe/Athens — SOURCE LIVE / LAB acceptance pending
+
+POS4197 plus bounded startup correction4204 installed at678e4645c566be048f205e4a3b642a1a740b7d25. Claim4203 was merged before source. FullPRCI45441724091:all5jobsSUCCESS atd0339e1d8cb906dac55348e006eab6431cbafb09. Renderdep-dc2sa7lg1s2s739ou4ngLIVE17:12:38Z; independentapi/healthok=true/exact678e4645. Prior faileddep-dc2rqbcs728c73bf2cug is retained as failure evidence.
+
+Readonly production recheck after deployment:570 associated tobacco-department products,568 classified tobacco plus2NULLcategory/VAT0;0rate mismatches, same aggregates as before. This does not prove all startup scripts were globally write-free. No product/category/VAT correction submitted by this page.
+
+The new read-only POS proposal and per-operator permission are SOURCE LIVE. HostedOwner/operator/physicalPOS/scanner/revocation arithmetic acceptance remainsNOT TESTED, grouped in existingLAB perdocs/testing/pos-order-proposals-lab-acceptance.md. No request to switch logins for partial acceptance. Default absent permission staysOFF; no mass grants performed. Weeklyalarm4194stillBLOCKED on independent schema/runtime admission No7/No14; no weekly tables/worker deployed.
