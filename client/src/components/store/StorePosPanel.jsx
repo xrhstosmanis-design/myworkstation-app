@@ -1,3 +1,4 @@
+import PosOrderSuggestions from './PosOrderSuggestions.jsx';
 import PosScannedCashReturn,{pendingCashReturn} from './PosScannedCashReturn.jsx';
 import PosInternalTransfer from "./PosInternalTransfer.jsx";
 import useFtextCashCheckout from './useFtextCashCheckout.js';
@@ -79,6 +80,8 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   const [tableServiceAvailable,setTableServiceAvailable]=useState(false);
   const [bakingOpen,setBakingOpen]=useState(false);
   useEffect(()=>setBakingOpen(false),[store.id]);
+  const [orderSuggestionsOpen,setOrderSuggestionsOpen]=useState(false);
+  useEffect(()=>setOrderSuggestionsOpen(false),[store.id,operator,api]);
   const [purchaseOrdersOpen,setPurchaseOrdersOpen]=useState(false);
   const [purchaseOrdersMinimized,setPurchaseOrdersMinimized]=useState(false);
   useEffect(()=>{if(!purchaseOrdersOpen)setPurchaseOrdersMinimized(false)},[purchaseOrdersOpen]);
@@ -196,7 +199,7 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   const [internalTransfer,setInternalTransfer]=useState(null);
   const [cashReturnOpen,setCashReturnOpen]=useState(()=>pendingCashReturn(store.id,operator?.id||operator?.employeeId));
   useEffect(()=>{setCashReturnOpen(pendingCashReturn(store.id,operator?.id||operator?.employeeId))},[store.id,operator?.id,operator?.employeeId]);
-  const scannerBlocked=Boolean(cashReturnOpen||internalTransfer==="open"||inventoryOpen||headerMenuOpen||cancelPending||busy||(fiscalPending&&!ftextDeclined)||customerReceiptOpen||activeModal||categoryModal||priceEdit||lineMenu||giftOffer||cardTerminalPicker||(purchaseOrdersOpen&&!purchaseOrdersMinimized)||barcodeOpen||attendanceOpen||chatOpen||netlinkPanel||storeMenu||posTextSizeMenu||dispatchReturn);
+  const scannerBlocked=Boolean(orderSuggestionsOpen||cashReturnOpen||internalTransfer==="open"||inventoryOpen||headerMenuOpen||cancelPending||busy||(fiscalPending&&!ftextDeclined)||customerReceiptOpen||activeModal||categoryModal||priceEdit||lineMenu||giftOffer||cardTerminalPicker||(purchaseOrdersOpen&&!purchaseOrdersMinimized)||barcodeOpen||attendanceOpen||chatOpen||netlinkPanel||storeMenu||posTextSizeMenu||dispatchReturn);
   const scannerReady=Boolean(data&&data.selectedStoreId===store.id);
   usePosScannerFocus({inputRef:scannerInput,storeId:store.id,ready:scannerReady,blocked:scannerBlocked,request:scanFocusRequest});
 
@@ -383,6 +386,7 @@ const changeAmount=completedChange(paymentMethod,paidNow,transactionId,result.ta
         {operator&&liveAccess?.inventoryPos===true&&<button type="button" className="store-chat-top-button" disabled={data?.selectedStoreId!==store.id||busy||cancelPending||Boolean(fiscalPending)||connectionStatus!=="ONLINE"} onClick={()=>setInventoryOpen(true)}>▣ Αποθήκη</button>}
         {canCreateProduct&&<button type="button" className="store-chat-top-button" data-pos-new-product="" disabled={busy||cancelPending||Boolean(fiscalPending)||connectionStatus!=="ONLINE"} title="Νέο είδος · Πλήρης καρτέλα" onClick={()=>setNewProductOpen({storeId:store.id,api})}>＋ Νέο είδος</button>}
         <span data-invoice-assistant-dock-host=""/>
+        <PosOrderSuggestions key={store.id} api={api} store={store} operator={operator} open={orderSuggestionsOpen} onOpen={()=>setOrderSuggestionsOpen(true)} onClose={()=>setOrderSuggestionsOpen(false)}/>
         {canPurchaseOrders&&<button type="button" className="store-chat-top-button" onClick={()=>{document.dispatchEvent(new Event("mws:invoice-workspace-restore"));document.dispatchEvent(new Event("mws:invoice-assistant-restore"));setPurchaseOrdersOpen(true)}}>▤ Τιμολόγια / Παραλαβές</button>}
         {tableServiceAvailable&&<button type="button" className="store-chat-top-button table-service-top-button" onClick={()=>setActiveModal("TABLES")}><Wifi size={18}/> Ασύρματη παραγγελιοληψία</button>}
         <button type="button" className="store-chat-top-button" title="Chat καταστήματος" onClick={()=>setChatOpen(true)}>💬 Chat</button>

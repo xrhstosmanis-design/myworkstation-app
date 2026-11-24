@@ -1,3 +1,6 @@
+import weeklyStockAlarmRoutes from './routes/weekly-stock-alarm.js';
+import {ensureWeeklyStockAlarmSchema} from './services/weekly-stock-alarm-schema.js';
+import {createWeeklyStockAlarmScheduler} from './services/weekly-stock-alarm-scheduler.js';
 import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
 import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
 import {readStaffWorkforceView} from './services/backoffice-staff-workforce.js';
@@ -402,6 +405,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceMyDataBranchRoutes,comm
 app.use("/api/commerce",auth,commerceTenantGuard,commerceVatLookupRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
+app.use("/api/stock-alarms",auth,weeklyStockAlarmRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
@@ -438,6 +442,7 @@ try{await ensurePlatformSchema();await ensureCashControlSchema();await ensureAut
 await ensureStorePaidModulesSchema();
 await ensureStoreChatSchema();
 await ensureBackofficeStaffSchema(prisma);
+await ensureWeeklyStockAlarmSchema(prisma);
 await ensurePosInvoiceBackgroundWorkerSchema();
 await clearKatStuckRbsRequest();
 const automaticReportActivationProvider=()=>readActivation(process.env);
@@ -455,11 +460,13 @@ const invoiceStockEmailScheduler=createInvoiceStockExclusionEmailScheduler({
   db:prisma,work:backgroundDrain,
   send:({companyId,storeId,...message})=>createAutomaticReportSmtpTransport({companyId,storeId}).sendMail(message)
 });
+const weeklyStockAlarmScheduler=createWeeklyStockAlarmScheduler({db:prisma,work:backgroundDrain});
 const server=app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
   startWorkforceAutoOutWorker();
+  weeklyStockAlarmScheduler.start();
   automaticReportScheduler.start();
   supplierReportScheduler.start();
   promotionReportScheduler.start();

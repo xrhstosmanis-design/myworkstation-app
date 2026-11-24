@@ -1,3 +1,4 @@
+import WeeklyStockAlarmPanel from './WeeklyStockAlarmPanel.jsx';
 import React,{useEffect,useMemo,useState} from "react";
 import {BadgeEuro,Building2,Check,Clock3,Database,Landmark,Mail,MoreHorizontal,PackageSearch,Settings2,ShoppingCart,Truck,Users,X} from "lucide-react";
 import "./management-parameters.css";
@@ -14,7 +15,8 @@ const secondaryTabs=[
   ["customers","Πελάτες",Users],
   ["email","eMail",Mail],
   ["other","Λοιπά",MoreHorizontal],
-  ["purchases","Αγορές & παραγγελίες",ShoppingCart]
+  ["purchases","Αγορές & παραγγελίες",ShoppingCart],
+  ["stockAlarm","Αυτόματο alarm stock",PackageSearch]
 ];
 const boolLabels={
   pos:[
@@ -92,6 +94,7 @@ export default function ManagementParametersPanel({api,onClose}){
   const onField=(key,value)=>setSettings(prev=>({...prev,[active]:{...safeSection(prev,active),[key]:value}}));
   const save=async()=>{setBusy(true);setError("");setMessage("");try{const payload={...section};const data=await api(`/api/management/parameters/${active}`,{method:"PATCH",body:JSON.stringify(payload)});setSecrets(data.secrets||secrets);if(active==="edelivery")setSettings(prev=>({...prev,edelivery:{...safeSection(prev,"edelivery"),woltPassword:"",efoodPassword:""}}));if(active==="other")setSettings(prev=>({...prev,other:{...safeSection(prev,"other"),aadePassword:""}}));setMessage("Οι παράμετροι αποθηκεύτηκαν.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
   const renderSection=()=>{
+    if(active==="stockAlarm")return <WeeklyStockAlarmPanel api={api}/>;
     const p={s:section,onField,secrets,integrations};
     if(active==="business")return <BusinessSection {...p}/>;
     if(active==="banks")return <BanksSection {...p}/>;
@@ -110,6 +113,6 @@ export default function ManagementParametersPanel({api,onClose}){
     <nav className="mparam-tabs secondary">{secondaryTabs.map(([key,label,Icon])=><button key={key} className={active===key?"active":""} onClick={()=>{setActive(key);setMessage("")}}><Icon/>{label}</button>)}</nav>
     {error&&<div className="mparam-alert error">{error}</div>}{message&&<div className="mparam-alert success">{message}</div>}
     <main>{busy&&!Object.keys(settings).length?<div className="mparam-loading">Φόρτωση παραμέτρων…</div>:renderSection()}</main>
-    <footer><button onClick={onClose}><X/>Κλείσιμο</button><span className="mparam-company">{company?.name||""}</span><button className="save" disabled={busy} onClick={save}><Check/>Καταχώρηση</button></footer>
+    <footer><button onClick={onClose}><X/>Κλείσιμο</button><span className="mparam-company">{company?.name||""}</span><button className="save" disabled={busy||active==="stockAlarm"} onClick={save}><Check/>Καταχώρηση</button></footer>
   </section></div>;
 }
