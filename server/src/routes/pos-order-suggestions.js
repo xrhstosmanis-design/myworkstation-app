@@ -17,7 +17,7 @@ export async function requirePosOrderSuggestion(db,user,storeId){
 export function createPosOrderSuggestionsRouter({db=defaultPrisma,read=readOrderSuggestions}={}){
  const router=Router(),moduleGuard=requireStoreModule('ORDER_SUGGESTIONS');
  router.use((req,res,next)=>{res.set('Cache-Control','no-store');next()});
- const admission=async(req,res,next)=>{try{await requirePosOrderSuggestion(db,req.user,req.params.storeId);req.user={...req.user,permissions:[...(req.user.permissions||[]),'ORDER_SUGGESTIONS']};next()}catch(error){next(error)}};
+ const admission=async(req,res,next)=>{try{if((req.body?.storeId!==undefined&&req.body.storeId!==req.params.storeId)||(req.query?.storeId!==undefined&&req.query.storeId!==req.params.storeId))throw fail(400,'Το κατάστημα της αίτησης δεν συμφωνεί με το επιλεγμένο POS.');await requirePosOrderSuggestion(db,req.user,req.params.storeId);req.user={...req.user,permissions:[...(req.user.permissions||[]),'ORDER_SUGGESTIONS']};next()}catch(error){next(error)}};
  const handler=fn=>async(req,res,next)=>{try{
   if(!await db.store.findFirst({where:{id:req.targetStore.id,companyId:req.targetStore.companyId,active:true},select:{id:true}}))throw fail(404,'Δεν βρέθηκε ενεργό κατάστημα.');
   await fn(req,res);

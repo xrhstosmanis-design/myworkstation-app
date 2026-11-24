@@ -23,3 +23,5 @@
 Πρόσθετες παραγωγικές React δοκιμές editor/header/coffee+POS UI:11PASS/0FAIL/0SKIP,2.78s. Τελικό build, νέο πλήρες CI, έγκριση για συγχώνευση/εγκατάσταση και κοινή τελική συνεδρία LAB εκκρεμούν. NOT INSTALLED / NOT LAB PASS.
 
 Τελικό Work-safe frontend/TABLE_SERVICE build:PASS,12.33s. Με ξεχωριστό CSS/URLητελική πραγματικήReactεπαλήθευσημένει11PASS/0FAIL/0SKIP. diff-checkPASS.
+
+Πρόσθετος έλεγχος ακριβούς target: body/query storeId που διαφέρει από το URL απορρίπτεται400 πριν από module lookup, ώστε η γενική προτεραιότητα body του module guard να μη μεταφέρει ανάγνωση Owner σε άλλο κατάστημα. Native GET με πραγματικό JSON body και query mismatch ελέγχονται, μαζί με ρητό κενό target.

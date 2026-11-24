@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {PrismaClient} from '@prisma/client';
 import express from 'express';
+import {request as nativeRequest} from 'node:http';
 const url=process.env.POS_ORDER_PROPOSALS_TEST_DATABASE_URL||process.env.DATABASE_URL;
 test('POS order proposal actual HTTP/PostgreSQL: grant, quantity, revoke, tenant and no business writes',{skip:!url||process.env.NODE_ENV!=='test',timeout:45000},async t=>{
  const target=new URL(url);assert.ok(['localhost','127.0.0.1','[::1]'].includes(target.hostname));assert.match(target.pathname,/_test$/);
@@ -31,12 +32,16 @@ test('POS order proposal actual HTTP/PostgreSQL: grant, quantity, revoke, tenant
   const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.get('x-actor')==='owner'?{id:'owner',companyId:'a',role:'OWNER'}:{id:'op',operatorId:'op',companyId:'a',storeId:'a1',tokenType:'STORE_OPERATOR',role:'EMPLOYEE',permissions:[]};next()});app.use(router);app.use((e,req,res,next)=>res.status(e.status||500).json({error:e.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const root=`http://127.0.0.1:${server.address().port}`;
   const request=(path,options={})=>fetch(root+path,options);
+  const getWithBody=(path,body)=>new Promise((resolve,reject)=>{const text=JSON.stringify(body),req=nativeRequest(root+path,{method:'GET',headers:{'x-actor':'owner','content-type':'application/json','content-length':Buffer.byteLength(text)}},response=>{response.resume();response.on('end',()=>resolve(response.statusCode))});req.on('error',reject);req.end(text)});
   const grant=()=>db.$executeRaw`UPDATE "StoreOperatorProfile" SET "permissions"='{"orderSuggestionsPos":true}'::jsonb,"posAccess"=TRUE`;
   await t.test('real proposal is eight pieces, same store only, without creating an order or changing stock',async()=>{
    const allowed=await request('/stores/a1/permission');assert.equal(allowed.status,200);assert.equal(allowed.headers.get('cache-control'),'no-store');
    const response=await request('/stores/a1/proposal'),body=await response.json();assert.equal(response.status,200,JSON.stringify(body));assert.equal(body.storeId,'a1');assert.equal(body.rows.length,1);assert.equal(body.rows[0].suggestedQuantity,8);assert.equal(body.rows[0].currentStock,2);assert.deepEqual(body.options,{historyDays:28,coverageDays:7,leadDays:3});
    assert.equal((await request('/stores/a2/proposal')).status,403);assert.equal((await request('/stores/b1/proposal',{headers:{'x-actor':'owner'}})).status,404);
    assert.equal((await request('/stores/a1/proposal?historyDays=0')).status,400);
+   assert.equal((await request('/stores/a1/proposal?storeId=a2')).status,400);
+   assert.equal(await getWithBody('/stores/a1/proposal',{storeId:'a2'}),400);
+   assert.equal(await getWithBody('/stores/a1/permission',{storeId:''}),400);
    assert.equal((await request('/stores/a1/proposal',{method:'POST'})).status,404);
   });
   await t.test('revocation is checked after reading too, with no response data leakage',async()=>{
