@@ -17,6 +17,13 @@ test('native chat cash discovery: real owned SQL, late upload unassigned, exact 
   const cashOnly=await readCashChatEvidence(db,{companyId:'c',storeId:'s'});assert.equal(cashOnly.sources.length,1);
   await db.$executeRaw`UPDATE "StoreChatMessage" SET "category"='SHIFT' WHERE "id" LIKE 'extra-%'`;
   const capped=await readCashChatEvidence(db,{companyId:'c',storeId:'s'});assert.equal(capped.status,'LIMITED');assert.equal(capped.sources.length,50);
+  await db.$executeRawUnsafe('ALTER TABLE "StoreChatMessage" ADD COLUMN "cashDay" DATE');
+  await db.$executeRaw`UPDATE "StoreChatMessage" SET "cashDay"='2026-10-25' WHERE "id"='own'`;
+  const dated=await readCashChatEvidence(db,{companyId:'c',storeId:'s'},{from:new Date('2026-10-25T03:00:00Z'),to:new Date('2026-10-27T15:00:00Z'),cashDay:'2026-10-25'});
+  assert.equal(dated.sources[0].references[0].messageId,'own');
+  assert.equal(dated.sources[0].references[0].declaredCashDay,'2026-10-25');
+  const other=await readCashChatEvidence(db,{companyId:'c',storeId:'s'},{from:new Date('2026-10-25T03:00:00Z'),to:new Date('2026-10-27T15:00:00Z'),cashDay:'2026-10-24'});
+  assert.ok(!other.sources.some(s=>s.references.some(ref=>ref.messageId==='own')));
   await db.$executeRawUnsafe('DROP TABLE "StoreChatMessage"');assert.equal((await readCashChatEvidence(db,{companyId:'c',storeId:'s'})).status,'UNAVAILABLE');
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

@@ -26,6 +26,7 @@ function fixture({slot=false,enabled=true,allowed=true,pendingAt}={}){
     discover:async (_db,store,window)=>{
       assert.equal(store.storeId,scope.storeId);
       assert.equal(window.from.toISOString(),period.from);
+      assert.equal(window.cashDay,'2026-11-21');
       return {sources};
     }
   });

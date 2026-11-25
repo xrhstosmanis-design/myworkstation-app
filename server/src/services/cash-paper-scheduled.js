@@ -40,7 +40,8 @@ export function createScheduledCashPaperReader(db,{
       if(slot||!await authorized(db,scope))return 'DONE';
       const actor=await db.user.findUnique({where:{id:period.actorId},select:{id:true,role:true,fullName:true,mustChangePassword:true}});
       if(actor?.role!=='SUPER_ADMIN'||actor.mustChangePassword)return 'DONE';
-      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1)});
+      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1),
+        cashDay:new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(from))});
       const candidates=discovery.sources.filter(source=>source.checksum&&Number.isSafeInteger(source.sizeBytes)&&
         source.sizeBytes>0&&source.sizeBytes<=7*1024*1024&&source.references[0]?.messageId).slice(0,maxAttachments);
       const readings=await Promise.all(candidates.map(source=>repository.get(scope,source.checksum)));
