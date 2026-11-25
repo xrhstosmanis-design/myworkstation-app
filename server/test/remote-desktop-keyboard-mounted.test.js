@@ -11,9 +11,9 @@ test('mounted remote desktop focuses only selected window, captures Greek and sp
  const keys=['window','document','navigator','HTMLElement','Event','localStorage','IS_REACT_ACT_ENVIRONMENT'],saved=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,roots=['a','b'].map(id=>createRoot(document.getElementById(id)));
- const streams=new Map(),sent=[],encoder=new TextEncoder();localStorage.setItem('token','creator-session');let delay=null;
+ const streams=new Map(),sent=[],encoder=new TextEncoder(),sequences=new Map();localStorage.setItem('token','creator-session');let delay=null;
  const request=async(path,options={})=>{if(path.endsWith('/stream'))return new ReadableStream({start(controller){streams.set(path,controller);options.signal.addEventListener('abort',()=>{try{controller.close();}catch{}});}});if(path.endsWith('/input')){sent.push({id:path.split('/')[4],...JSON.parse(options.body)});if(delay)await delay;}return {};};
- const frame=async(i,at=Date.now())=>{await act(async()=>streams.get(`/api/remote-support/controller/${i}/stream`).enqueue(encoder.encode(`data: ${JSON.stringify({storeName:`Store${i}`,terminalName:`POS${i}`,frame:{at,jpeg:'/9j/YQ=='},files:[]})}\n\n`)));};
+ const frame=async(i,at=Date.now())=>{const sequence=(sequences.get(i)||0)+1;sequences.set(i,sequence);const frameAgeMs=Math.max(0,Date.now()-at);await act(async()=>streams.get(`/api/remote-support/controller/${i}/stream`).enqueue(encoder.encode(`data: ${JSON.stringify({storeName:`Store${i}`,terminalName:`POS${i}`,frame:{at,sequence,jpeg:'/9j/YQ=='},frameAgeMs,files:[]})}\n\n`)));};
  const host=i=>document.getElementById(i?'b':'a'),capture=i=>host(i).querySelector('textarea');
  const key=(target,key,options={})=>target.dispatchEvent(new window.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true,...options}));
  try{
