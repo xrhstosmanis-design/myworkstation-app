@@ -1,3 +1,5 @@
+- 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
+
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
 ##25Nov2026 — Netlink numeric-ID correction installed; paid UNKNOWN remains OPEN /root
@@ -205,8 +207,6 @@ Source#4037/head8975b1ca, mergec36a4ffb. PR CI44393082061:6264PASS/0FAIL/2option
 - 25/11/2026 · Νο 7 · Ημερήσια αναφορά ταμείων την ημέρα ενεργοποίησης · [Checkpoint](CHANGES/2026-11-25-no7-daily-cash-activation-day.md).
 
 - 25/11/2026 · Νο 7 · Ημερομηνία ταμείου στο Chat · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day.md).
-
-- 25/11/2026 · Νο 7 · Επιλογή χειρογράφων ανά περίοδο · [Checkpoint](CHANGES/2026-11-25-no7-cash-paper-period-selection.md).
 
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
