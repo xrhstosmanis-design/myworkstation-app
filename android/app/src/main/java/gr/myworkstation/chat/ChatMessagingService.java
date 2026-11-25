@@ -18,7 +18,7 @@ import java.util.UUID;
 import org.json.JSONObject;
 
 public final class ChatMessagingService extends FirebaseMessagingService {
-    private static final String CHANNEL = "native-chat";
+    static final String CHANNEL = "native-chat";
     private static final int NOTIFICATION_ID = 313;
 
     @Override public void onNewToken(String token) { NativePush.refreshed(this, token); }
@@ -34,6 +34,10 @@ public final class ChatMessagingService extends FirebaseMessagingService {
             NotificationManager manager = getSystemService(NotificationManager.class);
             NotificationChannel channel = new NotificationChannel(CHANNEL, "Μηνύματα MyWorkStation", NotificationManager.IMPORTANCE_HIGH);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            channel.setSound(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI,
+                new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
             manager.createNotificationChannel(channel);
             Notification.Builder builder = notification(this, store, company, binding, messageId)
                 .setContentTitle(PushEnvelope.title(data)).setContentText("Έχεις νέο μήνυμα.");
@@ -77,7 +81,7 @@ public final class ChatMessagingService extends FirebaseMessagingService {
         Notification notification = notification(context, store, company, binding, messageId)
             .setContentTitle("MyWorkStation Chat")
             .setContentText(sent ? "Η απάντηση στάλθηκε." : "Η αποστολή δεν επιβεβαιώθηκε. Έλεγξε τη συνομιλία.")
-            .setOnlyAlertOnce(true).setTimeoutAfter(30_000).build();
+            .setOnlyAlertOnce(true).setSilent(true).setTimeoutAfter(30_000).build();
         context.getSystemService(NotificationManager.class).notify(messageId, NOTIFICATION_ID, notification);
     }
 }
