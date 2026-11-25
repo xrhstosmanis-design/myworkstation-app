@@ -14,7 +14,8 @@ export const staffDelegatableReadKeys=Object.freeze([
   'inventory.history.read','inventory.expected.read','unsold-products.read',
   'analytics.read','promotions.read','stock-transfers.read',
   'monthly-inventory.read','monthly-invoice-audit.read','pending.read',
-  'handover.read','printers.read','baking.read','online-orders.read','table-service.read'
+  'handover.read','printers.read','baking.read','online-orders.read','table-service.read',
+  'radio.read','video.read','wholesale.read','invoice-ai.read'
 ]);
 export const staffReadDelegationCapability='staff-grants.manage-reads';
 
