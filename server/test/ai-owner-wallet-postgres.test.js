@@ -392,6 +392,34 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
       const afterBad=await repository.read('activity');for(const key of ['balanceMicros','reservedMicros','version','entries','notices'])assert.deepEqual(afterBad[key],beforeBad[key]);
       const otherStore=await repository.read('activity','other-store');assert.ok(otherStore.entries.every(e=>e.kind==='CREDIT'));assert.doesNotMatch(JSON.stringify(otherStore.entries),/Synthetic initiating operator|synthetic-pos-operator/);
     }
+    {
+      await db.$executeRaw`INSERT INTO "Company" VALUES('extra-notices','Synthetic extra recipients',true)`;
+      await db.$executeRaw`INSERT INTO "User" VALUES('extra-owner','primary@example.invalid','Extra owner','OWNER','extra-notices',1,false)`;
+      const settings={version:0,enabled:false,emailEnabled:true,notificationOwnerId:'extra-owner'};
+      const route='/platform/companies/extra-notices';
+      assert.equal((await request(route,'owner','PUT',{...settings,extraNotificationEmails:['accounting@example.invalid']})).status,403);
+      assert.equal((await request(route,'admin','PUT',{...settings,extraNotificationEmails:['Accounting@example.invalid',' accounting@example.invalid ','primary@example.invalid','remove@example.invalid']})).status,200);
+      const saved=await request(route,'admin');
+      assert.deepEqual(saved.body.extraNotificationEmails,['accounting@example.invalid','primary@example.invalid','remove@example.invalid']);
+      assert.deepEqual((await request('/platform/companies/x','admin')).body.extraNotificationEmails,[]);
+      const credit={amountMicros:'10000',receiptReference:'extra-notices-credit'};
+      await repository.credit('extra-notices',credit,'admin');
+      await repository.credit('extra-notices',credit,'admin');
+      assert.equal((await repository.read('extra-notices')).notices.length,1);
+      const wallet=await repository.read('extra-notices');
+      assert.equal((await request(route,'admin','PUT',{...settings,version:wallet.version,extraNotificationEmails:['accounting@example.invalid','new@example.invalid']})).status,200);
+      const deliveries=[];
+      const extraDrain=createWalletNotificationDispatcher({repository,enabled:()=>true,send:async msg=>{
+        if(msg.companyId==='extra-notices')deliveries.push(msg.to);
+        return {messageId:'synthetic-'+randomUUID(),accepted:[msg.to],rejected:[]};
+      }});
+      await extraDrain();await extraDrain();
+      assert.deepEqual(deliveries.sort(),['accounting@example.invalid','primary@example.invalid']);
+      const notices=await db.$queryRaw`SELECT "email","emailStatus" FROM "AiOwnerWalletNotice" WHERE "companyId"='extra-notices' ORDER BY "email"`;
+      assert.deepEqual(notices.map(n=>[n.email,n.emailStatus]),[
+        ['accounting@example.invalid','ACCEPTED'],['primary@example.invalid','ACCEPTED'],['remove@example.invalid','REVOKED']
+      ]);
+    }
     assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
   }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
