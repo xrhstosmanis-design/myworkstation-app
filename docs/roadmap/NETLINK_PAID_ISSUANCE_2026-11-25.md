@@ -1,5 +1,7 @@
 # Netlink paid issuance —25Nov2026
 
+Authoritative release continuation: PR#4229 merged7623888cc63d95f1c1f4283231e4e938b565f397, full CI45633162691 SUCCESS. Code and activation deploys LIVE; selected-store non-stock card-value/existing-fee mapping is complete and fee stock/history preserved. Earlier uncommitted/NOT LIVE notes below are historical. Next action is grouped user acceptance of the normal full cash/card+fiscal checkout and each saved voucher; real issuance/printing NOT TESTED. Variable/prepare services remain read-only. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-live-setup.md`.
+
 ASSIGNED /root, continuation of existing Netlink ownership. No duplicate external-certification/cash/rights claim.
 
 1. Durable scoped quote/intent: authoritative provider product/payload/amount, configured service POS products, exactly0.50EUR per card, immutable checkout linkage. No guessed ambiguous prices or tax mapping.
