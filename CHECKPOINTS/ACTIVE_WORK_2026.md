@@ -214,6 +214,8 @@ The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejecte
 
 Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
 
+- 25/11/2026 · Νο 7 · Δημοσίευση Android Chat 0.1.18 · [Checkpoint](CHANGES/2026-11-25-no7-chat-android-018-publication.md).
+
 ## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
 
 PR #4048. Έλεγχοι CI και LAB 5/5 στο b9bdd08a. Εκκρεμεί εγκατάσταση. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md).
