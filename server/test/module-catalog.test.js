@@ -28,7 +28,7 @@ test("catalog view merges customer entitlements",()=>{
 });
 
 test("new owner modules are registered but cannot be sold before implementation",()=>{
-  const expected=["OFFERS_ADVANCED","INVOICE_CHANNEL","CASHIER_PERFORMANCE","PROFITABILITY","SUPPLIER_COMPARISON","ORDER_SUGGESTIONS","LOW_VALUE_PRODUCTS","OWNER_MONTHLY_REPORT","SMART_AUDIT"];
+  const expected=["OFFERS_ADVANCED","INVOICE_CHANNEL","CASHIER_PERFORMANCE","PROFITABILITY","SUPPLIER_COMPARISON","LOW_VALUE_PRODUCTS","OWNER_MONTHLY_REPORT","SMART_AUDIT"];
   for(const key of expected){
     const module=moduleCatalog.find(row=>row.key===key);
     assert.ok(module,`${key} must be registered`);
@@ -52,4 +52,13 @@ test("implemented Owner cash assistant remains opt-in and owner restricted; avai
   assert.equal(assistant.ownerOnly,true);
   assert.ok(ownerRestrictedModuleKeys.includes(assistant.key));
   for(const defaults of Object.values(planDefaults))assert.equal(defaults.includes(assistant.key),false);
+});
+
+test("installed order suggestions can be explicitly enabled without default entitlement or price changes",()=>{
+ const module=catalogView([]).find(row=>row.key==='ORDER_SUGGESTIONS');
+ assert.equal(module.commercialReady,true);assert.equal(module.active,false);assert.equal(module.ownerOnly,true);
+ assert.equal(module.monthlyPrice,0);assert.equal(module.setupFee,0);
+ for(const defaults of Object.values(planDefaults))assert.equal(defaults.includes(module.key),false);
+ assert.equal(catalogView([{moduleKey:module.key,active:true}]).find(row=>row.key===module.key).active,true);
+ assert.equal(catalogView([{moduleKey:module.key,active:false}]).find(row=>row.key===module.key).active,false);
 });

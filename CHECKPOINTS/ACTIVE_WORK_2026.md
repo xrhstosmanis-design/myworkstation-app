@@ -1,5 +1,5 @@
 - 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE LIVE 678e4645 / full CI PASS / native PostgreSQL + adapter 7PASS / LAB acceptance pending. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
-- 24/11/2026 · ASSIGNED /root · Πρόσθετοι παραλήπτες ειδοποιήσεων πορτοφολιού AI · [Checkpoint](CHANGES/2026-11-24-ai-wallet-extra-email.md) · BEFORE SOURCE.
+- 24/11/2026 · ASSIGNED /root · Πρόσθετοι παραλήπτες ειδοποιήσεων πορτοφολιού AI · [Checkpoint](CHANGES/2026-11-24-ai-wallet-extra-email.md) · Υλοποίηση σε έλεγχο CI και PostgreSQL.
 
 - 24/11/2026 · ASSIGNED /root · Ανεξάρτητη πρόταση παραγγελίας POS με ανακλητό orderSuggestionsPos · feat/pos-order-proposals-20261124 · claim4193. Χρήση μόνο υπαρχόντων πινάκων/υπολογισμού, χωρίς weekly schema/worker/ρυθμίσεις. Native HTTP/PostgreSQL + React8PASS, υπάρχον editor/header/coffee + POS UI11PASS. SOURCE LIVE 678e4645 / full CI PASS / κοινή LAB αποδοχή εκκρεμεί. Το αυτόματο alarm διατηρείται BLOCKED ON SCHEMA ADMISSION στο4194. [Checkpoint](CHANGES/2026-11-24-pos-order-proposals-release.md).
 - 24/11/2026 · Νο 9 · Μηνιαία σύνοψη απογραφής · [Checkpoint](CHANGES/2026-11-22-no9-monthly-inventory-summary.md).
@@ -1013,6 +1013,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 25/11/2026 · Νο 5 · [Επανενεργοποίηση κατηγοριών και αναζήτηση barcode καταστήματος](CHANGES/2026-11-25-no5-catalog-rights.md).
 
 
-25/11/2026 · ASSIGNED /root · POS proposal module admission, SOURCE NOT STARTED. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-module-admission.md. Existing owners retained; weekly alarm unaffected.
-
+25/11/2026 · ASSIGNED /root · POS proposal module admission, SOURCE LIVE7adad64f / FULL CI PASS / LABmodule explicitlyON, existingLAB POS2grantON / physical acceptance pending. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-module-admission.md. Existing owners retained; weekly alarm unaffected.
 - 25/11/2026 · Νο 5 · [Πέντε επιπλέον προβολές για επανεκχώρηση BackOffice](CHANGES/2026-11-25-no5-more-read-delegation.md).

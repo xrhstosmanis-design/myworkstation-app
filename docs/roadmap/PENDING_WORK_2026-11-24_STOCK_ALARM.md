@@ -19,4 +19,4 @@ ASSIGNED /root · docs/central-weekly-stock-alarm-claim-20261124 · PR #4193.
 Επόμενο βήμα: πράσινο CI και merge ανάληψης πριν από πηγαίο κώδικα. Μετά αποτύπωση κεντρικών ρυθμίσεων/χρονοπρογραμματισμού και ακριβές POS entry· τελική κοινή δοκιμή στο υπάρχον LAB.
 
 
-25/11/2026 · ASSIGNED /root · POS proposal module admission, SOURCE NOT STARTED. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-module-admission.md. Existing owners retained; weekly alarm unaffected.
+25/11/2026 · ASSIGNED /root · POS proposal module admission, SOURCE LIVE7adad64f / FULL CI PASS / LABmodule explicitlyON, existingLAB POS2grantON / physical acceptance pending. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-module-admission.md. Existing owners retained; weekly alarm unaffected.
