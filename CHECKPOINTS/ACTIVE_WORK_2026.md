@@ -1,3 +1,13 @@
+## 25/11/2026 — NETLINK central catalogue and report print / SOURCE, AWAITING CI + RELEASE
+
+Owner /root; continuation claim PR4217 merged92ad27933579548289ab7b2c1e5e2a3f1cf2cf24 after CI45601536239 SUCCESS. Source branch fix/netlink-catalogue-source-20261125. Owner explicitly requests common correction for every store and report print button. No real-store identifiers or credentials are recorded.
+
+Cause: common panel assumed groups at root, while provider menu uses data.tabs[].groups[]. Add shared adapter for tabs/direct groups and mock id/name compatibility, unique group anchors, disabled products/tabs preservation and explicit malformed-menu error. Refresh clears stale selection. Provider response replay yields22groups/113available services (no provider transaction). Existing credential/auth/module/store/fiscal/execute locks remain unchanged. No prepare/execute/PIN/charge calls added.
+
+Add selected internal report print for detail/summary/weekly, selected-store name/identity and date range, values/totals/cancellation status and explicit MyWorkStation ledger label (not provider statement). Text-only DOM construction, popup failure handling and58mm print stylesheet. Print disabled while refreshing, on errors, before current report context matches store+period; no request/submission from printing. Both common POS callers pass their existing selected-store name. Browser printer dialogue selects device; physical58mm print NOT TESTED.
+
+Local Node20.20.2:8/8 targeted tests PASS,0FAIL0SKIP, including actual mounted common panel with nested provider tabs/disabled item, popup print/current report, refresh lock and stale store response; three print report variants, escaped provider text, totals/period/store and blocked popup. Existing credential-save/store/unmount fences and no-execute tests passed. Frontend build PASS, TABLE_SERVICE verifier PASS. git diff --check PASS. These are local automated results, not LAB/LIVE feature PASS. Production catalogue display/physical printer/provider identity/sale remain NOT TESTED. Source not installed; review/green full CI and release required. No production config/schema/credentials/financial mutation in this change. Certification/report contract remains externally blocked.
+
 - 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE LIVE 678e4645 / full CI PASS / native PostgreSQL + adapter 7PASS / LAB acceptance pending. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
 - 24/11/2026 · ASSIGNED /root · Πρόσθετοι παραλήπτες ειδοποιήσεων πορτοφολιού AI · [Checkpoint](CHANGES/2026-11-24-ai-wallet-extra-email.md) · Υλοποίηση σε έλεγχο CI και PostgreSQL.
 

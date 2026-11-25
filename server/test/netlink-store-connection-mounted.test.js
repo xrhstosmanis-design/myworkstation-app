@@ -73,3 +73,19 @@ test("mounted POS requests explicit store status/menu and discards previous stor
     assert.ok(calls.every(u=>!/prepare|execute/.test(u)));
   }finally{await f.close()}
 });
+
+test("mounted common catalogue reads provider tabs and prints only fresh selected-store reports without execution",async()=>{
+ const f=await fixture("../../client/src/components/commerce/NetlinkPosPanel.jsx"),calls=[],report=deferred();let hold=false,printed=0;
+ const request=async url=>{calls.push(url);if(url.includes('/status'))return {configured:true,executeEnabled:false};if(url.includes('/config'))return {configured:true};if(url.includes('/menu'))return {data:{tabs:[{title:'airtime',groups:[{title:'Mobile',products:[{productId:'P',title:'Synthetic Card'},{productId:'D',title:'Disabled card',disabled:true}]}]}]}};if(url.includes('/reports/')){if(hold)return report.promise;return {items:[{id:'T',productId:'P',amount:10,status:'COMPLETED'}],totals:{completed:1,cardAmount:10},days:[],settlement:{},dailyBreakdown:[]}};throw Error(url)};
+ const button=label=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===label);
+ try{
+  await f.render({api:request,storeId:'SYNTHETIC-A',storeName:'Synthetic A',onClose:()=>{}});
+  assert.match(document.body.textContent,/Synthetic Card/);assert.match(document.body.textContent,/1 διαθέσιμες υπηρεσίες/);assert.equal([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Disabled card')).disabled,true);
+  await f.act(async()=>button('Αναφορές').click());assert.equal(button('Εκτύπωση αναφοράς').disabled,false);
+  const printDom=new JSDOM('<html><head></head><body></body></html>');window.open=()=>({document:printDom.window.document,focus(){},print(){printed++},close(){},addEventListener(){}});
+  await f.act(async()=>button('Εκτύπωση αναφοράς').click());assert.equal(printed,1);assert.match(printDom.window.document.body.textContent,/Synthetic A/);assert.match(printDom.window.document.body.textContent,/Εσωτερική αναφορά/);
+  hold=true;await f.act(async()=>button('Ανανέωση').click());assert.equal(button('Εκτύπωση αναφοράς').disabled,true);
+  await f.render({api:request,storeId:'SYNTHETIC-B',storeName:'Synthetic B',onClose:()=>{}});await f.act(async()=>report.resolve({items:[{productId:'OLD-A'}]}));assert.doesNotMatch(document.body.textContent,/OLD-A/);
+  assert.ok(calls.every(u=>!/prepare|execute/.test(u)));printDom.window.close();
+ }finally{await f.close()}
+});
