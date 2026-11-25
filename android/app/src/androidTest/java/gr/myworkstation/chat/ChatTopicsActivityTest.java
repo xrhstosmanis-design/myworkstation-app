@@ -35,7 +35,19 @@ import java.lang.reflect.Field;import java.lang.reflect.Method;import java.util.
  }
  @Test public void textPhotoVoiceAndVideoCarryTopicAndQuotedShiftCategory()throws Exception{
   for(String kind:new String[]{"text","photo","voice","video"}){Api api=new Api();try(ActivityScenario<MainActivity>s=ActivityScenario.launch(MainActivity.class)){start(s,api);change(s,"CASH");final byte[] video;if(kind.equals("video")){try(java.io.InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("video-one-second.mp4");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)out.write(b,0,n);video=out.toByteArray();}}else video=null;
-   s.onActivity(a->{try{JSONObject row=new JSONObject().put("id","topic-message").put("senderId","actor").put("body","Ταμείο").put("category","SHIFT").put("topic","CASH");Method reply=MainActivity.class.getDeclaredMethod("chooseChatReply",JSONObject.class);reply.setAccessible(true);reply.invoke(a,row);if(kind.equals("photo"))((PhotoBatch)get(a,"photos")).add(new byte[]{1,2},"image/jpeg");if(kind.equals("voice"))set(a,"voiceDraft",VoiceData.fromPcm(new short[]{1,2},2));if(kind.equals("video"))set(a,"videoDraft",video);((EditText)get(a,"composer")).setText("Απάντηση");call(a,"send");}catch(Exception e){throw new AssertionError(e);}});idle(s);assertEquals(kind,1,api.sent.size());JSONObject body=api.sent.get(0);assertEquals("CASH",body.getString("topic"));assertEquals("SHIFT",body.getString("category"));assertEquals("topic-message",body.getString("replyToId"));}
+   s.onActivity(a->{try{JSONObject row=new JSONObject().put("id","topic-message").put("senderId","actor").put("body","Ταμείο").put("category","SHIFT").put("topic","CASH");Method reply=MainActivity.class.getDeclaredMethod("chooseChatReply",JSONObject.class);reply.setAccessible(true);reply.invoke(a,row);if(kind.equals("photo"))((PhotoBatch)get(a,"photos")).add(new byte[]{1,2},"image/jpeg");if(kind.equals("voice"))set(a,"voiceDraft",VoiceData.fromPcm(new short[]{1,2},2));if(kind.equals("video"))set(a,"videoDraft",video);((EditText)get(a,"composer")).setText("Απάντηση");call(a,"send");}catch(Exception e){throw new AssertionError(e);}});
+   if(kind.equals("photo")){
+    assertTrue(api.sent.isEmpty());
+    s.onActivity(a->{try{
+     android.app.DatePickerDialog picker=(android.app.DatePickerDialog)get(a,"imageDialog");
+     assertTrue(picker.isShowing());
+     picker.getDatePicker().updateDate(2026,0,1);
+     picker.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+    }catch(Exception e){throw new AssertionError(e);}});
+   }
+   idle(s);assertEquals(kind,1,api.sent.size());JSONObject body=api.sent.get(0);
+   if(kind.equals("photo"))assertEquals("2026-01-01",body.getString("cashDay"));
+   else assertFalse(body.has("cashDay"));assertEquals("CASH",body.getString("topic"));assertEquals("SHIFT",body.getString("category"));assertEquals("topic-message",body.getString("replyToId"));}
   }
  }
  @Test public void uncertainSendBlocksTopicSwitchAndWrongResponseNeverRenders()throws Exception{

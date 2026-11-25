@@ -173,6 +173,8 @@ Source#4037/head8975b1ca, mergec36a4ffb. PR CI44393082061:6264PASS/0FAIL/2option
 
 - 25/11/2026 · Νο 7 · Ημερήσια αναφορά ταμείων την ημέρα ενεργοποίησης · [Checkpoint](CHANGES/2026-11-25-no7-daily-cash-activation-day.md).
 
+- 25/11/2026 · Νο 7 · Ημερομηνία ταμείου στο Chat · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day.md).
+
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
 Νέο ρητό αίτημα ιδιοκτήτη: εμφάνιση αντίστοιχων παραστατικών όταν πατά κάθε σύνολο· πρώτα οι μη καταχωρισμένες αγορές. Owner `/root` Νο2, branch `feat/no2-monthly-counter-drilldown`, μόνο ordinary GET filter/UI και regressions. Όλο το month subset πριν pagination, bound cursors και αμετάβλητα global totals. Άλλοι owners/C/D1/email/classifier/writers διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md). NOT STARTED / NOT TESTED, source μετά merged claim, καμία οικονομική/stock πράξη.
@@ -1058,3 +1060,4 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 25/11/2026 · Retained4194owner /root · weekly-only source READY, native102PASS + No7compat11PASS/3Docker-pending; explicit versioned security/existing-lab/schema admission; old plan/profile hashes preserved, code source bindings63. Full CI/install/LAB pending; runtime OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-admission-source.md.
 
 25/11/2026 · Weekly4194 same owner: actual299-table column reconciliation0mismatch, exact preserved No5/myDATA nullable/added columns included in optional versioned runtime metadata descriptor; production still OFF. New exact-head CI required. See weekly-stock-alarm-admission-source checkpoint.
+- 25/11/2026 · Νο 5 · [Επανεκχώρηση μηνιαίων ελέγχων και εκκρεμοτήτων](CHANGES/2026-11-25-no5-store-report-reads.md).

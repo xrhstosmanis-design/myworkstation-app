@@ -9,7 +9,17 @@ export async function readCashChatEvidence(db, {companyId, storeId}, window=null
   try {
     // Do not read binary bytes, invoke invoice intake, mark messages read or call AI.
     // Latest uploads are only discovery candidates, including late-uploaded papers.
-    const rows = window?await db.$queryRaw`
+    const rows = window?.cashDay?await db.$queryRaw`
+      SELECT "id", "companyId", "storeId", "category", "createdAt",
+        "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum", "cashDay"::text AS "cashDay"
+      FROM "StoreChatMessage"
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId}
+        AND "createdAt"<${window.to}
+        AND (("cashDay" IS NULL AND "createdAt">=${window.from}) OR
+             ("cashDay" IS NOT NULL AND "cashDay"=${window.cashDay}::date))
+        AND "category" IN ('CASH','SHIFT') AND "attachmentData" IS NOT NULL
+        AND "attachmentMimeType" IN ('image/jpeg','image/png','image/webp','application/pdf')
+      ORDER BY ("cashDay" IS NOT NULL) DESC, "createdAt" DESC, "id" DESC LIMIT 51` : window?await db.$queryRaw`
       SELECT "id", "companyId", "storeId", "category", "createdAt",
         "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum"
       FROM "StoreChatMessage"
@@ -32,7 +42,7 @@ export async function readCashChatEvidence(db, {companyId, storeId}, window=null
       if (ids.has(row.id)) return unavailable('DUPLICATE_MESSAGE_ID');
       ids.add(row.id);
       const checksum = /^[a-f0-9]{64}$/i.test(row.attachmentChecksum || '') ? row.attachmentChecksum.toLowerCase() : null;
-      const reference = {messageId:row.id, uploadedAt:row.createdAt, category:row.category, filename:String(row.attachmentName || '').slice(0,180)};
+      const reference = {messageId:row.id, uploadedAt:row.createdAt, ...(row.cashDay?{declaredCashDay:row.cashDay}:{}), category:row.category, filename:String(row.attachmentName || '').slice(0,180)};
       if (checksum && byChecksum.has(checksum)) { byChecksum.get(checksum).references.push(reference); continue; }
       const source = {sizeBytes:Number(row.attachmentSize),sourceId:checksum ? `SHA256:${checksum}` : `MESSAGE:${row.id}`, checksum, mimeType:row.attachmentMimeType,
         references:[reference], readingStatus:'NOT_CHECKED', documentDate:null, sessionId:null, associationStatus:'UNVERIFIED'};
