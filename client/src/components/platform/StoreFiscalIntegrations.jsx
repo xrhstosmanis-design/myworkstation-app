@@ -1,3 +1,4 @@
+import NetlinkPosConfigForm from "./NetlinkPosConfigForm.jsx";
 import React,{useEffect,useState} from "react";
 import {Copy,KeyRound,ShieldCheck,X} from "lucide-react";
 import EfoodEventPreview from "./EfoodEventPreview.jsx";
@@ -192,6 +193,7 @@ export default function StoreFiscalIntegrations({manager,request,onClose,onChang
     {error&&<div className="platform-error">{error}</div>}
     <div className="fiscal-integrations-grid">
       <NetlinkConnectionForm companyId={manager.company.id} storeId={manager.store.id} request={request}/>
+      <NetlinkPosConfigForm key={manager.store.id} companyId={manager.company.id} storeId={manager.store.id} request={request}/>
       {definitions.map(def=>{const row=current(def.kind);return <form key={def.kind} onSubmit={submit(def.kind)}>
         <div className="fiscal-integration-heading"><KeyRound/><div><h3>{def.title}</h3><span className={row?.enabled?"configured":""}>{row?`${row.enabled?"ΕΝΕΡΓΗ":"ΑΝΕΝΕΡΓΗ"} · ${row.accountHint}`:"ΔΕΝ ΕΧΕΙ ΡΥΘΜΙΣΤΕΙ"}</span></div></div>
         <label>Πάροχος / Υπηρεσία<input name="providerName" defaultValue={row?.providerName||""} placeholder="π.χ. AADE ή όνομα παρόχου" required/></label>
