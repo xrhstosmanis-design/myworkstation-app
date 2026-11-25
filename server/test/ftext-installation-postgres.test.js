@@ -60,6 +60,7 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
   for(let i=0;i<foreignIds.length;i++)await a.$executeRaw`INSERT INTO "CloudAudit" ("id","companyId","storeId","actorType","actorId","eventType","details") VALUES (${foreignIds[i]},${i===0?'company-B':scope.companyId},${i===1?'store-B':scope.storeId},'DEVICE',${i===2?'foreign-device':originalDevice.id},${i===3?'FTEXT_PAIRED':'FTEXT_STATUS_REPORTED'},${JSON.stringify({terminalPos:i===4?'POS-02':scope.terminalPos,requestId:foreignIds[i],ok:i!==5,code:i===5?101:0})}::jsonb)`;
   const before=await snapshot(),auditBefore=await a.$queryRaw`SELECT * FROM "CloudAudit" ORDER BY "id"`;
   const history=await service.statusHistory(token,{requestIds:[known,unknown,known,...foreignIds]});
+  assert.deepEqual(history.acknowledged101Ids,[foreignIds[5]]);
   assert.deepEqual(history.acknowledgedIds,[known]);assert.equal(history.storeId,scope.storeId);assert.equal(history.fiscalExecution,false);assert.equal(history.readinessVerified,false);
   assert.deepEqual(await snapshot(),before,'History lookup must not renew heartbeat/readiness');
   assert.deepEqual(await a.$queryRaw`SELECT * FROM "CloudAudit" ORDER BY "id"`,auditBefore,'History lookup must not create audit/business evidence');
