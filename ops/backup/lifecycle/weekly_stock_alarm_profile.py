@@ -39,6 +39,7 @@ def weekly_manifest(profile,select):
         for review in lab_definition.get('runtimeColumnCompatibility',[]):
             if result['knownColumns'][review['table']]!=review['sourceColumns']:raise ValueError('Weekly source columns differ')
             result['knownColumns'][review['table']]=copy.deepcopy(review['targetColumns'])
+            result['reviewedColumns'].extend(review['table']+'.'+c[0] for c in review['targetColumns'] if not any(s[0]==c[0] for s in review['sourceColumns']) and (c[0].endswith('Id') or c[1] in ('json','jsonb','bytea')))
         for name,columns in lab_definition['columns'].items():
             result['knownTables'].append(name);result['knownColumns'][name]=columns;result['preservedOperationalTables'].append(name);result['reviewedColumns'].extend(name+'.'+c[0] for c in columns)
     expected_receipts=profile[:-len(SUFFIX)].endswith('__NO14_COMPAT_V2')

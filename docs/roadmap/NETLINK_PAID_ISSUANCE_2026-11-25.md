@@ -8,3 +8,9 @@ ASSIGNED /root, continuation of existing Netlink ownership. No duplicate externa
 4. Central common POS integration adds paired value/service lines automatically and completes issuance only after normal successful checkout. Preserve existing fiscal recovery, tenant/module/licensing and once-only payment behavior. No new sale merely to repair lost UI state.
 5. Isolated mock-provider/real HTTP+SQL/mounted UI tests for cash, approved card, decline, timeout, fiscal failure, exact fee, replay/concurrency and store switch. No real provider purchase in automated tests.
 6. Full CI/release/exact revision, then one grouped user acceptance with existing POS/printer. Paid issuance/physical voucher printing remains NOT TESTED until measured. Internal reports remain separate from provider statements.
+
+## Mixed basket continuation
+
+User requires ordinary products in the same basket. Implementation now appends paired card/service rows without replacing ordinary goods; multiple cards share one immutable native checkout manifest, with a separate EUR0.50 service allocation for each card. Payment evidence must cover the entire basket. Removed intents cannot borrow another receipt, and aggregated receipt quantities cannot fund two intents with a single fee.
+
+Local targeted contract/allocation tests:32PASS,0FAIL. Added pre-selection native fiscal readiness check and stale-scope guard for sequential card completion. Source remains uncommitted and NOT LIVE; full SQL/HTTP/UI validation, configuration mapping, full CI and release remain pending. No real provider purchase or physical voucher test was performed.

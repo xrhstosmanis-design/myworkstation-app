@@ -18,6 +18,7 @@ test('weekly overlay keeps all reviewed legacy hashes and matches Python recover
   const broken=structuredClone(target);broken.knownColumns.WeeklyStockAlarmPolicy[0][1]='integer';assert.throws(()=>assertWeeklyStockAlarmProfile(broken));
  }
  assert.equal(createHash('sha256').update(readFileSync(new URL('../../'+weeklyExistingLabDefinition.ownerSource,import.meta.url))).digest('hex'),weeklyExistingLabDefinition.ownerSourceHash);
+ for(const review of weeklyExistingLabDefinition.runtimeCatalogueAdditions||[])assert.equal(createHash('sha256').update(readFileSync(new URL('../../'+review.ownerSource,import.meta.url))).digest('hex'),review.ownerSourceHash);
  const combined='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4__EXISTING_EFOOD_LAB_V1__NO14_COMPAT_V2'+WEEKLY_PROFILE_SUFFIX,target=select({MWS_STORE_LIFECYCLE_PROFILE:combined});
  assert.deepEqual(assertWeeklyStockAlarmProfile(target),select({MWS_STORE_LIFECYCLE_PROFILE:'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'}));assert.ok(createLifecycleInstallationCore(target,{sourceRevision:'a'.repeat(40)}).describe().planHash);
  const python=execFileSync('python3',['-c',`import json,worker;print(json.dumps(worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE':${JSON.stringify(combined)}})))`],{cwd:fileURLToPath(new URL('../../ops/backup/lifecycle/',import.meta.url)),encoding:'utf8'});assert.deepEqual(JSON.parse(python),target);

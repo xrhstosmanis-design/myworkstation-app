@@ -15,7 +15,7 @@ export function withWeeklyStockAlarmProfile(base,{expectedReceipts=false,existin
  if(typeof existingLab!=='boolean'||typeof expectedReceipts!=='boolean'||expectedReceipts&&sourcePlanHash!==weeklyAlarmDefinition.sourceProfiles.MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4)fail();
  if(existingLab){
   result.id+=WEEKLY_LAB_SUFFIX;
-  for(const review of weeklyExistingLabDefinition.runtimeColumnCompatibility||[]){if(JSON.stringify(result.knownColumns[review.table])!==JSON.stringify(review.sourceColumns))fail();result.knownColumns[review.table]=structuredClone(review.targetColumns);}
+  for(const review of weeklyExistingLabDefinition.runtimeColumnCompatibility||[]){if(JSON.stringify(result.knownColumns[review.table])!==JSON.stringify(review.sourceColumns))fail();result.knownColumns[review.table]=structuredClone(review.targetColumns);result.reviewedColumns.push(...review.targetColumns.filter(c=>!review.sourceColumns.some(s=>s[0]===c[0])&&(/Id$/.test(c[0])||['json','jsonb','bytea'].includes(c[1]))).map(c=>review.table+'.'+c[0]));}
   for(const [name,columns]of Object.entries(weeklyExistingLabDefinition.columns)){if(result.knownTables.includes(name))fail();result.knownTables.push(name);result.knownColumns[name]=structuredClone(columns);result.preservedOperationalTables.push(name);result.reviewedColumns.push(...columns.map(c=>name+'.'+c[0]));}
  }
  if(expectedReceipts){
@@ -44,7 +44,7 @@ export function assertWeeklyStockAlarmProfile(manifest){
  }
  if(existingLab){
   if(!base.id.endsWith(WEEKLY_LAB_SUFFIX))fail();base.id=base.id.slice(0,-WEEKLY_LAB_SUFFIX.length);
-  for(const review of weeklyExistingLabDefinition.runtimeColumnCompatibility||[]){if(JSON.stringify(base.knownColumns[review.table])!==JSON.stringify(review.targetColumns))fail();base.knownColumns[review.table]=structuredClone(review.sourceColumns);}
+  for(const review of weeklyExistingLabDefinition.runtimeColumnCompatibility||[]){if(JSON.stringify(base.knownColumns[review.table])!==JSON.stringify(review.targetColumns))fail();base.knownColumns[review.table]=structuredClone(review.sourceColumns);const added=review.targetColumns.filter(c=>!review.sourceColumns.some(s=>s[0]===c[0])&&(/Id$/.test(c[0])||['json','jsonb','bytea'].includes(c[1]))).map(c=>review.table+'.'+c[0]);base.reviewedColumns=base.reviewedColumns.filter(c=>!added.includes(c));}
   for(const name of Object.keys(weeklyExistingLabDefinition.columns)){base.knownTables=base.knownTables.filter(n=>n!==name);delete base.knownColumns[name];base.preservedOperationalTables=base.preservedOperationalTables.filter(n=>n!==name);base.reviewedColumns=base.reviewedColumns.filter(n=>!n.startsWith(name+'.'));}
  }
  if(JSON.stringify(withWeeklyStockAlarmProfile(base,{expectedReceipts,existingLab}))!==JSON.stringify(manifest))fail();return base;

@@ -98,12 +98,12 @@
     "server/src/services/automatic-report-security-compatibility.js": "54c6c24a794c7de5f7ff16f33844f3e0df31310648f3e7cfa3ccfd2af5c1017e",
     "ops/backup/lifecycle/report-security-profile.proposed.json": "467ebede27b7b9b8e0aefddfb274b5c32e89a0a056f65eb4e7443c42f651a074",
     "ops/backup/lifecycle/report-security-compatibility.proposed.json": "bb105475e3e14a3425d4fc67e5b2d855ee4c23f8c161d4c688bae5bbceca203f",
-    "server/src/services/weekly-stock-alarm-profile.js": "65977862629193aa527e2feb889c63ccbf51f8dbec4a9bb1b1e94ca384bdff94",
+    "server/src/services/weekly-stock-alarm-profile.js": "b8f9be24310c3d7cd37755b5aa3eb517209b8a574a8d4e4a1a3d8b57905f917c",
     "server/src/services/weekly-stock-alarm-catalogue.js": "266826756fdc0a4c3e2519f7e0f42a61b3f25b22850d0e6fd8b210caeb5f4a33",
-    "server/src/services/weekly-stock-alarm-existing-lab.js": "b576176d98db5ac218192d78879ef18e3ea33136f7adba498f69c93fc136b5e7",
+    "server/src/services/weekly-stock-alarm-existing-lab.js": "8111c570114784adf017c94049e94eddb146b8aeeae33c915d95fc242e298882",
     "ops/backup/lifecycle/weekly-stock-alarm-definition.proposed.json": "15c6fa54b45b47d68492d3e4016ed8bb22c238cf0a929112318c6120d5aa22ad",
-    "ops/backup/lifecycle/weekly-stock-alarm-existing-lab.proposed.json": "dc9621673bcd26cb9ecc3d105e74480b5bb8677c51b06a663e263d554b782797",
-    "ops/backup/lifecycle/weekly_stock_alarm_profile.py": "32d5ac800be5dd9903a0a6293517d95577121c2275e57fac427f11e7542d0a42"
+    "ops/backup/lifecycle/weekly-stock-alarm-existing-lab.proposed.json": "c36578458c32648ee9bf9368a9219ef10c40a9cbdd25e15853117e050775f9b1",
+    "ops/backup/lifecycle/weekly_stock_alarm_profile.py": "dbff7c30d26635b190d6225727b83b85f243fe2f366cfaaca6202ff936cf1403"
   },
   "runtimeProfilesUnchanged": [
     "BASE",

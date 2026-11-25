@@ -1,3 +1,4 @@
+import {addPlatformNetlinkPosConfig} from "./platform-netlink-pos-config.js";
 import {Router} from "express";
 import {z} from "zod";
 import {createNetlinkConnectionStore,connectionScope} from "../integrations/netlink/store-connection.js";
@@ -37,5 +38,6 @@ export function createPlatformNetlinkConnectionsRouter(db,{provider=config=>new 
     }
     res.json({ok:true,storeId:tenant.storeId,stationId:config.stationId,checkedAt:new Date().toISOString(),check:"AUTH_AND_CATALOGUE",storeIdentityVerified:false,message:"Η πρόσβαση στον κατάλογο Netlink επιβεβαιώθηκε. Η ταυτοποίηση καταστήματος εκκρεμεί με αναφορά της Netlink. Δεν εκδόθηκε κάρτα."});
   }catch(error){next(error)}});
+  addPlatformNetlinkPosConfig(router,{db,context});
   return router;
 }

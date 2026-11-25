@@ -1,3 +1,5 @@
+import {prepareNetlinkPaidCheckout} from "../integrations/netlink/paid-checkout-readiness.js";
+import {createPaidNetlinkRouter} from "./netlink-paid-issuance.js";
 import {greeceDateInput,greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
@@ -38,7 +40,7 @@ router.get("/status",async(req,res,next)=>{try{
   if(storeId!==undefined&&storeId!==null)await storeFor(req,storeId);
   const connection=storeId&&!isMockProvider()?await (await netlinkConnectionStore()).status({companyId:req.user.companyId,storeId}):null;
   const appConfigured=Boolean(process.env.NETLINK_TOKEN_URL&&process.env.NETLINK_API_BASE&&process.env.NETLINK_CLIENT_ID&&process.env.NETLINK_CLIENT_SECRET);
-  res.json({moduleKey:"NETLINK_PREPAID",storeId:storeId||null,configured:isMockProvider()||Boolean(appConfigured&&connection?.configured&&connection?.enabled),provider:isMockProvider()?"MOCK":"NETLINK",executeEnabled:process.env.NETLINK_ENABLE_EXECUTE==="true",testMode:isTestMode(),fiscalGateRequired:!isTestMode(),commissionRate,serviceFeeAmount:defaultServiceFee});
+  res.json({moduleKey:"NETLINK_PREPAID",storeId:storeId||null,configured:isMockProvider()||Boolean(appConfigured&&connection?.configured&&connection?.enabled),provider:isMockProvider()?"MOCK":"NETLINK",executeEnabled:process.env.NETLINK_ENABLE_EXECUTE==="true",paidIssuanceVersion:1,testMode:isTestMode(),fiscalGateRequired:!isTestMode(),commissionRate,serviceFeeAmount:defaultServiceFee});
 }catch(error){next(error)}});
 router.get("/menu",async(req,res,next)=>{try{
   const storeId=req.query.storeId??req.user.storeId;
@@ -75,6 +77,7 @@ const prepareSchema=z.object({storeId:z.string().min(1),productId:z.string().min
 router.post("/prepare",async(req,res,next)=>{
   let ledgerId=null;
   try{
+    if(!isMockProvider())return res.status(409).json({error:"Χρησιμοποίησε τη ροή πληρωμένης κάρτας.",code:"NETLINK_PAID_FLOW_REQUIRED"});
     const body=prepareSchema.parse(req.body||{});await storeFor(req,body.storeId);const requestId=body.requestId||crypto.randomUUID();
     const existing=await prisma.$queryRaw`SELECT "id","status" FROM "NetlinkTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${body.storeId} AND "requestId"=${requestId} LIMIT 1`;
     if(existing[0])return res.status(409).json({error:"Η συγκεκριμένη Netlink αίτηση έχει ήδη καταχωρηθεί.",code:"NETLINK_DUPLICATE_REQUEST",transaction:existing[0]});
@@ -93,6 +96,7 @@ router.post("/execute",async(req,res,next)=>{
     if(process.env.NETLINK_ENABLE_EXECUTE!=="true")return res.status(409).json({error:"Η εκτέλεση Netlink είναι κλειδωμένη από τη ρύθμιση του server.",code:"NETLINK_EXECUTE_LOCKED"});
     const body=executeSchema.parse(req.body||{});await storeFor(req,body.storeId);const testMode=isTestMode();
     if(body.testRun&&!testMode)return res.status(403).json({error:"Το Netlink test mode δεν επιτρέπεται σε production.",code:"NETLINK_TEST_MODE_FORBIDDEN"});
+    if(!isMockProvider())return res.status(409).json({error:"Η έκδοση απαιτεί τη συνδεδεμένη πληρωμένη κάρτα.",code:"NETLINK_PAID_FLOW_REQUIRED"});
     const configRows=await prisma.$queryRaw`SELECT "serviceFeeAmount" FROM "NetlinkStoreConfig" WHERE "storeId"=${body.storeId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;const serviceFeeAmount=money(configRows[0]?.serviceFeeAmount??defaultServiceFee);
     const sales=await prisma.$queryRaw`SELECT "id","total","status","fiscalStatus" FROM "Sale" WHERE "id"=${body.saleId} AND "storeId"=${body.storeId} AND "companyId"=${req.user.companyId} LIMIT 1`;const sale=sales[0];
     if(!sale)return res.status(404).json({error:"Δεν βρέθηκε η συνδεδεμένη δοκιμαστική πώληση POS."});
@@ -147,4 +151,5 @@ router.post("/cancellation-requests",async(req,res,next)=>{try{
   const id=crypto.randomUUID();await prisma.$executeRaw`INSERT INTO "NetlinkCancellationRequest" ("id","companyId","storeId","transactionId","status","reason","requestedById","requestedByName","netlinkReference") VALUES (${id},${req.user.companyId},${transaction.storeId},${transaction.id},'PENDING_NETLINK',${body.reason},${req.user.id||null},${req.user.fullName||null},${transaction.providerReference||transaction.providerTransactionId||null})`;
   res.status(201).json({id,status:"PENDING_NETLINK",transactionId:transaction.id,message:"Το αίτημα καταγράφηκε. Η ακύρωση ολοκληρώνεται μόνο μετά από επιβεβαίωση της Netlink."});
 }catch(error){next(error)}});
+router.use(createPaidNetlinkRouter({db:prisma,provider:netlinkClient,storeFor,prepareCheckout:prepareNetlinkPaidCheckout}));
 export default router;

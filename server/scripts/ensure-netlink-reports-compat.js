@@ -1,8 +1,10 @@
+import {ensureNetlinkPaidIssuanceSchema} from "../src/integrations/netlink/paid-issuance-schema.js";
 import {PrismaClient} from "@prisma/client";
 
 const prisma=new PrismaClient();
 
 try{
+  await ensureNetlinkPaidIssuanceSchema(prisma);
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "NetlinkCancellationRequest" (
       "id" TEXT PRIMARY KEY,

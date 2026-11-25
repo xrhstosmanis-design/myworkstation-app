@@ -610,6 +610,326 @@
       "ownerSources": [
         "server/src/routes/platform-store-integrations.js"
       ]
+    },
+    {
+      "table": "NetlinkTransaction",
+      "sourceColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "saleId",
+          "text",
+          false
+        ],
+        [
+          "requestId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "flow",
+          "text",
+          true
+        ],
+        [
+          "status",
+          "text",
+          true
+        ],
+        [
+          "providerTransactionId",
+          "text",
+          false
+        ],
+        [
+          "providerReference",
+          "text",
+          false
+        ],
+        [
+          "amount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "serviceFeeAmount",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "customerTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "commissionRate",
+          "numeric(8,6)",
+          true
+        ],
+        [
+          "commissionAmount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "paymentMethod",
+          "text",
+          false
+        ],
+        [
+          "operatorId",
+          "text",
+          false
+        ],
+        [
+          "operatorName",
+          "text",
+          false
+        ],
+        [
+          "errorCode",
+          "text",
+          false
+        ],
+        [
+          "errorMessage",
+          "text",
+          false
+        ],
+        [
+          "preparedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "fiscalDocumentId",
+          "text",
+          false
+        ],
+        [
+          "fiscalNumber",
+          "text",
+          false
+        ],
+        [
+          "fiscalIssuedAt",
+          "timestamp(3) without time zone",
+          false
+        ]
+      ],
+      "targetColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "saleId",
+          "text",
+          false
+        ],
+        [
+          "requestId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "flow",
+          "text",
+          true
+        ],
+        [
+          "status",
+          "text",
+          true
+        ],
+        [
+          "providerTransactionId",
+          "text",
+          false
+        ],
+        [
+          "providerReference",
+          "text",
+          false
+        ],
+        [
+          "amount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "serviceFeeAmount",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "customerTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "commissionRate",
+          "numeric(8,6)",
+          true
+        ],
+        [
+          "commissionAmount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "paymentMethod",
+          "text",
+          false
+        ],
+        [
+          "operatorId",
+          "text",
+          false
+        ],
+        [
+          "operatorName",
+          "text",
+          false
+        ],
+        [
+          "errorCode",
+          "text",
+          false
+        ],
+        [
+          "errorMessage",
+          "text",
+          false
+        ],
+        [
+          "preparedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "fiscalDocumentId",
+          "text",
+          false
+        ],
+        [
+          "fiscalNumber",
+          "text",
+          false
+        ],
+        [
+          "fiscalIssuedAt",
+          "timestamp(3) without time zone",
+          false
+        ],
+        [
+          "issuanceIntentEnc",
+          "text",
+          false
+        ],
+        [
+          "checkoutId",
+          "text",
+          false
+        ],
+        [
+          "cashReceivedTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "issuanceResultEnc",
+          "text",
+          false
+        ],
+        [
+          "cashReceivedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "cashReceivedBy",
+          "text",
+          false
+        ],
+        [
+          "providerDispatchedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "fiscalEvidence",
+          "jsonb",
+          false
+        ]
+      ],
+      "ownerSources": [
+        "server/src/integrations/netlink/paid-issuance-schema.js"
+      ]
     }
   ],
   "format": "MWS_WEEKLY_EXISTING_EFOOD_LAB_V1",
@@ -815,5 +1135,96 @@
       }
     ],
     "triggers": []
-  }
+  },
+  "runtimeCatalogueAdditions": [
+    {
+      "table": "NetlinkTransaction",
+      "columns": [
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "issuanceIntentEnc",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "checkoutId",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "cashReceivedTotal",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "numeric(14,2)"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "issuanceResultEnc",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "cashReceivedAt",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "timestamp with time zone"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "cashReceivedBy",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "providerDispatchedAt",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "timestamp with time zone"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "fiscalEvidence",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "jsonb"
+        }
+      ],
+      "indexes": [
+        {
+          "definition": "CREATE INDEX \"NetlinkTransaction_paid_checkout_idx\" ON __SCHEMA__.\"NetlinkTransaction\" USING btree (\"companyId\", \"storeId\", \"checkoutId\") WHERE (\"issuanceIntentEnc\" IS NOT NULL)",
+          "name": "NetlinkTransaction_paid_checkout_idx",
+          "ready": true,
+          "table": "NetlinkTransaction",
+          "unique": false,
+          "valid": true
+        }
+      ],
+      "ownerSource": "server/src/integrations/netlink/paid-issuance-schema.js",
+      "ownerSourceHash": "f849f225239b9eb99aea35f7993a3350076bb7691aa62e0e2e75abdf6fcfd8cc"
+    }
+  ]
 }
