@@ -81,7 +81,7 @@ public final class ChatMessagingService extends FirebaseMessagingService {
         Notification notification = notification(context, store, company, binding, messageId)
             .setContentTitle("MyWorkStation Chat")
             .setContentText(sent ? "Η απάντηση στάλθηκε." : "Η αποστολή δεν επιβεβαιώθηκε. Έλεγξε τη συνομιλία.")
-            .setOnlyAlertOnce(true).setSilent(true).setTimeoutAfter(30_000).build();
+            .setOnlyAlertOnce(true).setTimeoutAfter(30_000).build();
         context.getSystemService(NotificationManager.class).notify(messageId, NOTIFICATION_ID, notification);
     }
 }
