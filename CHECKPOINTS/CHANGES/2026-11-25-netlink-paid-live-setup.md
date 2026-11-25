@@ -1,0 +1,13 @@
+# Netlink paid issuance — release and production setup
+
+Owner /root. Continuation of claim#4225 and source PR#4229. No customer IDs, credentials, private receipts or production financial details are included here.
+
+Source head e7ed47d3125a2a589716d2079a84532dd7be89f0: full CI45633162691 SUCCESS, all5jobs. Merged7623888cc63d95f1c1f4283231e4e938b565f397. Render source deploy dep-dc3fgqd9el5s73d8tuqg LIVE; paid-feature activation deploy dep-dc3fllk0916s738m9v80 LIVE on the same revision. Public /api/health returned200,ok:true,revision7623888cc63d95f1c1f4283231e4e938b565f397 after activation.
+
+The selected production-store accounting setup was completed through normal authenticated Super Admin/Backoffice UI. Existing service fee reused at0.50EUR, with stock tracking disabled; its existing stock and movement count were verified unchanged before/after by read-only SQL. A dedicated electronic-card value item was created with no opening stock/tracking, adopting the existing card fiscal department. Central mapping saved and independently read back with exact0.50fee and both items non-stock. Existing denomination-card inventory was not repurposed or edited. Current native ftext device was observed active with cash/card enabled, successful status and the relevant existing fiscal departments. No credentials or rights were changed.
+
+NETLINK_ENABLE_EXECUTE was enabled using a partial Render environment update, preserving all other variables, and the resulting deploy was monitored to LIVE. This exposes only the new paid/fiscal-gated route: legacy direct production execution remains blocked. Store credentials, accounting mapping, native register readiness, module/license/operator/store checks and full payment/receipt evidence are still mandatory. The other configured-accounting store has no Netlink connection; no second production store was configured for this change.
+
+Validation:61/61 targeted local tests with isolated PostgreSQL18.7 and mounted React,0FAIL/0SKIP; production client build PASS. Full CI and exact live health verified. This is deployment/setup evidence, not a real issuance/physical-print PASS. No real PIN purchase, test sale or payment was performed by the agent. Existing catalogue/internal-report print USER PASS remains separate and protected.
+
+Next grouped user acceptance: refresh the existing POS, select a fixed-value card, verify a separate0.50fee alongside any ordinary goods/multiple cards; use the normal whole-basket cash/card payment and genuine fiscal receipt. Verify each saved voucher prints, and reprint does not create a new purchase. Never repeat a payment to document an unknown result. Variable/prepare products remain read-only. Owner /root retains the open paid-flow acceptance scope.
