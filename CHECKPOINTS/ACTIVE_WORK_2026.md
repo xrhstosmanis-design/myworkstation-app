@@ -1005,3 +1005,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 24/11/2026 · Νο 5 · [Όρια εκχώρησης δικαιωμάτων POS ανά κατάστημα](CHANGES/2026-11-24-no5-pos-permission-ceiling.md).
 
 - 24/11/2026 · Νο 5 · [Όρια επανεκχώρησης προβολών BackOffice](CHANGES/2026-11-24-no5-backoffice-read-delegation.md).
+
+- 25/11/2026 · Νο 5 · [Επανενεργοποίηση κατηγοριών και αναζήτηση barcode καταστήματος](CHANGES/2026-11-25-no5-catalog-rights.md).

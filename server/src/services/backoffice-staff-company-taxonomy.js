@@ -1,6 +1,6 @@
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {companyCategoryManageCapability as capability,companyCategoryManageRoute} from "../../../shared/backoffice-staff-company.mjs";
+import {companyCategoryManageCapability as capability,companyCategoryManageRoute,companyCategoryReactivateCapability,companyCategoryReactivateRoute} from "../../../shared/backoffice-staff-company.mjs";
 import {requireStaffCompanyGrant} from "./backoffice-staff-company.js";
 import {staffError} from "./backoffice-staff-access.js";
 
@@ -58,4 +58,54 @@ export async function saveStaffCompanyCategory(db,req){
     if(error?.code==="P2002"||error?.meta?.code==="23505")throw duplicate();
     throw error;
   }
+}
+
+const reactivationSchema=z.object({expectedName:z.string().min(1).max(180),confirm:z.literal(true)}).strict();
+export async function reactivateStaffCompanyCategory(db,req){
+  const {user,staffCompanyGrant:initial}=req,capability=companyCategoryReactivateCapability;
+  const route=companyCategoryReactivateRoute(req.method,String(req.originalUrl||"").split("?")[0]);
+  if(!route||user?.staffAccess!==true||user.storeId||initial?.capability!==capability||initial.companyId!==user.companyId||
+    req.get("x-backoffice-company-id")!==user.companyId||req.get("x-backoffice-store-id")!==undefined||Object.keys(req.query||{}).length)throw staffError();
+  const parsed=reactivationSchema.safeParse(req.body);
+  if(!parsed.success)throw staffError(400,"STAFF_TAXONOMY_CONFIRMATION_REQUIRED","Επιβεβαίωσε την επανενεργοποίηση.");
+  const {id,kind}=route,companyId=user.companyId,subcategory=kind==="subcategories";
+  return db.$transaction(async tx=>{
+    const live=await requireStaffCompanyGrant(tx,user,capability);
+    if(live.revision!==initial.revision)throw staffError();
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"staff-company-taxonomy:"+companyId}))`;
+    const [current]=subcategory?
+      await tx.$queryRaw`SELECT sc."name",sc."active",sc."categoryId",par."active" AS "parentActive" FROM "ProductSubcategory" sc
+        JOIN "ProductCategory" par ON par."id"=sc."categoryId" AND par."companyId"=sc."companyId"
+        WHERE sc."id"=${id} AND sc."companyId"=${companyId} FOR UPDATE OF sc FOR SHARE OF par`:
+      await tx.$queryRaw`SELECT "name","active" FROM "ProductCategory" WHERE "id"=${id} AND "companyId"=${companyId} FOR UPDATE`;
+    if(!current)throw missing();
+    if(current.name!==parsed.data.expectedName)throw staffError(409,"STAFF_TAXONOMY_CHANGED","Η περιγραφή άλλαξε. Ανανέωσε την προβολή.");
+    if(current.active)throw staffError(409,"STAFF_TAXONOMY_ALREADY_ACTIVE","Η καταχώριση είναι ήδη ενεργή.");
+    if(subcategory&&!current.parentActive)throw staffError(409,"STAFF_TAXONOMY_PARENT_INACTIVE","Ενεργοποίησε πρώτα τη γονική κατηγορία.");
+    const [existing]=subcategory?
+      await tx.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "categoryId"=${current.categoryId}
+        AND "id"<>${id} AND "active"=true AND LOWER("name")=LOWER(${current.name}) LIMIT 1`:
+      await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${companyId}
+        AND "id"<>${id} AND "active"=true AND LOWER("name")=LOWER(${current.name}) LIMIT 1`;
+    if(existing)throw duplicate();
+    const [references]=await tx.$queryRaw`
+      WITH subcategories AS (
+        SELECT "id" FROM "ProductSubcategory" WHERE "companyId"=${companyId}
+          AND ((${subcategory} AND "id"=${id}) OR (NOT ${subcategory} AND "categoryId"=${id}))
+      )
+      SELECT EXISTS(SELECT 1 FROM "Product" WHERE "companyId"=${companyId}
+        AND ((NOT ${subcategory} AND "categoryId"=${id}) OR "subcategoryId" IN (SELECT "id" FROM subcategories)))
+      OR EXISTS(SELECT 1 FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
+        WHERE (NOT ${subcategory} AND sp."categoryIdOverride"=${id}) OR sp."subcategoryIdOverride" IN (SELECT "id" FROM subcategories)) AS "used"`;
+    if(references?.used!==false)throw staffError(409,"STAFF_TAXONOMY_REFERENCED","Η καταχώριση χρησιμοποιείται ήδη σε είδος.");
+    if(subcategory){
+      await tx.$executeRaw`UPDATE "ProductSubcategory" SET "active"=true,"updatedAt"=NOW() WHERE "id"=${id} AND "companyId"=${companyId}`;
+    }else{
+      await tx.$executeRaw`UPDATE "ProductCategory" SET "active"=true,"updatedAt"=NOW() WHERE "id"=${id} AND "companyId"=${companyId}`;
+    }
+    await tx.$executeRaw`INSERT INTO "BackofficeStaffAudit" ("id","companyId","actorId","targetUserId","event","detail")
+      VALUES (${randomUUID()},${companyId},${user.id},${user.id},'PRODUCT_TAXONOMY_REACTIVATED',
+        ${JSON.stringify({kind,id,categoryId:current.categoryId??null,name:current.name})}::jsonb)`;
+    return {ok:true,companyId,id,kind,active:true};
+  });
 }

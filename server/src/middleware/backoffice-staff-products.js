@@ -59,6 +59,27 @@ export function createStaffProductBridge(db){
     }
     if(req.user?.staffAccess!==true||req.staffGrant?.capability!=='products.create')return res.status(403).json({error:'Δεν υπάρχει δικαίωμα δημιουργίας είδους.'});
     try{
+      const barcodeLookup=/^\/new-card\/stores\/([^/]+)\/barcode\/([0-9]{6,18})$/.exec(req.path);
+      if(req.method==='GET'&&barcodeLookup){
+        const [,storeId,barcode]=barcodeLookup;
+        if(req.user.storeId!==storeId||Object.keys(req.query||{}).length)throw staffError();
+        const result=await db.$transaction(async tx=>{
+          await requireStaffAction(tx,req,storeId,'products.create');
+          const rows=await tx.$queryRaw`
+            SELECT DISTINCT p."name",p."id" FROM "Product" p
+            JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} AND sp."active"=true
+            JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=p."companyId"
+            WHERE p."companyId"=${req.user.companyId} AND p."active"=true
+              AND EXISTS (
+                SELECT 1 FROM "ProductBarcode" b WHERE b."productId"=p."id" AND b."barcode"=${barcode}
+              )
+            ORDER BY p."id" LIMIT 2
+          `;
+          if(rows.length>1)throw staffError(409,'STAFF_BARCODE_AMBIGUOUS','Το barcode αντιστοιχεί σε περισσότερα είδη του καταστήματος.');
+          return rows.length?{found:true,source:'MYWORKSTATION',product:{name:rows[0].name}}:{found:false};
+        });
+        return res.json({storeId,barcode,...result});
+      }
       if(req.method==='GET'&&req.path==='/new-card/options')return res.json(await readInventoryNewCardOptions(db,req.user,String(req.query.storeId||'')));
       if(req.method==='POST'&&req.path==='/new-card'){
         const result=await createInventoryCard(db,req.user,req.body);
