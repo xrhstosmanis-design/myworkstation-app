@@ -45,7 +45,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     ])await db.$executeRawUnsafe(sql);
     await db.$executeRaw`INSERT INTO "Company" ("id","name") VALUES ('a','A'),('b','B')`;
     await db.$executeRaw`INSERT INTO "Store" ("id","companyId","name") VALUES ('a1','a','A1'),('a2','a','A2'),('b1','b','B1')`;
-    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") SELECT 'a-'||key,'a',key FROM unnest(ARRAY['CORE','INVENTORY','CASH_CONTROL','STORE_CHAT','AI_READER','STORE_MODE','DOCUMENTS']) AS key`;
+    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") SELECT 'a-'||key,'a',key FROM unnest(ARRAY['CORE','INVENTORY','CASH_CONTROL','STORE_CHAT','AI_READER','STORE_MODE','DOCUMENTS','ORDER_SUGGESTIONS']) AS key`;
     await db.$executeRaw`INSERT INTO "User" ("id","companyId","email","fullName","role","passwordHash") VALUES ('owner-a','a','a@isolated.invalid','Owner A','OWNER','unused'),('owner-b','b','b@isolated.invalid','Owner B','OWNER','unused')`;
     await db.$executeRaw`INSERT INTO "UserSession" ("id","userId","expiresAt") VALUES ('session-owner-a','owner-a',NOW()+INTERVAL '1 hour'),('session-owner-b','owner-b',NOW()+INTERVAL '1 hour')`;
     await ensureBackofficeStaffSchema(db);await ensureBackofficeStaffSchema(db);
