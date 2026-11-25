@@ -46,3 +46,39 @@ jobs:
           ./tools/windows-ftext/Test-Install-Smoke.ps1
           ./tools/windows-ftext/Test-Output-Smoke.ps1
           ./tools/windows-ftext/Test-Output-Cloud-Smoke.ps1
+      - name: Check LAB-only timing contract
+        shell: pwsh
+        run: node --test tools/windows-ftext/tests/ftext-lab-timing-contract.test.mjs
+      - name: Exercise opt-in LAB timing on synthetic Windows cash fixture
+        shell: powershell
+        env:
+          MWS_FTEXT_LAB_TIMING: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # The existing smoke suite creates a temporary synthetic FTEXT folder,
+          # never connects to a store or to a physical payment terminal.
+          $observed = (& ./tools/windows-ftext/Test-Cash-Smoke.ps1 6>&1 | Out-String -Width 4096)
+          if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'Synthetic cash fixture failed.' }
+          if ($observed -notmatch 'PASS: [0-9]+ cash command/result/scope/timeout/restart/tombstone boundaries') { throw 'Original cash regression fixture did not pass.' }
+          # Only synthetic fixture output (no real POS/payment credentials).
+          $timingLines = @($observed -split "\x60n" | Where-Object { $_ -match 'FTEXT_LAB_TIMING|PASS:|NOT_OBSERVED' })
+          Write-Host ('Synthetic fixture diagnostics: ' + ($timingLines -join ' | '))
+          if ($observed -notmatch 'FTEXT_LAB_TIMING requestId=[0-9a-f-]{36} publish_to_result_ms=[0-9]+ elapsed_ms=[0-9]+ eftpos_visible_ms=NOT_OBSERVED') { throw 'Opt-in timing missing for the synthetic result.' }
+          Write-Host 'PASS: synthetic original cash guard and LAB publication-to-result timing.'
+      - name: Reject passive timing on foreign synthetic terminal
+        shell: powershell
+        env:
+          MWS_FTEXT_RIZAREIO_PASSIVE_TIMING: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Test-Cash-Smoke uses fixture-store/POS-01/TEST12345, not Rizareio.
+          # Production passive mode must be silent for any nonmatching scope.
+          $observed = (& ./tools/windows-ftext/Test-Cash-Smoke.ps1 6>&1 | Out-String -Width 4096)
+          if ($observed -notmatch 'PASS: [0-9]+ cash command/result/scope/timeout/restart/tombstone boundaries') { throw 'Synthetic cash guards did not pass.' }
+          if ($observed -match 'FTEXT_(LAB|RIZAREIO_PASSIVE)_TIMING requestId=') { throw 'Passive diagnostics activated on foreign synthetic terminal.' }
+          Write-Host 'PASS: passive timing rejected for unrelated store/POS/serial.'
+      - name: Verify Rizareio passive scope positive and three negative scenarios
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./tools/windows-ftext/Test-Passive-Timing-Smoke.ps1
