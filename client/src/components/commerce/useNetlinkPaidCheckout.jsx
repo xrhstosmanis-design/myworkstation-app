@@ -5,7 +5,7 @@ export const netlinkIntentFromItems=items=>netlinkIntentIdsFromItems(items)[0]||
 export function useNetlinkPaidCheckout({api,storeId,storeName,getCheckoutId,onReady,onError,onMessage}){
  const token=useRef(null);if(token.current?.api!==api||token.current?.storeId!==storeId)token.current={api,storeId};
  const alive=useRef(true),locks=useRef(new Set()),printed=useRef(new Set());const [buying,setBuying]=useState(false),[voucher,setVoucher]=useState(null);
- useEffect(()=>{alive.current=true;setVoucher(null);return()=>{alive.current=false}},[storeId,api]);
+ useEffect(()=>{alive.current=true;setBuying(false);setVoucher(null);return()=>{alive.current=false}},[storeId,api]);
  const renderToken=token.current;
  const current=()=>()=>alive.current&&token.current===renderToken;
  async function receipt(id,{autoPrint=false}={}){const valid=current();const result=await api(`/api/netlink/issuance-intents/${encodeURIComponent(id)}/receipt`,{method:'POST',body:JSON.stringify({storeId})});if(!valid())return;setVoucher(result);onMessage?.('Η κάρτα εκδόθηκε. Η επανεκτύπωση χρησιμοποιεί την ίδια κάρτα, χωρίς νέα χρέωση.');if(autoPrint&&!printed.current.has(storeId+':'+id)){printed.current.add(storeId+':'+id);if(!await printNetlinkVoucher(window,result,storeName)&&valid())onMessage?.('Η κάρτα εκδόθηκε. Πάτησε «Εκτύπωση κάρτας» στο παράθυρο που άνοιξε.')}}

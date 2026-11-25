@@ -163,6 +163,7 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
     const current=netlinkCartScope.current;
     if(current.busy||current.fiscalPending||current.customer||current.tableOrderId||current.audience!=="NORMAL")throw Error("Η προσθήκη κάρτας χρειάζεται ενεργό καλάθι λιανικής, χωρίς εκκρεμή πληρωμή.");
     if(intent.status!=="READY_FOR_PAYMENT"||intent.items?.length!==2)throw Error("Η επιλεγμένη κάρτα δεν είναι έτοιμη για πληρωμή.");
+    if(checkoutKey.current!==intent.checkoutId)throw Error("Το καλάθι άλλαξε όσο φορτωνόταν η κάρτα. Επίλεξέ την ξανά στο νέο καλάθι.");
     checkoutKey.current=intent.checkoutId;
     setCart(current=>[...current,...intent.items.map(item=>({...item,id:`${intent.requestId}:${item.netlinkRole}`,productId:item.id,salePrice:Number(item.unitPriceOverride),manualPrice:true,priceReason:item.overrideReason,quantity:1}))]);
     setReceived("");setNetlinkPanel(false);setMessage(`Κάρτα ${euro(intent.amount)} + παροχή ${euro(.5)} = ${euro(intent.customerTotal)}. Ολοκλήρωσε την πληρωμή για την έκδοση.`);
