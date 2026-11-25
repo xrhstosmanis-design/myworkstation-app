@@ -1,3 +1,4 @@
+import {assertNetlinkProviderRequestId,nextNetlinkProviderRequestId} from './provider-request-id.js';
 import {decodePaidIntent as openIntent} from './paid-intent-codec.js';
 import {netlinkIntentIdsFromItems,netlinkItemMarker} from '../../../../shared/netlink-checkout-items.mjs';
 import crypto from 'node:crypto';
@@ -16,7 +17,7 @@ export async function readNetlinkPaidConfig(db,scope){
 }
 export function createNetlinkPaidStore({db,provider,clock=()=>new Date(),evidence=readNetlinkNativeEvidence}){
  async function load(scope,id,t=db){return openIntent((await t.$queryRaw`SELECT * FROM "NetlinkTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "issuanceIntentEnc" IS NOT NULL LIMIT 1`)[0],scope)}
- function view(row){return {requestId:row.requestId,checkoutId:row.checkoutId,productId:row.productId,title:row.title,status:row.status,amount:Number(row.amount),serviceFeeAmount:.5,customerTotal:Number(row.customerTotal),saleId:row.saleId||null,createdAt:row.createdAt,cashReceived:Boolean(row.cashReceivedAt)}}
+ function view(row){return {requestId:row.requestId,providerRequestId:row.providerRequestId,errorCode:row.errorCode||null,checkoutId:row.checkoutId,productId:row.productId,title:row.title,status:row.status,amount:Number(row.amount),serviceFeeAmount:.5,customerTotal:Number(row.customerTotal),saleId:row.saleId||null,createdAt:row.createdAt,cashReceived:Boolean(row.cashReceivedAt)}}
  function checkoutView(row,config){
   if(config.saleProduct.id!==row.saleProductId||config.serviceFeeProduct.id!==row.serviceFeeProductId)fail('NETLINK_POS_CONFIG_REQUIRED','Η αντιστοίχιση ειδών άλλαξε. Επίλεξε ξανά την κάρτα πριν πληρώσεις.');
   return {...view(row),items:[{...config.saleProduct,quantity:1,unitPriceOverride:Number(row.amount),overrideReason:`NETLINK_CARD:${row.requestId}`,netlinkIntentId:row.requestId,netlinkCheckoutId:row.checkoutId,netlinkRole:'CARD',displayName:row.title},{...config.serviceFeeProduct,quantity:1,unitPriceOverride:.5,overrideReason:`NETLINK_FEE:${row.requestId}`,netlinkIntentId:row.requestId,netlinkCheckoutId:row.checkoutId,netlinkRole:'FEE',displayName:'Παροχή υπηρεσίας Netlink'}]};
@@ -40,7 +41,7 @@ export function createNetlinkPaidStore({db,provider,clock=()=>new Date(),evidenc
    const sale=(await db.$queryRaw`SELECT "id" FROM "Sale" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${checkoutId} LIMIT 1`)[0];
    if(sale)fail('NETLINK_SALE_ALREADY_EXISTS','Η κάρτα πρέπει να επιλεγεί πριν από την πληρωμή.');
    const config=await readNetlinkPaidConfig(db,scope);let menu;try{menu=await provider(scope).menu()}catch{throw netlinkPaidError("NETLINK_CATALOGUE_UNAVAILABLE","Δεν φορτώθηκε ο κατάλογος Netlink. Δεν έγινε αγορά κάρτας.",502)}const card=fixedCardFromMenu(menu,productId);
-   const value={version:1,...binding(scope,requestId),checkoutId,productId,title:card.title,amount:card.amountCents/100,saleProductId:config.saleProduct.id,serviceFeeProductId:config.serviceFeeProduct.id,providerRequestId:BigInt('0x'+crypto.randomBytes(16).toString('hex')).toString(),expiresAt:new Date(clock().getTime()+30*60000).toISOString()};
+   const value={version:1,...binding(scope,requestId),checkoutId,productId,title:card.title,amount:card.amountCents/100,saleProductId:config.saleProduct.id,serviceFeeProductId:config.serviceFeeProduct.id,providerRequestId:await nextNetlinkProviderRequestId(db),expiresAt:new Date(clock().getTime()+30*60000).toISOString()};
    const enc=encryptStoreIntegrationValue(value),total=(card.amountCents+50)/100;
    const inserted=await db.$executeRaw`INSERT INTO "NetlinkTransaction" ("id","companyId","storeId","requestId","checkoutId","productId","flow","status","amount","serviceFeeAmount","customerTotal","operatorId","operatorName","issuanceIntentEnc") VALUES (${crypto.randomUUID()},${scope.companyId},${scope.storeId},${requestId},${checkoutId},${productId},'PAID_ISSUANCE_V1','READY_FOR_PAYMENT',${value.amount},0.50,${total},${actorId},${actorName||null},${enc}) ON CONFLICT ("storeId","requestId") DO NOTHING`;
    const saved=await load(scope,requestId);if(!saved||saved.productId!==productId||saved.checkoutId!==checkoutId||saved.operatorId!==actorId)fail('NETLINK_DUPLICATE_REQUEST','Το ίδιο αίτημα αφορά διαφορετική κάρτα.');
@@ -69,6 +70,7 @@ export async function assertNetlinkCheckoutDraft(db,scope,body,items,summary){
  for(const id of ids){
   const row=openIntent((await db.$queryRaw`SELECT * FROM "NetlinkTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "issuanceIntentEnc" IS NOT NULL LIMIT 1`)[0],scope);
   if(!row||row.checkoutId!==checkoutId||row.status!=='READY_FOR_PAYMENT')fail('NETLINK_INTENT_NOT_READY','Η κάρτα δεν αντιστοιχεί στο τρέχον καλάθι.');
+  assertNetlinkProviderRequestId(row.providerRequestId);
   if(!body.fiscalRequestId&&Date.now()>new Date(row.expiresAt).getTime())fail('NETLINK_QUOTE_EXPIRED','Η επιλογή της κάρτας έληξε. Επίλεξέ την ξανά πριν πληρώσεις.');
   const indexes=body.items.flatMap((r,i)=>netlinkItemMarker(r)?.requestId===id?[i]:[]);
   for(const [role,productId] of [['CARD',row.saleProductId],['FEE',row.serviceFeeProductId]]){const matches=indexes.filter(i=>netlinkItemMarker(body.items[i])?.role===role&&body.items[i].productId===productId);if(matches.length!==1)fail('NETLINK_PAID_LINES_MISMATCH','Κάθε κάρτα χρειάζεται τη δική της παροχή0,50€.');}
