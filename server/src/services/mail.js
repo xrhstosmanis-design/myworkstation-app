@@ -141,7 +141,7 @@ function createTransport(config){
   });
 }
 
-export async function sendEmail({to,subject,text,html,attachments=[],companyId,storeId}){
+export async function sendEmail({to,subject,text,html,attachments=[],companyId,storeId,includeDeliveryResult=false}){
   assertCustomerDemoOutboundAllowed({companyId,storeId});
   const config=requireMailConfig();
   const recipients=normalizeReportRecipients(to);
@@ -153,7 +153,7 @@ export async function sendEmail({to,subject,text,html,attachments=[],companyId,s
   const transport=createTransport(config);
   try{
     const result=await transport.sendMail({from:`MyWorkStation <${config.from}>`,to:recipients,subject,text,html,attachments});
-    return {messageId:result.messageId,recipients};
+    return {messageId:result.messageId,recipients,...(includeDeliveryResult?{accepted:normalizeReportRecipients(result.accepted||recipients),rejected:normalizeReportRecipients(result.rejected||[])}:{})};
   }catch(cause){
     const code=String(cause?.code||"").toUpperCase();
     const responseCode=Number(cause?.responseCode||0);

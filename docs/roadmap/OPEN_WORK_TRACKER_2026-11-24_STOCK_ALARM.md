@@ -20,3 +20,6 @@ ASSIGNED /root · docs/central-weekly-stock-alarm-claim-20261124 · PR #4193.
 
 
 25/11/2026 · ASSIGNED /root · POS proposal module admission, SOURCE LIVE7adad64f / FULL CI PASS / LABmodule explicitlyON, existingLAB POS2grantON / physical acceptance pending. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-module-admission.md. Existing owners retained; weekly alarm unaffected.
+
+
+25/11/2026 · ASSIGNED /root · POS proposal supplier/coverage/sales dates/email/print combined package, LIVE669763de / FULL CI45598388164 all5PASS / LAB business hashes unchanged / common POS-print-inbox acceptance pending / existing4193owner retained. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-controls-output.md. Weeklyalarm separateblocked.
