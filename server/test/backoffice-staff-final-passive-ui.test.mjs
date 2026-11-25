@@ -122,8 +122,8 @@ test('delegated read controls bind the target, store and revision and never offe
   const calls=[];
   const api=async(path,options)=>{
     calls.push({path,options});
-    if(options.method==='PATCH')return {storeId:'s',userId:'peer',revision:5,capabilities:['promotions.read']};
-    return {storeId:'s',editableKeys:['promotions.read'],items:[
+    if(options.method==='PATCH')return {storeId:'s',userId:'peer',revision:5,capabilities:['monthly-invoice-audit.read']};
+    return {storeId:'s',editableKeys:['monthly-invoice-audit.read'],items:[
       {userId:'self',fullName:'Self',revision:1,capabilities:[]},
       {userId:'peer',fullName:'Peer',revision:4,capabilities:[]}
     ]};
@@ -139,7 +139,7 @@ test('delegated read controls bind the target, store and revision and never offe
     assert.equal(document.querySelectorAll('fieldset input').length,1);
     await m.act(async()=>checkbox.click());
     assert.equal(calls[1].path,'/api/backoffice-staff/stores/s/delegated-reads/peer');
-    assert.deepEqual(JSON.parse(calls[1].options.body),{key:'promotions.read',enabled:true,expectedRevision:4});
+    assert.deepEqual(JSON.parse(calls[1].options.body),{key:'monthly-invoice-audit.read',enabled:true,expectedRevision:4});
     assert.equal(document.querySelector('fieldset input').checked,true);
   }finally{await m.close()}
 });
