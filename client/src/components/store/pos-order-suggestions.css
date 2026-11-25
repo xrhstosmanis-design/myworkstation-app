@@ -1,5 +1,5 @@
 .pos-order-proposals-overlay{position:fixed;inset:0;z-index:15000;background:#001e19aa;display:grid;place-items:center;padding:16px}
-.pos-order-proposals-window{background:#fff;color:#14352d;border-radius:14px;width:min(1100px,100%);max-height:94dvh;display:flex;flex-direction:column;padding:18px;gap:12px;overflow:auto}
+.pos-order-proposals-window{box-sizing:border-box;min-width:0;background:#fff;color:#14352d;border-radius:14px;width:min(1100px,100%);max-height:94dvh;display:flex;flex-direction:column;padding:18px;gap:12px;overflow:auto}
 .pos-order-proposals-window header{display:flex;justify-content:space-between;align-items:center;gap:14px}
 .pos-order-proposals-window h2,.pos-order-proposals-window p{margin:0}
 .pos-order-proposals-scroll{overflow:auto;max-height:50dvh}
