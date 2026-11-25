@@ -8,7 +8,7 @@ export function attendedRemoteGate(env){
 }
 export function createAttendedRemote({now=Date.now,onStop=()=>{}}={}){
  const invitations=new Map(),grants=new Map(),listeners=new Map(),commandListeners=new Map(),files=createRemoteTransfers({now});
- const stopReasons=new Set(['STOP','AUDIT_FAILED','DEVICE_STOP','OPERATOR_STOP','CONTROLLER_STOP','AUTHORITY_REVOKED','STREAM_CLOSED','STREAM_ERROR','STREAM_BACKPRESSURE','DEVICE_IDLE','CONTROLLER_IDLE','SESSION_EXPIRED']);
+ const stopReasons=new Set(['STOP','AUDIT_FAILED','DEVICE_STOP','OPERATOR_STOP','CONTROLLER_STOP','AUTHORITY_REVOKED','STREAM_CLOSED','STREAM_ERROR','STREAM_BACKPRESSURE','DEVICE_IDLE','CONTROLLER_IDLE','SESSION_EXPIRED','COMMAND_POLL_TIMEOUT','COMMAND_TRANSPORT_ERROR','COMMAND_RESPONSE_ERROR','COMMAND_CHANNEL_ERROR']);
  const close=(id,reason='STOP')=>{const j=invitations.get(id);invitations.delete(id);for(const[g,v]of grants)if(v.id===id)grants.delete(g);files.stop(id);listeners.delete(id);const wake=commandListeners.get(id);commandListeners.delete(id);wake?.();if(j)onStop(j,stopReasons.has(reason)?reason:'STOP');};
  const sessions=createRemoteSessionStore({now,ttl:null,maxSessions:30,onExpire:(s,reason)=>close(s.id,reason)});
  const publicJob=j=>({id:j.id,companyId:j.companyId,storeId:j.storeId,terminalId:j.terminalId,storeName:j.storeName,terminalName:j.terminalName,requester:j.requester,state:j.state});
