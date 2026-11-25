@@ -338,6 +338,7 @@ export function staffRequestCapability(method,path,body={},query={}){
     (method==='POST'&&/^\/api\/owner-products\/[^/]+\/(?:set-items|recipe-items|stock-adjustment)$/.test(path))||
     (method==='DELETE'&&/^\/api\/owner-products\/[^/]+\/(?:set-items|recipe-items)\/[^/]+$/.test(path)))return 'products.edit';
   if(method==='PATCH'&&/^\/api\/owner-products\/[^/]+\/store-price$/.test(path))return 'products.price-edit';
+  if(method==='GET'&&/^\/api\/owner-products\/new-card\/stores\/[^/]+\/barcode\/[0-9]{6,18}$/.test(path))return 'products.create';
   if(method==='GET'&&path==='/api/owner-products/new-card/options')return 'products.create';
   if(method==='POST'&&path==='/api/owner-products/new-card')return 'products.create';
   if(method==='GET'&&path==='/api/backoffice-staff/me')return 'SESSION';

@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {companyCategoryManageCapability as capability,companyCategoryManagePrefix as prefix,companyCategoryManageRoute,staffCompanyRequestCapability,validStaffCompanyCapabilities} from "../../shared/backoffice-staff-company.mjs";
+import {companyCategoryManageCapability as capability,companyCategoryManagePrefix as prefix,companyCategoryManageRoute,companyCategoryReactivateCapability,companyCategoryReactivateRoute,staffCompanyRequestCapability,validStaffCompanyCapabilities} from "../../shared/backoffice-staff-company.mjs";
 import {invoiceDbFixture,isolatedInvoiceDb} from "./helpers/invoice-common-draft-fixture.js";
 
 const source=readFileSync(new URL("../src/services/backoffice-staff-company-taxonomy.js",import.meta.url),"utf8")
-  .replace(/^import .*;$/gm,"").replace("export async function","async function");
+  .replace(/^import .*;$/gm,"").replaceAll("export async function","async function");
 const writer=new Function("randomUUID","z","capability","companyCategoryManageRoute","requireStaffCompanyGrant","staffError",source+";return saveStaffCompanyCategory");
 const fault=(status=403,code="STAFF_ACCESS_DENIED",message=code)=>Object.assign(Error(message),{status,code});
 const request=(method,path,body)=>({method,originalUrl:prefix+path,body,
@@ -61,5 +61,56 @@ test("native category and subcategory changes preserve parent, flags and foreign
     const audit=await db.$queryRaw`SELECT "companyId","actorId","event" FROM "BackofficeStaffAudit"`;
     assert.equal(audit.length,4);
     assert.ok(audit.every(row=>row.companyId==="c"&&row.actorId==="staff"));
+  }finally{await close();}
+});
+
+const activationWriter=new Function("randomUUID","z","companyCategoryReactivateCapability","companyCategoryReactivateRoute","requireStaffCompanyGrant","staffError",source+";return reactivateStaffCompanyCategory");
+const reactivate=activationWriter(randomUUID,z,companyCategoryReactivateCapability,companyCategoryReactivateRoute,async()=>({revision:1}),fault);
+function reactivation(kind,id,body={expectedName:id,confirm:true}){
+  const req=request("POST","/"+kind+"/"+id+"/reactivate",body);
+  req.staffCompanyGrant.capability=companyCategoryReactivateCapability;
+  return req;
+}
+test("taxonomy reactivation has a separate company grant and admits only exact confirmed POST",async()=>{
+  const cap=companyCategoryReactivateCapability,url=prefix+"/categories/item/reactivate";
+  assert.equal(staffCompanyRequestCapability("POST",url),cap);
+  assert.equal(staffCompanyRequestCapability("PATCH",url),null);
+  assert.equal(staffCompanyRequestCapability("POST",url.replace("reactivate","archive")),null);
+  assert.equal(staffCompanyRequestCapability("POST",url.replace("item","%2F")),null);
+  assert.equal(validStaffCompanyCapabilities([cap]),false);
+  assert.equal(validStaffCompanyCapabilities(["categories.read",cap]),true);
+  await assert.rejects(reactivate({$transaction:()=>assert.fail("invalid body")},reactivation("categories","item",{expectedName:"item",confirm:false})),{status:400});
+  const revoked=activationWriter(randomUUID,z,cap,companyCategoryReactivateRoute,async()=>({revision:2}),fault);
+  await assert.rejects(revoked({$transaction:run=>run({})},reactivation("categories","item")),{status:403});
+});
+
+test("native reactivation rejects company and store references, inactive parents and foreign rows",{skip:!isolatedInvoiceDb()},async()=>{
+  const {db,close}=await invoiceDbFixture();
+  try{
+    await db.$executeRawUnsafe('CREATE TABLE "ProductCategory" ("id" text PRIMARY KEY,"companyId" text,"name" text,"active" bool,"updatedAt" timestamptz)');
+    await db.$executeRawUnsafe('CREATE TABLE "ProductSubcategory" ("id" text PRIMARY KEY,"companyId" text,"categoryId" text,"name" text,"active" bool,"updatedAt" timestamptz)');
+    await db.$executeRawUnsafe('CREATE TABLE "BackofficeStaffAudit" ("id" text PRIMARY KEY,"companyId" text,"actorId" text,"targetUserId" text,"event" text,"detail" jsonb)');
+    await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN "categoryId" text, ADD COLUMN "subcategoryId" text');
+    await db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN "categoryIdOverride" text, ADD COLUMN "subcategoryIdOverride" text');
+    await db.$executeRaw`INSERT INTO "ProductCategory" VALUES ('cat','c','cat',false,NULL),('parent','c','parent',true,NULL),
+      ('used','c','used',false,NULL),('override','c','override',false,NULL),('foreign','x','foreign',false,NULL)`;
+    await db.$executeRaw`INSERT INTO "ProductSubcategory" VALUES ('child','c','cat','child',false,NULL),('leaf','c','parent','leaf',false,NULL),
+      ('refsub','c','parent','refsub',false,NULL)`;
+    await db.$executeRaw`UPDATE "Product" SET "categoryId"='used' WHERE "id"='p'`;
+    await db.$executeRaw`UPDATE "StoreProduct" SET "categoryIdOverride"='override',"subcategoryIdOverride"='refsub' WHERE "id"='stock'`;
+    const activate=(kind,id)=>reactivate(db,reactivation(kind,id));
+    for(const id of ["used","override"])await assert.rejects(activate("categories",id),{code:"STAFF_TAXONOMY_REFERENCED"});
+    await assert.rejects(activate("subcategories","refsub"),{code:"STAFF_TAXONOMY_REFERENCED"});
+    await assert.rejects(activate("subcategories","child"),{code:"STAFF_TAXONOMY_PARENT_INACTIVE"});
+    await assert.rejects(activate("categories","foreign"),{status:404});
+    const results=await Promise.allSettled([activate("categories","cat"),activate("categories","cat")]);
+    assert.equal(results.filter(result=>result.status==="fulfilled").length,1);
+    assert.equal(results.find(result=>result.status==="rejected").reason.code,"STAFF_TAXONOMY_ALREADY_ACTIVE");
+    assert.equal((await activate("subcategories","leaf")).active,true);
+    const [child]=await db.$queryRaw`SELECT "active" FROM "ProductSubcategory" WHERE "id"='child'`;
+    assert.equal(child.active,false);
+    const audit=await db.$queryRaw`SELECT "event","actorId" FROM "BackofficeStaffAudit"`;
+    assert.equal(audit.length,2);
+    assert.ok(audit.every(row=>row.event==="PRODUCT_TAXONOMY_REACTIVATED"&&row.actorId==="staff"));
   }finally{await close();}
 });

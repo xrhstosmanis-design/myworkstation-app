@@ -174,3 +174,13 @@ test('invoice item creation has exact draft-line admission and never unlocks sib
     ['POST','/api/commerce/purchase-orders/order/ocr-lines/create-product']
   ])assert.equal(staffRequestCapability(method,path),null,`${method} ${path}`);
 });
+
+test('smart entry gives products.create only an exact local store barcode lookup',()=>{
+  const path='/api/owner-products/new-card/stores/store-a/barcode/1234567890123';
+  assert.equal(staffRequestCapability('GET',path),'products.create');
+  assert.equal(staffRequestCapability('POST',path),null);
+  for(const invalid of [path+'/',path+'/online',path.replace(/1234567890123$/,'12345'),path.replace(/1234567890123$/,'ABC123456')]){
+    assert.equal(staffRequestCapability('GET',invalid),null);
+  }
+  assert.equal(staffRequestCapability('GET','/api/owner-products/smart-entry/barcode/1234567890123'),null);
+});
