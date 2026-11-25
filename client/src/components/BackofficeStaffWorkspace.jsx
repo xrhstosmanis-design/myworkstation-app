@@ -46,6 +46,7 @@ const WorkforceV2AttendanceTab=React.lazy(()=>import('./platform/WorkforceV2Atte
 const WorkforceV2PayrollTab=React.lazy(()=>import('./platform/WorkforceV2PayrollTab.jsx'));
 const InventoryV2Center=React.lazy(()=>import('./inventory/InventoryV2Center.jsx'));
 const CashControlPanel=React.lazy(()=>import('./cloud/CashControlPanel.jsx'));
+const StoreFinancialReports=React.lazy(()=>import('./cloud/StoreFinancialReports.jsx'));
 const StoreCloudPage=React.lazy(()=>import('./cloud/StoreCloudPage.jsx'));
 const InventoryArchivePanel=React.lazy(()=>import('./commerce/InventoryArchivePanel.jsx'));
 const InventoryNewProductCard=React.lazy(()=>import('./commerce/InventoryNewProductCard.jsx'));
@@ -84,6 +85,8 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
   const openCommerce=commerceView?()=>setView(commerceView):undefined;
   useEffect(()=>{let live=true;setIdentity(null);api('/api/backoffice-staff/me').then(d=>{if(live){identitySource.current={api,user};setIdentity(d)}}).catch(e=>{if(live)setError(e.message)});return()=>{live=false;sequence.current++}},[api,user]);
   useEffect(()=>{sequence.current++;selectedStocktakeId.current=null;setData(null);setDetail(null);setInventoryPages([]);setError('');setBusy(false);setNewProduct(false);setInventoryNewOrigin(null);setStocktakeMessage('');if(view==='inventory'&&storeId&&capabilities.includes('inventory.read'))void load()},[storeId,view,from,to]);
+  const canOpenFinancialReports=selected?.profile==='MANAGER'&&capabilities.includes('store-reports-sales-analysis.read')&&
+    identitySource.current?.api===api&&identitySource.current?.user===user;
   const scoped=useCallback(async(path,options={})=>{
     const own=scope.current;
     const writing=String(options.method||'GET').toUpperCase()!=='GET';
@@ -190,6 +193,9 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
     <section hidden={page==='company'} className="panel staff-panel staff-store-panel"><div className="staff-store-heading"><label>Κατάστημα<select aria-label="Κατάστημα" value={storeId} disabled={busy||productBusy||Boolean(pending||stocktakeOperation)} onChange={e=>{sequence.current++;setData(null);setDetail(null);setView('');setPage('stores');setStoreId(e.target.value)}}><option value="">Επίλεξε κατάστημα</option>{identity?.stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       {identity&&!identity.stores.length&&<p>Δεν υπάρχει ενεργή ανάθεση καταστήματος. Επικοινώνησε με τον ιδιοκτήτη.</p>}
       {selected&&<><h2>{selected.name}</h2><p>{staffProfiles[selected.profile]?.label||'Προσωπική πρόσβαση'}</p>{!view&&<p>Επίλεξε λειτουργία από το μενού. Εμφανίζονται όσα σου έχει επιτρέψει ο ιδιοκτήτης.</p>}</>}
+      {canOpenFinancialReports&&<button type="button" className="cloud-refresh" aria-expanded={view==='financial-reports'}
+        disabled={busy||productBusy||Boolean(pending||stocktakeOperation)}
+        onClick={()=>setView(view==='financial-reports'?'':'financial-reports')}>Οικονομικές αναφορές</button>}
       </div>
       {selected&&identitySource.current?.api===api&&identitySource.current?.user===user&&
         <nav className="staff-store-menu" aria-label="Λειτουργίες BackOffice">
@@ -250,6 +256,10 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
       {view==='attendance'&&selected&&identity?.companyId&&capabilities.includes('attendance.read')&&<React.Suspense fallback={<p role="status">Φόρτωση παρουσιών…</p>}><WorkforceV2AttendanceTab key={`${identity.companyId}:${storeId}`} company={{id:identity.companyId}} store={selected} request={scoped} readOnly canExport={capabilities.includes("attendance.export")} canPrint={capabilities.includes("attendance.print")} canClock={capabilities.includes("attendance.clock")} canCorrect={capabilities.includes("attendance.correct")} canApproveReview={capabilities.includes("attendance.approve-review")} canApproveOvertime={capabilities.includes("attendance.approve-overtime")}/></React.Suspense>}
       {view==='employees'&&selected&&identity?.companyId&&capabilities.includes('employees.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προσωπικού…</p>}><WorkforceV2EmployeesPanel key={`${identity.companyId}:${storeId}`} company={{id:identity.companyId}} store={selected} request={scoped} readOnly canEditDetails={capabilities.includes("employees.edit")}/></React.Suspense>}
       {view==='handover'&&selected&&capabilities.includes('handover.read')&&<React.Suspense fallback={<p role="status">Φόρτωση παραδόσεων βάρδιας…</p>}><StoreHandoverPanel key={storeId} api={scoped} store={selected} readOnly/></React.Suspense>}
+      {page!=='company'&&view==='financial-reports'&&canOpenFinancialReports&&
+        <React.Suspense fallback={<p role="status">Φόρτωση αναφορών…</p>}>
+          <StoreFinancialReports key={storeId} api={scoped} store={selected}/>
+        </React.Suspense>}
       {view==='analytics'&&selected&&capabilities.includes('analytics.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ανάλυσης πωλήσεων…</p>}><AdvancedSalesAnalytics key={storeId} api={scoped} stores={[selected]} initialStoreId={storeId}/></React.Suspense>}
       {view==='order-suggestions'&&selected&&capabilities.includes('order-suggestions.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προτάσεων παραγγελίας…</p>}><OrderSuggestionsPanel key={storeId} api={scoped} storeId={storeId}/></React.Suspense>}
       {view==='low-value-products'&&selected&&capabilities.includes('low-value-products.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προϊόντων χαμηλής απόδοσης…</p>}><LowValueProductsPanel key={storeId} api={scoped} storeId={storeId}/></React.Suspense>}

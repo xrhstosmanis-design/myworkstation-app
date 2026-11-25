@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from "react";
 import {flushSync} from "react-dom";
 import {ArrowLeft,BriefcaseBusiness,Barcode,Copy,KeyRound,RefreshCw,ShieldCheck,Users,WalletCards} from "lucide-react";
+import StoreFinancialReports from "./StoreFinancialReports.jsx";
 import StoreInvoiceEntry from "./StoreInvoiceEntry.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
@@ -34,7 +35,7 @@ export default function StoreCloudPage(props){
   return <StoreWorkspace key={props.store.id} {...props}/>;
 }
 
-function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCommerce,navigationLocked=false,canConfigureMyDataBranch=false,primaryView,onPrimaryChange}){
+function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCommerce,navigationLocked=false,canConfigureMyDataBranch=false,canOpenFinancialReports=false,primaryView,onPrimaryChange}){
   const delegated=Array.isArray(capabilities);
   const can=key=>!delegated||capabilities.includes(key);
   const salesAllowed=can('sales.read');
@@ -68,6 +69,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
     if(!window.dispatchEvent(new window.CustomEvent("mws:store-invoice-entry-request",{cancelable:true}))){setInvoiceEntryMessage("Κλείσε πρώτα την ανοικτή Εμπορική λειτουργία για να ανοίξεις τη θυρίδα τιμολογίων.");return}
     invoiceOpenRef.current=true;setInvoiceEntryMessage("");setInvoiceOpen(true);
   };
+  const [financialOpen,setFinancialOpen]=useState(false);
   const openCommerce=()=>{if(refuseCompetingCommerce())return;onOpenCommerce?onOpenCommerce():window.dispatchEvent(new window.CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))};
   const closeInvoices=()=>{if(navigationLocked)return;invoiceOpenRef.current=false;setInvoiceEntryMessage("");setInvoiceOpen(false)};
   const openInvoiceOrder=order=>{
@@ -166,12 +168,17 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
       <button className="cloud-back" disabled={navigationLocked} onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
       <div className="cloud-titlebar-actions">
         <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
+        {canOpenFinancialReports&&<button className="cloud-refresh" type="button" aria-expanded={financialOpen} disabled={navigationLocked} onClick={()=>setFinancialOpen(open=>!open)}>Οικονομικές αναφορές</button>}
+        {!delegated&&<button className="cloud-refresh" type="button" disabled={navigationLocked} onClick={()=>{
+          if(!refuseCompetingCommerce())window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"operations",storeId:store.id}}));
+        }}><BriefcaseBusiness/>Λοιπές εμπορικές λειτουργίες</button>}
         {(!delegated||onOpenCommerce)&&<button className="cloud-refresh" type="button" disabled={navigationLocked} onClick={openCommerce}><BriefcaseBusiness/>Εμπορική λειτουργία</button>}
         {!delegated&&<button className="cloud-refresh" type="button" aria-expanded={invoiceOpen} disabled={navigationLocked} onClick={openInvoices}>Θυρίδα τιμολογίων καταστήματος</button>}
         {!delegated&&<ScreenRecorderWindowLauncher/>}
       </div>
     </div>
 
+    {canOpenFinancialReports&&financialOpen&&<StoreFinancialReports api={api} store={store} version={version}/>}
     <div className="cloud-hero">
       <div>
         <span className="cloud-kicker">MYWORKSTATION · BACKOFFICE</span>
@@ -204,7 +211,6 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
 
         {onWorkforce&&<button type="button" onClick={onWorkforce}><Users/><b>Προσωπικό & Πρόγραμμα</b><span>Εργαζόμενοι, κάρτες και QR</span></button>}
         <button type="button" aria-expanded={toolOpen==="rbs"} className={toolOpen==="rbs"?"active":""} onClick={()=>setToolOpen(v=>v==="rbs"?"":"rbs")}><KeyRound/><b>Σύνδεση RBS</b><span>CAP Driver / Writer</span></button>
-        <button type="button" onClick={()=>window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"operations",storeId:store.id}}))}><BriefcaseBusiness/><b>Λοιπές εμπορικές λειτουργίες</b><span>Λειτουργίες και modules καταστήματος</span></button>
         <button type="button" aria-expanded={toolOpen==="barcode"} className={toolOpen==="barcode"?"active":""} onClick={()=>setToolOpen(v=>v==="barcode"?"":"barcode")}><Barcode/><b>Barcode & Online Ράδιο</b><span>Τιμές, αναφορές και σταθμοί</span></button>
         <button type="button" aria-expanded={toolOpen==="approvals"} className={toolOpen==="approvals"?"active":""} onClick={()=>setToolOpen(v=>v==="approvals"?"":"approvals")}><ShieldCheck/><b>Εκκρεμείς επιβεβαιώσεις</b><span>Πληρωμές και αποδεικτικά</span></button>
       </div>

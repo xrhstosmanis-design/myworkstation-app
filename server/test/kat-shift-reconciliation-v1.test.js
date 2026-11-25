@@ -45,7 +45,12 @@ test('BackOffice exposes printable reconciliation totals and explicit alerts',()
   assert.match(panel,/Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS \/ Store Mode/);
   assert.doesNotMatch(panel,/BriefcaseBusiness\/>Εμπορική λειτουργία/);
   assert.match(storePage,/mws:commerce-open/);
-  assert.match(storePage,/RefreshCw\/>Ανανέωση[\s\S]{0,300}BriefcaseBusiness\/>Εμπορική λειτουργία/);
+  const toolbar=storePage.match(/<div className="cloud-titlebar-actions">([\s\S]*?)<\/div>/)?.[1]||"";
+  assert.deepEqual(
+    Array.from(toolbar.matchAll(/>(Ανανέωση|Οικονομικές αναφορές|Λοιπές εμπορικές λειτουργίες|Εμπορική λειτουργία)<\/button>/g),match=>match[1]),
+    ["Ανανέωση","Οικονομικές αναφορές","Λοιπές εμπορικές λειτουργίες","Εμπορική λειτουργία"]
+  );
+  assert.match(toolbar,/onClick=\{openCommerce\}><BriefcaseBusiness\/>Εμπορική λειτουργία/);
   assert.match(storePage,/ScreenRecorderWindowLauncher/);
   assert.doesNotMatch(productCenter,/mws-audience-discount-layer/);
   assert.match(productCenter,/mws-audience-discount-btn/);
