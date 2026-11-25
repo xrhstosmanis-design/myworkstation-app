@@ -60,5 +60,8 @@ jobs:
           $observed = (& ./tools/windows-ftext/Test-Cash-Smoke.ps1 6>&1 | Out-String)
           if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'Synthetic cash fixture failed.' }
           if ($observed -notmatch 'PASS: [0-9]+ cash command/result/scope/timeout/restart/tombstone boundaries') { throw 'Original cash regression fixture did not pass.' }
+          # Only synthetic fixture output (no real POS/payment credentials).
+          $timingLines = @($observed -split "\x60n" | Where-Object { $_ -match 'FTEXT_LAB_TIMING|PASS:|NOT_OBSERVED' })
+          Write-Host ('Synthetic fixture diagnostics: ' + ($timingLines -join ' | '))
           if ($observed -notmatch 'FTEXT_LAB_TIMING requestId=[0-9a-f-]{36} publish_to_result_ms=[0-9]+ elapsed_ms=[0-9]+ eftpos_visible_ms=NOT_OBSERVED') { throw 'Opt-in timing missing for the synthetic result.' }
           Write-Host 'PASS: synthetic original cash guard and LAB publication-to-result timing.'
