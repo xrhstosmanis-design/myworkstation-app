@@ -1,0 +1,206 @@
+{
+  "format": "MWS_WEEKLY_EXISTING_EFOOD_LAB_V1",
+  "ownerSource": "server/src/integrations/efood/lab-order-postgres.js",
+  "ownerSourceHash": "5ab05a5878a19b563a98d9f56acf31796e41202bb2892c6619ff3b14a8aa3922",
+  "columns": {
+    "EfoodLabOrderRun": [
+      [
+        "integrationId",
+        "text",
+        true
+      ],
+      [
+        "runId",
+        "uuid",
+        true
+      ],
+      [
+        "stock",
+        "integer",
+        true
+      ],
+      [
+        "orderRecord",
+        "jsonb",
+        false
+      ]
+    ],
+    "EfoodLabOrderRunEvent": [
+      [
+        "integrationId",
+        "text",
+        true
+      ],
+      [
+        "runId",
+        "uuid",
+        true
+      ],
+      [
+        "eventKey",
+        "text",
+        true
+      ],
+      [
+        "payloadHash",
+        "text",
+        true
+      ],
+      [
+        "stockDelta",
+        "integer",
+        true
+      ]
+    ]
+  },
+  "catalogue": {
+    "relations": [
+      {
+        "name": "EfoodLabOrderRun",
+        "kind": "r",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "EfoodLabOrderRunEvent",
+        "kind": "r",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "inherited": false,
+        "rewritten": false
+      }
+    ],
+    "columns": [
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "integrationId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "runId",
+        "type": "uuid",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "stock",
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "orderRecord",
+        "type": "jsonb",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "integrationId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "runId",
+        "type": "uuid",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "eventKey",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "payloadHash",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "stockDelta",
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      }
+    ],
+    "constraints": [
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "EfoodLabOrderRun_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (\"integrationId\", \"runId\")"
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "EfoodLabOrderRun_stock_check",
+        "type": "c",
+        "definition": "CHECK (stock >= 0)"
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "EfoodLabOrderRunEvent_integrationId_runId_fkey",
+        "type": "f",
+        "definition": "FOREIGN KEY (\"integrationId\", \"runId\") REFERENCES \"EfoodLabOrderRun\"(\"integrationId\", \"runId\") ON DELETE CASCADE"
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "EfoodLabOrderRunEvent_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (\"integrationId\", \"runId\", \"eventKey\")"
+      }
+    ],
+    "indexes": [
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "EfoodLabOrderRun_pkey",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"EfoodLabOrderRun_pkey\" ON __SCHEMA__.\"EfoodLabOrderRun\" USING btree (\"integrationId\", \"runId\")"
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "EfoodLabOrderRunEvent_pkey",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"EfoodLabOrderRunEvent_pkey\" ON __SCHEMA__.\"EfoodLabOrderRunEvent\" USING btree (\"integrationId\", \"runId\", \"eventKey\")"
+      }
+    ],
+    "triggers": []
+  }
+}

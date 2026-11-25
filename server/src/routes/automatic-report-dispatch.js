@@ -59,6 +59,11 @@ export function createAutomaticReportDispatchRouter(db,{env=process.env,manageme
  router.put('/promotion-results/policy',handle(req=>getPromotionService().saveDispatchPolicy(scope(req),req.body)));
  let inventoryService;
  const getInventoryService=()=>inventoryService??=createAutomaticReportManagement({db,env,reportType:'INVENTORY_RESULT',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Event invitations are unavailable')}});
+ let monthlyInventoryService;
+ const getMonthlyInventoryService=()=>monthlyInventoryService??=createAutomaticReportManagement({db,env,reportType:'MONTHLY_INVENTORY_SUMMARY',activationProvider:()=>readActivation(env),sendVerification:async()=>{throw new Error('Monthly inventory invitations are unavailable')}});
+ router.get('/monthly-inventory-summary',handle(req=>getMonthlyInventoryService().getDispatchManagement(scope(req))));
+ router.post('/monthly-inventory-summary/recipients/authorize',handle(req=>getMonthlyInventoryService().authorizeAdministratorRecipient(scope(req),req.body)));
+ router.put('/monthly-inventory-summary/policy',handle(req=>getMonthlyInventoryService().saveDispatchPolicy(scope(req),req.body)));
  router.get('/inventory-result',handle(req=>getInventoryService().getDispatchManagement(scope(req))));
  router.post('/inventory-result/recipients/authorize',handle(req=>getInventoryService().authorizeAdministratorRecipient(scope(req),req.body)));
  router.put('/inventory-result/policy',handle(req=>getInventoryService().saveDispatchPolicy(scope(req),req.body)));

@@ -4,22 +4,12 @@ import {z} from 'zod';
 import {prisma as defaultPrisma} from '../prisma.js';
 import {weeklyStockAlarmReadiness} from '../services/weekly-stock-alarm-schema.js';
 import {requireStoreModule,isPlatformSuperAdmin} from '../middleware/module-access.js';
-import {readOrderSuggestions} from './order-suggestions.js';
 import {stockAlarmPolicy,calculateWeeklyStockAlarm,stockAlarmWeek} from '../lib/weekly-stock-alarm.js';
 import {readStockAlarmPolicy,stockAlarmRows} from '../services/weekly-stock-alarm.js';
 const fail=(status,message)=>Object.assign(new Error(message),{status});
-export async function requirePosOrderSuggestion(db,user,storeId){
- if(user?.staffAccess===true)throw fail(403,'Απαιτείται σύνδεση χειριστή POS.');
- if(user?.tokenType!=='STORE_OPERATOR'){
-  if(!isPlatformSuperAdmin(user)&&!['OWNER','ADMIN'].includes(user?.role))throw fail(403,'Δεν επιτρέπεται πρόσβαση.');
-  return;
- }
- if(user.storeId!==storeId)throw fail(403,'Η πρόταση αφορά μόνο το κατάστημα του POS.');
- const [row]=await db.$queryRaw`SELECT p."permissions",p."posAccess" FROM "StoreOperatorCredential" c JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId" LEFT JOIN "StoreOperatorProfile" p ON p."companyId"=c."companyId" AND p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${user.operatorId||user.id} AND c."companyId"=${user.companyId} AND c."storeId"=${storeId} AND c."active"=TRUE AND e."active"=TRUE`;
- if(!row||row.posAccess===false||row.permissions?.orderSuggestionsPos!==true)throw fail(403,'Δεν έχεις δικαίωμα «Πρόταση παραγγελίας στο POS».');
-}
 export function createWeeklyStockAlarmRouter({db=defaultPrisma,readiness=weeklyStockAlarmReadiness}={}){
 const prisma=db,router=Router();
+router.use((req,res,next)=>{if((req.body?.storeId!==undefined&&req.body.storeId!==req.params.storeId)||(req.query?.storeId!==undefined&&req.query.storeId!==req.params.storeId))return next(fail(400,'Το κατάστημα της αίτησης δεν συμφωνεί με το επιλεγμένο κατάστημα.'));next()});
 const schemaGuard=async(req,res,next)=>{try{const state=await readiness(prisma);if(!state.ready)throw fail(503,'Το αυτόματο alarm stock δεν είναι ακόμη διαθέσιμο σε αυτή την εγκατάσταση. Η πρόταση στο POS είναι ξεχωριστή επιλογή με δικαίωμα.');next()}catch(error){next(error)}};
 const owner=(req,res,next)=>{
  if(req.user?.staffAccess===true||req.user?.tokenType==='STORE_OPERATOR'||(!isPlatformSuperAdmin(req.user)&&!['OWNER','ADMIN'].includes(req.user?.role)))return next(fail(403,'Οι ρυθμίσεις διαχειρίζονται κεντρικά από Ιδιοκτήτη ή Διαχειριστή.'));
@@ -28,14 +18,6 @@ const owner=(req,res,next)=>{
 const moduleGuard=requireStoreModule('ORDER_SUGGESTIONS');
 router.get('/stores',owner,async(req,res,next)=>{try{res.set('Cache-Control','no-store');res.json({stores:await prisma.store.findMany({where:{companyId:req.user.companyId,active:true},select:{id:true,name:true},orderBy:{name:'asc'}})})}catch(e){next(e)}});
 const route=fn=>async(req,res,next)=>{try{res.set('Cache-Control','no-store');if(req.targetStore&&!await prisma.store.findFirst({where:{id:req.targetStore.id,companyId:req.targetStore.companyId,active:true},select:{id:true}}))throw fail(404,'Δεν βρέθηκε ενεργό κατάστημα.');await fn(req,res)}catch(e){if(e instanceof z.ZodError)e=fail(400,'Έλεγξε τις ρυθμίσεις.');next(e)}};
-// Admission must call next after checking the current grant, before license/module admission.
-const posAdmission=async(req,res,next)=>{try{await requirePosOrderSuggestion(prisma,req.user,req.params.storeId);req.user={...req.user,permissions:[...(req.user.permissions||[]),'ORDER_SUGGESTIONS']};next()}catch(e){next(e)}};
-router.get('/stores/:storeId/permission',posAdmission,moduleGuard,route(async(req,res)=>{res.json({storeId:req.targetStore.id,allowed:true})}));
-router.get('/stores/:storeId/proposal',posAdmission,moduleGuard,route(async(req,res)=>{
- const options=z.object({historyDays:z.coerce.number().int().min(7).max(90).default(28),coverageDays:z.coerce.number().int().min(1).max(60).default(7),leadDays:z.coerce.number().int().min(0).max(30).default(3)}).parse(req.query);
- const result=await readOrderSuggestions(prisma,{storeId:req.targetStore.id,companyId:req.targetStore.companyId,options});
- await requirePosOrderSuggestion(prisma,req.user,req.params.storeId);res.json(result);
-}));
 router.get('/stores/:storeId/settings',owner,moduleGuard,schemaGuard,route(async(req,res)=>{
  const {companyId,id:storeId}=req.targetStore,policy=await readStockAlarmPolicy(prisma,companyId,storeId);
  const stores=await prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:'asc'}});

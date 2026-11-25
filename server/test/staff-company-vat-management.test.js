@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {companyVatManageCapability as capability,companyVatManagePath as path,companyVatManageRoute,staffCompanyRequestCapability,validStaffCompanyCapabilities} from "../../shared/backoffice-staff-company.mjs";
+import {companyVatManageCapability as capability,companyVatManagePath as path,companyVatManageRoute,companyVatActivateCapability,companyVatActivateRoute,staffCompanyRequestCapability,validStaffCompanyCapabilities} from "../../shared/backoffice-staff-company.mjs";
 import {invoiceDbFixture,isolatedInvoiceDb} from "./helpers/invoice-common-draft-fixture.js";
 
 const source=readFileSync(new URL("../src/services/backoffice-staff-company-vat.js",import.meta.url),"utf8")
-  .replace(/^import .*;$/gm,"").replace("export async function","async function");
+  .replace(/^import .*;$/gm,"").replaceAll("export async function","async function");
 const writer=new Function("randomUUID","z","capability","companyVatManageRoute","requireStaffCompanyGrant","staffError",source+";return saveStaffCompanyVatDepartment");
 const fault=(status=403,code="STAFF_ACCESS_DENIED",message=code)=>Object.assign(Error(message),{status,code});
 const request=(method,suffix,body)=>({method,originalUrl:path+suffix,body,
@@ -58,5 +58,57 @@ test("native VAT drafts stay inactive and fiscal fields and tenant remain intact
     assert.equal(dto("foreign").description,"Foreign");
     const audit=await db.$queryRaw`SELECT "event","actorId" FROM "BackofficeStaffAudit" ORDER BY "event"`;
     assert.deepEqual(audit,[{event:"VAT_DEPARTMENT_DRAFT_CREATED",actorId:"staff"},{event:"VAT_DEPARTMENT_LABEL_RENAMED",actorId:"staff"}]);
+  }finally{await close();}
+});
+
+const activationWriter=new Function("randomUUID","z","companyVatActivateCapability","companyVatActivateRoute","requireStaffCompanyGrant","staffError",
+  source+";return activateStaffCompanyVatDraft");
+const activate=activationWriter(randomUUID,z,companyVatActivateCapability,companyVatActivateRoute,async()=>({revision:1}),fault);
+function activation(id,body={expectedDescription:"Draft",vatRate:13,confirm:true}){
+  const req=request("POST","/"+id+"/activate-draft",body);
+  req.staffCompanyGrant.capability=companyVatActivateCapability;
+  return req;
+}
+test("unused VAT draft activation is independent and rejects unconfirmed, zero or fiscal fields",async()=>{
+  const url=path+"/dept/activate-draft";
+  assert.equal(staffCompanyRequestCapability("POST",url),companyVatActivateCapability);
+  assert.equal(staffCompanyRequestCapability("PATCH",url),null);
+  assert.equal(staffCompanyRequestCapability("POST",url+"?storeId=s"),null);
+  assert.equal(validStaffCompanyCapabilities([companyVatActivateCapability]),false);
+  assert.equal(validStaffCompanyCapabilities(["vat-departments.read",companyVatActivateCapability]),true);
+  const db={$transaction:()=>assert.fail("may not start transaction")};
+  for(const body of [
+    {expectedDescription:"Draft",vatRate:0,confirm:true},
+    {expectedDescription:"Draft",vatRate:13.0001,confirm:true},
+    {expectedDescription:"Draft",vatRate:13,confirm:false},
+    {expectedDescription:"Draft",vatRate:24,confirm:true,cashRegisterDepartment:2}
+  ])await assert.rejects(activate(db,activation("d",body)),{status:400});
+  const revoked=activationWriter(randomUUID,z,companyVatActivateCapability,companyVatActivateRoute,async()=>({revision:2}),fault);
+  await assert.rejects(revoked({$transaction:run=>run({})},activation("d")),{status:403});
+});
+test("native activation only changes an unused unconfigured company draft, atomically audited",{skip:!isolatedInvoiceDb()},async()=>{
+  const {db,close}=await invoiceDbFixture();
+  try{
+    await db.$executeRawUnsafe(`CREATE TABLE "ManagementVatDepartment" ("id" text PRIMARY KEY,"companyId" text,"description" text,
+      "active" bool default false,"commerce" bool default false,"vatRate" numeric default 0,"cashRegisterDepartment" int,
+      "legacyVatCode" text,"exemptionCode" text,"exemptionDescription" text,"updatedAt" timestamptz)`);
+    await db.$executeRawUnsafe('CREATE TABLE "BackofficeStaffAudit" ("id" text PRIMARY KEY,"companyId" text,"actorId" text,"targetUserId" text,"event" text,"detail" jsonb)');
+    await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" text');
+    await db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN IF NOT EXISTS "vatDepartmentIdOverride" text');
+    await db.$executeRaw`INSERT INTO "ManagementVatDepartment" ("id","companyId","description") VALUES ('d','c','Draft'),('mapped','c','Draft'),('used','c','Draft'),('override','c','Draft'),('foreign','else','Draft')`;
+    await db.$executeRaw`UPDATE "ManagementVatDepartment" SET "cashRegisterDepartment"=4 WHERE "id"='mapped'`;
+    await db.$executeRaw`UPDATE "Product" SET "vatDepartmentId"='used' WHERE "id"='p'`;
+    await db.$executeRaw`UPDATE "StoreProduct" SET "vatDepartmentIdOverride"='override' WHERE "id"='stock'`;
+    await assert.rejects(activate(db,activation("foreign")),{status:404});
+    await assert.rejects(activate(db,activation("mapped")),{code:"STAFF_VAT_ACTIVATION_NOT_DRAFT"});
+    await assert.rejects(activate(db,activation("used")),{code:"STAFF_VAT_ACTIVATION_REFERENCED"});
+    await assert.rejects(activate(db,activation("override")),{code:"STAFF_VAT_ACTIVATION_REFERENCED"});
+    const outcome=await Promise.allSettled([activate(db,activation("d")),activate(db,activation("d"))]);
+    assert.equal(outcome.filter(row=>row.status==="fulfilled").length,1);
+    assert.equal(outcome.find(row=>row.status==="rejected").reason.code,"STAFF_VAT_ACTIVATION_NOT_DRAFT");
+    const [row]=await db.$queryRaw`SELECT "vatRate","active","commerce","cashRegisterDepartment" FROM "ManagementVatDepartment" WHERE "id"='d'`;
+    assert.deepEqual({...row,vatRate:Number(row.vatRate)},{vatRate:13,active:true,commerce:false,cashRegisterDepartment:null});
+    const audits=await db.$queryRaw`SELECT "event","actorId" FROM "BackofficeStaffAudit"`;
+    assert.deepEqual(audits,[{event:"VAT_DEPARTMENT_DRAFT_ACTIVATED",actorId:"staff"}]);
   }finally{await close();}
 });

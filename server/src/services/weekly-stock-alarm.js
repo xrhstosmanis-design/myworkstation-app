@@ -1,3 +1,4 @@
+import {weeklyStockAlarmReadiness} from './weekly-stock-alarm-schema.js';
 import {randomUUID} from 'node:crypto';
 import {calculateWeeklyStockAlarm,stockAlarmDefaults,stockAlarmPolicy,stockAlarmWeek} from '../lib/weekly-stock-alarm.js';
 export async function readStockAlarmPolicy(db,companyId,storeId){
@@ -18,7 +19,7 @@ export async function stockAlarmRows(db,{companyId,storeId,settings,now=new Date
  LEFT JOIN LATERAL (
  SELECT SUM(GREATEST(l."quantity",0)) FILTER(WHERE s."source" NOT IN ('POS_REVERSAL','WASTE','SELF_CONSUMPTION','PRODUCT_DESTRUCTION')) AS "soldQuantity",
  SUM(CASE WHEN s."source"='POS_REVERSAL' THEN ABS(l."quantity") ELSE GREATEST(-l."quantity",0) END) FILTER(WHERE s."source" NOT IN ('WASTE','SELF_CONSUMPTION','PRODUCT_DESTRUCTION')) AS "returnedQuantity"
- FROM "SaleLine" l JOIN "Sale" s ON s."id"=l."saleId" WHERE l."productId"=p."id" AND s."companyId"=${companyId} AND s."storeId"=${storeId} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<${now}
+ FROM "SaleLine" l JOIN "Sale" s ON s."id"=l."saleId" WHERE l."productId"=p."id" AND s."companyId"=${companyId} AND s."storeId"=${storeId} AND s."status"='COMPLETED' AND s."occurredAt">=${from.toISOString().slice(0,-1)}::timestamp AND s."occurredAt"<${now.toISOString().slice(0,-1)}::timestamp
  ) v ON TRUE
  WHERE sp."storeId"=${storeId} AND sp."active"=TRUE AND p."active"=TRUE AND p."trackStock"=TRUE
  AND p."id">${after} AND (${query}='' OR p."name" ILIKE ${'%'+query+'%'} OR COALESCE(p."sku",'') ILIKE ${'%'+query+'%'})
@@ -48,4 +49,9 @@ export async function runWeeklyStockAlarmBatch(db,{companyId,storeId,now=new Dat
   }
   return {status:'COMPLETE',processed:rows.length};
  },{timeout:30000});
+}
+
+export async function readWeeklyStockAlarmState(db,scope){
+ const readiness=await weeklyStockAlarmReadiness(db);if(!readiness.ready)return {available:false,enabled:false,reason:readiness.reason};
+ const policy=await readStockAlarmPolicy(db,scope.companyId,scope.storeId);return {available:true,enabled:policy.settings.enabled,reason:null};
 }

@@ -1,3 +1,4 @@
+import {parseWeeklyStockAlarmProfile} from './weekly-stock-alarm-profile.js';
 // Explicit lifecycle profile for event report authorizations. The default
 // manifest remains usable before the optional event schema is provisioned.
 import {readFileSync} from 'node:fs';
@@ -25,6 +26,20 @@ export function withAutomaticReportEventConsent(manifest){
   return result;
 }
 
+export function withMonthlyInventorySummaryConsent(manifest){
+  const result=structuredClone(manifest);
+  const consent=result.valueGuards.find(guard=>guard.table==='AutomaticReportEventConsent'&&guard.column==='reportType');
+  if(!consent)throw new Error('Missing report consent lifecycle guard.');
+  consent.allowed.push('MONTHLY_INVENTORY_SUMMARY');
+  result.id+='__MONTHLY_INVENTORY_SUMMARY_V1';
+  return result;
+}
+
+export function monthlyInventorySummaryLifecycleReady(env=process.env){
+  return env.MWS_STORE_LIFECYCLE_PROFILE==='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5';
+}
+
 export function automaticReportEventLifecycleReady(env=process.env){
-  return ['AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'].includes(env.MWS_STORE_LIFECYCLE_PROFILE);
+ if(typeof env.MWS_STORE_LIFECYCLE_PROFILE==='string'&&env.MWS_STORE_LIFECYCLE_PROFILE.endsWith('__WEEKLY_STOCK_ALARM_V1')){try{parseWeeklyStockAlarmProfile(env.MWS_STORE_LIFECYCLE_PROFILE);return true}catch{return false}}
+  return ['AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'].includes(env.MWS_STORE_LIFECYCLE_PROFILE);
 }

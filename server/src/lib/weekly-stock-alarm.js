@@ -22,6 +22,7 @@ export function calculateWeeklyStockAlarm(row,input={},now=new Date()){
  const unit=suggestionUnit(row.unit);
  if(!unit||row.hasRecipe)return hold('UNIT_OR_RECIPE_REVIEW');
  if(current===null||current<0||!finite(row.soldQuantity)||!finite(row.returnedQuantity)||Number(row.soldQuantity)<0||Number(row.returnedQuantity)<0||!finite(row.currentStock)||Number(row.currentStock)<0)return hold('INVALID_OR_NEGATIVE_STOCK');
+ if(row.createdAt==null||row.createdAt==='')return hold('INSUFFICIENT_HISTORY');
  const since=new Date(row.createdAt);if(!Number.isFinite(since.getTime())||now-since<p.historyDays*86400000)return hold('INSUFFICIENT_HISTORY');
  if((row.floor!=null&&!finite(row.floor))||(row.baselineMinimum!=null&&!finite(row.baselineMinimum)))return hold('INVALID_FLOOR');
  const baseline=finite(row.baselineMinimum)?Number(row.baselineMinimum):current;

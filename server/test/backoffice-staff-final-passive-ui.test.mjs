@@ -89,3 +89,57 @@ test('staff policy supports a display-name-only action for another account with 
     assert.match(document.body.textContent,/Το ονοματεπώνυμο αποθηκεύτηκε/);
   }finally{await m.close()}
 });
+
+test('POS ceiling disables protected toggles and rejects a copy that would change them',async()=>{
+  const Panel=await component('backoffice/StaffOperatorPermissions');
+  const calls=[];
+  const api=async(path,options)=>{
+    calls.push({path,options});
+    return {companyId:'c',storeId:'s',editableKeys:['orders'],items:[
+      {employeeId:'target',displayName:'Target',permissions:{orders:false,cash:false}},
+      {employeeId:'source',displayName:'Source',permissions:{orders:true,cash:true}}
+    ]};
+  };
+  const m=await mount(Panel,{api,companyId:'c',storeId:'s',canCopyPermissions:true});
+  try{
+    const pick=async(index,value)=>m.act(async()=>{
+      const select=document.querySelectorAll('select')[index];
+      select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    await pick(0,'target');
+    const check=label=>[...document.querySelectorAll('label')].find(node=>node.textContent.trim()===label).querySelector('input');
+    assert.equal(check('Μετρητά').disabled,true);
+    assert.equal(check('Παραγγελίες (Τιμολόγια / Παραλαβές στο PoS)').disabled,false);
+    await pick(1,'source');
+    assert.equal(button('Αντιγραφή δικαιωμάτων POS').disabled,true);
+    assert.match(document.body.textContent,/εκτός του ορίου/);
+    assert.equal(calls.length,1);
+  }finally{await m.close()}
+});
+
+test('delegated read controls bind the target, store and revision and never offer self or other permissions',async()=>{
+  const Panel=await component('backoffice/StaffReadDelegation');
+  const calls=[];
+  const api=async(path,options)=>{
+    calls.push({path,options});
+    if(options.method==='PATCH')return {storeId:'s',userId:'peer',revision:5,capabilities:['promotions.read']};
+    return {storeId:'s',editableKeys:['promotions.read'],items:[
+      {userId:'self',fullName:'Self',revision:1,capabilities:[]},
+      {userId:'peer',fullName:'Peer',revision:4,capabilities:[]}
+    ]};
+  };
+  const m=await mount(Panel,{api,storeId:'s',userId:'self'});
+  try{
+    assert.deepEqual([...document.querySelectorAll('option')].map(option=>option.value),['','peer']);
+    await m.act(async()=>{
+      const select=document.querySelector('select');
+      select.value='peer';select.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    const checkbox=document.querySelector('fieldset input');
+    assert.equal(document.querySelectorAll('fieldset input').length,1);
+    await m.act(async()=>checkbox.click());
+    assert.equal(calls[1].path,'/api/backoffice-staff/stores/s/delegated-reads/peer');
+    assert.deepEqual(JSON.parse(calls[1].options.body),{key:'promotions.read',enabled:true,expectedRevision:4});
+    assert.equal(document.querySelector('fieldset input').checked,true);
+  }finally{await m.close()}
+});

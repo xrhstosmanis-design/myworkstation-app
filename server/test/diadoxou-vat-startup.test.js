@@ -13,7 +13,7 @@ async function run({departments=canonical,state={total:567,tobacco:567,other:0},
   const pending=[];
   const result=await fn({$queryRaw:async(strings,...values)=>{
    assert.equal(values[0],'cmulmjjoa000oqlbfyi0h53ju');
-   return strings.join('?').includes('COUNT(*)')?[state]:departments;
+   return strings.join('?').includes('COUNT(*)')?[{uncategorized_zero:0,...state}]:departments;
   },$executeRaw:async(strings,...values)=>{const row={sql:strings.join('?'),values};pending.push(row);attempted.push(row);return row.sql.includes('UPDATE "Product"')?moved:1}});
   committed.push(...pending);return result;
  }};
@@ -36,4 +36,18 @@ test('only exact historical 585/565/20 state performs original scoped repair; mi
  const r=await run({departments,state});assert.equal(r.error,undefined);assert.equal(r.committed.length,2);assert.match(r.committed[0].sql,/p\."companyId"/);assert.match(r.committed[0].sql,/c\."name" <> 'ΚΑΠΝΙΚΑ' AND p\."vatRate"=24/);assert.deepEqual(r.committed[0].values,['s','cmulmjjoa000oqlbfyi0h53ju','t']);assert.deepEqual(r.committed[1].values,['t']);assert.equal(r.disconnected,1);
  const failed=await run({departments,state,moved:19});assert.match(failed.error.message,/moved 19, expected 20/);assert.deepEqual(failed.committed,[]);assert.equal(failed.disconnected,1);
  const unexpected=await run({departments,state:{total:586,tobacco:566,other:20}});assert.match(unexpected.error.message,/unexpected data/);assert.deepEqual(unexpected.attempted,[]);
+});
+
+test('already repaired mapping accepts observed VAT0 uncategorized items without writes',async()=>{
+ for(const state of [{total:570,tobacco:568,uncategorized_zero:2,other:0},{total:2,tobacco:0,uncategorized_zero:2,other:0}]){
+  const r=await run({state});assert.equal(r.error,undefined);assert.deepEqual(r.attempted,[]);assert.deepEqual(r.committed,[]);assert.equal(r.disconnected,1);
+ }
+});
+test('uncategorized nonzero or NULL VAT, explicit other categories and wrong fiscal mapping still fail closed',async()=>{
+ for(const state of [{total:570,tobacco:568,uncategorized_zero:1,other:0},{total:570,tobacco:568,uncategorized_zero:2,other:1}]){
+  const r=await run({state});assert.match(r.error.message,/unexpected data/);assert.deepEqual(r.attempted,[]);
+ }
+ for(const change of [{vatRate:24},{cashRegisterDepartment:2},{legacyVatCode:'42'}]){
+  const r=await run({state:{total:570,tobacco:568,uncategorized_zero:2,other:0},departments:[{...canonical[0],...change},canonical[1]]});assert.match(r.error.message,/unexpected data/);assert.deepEqual(r.attempted,[]);
+ }
 });

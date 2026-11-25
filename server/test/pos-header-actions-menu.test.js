@@ -39,6 +39,9 @@ test('actual POS central menu preserves authorized launchers, scanner focus, med
   await click(document.querySelector('.mws-screen-recorder>button'));assert.equal(recordStarts,1);assert.equal(layer().hidden,false);await click(close);await open();assert.equal(recordStarts,1);assert.equal(trackStops,0,'menu close must not stop live recording');assert.match(document.querySelector('.mws-screen-recorder>button').textContent,/Διακοπή/);
   await click(close);await click(button('.store-pos-top .runtime-top-actions>button','Έξοδος'));assert.equal(logouts,1);
   await open();available=false;await render('OTHER');assert.equal(layer().hidden,true);await open();assert.equal(document.querySelector('.table-service-top-button'),null);assert.equal(button('.pos-aux-actions>button','Barcode'),undefined);assert.equal(button('.pos-aux-actions>button','Τιμολόγια'),undefined);assert.equal(button('.pos-aux-actions>button','Online Ράδιο'),undefined);assert.ok(button('.pos-aux-actions>button','Chat'));assert.ok(button('.pos-aux-actions>button','Κάρτα εργασίας'));
+  const permissionReads=calls.filter(c=>/^\/api\/pos-order-suggestions\/stores\/(?:S|OTHER)\/permission$/.test(c.path)&&(!c.options.method||c.options.method==='GET'));
+  assert.equal(permissionReads.length,2,'one read-only permission check per POS context');
+  assert.deepEqual(permissionReads.map(c=>c.path.split('/')[4]).sort(),['OTHER','S']);
   assert.equal(calls.filter(c=>/checkout|stock|attendance\/scan/.test(c.path)).length,0,'no business action in this presentation test');
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[key,d]of previous){if(d)Object.defineProperty(globalThis,key,d);else delete globalThis[key]}}
 });

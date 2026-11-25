@@ -45,7 +45,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     ])await db.$executeRawUnsafe(sql);
     await db.$executeRaw`INSERT INTO "Company" ("id","name") VALUES ('a','A'),('b','B')`;
     await db.$executeRaw`INSERT INTO "Store" ("id","companyId","name") VALUES ('a1','a','A1'),('a2','a','A2'),('b1','b','B1')`;
-    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") SELECT 'a-'||key,'a',key FROM unnest(ARRAY['CORE','INVENTORY','CASH_CONTROL','STORE_CHAT','AI_READER','STORE_MODE','DOCUMENTS']) AS key`;
+    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") SELECT 'a-'||key,'a',key FROM unnest(ARRAY['CORE','INVENTORY','CASH_CONTROL','STORE_CHAT','AI_READER','STORE_MODE','DOCUMENTS','ORDER_SUGGESTIONS']) AS key`;
     await db.$executeRaw`INSERT INTO "User" ("id","companyId","email","fullName","role","passwordHash") VALUES ('owner-a','a','a@isolated.invalid','Owner A','OWNER','unused'),('owner-b','b','b@isolated.invalid','Owner B','OWNER','unused')`;
     await db.$executeRaw`INSERT INTO "UserSession" ("id","userId","expiresAt") VALUES ('session-owner-a','owner-a',NOW()+INTERVAL '1 hour'),('session-owner-b','owner-b',NOW()+INTERVAL '1 hour')`;
     await ensureBackofficeStaffSchema(db);await ensureBackofficeStaffSchema(db);
@@ -155,6 +155,135 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       for(let i=0;i<5;i++)assert.equal((await verifyStaffLogin(db,{username:'absent.fixture',pin:'999999'},'fixture-ip',process.env.JWT_SECRET)).ok,false);
       assert.equal((await verifyStaffLogin(db,{username:'absent.fixture',pin:'999999'},'other-ip',process.env.JWT_SECRET)).limited,true);
       assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "BackofficeStaffAccount"`)[0].n),1);
+    });
+    await t.test('owner POS ceiling persists with archived grant data and blocks a mixed-permission copy atomically',async()=>{
+      const {decodeStoredStaffCapabilities,posPermissionKeys}=await import('../src/services/staff-pos-permission-ceiling.js');
+      const {POS_PERMISSIONS}=await import('../../shared/pos-operator-permissions.mjs');
+      const {staffError}=await import('../src/services/backoffice-staff-access.js');
+      const name='pos.ceiling.fixture';
+      const capabilities=['operator-profiles.manage-permissions','operator-profiles.copy-permissions'];
+      const a1={storeId:'a1',profile:'AUDITOR',capabilities};
+      const a2={storeId:'a2',profile:'AUDITOR',capabilities,posPermissionCeiling:[]};
+      const ceilingAccount=await createStaffAccount(db,owner,{...input,username:name,grants:[
+        {...a1,posPermissionCeiling:['orders']},a2
+      ]});
+      const actorId=ceilingAccount.id;
+      await updateStaffAccount(db,owner,actorId,{expectedRevision:1,active:true,grants:[a2]});
+      await updateStaffAccount(db,owner,actorId,{expectedRevision:2,active:true,grants:[a1,a2]});
+      const persisted=await db.$queryRaw`SELECT "storeId","capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${actorId} ORDER BY "storeId"`;
+      assert.deepEqual(persisted.map(row=>decodeStoredStaffCapabilities(row.capabilities)),[
+        {capabilities,posPermissionCeiling:['orders'],backofficeReadDelegationCeiling:[]},{capabilities,posPermissionCeiling:[],backofficeReadDelegationCeiling:[]}
+      ]);
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username:name,pin:input.pin}});
+      assert.equal(login.status,200,JSON.stringify(login.data));
+      const token=login.data.token,claims={...jwt.verify(token,process.env.JWT_SECRET),storeId:'a1'};
+      const me=await request('/api/backoffice-staff/me',{token});
+      assert.deepEqual(me.data.stores.map(row=>row.capabilities),[capabilities,capabilities]);
+      assert.doesNotMatch(JSON.stringify(me.data),/mws:pos-permission-ceiling/);
+      for(const sql of [
+        'CREATE TABLE "Employee" ("id" text,"storeId" text,"userId" text,"active" bool)',
+        'CREATE TABLE "StoreOperatorCredential" ("id" text,"companyId" text,"storeId" text,"employeeId" text,"role" text,"active" bool,"displayName" text)',
+        `CREATE TABLE "StoreOperatorProfile" ("id" text,"companyId" text,"storeId" text,"employeeId" text,"permissions" jsonb DEFAULT '{}',"backofficeMenu" jsonb DEFAULT '{}',"posAccess" bool DEFAULT true,"createdBy" text,"updatedAt" timestamptz,UNIQUE("storeId","employeeId"))`,
+        'CREATE TABLE "StoreOperatorAudit" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT now())'
+      ])await db.$executeRawUnsafe(sql);
+      await db.$executeRaw`INSERT INTO "Employee" VALUES ('source','a1',NULL,true),('target','a1',NULL,true),('other','a2',NULL,true),('self','a1',${actorId},true)`;
+      await db.$executeRaw`INSERT INTO "StoreOperatorCredential" VALUES ('c1','a','a1','source','EMPLOYEE',true,'Source'),('c2','a','a1','target','EMPLOYEE',true,'Target'),('c3','a','a2','other','EMPLOYEE',true,'Other'),('c4','a','a1','self','EMPLOYEE',true,'Self')`;
+      await db.$executeRaw`INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","permissions","backofficeMenu") VALUES
+        ('src','a','a1','source','{"cash":true}'::jsonb,'{"orders":true}'::jsonb),
+        ('dst','a','a1','target','{}'::jsonb,'{"privateMenu":true}'::jsonb)`;
+      const source=(await readFile(new URL('../src/routes/operator-permission-delegation.js',import.meta.url),'utf8'))
+        .replace(/^import .*;\n/gm,'').replace('export default router;','');
+      const handlers={};
+      const router=()=>({get:(_path,handler)=>handlers.read=handler,post:(path,handler)=>{
+        if(path.endsWith('/copy-permissions'))handlers.copy=handler;
+      },patch:(path,handler)=>{
+        if(path.endsWith('/:employeeId'))handlers.toggle=handler;
+      }});
+      new Function('Router','z','crypto','prisma','requireStaffAction','staffError','POS_PERMISSIONS','operatorPermissionKeys',source)(
+        router,z,crypto,db,requireStaffAction,staffError,POS_PERMISSIONS,posPermissionKeys);
+      const invoke=(handler,capability,body,employeeId='target')=>new Promise((resolve,reject)=>{
+        const req={params:{storeId:'a1',employeeId},body,user:claims,staffGrant:{capability}};
+        handlers[handler](req,{json:resolve},reject);
+      });
+      const toggle=(key,enabled,employeeId)=>invoke('toggle',capabilities[0],{key,enabled,expected:!enabled},employeeId);
+      const before=Object.fromEntries(posPermissionKeys.map(key=>[key,false]));
+      const copy=expectedTarget=>invoke('copy',capabilities[1],{sourceEmployeeId:'source',
+        expectedSource:{...before,orders:true,cash:true},expectedTarget});
+      const read=await invoke('read',capabilities[0]);
+      assert.deepEqual(read.editableKeys,['orders']);
+      assert.deepEqual(read.items.map(row=>row.employeeId),['source','target']);
+      await assert.rejects(toggle('cash',true),{code:'STAFF_POS_PERMISSION_CEILING'});
+      await assert.rejects(toggle('orders',true,'other'),{status:404});
+      await assert.rejects(toggle('orders',true,'self'),{status:404});
+      await assert.rejects(copy(before),{code:'STAFF_POS_PERMISSION_CEILING'});
+      assert.deepEqual(await db.$queryRaw`SELECT "id" FROM "StoreOperatorAudit"`,[]);
+      await db.$executeRaw`UPDATE "StoreOperatorProfile" SET "permissions"='{"cash":true}'::jsonb WHERE "id"='dst'`;
+      await copy({...before,cash:true});
+      const profile=(await db.$queryRaw`SELECT "permissions","backofficeMenu" FROM "StoreOperatorProfile" WHERE "id"='dst'`)[0];
+      assert.deepEqual(profile,{permissions:{cash:true},backofficeMenu:{privateMenu:true,orders:true}});
+      await toggle('orders',false);
+      assert.equal((await db.$queryRaw`SELECT "id" FROM "StoreOperatorAudit"`).length,2);
+      await updateStaffAccount(db,owner,actorId,{expectedRevision:3,active:true,grants:[{...a1,posPermissionCeiling:[]},a2]});
+      await assert.rejects(toggle('orders',true),{code:'STAFF_SESSION_INVALID'});
+      assert.equal((await db.$queryRaw`SELECT "id" FROM "StoreOperatorAudit"`).length,2);
+    });
+    await t.test('BackOffice read subdelegation is owner bounded, preserves other grants and revokes the target session',async()=>{
+      const {decodeStoredStaffCapabilities}=await import('../src/services/staff-pos-permission-ceiling.js');
+      const cap='staff-grants.manage-reads',actorName='delegated.reads.fixture',targetName='delegated.target.fixture';
+      const a1={storeId:'a1',profile:'AUDITOR'};
+      const actorGrant={...a1,capabilities:[cap,'products.read','order-suggestions.read','inventory.read']};
+      const targetGrant={...a1,capabilities:['products.read','products.create'],posPermissionCeiling:['orders']};
+      const target=await createStaffAccount(db,owner,{...input,username:targetName,grants:[targetGrant,
+        {storeId:'a2',profile:'AUDITOR',capabilities:['order-suggestions.read']}]});
+      const bounded=await createStaffAccount(db,owner,{...input,username:actorName,grants:[
+        {...actorGrant,backofficeReadDelegationCeiling:['products.read','order-suggestions.read','shifts.read']}]});
+      await updateStaffAccount(db,owner,bounded.id,{expectedRevision:1,active:true,grants:[actorGrant]});
+      const signIn=async username=>{
+        const result=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
+        assert.equal(result.status,200,JSON.stringify(result.data));return result.data.token;
+      };
+      const targetToken=await signIn(targetName),actorToken=await signIn(actorName);
+      const path='/api/backoffice-staff/stores/a1/delegated-reads';
+      const invoke=(suffix='',method='GET',body,storeId='a1')=>request(path+suffix,{token:actorToken,method,body,storeId});
+      const change=(userId,key,enabled,expectedRevision)=>invoke('/'+userId,'PATCH',{key,enabled,expectedRevision});
+      const visible=await invoke();
+      assert.equal(visible.status,200,JSON.stringify(visible.data));
+      assert.deepEqual(visible.data.editableKeys,['products.read','order-suggestions.read']);
+      assert.equal(visible.data.items.some(item=>item.userId===bounded.id),false);
+      assert.doesNotMatch(JSON.stringify(visible.data),/products.create|mws:/);
+      const listed=visible.data.items.find(item=>item.userId===target.id);
+      assert.ok(listed);
+      assert.equal((await change(target.id,cap,true,listed.revision)).status,400);
+      assert.equal((await change(target.id,'shifts.read',true,listed.revision)).status,403);
+      assert.equal((await change(target.id,'inventory.read',true,listed.revision)).status,403);
+      assert.equal((await change(bounded.id,'order-suggestions.read',true,listed.revision)).status,403);
+      assert.equal((await invoke('', 'GET',undefined,'a2')).status,403);
+      const dependent=await change(target.id,'products.read',false,listed.revision);
+      assert.equal(dependent.status,409);assert.equal(dependent.data.code,'STAFF_READ_DELEGATION_DEPENDENCY');
+      assert.equal((await request('/api/backoffice-staff/me',{token:targetToken})).status,200);
+      const control=await db.$queryRaw`SELECT "capabilities","revision" FROM "BackofficeStaffGrant" WHERE "userId"=${target.id} AND "storeId"='a2'`;
+      const permitted=await change(target.id,'order-suggestions.read',true,listed.revision);
+      assert.equal(permitted.status,200,JSON.stringify(permitted.data));
+      assert.deepEqual(permitted.data,{storeId:'a1',userId:target.id,revision:listed.revision+1,capabilities:['products.read','order-suggestions.read']});
+      const row=(await db.$queryRaw`SELECT "capabilities","revision" FROM "BackofficeStaffGrant" WHERE "userId"=${target.id} AND "storeId"='a1'`)[0];
+      assert.deepEqual(decodeStoredStaffCapabilities(row.capabilities),{
+        capabilities:['products.read','products.create','order-suggestions.read'],posPermissionCeiling:['orders'],backofficeReadDelegationCeiling:[]
+      });
+      assert.deepEqual(await db.$queryRaw`SELECT "capabilities","revision" FROM "BackofficeStaffGrant" WHERE "userId"=${target.id} AND "storeId"='a2'`,control);
+      assert.equal((await request('/api/backoffice-staff/me',{token:targetToken})).status,401);
+      assert.equal((await change(target.id,'order-suggestions.read',false,listed.revision)).status,409);
+      const freshTargetToken=await signIn(targetName);
+      const noOp=await change(target.id,'order-suggestions.read',true,listed.revision+1);
+      assert.equal(noOp.status,200);assert.equal(noOp.data.revision,listed.revision+1);
+      assert.equal((await request('/api/backoffice-staff/me',{token:freshTargetToken})).status,200);
+      const audit=await db.$queryRaw`SELECT "actorId","targetUserId","detail" FROM "BackofficeStaffAudit" WHERE "event"='BACKOFFICE_READ_DELEGATED'`;
+      assert.deepEqual(audit,[{actorId:bounded.id,targetUserId:target.id,
+        detail:{storeId:'a1',key:'order-suggestions.read',before:false,enabled:true,revision:listed.revision+1}}]);
+      await assert.rejects(updateStaffAccount(db,owner,target.id,{expectedRevision:1,active:true,grants:[targetGrant]}),{code:'STAFF_STALE'});
+      await updateStaffAccount(db,owner,bounded.id,{expectedRevision:2,active:true,grants:[{...actorGrant,backofficeReadDelegationCeiling:[]}]});
+      assert.equal((await change(target.id,'order-suggestions.read',false,listed.revision+1)).status,401);
+      const freshActor=await signIn(actorName);
+      assert.deepEqual((await request(path,{token:freshActor,storeId:'a1'})).data,{storeId:'a1',editableKeys:[],items:[]});
     });
     await t.test('native auditor HTTP admits only own read projection and manager label cannot restore unchecked actions',async()=>{
       for(const [profile,capabilities] of [['AUDITOR',['cash.read']],['MANAGER',['inventory.read']]]){

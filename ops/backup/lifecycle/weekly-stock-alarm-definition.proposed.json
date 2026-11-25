@@ -1,0 +1,657 @@
+{
+  "format": "MWS_WEEKLY_STOCK_ALARM_SCHEMA_V1",
+  "sourceProfiles": {
+    "MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3": "54ceb10a4383faf7367d07bd3b8ad1c066b85c025a23e937c610d1f473423828",
+    "MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4": "e349bf37597939d918b098aaa434ce4dfd686b653b0fe013d8c4df83420ec68f",
+    "MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_NO14_V1": "75ddba0584cc6a256bd0d97b6d4b8ad466229061da7329f72c07a068acc49183"
+  },
+  "columns": {
+    "WeeklyStockAlarmPolicy": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "scope",
+        "text",
+        true
+      ],
+      [
+        "settings",
+        "jsonb",
+        true
+      ],
+      [
+        "version",
+        "integer",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "WeeklyStockAlarmProduct": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "productId",
+        "text",
+        true
+      ],
+      [
+        "mode",
+        "text",
+        true
+      ],
+      [
+        "floor",
+        "numeric(14,4)",
+        false
+      ],
+      [
+        "leadDays",
+        "integer",
+        false
+      ],
+      [
+        "baselineMinimum",
+        "numeric(14,4)",
+        false
+      ],
+      [
+        "lastApplied",
+        "numeric(14,4)",
+        false
+      ]
+    ],
+    "WeeklyStockAlarmHistory": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "productId",
+        "text",
+        false
+      ],
+      [
+        "week",
+        "text",
+        true
+      ],
+      [
+        "previousMinimum",
+        "numeric(14,4)",
+        false
+      ],
+      [
+        "nextMinimum",
+        "numeric(14,4)",
+        false
+      ],
+      [
+        "status",
+        "text",
+        true
+      ],
+      [
+        "details",
+        "jsonb",
+        true
+      ],
+      [
+        "actorId",
+        "text",
+        false
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ]
+    ]
+  },
+  "ddl": [
+    "CREATE TABLE IF NOT EXISTS \"WeeklyStockAlarmPolicy\" (\"companyId\" TEXT NOT NULL,\"scope\" TEXT NOT NULL,\"settings\" JSONB NOT NULL,\"version\" INTEGER NOT NULL DEFAULT 1,\"updatedAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(\"companyId\",\"scope\"))",
+    "CREATE TABLE IF NOT EXISTS \"WeeklyStockAlarmProduct\" (\"companyId\" TEXT NOT NULL,\"storeId\" TEXT NOT NULL,\"productId\" TEXT NOT NULL,\"mode\" TEXT NOT NULL DEFAULT 'AUTO' CHECK(\"mode\" IN ('AUTO','MANUAL')),\"floor\" NUMERIC(14,4),\"leadDays\" INTEGER CHECK(\"leadDays\" BETWEEN 0 AND 30),\"baselineMinimum\" NUMERIC(14,4),\"lastApplied\" NUMERIC(14,4),PRIMARY KEY(\"companyId\",\"storeId\",\"productId\"))",
+    "CREATE TABLE IF NOT EXISTS \"WeeklyStockAlarmHistory\" (\"id\" TEXT PRIMARY KEY,\"companyId\" TEXT NOT NULL,\"storeId\" TEXT NOT NULL,\"productId\" TEXT,\"week\" TEXT NOT NULL,\"previousMinimum\" NUMERIC(14,4),\"nextMinimum\" NUMERIC(14,4),\"status\" TEXT NOT NULL,\"details\" JSONB NOT NULL,\"actorId\" TEXT,\"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW())",
+    "CREATE UNIQUE INDEX IF NOT EXISTS \"WeeklyStockAlarmHistory_once\" ON \"WeeklyStockAlarmHistory\"(\"companyId\",\"storeId\",\"productId\",\"week\") WHERE \"productId\" IS NOT NULL AND \"status\" IN ('APPLY','UNCHANGED','HELD')",
+    "CREATE INDEX IF NOT EXISTS \"WeeklyStockAlarmHistory_scope\" ON \"WeeklyStockAlarmHistory\"(\"companyId\",\"storeId\",\"createdAt\")"
+  ],
+  "catalogue": {
+    "relations": [
+      {
+        "name": "WeeklyStockAlarmHistory",
+        "kind": "r",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "WeeklyStockAlarmPolicy",
+        "kind": "r",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "WeeklyStockAlarmProduct",
+        "kind": "r",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "inherited": false,
+        "rewritten": false
+      }
+    ],
+    "columns": [
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "id",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "companyId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "storeId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "productId",
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "week",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "previousMinimum",
+        "type": "numeric(14,4)",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "nextMinimum",
+        "type": "numeric(14,4)",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "status",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "details",
+        "type": "jsonb",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "actorId",
+        "type": "text",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "createdAt",
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()"
+      },
+      {
+        "table": "WeeklyStockAlarmPolicy",
+        "name": "companyId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmPolicy",
+        "name": "scope",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmPolicy",
+        "name": "settings",
+        "type": "jsonb",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmPolicy",
+        "name": "version",
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "1"
+      },
+      {
+        "table": "WeeklyStockAlarmPolicy",
+        "name": "updatedAt",
+        "type": "timestamp with time zone",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "now()"
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "companyId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "storeId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "productId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "mode",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": "'AUTO'::text"
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "floor",
+        "type": "numeric(14,4)",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "leadDays",
+        "type": "integer",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "baselineMinimum",
+        "type": "numeric(14,4)",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "lastApplied",
+        "type": "numeric(14,4)",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      }
+    ],
+    "constraints": [
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "WeeklyStockAlarmHistory_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "table": "WeeklyStockAlarmPolicy",
+        "name": "WeeklyStockAlarmPolicy_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (\"companyId\", scope)"
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "WeeklyStockAlarmProduct_leadDays_check",
+        "type": "c",
+        "definition": "CHECK (\"leadDays\" >= 0 AND \"leadDays\" <= 30)"
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "WeeklyStockAlarmProduct_mode_check",
+        "type": "c",
+        "definition": "CHECK (mode = ANY (ARRAY['AUTO'::text, 'MANUAL'::text]))"
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "WeeklyStockAlarmProduct_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (\"companyId\", \"storeId\", \"productId\")"
+      }
+    ],
+    "indexes": [
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "WeeklyStockAlarmHistory_once",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"WeeklyStockAlarmHistory_once\" ON __SCHEMA__.\"WeeklyStockAlarmHistory\" USING btree (\"companyId\", \"storeId\", \"productId\", week) WHERE ((\"productId\" IS NOT NULL) AND (status = ANY (ARRAY['APPLY'::text, 'UNCHANGED'::text, 'HELD'::text])))"
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "WeeklyStockAlarmHistory_pkey",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"WeeklyStockAlarmHistory_pkey\" ON __SCHEMA__.\"WeeklyStockAlarmHistory\" USING btree (id)"
+      },
+      {
+        "table": "WeeklyStockAlarmHistory",
+        "name": "WeeklyStockAlarmHistory_scope",
+        "valid": true,
+        "ready": true,
+        "unique": false,
+        "definition": "CREATE INDEX \"WeeklyStockAlarmHistory_scope\" ON __SCHEMA__.\"WeeklyStockAlarmHistory\" USING btree (\"companyId\", \"storeId\", \"createdAt\")"
+      },
+      {
+        "table": "WeeklyStockAlarmPolicy",
+        "name": "WeeklyStockAlarmPolicy_pkey",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"WeeklyStockAlarmPolicy_pkey\" ON __SCHEMA__.\"WeeklyStockAlarmPolicy\" USING btree (\"companyId\", scope)"
+      },
+      {
+        "table": "WeeklyStockAlarmProduct",
+        "name": "WeeklyStockAlarmProduct_pkey",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"WeeklyStockAlarmProduct_pkey\" ON __SCHEMA__.\"WeeklyStockAlarmProduct\" USING btree (\"companyId\", \"storeId\", \"productId\")"
+      }
+    ],
+    "triggers": []
+  },
+  "expectedReceiptProfileDelta": {
+    "idSuffix": "__EXPECTED_RECEIPTS_REPORTS_ONLY_V1",
+    "compatibility": {
+      "format": "MWS_EXPECTED_RECEIPTS_REPORTS_ONLY_V1",
+      "definitionHash": "19f6f2ab25445c8f9d84e95333623ea8b6d572a66374ab16604cbbcf4395e15a",
+      "sourcePlanHash": "54ceb10a4383faf7367d07bd3b8ad1c066b85c025a23e937c610d1f473423828"
+    },
+    "tables": [
+      {
+        "name": "SupplierExpectedReceiptLine",
+        "columns": [
+          [
+            "id",
+            "text",
+            true
+          ],
+          [
+            "companyId",
+            "text",
+            true
+          ],
+          [
+            "storeId",
+            "text",
+            true
+          ],
+          [
+            "supplierId",
+            "text",
+            true
+          ],
+          [
+            "productId",
+            "text",
+            true
+          ],
+          [
+            "invoiceQuantity",
+            "numeric(24,6)",
+            true
+          ],
+          [
+            "invoiceUnit",
+            "text",
+            true
+          ],
+          [
+            "stockUnit",
+            "text",
+            true
+          ],
+          [
+            "stockUnitsPerInvoiceUnit",
+            "numeric(24,6)",
+            true
+          ],
+          [
+            "expectedStockQuantity",
+            "numeric(30,12)",
+            true
+          ],
+          [
+            "cancelledQuantity",
+            "numeric(30,12)",
+            true
+          ],
+          [
+            "version",
+            "integer",
+            true
+          ],
+          [
+            "confirmedBy",
+            "text",
+            true
+          ],
+          [
+            "confirmedAt",
+            "timestamp with time zone",
+            true
+          ],
+          [
+            "cancelledBy",
+            "text",
+            false
+          ],
+          [
+            "cancelledAt",
+            "timestamp with time zone",
+            false
+          ],
+          [
+            "cancellationReason",
+            "text",
+            false
+          ]
+        ]
+      },
+      {
+        "name": "SupplierExpectedReceiptAllocation",
+        "columns": [
+          [
+            "id",
+            "text",
+            true
+          ],
+          [
+            "companyId",
+            "text",
+            true
+          ],
+          [
+            "storeId",
+            "text",
+            true
+          ],
+          [
+            "expectedLineId",
+            "text",
+            true
+          ],
+          [
+            "orderId",
+            "text",
+            true
+          ],
+          [
+            "productId",
+            "text",
+            true
+          ],
+          [
+            "quantity",
+            "numeric(30,12)",
+            true
+          ],
+          [
+            "sourceDigest",
+            "text",
+            true
+          ],
+          [
+            "actorId",
+            "text",
+            true
+          ],
+          [
+            "createdAt",
+            "timestamp with time zone",
+            true
+          ]
+        ]
+      },
+      {
+        "name": "SupplierExpectedReceiptOperation",
+        "columns": [
+          [
+            "companyId",
+            "text",
+            true
+          ],
+          [
+            "storeId",
+            "text",
+            true
+          ],
+          [
+            "key",
+            "text",
+            true
+          ],
+          [
+            "actorId",
+            "text",
+            true
+          ],
+          [
+            "payloadDigest",
+            "text",
+            true
+          ],
+          [
+            "result",
+            "jsonb",
+            true
+          ]
+        ]
+      }
+    ]
+  }
+}

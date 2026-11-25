@@ -1,3 +1,4 @@
+import {decodeStoredStaffCapabilities} from "./staff-pos-permission-ceiling.js";
 import {finalPassiveStoreActions,finalPassiveStoreRequest} from '../../../shared/backoffice-staff-final-passive.mjs';
 import {storeReportCapabilities,freeStoreReportCapabilities} from '../../../shared/backoffice-staff-reports.mjs';
 import {expectedReceiptAction,expectedReceiptFields} from '../../../shared/supplier-expected-receipts.mjs';
@@ -28,7 +29,7 @@ export async function requireStaffGrant(db,user,storeId,capability,{additionalMo
   if(account.mustChangePassword)throw staffError();
   if(typeof storeId!=='string'||!storeId||storeId.length>200||!staffCapabilities.includes(capability))throw staffError();
   const rows=await db.$queryRaw`SELECT g."profile",g."capabilities",g."revision" FROM "BackofficeStaffGrant" g JOIN "Store" s ON s."id"=g."storeId" AND s."companyId"=g."companyId" WHERE g."userId"=${user.id} AND g."companyId"=${user.companyId} AND g."storeId"=${storeId} AND g."active"=true AND s."active"=true LIMIT 1 FOR SHARE OF g,s`;
-  const grant=rows[0];
+  const grant=rows[0]?{...rows[0],...decodeStoredStaffCapabilities(rows[0].capabilities)}:null;
   if(!grant||!staffProfiles[grant.profile]||!validStaffCapabilities(grant.capabilities)||!grant.capabilities.includes(capability))throw staffError();
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
@@ -101,6 +102,8 @@ export async function enforceBackofficeStaff(db,req,res){
     const rows=await db.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${order[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
+  const delegationStore=path.match(/^\/api\/backoffice-staff\/stores\/([^/]+)\/delegated-reads(?:\/[^/]+)?$/);
+  if(delegationStore&&delegationStore[1]!==storeId)throw staffError();
   const close=path.match(/^\/api\/(?:cash\/sessions\/([^/]+)\/close|owner-shifts\/([^/]+)\/(?:force-close|closing-count|detail))$/);
   if(close){
     const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${close[1]??close[2]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
@@ -147,6 +150,7 @@ function modulesForCapability(capability){
  if(storeReportCapabilities.includes(capability))return freeStoreReportCapabilities.includes(capability)?[]:['INVENTORY'];
  if(capability==='unsold-products.read')return ['SALES_ANALYTICS'];
  if(['operator-profiles.manage-permissions','operator-profiles.manage-pos-access','operator-profiles.create-employee','operator-profiles.reset-pin','operator-profiles.copy-permissions'].includes(capability))return ['STORE_MODE'];
+ if(capability==='staff-grants.manage-reads')return [];
  if(capability==='payments.import-kiosk')return ['CASH_CONTROL'];
  if(['invoices.upload-original','invoices.fetch-original','invoices.sync-mydata'].includes(capability))return ['DOCUMENTS'];
  if(['invoice-ai.photo-preview','invoices.mydata-prefill'].includes(capability))return ['AI_READER','DOCUMENTS','INVENTORY'];
@@ -162,13 +166,14 @@ export async function requireStaffAction(db,req,storeId,capability){
   if(['sales.cancel','shifts.close'].includes(capability)||capability.startsWith('payments.')&&(req.body?.paymentSource==='CASH_SHIFT'||req.body?.paymentMethod==='CASH_SHIFT')){
     if(!String(req.get('x-mws-terminal-pos')||'').trim())throw staffError(400,'STAFF_TERMINAL_REQUIRED','Επίλεξε ταμείο πριν συνεχίσεις.');
   }
-  await requireStaffGrant(db,req.user,storeId,capability);
+  const {grant}=await requireStaffGrant(db,req.user,storeId,capability);
   if(capability==='payments.expense'){
     const body=req.body||{};
     if(body.supplierId||body.supplierName||body.invoiceDocumentNumber||body.type!=='OTHER_EXPENSE'||Number(body.amount)<=0||body.deferredInvoice||!body.idempotencyKey||!['DOCUMENT','NO_DOCUMENT'].includes(body.evidenceMode)||!['CASH_SHIFT','EXTERNAL'].includes(body.paymentSource)||!['CASH_SHIFT','CORPORATE_CARD','BANK_TRANSFER','EMPLOYEE_REIMBURSEMENT'].includes(body.paymentMethod)||(body.paymentSource==='CASH_SHIFT')!==(body.paymentMethod==='CASH_SHIFT'))throw staffError(400,'STAFF_PAYMENT_INVALID','Έλεγξε το είδος και τον τρόπο πληρωμής.');
     if(body.evidenceMode==='NO_DOCUMENT'&&body.responsibilityAcknowledged!==true)throw staffError(400,'STAFF_PAYMENT_DECLARATION','Επιβεβαίωσε τη δήλωση χωρίς παραστατικό.');
   }
   if(capability.startsWith('payments.')&&(req.body?.paymentSource==='CASH_SHIFT'||req.body?.paymentMethod==='CASH_SHIFT'||req.body?.subtractFromShift===true))await requireStaffGrant(db,req.user,storeId,'payments.cash');
+  return grant;
 }
 export async function requireStaffOrderAction(db,req,orderId,capability){
   if(req.user?.staffAccess!==true)return;

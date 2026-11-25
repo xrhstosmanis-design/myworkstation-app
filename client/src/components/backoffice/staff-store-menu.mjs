@@ -14,6 +14,7 @@ const groups = [
 // Register each new dedicated store view here with its capability and group.
 const views = [
   ["payments.import-kiosk","cash","kiosk-import","Εισαγωγή πληρωμών Kiosk"],
+  ["staff-grants.manage-reads","people","delegated-reads","Παραχώρηση προβολών καταστήματος"],
   ["operator-profiles.manage-permissions","people","operator-permissions","Δικαιώματα χειριστών POS"],
   ["invoices.read", "invoices", "invoices", "Τιμολόγια"],
   ["shifts.read", "cash", "shift-report", "Αναφορά βαρδιών"],

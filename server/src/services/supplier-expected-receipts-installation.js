@@ -1,3 +1,4 @@
+import {withWeeklyStockAlarmProfile,WEEKLY_PROFILE_SUFFIX,WEEKLY_RECEIPT_SUFFIX,WEEKLY_LAB_SUFFIX} from './weekly-stock-alarm-profile.js';
 import {readFileSync} from 'node:fs';
 import {EXPECTED_RECEIPT_SOURCE_PROFILE,EXPECTED_RECEIPT_TARGET_PROFILE} from './supplier-expected-receipts-lifecycle-profile.js';
 import {collectExpectedReceiptCatalog} from './supplier-expected-receipts-compatibility.js';
@@ -20,10 +21,11 @@ const copy=value=>{
 };
 const text=value=>typeof value==='string'&&value.trim()===value&&value.length>0&&value.length<=160&&!/[\u0000-\u001f\u007f]/.test(value);
 const migrations=readFileSync(new URL('../../scripts/sql/supplier-expected-receipts-installation.sql',import.meta.url),'utf8').split(';').map(s=>s.trim()).filter(Boolean);
-export function createExpectedReceiptInstallation(db,{sourceRevision,enabled=false}={}){
- if(!/^[a-f0-9]{40}$/.test(sourceRevision||'')||typeof enabled!=='boolean')fail();
- const source=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:EXPECTED_RECEIPT_SOURCE_PROFILE});
- const targetProfile=EXPECTED_RECEIPT_TARGET_PROFILE,profile='NO14';
+export function createExpectedReceiptInstallation(db,{sourceRevision,enabled=false,weeklyStockAlarm=false,sourceProfile=EXPECTED_RECEIPT_SOURCE_PROFILE,existingLab=false}={}){
+ if(!/^[a-f0-9]{40}$/.test(sourceRevision||'')||(typeof enabled!=='boolean'||typeof weeklyStockAlarm!=='boolean'||typeof existingLab!=='boolean'))fail();
+ const sourceBase=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:weeklyStockAlarm?sourceProfile:EXPECTED_RECEIPT_SOURCE_PROFILE});
+ const source=weeklyStockAlarm?withWeeklyStockAlarmProfile(sourceBase,{existingLab}):sourceBase;
+ const targetProfile=weeklyStockAlarm&&sourceProfile==='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4'?sourceProfile+(existingLab?WEEKLY_LAB_SUFFIX:'')+WEEKLY_RECEIPT_SUFFIX+WEEKLY_PROFILE_SUFFIX:EXPECTED_RECEIPT_TARGET_PROFILE+(weeklyStockAlarm?WEEKLY_PROFILE_SUFFIX:''),profile=weeklyStockAlarm?'NO14_WEEKLY_STOCK_ALARM_V2':'NO14';
  const target=selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:targetProfile});
  const sourceCore=createLifecycleInstallationCore(source,{sourceRevision}),targetCore=createLifecycleInstallationCore(target,{sourceRevision});
  const oldPlanHash=sourceCore.describe().planHash,targetPlanHash=targetCore.describe().planHash;

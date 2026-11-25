@@ -1,3 +1,6 @@
+import {inspectWeeklyExistingLabCatalogue} from './weekly-stock-alarm-existing-lab.js';
+import {inspectWeeklyAlarmCatalogue} from './weekly-stock-alarm-catalogue.js';
+import {assertWeeklyStockAlarmProfile,weeklyAlarmDefinition} from './weekly-stock-alarm-profile.js';
 import {assertReportSecurityProfile,inspectReportSecurityProfile} from './automatic-report-security-transition.js';
 import {assertExpectedReceiptProfile} from './supplier-expected-receipts-lifecycle-profile.js';
 import {inspectExpectedReceiptInstallationCatalogue} from './supplier-expected-receipts-lifecycle-inspection.js';
@@ -33,8 +36,9 @@ const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for
 const drainFingerprint=(plan,scope,mode,operationId)=>hash({phase:'DRAINING',operationId,companyId:scope.companyId,storeId:scope.storeId,mode,planHash:plan.planHash,sourceRevision:plan.sourceRevision});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
+ const inherited=manifest?.weeklyStockAlarmCompatibility?assertWeeklyStockAlarmProfile(manifest):manifest;
  if(manifest.preservedReportSecurityTables!==undefined&&!manifest.reportSecurityCompatibility)throw Object.assign(new Error('Report security profile differs.'),{code:'REPORT_SECURITY_PROFILE_CHANGED',status:409});
- const securityLegacy=manifest.reportSecurityCompatibility?assertReportSecurityProfile(manifest):manifest;
+ const securityLegacy=inherited.reportSecurityCompatibility?assertReportSecurityProfile(inherited):inherited;
  const legacy=securityLegacy.expectedReceiptCompatibility!==undefined?assertExpectedReceiptProfile(securityLegacy):securityLegacy;
  if(manifest.purpose!==undefined)assertCompanyCurrentCaptureManifest(manifest);
  if(manifest.reviewedColumnExtensions!==undefined)assertReportColumnProfile(securityLegacy);
@@ -73,7 +77,7 @@ function planFor(manifest){
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!validColumns(row.owner.columns))fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
  if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
- return {expectedReceiptCompatibility:manifest.expectedReceiptCompatibility,id:manifest.id,executionDisabled:manifest.executionDisabled===true,purpose:manifest.purpose,reportSecurityCompatibility:manifest.reportSecurityCompatibility||null,reviewedColumnExtensions:manifest.reviewedColumnExtensions||[],preservedReportChatTables:manifest.preservedReportChatTables||[],preservedReportSecurityTables:manifest.reportSecurityCompatibility?[...manifest.preservedReportSecurityTables]:[],preservedOperationalTables:manifest.companyCurrentCatalogue?.nonOwningTables||manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
+ return {weeklyExistingLabCompatibility:manifest.weeklyStockAlarmCompatibility?.existingLabCompatibility,weeklyStockAlarmCompatibility:manifest.weeklyStockAlarmCompatibility,expectedReceiptCompatibility:manifest.expectedReceiptCompatibility||(manifest.weeklyStockAlarmCompatibility?.expectedReceipts?weeklyAlarmDefinition.expectedReceiptProfileDelta.compatibility:undefined),id:manifest.id,executionDisabled:manifest.executionDisabled===true,purpose:manifest.purpose,reportSecurityCompatibility:manifest.reportSecurityCompatibility||null,reviewedColumnExtensions:manifest.reviewedColumnExtensions||[],preservedReportChatTables:manifest.preservedReportChatTables||[],preservedReportSecurityTables:manifest.reportSecurityCompatibility?[...manifest.preservedReportSecurityTables]:[],preservedOperationalTables:manifest.companyCurrentCatalogue?.nonOwningTables||manifest.preservedOperationalTables||[],nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
 }
 function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='ROOT')return `${alias}."id"=$1`;
@@ -166,6 +170,8 @@ function bindDatabaseReferences(plan,schema,fks){
  plan.databaseReferences=references;
 }
 async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
+ if(plan.weeklyExistingLabCompatibility)await inspectWeeklyExistingLabCatalogue(tx,schema);
+ if(plan.weeklyStockAlarmCompatibility)await inspectWeeklyAlarmCatalogue(tx,schema);
  const reportSecurity=plan.reportSecurityCompatibility?await inspectReportSecurityProfile(tx,schema):null;
  const expectedReceipts=plan.expectedReceiptCompatibility?await inspectExpectedReceiptInstallationCatalogue(tx,schema):null;
  const chatCompatibility=plan.preservedReportChatTables.length?await prepareReportChatInspection(tx,schema):null;

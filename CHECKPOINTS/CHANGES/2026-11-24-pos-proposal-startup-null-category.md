@@ -1,0 +1,23 @@
+# POS proposal release dependency — missing tobacco category
+
+24/11/2026 · ASSIGNED /root · fix/pos-proposal-vat-startup-20261124 · SOURCE NOT STARTED.
+
+User explicitly requested starting resolution after failed approved POS4197 deployment. Independent bounded follow-up to original codex/inventory-free-count-20261013 startup predicate; retain that owner and all prior fiscal/inventory acceptance. No takeover of unfinished inventory or fiscal work. No concurrent open PR for this script observed.
+
+Observed:4197 merged d5e7582, both full CI runs successful; Render dep-dc2rqbcs728c73bf2cug UPDATE_FAILED in repair-diadoxou-vat.js. Previous aae50a7 stays healthy. Read-only production SQL confirms tobacco department VAT0/register1/code12, standard VAT24/register6/code15, zero rate mismatches. Of570 associated tobacco-department products,568 have category ΚΑΠΝΙΚΑ and2 existing VAT0 cigarette products have NULL categoryId. No product/tax/stock writes performed by this investigation.
+
+Proposed source only: count VAT0 products with NULL categoryId separately for recognition of the already-repaired no-write state. Keep explicit other categories, nonzero/NULL VAT, missing/changed departments, register/code guards rejected; preserve exact legacy585/565/20 mutation and20-write rollback unchanged. No startup command/global catch/schema/lifecycle change and no production recategorization. Tests execute the actual script with isolated adapter, including observed570/568/2 and negative cases. Publish this claim before source. New full CI then approved release required. No hostedLAB/manual PASS.
+
+## Source ready
+
+Claim4203 merged c655d222e85e89b9bc3aee5d3d881a6f15cb19f6 before source. Source branch fix/pos-proposal-vat-null-category-source. Count only NULL categoryId AND VAT0 for canonical no-write recognition. Explicit other categories remain rejected. Exact historical mutation guards and SQL updates unchanged. Existing business records are not repaired by this patch.
+
+Node20.20.2/PostgreSQL18.7 isolated native execution:7PASS/0FAIL/0SKIP,206.6ms. Real actual-script SQL recognizes570/568/2 without row changes; nonzero/NULL VAT, explicit other category and wrong register reject. Adapter regressions retain original legacy repair and rollback count. Owned random test schema removed and local PostgreSQL stopped. diff-check PASS. FullCI, merge and successful Render deployment pending. NOT INSTALLED / NOT LAB PASS.
+
+## 24/11/2026 19:12 Europe/Athens — SOURCE LIVE / LAB acceptance pending
+
+POS4197 plus bounded startup correction4204 installed at678e4645c566be048f205e4a3b642a1a740b7d25. Claim4203 was merged before source. FullPRCI45441724091:all5jobsSUCCESS atd0339e1d8cb906dac55348e006eab6431cbafb09. Renderdep-dc2sa7lg1s2s739ou4ngLIVE17:12:38Z; independentapi/healthok=true/exact678e4645. Prior faileddep-dc2rqbcs728c73bf2cug is retained as failure evidence.
+
+Readonly production recheck after deployment:570 associated tobacco-department products,568 classified tobacco plus2NULLcategory/VAT0;0rate mismatches, same aggregates as before. This does not prove all startup scripts were globally write-free. No product/category/VAT correction submitted by this page.
+
+The new read-only POS proposal and per-operator permission are SOURCE LIVE. HostedOwner/operator/physicalPOS/scanner/revocation arithmetic acceptance remainsNOT TESTED, grouped in existingLAB perdocs/testing/pos-order-proposals-lab-acceptance.md. No request to switch logins for partial acceptance. Default absent permission staysOFF; no mass grants performed. Weeklyalarm4194stillBLOCKED on independent schema/runtime admission No7/No14; no weekly tables/worker deployed.

@@ -3,8 +3,8 @@ const pieceUnits=new Set(["PIECE","PCS","PC","ΤΜΧ","ΤΕΜ","ΤΕΜ.","ΤΕΜ
 const measuredUnits=new Map([["KG","kg"],["ΚΙΛΟ","kg"],["G","g"],["GR","g"],["GRAM","g"],["L","L"],["LT","L"],["LITER","L"],["LITRE","L"],["ML","ml"]]);
 export function suggestionUnit(value){const key=String(value||"").trim().toLocaleUpperCase("el-GR");return pieceUnits.has(key)?{label:"τεμ.",step:1}:measuredUnits.has(key)?{label:measuredUnits.get(key),step:.001}:null;}
 
-export function buildOrderSuggestions(rows,{historyDays=30,coverageDays=7,leadDays=3}={}){
-  if(!Number.isInteger(historyDays)||historyDays<7||historyDays>90||!Number.isInteger(coverageDays)||coverageDays<1||coverageDays>60||!Number.isInteger(leadDays)||leadDays<0||leadDays>30)throw new Error("Μη έγκυρες ημέρες υπολογισμού.");
+export function buildOrderSuggestions(rows,{historyDays=30,coverageDays=7,leadDays=3,calendarPeriod=false}={}){
+  if(!Number.isInteger(historyDays)||historyDays<(calendarPeriod?1:7)||historyDays>(calendarPeriod?366:90)||!Number.isInteger(coverageDays)||coverageDays<1||coverageDays>60||!Number.isInteger(leadDays)||leadDays<0||leadDays>30)throw new Error("Μη έγκυρες ημέρες υπολογισμού.");
   return rows.map(row=>{
     const unit=suggestionUnit(row.unit),stock=number(row.currentStock),minimum=row.minStock==null?0:number(row.minStock),sold=number(row.soldQuantity),returned=number(row.returnedQuantity);
     const base={productId:row.productId,name:row.name,sku:row.sku,unitLabel:unit?.label||String(row.unit||"—"),currentStock:stock,minStock:minimum,soldQuantity:sold,returnedQuantity:returned,netQuantity:null,dailyDemand:null,targetStock:null,suggestedQuantity:null,daysRemaining:null,reason:"",warnings:[],expectedReceiptsAvailable:row.expectedReceiptsAvailable,expectedReceiptsAvailabilityReason:row.expectedReceiptsAvailabilityReason,confirmedPendingStockQuantity:row.expectedReceiptsAvailable===false?null:row.confirmedPendingStockQuantity??0,expectedReceiptReviewReasons:row.expectedReceiptReviewReasons||[],pendingPurchaseReview:row.pendingPurchaseReview||[]};

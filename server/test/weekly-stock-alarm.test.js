@@ -18,3 +18,7 @@ test('scheduler deduplicates concurrent sweeps, bounds each pass, stops and drai
 test('scheduler continues healthy stores after a failed store',async()=>{const visited=[],errors=[],work={stopping:false,track:p=>p,onStop(){}};const scheduler=createWeeklyStockAlarmScheduler({db:{$queryRaw:async()=>[{id:'a',companyId:'c'},{id:'b',companyId:'c'}]},work,readiness:async()=>({ready:true}),onError:e=>errors.push(e),run:async(db,{storeId})=>{visited.push(storeId);if(storeId==='a')throw Error('isolated failure')}});await scheduler.sweep();assert.deepEqual(visited,['a','b']);assert.equal(errors.length,1);scheduler.stop()});
 
 test('production scheduler stays OFF before profile admission without scanning or creating tables',async()=>{let scans=0;const work={stopping:false,track:p=>p,onStop(){}};const scheduler=createWeeklyStockAlarmScheduler({db:{$queryRaw:async()=>{scans++;throw Error('must not scan')}},work});const result=await scheduler.sweep();assert.equal(result.status,'OFF');assert.equal(result.reason,'SCHEMA_PROFILE_NOT_ADMITTED');assert.equal(scans,0);scheduler.stop()});
+
+test('unknown product creation date cannot be treated as a complete sales history',()=>{
+ for(const createdAt of [null,undefined,''])assert.equal(calculateWeeklyStockAlarm({productId:'p',unit:'PIECE',minStock:1,currentStock:10,soldQuantity:100,returnedQuantity:0,createdAt},{enabled:true},new Date('2026-11-25T12:00:00Z')).reason,'INSUFFICIENT_HISTORY');
+});

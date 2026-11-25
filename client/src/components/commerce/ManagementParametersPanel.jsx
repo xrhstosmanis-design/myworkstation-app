@@ -15,8 +15,7 @@ const secondaryTabs=[
   ["customers","Πελάτες",Users],
   ["email","eMail",Mail],
   ["other","Λοιπά",MoreHorizontal],
-  ["purchases","Αγορές & παραγγελίες",ShoppingCart],
-  ["stockAlarm","Αυτόματο alarm stock",PackageSearch]
+  ["purchases","Αγορές & παραγγελίες",ShoppingCart]
 ];
 const boolLabels={
   pos:[
@@ -84,7 +83,7 @@ function ShiftsSection({s,onField}){return <><div className="mparam-section-titl
 function CustomersSection({s,onField}){return <><div className="mparam-section-title">Loyalty και κάρτα πελάτη</div><div className="mparam-radio-stack"><label>Κανόνας πόντων</label><Choice value={s.pointsMode||"TURNOVER"} onChange={v=>onField("pointsMode",v)} options={[["TURNOVER","υπολογισμός με τζίρο"],["QUANTITY","υπολογισμός με ποσότητα"]]}/></div><BooleanGrid section={s} rows={boolLabels.customers} onField={onField}/><Inputs section={s} fields={inputFields.customers} onField={onField}/></>}
 function EmailSection({s,onField}){return <><div className="mparam-section-title">e-mail επιχείρησης</div><p className="mparam-help">Με την καταχώρηση του email, δίνεις τη συγκατάθεσή σου να επικοινωνούμε μαζί σου.</p><Inputs section={s} fields={inputFields.email} onField={onField}/><div className="mparam-section-title">Συμβάντα αυτόματης αποστολής e-mail</div><BooleanGrid section={s} rows={boolLabels.email} onField={onField}/></>}
 function OtherSection({s,onField,secrets,integrations}){return <><div className="mparam-section-title">Ζυγιζόμενα & ηλεκτρονικός ζυγός</div><BooleanGrid section={s} rows={boolLabels.other} onField={onField}/><Inputs section={s} fields={inputFields.other} onField={onField}/><div className="mparam-radio-line"><b>Parity:</b><Choice value={s.parity||"NONE"} onChange={v=>onField("parity",v)} options={[["NONE","None"],["ODD","Odd"],["EVEN","Even"]]}/></div><div className="mparam-section-title">Παράμετροι ΑΑΔΕ (εύρεση στοιχείων συναλλασσόμενου από ΑΦΜ)</div><div className="mparam-inline-status"><IntegrationBadge label="ΑΑΔΕ" status={integrations?.aade}/></div><label className="mparam-secret"><span>AADE password</span><input type="password" value={s.aadePassword||""} placeholder={secrets?.aadePasswordConfigured?"•••••••• (ρυθμισμένο)":""} onChange={e=>onField("aadePassword",e.target.value)}/></label></>}
-function PurchasesSection({s,onField}){return <><div className="mparam-section-title">Παραγγελίες & αγορές</div><BooleanGrid section={s} rows={boolLabels.purchases} onField={onField}/><Inputs section={s} fields={inputFields.purchases} onField={onField}/></>}
+function PurchasesSection({s,onField,api}){return <><div className="mparam-section-title">Παραγγελίες & αγορές</div><BooleanGrid section={s} rows={boolLabels.purchases} onField={onField}/><Inputs section={s} fields={inputFields.purchases} onField={onField}/><WeeklyStockAlarmPanel api={api}/></>}
 
 export default function ManagementParametersPanel({api,onClose}){
   const [active,setActive]=useState("business"),[settings,setSettings]=useState({}),[company,setCompany]=useState({}),[secrets,setSecrets]=useState({}),[integrations,setIntegrations]=useState({}),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
@@ -94,8 +93,7 @@ export default function ManagementParametersPanel({api,onClose}){
   const onField=(key,value)=>setSettings(prev=>({...prev,[active]:{...safeSection(prev,active),[key]:value}}));
   const save=async()=>{setBusy(true);setError("");setMessage("");try{const payload={...section};const data=await api(`/api/management/parameters/${active}`,{method:"PATCH",body:JSON.stringify(payload)});setSecrets(data.secrets||secrets);if(active==="edelivery")setSettings(prev=>({...prev,edelivery:{...safeSection(prev,"edelivery"),woltPassword:"",efoodPassword:""}}));if(active==="other")setSettings(prev=>({...prev,other:{...safeSection(prev,"other"),aadePassword:""}}));setMessage("Οι παράμετροι αποθηκεύτηκαν.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
   const renderSection=()=>{
-    if(active==="stockAlarm")return <WeeklyStockAlarmPanel api={api}/>;
-    const p={s:section,onField,secrets,integrations};
+    const p={s:section,onField,secrets,integrations,api};
     if(active==="business")return <BusinessSection {...p}/>;
     if(active==="banks")return <BanksSection {...p}/>;
     if(active==="edelivery")return <EDeliverySection {...p}/>;
@@ -113,6 +111,6 @@ export default function ManagementParametersPanel({api,onClose}){
     <nav className="mparam-tabs secondary">{secondaryTabs.map(([key,label,Icon])=><button key={key} className={active===key?"active":""} onClick={()=>{setActive(key);setMessage("")}}><Icon/>{label}</button>)}</nav>
     {error&&<div className="mparam-alert error">{error}</div>}{message&&<div className="mparam-alert success">{message}</div>}
     <main>{busy&&!Object.keys(settings).length?<div className="mparam-loading">Φόρτωση παραμέτρων…</div>:renderSection()}</main>
-    <footer><button onClick={onClose}><X/>Κλείσιμο</button><span className="mparam-company">{company?.name||""}</span><button className="save" disabled={busy||active==="stockAlarm"} onClick={save}><Check/>Καταχώρηση</button></footer>
+    <footer><button onClick={onClose}><X/>Κλείσιμο</button><span className="mparam-company">{company?.name||""}</span><button className="save" disabled={busy} onClick={save}><Check/>Καταχώρηση</button></footer>
   </section></div>;
 }

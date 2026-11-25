@@ -1,6 +1,6 @@
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {companyVatManageCapability as capability,companyVatManageRoute} from "../../../shared/backoffice-staff-company.mjs";
+import {companyVatManageCapability as capability,companyVatManageRoute,companyVatActivateCapability,companyVatActivateRoute} from "../../../shared/backoffice-staff-company.mjs";
 import {requireStaffCompanyGrant} from "./backoffice-staff-company.js";
 import {staffError} from "./backoffice-staff-access.js";
 
@@ -40,5 +40,44 @@ export async function saveStaffCompanyVatDepartment(db,req){
       VALUES (${randomUUID()},${companyId},${user.id},${user.id},${rename?"VAT_DEPARTMENT_LABEL_RENAMED":"VAT_DEPARTMENT_DRAFT_CREATED"},
         ${JSON.stringify({id,before:current?.description??null,after:body.description})}::jsonb)`;
     return result;
+  });
+}
+
+const activateVatSchema=z.object({
+  expectedDescription:z.string().min(1).max(160),
+  vatRate:z.number().finite().min(0.001).max(100).refine(rate=>Math.abs(Math.round(rate*1000)-rate*1000)<0.0001),
+  confirm:z.literal(true)
+}).strict();
+
+export async function activateStaffCompanyVatDraft(db,req){
+  const {user,staffCompanyGrant:initial}=req,capability=companyVatActivateCapability;
+  const route=companyVatActivateRoute(req.method,String(req.originalUrl||"").split("?")[0]);
+  if(!route||user?.staffAccess!==true||user.storeId||initial?.capability!==capability||initial.companyId!==user.companyId||
+    req.get("x-backoffice-company-id")!==user.companyId||req.get("x-backoffice-store-id")!==undefined||Object.keys(req.query||{}).length)throw staffError();
+  const parsed=activateVatSchema.safeParse(req.body);
+  if(!parsed.success)throw staffError(400,"STAFF_VAT_ACTIVATION_INVALID","Επιβεβαίωσε νέο τμήμα ΦΠΑ με θετικό συντελεστή.");
+  const {vatRate,expectedDescription}=parsed.data,companyId=user.companyId,{id}=route;
+  return db.$transaction(async tx=>{
+    const live=await requireStaffCompanyGrant(tx,user,capability);
+    if(live.revision!==initial.revision)throw staffError();
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"staff-company-vat-label:"+companyId}))`;
+    const [current]=await tx.$queryRaw`SELECT "active","description","vatRate","commerce","cashRegisterDepartment","legacyVatCode","exemptionCode","exemptionDescription"
+      FROM "ManagementVatDepartment" WHERE "id"=${id} AND "companyId"=${companyId} FOR UPDATE`;
+    if(!current)throw staffError(404,"STAFF_VAT_LABEL_NOT_FOUND","Δεν βρέθηκε το τμήμα ΦΠΑ στην εταιρεία.");
+    if(current.description!==expectedDescription)throw staffError(409,"STAFF_VAT_LABEL_CHANGED","Η περιγραφή άλλαξε. Ανανέωσε την προβολή.");
+    if(current.active||current.commerce||Number(current.vatRate)!==0||
+       [current.cashRegisterDepartment,current.legacyVatCode,current.exemptionCode,current.exemptionDescription].some(value=>value!==null)){
+      throw staffError(409,"STAFF_VAT_ACTIVATION_NOT_DRAFT","Η ενέργεια αφορά νέο, ανενεργό τμήμα ΦΠΑ χωρίς φορολογική αντιστοίχιση.");
+    }
+    const [references]=await tx.$queryRaw`SELECT EXISTS(SELECT 1 FROM "Product" p WHERE p."companyId"=${companyId} AND p."vatDepartmentId"=${id})
+      OR EXISTS(SELECT 1 FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
+        WHERE sp."vatDepartmentIdOverride"=${id}) AS "used"`;
+    if(references?.used!==false)throw staffError(409,"STAFF_VAT_ACTIVATION_REFERENCED","Το τμήμα ΦΠΑ χρησιμοποιείται ήδη σε είδος.");
+    await tx.$executeRaw`UPDATE "ManagementVatDepartment" SET "vatRate"=${vatRate},"active"=true,"updatedAt"=NOW()
+      WHERE "id"=${id} AND "companyId"=${companyId}`;
+    await tx.$executeRaw`INSERT INTO "BackofficeStaffAudit" ("id","companyId","actorId","targetUserId","event","detail")
+      VALUES (${randomUUID()},${companyId},${user.id},${user.id},'VAT_DEPARTMENT_DRAFT_ACTIVATED',
+        ${JSON.stringify({id,description:current.description,vatRate})}::jsonb)`;
+    return {ok:true,companyId,id,description:current.description,vatRate,active:true};
   });
 }
