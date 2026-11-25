@@ -46,3 +46,6 @@ jobs:
           ./tools/windows-ftext/Test-Install-Smoke.ps1
           ./tools/windows-ftext/Test-Output-Smoke.ps1
           ./tools/windows-ftext/Test-Output-Cloud-Smoke.ps1
+      - name: Check LAB-only timing contract
+        shell: pwsh
+        run: node --test tools/windows-ftext/tests/ftext-lab-timing-contract.test.mjs
