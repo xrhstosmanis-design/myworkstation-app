@@ -1028,3 +1028,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 25/11/2026 · ASSIGNED /root · POS proposal supplier/coverage/sales dates/email/print combined package, LIVE669763de / FULL CI45598388164 all5PASS / LAB business hashes unchanged / common POS-print-inbox acceptance pending / existing4193owner retained. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-controls-output.md. Weeklyalarm separateblocked.
 - 25/11/2026 · Νο 5 · [Πέντε επιπλέον προβολές για επανεκχώρηση BackOffice](CHANGES/2026-11-25-no5-more-read-delegation.md).
+
+- 25/11/2026 · Νο 5 · [Επανεκχώρηση προβολών απογραφής και απούλητων ειδών](CHANGES/2026-11-25-no5-stock-report-delegation.md).
