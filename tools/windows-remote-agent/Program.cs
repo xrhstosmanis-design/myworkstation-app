@@ -53,7 +53,7 @@ internal sealed partial class AgentForm:Form {
   if(session!=null||(grant==null&&!consent.Checked)){status.Text="Απαιτείται τοπική αποδοχή.";return;}
   if(grant==null&&(code.Text.Length!=6||code.Text.Any(c=>c<'0'||c>'9'))){status.Text="Συμπληρώστε μόνο τον εξαψήφιο κωδικό.";return;}
   if(grant!=null){consent.Checked=true;TopMost=true;WindowState=FormWindowState.Normal;Show();Activate();BringToFront();}
-  supportGeneration++;fileBusy=false;invitedMode=grant!=null;connect.Enabled=false;code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;RemoteCommandChannel? commandChannel=null;var generation=supportGeneration;var ownerSession=session;
+  supportGeneration++;fileBusy=false;invitedMode=grant!=null;connect.Enabled=false;code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;RemoteCommandChannel? commandChannel=null;var generation=supportGeneration;var ownerSession=session;string nativeStopReason="DEVICE_STOP";
   try{
    var paired=grant==null?await http.PostAsJsonAsync("/api/remote-agent/pair-code",new{code=code.Text,localConsent=true},ct):await http.PostAsJsonAsync("/api/remote-support/pair",new{grant},ct);
    paired.EnsureSuccessStatusCode();var pair=await paired.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:ct);
@@ -65,7 +65,7 @@ internal sealed partial class AgentForm:Form {
     commandChannel=new RemoteCommandChannel(async cancellation=>{
      using var request=new HttpRequestMessage(HttpMethod.Get,commandPath);request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",commandToken);
      using var response=await commandHttp.SendAsync(request,cancellation);response.EnsureSuccessStatusCode();return await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:cancellation);
-    },command=>NativeInput.Apply(command,Screen.PrimaryScreen?.Bounds??throw new InvalidOperationException("Δεν υπάρχει οθόνη.")),()=>!ct.IsCancellationRequested&&consent.Checked&&supportGeneration==generation,()=>ownerSession.Cancel(),ct);
+    },command=>NativeInput.Apply(command,Screen.PrimaryScreen?.Bounds??throw new InvalidOperationException("Δεν υπάρχει οθόνη.")),()=>!ct.IsCancellationRequested&&consent.Checked&&supportGeneration==generation,()=>ownerSession.Cancel(),ct,reason=>nativeStopReason=reason);
    }
    long? expiresAt=pair.GetProperty("expiresAt").ValueKind==JsonValueKind.Null?null:pair.GetProperty("expiresAt").GetInt64();
    while(!ct.IsCancellationRequested&&(!expiresAt.HasValue||DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()<expiresAt.Value)){
@@ -90,7 +90,7 @@ internal sealed partial class AgentForm:Form {
   }catch(OperationCanceledException){}catch(Exception){status.Text="Η σύνδεση σταμάτησε. Ελέγξτε τον κωδικό/διαθεσιμότητα με τον διαχειριστή.";}
   finally{
    ownerSession.Cancel();if(commandChannel!=null)await commandChannel.DisposeAsync();
-   if(token!=null&&sessionJob!=null)try{using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/{(invitedMode?"stop":"device-stop")}");request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);using var response=await http.SendAsync(request);}catch{}
+   if(token!=null&&sessionJob!=null)try{using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/{(invitedMode?"stop":"device-stop")}"){Content=invitedMode?JsonContent.Create(new{reason=nativeStopReason}):null};request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);using var response=await http.SendAsync(request);}catch{}
    session?.Cancel();sendFile.Enabled=false;incoming.Controls.Clear();handledFiles.Clear();activeBase=null;token=null;sessionJob=null;session?.Dispose();session=null;stop.Enabled=false;connect.Enabled=true;code.Enabled=true;consent.Checked=false;http.DefaultRequestHeaders.Authorization=null;
   }
  }
