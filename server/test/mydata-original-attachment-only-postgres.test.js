@@ -21,6 +21,7 @@ test('Panormou queue admits additional verified provider URLs with native Postgr
  const eInvoicing = 'https://e-invoicing.gr/edocuments/ViewInvoice/-1/12345678-abcd-1234-abcd-123456789abc_';
  const epsilon9 = 'https://epsilondigital9.epsilonnet.gr/fd/' + 'a'.repeat(32);
  const epsilon169 = 'https://epsilondigital-3rdparte.epsilonnet.gr/fd/' + 'b'.repeat(32);
+ const megasoft = 'https://invoicelink.megasoft.gr/invoiceinspect/qr?QrCode=' + 'a'.repeat(100);
  const checks = [
   [eInvoicing+'Ab1234',false,true],
   [eInvoicing+'Ab12345',true,true],
@@ -31,6 +32,12 @@ test('Panormou queue admits additional verified provider URLs with native Postgr
   [epsilon9+':169',false,false],
   [epsilon9+':145?token=example',false,false],
   [epsilon9.replace('epsilonnet.gr','epsilonnet.gr.example')+':145',false,false],
+  [megasoft,false,true],
+  [megasoft+'/pdf',false,true],
+  [megasoft+'/',false,false],
+  [megasoft+'x',false,false],
+  [megasoft+'?other=1',false,false],
+  [megasoft.replace('megasoft.gr','megasoft.gr.example'),false,false],
   [original,true,true],
  ];
  const f = await invoiceDbFixture();

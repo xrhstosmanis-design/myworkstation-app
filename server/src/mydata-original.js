@@ -32,11 +32,16 @@ function originalRecoveryLinkPattern(formats) {
     + formats.join("|") + ")/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>";
 }
 
+// InvoiceLink appends the format to the original QR query value.
+const megasoftOriginalLink = "invoicelink[.]megasoft[.]gr/invoiceinspect/qr[?]QrCode=[A-Za-z0-9]{100}(?:/pdf)?";
+const megasoftOriginalUrl = new RegExp("^https://" + megasoftOriginalLink + "$");
+
 // PostgreSQL ARE syntax, with host and paths anchored inside the XML value.
 export function providerOriginalRecoveryLinkPattern({includeExistingImpact = false, includeAdditionalVerifiedFormats = false} = {}) {
   const eInvoicingSuffixLength = includeAdditionalVerifiedFormats ? "{6,8}" : "{7}";
   return originalRecoveryLinkPattern([
     ...verifiedEpsilonRecoveryLinkFormats(includeAdditionalVerifiedFormats),
+    ...(includeAdditionalVerifiedFormats ? [megasoftOriginalLink+"(?!/)"] : []),
     ...(includeExistingImpact ? ["einvoice[.]impact[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}"] : []),
     "einvoice[.]s1ecos[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}",
     "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]" + eInvoicingSuffixLength,
@@ -55,6 +60,7 @@ export function originalDownloadUrl(xml,issuerVat){
   if(/[\u0000-\u0020\u007f]/.test(decoded))throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.");
   let url;try{url=new URL(decoded)}catch{throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.")}
   const validIssuer = /^\d{9}$/.test(issuerVat);
+  if(validIssuer&&megasoftOriginalUrl.test(decoded))return decoded.endsWith("/pdf")?decoded:decoded+"/pdf";
   const impact = validIssuer && ["einvoice.impact.gr","einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
   const epsilon = matchesVerifiedEpsilonOriginal(url,issuerVat);

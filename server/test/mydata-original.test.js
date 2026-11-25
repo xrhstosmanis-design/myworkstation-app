@@ -112,6 +112,32 @@ test("Epsilon file recovery stays on the known host and checks PDF identity", as
   assert.equal(requests,2);
 });
 
+test("InvoiceLink PDF format suffix preserves the QR value and rejects unrelated URLs", async()=>{
+  const original="https://invoicelink.megasoft.gr/invoiceinspect/qr?QrCode="+"a".repeat(100);
+  const withLink=url=>({...row,rawPayload:{xml:`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`}});
+  assert.equal(originalDownloadUrl(withLink(original).rawPayload.xml,row.issuerVat),original+"/pdf");
+  assert.equal(originalDownloadUrl(withLink(original+"/pdf").rawPayload.xml,row.issuerVat),original+"/pdf");
+  assert.throws(()=>originalDownloadUrl(withLink(original).rawPayload.xml,"invalid"));
+  for(const bad of [original+"x",original.slice(0,-1),original+"/xml",original+"#private",original+"&amp;other=1",
+    original.replace("https://","https://user@"),original.replace("megasoft.gr","megasoft.gr.example"),
+    original.replace("megasoft.gr","megasoft.gr:443"),original.replace("/qr?","/qr/pdf?"),original.replace("QrCode","qrcode")]){
+    assert.throws(()=>originalDownloadUrl(withLink(bad).rawPayload.xml,row.issuerVat));
+  }
+  const bytes=Buffer.from("%PDF-"+"x".repeat(110));
+  const serve=async(url,options)=>{
+    assert.equal(url,original+"/pdf");
+    assert.equal(options.redirect,"error");
+    return new Response(bytes,{headers:{"content-type":"application/pdf"}});
+  };
+  const identity=`${row.mark} ${row.issuerVat} ${row.counterpartVat} ${row.documentNumber}`;
+  const result=await fetchOriginalPdf(withLink(original),serve,async()=>({text:identity,pageCount:1}));
+  assert.deepEqual(result.bytes,bytes);
+  await assert.rejects(fetchOriginalPdf(withLink(original),serve,
+    async()=>({text:identity.replace(row.issuerVat,""),pageCount:1})),/δεν επιβεβαιώνει/);
+  await assert.rejects(fetchOriginalPdf(withLink(original),
+    async()=>new Response("<html>viewer</html>",{headers:{"content-type":"text/html"}})),/PDF/);
+});
+
 test("only verified provider host and path combinations are allowed for inbound PDFs", () => {
   const short = "a".repeat(32);
   const uuid = "12345678-1234-1234-1234-123456789abc";
