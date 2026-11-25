@@ -36,6 +36,18 @@ try {
  Reject-Output {Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$failedId})}
  $failed=Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$failedId;code=101})
  Assert-Output ($failed.movedFiles -eq 2) 'Acknowledged STATUS 101 was not archived.'
+ $legacyId='4'*32;$legacyPrefix=Join-Path $folder ('mws-status-'+$legacyId)
+ $legacyText="101`r`nNo response from device`r`nInputLine: `r`n" + ("`r`n"*7)
+ $legacyBytes=[Text.Encoding]::GetEncoding(1253).GetBytes($legacyText)
+ $e.requestId=$legacyId;$e.result=Read-FtextStatusResult $legacyBytes $c.serialNumber
+ Assert-Output ($e.result.failedCommand -ceq '') 'Fixture must parse as an empty failed command.'
+ [IO.File]::WriteAllText(($legacyPrefix+'.json'),($e | ConvertTo-Json -Depth 6))
+ [IO.File]::WriteAllBytes(($legacyPrefix+'.res'),[Text.Encoding]::GetEncoding(1253).GetBytes($legacyText+"extra`r`n"))
+ Reject-Output {Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$legacyId;code=101})}
+ [IO.File]::WriteAllBytes(($legacyPrefix+'.res'),$legacyBytes)
+ Reject-Output {Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$legacyId})}
+ $legacy=Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$legacyId;code=101})
+ Assert-Output ($legacy.movedFiles -eq 2) 'Acknowledged STATUS 101 with empty InputLine was not archived.'
  $id='22222222-2222-4222-8222-222222222222';$prefix=Join-Path $folder ('mws-cash-'+$id)
  $raw=[Text.Encoding]::UTF8.GetBytes('ORIGINAL FINAL RECEIPT BYTES');[IO.File]::WriteAllBytes(($prefix+'.res'),$raw)
  $rawHash=(Get-FileHash -LiteralPath ($prefix+'.res') -Algorithm SHA256).Hash.ToLowerInvariant()
