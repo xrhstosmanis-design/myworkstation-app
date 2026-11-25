@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import {invoiceDetailLines} from "./mydata-xml.js";
 import {evaluateStandaloneDeliveryAttachment} from './lib/mydata-standalone-original-eligibility.js';
 import {readStandaloneOriginalSnapshot} from './lib/mydata-standalone-original-metadata.js';
-import {matchesVerifiedEpsilonOriginal} from './lib/mydata-original-provider-profiles.js';
+import {matchesVerifiedEpsilonOriginal,verifiedEpsilonRecoveryLinkFormats} from './lib/mydata-original-provider-profiles.js';
 import {readOriginalIdentityHeader} from './lib/mydata-original-identity-ocr.js';
 
 import {ALFA19_PROFILE,printedEconomicsProfileForUrl,parseMyDataPrintedLineEconomics} from './lib/mydata-printed-line-economics.js';
@@ -27,37 +27,19 @@ function decimalFitsColumn(value,column){
     &&(match[2]||'').replace(/0+$/,'').length<=column.numeric_scale;
 }
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
-// Host and format-code pairs confirmed against provider PDFs. Each host is exact.
-const epsilonOriginalFormats = new Map([
-  ["epsilondigital.epsilonnet.gr", "8"],
-  ["epsilondigital3.epsilonnet.gr", "84"],
-  ["epsilondigital14.epsilonnet.gr", "160"],
-  ["epsilondigital22.epsilonnet.gr", "190"],
-  ["epsilondigital-enetgroup.epsilonnet.gr", "107"],
-  ["epsilondigital-nbg.epsilonnet.gr", "109"],
-  ["epsilondigitalsmart10.epsilonnet.gr", "227"],
-  ["epsilondigitalsmart9.epsilonnet.gr", "217"],
-  ["epsilondigital2.epsilonnet.gr", "72"],
-  ["epsilondigital18.epsilonnet.gr", "172"],
-  ["epsilondigital-3rdpartd.epsilonnet.gr", "159"],
-  ["epsilondigital24.epsilonnet.gr", "209"],
-]);
-
 function originalRecoveryLinkPattern(formats) {
   return "<(?:[[:alnum:]_]+:)?downloadingInvoiceUrl[^>]*>[[:space:]]*https://(?:"
     + formats.join("|") + ")/?[[:space:]]*</(?:[[:alnum:]_]+:)?downloadingInvoiceUrl>";
 }
 
-const epsilonRecoveryFormats = Array.from(epsilonOriginalFormats, ([host, code]) =>
-  host.replaceAll(".", "[.]") + "/fd/[a-f0-9]{32}:" + code);
-
 // PostgreSQL ARE syntax, with host and paths anchored inside the XML value.
-export function providerOriginalRecoveryLinkPattern({includeExistingImpact = false} = {}) {
+export function providerOriginalRecoveryLinkPattern({includeExistingImpact = false, includeAdditionalVerifiedFormats = false} = {}) {
+  const eInvoicingSuffixLength = includeAdditionalVerifiedFormats ? "{6,8}" : "{7}";
   return originalRecoveryLinkPattern([
-    ...epsilonRecoveryFormats,
+    ...verifiedEpsilonRecoveryLinkFormats(includeAdditionalVerifiedFormats),
     ...(includeExistingImpact ? ["einvoice[.]impact[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}"] : []),
     "einvoice[.]s1ecos[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}",
-    "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}",
+    "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]" + eInvoicingSuffixLength,
     String.raw`vs[.]gr/iv/invoice/download/([a-z0-9]{4}_[0-9])/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}`,
   ]);
 }
@@ -71,9 +53,7 @@ export function originalDownloadUrl(xml,issuerVat){
   const validIssuer = /^\d{9}$/.test(issuerVat);
   const impact = validIssuer && ["einvoice.impact.gr","einvoice.s1ecos.gr"].includes(url.hostname)
     && new RegExp("^/p/EL" + issuerVat + "/[A-Fa-f0-9]{40}/[A-Fa-f0-9]{32}/?$").test(url.pathname);
-  const epsilonFormat = url.pathname.match(/^\/fd\/[a-f0-9]{32}:(\d{1,3})\/?$/i)?.[1];
-  const epsilon = validIssuer && (matchesVerifiedEpsilonOriginal(url,issuerVat)
-    || (epsilonFormat !== undefined && epsilonOriginalFormats.get(url.hostname) === epsilonFormat));
+  const epsilon = matchesVerifiedEpsilonOriginal(url,issuerVat);
   const einvoicing = validIssuer && url.hostname === "e-invoicing.gr"
     && /^\/edocuments\/ViewInvoice\/-1\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_[A-Za-z0-9]{6,8}\/?$/i.test(url.pathname);
   const vs = validIssuer && url.hostname === "vs.gr"

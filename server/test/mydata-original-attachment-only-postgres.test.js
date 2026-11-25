@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import PDFDocument from 'pdfkit';
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
-import {acquireOriginal,fetchOriginalPdf} from '../src/mydata-original.js';
+import {acquireOriginal,fetchOriginalPdf,providerOriginalRecoveryLinkPattern} from '../src/mydata-original.js';
 import {readMonthlyInvoiceAudit,readMonthlyInvoiceAuditRecord} from '../src/services/monthly-invoice-audit.js';
 
 const scope={companyId:'c',storeId:'s',inboxId:'delivery-inbox'};
@@ -13,6 +13,36 @@ const mark='400000000000093';
 const original='https://einvoice.impact.gr/p/EL099999999/'+ 'a'.repeat(40)+'/'+ 'b'.repeat(32);
 const xml=`<invoice><downloadingInvoiceUrl>${original}</downloadingInvoiceUrl></invoice>`;
 const businessTables=['PurchaseOrder','PurchaseDocument','PurchaseOrderLine','PurchaseDocumentLine','AiReaderJob','StoreTransaction','SupplierPaymentSettlement','SupplierPaymentAllocation','StockMovement','StoreProduct','SupplierProductLink','SupplierProductMapping','InvoiceDraftAlias','PurchaseOrderPosting','InvoiceStockPosting','StoreOperatorAudit','PosInvoiceBackgroundTask'];
+
+test('Panormou queue admits additional verified provider URLs with native PostgreSQL matching', {skip:!isolatedInvoiceDb(),timeout:30000}, async () => {
+ const legacy = providerOriginalRecoveryLinkPattern({includeExistingImpact:true});
+ const expanded = providerOriginalRecoveryLinkPattern({includeExistingImpact:true,includeAdditionalVerifiedFormats:true});
+ const eInvoicing = 'https://e-invoicing.gr/edocuments/ViewInvoice/-1/12345678-abcd-1234-abcd-123456789abc_';
+ const epsilon9 = 'https://epsilondigital9.epsilonnet.gr/fd/' + 'a'.repeat(32);
+ const epsilon169 = 'https://epsilondigital-3rdparte.epsilonnet.gr/fd/' + 'b'.repeat(32);
+ const checks = [
+  [eInvoicing+'Ab1234',false,true],
+  [eInvoicing+'Ab12345',true,true],
+  [eInvoicing+'Ab123456',false,true],
+  [eInvoicing+'Ab1234567',false,false],
+  [epsilon9+':145',false,true],
+  [epsilon169+':169/',false,true],
+  [epsilon9+':169',false,false],
+  [epsilon9+':145?token=example',false,false],
+  [epsilon9.replace('epsilonnet.gr','epsilonnet.gr.example')+':145',false,false],
+  [original,true,true],
+ ];
+ const f = await invoiceDbFixture();
+ try {
+  for (const [url, legacyMatch, expandedMatch] of checks) {
+   const xml = `<n:downloadingInvoiceUrl> ${url} </n:downloadingInvoiceUrl>`;
+   const [result] = await f.db.$queryRaw`SELECT ${xml} ~* ${legacy} AS legacy, ${xml} ~* ${expanded} AS expanded`;
+   assert.deepEqual(result,{legacy:legacyMatch,expanded:expandedMatch});
+  }
+ } finally {
+  await f.close();
+ }
+});
 
 async function fixture(){
  const f=await invoiceDbFixture();

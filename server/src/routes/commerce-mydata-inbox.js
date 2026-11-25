@@ -344,7 +344,10 @@ async function performSync(req,branch=null){
   }
   // Bounded retries only for records received after this feature; no historic mass ingestion.
   const panormouProduction=store.id===panormouStoreId && source==="AADE_MYDATA_PRODUCTION";
-  const panormouProviderPattern=panormouProduction?providerOriginalRecoveryLinkPattern({includeExistingImpact:true}):null;
+  const panormouProviderPattern=panormouProduction?providerOriginalRecoveryLinkPattern({
+    includeExistingImpact:true,
+    includeAdditionalVerifiedFormats:true,
+  }):null;
   const pending=await prisma.$queryRaw`SELECT m."inboxId" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id} AND m."rawPayload"->>'originalPending'='true' AND i."attachmentId" IS NULL AND i."status"='RECEIVED' AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)<3
     AND (${receiveFromDate}::date IS NULL OR (m."issueDate">=${receiveFromDate}::date AND m."rawPayload"->>'source'=${source}))
     AND (NOT ${panormouProduction} OR (
