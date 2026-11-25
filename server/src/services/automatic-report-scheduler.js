@@ -1,3 +1,5 @@
+import {completedReportPeriod,reportDayOffset} from './automatic-report-policy.js';
+
 // Explicitly started, bounded and drained by the existing server shutdown work.
 // No timers or database work run at import or factory construction.
 export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',activationProvider,work,clock=()=>new Date().toISOString(),intervalMs=60000,batchSize=5,maxAttempts=15,timers={setInterval,clearInterval},readPromotionEvents,readInventoryEvents}){
@@ -6,6 +8,7 @@ export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',
  if(!Object.hasOwn(frequencies,reportType))throw new TypeError('Unsupported scheduled report type');
  let timer=null,inflight=null,stopped=false,cursor=null;
  const eventCursors=new Map();
+ const cashDayCursors=new Map();
  const stop=()=>{stopped=true;if(timer!==null){timers.clearInterval(timer);timer=null}};
  work.onStop(stop);
  const enabled=()=>{const c=activationProvider();return c?.valid&&c.enabled?c:null};
@@ -22,6 +25,20 @@ export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',
    const latest=enabled();if(!latest||latest.fingerprint!==control.fingerprint)break;
    const eventKey=JSON.stringify([row.companyId,row.storeId]);
    let scopes=frequencies[reportType].map(frequency=>({...row,frequency}));
+   if(reportType==='CASH'){
+    const [[grant], [settings]]=await Promise.all([
+     db.$queryRaw`SELECT "notBefore" FROM "AutomaticReportAutomationGrant" WHERE "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "reportType"='CASH' AND "active"=TRUE AND 'DAILY'=ANY("allowedFrequencies")`,
+     db.$queryRaw`SELECT "configurationJson" FROM "AutomaticReportSettings" WHERE "companyId"=${row.companyId} AND "storeId"=${row.storeId}`
+    ]);
+    if(grant?.notBefore&&settings?.configurationJson){
+     const configuration=settings.configurationJson;
+     const first=completedReportPeriod(new Date(grant.notBefore),'DAILY',configuration).fromDay;
+     const latest=completedReportPeriod(new Date(clock()),'DAILY',configuration).fromDay;
+     const day=cashDayCursors.get(eventKey)??first;
+     if(day>=first&&day<latest)scopes.splice(1,0,{...row,frequency:'DAILY',day});
+     else cashDayCursors.delete(eventKey);
+    }
+   }
    if(['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)){
     const reader=reportType==='INVENTORY_RESULT'
      ?readInventoryEvents??(await import('./inventory-result-email.js')).listDueInventoryResultEvents
@@ -37,6 +54,11 @@ export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',
     const result=await dispatcher.dispatch(scope,{maxAttempts:Math.min(5,maxAttempts-attempted)});
     if(!Number.isInteger(result.attempted)||result.attempted<0||result.attempted>Math.min(5,maxAttempts-attempted))throw new Error('Invalid dispatcher attempt count');
     attempted+=result.attempted;
+    if(scope.day){
+     cashDayCursors.delete(eventKey);
+     cashDayCursors.set(eventKey,reportDayOffset(scope.day,1));
+     if(cashDayCursors.size>1000)cashDayCursors.delete(cashDayCursors.keys().next().value);
+    }
     if(['PROMOTION_RESULT','INVENTORY_RESULT'].includes(reportType)){
      eventCursors.delete(eventKey);eventCursors.set(eventKey,scope.eventId);
      if(eventCursors.size>1000)eventCursors.delete(eventCursors.keys().next().value);
