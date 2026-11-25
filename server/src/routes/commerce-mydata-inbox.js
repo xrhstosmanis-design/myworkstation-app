@@ -374,7 +374,7 @@ async function performSync(req,branch=null){
   originalsFailed += recovery.failed;
   const existingPhotosLinked=canPrepareDraft?await prisma.$transaction(tx=>linkStoredPosInvoicePhotos(tx,{companyId:req.user.companyId,storeId:store.id})):0;
   if(canPrepareDraft){
-    const emptyDrafts=await prisma.$queryRaw`
+    const draftsToPrepare=await prisma.$queryRaw`
       SELECT m."inboxId" FROM "MyDataInboundDocument" m
       JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
       JOIN "PurchaseOrder" o ON o."id"=m."rawPayload"->>'mydataDraftOrderId' AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
@@ -383,7 +383,22 @@ async function performSync(req,branch=null){
         AND (m."rawPayload"->>'automaticPrefillChecked' IS DISTINCT FROM 'true' OR m."rawPayload"->>'packagingPrefillChecked' IS DISTINCT FROM 'true')
         AND NOT EXISTS (SELECT 1 FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id")
       ORDER BY m."fetchedAt",m."id" LIMIT 10`;
-    for(const item of emptyDrafts){
+    if(panormouProduction){
+      // Historical PDF recovery can leave an eligible credit in the inbox without an order.
+      const storedCredits=await prisma.$queryRaw`
+        SELECT m."inboxId" FROM "MyDataInboundDocument" m
+        JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+        JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=i."companyId" AND a."storeId"=i."storeId"
+        WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id}
+          AND m."rawPayload"->>'source'=${source} AND m."issueDate">=DATE '2026-11-01' AND m."issueDate"<DATE '2026-12-01'
+          AND m."invoiceType"='5.2' AND m."currency"='EUR' AND m."totalGross">0 AND i."status"='RECEIVED'
+          AND a."mimeType"='application/pdf' AND a."documentType"='AI_READER_SOURCE'
+          AND m."rawPayload"->>'originalDownloaded'='true'
+          AND m."rawPayload"->>'mydataDraftOrderId' IS NULL AND m."rawPayload"->>'mydataDraftDocumentId' IS NULL
+        ORDER BY m."fetchedAt",m."id" LIMIT 3`;
+      draftsToPrepare.push(...storedCredits);
+    }
+    for(const item of draftsToPrepare){
       try{
         await acquireOriginal(prisma,req.user.companyId,store.id,item.inboxId,req.user.id,true);
       }catch{
