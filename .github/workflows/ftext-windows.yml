@@ -49,3 +49,16 @@ jobs:
       - name: Check LAB-only timing contract
         shell: pwsh
         run: node --test tools/windows-ftext/tests/ftext-lab-timing-contract.test.mjs
+      - name: Exercise opt-in LAB timing on synthetic Windows cash fixture
+        shell: powershell
+        env:
+          MWS_FTEXT_LAB_TIMING: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # The existing smoke suite creates a temporary synthetic FTEXT folder,
+          # never connects to a store or to a physical payment terminal.
+          $observed = (& ./tools/windows-ftext/Test-Cash-Smoke.ps1 6>&1 | Out-String)
+          if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'Synthetic cash fixture failed.' }
+          if ($observed -notmatch 'PASS: [0-9]+ cash command/result/scope/timeout/restart/tombstone boundaries') { throw 'Original cash regression fixture did not pass.' }
+          if ($observed -notmatch 'FTEXT_LAB_TIMING requestId=[0-9a-f-]{36} publish_to_result_ms=[0-9]+ elapsed_ms=[0-9]+ eftpos_visible_ms=NOT_OBSERVED') { throw 'Opt-in timing missing for the synthetic result.' }
+          Write-Host 'PASS: synthetic original cash guard and LAB publication-to-result timing.'
