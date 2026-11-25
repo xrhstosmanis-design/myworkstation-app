@@ -1,3 +1,4 @@
+import {extraWalletRecipientMarker,readExtraWalletEmails} from './ai-wallet-extra-email.js';
 import {postpaidRecipientMarker} from './ai-wallet-postpaid-recipients.js';
 import {randomUUID} from 'node:crypto';
 import nodemailer from 'nodemailer';
@@ -38,8 +39,9 @@ export function createWalletNotificationDispatcher({repository,send=sendWalletNo
         const item=rows[0];if(!item)return null;
         // Release this candidate lock before acquiring lifecycle/Store/wallet.
         if(item.ownerId?.startsWith(postpaidRecipientMarker))return {postpaidCandidate:item.id};
-        const valid=await tx.$queryRaw`SELECT u."id" FROM "AiOwnerWallet" w JOIN "Company" c ON c."id"=w."companyId" JOIN "User" u ON u."id"=w."notificationOwnerId" WHERE w."companyId"=${item.companyId} AND c."active"=TRUE AND (u."companyId"=w."companyId" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=w."companyId")) AND w."emailEnabled"=TRUE AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE AND u."id"=${item.ownerId} AND u."email"=${item.email}`;
-        if(!valid.length){await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "id"=${item.id}`;return {revoked:true}}
+        const valid=await tx.$queryRaw`SELECT u."id" FROM "AiOwnerWallet" w JOIN "Company" c ON c."id"=w."companyId" JOIN "User" u ON u."id"=w."notificationOwnerId" WHERE w."companyId"=${item.companyId} AND c."active"=TRUE AND (u."companyId"=w."companyId" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=w."companyId")) AND w."emailEnabled"=TRUE AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE AND u."id"=${item.ownerId} AND (u."email"=${item.email} OR ${item.cycleId?.startsWith(extraWalletRecipientMarker)===true})`;
+        const extra=item.cycleId?.startsWith(extraWalletRecipientMarker)===true;
+        if(!valid.length||extra&&!(await readExtraWalletEmails(tx,item.companyId)).includes(item.email)){await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "id"=${item.id}`;return {revoked:true}}
         await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='ATTEMPTING',"attemptedAt"=NOW(),"messageId"=${'attempt-'+randomUUID()} WHERE "id"=${item.id}`;
         return item;
       });

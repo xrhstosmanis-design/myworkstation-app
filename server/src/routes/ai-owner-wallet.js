@@ -1,3 +1,4 @@
+import {extraWalletEmailSchema,readExtraWalletEmails} from '../services/ai-wallet-extra-email.js';
 import {createSharedCostReviewRoutes} from './shared-cost-reviews.js';
 import {postpaidGrantSchema,postpaidPaymentSchema} from '../services/ai-wallet-postpaid.js';
 import {invoiceWalletFeatures} from "../services/ai-wallet-invoice-metering.js";
@@ -21,7 +22,7 @@ export function walletHttpError(e,res){
   return res.status(e instanceof z.ZodError?400:known?(e.status||409):503).json({code:known?code:'AI_WALLET_UNAVAILABLE',error:messages[code]||extra[code]||(known?'Δεν επιτρέπεται η ενέργεια ή τα στοιχεία δεν είναι έγκυρα.':'Το υπόλοιπο AI δεν είναι διαθέσιμο. Δοκίμασε ξανά αργότερα.')});
 }
 const reference=z.string().trim().min(5).max(160).regex(/^[\p{L}\p{N}_.:/ -]+$/u);
-const configureSchema=z.object({version:z.number().int().nonnegative(),enabled:z.boolean(),emailEnabled:z.boolean(),notificationOwnerId:z.string().max(160),invoiceEnabled:z.boolean().optional()}).strict();
+const configureSchema=z.object({version:z.number().int().nonnegative(),enabled:z.boolean(),emailEnabled:z.boolean(),notificationOwnerId:z.string().max(160),extraNotificationEmails:extraWalletEmailSchema.optional(),invoiceEnabled:z.boolean().optional()}).strict();
 const creditSchema=z.object({amountMicros:z.string().regex(/^\d{1,13}$/),receiptReference:reference,receiptConfirmed:z.literal(true)}).strict();
 const trialSchema=z.object({amountMicros:z.string().regex(/^\d{1,13}$/),grantReference:reference,reason:z.string().trim().min(5).max(300),trialConfirmed:z.literal(true)}).strict();
 export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRepository,authenticate=auth,access=createWalletAccess(db),enabled=()=>process.env.AI_OWNER_WALLET_ENABLED==='true',env=process.env}={}){
@@ -74,14 +75,15 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
         Object.assign(activationReadiness,{ready:false,code:error.code,maxReservationMicros:null,availableEnough:false});
       }
     }
-    await access.platform(req);res.json({...result,owners,runtimeEnabled:true,meteredFeatures:invoiceWalletFeatures(env,scope.companyId,invoiceEnabled),activationReadiness,serviceConfiguration:walletServiceConfiguration(env,scope.companyId,invoiceEnabled),invoiceBilling:{enabled:invoiceEnabled,active:invoiceEnabled&&result.enabled&&readiness.globalEnabled,readiness}});
+    const extraNotificationEmails=await readExtraWalletEmails(repository.db,scope.companyId);
+    await access.platform(req);res.json({...result,owners,extraNotificationEmails,runtimeEnabled:true,meteredFeatures:invoiceWalletFeatures(env,scope.companyId,invoiceEnabled),activationReadiness,serviceConfiguration:walletServiceConfiguration(env,scope.companyId,invoiceEnabled),invoiceBilling:{enabled:invoiceEnabled,active:invoiceEnabled&&result.enabled&&readiness.globalEnabled,readiness}});
   }));
   router.put(prefix,run('platform',async(req,res,scope)=>{
     const input=configureSchema.parse(req.body);await access.platform(req);
     const current=await repository.read(scope.companyId),previousInvoice=await resolvedInvoiceWalletCompany(repository,scope.companyId,env);
     // Disabling only invoice charging remains possible during a provider outage;
     // this exception cannot enable Owner billing or change its email settings.
-    const invoiceOnlyDisable=input.invoiceEnabled===false&&current.enabled===true&&input.enabled===true&&input.emailEnabled===current.emailEnabled&&input.notificationOwnerId===(current.notificationOwnerId||'');
+    const invoiceOnlyDisable=input.invoiceEnabled===false&&current.enabled===true&&input.enabled===true&&input.emailEnabled===current.emailEnabled&&input.notificationOwnerId===(current.notificationOwnerId||'')&&input.extraNotificationEmails===undefined;
     if(input.enabled&&!invoiceOnlyDisable)requireOwnerWalletReady(env);
     const enablesInvoices=input.invoiceEnabled===true&&(!previousInvoice||input.enabled);
     const keepsActiveInvoices=input.invoiceEnabled===undefined&&input.enabled&&previousInvoice&&env.AI_OWNER_WALLET_INVOICES_ENABLED==='true';

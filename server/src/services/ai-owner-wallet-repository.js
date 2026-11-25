@@ -1,3 +1,4 @@
+import {extraWalletEmailSchema, extraWalletRecipientMarker, readExtraWalletEmails} from './ai-wallet-extra-email.js';
 import {createCommercialWaiver,publicCommercialWaiver} from './ai-wallet-commercial-waiver.js';
 import {postpaidRecipientMarker} from './ai-wallet-postpaid-recipients.js';
 import {createPostpaidWallet,readPostpaidDebt,publicPostpaidActivity} from './ai-wallet-postpaid.js';
@@ -5,7 +6,7 @@ import {sanitizeWalletReviewEvidence} from './ai-owner-wallet-review-evidence.js
 import {publicWalletActivity,reservationWalletActivity} from './ai-wallet-activity.js';
 import {assertAiWalletCatalogue,createAiWalletSchema,validateAiWalletSchema} from './ai-owner-wallet-schema.js';
 import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {MAX_WALLET_MICROS,positiveMicros,walletError,walletView} from './ai-owner-wallet-contract.js';
 import {readWalletUsageSummary} from './ai-owner-wallet-usage.js';
 import {DEFAULT_CUSTOMER_PRICING,parseCustomerPricing,customerCharge,pricingSnapshot,chargeFromSnapshot,stableWalletJson,publicCustomerCharge} from './ai-wallet-customer-pricing.js';
@@ -50,7 +51,14 @@ export function createAiOwnerWalletRepository(db){
   }
   async function notice(tx,row,kind,amount=0n){
     const owner=row.emailEnabled&&row.notificationOwnerId?(await tx.$queryRaw`SELECT u."id",u."email" FROM "User" u JOIN "Company" c ON c."id"=${row.companyId} AND c."active"=TRUE WHERE u."id"=${row.notificationOwnerId} AND (u."companyId"=c."id" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=c."id")) AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE`)[0]:null;
-    await tx.$executeRaw`INSERT INTO "AiOwnerWalletNotice" ("id","companyId","kind","cycleId","balanceMicros","amountMicros","ownerId","email","emailStatus") VALUES (${randomUUID()},${row.companyId},${kind},${row.cycleId},${row.balanceMicros},${amount},${owner?.id||null},${owner?.email||null},${owner?.email?'PENDING':'DISABLED'}) ON CONFLICT ("companyId","kind","cycleId") DO NOTHING`;
+    const inserted=await tx.$executeRaw`INSERT INTO "AiOwnerWalletNotice" ("id","companyId","kind","cycleId","balanceMicros","amountMicros","ownerId","email","emailStatus") VALUES (${randomUUID()},${row.companyId},${kind},${row.cycleId},${row.balanceMicros},${amount},${owner?.id||null},${owner?.email||null},${owner?.email?'PENDING':'DISABLED'}) ON CONFLICT ("companyId","kind","cycleId") DO NOTHING`;
+    if(!inserted||!owner?.email)return;
+    const extra=await readExtraWalletEmails(tx,row.companyId);
+    for(const email of extra){
+      if(email===owner.email.toLowerCase())continue;
+      const key=createHash('sha256').update(JSON.stringify([row.cycleId,email])).digest('hex');
+      await tx.$executeRaw`INSERT INTO "AiOwnerWalletNotice" ("id","companyId","kind","cycleId","balanceMicros","amountMicros","ownerId","email","emailStatus") VALUES (${randomUUID()},${row.companyId},${kind},${extraWalletRecipientMarker+key},${row.balanceMicros},${amount},${owner.id},${email},'PENDING') ON CONFLICT ("companyId","kind","cycleId") DO NOTHING`;
+    }
   }
   async function read(companyId,storeId=null){
     await ensure();
@@ -60,7 +68,7 @@ export function createAiOwnerWalletRepository(db){
     // Pending resolution is independent of the recent100 activity window.
     // Oldest-first makes historical holds reachable without expanding history.
     const waiverCandidates=await db.$queryRaw`SELECT e."id",e."storeId",e."kind",e."status",e."chargedMicros",e."reservedMicros",e."feature",e."createdAt",(SELECT s."name" FROM "Store" s WHERE s."id"=e."storeId" AND s."companyId"=e."companyId") AS "storeName" FROM "AiOwnerWalletEntry" e WHERE e."companyId"=${companyId} AND (${storeId}::text IS NULL OR e."storeId"=${storeId}) AND e."storeId" IS NOT NULL AND e."kind"='USAGE' AND e."status"='REVIEW' AND e."chargedMicros"=0 AND e."reservedMicros">0 AND e."resolutionReference" IS NULL ORDER BY e."createdAt",e."id" LIMIT 101`;
-    const notices=await db.$queryRaw`SELECT "id","kind","balanceMicros","amountMicros","emailStatus","createdAt" FROM "AiOwnerWalletNotice" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 30`;
+    const notices=await db.$queryRaw`SELECT "id","kind","balanceMicros","amountMicros","emailStatus","createdAt" FROM "AiOwnerWalletNotice" WHERE "companyId"=${companyId} AND "cycleId" NOT LIKE ${extraWalletRecipientMarker+'%'} ORDER BY "createdAt" DESC,"id" DESC LIMIT 30`;
     const usage=storeId?await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SETTLED' GROUP BY "storeId"`:await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "status"='SETTLED' GROUP BY "storeId"`;
     const json=value=>JSON.parse(JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v));
     const usageSummary=await readWalletUsageSummary(db,companyId,storeId);
@@ -84,6 +92,7 @@ export function createAiOwnerWalletRepository(db){
     });
   }
   async function configure(companyId,input,actorId){
+    if(input.extraNotificationEmails!==undefined)input={...input,extraNotificationEmails:extraWalletEmailSchema.parse(input.extraNotificationEmails)};
     if(Object.hasOwn(input,'invoiceEnabled')&&typeof input.invoiceEnabled!=='boolean')throw walletError('AI_WALLET_INVALID_INPUT',400);
     await ensure();return db.$transaction(async tx=>{
       const row=await lock(tx,companyId);
@@ -96,6 +105,9 @@ export function createAiOwnerWalletRepository(db){
       // Revoking email configuration invalidates every unsent notice. Never
       // retarget old notices to a newly selected owner/address.
       if(!input.emailEnabled||row.notificationOwnerId!==input.notificationOwnerId)await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "companyId"=${companyId} AND "emailStatus"='PENDING' AND ("ownerId" IS NULL OR "ownerId" NOT LIKE ${postpaidRecipientMarker+'%'})`;
+      if(input.extraNotificationEmails!==undefined){
+        await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "companyId"=${companyId} AND "emailStatus"='PENDING' AND "cycleId" LIKE ${extraWalletRecipientMarker+'%'} AND NOT ("email"=ANY(${input.extraNotificationEmails}::text[]))`;
+      }
       await tx.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},${companyId},${actorId},'CONFIGURED',${JSON.stringify(input)}::jsonb)`;
       return {version:row.version+1};
     });
