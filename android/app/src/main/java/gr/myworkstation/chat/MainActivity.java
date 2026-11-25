@@ -96,7 +96,9 @@ public final class MainActivity extends Activity {
     private Bitmap preview;
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
-            if (foreground && needsChatRenewal() && selected != null && view.equals("conversation") && !busy)
+            if (foreground && !busy && needsSuperAdminRenewal())
+                call("/api/auth/renew", "POST", object(), false, MainActivity.this::saveRenewedSuperAdminConnection);
+            else if (foreground && needsChatRenewal() && selected != null && view.equals("conversation") && !busy)
                 call("/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-renew", "POST", object(), false, MainActivity.this::saveRenewedConnection);
             if (foreground && !token.isEmpty() && selected != null && view.equals("conversation") && tab.equals("chat") && !busy) {
                 if (refreshOpenGroup != null) refreshOpenGroup.run();
@@ -274,6 +276,29 @@ public final class MainActivity extends Activity {
         });
         content.addView(button("Συνέχεια χωρίς ανανέωση", () -> { navigate(); stores(); }));
     }
+    private boolean needsSuperAdminRenewal() {
+        if (token.isEmpty() || !identity.optBoolean("isSuperAdmin") ||
+                !"BACKOFFICE_USER".equals(identity.optString("tokenType")) ||
+                identity.optString("sessionId").isEmpty()) return false;
+        long remaining = identity.optLong("exp") * 1000L - System.currentTimeMillis();
+        return remaining > 0 && remaining <= 10L * 60_000L;
+    }
+
+    private void saveRenewedSuperAdminConnection(JSONObject data) throws Exception {
+        String next = data.getString("token");
+        JSONObject decoded = claims(next);
+        if (!decoded.optBoolean("isSuperAdmin") ||
+                !"BACKOFFICE_USER".equals(decoded.optString("tokenType")) ||
+                decoded.optLong("exp") <= identity.optLong("exp")) throw new IllegalArgumentException();
+        for (String key : new String[]{"id", "companyId", "sessionId", "sessionVersion", "role", "platformRole", "supportContext"}) {
+            if (!decoded.optString(key).equals(identity.optString(key))) throw new IllegalArgumentException();
+        }
+        vault.save(next);
+        token = next;
+        identity = decoded;
+        if (NativePush.opted(this)) NativePush.register(this, next, ok -> {});
+    }
+
     private boolean needsChatRenewal() {
         return !token.isEmpty() && staff() && identity.optLong("exp") * 1000L - System.currentTimeMillis() < 29L * 86400000L;
     }
@@ -307,6 +332,13 @@ public final class MainActivity extends Activity {
         view = "stores"; selected = null; tab = "chat"; layout("Συνομιλίες", "MyWorkStation · Android Preview");
         content.addView(button("Αποσύνδεση", this::logout));
         content.addView(button("Ενεργοποίηση ειδοποιήσεων", this::enableNativePush));
+        content.addView(button("Ήχος ειδοποιήσεων Chat", () -> {
+            Intent settings = new Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())
+                .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, ChatMessagingService.CHANNEL);
+            try { startActivity(settings); }
+            catch (android.content.ActivityNotFoundException ignored) { status("Άνοιξε τις ειδοποιήσεις του MyWorkStation Chat από τις ρυθμίσεις Android."); }
+        }));
         content.addView(text("Οι ειδοποιήσεις δείχνουν μόνο ότι υπάρχει νέο μήνυμα. Απαιτείται ενεργή σύνδεση και ρύθμιση server.", 14, MUTED));
         if (staff()) {
             JSONObject own = object("id", identity.optString("storeId"), "companyId", identity.optString("companyId"), "name", "Το κατάστημά μου");
