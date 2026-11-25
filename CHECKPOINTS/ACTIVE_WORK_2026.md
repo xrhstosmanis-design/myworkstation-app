@@ -1,3 +1,34 @@
+##25Nov2026 — Netlink numeric-ID correction installed; paid UNKNOWN remains OPEN /root
+
+Source#4241 head d2b3dcc82a69ee609cff7c78fe2d6ebc047c79eb passed full CI45647815255 (all5jobs), merged d6694542c758636b4da7f7f39a39b481b3af43cb. Render dep-dc3h5sgu01pc73elbvlg LIVE; public health200/ok confirms exact revision. Native read-only verification confirms bounded provider sequence exists and is unconsumed; original paid UNKNOWN sale/receipt/dispatch record is unchanged. New issuance remains PAUSED. The user reports no corresponding card charge in the provider terminal's current daily report; this is user evidence, not provider final confirmation. No retry, new payment, refund, deletion or fiscal correction was performed. Await provider reconciliation and explicit authorization to transmit the prepared incident email. Next: obtain existing provider result/non-execution confirmation; never replay the UNKNOWN purchase. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-correction-live.md`.
+
+##25Nov2026 — Netlink real paid receipt, provider result UNKNOWN — OPEN /root
+
+User reports a real cash checkout/fiscal receipt and correct separate card/service sale lines; provider issuance is UNKNOWN. No before-baseline financial delta was captured, so this is not a full LAB balance PASS. No confirmed provider PIN/charge result exists. NETLINK_ENABLE_EXECUTE was paused; pause deploy dep-dc3fur4ipgvc738itlk0 LIVE. Preserve the paid sale/receipt, frozen original request, provider dispatch identity and existing UNKNOWN status. No purchase/payment retry, new intent for this paid sale or inferred no-charge claim is permitted. Provider reconciliation is required.
+
+Continuation branch `fix/netlink-unknown-request-id-20261125`: bound future provider IDs to seconds-sized numeric range using an atomic non-cycling SQL sequence, reject legacy oversized READY intents before payment/dispatch, expose scoped non-secret provider trace ID for support, and retain only safe HTTP status diagnostics. The28Aug provider email recommends seconds rather than millisecond/nanosecond timestamps; this is a compatibility correction, not proof of the historical exception's cause. Existing paid UNKNOWN intent must never be rewritten/resubmitted.63Netlink local tests PASS with isolated PostgreSQL18.7,0FAIL/0SKIP. Full CI/build/release pending. Existing catalogue/report printing PASS remains intact. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-request-id.md`.
+
+##25Nov2026 — Netlink paid issuance installed; production setup complete — AWAITING USER ACCEPTANCE /root
+
+PR#4229 head e7ed47d3125a2a589716d2079a84532dd7be89f0 passed full CI45633162691 (all5jobs), merged7623888cc63d95f1c1f4283231e4e938b565f397. Render code deploy dep-dc3fgqd9el5s73d8tuqg and activation deploy dep-dc3fllk0916s738m9v80 LIVE at the same source revision. Global paid-execution feature enabled with all payment/fiscal/tenant gates retained. Selected production-store POS mapping completed through authenticated UI; existing fee reused as non-stock service, dedicated non-stock electronic value item created with existing fiscal department. Read-only SQL confirms the existing fee stock and movement history stayed unchanged. No real card/provider purchase or physical voucher print test performed.61targeted local tests PASS including isolated native PostgreSQL and mounted UI; user acceptance remains OPEN. Existing catalogue/report-print USER PASS remains protected. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-live-setup.md`.
+
+##25Nov2026 — Netlink paid mixed basket implementation — ASSIGNED /root
+
+Branch `fix/netlink-paid-issuance-20261125`, continuation of claim PR#4225. Adds encrypted scoped card intents, EUR0.50 per card, mixed ordinary goods/multiple cards, whole basket cash/card and native fiscal proof, atomic provider dispatch, safe recovery/reprint, central accounting-product mapping.59 all-Netlink local tests PASS with isolated PostgreSQL18.7,0FAIL/0SKIP; includes native SQL/HTTP and mounted React. CI45629329482 found migration-test prepared-statement execution and the changed integration-form count; both corrected,59native Netlink and2integration-preview tests PASS locally; multiple completed vouchers remain queued individually and are cleared on store/operator changes. Client production build PASS. NOT LIVE, NOT LAB/USER PASS; execute flag remains unchanged. Full CI and user acceptance remain pending. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-mixed-basket.md`.
+
+## 25/11/2026 — NETLINK paid issuance with automatic0.50 service — ASSIGNED /root
+
+- 25/11/2026 · Επιλεγμένο κατάστημα · [Οικονομικές αναφορές ιδιοκτήτη και εξουσιοδοτημένου υπευθύνου](CHANGES/2026-11-25-store-financial-reports.md) · Έλεγχοι τοπικά, εκκρεμούν CI και LAB.
+
+
+Continuation of existing /root Netlink ownership; source branch planned fix/netlink-paid-issuance-20261125. Owner explicitly requests central implementation: every card carries automatic0.50EUR service, cash receipt confirmed by employee or successful card-machine transaction, then fiscal receipt, then one provider issuance. No production sale/PIN/provider execution is authorized merely for implementation testing. Cash/CARD proof and same-store receipt must be bound to the same durable request and sale. Timeout/uncertain provider result must never cause an automatic second issuance. Fee and price must be validated before provider execution, not only reviewed afterwards.
+
+Baseline main f010fdbee0e5f8d5e895a15bde036108281817db. Existing catalogue/print release #4219/ac3ae31 is installed; user now confirms report printed correctly after POS58 driver selection and shows actual populated catalogue. Narrow USER PASS: catalogue visibility and internal report printing only. Exact runtime at the user observation was not independently recorded. No financial deltas or card issuance PASS. Prior distorted Greek receipt is superseded only for this user's corrected printer test. Manual docs/manual/netlink/PASS.md records the narrow observation.
+
+Code inspection: shared POS panel has no issuance handler; current execute endpoint has a fiscal guard but no pre-dispatch fee/payment proof/atomic prepared-row claim/result recovery contract. Client prepare/confirmation payload also needs documented-contract verification. Scope: additive durable encrypted issuance intent/result, central cash/card/fiscal evidence gates, automatic paired POS lines, common panel+existing checkout integration, same-request recovery/reprint without reissue, store setup validation and meaningful isolated concurrency/payment/fiscal/UI tests. Preserve ordinary checkout/ftext/RBS, tenant/module/demo/licensing, all established tests and reports. No broad fiscal rewrite, provider-report invention, real credentials or new service. Provider certification remains independent. Existing cash/report/rights owners are not reassigned.
+
+Acceptance and remaining work are continued in docs/roadmap/NETLINK_PAID_ISSUANCE_2026-11-25.md. Status NOT IMPLEMENTED / NOT TESTED for paid issuance; no execute flag change. Single next action after claim green/main: implement durable fee/payment/receipt proof and once-only dispatch with isolated tests, then common POS integration; install only after full required CI and grouped acceptance preparation.
+
 ## 25/11/2026 — NETLINK central catalogue / report print — SOURCE INSTALLED, AWAITING USER
 
 Owner /root retained. Source PR4219 merged ac3ae31ef7ef052c8ba0f7be9d83709f8acdded6 after exact head de9dce5bf0452a796495719529db86dce4a8bf5b CI45602564367 SUCCESS. All5 jobs succeeded after only wholesale browser infrastructure retry: first Target.createTarget timeout before assertions, unchanged code then PASS. Full server7333 tests/7329PASS/0FAIL/4optional PostgreSQL-WASM skips; native SQL and real HTTP E2E (including Netlink) succeeded. Local common-panel/print tests8/8PASS; frontend build PASS; stored provider-menu shape replay22groups/113services. No real-store identifiers or credentials included.
@@ -163,6 +194,8 @@ Source#4037/head8975b1ca, mergec36a4ffb. PR CI44393082061:6264PASS/0FAIL/2option
 
 - 25/11/2026 · Νο 7 · Ημερήσια αναφορά ταμείων την ημέρα ενεργοποίησης · [Checkpoint](CHANGES/2026-11-25-no7-daily-cash-activation-day.md).
 
+- 25/11/2026 · Νο 7 · Ημερομηνία ταμείου στο Chat · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day.md).
+
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
 Νέο ρητό αίτημα ιδιοκτήτη: εμφάνιση αντίστοιχων παραστατικών όταν πατά κάθε σύνολο· πρώτα οι μη καταχωρισμένες αγορές. Owner `/root` Νο2, branch `feat/no2-monthly-counter-drilldown`, μόνο ordinary GET filter/UI και regressions. Όλο το month subset πριν pagination, bound cursors και αμετάβλητα global totals. Άλλοι owners/C/D1/email/classifier/writers διατηρούνται. [Checkpoint](CHANGES/2026-11-18-no2-monthly-counter-drilldown.md). NOT STARTED / NOT TESTED, source μετά merged claim, καμία οικονομική/stock πράξη.
@@ -190,6 +223,8 @@ Corrected source head `bd0e268f27ea2c5d39a97397e3ad426130fff5cc`, CI `4432297606
 The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejected the old owner catalogue call without storeId: HTTP400 / NETLINK_STORE_REQUIRED, formerly expected200 at line70. Causal correction updates the E2E caller's status/menu URLs to the fixture's explicit selected store, asserts the returned storeId and adds a retained missing-store400/code assertion. Runtime source and all existing auth/licensing/fiscal/idempotency/settlement assertions are unchanged. No global-store fallback or production guard is relaxed. The retained POS header browser fixture also recognizes the selected-store status query when simulating a disabled Netlink module; its prior disabled-module geometry intent is preserved.
 
 Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
+
+- 25/11/2026 · Νο 7 · Δημοσίευση Android Chat 0.1.18 · [Checkpoint](CHANGES/2026-11-25-no7-chat-android-018-publication.md).
 
 ## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
 
@@ -1040,5 +1075,20 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 25/11/2026 · Νο 5 · [Πέντε επιπλέον προβολές για επανεκχώρηση BackOffice](CHANGES/2026-11-25-no5-more-read-delegation.md).
 
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση προβολών απογραφής και απούλητων ειδών](CHANGES/2026-11-25-no5-stock-report-delegation.md).
+
+- 25/11/2026 · Νο 5 · [Επανεκχώρηση προβολών πωλήσεων, προσφορών και μεταφορών](CHANGES/2026-11-25-no5-more-store-reports.md).
+
+25/11/2026 · Retained4194owner /root · weekly alarm continuation; bounded versioned admission extension, old profiles/defaults/No7-No14 owners retained. SOURCE NOT STARTED / PRODUCTION OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-continuation.md.
+
+- 25/11/2026 · Νο 5 · [Επανεκχώρηση μηνιαίων ελέγχων και εκκρεμοτήτων](CHANGES/2026-11-25-no5-store-report-reads.md).
+
+- 25/11/2026 · Νο 7 · Έκδοση Android με ημερομηνία ταμείου · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day-android-release.md).
+
+25/11/2026 · Weekly4194 retained /root: Διαδόχου module enabled0cost, actualsales calculation preview only; no minimum/runtime activation. Newhead4dbd6b16 fullCI45643643734/AIwallet45643643611 pending after exact Netlink catalogue preservation. Next: green CI→explicit installation→measured Διαδόχου STORE-only test. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-diadochou-handoff.md.
+
+25/11/2026 · ASSIGNED retained4194 /root, before-source extension of4236: exact existing StoreChatMessage.cashDay DATE NULL from unchanged No7 store-chat.js is the only further mismatch in all299physical table shapes. Preserve via bounded metadata-only runtime descriptor and exact nullable/default-free column catalogue, native replay/tamper checks; no Chat writer/row/access/session changes, No7 owner retained. No generic unknown-column allowance. Operational test remains Διαδόχου, weekly OFF.
+
+25/11/2026 · ASSIGNED retained4194 /root: bounded weekly-alarm preservation of newly deployed Netlink paid-issuance catalogue from7623888/4229. Before-source claim: verify the exact8nullable NetlinkTransaction columns and paid_checkout partial index against unchanged dedicated-owner DDL, version metadata-only source projection/target declaration, refresh source bindings and native both-order/tamper controls. No Netlink writer/row/fiscal/provider behavior ownership or changes, no generic unknown-column admission. Existing No7/No14/efood/Netlink owners retained. Operational test requested by user at Διαδόχου, preflight/module activation only so far; weekly runtime OFF. Source4194 still pending finalCI/release and new exact-catalogue integration.
+- 25/11/2026 · Νο 5 · [Πρόσθετες προβολές λειτουργίας καταστήματος](CHANGES/2026-11-25-no5-store-operations-delegation.md).
 
 - 25/11/2026 · Νο 7 · Επιλογή χειρογράφων ανά περίοδο · [Checkpoint](CHANGES/2026-11-25-no7-cash-paper-period-selection.md).

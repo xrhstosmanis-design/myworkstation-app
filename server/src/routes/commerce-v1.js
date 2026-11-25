@@ -1,3 +1,4 @@
+import {financialReportFilters,readStoreFinancialReport} from "../services/store-financial-reports.js";
 import {LOCAL_INVOICE_OCR_LIMITS} from "../../../shared/local-invoice-ocr-limits.mjs";
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
 import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
@@ -290,6 +291,26 @@ router.get("/sales/unsold-products",requireCompanyModule("SALES_ANALYTICS"),asyn
       )
       ORDER BY p.name,p.sku,p.id`;
     res.json({storeId,products});
+  }catch(error){next(error)}
+});
+
+router.get("/sales/financial-reports",requireStoreModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const {storeId}=req.query;
+    const {companyId,staffAccess}=req.user;
+    const capability='store-reports-sales-analysis.read';
+    if(typeof storeId!=='string'||!storeId)return res.status(400).json({error:"Επίλεξε κατάστημα."});
+    const checkManager=async()=>{
+      if(storeId!==req.user.storeId||req.staffGrant?.capability!==capability)throw staffError();
+      const {grant}=await requireStaffGrant(prisma,req.user,storeId,capability);
+      if(grant.profile!=='MANAGER')throw staffError();
+    };
+    if(staffAccess)await checkManager();
+    else if(req.user.role!=='OWNER'||req.user.supportContext||req.user.tokenType==='STORE_OPERATOR')throw staffError();
+    if(req.targetStore?.id!==storeId||req.targetStore.companyId!==companyId)throw staffError();
+    const result=await readStoreFinancialReport(prisma,companyId,storeId,financialReportFilters(req.query));
+    if(staffAccess)await checkManager();
+    res.set("Cache-Control","private, no-store").json({storeId,...result});
   }catch(error){next(error)}
 });
 

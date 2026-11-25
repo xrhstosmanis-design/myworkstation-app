@@ -2,6 +2,7 @@ package gr.myworkstation.chat;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -26,6 +27,7 @@ import android.widget.*;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -94,7 +96,9 @@ public final class MainActivity extends Activity {
     private Bitmap preview;
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
-            if (foreground && needsChatRenewal() && selected != null && view.equals("conversation") && !busy)
+            if (foreground && !busy && needsSuperAdminRenewal())
+                call("/api/auth/renew", "POST", object(), false, MainActivity.this::saveRenewedSuperAdminConnection);
+            else if (foreground && needsChatRenewal() && selected != null && view.equals("conversation") && !busy)
                 call("/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-renew", "POST", object(), false, MainActivity.this::saveRenewedConnection);
             if (foreground && !token.isEmpty() && selected != null && view.equals("conversation") && tab.equals("chat") && !busy) {
                 if (refreshOpenGroup != null) refreshOpenGroup.run();
@@ -272,6 +276,29 @@ public final class MainActivity extends Activity {
         });
         content.addView(button("Συνέχεια χωρίς ανανέωση", () -> { navigate(); stores(); }));
     }
+    private boolean needsSuperAdminRenewal() {
+        if (token.isEmpty() || !identity.optBoolean("isSuperAdmin") ||
+                !"BACKOFFICE_USER".equals(identity.optString("tokenType")) ||
+                identity.optString("sessionId").isEmpty()) return false;
+        long remaining = identity.optLong("exp") * 1000L - System.currentTimeMillis();
+        return remaining > 0 && remaining <= 10L * 60_000L;
+    }
+
+    private void saveRenewedSuperAdminConnection(JSONObject data) throws Exception {
+        String next = data.getString("token");
+        JSONObject decoded = claims(next);
+        if (!decoded.optBoolean("isSuperAdmin") ||
+                !"BACKOFFICE_USER".equals(decoded.optString("tokenType")) ||
+                decoded.optLong("exp") <= identity.optLong("exp")) throw new IllegalArgumentException();
+        for (String key : new String[]{"id", "companyId", "sessionId", "sessionVersion", "role", "platformRole", "supportContext"}) {
+            if (!decoded.optString(key).equals(identity.optString(key))) throw new IllegalArgumentException();
+        }
+        vault.save(next);
+        token = next;
+        identity = decoded;
+        if (NativePush.opted(this)) NativePush.register(this, next, ok -> {});
+    }
+
     private boolean needsChatRenewal() {
         return !token.isEmpty() && staff() && identity.optLong("exp") * 1000L - System.currentTimeMillis() < 29L * 86400000L;
     }
@@ -305,6 +332,13 @@ public final class MainActivity extends Activity {
         view = "stores"; selected = null; tab = "chat"; layout("Συνομιλίες", "MyWorkStation · Android Preview");
         content.addView(button("Αποσύνδεση", this::logout));
         content.addView(button("Ενεργοποίηση ειδοποιήσεων", this::enableNativePush));
+        content.addView(button("Ήχος ειδοποιήσεων Chat", () -> {
+            Intent settings = new Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())
+                .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, ChatMessagingService.CHANNEL);
+            try { startActivity(settings); }
+            catch (android.content.ActivityNotFoundException ignored) { status("Άνοιξε τις ειδοποιήσεις του MyWorkStation Chat από τις ρυθμίσεις Android."); }
+        }));
         content.addView(text("Οι ειδοποιήσεις δείχνουν μόνο ότι υπάρχει νέο μήνυμα. Απαιτείται ενεργή σύνδεση και ρύθμιση server.", 14, MUTED));
         if (staff()) {
             JSONObject own = object("id", identity.optString("storeId"), "companyId", identity.optString("companyId"), "name", "Το κατάστημά μου");
@@ -552,17 +586,40 @@ public final class MainActivity extends Activity {
                 scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
             });
         } else {
-            if (videoDraft != null) sendVideoMessage(value); else if (voiceDraft != null) sendVoiceMessage(value); else sendPhotoMessage(value);
+            if (videoDraft != null) sendVideoMessage(value);
+            else if (voiceDraft != null) sendVoiceMessage(value);
+            else if ("CASH".equals(activeTopic) && photos.size() > 0) chooseCashDay(value);
+            else sendPhotoMessage(value, null);
         }
     }
-    private void sendPhotoMessage(String value) {
+    private void chooseCashDay(String value) {
+        final long generation = epoch.capture();
+        final String captured = token, store = id(selected, "id"), company = id(selected, "companyId");
+        final ZoneId athens = ZoneId.of("Europe/Athens");
+        final LocalDate today = LocalDate.now(athens), suggested = today.minusDays(1);
+        DatePickerDialog picker = new DatePickerDialog(this, (view, year, month, day) -> {
+            if (busy || !chatScope(generation, captured, store, company) || !"CASH".equals(activeTopic) || photos.size() == 0) return;
+            LocalDate selectedDay = LocalDate.of(year, month + 1, day);
+            if (selectedDay.isAfter(today)) { status("Η ημερομηνία ταμείου δεν μπορεί να είναι μελλοντική."); return; }
+            sendPhotoMessage(value, selectedDay.toString());
+        }, suggested.getYear(), suggested.getMonthValue() - 1, suggested.getDayOfMonth());
+        dismissImage();
+        imageDialog = picker;
+        picker.setTitle("Ημερομηνία ταμείου");
+        picker.show();
+    }
+
+    private void sendPhotoMessage(String value, String cashDay) {
         if (busy || !foreground || selected == null || !tab.equals("chat")) return;
         JSONObject body = object("body", value, "category", messageCategory, "topic", activeTopic);
         if (!attachQuote(body)) return;
         final PhotoBatch.Photo first = photos.size() == 0 ? null : photos.get(0);
         if (first != null) {
             if (!photosEnabled) { status("Οι φωτογραφίες είναι ανενεργές για αυτό το κατάστημα."); return; }
-            try { body.put("attachment", object("name", first.mime.equals("image/png") ? "photo.png" : first.mime.equals("image/webp") ? "photo.webp" : "photo.jpg", "mimeType", first.mime, "dataUrl", "data:" + first.mime + ";base64," + Base64.encodeToString(first.bytes, Base64.NO_WRAP))); }
+            try {
+                if (cashDay != null) body.put("cashDay", cashDay);
+                body.put("attachment", object("name", first.mime.equals("image/png") ? "photo.png" : first.mime.equals("image/webp") ? "photo.webp" : "photo.jpg", "mimeType", first.mime, "dataUrl", "data:" + first.mime + ";base64," + Base64.encodeToString(first.bytes, Base64.NO_WRAP)));
+            }
             catch (Exception ignored) { return; }
         }
         uncertainStoreId = id(selected, "id");
@@ -573,7 +630,7 @@ public final class MainActivity extends Activity {
             if (composer.getText().toString().trim().equals(value)) composer.setText("");
             if (first != null) photos.remove(0);
             updatePhotoLabel();
-            if (photos.size() > 0) sendPhotoMessage(""); else loadMessages(true);
+            if (photos.size() > 0) sendPhotoMessage("", cashDay); else loadMessages(true);
         });
     }
     private void bubble(String body, boolean own, String meta, JSONObject row) {

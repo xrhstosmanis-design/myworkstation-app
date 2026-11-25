@@ -40,15 +40,16 @@ export function createScheduledCashPaperReader(db,{
       if(slot||!await authorized(db,scope))return 'DONE';
       const actor=await db.user.findUnique({where:{id:period.actorId},select:{id:true,role:true,fullName:true,mustChangePassword:true}});
       if(actor?.role!=='SUPER_ADMIN'||actor.mustChangePassword)return 'DONE';
-      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1)});
+      const formatter=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'});
+      const cashDay=formatter.format(new Date(from)),endDay=formatter.format(new Date(to));
+      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1),cashDay});
       const candidates=discovery.sources.filter(source=>source.checksum&&Number.isSafeInteger(source.sizeBytes)&&
         source.sizeBytes>0&&source.sizeBytes<=7*1024*1024&&source.references[0]?.messageId);
-      const dateFormatter=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'});
-      const fromDay=dateFormatter.format(new Date(from)),toDay=dateFormatter.format(new Date(to));
       const inspected=await Promise.all(candidates.map(async source=>({source,reading:await repository.get(scope,source.checksum)})));
-      const selected=inspected.filter(({reading})=>{
-        const day=reading.extraction?.documentDate;
-        return reading.status!=='EXTRACTED_UNVERIFIED'||!day||(day>=fromDay&&day<=toDay);
+      const selected=inspected.filter(({source,reading})=>{
+        if(source.references.some(reference=>reference.declaredCashDay===cashDay))return true;
+        const printedDay=reading.extraction?.documentDate;
+        return reading.status!=='EXTRACTED_UNVERIFIED'||!printedDay||(printedDay>=cashDay&&printedDay<=endDay);
       }).slice(0,maxAttachments);
       const readings=selected.map(({reading})=>reading);
       if(readings.some(reading=>{
