@@ -8,9 +8,11 @@ import {buildOrderSuggestions} from "../lib/order-suggestions.js";
 import {buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT} from "../lib/supplier-order-groups.js";
 
 const optionsSchema=z.object({historyDays:z.coerce.number().int().min(7).max(90).default(30),coverageDays:z.coerce.number().int().min(1).max(60).default(7),leadDays:z.coerce.number().int().min(0).max(30).default(3)});
-export async function readOrderSuggestions(db,{storeId,companyId,options,now=new Date()}){
-  if(db.$transaction)return db.$transaction(tx=>readOrderSuggestions(tx,{storeId,companyId,options,now}),{isolationLevel:"RepeatableRead",timeout:30000});
-  const from=new Date(now.getTime()-options.historyDays*86400000);
+export async function readOrderSuggestions(db,{storeId,companyId,options,now=new Date(),salesPeriod}){
+  if(db.$transaction)return db.$transaction(tx=>readOrderSuggestions(tx,{storeId,companyId,options,now,salesPeriod}),{isolationLevel:"RepeatableRead",timeout:30000});
+  const from=salesPeriod?.from||new Date(now.getTime()-options.historyDays*86400000),to=salesPeriod?.toExclusive||now;
+  // Sale.occurredAt stores UTC in timestamp without time zone. Explicit calendar
+  // bounds must stay UTC even when PostgreSQL uses Europe/Athens; retain legacy bounds.
   const rows=await db.$queryRaw`
     SELECT p."id" AS "productId",p."name",p."sku",p."unit",sp."currentStock",sp."minStock",
       EXISTS(SELECT 1 FROM "Recipe" r WHERE r."companyId"=${companyId} AND r."productId"=p."id" AND r."active"=TRUE)
@@ -24,7 +26,10 @@ export async function readOrderSuggestions(db,{storeId,companyId,options,now=new
           FILTER(WHERE s."source" NOT IN ('WASTE','SELF_CONSUMPTION','PRODUCT_DESTRUCTION')),0) AS "returnedQuantity"
       FROM "SaleLine" l JOIN "Sale" s ON s."id"=l."saleId"
       WHERE l."productId"=p."id" AND s."companyId"=${companyId} AND s."storeId"=${storeId}
-        AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${now}
+        AND s."status"='COMPLETED' AND (
+          (${Boolean(salesPeriod)} AND s."occurredAt">=${from.toISOString().slice(0,-1)}::timestamp
+            AND s."occurredAt"<${to.toISOString().slice(0,-1)}::timestamp AND s."occurredAt"<=${now.toISOString().slice(0,-1)}::timestamp)
+          OR (NOT ${Boolean(salesPeriod)} AND s."occurredAt">=${from} AND s."occurredAt"<=${now}))
     ) sales ON TRUE
     LEFT JOIN LATERAL (
       SELECT jsonb_agg(jsonb_build_object('status',review."status",'orderCount',review."orderCount",
@@ -55,7 +60,7 @@ export async function readOrderSuggestions(db,{storeId,companyId,options,now=new
     row.confirmedPendingStockQuantity=Number.isFinite(total)&&total<=Number.MAX_SAFE_INTEGER?total:null;
     if(row.confirmedPendingStockQuantity===null)row.expectedReceiptReviewReasons.push("Η αναμενόμενη ποσότητα χρειάζεται αριθμητικό έλεγχο.");
   }
-  return {storeId,generatedAt:now.toISOString(),from:from.toISOString(),to:now.toISOString(),options,expectedReceipts,rows:buildOrderSuggestions(rows,options)};
+  return {storeId,generatedAt:now.toISOString(),from:from.toISOString(),to:to.toISOString(),options,expectedReceipts,rows:buildOrderSuggestions(rows,{...options,calendarPeriod:Boolean(salesPeriod)})};
 }
 
 export async function readSupplierOrderSuggestions(db,scope){
