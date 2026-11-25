@@ -930,6 +930,251 @@
       "ownerSources": [
         "server/src/integrations/netlink/paid-issuance-schema.js"
       ]
+    },
+    {
+      "table": "StoreChatMessage",
+      "sourceColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "senderId",
+          "text",
+          true
+        ],
+        [
+          "category",
+          "text",
+          true
+        ],
+        [
+          "body",
+          "text",
+          true
+        ],
+        [
+          "important",
+          "boolean",
+          true
+        ],
+        [
+          "pinned",
+          "boolean",
+          true
+        ],
+        [
+          "completed",
+          "boolean",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "attachmentName",
+          "text",
+          false
+        ],
+        [
+          "attachmentMimeType",
+          "text",
+          false
+        ],
+        [
+          "attachmentSize",
+          "integer",
+          false
+        ],
+        [
+          "attachmentChecksum",
+          "text",
+          false
+        ],
+        [
+          "attachmentData",
+          "text",
+          false
+        ],
+        [
+          "completedBy",
+          "text",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "aiReaderJobId",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentBy",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "replyToId",
+          "text",
+          false
+        ],
+        [
+          "forwardBinding",
+          "text",
+          false
+        ]
+      ],
+      "targetColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "senderId",
+          "text",
+          true
+        ],
+        [
+          "category",
+          "text",
+          true
+        ],
+        [
+          "body",
+          "text",
+          true
+        ],
+        [
+          "important",
+          "boolean",
+          true
+        ],
+        [
+          "pinned",
+          "boolean",
+          true
+        ],
+        [
+          "completed",
+          "boolean",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "attachmentName",
+          "text",
+          false
+        ],
+        [
+          "attachmentMimeType",
+          "text",
+          false
+        ],
+        [
+          "attachmentSize",
+          "integer",
+          false
+        ],
+        [
+          "attachmentChecksum",
+          "text",
+          false
+        ],
+        [
+          "attachmentData",
+          "text",
+          false
+        ],
+        [
+          "completedBy",
+          "text",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "aiReaderJobId",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentBy",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "replyToId",
+          "text",
+          false
+        ],
+        [
+          "forwardBinding",
+          "text",
+          false
+        ],
+        [
+          "cashDay",
+          "date",
+          false
+        ]
+      ],
+      "ownerSources": [
+        "server/src/routes/store-chat.js"
+      ]
     }
   ],
   "format": "MWS_WEEKLY_EXISTING_EFOOD_LAB_V1",
@@ -1225,6 +1470,23 @@
       ],
       "ownerSource": "server/src/integrations/netlink/paid-issuance-schema.js",
       "ownerSourceHash": "f849f225239b9eb99aea35f7993a3350076bb7691aa62e0e2e75abdf6fcfd8cc"
+    },
+    {
+      "table": "StoreChatMessage",
+      "columns": [
+        {
+          "table": "StoreChatMessage",
+          "name": "cashDay",
+          "type": "date",
+          "notNull": false,
+          "identity": "",
+          "generated": "",
+          "defaultExpression": null
+        }
+      ],
+      "indexes": [],
+      "ownerSource": "server/src/routes/store-chat.js",
+      "ownerSourceHash": "0892cae09a315a494e3c6f8226cdec193cdfb7aeae0ed989c81245108985d881"
     }
   ]
 }

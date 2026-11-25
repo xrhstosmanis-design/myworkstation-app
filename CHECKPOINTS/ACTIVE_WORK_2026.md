@@ -1,8 +1,15 @@
+##25Nov2026 — Netlink paid issuance installed; production setup complete — AWAITING USER ACCEPTANCE /root
+
+PR#4229 head e7ed47d3125a2a589716d2079a84532dd7be89f0 passed full CI45633162691 (all5jobs), merged7623888cc63d95f1c1f4283231e4e938b565f397. Render code deploy dep-dc3fgqd9el5s73d8tuqg and activation deploy dep-dc3fllk0916s738m9v80 LIVE at the same source revision. Global paid-execution feature enabled with all payment/fiscal/tenant gates retained. Selected production-store POS mapping completed through authenticated UI; existing fee reused as non-stock service, dedicated non-stock electronic value item created with existing fiscal department. Read-only SQL confirms the existing fee stock and movement history stayed unchanged. No real card/provider purchase or physical voucher print test performed.61targeted local tests PASS including isolated native PostgreSQL and mounted UI; user acceptance remains OPEN. Existing catalogue/report-print USER PASS remains protected. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-live-setup.md`.
+
 ##25Nov2026 — Netlink paid mixed basket implementation — ASSIGNED /root
 
 Branch `fix/netlink-paid-issuance-20261125`, continuation of claim PR#4225. Adds encrypted scoped card intents, EUR0.50 per card, mixed ordinary goods/multiple cards, whole basket cash/card and native fiscal proof, atomic provider dispatch, safe recovery/reprint, central accounting-product mapping.59 all-Netlink local tests PASS with isolated PostgreSQL18.7,0FAIL/0SKIP; includes native SQL/HTTP and mounted React. CI45629329482 found migration-test prepared-statement execution and the changed integration-form count; both corrected,59native Netlink and2integration-preview tests PASS locally; multiple completed vouchers remain queued individually and are cleared on store/operator changes. Client production build PASS. NOT LIVE, NOT LAB/USER PASS; execute flag remains unchanged. Full CI and user acceptance remain pending. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-mixed-basket.md`.
 
 ## 25/11/2026 — NETLINK paid issuance with automatic0.50 service — ASSIGNED /root
+
+- 25/11/2026 · Επιλεγμένο κατάστημα · [Οικονομικές αναφορές ιδιοκτήτη και εξουσιοδοτημένου υπευθύνου](CHANGES/2026-11-25-store-financial-reports.md) · Έλεγχοι τοπικά, εκκρεμούν CI και LAB.
+
 
 Continuation of existing /root Netlink ownership; source branch planned fix/netlink-paid-issuance-20261125. Owner explicitly requests central implementation: every card carries automatic0.50EUR service, cash receipt confirmed by employee or successful card-machine transaction, then fiscal receipt, then one provider issuance. No production sale/PIN/provider execution is authorized merely for implementation testing. Cash/CARD proof and same-store receipt must be bound to the same durable request and sale. Timeout/uncertain provider result must never cause an automatic second issuance. Fee and price must be validated before provider execution, not only reviewed afterwards.
 
@@ -1068,9 +1075,15 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 25/11/2026 · Weekly4194: full CI found2failures of one Python non-string profile guard; fixed both selectors,27Python +10JS PASS. New full CI required. User requests Διαδόχου test: fresh baseline/preview then store-only opt-in after admission, production currently OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-ci-type-guard.md.
 
 25/11/2026 · Weekly4194 exact Netlink catalogue continuation after4236claim: incoming main retained,8nullable columns+1partial index preserved/verified, JS-Python profiles and native102PASS. Full newCI/release required; Diadochou module active0cost and preview only, weekly runtimeOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-netlink-catalogue-source.md.
+
+25/11/2026 · Weekly4194 after4240claim: exact existingcashDay preserved, all299table columnshapes0mismatch, native102PASS, newfullCI required. Clean isolatedrelease leaves unrelated uncommittedinvoice edits untouched. Diadochou preview only; weeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-cashday-catalogue-source.md.
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση μηνιαίων ελέγχων και εκκρεμοτήτων](CHANGES/2026-11-25-no5-store-report-reads.md).
 
 - 25/11/2026 · Νο 7 · Έκδοση Android με ημερομηνία ταμείου · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day-android-release.md).
+
+25/11/2026 · Weekly4194 retained /root: Διαδόχου module enabled0cost, actualsales calculation preview only; no minimum/runtime activation. Newhead4dbd6b16 fullCI45643643734/AIwallet45643643611 pending after exact Netlink catalogue preservation. Next: green CI→explicit installation→measured Διαδόχου STORE-only test. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-diadochou-handoff.md.
+
+25/11/2026 · ASSIGNED retained4194 /root, before-source extension of4236: exact existing StoreChatMessage.cashDay DATE NULL from unchanged No7 store-chat.js is the only further mismatch in all299physical table shapes. Preserve via bounded metadata-only runtime descriptor and exact nullable/default-free column catalogue, native replay/tamper checks; no Chat writer/row/access/session changes, No7 owner retained. No generic unknown-column allowance. Operational test remains Διαδόχου, weekly OFF.
 
 25/11/2026 · ASSIGNED retained4194 /root: bounded weekly-alarm preservation of newly deployed Netlink paid-issuance catalogue from7623888/4229. Before-source claim: verify the exact8nullable NetlinkTransaction columns and paid_checkout partial index against unchanged dedicated-owner DDL, version metadata-only source projection/target declaration, refresh source bindings and native both-order/tamper controls. No Netlink writer/row/fiscal/provider behavior ownership or changes, no generic unknown-column admission. Existing No7/No14/efood/Netlink owners retained. Operational test requested by user at Διαδόχου, preflight/module activation only so far; weekly runtime OFF. Source4194 still pending finalCI/release and new exact-catalogue integration.
 - 25/11/2026 · Νο 5 · [Πρόσθετες προβολές λειτουργίας καταστήματος](CHANGES/2026-11-25-no5-store-operations-delegation.md).

@@ -1,0 +1,11 @@
+# Weekly alarm · exact existing Chat cashDay compatibility
+
+25/11/2026 · retained4194owner /root, before-source4240 merged8d3041d8. Isolated release worktree retains all main financial-report/Netlink/Android/No5 changes. An unexpected uncommitted invoice-learning index.js edit appeared in older weekly-alarm worktree and was left untouched; release uses committed40a2a72 plus mergedmain only.
+
+Fresh SELECT-only shape fingerprints across all299actualtables: exactly one remaining StoreChatMessage.cashDay DATE NULL mismatch from unchanged existing No7 store-chat.js. Bounded runtime descriptor declares exact24columns and verifies the added cashDay has no default/identity/generated value; missing/type/default drift is refused. No Chat writer, row, access, session or attachment change. No7 owner retained. New target metadata preserves this field; frozen base profile/plan identities remain unchanged, destructiveexecutionDisabled=true.
+
+Final independent comparison of all299actualphysicaltable columnshapes against newtarget:0mismatches, only4recognized internal lifecycle tables outside the reviewed business catalogue and3weeklytables absent asplanned. Netlink35columns/exactpartialindex, original security/efood and prior CashShiftSession/integrationDate deltas remain validated.
+
+Native actualPostgreSQL18/HTTP/React102PASS/0FAIL/0SKIP, including unexpectedcashDaydefault refusal and existingNetlink/default/index/bothNo14orders/preservation proofs. Separate Python/JS/profile/legacycompat10PASS/1nativecheckSKIP. ProductionfrontendbuildPASS. Exact63source fingerprints refreshed. Full newexactheadCI required. Earlier4dbd6b16 CI is superseded for this source; no weeklyschema/policy/minStock/currentStock mutation has occurred.
+
+User-requested actualtest remains Διαδόχου only. Moduleactive0cost, operatorΛΕΩΝΙΔΑΣ alreadygranted, actualsales preview recorded. Early automaticcandidate100207 7DAYS HAZELNUT110GR is position130 in default100row batches, currentStock0,minStock1,28daynet41→expected8 atobserved15:30UTC (refresh beforeactualwrite). MainLAB remains only technical sharedschema-install anchor/control. Next: green newCI→code/schema/runtimeadmission→fresh scopedDiadochou baseline/policy→measure actualaudit/minimum and no duplicate. DecreasesremainHELDwithoutavailability/promotionevidence.
