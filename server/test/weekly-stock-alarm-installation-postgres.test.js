@@ -63,7 +63,7 @@ test('weekly admission covers existing security catalogue and No14-first or No14
    const weekly=createWeeklyStockAlarmInstallation(f.db,{sourceRevision:h.revision,enabled:true,sourceProfile,admitExistingSecurity:transition==='V3_SECURITY',admitExistingLab:transition==='V3_SECURITY'});
    if(transition==='V3_SECURITY'){
     await assert.rejects(weekly.inspect(actor,h.scope),{code:'WEEKLY_ALARM_EXISTING_LAB_CHANGED'});
-    await ensureEfoodLabOrderSchema(f.db);await f.db.$executeRawUnsafe(`INSERT INTO "EfoodLabOrderRun" VALUES ('synthetic-integration','00000000-0000-4000-8000-000000000001',10,'{}'::jsonb)`);
+    await ensureEfoodLabOrderSchema(f.db);await f.db.$executeRawUnsafe('ALTER TABLE "CashShiftSession" ADD COLUMN "closeReconciliationStatus" TEXT, ALTER COLUMN "eftposTotal" DROP NOT NULL, ALTER COLUMN "cardVariance" DROP NOT NULL, ALTER COLUMN "expectedOpeningOperational" DROP NOT NULL, ALTER COLUMN "openingVariance" DROP NOT NULL');await f.db.$executeRawUnsafe('ALTER TABLE "StoreIntegrationCredential" ADD COLUMN "receiveFromDate" DATE');await f.db.$executeRawUnsafe(`INSERT INTO "EfoodLabOrderRun" VALUES ('synthetic-integration','00000000-0000-4000-8000-000000000001',10,'{}'::jsonb)`);
     await assert.rejects(weekly.inspect(actor,h.scope),{code:'REPORT_SECURITY_CATALOGUE_CHANGED'});
     await f.db.$executeRawUnsafe('CREATE TABLE "StoreChatAccessRevocation" ("companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"userId" TEXT NOT NULL,PRIMARY KEY("companyId","storeId","userId"))');
    }

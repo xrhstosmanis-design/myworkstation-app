@@ -36,6 +36,9 @@ def weekly_manifest(profile,select):
     if existing_lab:
         lab_definition=json.loads((pathlib.Path(__file__).resolve().parent/'weekly-stock-alarm-existing-lab.proposed.json').read_text())
         result['id']+='__EXISTING_EFOOD_LAB_V1'
+        for review in lab_definition.get('runtimeColumnCompatibility',[]):
+            if result['knownColumns'][review['table']]!=review['sourceColumns']:raise ValueError('Weekly source columns differ')
+            result['knownColumns'][review['table']]=copy.deepcopy(review['targetColumns'])
         for name,columns in lab_definition['columns'].items():
             result['knownTables'].append(name);result['knownColumns'][name]=columns;result['preservedOperationalTables'].append(name);result['reviewedColumns'].extend(name+'.'+c[0] for c in columns)
     expected_receipts=profile[:-len(SUFFIX)].endswith('__NO14_COMPAT_V2')
