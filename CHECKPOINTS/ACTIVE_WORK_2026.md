@@ -1040,3 +1040,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 25/11/2026 · Νο 5 · [Πέντε επιπλέον προβολές για επανεκχώρηση BackOffice](CHANGES/2026-11-25-no5-more-read-delegation.md).
 
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση προβολών απογραφής και απούλητων ειδών](CHANGES/2026-11-25-no5-stock-report-delegation.md).
+
+- 25/11/2026 · Νο 7 · Επιλογή χειρογράφων ανά περίοδο · [Checkpoint](CHANGES/2026-11-25-no7-cash-paper-period-selection.md).

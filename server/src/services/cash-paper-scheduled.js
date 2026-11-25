@@ -42,8 +42,15 @@ export function createScheduledCashPaperReader(db,{
       if(actor?.role!=='SUPER_ADMIN'||actor.mustChangePassword)return 'DONE';
       const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1)});
       const candidates=discovery.sources.filter(source=>source.checksum&&Number.isSafeInteger(source.sizeBytes)&&
-        source.sizeBytes>0&&source.sizeBytes<=7*1024*1024&&source.references[0]?.messageId).slice(0,maxAttachments);
-      const readings=await Promise.all(candidates.map(source=>repository.get(scope,source.checksum)));
+        source.sizeBytes>0&&source.sizeBytes<=7*1024*1024&&source.references[0]?.messageId);
+      const dateFormatter=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'});
+      const fromDay=dateFormatter.format(new Date(from)),toDay=dateFormatter.format(new Date(to));
+      const inspected=await Promise.all(candidates.map(async source=>({source,reading:await repository.get(scope,source.checksum)})));
+      const selected=inspected.filter(({reading})=>{
+        const day=reading.extraction?.documentDate;
+        return reading.status!=='EXTRACTED_UNVERIFIED'||!day||(day>=fromDay&&day<=toDay);
+      }).slice(0,maxAttachments);
+      const readings=selected.map(({reading})=>reading);
       if(readings.some(reading=>{
         const pendingAt=reading.status==='PENDING'?reading.requestedAt:reading.rereadRequestedAt;
         const elapsed=now-Date.parse(pendingAt);
@@ -51,7 +58,7 @@ export function createScheduledCashPaperReader(db,{
       }))return 'MORE';
       const index=readings.findIndex(reading=>reading.status==='NOT_READ'||reading.canReread===true);
       if(index<0)return 'DONE';
-      const source=candidates[index],messageId=source.references[0].messageId;
+      const {source}=selected[index],messageId=source.references[0].messageId;
       scope.activity=walletActivitySchema.parse({version:1,companyId,storeId,purpose:'CASH_PAPER_READING',surface:'CASH_REVIEW',
         execution:'BACKGROUND',actor:null,terminalPos:null,documentId:messageId,documentNumber:null,jobId:null});
       const operation=readings[index].canReread===true?'reread':'read';
