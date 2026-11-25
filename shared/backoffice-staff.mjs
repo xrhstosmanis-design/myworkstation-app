@@ -273,6 +273,7 @@ export function staffRequestCapability(method,path,body={},query={}){
   if(method==='PATCH'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/employees\/[^/]+\/details$/.test(path))return 'employees.edit';
   if(method==='GET'&&/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2\/employees(?:\/[^/]+)?$/.test(path))return 'employees.read';
   if(method==='GET'&&(path==='/api/commerce/handover'||/^\/api\/commerce\/handover\/[^/]+\/attachment$/.test(path)))return 'handover.read';
+  if(method==='GET'&&path==='/api/commerce/sales/financial-reports')return 'store-reports-sales-analysis.read';
   if(method==='GET'&&path==='/api/commerce/sales/advanced-report')return 'analytics.read';
   if(method==='GET'&&['/api/commerce/order-suggestions','/api/commerce/order-suggestions/by-supplier'].includes(path))return 'order-suggestions.read';
   if(method==='GET'&&['/api/commerce/low-value-products/access','/api/commerce/low-value-products'].includes(path))return 'low-value-products.read';

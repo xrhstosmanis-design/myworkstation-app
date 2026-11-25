@@ -1,0 +1,7 @@
+# 25/11/2026 — Οικονομικές αναφορές επιλεγμένου καταστήματος
+
+Owner /root · branch `feature/store-financial-reports` · baseline `3111739c309f457bdc5873e0dde2165eb395a72b`. Scope confirmed by the owner on 25/11: shortcut beside Refresh and move Other commercial functions to the same toolbar. Show monthly, category/subcategory, supplier-linked items and individual item sales. No production activation, permission change, or transaction.
+
+The selected-store read endpoint uses the existing INVENTORY entitlement and the existing explicit store sales analysis permission for the MANAGER profile. It checks the active grant again before returning data. Owner reads remain company/store scoped. Athens dates are inclusive, averages use calendar days, and POS reversals net down quantity/revenue. Supplier results use active supplier-product links and are not additive across suppliers with shared items. Selected item lookup searches items sold in the chosen period.
+
+Local evidence: frontend build, focused Node 20 tests, and isolated PostgreSQL WASM read fixture covering the seven query modes, scope isolation, reversals, supplier duplicate links and Athens midnight. Existing store workspace navigation tests exercised both commercial destinations. LAB NOT TESTED. Before rollout verify both roles, grant removal, switching stores, toolbar wrapping, and known totals for each report against the selected LAB period. Keep the existing shift, payment, invoice and commercial workspaces available.

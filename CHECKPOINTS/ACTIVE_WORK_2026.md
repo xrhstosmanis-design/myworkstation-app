@@ -1,5 +1,8 @@
 ## 25/11/2026 — NETLINK paid issuance with automatic0.50 service — ASSIGNED /root
 
+- 25/11/2026 · Επιλεγμένο κατάστημα · [Οικονομικές αναφορές ιδιοκτήτη και εξουσιοδοτημένου υπευθύνου](CHANGES/2026-11-25-store-financial-reports.md) · Έλεγχοι τοπικά, εκκρεμούν CI και LAB.
+
+
 Continuation of existing /root Netlink ownership; source branch planned fix/netlink-paid-issuance-20261125. Owner explicitly requests central implementation: every card carries automatic0.50EUR service, cash receipt confirmed by employee or successful card-machine transaction, then fiscal receipt, then one provider issuance. No production sale/PIN/provider execution is authorized merely for implementation testing. Cash/CARD proof and same-store receipt must be bound to the same durable request and sale. Timeout/uncertain provider result must never cause an automatic second issuance. Fee and price must be validated before provider execution, not only reviewed afterwards.
 
 Baseline main f010fdbee0e5f8d5e895a15bde036108281817db. Existing catalogue/print release #4219/ac3ae31 is installed; user now confirms report printed correctly after POS58 driver selection and shows actual populated catalogue. Narrow USER PASS: catalogue visibility and internal report printing only. Exact runtime at the user observation was not independently recorded. No financial deltas or card issuance PASS. Prior distorted Greek receipt is superseded only for this user's corrected printer test. Manual docs/manual/netlink/PASS.md records the narrow observation.
