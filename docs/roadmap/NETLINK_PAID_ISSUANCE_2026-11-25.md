@@ -1,5 +1,7 @@
 # Netlink paid issuance —25Nov2026
 
+Latest correction installed: source#4241/d6694542c758636b4da7f7f39a39b481b3af43cb, full CI45647815255 SUCCESS, exact Render LIVE/health verified. New issuance stays PAUSED; paid UNKNOWN purchase is not replayed or closed. User reports no corresponding charge in the current provider-terminal daily report; provider reconciliation remains required. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-correction-live.md`.
+
 Authoritative incident continuation: user paid/fiscal sale exists but provider result UNKNOWN. New issuance is PAUSED. Preserve the existing paid record and frozen provider identity; no replay or second payment. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-request-id.md`. /root retains ownership; provider reconciliation and real voucher acceptance remain OPEN. Earlier ready/activation notes below are historical.
 
 Authoritative release continuation: PR#4229 merged7623888cc63d95f1c1f4283231e4e938b565f397, full CI45633162691 SUCCESS. Code and activation deploys LIVE; selected-store non-stock card-value/existing-fee mapping is complete and fee stock/history preserved. Earlier uncommitted/NOT LIVE notes below are historical. Next action is grouped user acceptance of the normal full cash/card+fiscal checkout and each saved voucher; real issuance/printing NOT TESTED. Variable/prepare services remain read-only. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-live-setup.md`.
