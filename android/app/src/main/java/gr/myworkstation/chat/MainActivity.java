@@ -571,6 +571,8 @@ public final class MainActivity extends Activity {
             if (selectedDay.isAfter(today)) { status("Η ημερομηνία ταμείου δεν μπορεί να είναι μελλοντική."); return; }
             sendPhotoMessage(value, selectedDay.toString());
         }, suggested.getYear(), suggested.getMonthValue() - 1, suggested.getDayOfMonth());
+        dismissImage();
+        imageDialog = picker;
         picker.setTitle("Ημερομηνία ταμείου");
         picker.show();
     }
