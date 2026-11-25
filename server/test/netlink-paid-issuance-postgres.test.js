@@ -22,7 +22,7 @@ test('native paid issuance SQL/HTTP: mixed basket, encryption, receipt gate, onc
    'CREATE TABLE "FiscalDocument"("id" text,"saleId" text,"status" text,"fiscalNumber" text,"issuedAt" timestamp)',
    'CREATE TABLE "StoreOperatorAudit"("id" text,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb)'
   ])await db.$executeRawUnsafe(sql);
-  for(const name of ['20260825130500_netlink_prepaid_storage','20260826210000_netlink_fiscal_receipt_gate','20261125130000_netlink_paid_issuance']){const sql=await readFile(new URL(`../prisma/migrations/${name}/migration.sql`,import.meta.url),'utf8');for(const statement of sql.replace(/--[^\n]*/g,'').split(';').map(s=>s.trim()).filter(Boolean))await db.$executeRawUnsafe(statement)}
+  for(const name of ['20260825130500_netlink_prepaid_storage','20260826210000_netlink_fiscal_receipt_gate','20261125130000_netlink_paid_issuance','20261125154500_netlink_numeric_request_id']){const sql=await readFile(new URL(`../prisma/migrations/${name}/migration.sql`,import.meta.url),'utf8');for(const statement of sql.replace(/--[^\n]*/g,'').split(';').map(s=>s.trim()).filter(Boolean))await db.$executeRawUnsafe(statement)}
   const {ensureNetlinkPaidIssuanceSchema}=await import('../src/integrations/netlink/paid-issuance-schema.js');
   await ensureNetlinkPaidIssuanceSchema(db);await ensureNetlinkPaidIssuanceSchema(db);
   await db.$executeRaw`INSERT INTO "Product" VALUES('value','company','Card accounting','VALUE',0,false,0,true),('fee','company','Service accounting','FEE',24,false,.5,true)`;
@@ -56,7 +56,7 @@ test('native paid issuance SQL/HTTP: mixed basket, encryption, receipt gate, onc
   const printed=await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'});assert.equal(printed.status,200);assert.equal(printed.cache,'no-store');assert.deepEqual(printed.body.lines,['PRIVATE-SYNTHETIC-PIN']);assert.equal(calls,2);
   assert.equal((await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'},'other-operator')).status,403);
   assert.equal((await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'other'})).status,403);
-  const listed=await request('/issuance-intents?storeId=store',null,'operator','GET');assert.equal(listed.body.items.length,2);assert.doesNotMatch(JSON.stringify(listed),/PRIVATE-SYNTHETIC-PIN|issuanceIntentEnc|issuanceResultEnc|providerRequestId/);
+  const listed=await request('/issuance-intents?storeId=store',null,'operator','GET');assert.equal(listed.body.items.length,2);assert.equal(new Set(listed.body.items.map(row=>row.providerRequestId)).size,2);assert.ok(listed.body.items.every(row=>/^[1-9][0-9]{0,9}$/.test(row.providerRequestId)&&Number(row.providerRequestId)<=2147483647));assert.doesNotMatch(JSON.stringify(listed),/PRIVATE-SYNTHETIC-PIN|issuanceIntentEnc|issuanceResultEnc/);
   const rows=await db.$queryRaw`SELECT "issuanceIntentEnc","issuanceResultEnc" FROM "NetlinkTransaction"`;assert.equal(rows.length,2);assert.doesNotMatch(JSON.stringify(rows),/PRIVATE-SYNTHETIC-PIN/);
   const audit=await db.$queryRaw`SELECT * FROM "StoreOperatorAudit"`;assert.equal(audit.length,1);assert.doesNotMatch(JSON.stringify(audit),/PRIVATE-SYNTHETIC-PIN/);
   assert.equal((await request('/issuance-intents',{storeId:'store',requestId:randomUUID(),checkoutId,productId:'card10'})).body.code,'NETLINK_SALE_ALREADY_EXISTS');

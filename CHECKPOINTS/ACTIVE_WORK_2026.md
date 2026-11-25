@@ -1,3 +1,13 @@
+##25Nov2026 — Netlink numeric-ID correction installed; paid UNKNOWN remains OPEN /root
+
+Source#4241 head d2b3dcc82a69ee609cff7c78fe2d6ebc047c79eb passed full CI45647815255 (all5jobs), merged d6694542c758636b4da7f7f39a39b481b3af43cb. Render dep-dc3h5sgu01pc73elbvlg LIVE; public health200/ok confirms exact revision. Native read-only verification confirms bounded provider sequence exists and is unconsumed; original paid UNKNOWN sale/receipt/dispatch record is unchanged. New issuance remains PAUSED. The user reports no corresponding card charge in the provider terminal's current daily report; this is user evidence, not provider final confirmation. No retry, new payment, refund, deletion or fiscal correction was performed. Await provider reconciliation and explicit authorization to transmit the prepared incident email. Next: obtain existing provider result/non-execution confirmation; never replay the UNKNOWN purchase. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-correction-live.md`.
+
+##25Nov2026 — Netlink real paid receipt, provider result UNKNOWN — OPEN /root
+
+User reports a real cash checkout/fiscal receipt and correct separate card/service sale lines; provider issuance is UNKNOWN. No before-baseline financial delta was captured, so this is not a full LAB balance PASS. No confirmed provider PIN/charge result exists. NETLINK_ENABLE_EXECUTE was paused; pause deploy dep-dc3fur4ipgvc738itlk0 LIVE. Preserve the paid sale/receipt, frozen original request, provider dispatch identity and existing UNKNOWN status. No purchase/payment retry, new intent for this paid sale or inferred no-charge claim is permitted. Provider reconciliation is required.
+
+Continuation branch `fix/netlink-unknown-request-id-20261125`: bound future provider IDs to seconds-sized numeric range using an atomic non-cycling SQL sequence, reject legacy oversized READY intents before payment/dispatch, expose scoped non-secret provider trace ID for support, and retain only safe HTTP status diagnostics. The28Aug provider email recommends seconds rather than millisecond/nanosecond timestamps; this is a compatibility correction, not proof of the historical exception's cause. Existing paid UNKNOWN intent must never be rewritten/resubmitted.63Netlink local tests PASS with isolated PostgreSQL18.7,0FAIL/0SKIP. Full CI/build/release pending. Existing catalogue/report printing PASS remains intact. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-request-id.md`.
+
 ##25Nov2026 — Netlink paid issuance installed; production setup complete — AWAITING USER ACCEPTANCE /root
 
 PR#4229 head e7ed47d3125a2a589716d2079a84532dd7be89f0 passed full CI45633162691 (all5jobs), merged7623888cc63d95f1c1f4283231e4e938b565f397. Render code deploy dep-dc3fgqd9el5s73d8tuqg and activation deploy dep-dc3fllk0916s738m9v80 LIVE at the same source revision. Global paid-execution feature enabled with all payment/fiscal/tenant gates retained. Selected production-store POS mapping completed through authenticated UI; existing fee reused as non-stock service, dedicated non-stock electronic value item created with existing fiscal department. Read-only SQL confirms the existing fee stock and movement history stayed unchanged. No real card/provider purchase or physical voucher print test performed.61targeted local tests PASS including isolated native PostgreSQL and mounted UI; user acceptance remains OPEN. Existing catalogue/report-print USER PASS remains protected. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-live-setup.md`.
@@ -213,6 +223,8 @@ Corrected source head `bd0e268f27ea2c5d39a97397e3ad426130fff5cc`, CI `4432297606
 The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejected the old owner catalogue call without storeId: HTTP400 / NETLINK_STORE_REQUIRED, formerly expected200 at line70. Causal correction updates the E2E caller's status/menu URLs to the fixture's explicit selected store, asserts the returned storeId and adds a retained missing-store400/code assertion. Runtime source and all existing auth/licensing/fiscal/idempotency/settlement assertions are unchanged. No global-store fallback or production guard is relaxed. The retained POS header browser fixture also recognizes the selected-store status query when simulating a disabled Netlink module; its prior disabled-module geometry intent is preserved.
 
 Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
+
+- 25/11/2026 · Νο 7 · Δημοσίευση Android Chat 0.1.18 · [Checkpoint](CHANGES/2026-11-25-no7-chat-android-018-publication.md).
 
 ## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
 
@@ -1079,6 +1091,8 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 25/11/2026 · Weekly4194 after4240claim: exact existingcashDay preserved, all299table columnshapes0mismatch, native102PASS, newfullCI required. Clean isolatedrelease leaves unrelated uncommittedinvoice edits untouched. Diadochou preview only; weeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-cashday-catalogue-source.md.
 
 25/11/2026 · Weekly4194 parent installer now actually rendered before policy/schema readiness; integrated central packet→verified install→policy reload test14UI PASS, production buildPASS. Full exact-headCI pending, alarmOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-parent-installer.md.
+
+25/11/2026 · Weekly4194 outage recovered;65d fullCI fullyGREEN after browserretry. CurrentNetlink4241/main6b3c retained, unchanged8column/index owner source witness refreshed, native103PASS and buildPASS. New exactheadCI needed, productionweeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-resume-numeric-netlink.md.
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση μηνιαίων ελέγχων και εκκρεμοτήτων](CHANGES/2026-11-25-no5-store-report-reads.md).
 
 - 25/11/2026 · Νο 7 · Έκδοση Android με ημερομηνία ταμείου · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day-android-release.md).

@@ -1,4 +1,5 @@
 import {validFiscalReceipt} from './fiscal-gate.js';
+import {assertNetlinkProviderRequestId} from './provider-request-id.js';
 
 import {NETLINK_SERVICE_CENTS,netlinkPaidError,moneyCents} from "../../../../shared/netlink-fixed-card.mjs";
 export {NETLINK_SERVICE_CENTS,netlinkPaidError,moneyCents,fixedCardFromMenu} from "../../../../shared/netlink-fixed-card.mjs";
@@ -39,13 +40,14 @@ export async function dispatchPaidNetlink({repository,scope,requestId,loadEviden
  if(intent.status==='COMPLETED')return {status:'COMPLETED',idempotentReplay:true,requestId};
  if(['EXECUTING','UNKNOWN','AMOUNT_REVIEW'].includes(intent.status))return {status:intent.status,idempotentReplay:true,requestId};
  if(intent.status!=='READY_FOR_PAYMENT')reject('NETLINK_INTENT_NOT_READY','Η κάρτα δεν είναι διαθέσιμη για έκδοση.');
+ assertNetlinkProviderRequestId(intent.providerRequestId);
  const evidence=await loadEvidence(intent);
  const paid=assertNetlinkPaidSale({...evidence,scope,intent});
  const claimed=await repository.claim(scope,requestId,{saleId:evidence.sale.id,...paid});
  if(!claimed)return {status:'EXECUTING',idempotentReplay:true,requestId};
  let result;
  try{result=await provider.execute(intent.productId,{requestId:intent.providerRequestId,payload:{}})}
- catch{await repository.uncertain(scope,requestId,'NETLINK_PROVIDER_RESULT_UNCERTAIN').catch(()=>{});return {status:'UNKNOWN',requestId,requiresReview:true}}
+ catch(error){const status=Number(error?.providerStatus),providerHttpStatus=Number.isInteger(status)&&status>=400&&status<=599?status:null;await repository.uncertain(scope,requestId,providerHttpStatus?`NETLINK_PROVIDER_HTTP_${providerHttpStatus}`:'NETLINK_PROVIDER_RESULT_UNCERTAIN').catch(()=>{});return {status:'UNKNOWN',requestId,requiresReview:true,...(providerHttpStatus?{providerHttpStatus}:{})}}
  try{
   const data=result?.data??result;
   if(!['string','number'].includes(typeof data?.transactionId)||!String(data.transactionId).trim()||String(data.transactionId).length>160||!Array.isArray(data.lines)||!data.lines.length||data.lines.length>1000||data.lines.some(l=>typeof l!=='string'||l.length>4000)||data.requestId!==undefined&&String(data.requestId)!==intent.providerRequestId||moneyCents(data.amount)!==paid.cardCents){

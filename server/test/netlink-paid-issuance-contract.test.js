@@ -36,6 +36,12 @@ test('uncertain provider response remains review-required and never retries a pu
  const opts={repository,scope,requestId:'card-intent-id',provider:{execute:async()=>{calls++;throw Error('secret provider body')}},loadEvidence:async()=>evidence,encryptResult:async()=>''};
  assert.equal((await dispatchPaidNetlink(opts)).status,'UNKNOWN');assert.equal((await dispatchPaidNetlink(opts)).status,'UNKNOWN');assert.equal(calls,1);
 });
+test('provider HTTP rejection retains a safe status without exposing provider body or retrying',async()=>{
+ const evidence=fixture(),repository=memoryRepository(evidence);let calls=0,savedCode;
+ repository.uncertain=async(s,id,code)=>{repository.row.status='UNKNOWN';savedCode=code};
+ const opts={repository,scope,requestId:'card-intent-id',provider:{execute:async()=>{calls++;throw Object.assign(Error('PRIVATE PROVIDER BODY'),{providerStatus:400})}},loadEvidence:async()=>evidence,encryptResult:async()=>''};
+ const result=await dispatchPaidNetlink(opts);assert.equal(result.providerHttpStatus,400);assert.equal(savedCode,'NETLINK_PROVIDER_HTTP_400');assert.doesNotMatch(JSON.stringify(result),/PRIVATE PROVIDER BODY/);await dispatchPaidNetlink(opts);assert.equal(calls,1);
+});
 test('all payment/fiscal/fee checks happen before claiming or contacting provider',async()=>{
  const evidence=fixture();evidence.sale.total=10;let claimed=0,called=0;const repository=memoryRepository(evidence);repository.claim=async()=>{claimed++;return true};
  await assert.rejects(()=>dispatchPaidNetlink({repository,scope,requestId:'card-intent-id',provider:{execute:async()=>called++},loadEvidence:async()=>evidence,encryptResult:async()=>''}),{code:'NETLINK_PAID_TOTAL_MISMATCH'});assert.equal(claimed,0);assert.equal(called,0);
