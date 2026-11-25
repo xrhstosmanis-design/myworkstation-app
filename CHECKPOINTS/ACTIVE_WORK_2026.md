@@ -1,3 +1,5 @@
+- 25/11/2026 · [Ριζάρειο: ιστορικό STATUS 101 χωρίς τιμή InputLine](CHANGES/2026-11-25-ftext-status101-empty-inputline.md) · Εκκρεμεί αποδοχή στο POS.
+
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.

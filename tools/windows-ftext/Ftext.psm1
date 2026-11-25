@@ -125,7 +125,9 @@ function Read-FtextArchiveStatus([string]$Path,[string]$Serial) {
     $bytes=[IO.File]::ReadAllBytes($Path)
     $lines=@([Text.Encoding]::GetEncoding(1253).GetString($bytes) -split '\r?\n')
     if(($lines.Count -gt 6 -and -not [string]::IsNullOrWhiteSpace($lines[6])) -or ($lines.Count -gt 7 -and -not [string]::IsNullOrWhiteSpace($lines[7]))) {throw 'Fiscal receipt/payment evidence must never be archived as STATUS.'}
-    return Read-FtextStatusResult $bytes $Serial
+    $parsed=Read-FtextStatusResult $bytes $Serial
+    if($parsed.code -eq 101 -and @($lines | Select-Object -Skip 3 | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {throw 'Unexpected extra evidence in STATUS 101.'}
+    return $parsed
 }
 function Assert-FtextArchivePath([string]$Path) {
     $p=[IO.Path]::GetFullPath($Path)
@@ -376,7 +378,7 @@ function Invoke-FtextOutputArchive {
             $e=& $readJson '.json';$parsed=Read-FtextArchiveStatus $paths[($prefix+$id+'.res')] ([string]$Config.serialNumber)
             $expectedCode=if($Proof.PSObject.Properties['code']) {$Proof.code} else {0}
             $matchesOutcome=($expectedCode -eq 0 -and $parsed.ok -and $parsed.code -eq 0) -or
-                ($expectedCode -eq 101 -and -not $parsed.ok -and $parsed.code -eq 101 -and $parsed.failedCommand -ceq 'STATUS')
+                ($expectedCode -eq 101 -and -not $parsed.ok -and $parsed.code -eq 101 -and $parsed.failedCommand -cin @('STATUS',''))
             if($e.requestId -cne $id -or -not $matchesOutcome -or ($e.result | ConvertTo-Json -Compress) -cne ($parsed | ConvertTo-Json -Compress)) {throw 'STATUS output does not match acknowledged outcome.'}
             foreach($key in @('companyId','storeId','terminalPos')) {if([string]$e.$key -cne [string]$Config.$key) {throw 'Foreign STATUS retained.'}}
         } else {
