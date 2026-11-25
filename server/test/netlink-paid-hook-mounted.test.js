@@ -39,3 +39,14 @@ test('mounted sequential completion stops after a store switch and old callbacks
   await previous.complete(ids[1]);assert.equal(calls.length,1);assert.equal(f.hook.voucher,null);
  }finally{await f.close()}
 });
+
+test('several completed cards remain queued for individual printing without another purchase',async()=>{
+ const f=await fixture(),calls=[];
+ const api=async(url,options)=>{calls.push(url);const id=decodeURIComponent(url.split('/')[4]);return url.endsWith('/issue')?{status:'COMPLETED',idempotentReplay:true}:{requestId:id,title:'Synthetic card',transactionId:'tx-'+id,amount:10,serviceFeeAmount:.5,customerTotal:10.5,lines:['PRIVATE-SYNTHETIC-PIN']}};
+ try{
+  await f.render({api,storeId:'A',getCheckoutId:()=> 'checkout'});
+  await f.act(async()=>f.hook.complete(items()));assert.equal(f.hook.pendingVoucherCount,2);assert.equal(f.hook.voucher.requestId,ids[0]);assert.doesNotMatch(document.body.textContent,/PRIVATE-SYNTHETIC-PIN/);
+  await f.act(async()=>f.hook.closeVoucher());assert.equal(f.hook.voucher.requestId,ids[1]);assert.equal(f.hook.pendingVoucherCount,1);assert.equal(calls.filter(url=>url.endsWith('/issue')).length,2);
+  await f.act(async()=>f.hook.closeVoucher());assert.equal(f.hook.voucher,null);assert.equal(calls.length,4);
+ }finally{await f.close()}
+});
