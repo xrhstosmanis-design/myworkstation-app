@@ -77,3 +77,8 @@ jobs:
           if ($observed -notmatch 'PASS: [0-9]+ cash command/result/scope/timeout/restart/tombstone boundaries') { throw 'Synthetic cash guards did not pass.' }
           if ($observed -match 'FTEXT_(LAB|RIZAREIO_PASSIVE)_TIMING requestId=') { throw 'Passive diagnostics activated on foreign synthetic terminal.' }
           Write-Host 'PASS: passive timing rejected for unrelated store/POS/serial.'
+      - name: Verify Rizareio passive scope positive and three negative scenarios
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./tools/windows-ftext/Test-Passive-Timing-Smoke.ps1
