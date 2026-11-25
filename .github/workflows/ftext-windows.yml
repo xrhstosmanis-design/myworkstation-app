@@ -57,7 +57,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           # The existing smoke suite creates a temporary synthetic FTEXT folder,
           # never connects to a store or to a physical payment terminal.
-          $observed = (& ./tools/windows-ftext/Test-Cash-Smoke.ps1 6>&1 | Out-String)
+          $observed = (& ./tools/windows-ftext/Test-Cash-Smoke.ps1 6>&1 | Out-String -Width 4096)
           if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'Synthetic cash fixture failed.' }
           if ($observed -notmatch 'PASS: [0-9]+ cash command/result/scope/timeout/restart/tombstone boundaries') { throw 'Original cash regression fixture did not pass.' }
           # Only synthetic fixture output (no real POS/payment credentials).
