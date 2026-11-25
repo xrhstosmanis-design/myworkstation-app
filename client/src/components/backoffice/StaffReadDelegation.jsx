@@ -1,13 +1,17 @@
 import React,{useEffect,useRef,useState} from 'react';
 
-export const readDelegationRight='staff-grants.manage-reads';
-export const delegatedReadOptions=[
+import {staffDelegatableReadKeys,staffPermissionSections,staffReadDelegationCapability} from '../../../../shared/backoffice-staff.mjs';
+
+export const readDelegationRight=staffReadDelegationCapability;
+const shortLabels=new Map([
   ['products.read','Είδη'],
   ['inventory.read','Απογραφή'],
   ['invoices.read','Τιμολόγια'],
   ['sales.read','Πωλήσεις'],
   ['shifts.read','Βάρδιες']
-];
+]);
+const labels=new Map(staffPermissionSections.flatMap(section=>section.actions.map(action=>[action.key,action.label])));
+export const delegatedReadOptions=staffDelegatableReadKeys.map(key=>[key,shortLabels.get(key)??labels.get(key)]);
 
 const allowedKeys=new Set(delegatedReadOptions.map(([key])=>key));
 const validRevision=value=>Number.isSafeInteger(value)&&value>0;
