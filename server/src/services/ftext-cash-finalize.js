@@ -1,3 +1,4 @@
+import {netlinkAuditDetails} from "../../../shared/netlink-checkout-items.mjs";
 import {hasFtextPromotion} from './ftext-promotion-lines.js';
 import {assertFtextOperatorCardApproved} from './ftext-operator-card.js';
 import {randomUUID} from 'node:crypto';
@@ -50,7 +51,7 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   }
   await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${randomUUID()},${saleId},${method},${row.total})`;
   await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${row.sessionId},${method==='CASH'?'SALE_CASH':'SALE_CARD'},${row.total},${'POS πώληση '+saleId+(method==='CASH'?' · ΜΕΤΡΗΤΑ':' · ΚΑΡΤΑ')},${saved.actorId},${saved.actorName})`;
-  await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${saved.operatorId||saved.actorId},${saved.actorId},'POS_SALE_COMPLETED',${JSON.stringify({source:method==='CASH'?'FTEXT_CASH':'FTEXT_CARD',requestId:row.id,saleId,terminalPos:scope.terminalPos,sessionId:row.sessionId,total:Number(row.total),inventoryWarnings,receipt})}::jsonb)`;
+  await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${saved.operatorId||saved.actorId},${saved.actorId},'POS_SALE_COMPLETED',${JSON.stringify({...netlinkAuditDetails(saved.items),source:method==='CASH'?'FTEXT_CASH':'FTEXT_CARD',requestId:row.id,saleId,terminalPos:scope.terminalPos,sessionId:row.sessionId,total:Number(row.total),inventoryWarnings,receipt})}::jsonb)`;
   if(saved.duplicateConfirmed)await insertPosSaleSafetyAudit(tx,{...scope,saleId,relatedSaleId:saved.relatedSaleId,eventType:'DUPLICATE_CONFIRMED',clientTransactionId:row.clientTransactionId,saleFingerprint:row.requestHash,actorId:saved.actorId,actorName:saved.actorName,details:{source:method==='CASH'?'FTEXT_CASH':'FTEXT_CARD',requestId:row.id,total:Number(row.total),paymentMethod:method}});
   await tx.$executeRaw`UPDATE "FtextCashRequest" SET "status"='SALE_COMMITTED',"saleId"=${saleId},"checkoutJson"=${JSON.stringify({...saved,inventoryWarnings})}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='CONFIRMED'`;
   return {saleId,replay:false,inventoryWarnings};
