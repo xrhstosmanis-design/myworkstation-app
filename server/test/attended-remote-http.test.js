@@ -31,6 +31,18 @@ test('actual mounted HTTP: exact POS consent, one-use pairing, bidirectional tra
   let framePacket='',timeout;try{await Promise.race([(async()=>{while(!framePacket.includes('"sequence":1')){const part=await reader.read();assert.equal(part.done,false);framePacket+=new TextDecoder().decode(part.value);}})(),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('fresh frame waited for the old 1-second polling timer')),750);})]);}finally{clearTimeout(timeout);}
   assert.ok(performance.now()-started<750);assert.match(framePacket, /"jpeg":"\/9j\/YQ=="/);
   await reader.cancel();await new Promise(r=>setTimeout(r,30));assert.equal((await call(`/controller/${j.id}/frame`)).status,404);assert.ok(audits.some(x=>x.data.event==='ATTENDED_REMOTE_STOP_STREAM_CLOSED'));
+  // A device-origin long-poll failure is not an operator STOP.
+  const diag=(await invite()).body;const diagGrant=(await call(`/pos/${diag.id}/consent`,'operator',{accepted:true})).body.grant;
+  const diagPair=await call('/pair','anonymous',{grant:diagGrant});assert.equal(diagPair.status,201);
+  const diagStop=await fetch(base+`/device/${diag.id}/stop`,{method:'POST',headers:{Authorization:`Bearer ${diagPair.body.token}`,'Content-Type':'application/json'},body:JSON.stringify({reason:'COMMAND_POLL_TIMEOUT'})});
+  assert.equal(diagStop.status,200);await new Promise(r=>setTimeout(r,20));
+  assert.ok(audits.some(x=>x.data.event==='ATTENDED_REMOTE_STOP_COMMAND_POLL_TIMEOUT'));
+  const unexpected=(await invite()).body;const unexpectedGrant=(await call(`/pos/${unexpected.id}/consent`,'operator',{accepted:true})).body.grant;
+  const unexpectedPair=await call('/pair','anonymous',{grant:unexpectedGrant});assert.equal(unexpectedPair.status,201);
+  const badReason=await fetch(base+`/device/${unexpected.id}/stop`,{method:'POST',headers:{Authorization:`Bearer ${unexpectedPair.body.token}`,'Content-Type':'application/json'},body:JSON.stringify({reason:'UNTRUSTED_SECRET'})});
+  assert.equal(badReason.status,200);await new Promise(r=>setTimeout(r,20));
+  assert.ok(audits.some(x=>x.data.event==='ATTENDED_REMOTE_STOP_DEVICE_STOP'));
+
   const j2=(await invite()).body;const g2=(await call(`/pos/${j2.id}/consent`,'operator',{accepted:true})).body.grant;revoked=true;assert.equal((await call('/pair','anonymous',{grant:g2})).status,403);assert.ok(audits.length>0);assert.ok(!JSON.stringify(audits).includes(token));
  }finally{route.close();await new Promise(r=>{server.close(r);server.closeAllConnections();});}
 });
