@@ -63,3 +63,21 @@ test('server device liveness and idle expiry are unchanged by frame age metadata
  t+=15001;assert.throws(()=>sessions.device(job.id,token),/έληξε|χάθηκε/);
  assert.deepEqual(closed,['DEVICE_IDLE']);
 });
+
+test('V2 device command freshness is measured only on server clock at dequeue',()=>{
+ let t=1000;
+ const sessions=createRemoteSessionStore({now:()=>t,ttl:null,idle:15000});
+ const {token}=sessions.start({id:'commands-server-clock',createdBy:'admin-1'});
+ const session=sessions.device('commands-server-clock',token);
+ sessions.command(session,{type:'key',key:'Enter'});
+ t+=2750;
+ const command=sessions.takeCommands(session)[0];
+ assert.equal(command.ageMs,2750);
+ assert.equal(command.at,1000);
+ assert.equal(command.type,'key');
+ assert.deepEqual(sessions.takeCommands(session),[]);
+ t+=100;
+ sessions.command(session,{type:'key',key:'Tab'});
+ t+=3200;
+ assert.ok(sessions.takeCommands(session)[0].ageMs>=3000);
+});
