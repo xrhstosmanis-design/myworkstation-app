@@ -1014,3 +1014,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 
 25/11/2026 · ASSIGNED /root · POS proposal module admission, SOURCE LIVE7adad64f / FULL CI PASS / LABmodule explicitlyON, existingLAB POS2grantON / physical acceptance pending. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-module-admission.md. Existing owners retained; weekly alarm unaffected.
+
+- 25/11/2026 · Νο 7 · Ημερήσια αναφορά ταμείων την ημέρα ενεργοποίησης · [Checkpoint](CHANGES/2026-11-25-no7-daily-cash-activation-day.md).
