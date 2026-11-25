@@ -1077,6 +1077,8 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 25/11/2026 · Weekly4194 exact Netlink catalogue continuation after4236claim: incoming main retained,8nullable columns+1partial index preserved/verified, JS-Python profiles and native102PASS. Full newCI/release required; Diadochou module active0cost and preview only, weekly runtimeOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-netlink-catalogue-source.md.
 
 25/11/2026 · Weekly4194 after4240claim: exact existingcashDay preserved, all299table columnshapes0mismatch, native102PASS, newfullCI required. Clean isolatedrelease leaves unrelated uncommittedinvoice edits untouched. Diadochou preview only; weeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-cashday-catalogue-source.md.
+
+25/11/2026 · Weekly4194 parent installer now actually rendered before policy/schema readiness; integrated central packet→verified install→policy reload test14UI PASS, production buildPASS. Full exact-headCI pending, alarmOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-parent-installer.md.
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση μηνιαίων ελέγχων και εκκρεμοτήτων](CHANGES/2026-11-25-no5-store-report-reads.md).
 
 - 25/11/2026 · Νο 7 · Έκδοση Android με ημερομηνία ταμείου · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day-android-release.md).

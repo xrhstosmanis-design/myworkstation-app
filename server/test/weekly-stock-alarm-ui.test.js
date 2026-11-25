@@ -20,5 +20,26 @@ test('stock alarm and POS production React controls: grants, stale stores, compa
    select=[...document.querySelectorAll('select')][1];await act(async()=>{select.value='COMPANY';select.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});
    const save=[...document.querySelectorAll('button')].find(b=>b.textContent==='Αποθήκευση alarm stock');await act(async()=>save.click());const write=calls.find(c=>c.options?.method==='PUT');assert.ok(write);const body=JSON.parse(write.options.body);assert.equal(body.scope,'COMPANY');assert.equal(body.expectedVersion,3);assert.deepEqual(body.settings,company);await clear();
   });
+  await t.test('actual settings parent exposes authorized installer before schema admission and refreshes policy after verified install',async()=>{
+   const claims={id:'admin',sessionId:'central-session',sessionVersion:3,tokenType:'BACKOFFICE_USER',role:'SUPER_ADMIN',isSuperAdmin:true,mustChangePassword:false,exp:Math.floor(Date.now()/1000)+3600};
+   const credential='synthetic.'+Buffer.from(JSON.stringify(claims)).toString('base64url')+'.synthetic';window.localStorage.setItem('token',credential);
+   let installed=false,settingsReads=0,installCalls=0;const settings={enabled:false,historyDays:28,leadDays:3,safetyDays:2,floor:0};
+   const packet={actorId:'admin',companyId:'c',storeId:'a',sourceRevision:'a'.repeat(40),oldPlanHash:'b'.repeat(64),targetPlanHash:'c'.repeat(64),targetProfile:'WEEKLY',schema:'public',enrollments:[{companyId:'c',storeId:'a',generation:0}],installed:false};
+   const api=async(path,options)=>{
+    if(path==='/api/stock-alarms/stores')return {stores:[{id:'a',name:'A'}]};
+    if(path.endsWith('/settings')){settingsReads++;if(!installed)throw Error('schema not admitted');return {storeId:'a',policy:{settings,companySettings:settings,companyVersion:0,storeVersion:0,inherited:true},history:[]};}
+    if(path.endsWith('/inspect')){assert.equal(options.headers.Authorization,'Bearer '+credential);return {eligible:true,packet:{...packet,installed}};}
+    if(path.endsWith('/install')){assert.equal(options.headers.Authorization,'Bearer '+credential);assert.deepEqual(JSON.parse(options.body),{packet,explicitAuthorization:true});installCalls++;installed=true;return {installed:true};}
+    throw Error('unexpected integration path '+path);
+   };
+   try{
+    await render(Settings,{api});const select=document.querySelector('select');await act(async()=>{select.value='a';select.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});
+    assert.match(text(),/schema not admitted/);const install=[...document.querySelectorAll('button')].find(b=>b.textContent==='Ρητή εγκατάσταση αυτόματου alarm stock');assert(install,'parent must render the installer even when its policy read fails before admission');assert.equal(install.disabled,true);
+    assert.equal([...document.querySelectorAll('button')].find(b=>b.textContent==='Αποθήκευση alarm stock'),undefined);
+    await act(async()=>document.querySelector('input[type=checkbox]').click());assert.equal(install.disabled,false);
+    await act(async()=>install.click());await tick();assert.equal(installCalls,1);assert.equal(settingsReads,2);assert.doesNotMatch(text(),/schema not admitted/);assert.match(text(),/Το τρέχον target επαληθεύτηκε/);assert([...document.querySelectorAll('button')].find(b=>b.textContent==='Αποθήκευση alarm stock'));
+    await clear();
+   }finally{window.localStorage.removeItem('token');}
+  });
  }finally{await act(async()=>root.unmount());dom.window.close();for(const k of keys){const d=old.get(k);if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k];}}
 });
