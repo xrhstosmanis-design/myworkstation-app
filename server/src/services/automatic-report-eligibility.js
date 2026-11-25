@@ -10,7 +10,7 @@ import {invoiceAuditEmailPeriod} from './invoice-audit-email-period.js';
 import {createHash} from 'node:crypto';
 import {lockAutomaticReportBoundary} from './automatic-report-lock-boundary.js';
 import {automaticReportConfigurationSchema} from './automatic-report-settings.js';
-import {completedReportPeriod,reportScheduleAllows} from './automatic-report-policy.js';
+import {completedReportPeriod,reportScheduleAllows,reportBusinessPeriod} from './automatic-report-policy.js';
 import {readAutomaticCashPreviewInTransaction} from './automatic-report-source.js';
 import {buildAutomaticCashPayload} from './automatic-report-cash-payload.js';
 import {activationAllows} from './automatic-report-activation.js';
@@ -23,10 +23,11 @@ const active=(row,now)=>!!row&&row.active===true&&(!row.startsAt||iso(row.starts
 const safe=value=>{if(typeof value!=='string'||!/^[1-9]\d*$/.test(value)||BigInt(value)>BigInt(Number.MAX_SAFE_INTEGER))hold();return Number(value)};
 export function automaticReportScopeInput(raw){
  if(!raw||typeof raw!=='object'||![Object.prototype,null].includes(Object.getPrototypeOf(raw)))hold();
- const d=Object.getOwnPropertyDescriptors(raw),keys=['companyId','storeId','frequency',...(d.frequency?.value==='EVENT'?['eventId']:[])];
+ const d=Object.getOwnPropertyDescriptors(raw),keys=['companyId','storeId','frequency',...(d.frequency?.value==='EVENT'?['eventId']:[]),...(d.frequency?.value==='DAILY'&&d.day?['day']:[])];
  if(Reflect.ownKeys(d).length!==keys.length||keys.some(k=>!d[k]?.enumerable||!Object.hasOwn(d[k],'value')))hold();
  const result=Object.fromEntries(keys.map(k=>[k,d[k].value]));
  if(!['companyId','storeId'].every(k=>typeof result[k]==='string'&&result[k]===result[k].trim()&&result[k].length>0&&result[k].length<=200&&!/[\u0000-\u001f\u007f]/.test(result[k]))||!['DAILY','WEEKLY','MONTHLY','EVENT'].includes(result.frequency)||result.frequency==='EVENT'&&(typeof result.eventId!=='string'||result.eventId!==result.eventId.trim()||!result.eventId||result.eventId.length>200||/[\u0000-\u001f\u007f]/.test(result.eventId)))hold();
+ if(Object.hasOwn(result,'day')&&(typeof result.day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(result.day)))hold();
  return Object.freeze(result);
 }
 export function cashGrantPeriodStart(grant,frequency){
@@ -56,6 +57,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   const scope=automaticReportScopeInput(raw);now=iso(now);
   if(eventReport&&!automaticReportEventLifecycleReady(env)||monthlyInventory&&!monthlyInventorySummaryLifecycleReady(env))hold();
   if((supplier||monthlyInventory)&&scope.frequency!=='MONTHLY'||eventReport&&scope.frequency!=='EVENT'||!eventReport&&scope.frequency==='EVENT')hold();
+  if(nonCash&&scope.day)hold();
   const control=activationProvider();if(!control?.valid||!control.enabled)hold();
   const lifecycle=await lockAutomaticReportBoundary(tx,scope);
   const [company]=await tx.$queryRaw`SELECT "id","active","licenseStatus","subscriptionEndsAt" FROM "Company" WHERE "id"=${scope.companyId} FOR SHARE NOWAIT`;
@@ -93,7 +95,9 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    ? inventoryMonthPeriod(month)
    :supplier
    ? {from:monthBoundary(completedSupplierReportMonth(Date.parse(month+'-15T12:00:00Z'))),to:monthBoundary(month)}
+   : scope.day?reportBusinessPeriod(scope.day,scope.day,configuration)
    : completedReportPeriod(new Date(now),scope.frequency,configuration);
+  if(scope.day&&period.to>new Date(now))hold();
   const from=period.from.toISOString(),to=period.to.toISOString();
   const dailyCash=!nonCash&&scope.frequency==='DAILY';
   const periodAfterAuthorization=authorizedAt=>dailyCash?authorizedAt<to:authorizedAt<=from;
@@ -147,7 +151,9 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   return {scope,now,payload,inputs:eligible,activation:control,authorities,automaticPapers};
  }
  const reader=async({tx,companyId,storeId,input,now})=>{
-  const current=await context(tx,{companyId,storeId,frequency:input.frequency,...(input.eventId?{eventId:input.eventId}:{})},now);
+  const dailyCash=!nonCash&&input.frequency==='DAILY';
+  const day=dailyCash?new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso(input.periodFrom))):null;
+  const current=await context(tx,{companyId,storeId,frequency:input.frequency,...(input.eventId?{eventId:input.eventId}:{}),...(day?{day}:{})},now);
   const candidate=current.inputs.find(v=>v.recipient===input.recipient);
   if(!candidate||canonical(candidate)!==canonical(input))hold();
   const stored=await persistence.readImmutablePayload(tx,{companyId,storeId,frequency:input.frequency,periodFrom:input.periodFrom,periodTo:input.periodTo,payloadFingerprint:input.snapshot.payloadFingerprint,lifecycleGeneration:input.snapshot.lifecycleGeneration,now});

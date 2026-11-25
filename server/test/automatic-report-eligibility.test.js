@@ -206,3 +206,14 @@ test('daily cash covers the business day in progress when the store and recipien
   await assert.rejects(reader.readContext(late.tx,scope,NOW));
  }
 });
+
+test('a completed daily cash period can be recovered and revalidated independently of today',async()=>{
+ const h=fixture(),read=createAutomaticReportEligibilityReader(h),now='2026-10-23T12:00:00.000Z';
+ const candidate=await read.readContext(h.tx,{...scope,day:'2026-10-21'},now);
+ assert.equal(candidate.inputs[0].periodFrom,'2026-10-21T04:00:00.000Z');
+ await h.persistence.putImmutablePayload(h.tx,{payload:candidate.payload});
+ await read({tx:h.tx,companyId:'c',storeId:'s',input:candidate.inputs[0],now});
+ await assert.rejects(read.readContext(h.tx,{...scope,day:'2026-10-23'},now));
+ h.rows[2].status='OPEN';
+ await assert.rejects(read.readContext(h.tx,{...scope,day:'2026-10-21'},now));
+});

@@ -16,7 +16,7 @@ test('construction is inert, explicit start once creates unref timer and OFF mak
 });
 test('bounded sweep runs only three known frequencies and uses keyset on following sweep',async()=>{
  const h=fixture();assert.equal((await h.scheduler.sweep()).attempted,3);assert.deepEqual(h.calls.map(x=>x.scope.frequency),['DAILY','WEEKLY','MONTHLY']);assert.equal(h.queries[0].values.at(-1),2);assert.deepEqual(h.calls.map(x=>x.options.maxAttempts),[3,2,1]);
- await h.scheduler.sweep();assert.match(h.queries[1].sql,/\("companyId","storeId"\)>/);assert.deepEqual(h.queries[1].values,['CASH','c','s',2]);
+ await h.scheduler.sweep();const next=h.queries.find(q=>q.sql.includes('>(?,?)'));assert.ok(next);assert.deepEqual(next.values,['CASH','c','s',2]);
 });
 test('concurrent sweeps share one tracked task; shutdown stops admission but drains current operation',async()=>{
  const h=fixture();let release;const wait=new Promise(r=>{release=r});h.dispatcher.dispatch=async scope=>{h.calls.push(scope);await wait;return{attempted:1}};
@@ -38,4 +38,19 @@ test('supplier scheduler selects its own policies and only runs monthly',async()
  assert.equal((await h.scheduler.sweep()).attempted,2);
  assert.deepEqual(h.queries[0].values,['SUPPLIER_COMPARISON',2]);
  assert.deepEqual(h.calls.map(call=>call.scope.frequency),['MONTHLY','MONTHLY']);
+});
+
+test('cash scheduler revisits an older day after HOLD while prioritizing the latest day',async()=>{
+ const work=createBackgroundDrain(),calls=[];
+ const db={$queryRaw:async strings=>{
+  const sql=strings.join('?');
+  if(sql.includes('AutomaticReportAutomationGrant'))return[{notBefore:new Date('2026-11-21T10:00:00Z')}];
+  if(sql.includes('AutomaticReportSettings'))return[{configurationJson:{dayStartHour:5}}];
+  return sql.includes('>(?,?)')?[]:[{companyId:'c',storeId:'s'}];
+ }};
+ const scheduler=createAutomaticReportScheduler({db,work,dispatcher:{dispatch:async scope=>{calls.push(scope);return{status:'HOLD',attempted:0}}},
+  clock:()=> '2026-11-24T06:00:00.000Z',activationProvider:()=>({valid:true,enabled:true,fingerprint:'one'})});
+ for(let i=0;i<9;i++)await scheduler.sweep();
+ assert.deepEqual(calls.filter(s=>s.day).map(s=>s.day),['2026-11-20','2026-11-21','2026-11-22','2026-11-20']);
+ assert.equal(calls[0].frequency,'DAILY');assert.equal(calls[0].day,undefined);
 });
