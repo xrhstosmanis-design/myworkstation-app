@@ -8,6 +8,14 @@ User reports a real cash checkout/fiscal receipt and correct separate card/servi
 
 Continuation branch `fix/netlink-unknown-request-id-20261125`: bound future provider IDs to seconds-sized numeric range using an atomic non-cycling SQL sequence, reject legacy oversized READY intents before payment/dispatch, expose scoped non-secret provider trace ID for support, and retain only safe HTTP status diagnostics. The28Aug provider email recommends seconds rather than millisecond/nanosecond timestamps; this is a compatibility correction, not proof of the historical exception's cause. Existing paid UNKNOWN intent must never be rewritten/resubmitted.63Netlink local tests PASS with isolated PostgreSQL18.7,0FAIL/0SKIP. Full CI/build/release pending. Existing catalogue/report printing PASS remains intact. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-request-id.md`.
 
+
+## 25/11/2026 - Αυτόματο alarm stock: κεντρικά LIVE, πρώτη Διαδόχου LIVE PASS
+
+Retained owner /root /4194. FullCI45664460655 all5jobsPASS + AIwallet45664460868PASS; merged/deployed0fce7daa0eec2e1a461fa6773d7c3deb8ae2cf6a. Explicit3table installation299→302, existingfencegeneration0preserved/target93d396e0; runtimeLIVE, installerOFF. ΜόνοΔιαδόχουSTOREon28/3/2/floor0. Αυτόματη αλλαγήSKU1002071→8 στις20:02:40Athens, ιστορικόb6325860-c4af-4cca-b49c-9b6f7c47e69f/εβδομάδα23Nov, μοναδικήεγγραφή, απόθεμα0/οικονομικάαμετάβλητα. Αυτό αντικαθιστά τις ιστορικές SOURCE/OFF/INSTALLpendingεγγραφές για το συγκεκριμένοscope.
+
+Δεν κλείνει ολόκληροGate14/No14. Full-store completion, future-week rollover, automaticdecreases withavailability/promotionhistory, sharedrestoreexercise and long-durationperformance remainOPEN. ExistingPOSprint/inboxacceptance separate. Nootherstoresactivated. [Checkpoint](../../CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-central-release.md) · [Manual](../manual/weekly-stock-alarm/PASS.md).
+
+
 ##25Nov2026 — Netlink paid issuance installed; production setup complete — AWAITING USER ACCEPTANCE /root
 
 PR#4229 head e7ed47d3125a2a589716d2079a84532dd7be89f0 passed full CI45633162691 (all5jobs), merged7623888cc63d95f1c1f4283231e4e938b565f397. Render code deploy dep-dc3fgqd9el5s73d8tuqg and activation deploy dep-dc3fllk0916s738m9v80 LIVE at the same source revision. Global paid-execution feature enabled with all payment/fiscal/tenant gates retained. Selected production-store POS mapping completed through authenticated UI; existing fee reused as non-stock service, dedicated non-stock electronic value item created with existing fiscal department. Read-only SQL confirms the existing fee stock and movement history stayed unchanged. No real card/provider purchase or physical voucher print test performed.61targeted local tests PASS including isolated native PostgreSQL and mounted UI; user acceptance remains OPEN. Existing catalogue/report-print USER PASS remains protected. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-live-setup.md`.
@@ -1103,5 +1111,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 25/11/2026 · ASSIGNED retained4194 /root: bounded weekly-alarm preservation of newly deployed Netlink paid-issuance catalogue from7623888/4229. Before-source claim: verify the exact8nullable NetlinkTransaction columns and paid_checkout partial index against unchanged dedicated-owner DDL, version metadata-only source projection/target declaration, refresh source bindings and native both-order/tamper controls. No Netlink writer/row/fiscal/provider behavior ownership or changes, no generic unknown-column admission. Existing No7/No14/efood/Netlink owners retained. Operational test requested by user at Διαδόχου, preflight/module activation only so far; weekly runtime OFF. Source4194 still pending finalCI/release and new exact-catalogue integration.
 - 25/11/2026 · Νο 5 · [Πρόσθετες προβολές λειτουργίας καταστήματος](CHANGES/2026-11-25-no5-store-operations-delegation.md).
+
+- 25/11/2026 · Νο 5 · [Προβολές ραδιοφώνου, καμερών, χονδρικής και OCR](CHANGES/2026-11-25-no5-observation-reads.md).
 
 - 25/11/2026 · [Οικονομικές αναφορές: είδη κάτω από την κατηγορία](CHANGES/2026-11-25-financial-category-inline.md) · Εκκρεμεί αποδοχή στο LAB.
