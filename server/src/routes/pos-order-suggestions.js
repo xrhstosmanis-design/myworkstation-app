@@ -35,7 +35,7 @@ export function createPosOrderSuggestionsRouter({db=defaultPrisma,read=readPosOr
  router.get('/stores/:storeId/permission',admission,moduleGuard,handler(async(req,res)=>res.json({storeId:req.targetStore.id,allowed:true})));
  const scope=req=>({storeId:req.targetStore.id,companyId:req.targetStore.companyId,actorId:req.user.operatorId||req.user.id});
  router.get('/stores/:storeId/suppliers',admission,moduleGuard,handler(async(req,res)=>{
-  const rows=await suppliers(db,scope(req));await recheck(req);
+  const rows=await suppliers(db,{...scope(req),includeCadence:true,now:clock()});await recheck(req);
   res.json({storeId:req.targetStore.id,suppliers:rows});
  }));
  router.get('/stores/:storeId/proposal',admission,moduleGuard,handler(async(req,res)=>{
