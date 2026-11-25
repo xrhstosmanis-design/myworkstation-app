@@ -239,6 +239,13 @@ function Invoke-FtextOutputDiscovery([string]$ConfigPath,[string]$CashCursor='',
             foreach($p in @($ack.completed)) {if([string]$p.requestId -cnotin $ids -or $seen.ContainsKey([string]$p.requestId)) {throw 'Unexpected fiscal OUTPUT identity.'};$seen[[string]$p.requestId]=$true;$entries.Add([pscustomobject]@{kind=$kind;proof=$p})}
         } else {
             foreach($id in @($ack.acknowledgedIds)) {if([string]$id -cnotin $ids -or $seen.ContainsKey([string]$id)) {throw 'Unexpected STATUS OUTPUT identity.'};$seen[[string]$id]=$true;$entries.Add([pscustomobject]@{kind=$kind;proof=[pscustomobject]@{requestId=[string]$id}})}
+            if($ack.PSObject.Properties['acknowledged101Ids']) {
+                foreach($id in $ack.acknowledged101Ids) {
+                    if([string]$id -cnotin $ids -or $seen.ContainsKey([string]$id)) {throw 'Unexpected STATUS 101 OUTPUT identity.'}
+                    $seen[[string]$id]=$true
+                    $entries.Add([pscustomobject]@{kind=$kind;proof=[pscustomobject]@{requestId=[string]$id;code=101}})
+                }
+            }
         }
     }
     # Resume the single pinned partial group before any new group.
