@@ -4,9 +4,11 @@ import {createScheduledCashPaperReader} from '../src/services/cash-paper-schedul
 
 const scope={companyId:'synthetic-company',storeId:'synthetic-store'};
 const period={actorId:'synthetic-admin',generation:'1',from:'2026-11-21T03:00:00.000Z',to:'2026-11-22T03:00:00.000Z',now:'2026-11-22T03:10:00.000Z'};
-function fixture({slot=false,enabled=true,allowed=true,pendingAt}={}){
+function fixture({slot=false,enabled=true,allowed=true,pendingAt,foreignDate,declaredDay}={}){
   const sources=['a','b','c','d'].map(key=>({checksum:key.repeat(64),sizeBytes:300,references:[{messageId:key}]}));
   const calls=[],readings=new Map([[sources[0].checksum,{status:'EXTRACTED_UNVERIFIED',canReread:true}]]);
+  if(declaredDay)sources[0].references[0].declaredCashDay=declaredDay;
+  if(foreignDate)readings.set(sources[0].checksum,{status:'EXTRACTED_UNVERIFIED',extraction:{documentDate:foreignDate},canReread:true});
   if(pendingAt)readings.set(sources[0].checksum,{status:'PENDING',requestedAt:pendingAt});
   const read=operation=>async (owner,actor,request)=>{
     assert.equal(owner.activity.execution,'BACKGROUND');
@@ -65,5 +67,18 @@ test('a concurrent read delays the report briefly and an old uncertain request i
 test('the reader still runs when the daily delivery is scheduled at 08:00 Athens',async()=>{
   const {run,calls}=fixture();
   assert.equal(await run(scope,{...period,now:'2026-11-22T06:00:00.000Z'}),'MORE');
+  assert.deepEqual(calls,[['reread','a']]);
+});
+test('a previously read paper dated outside the report does not consume an automatic reading position',async()=>{
+ const {run,calls}=fixture({foreignDate:'2026-11-20'});
+ assert.equal(await run(scope,period),'MORE');
+ assert.equal(await run(scope,period),'MORE');
+ assert.equal(await run(scope,period),'DONE');
+ assert.deepEqual(calls,[['read','b'],['read','c'],['read','d']]);
+});
+
+test('an explicit matching cash day keeps the photo eligible for re-reading when OCR disagrees',async()=>{
+  const {run,calls}=fixture({foreignDate:'2026-11-20',declaredDay:'2026-11-21'});
+  assert.equal(await run(scope,period),'MORE');
   assert.deepEqual(calls,[['reread','a']]);
 });

@@ -40,11 +40,18 @@ export function createScheduledCashPaperReader(db,{
       if(slot||!await authorized(db,scope))return 'DONE';
       const actor=await db.user.findUnique({where:{id:period.actorId},select:{id:true,role:true,fullName:true,mustChangePassword:true}});
       if(actor?.role!=='SUPER_ADMIN'||actor.mustChangePassword)return 'DONE';
-      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1),
-        cashDay:new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(from))});
+      const formatter=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'});
+      const cashDay=formatter.format(new Date(from)),endDay=formatter.format(new Date(to));
+      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1),cashDay});
       const candidates=discovery.sources.filter(source=>source.checksum&&Number.isSafeInteger(source.sizeBytes)&&
-        source.sizeBytes>0&&source.sizeBytes<=7*1024*1024&&source.references[0]?.messageId).slice(0,maxAttachments);
-      const readings=await Promise.all(candidates.map(source=>repository.get(scope,source.checksum)));
+        source.sizeBytes>0&&source.sizeBytes<=7*1024*1024&&source.references[0]?.messageId);
+      const inspected=await Promise.all(candidates.map(async source=>({source,reading:await repository.get(scope,source.checksum)})));
+      const selected=inspected.filter(({source,reading})=>{
+        if(source.references.some(reference=>reference.declaredCashDay===cashDay))return true;
+        const printedDay=reading.extraction?.documentDate;
+        return reading.status!=='EXTRACTED_UNVERIFIED'||!printedDay||(printedDay>=cashDay&&printedDay<=endDay);
+      }).slice(0,maxAttachments);
+      const readings=selected.map(({reading})=>reading);
       if(readings.some(reading=>{
         const pendingAt=reading.status==='PENDING'?reading.requestedAt:reading.rereadRequestedAt;
         const elapsed=now-Date.parse(pendingAt);
@@ -52,7 +59,7 @@ export function createScheduledCashPaperReader(db,{
       }))return 'MORE';
       const index=readings.findIndex(reading=>reading.status==='NOT_READ'||reading.canReread===true);
       if(index<0)return 'DONE';
-      const source=candidates[index],messageId=source.references[0].messageId;
+      const {source}=selected[index],messageId=source.references[0].messageId;
       scope.activity=walletActivitySchema.parse({version:1,companyId,storeId,purpose:'CASH_PAPER_READING',surface:'CASH_REVIEW',
         execution:'BACKGROUND',actor:null,terminalPos:null,documentId:messageId,documentNumber:null,jobId:null});
       const operation=readings[index].canReread===true?'reread':'read';
