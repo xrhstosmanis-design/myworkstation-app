@@ -41,7 +41,7 @@ Console.WriteLine("Remote Agent actual loopback HTTP tests PASS; desktop/Windows
  int polls=0,inputs=0,failures=0;
  await using var channel=new RemoteCommandChannel(ct=>++polls==1?first.Task:next.Task.WaitAsync(ct),_=>{inputs++;applied.TrySetResult(true);},()=>true,()=>failures++,cancel.Token);
  long now=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
- first.SetResult(System.Text.Json.JsonSerializer.SerializeToElement(new{commands=new object[]{new{type="key",key="Enter",at=now-5000},new{type="text",text="Ελληνικά",at=now}}}));
+ first.SetResult(System.Text.Json.JsonSerializer.SerializeToElement(new{commands=new object[]{new{type="key",key="Enter",at=now-5000,ageMs=5000},new{type="text",text="Ελληνικά",at=now,ageMs=0}}}));
  await applied.Task.WaitAsync(TimeSpan.FromSeconds(2));Check(inputs==1,"stale native input discarded");
  var watch=System.Diagnostics.Stopwatch.StartNew();await channel.WaitForCapture(cancel.Token);Check(watch.ElapsedMilliseconds<700,"input wakes screenshot before the 900ms idle wait");
  using(var quiet=new CancellationTokenSource(100)){
@@ -54,12 +54,41 @@ Console.WriteLine("Remote Agent actual loopback HTTP tests PASS; desktop/Windows
  var delayed=new TaskCompletionSource<System.Text.Json.JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);int inputs=0,failures=0;
  var channel=new RemoteCommandChannel(_=>delayed.Task,_=>inputs++,()=>true,()=>failures++,cancel.Token);
  var closing=channel.DisposeAsync();
- delayed.SetResult(System.Text.Json.JsonSerializer.SerializeToElement(new{commands=new[]{new{type="key",key="Enter",at=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}}));
+ delayed.SetResult(System.Text.Json.JsonSerializer.SerializeToElement(new{commands=new[]{new{type="key",key="Enter",at=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),ageMs=0}}}));
  await closing;Check(inputs==0&&failures==0,"late command response after STOP never applies");
 }
 {
- using var cancel=new CancellationTokenSource();int failures=0,inputs=0;
- await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new HttpRequestException("uncertain transport")),_=>inputs++,()=>true,()=>{failures++;cancel.Cancel();},cancel.Token);
+ using var cancel=new CancellationTokenSource();int failures=0,inputs=0;string? reason=null;
+ await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new HttpRequestException("uncertain transport")),_=>inputs++,()=>true,()=>{failures++;cancel.Cancel();},cancel.Token,cause=>reason=cause);
  await channel.Completion;Check(failures==1&&inputs==0&&cancel.IsCancellationRequested,"uncertain command transport stops session without retry");
+ Check(reason=="COMMAND_TRANSPORT_ERROR","native transport failure emits safe categorical stop reason");
+}
+{
+ using var cancel=new CancellationTokenSource();int failures=0;string? reason=null;
+ await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new TaskCanceledException("poll timed out")),_=>{},()=>true,()=>{failures++;cancel.Cancel();},cancel.Token,cause=>reason=cause);
+ await channel.Completion;Check(failures==1&&reason=="COMMAND_POLL_TIMEOUT","native poll timeout is distinguished from operator STOP");
+}
+{
+ using var cancel=new CancellationTokenSource();int failures=0;string? reason=null;
+ await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new System.Text.Json.JsonException("bad reply")),_=>{},()=>true,()=>{failures++;cancel.Cancel();},cancel.Token,cause=>reason=cause);
+ await channel.Completion;Check(failures==1&&reason=="COMMAND_RESPONSE_ERROR","native bad response is distinguished from operator STOP");
+}
+{
+ // Simulate Windows clock being many hours behind the server: the native Agent
+ // must accept only server-measured fresh input rather than comparing epochs.
+ using var cancel=new CancellationTokenSource();
+ int applied=0;var delivered=new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+ var block=new TaskCompletionSource<System.Text.Json.JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+ int polls=0;
+ await using var channel=new RemoteCommandChannel(ct=>++polls==1?
+  Task.FromResult(System.Text.Json.JsonSerializer.SerializeToElement(new{commands=new object[]{
+   new{type="key",key="Enter",at=123L,ageMs=0},
+   new{type="key",key="Escape",at=123L,ageMs=3000},
+   new{type="key",key="Backspace",at=123L}
+  }})):block.Task.WaitAsync(ct),
+  _=>{applied++;delivered.TrySetResult(true);},()=>true,()=>cancel.Cancel(),cancel.Token);
+ await delivered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+ Check(applied==1,"only fresh server-age input applied despite clock skew, missing or expired age fails closed");
+ cancel.Cancel();await channel.Completion.WaitAsync(TimeSpan.FromSeconds(2));
 }
 Console.WriteLine("Remote command wake, stale input, cancellation and uncertain transport tests PASS; physical speed remains NOT TESTED.");
