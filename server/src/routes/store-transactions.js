@@ -851,6 +851,18 @@ router.get("/supplier-settlements/:settlementId/attachment",requireSuperAdminSet
 }));
 
 // Manual allocation of an existing cash payment: no new ledger transaction.
+router.get('/supplier-settlements/:settlementId/manual-allocation/context',requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const user=req.user;
+  if(user.staffAccess===true||user.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(user.role))return res.status(403).json({error:'FORBIDDEN'});
+  const [payment]=await prisma.$queryRaw`SELECT ss."id",ss."companyId",ss."storeId",ss."supplierId",t."amount" FROM "SupplierPaymentSettlement" ss JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND t."storeId"=ss."storeId" WHERE ss."id"=${req.params.settlementId} AND (${user.role==='SUPER_ADMIN'} OR ss."companyId"=${user.companyId||''}) AND (${user.storeId||null}::text IS NULL OR ss."storeId"=${user.storeId||null}) AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY') AND ss."paymentMethod"='CASH_SHIFT' AND t."paymentMethod"='CASH_SHIFT' AND t."reversedAt" IS NULL AND NOT EXISTS(SELECT 1 FROM "SupplierPaymentAllocation" a WHERE a."settlementId"=ss."id")`;
+  if(!payment)return res.status(409).json({error:'PAYMENT_NOT_ELIGIBLE'});
+  const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${payment.companyId} AND "active"=true ORDER BY "name"`;
+  const supplierId=String(req.query.supplierId||payment.supplierId);
+  if(!suppliers.some(s=>s.id===supplierId))return res.status(400).json({error:'INVALID_SUPPLIER'});
+  const documents=await prisma.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."totalGross",d."totalGross"-COALESCE((SELECT SUM(a."amount") FROM "SupplierPaymentAllocation" a WHERE a."purchaseDocumentId"=d."id"),0) AS "availableAmount" FROM "PurchaseDocument" d WHERE d."companyId"=${payment.companyId} AND d."storeId"=${payment.storeId} AND d."supplierId"=${supplierId} AND d."status"='APPROVED' AND d."documentType"='INVOICE' AND d."paymentTransactionId" IS NULL AND (d."settlementMode" IS NULL OR d."settlementMode"='CREDIT') AND EXISTS(SELECT 1 FROM "PurchaseOrderPosting" p JOIN "PurchaseOrder" o ON o."id"=p."orderId" AND o."companyId"=p."companyId" WHERE p."purchaseDocumentId"=d."id" AND p."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."status"='INVOICED') ORDER BY d."documentDate" DESC LIMIT 300`;
+  res.json({payment:{...payment,amount:Number(payment.amount)},suppliers,documents:documents.map(d=>({...d,totalGross:Number(d.totalGross),availableAmount:Number(d.availableAmount)})).filter(d=>d.availableAmount>0)});
+}));
+
 const manualAllocationInput=z.object({
   companyId:z.string().min(1).max(180),storeId:z.string().min(1).max(180),
   targetSupplierId:z.string().min(1).max(180),
