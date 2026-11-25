@@ -99,9 +99,15 @@ function Get-FtextCashPending($Config) {
 function Invoke-FtextCashRequest {
  param([Parameter(Mandatory=$true)][string]$ConfigPath,[Parameter(Mandatory=$true)]$Request,[ValidateRange(1,120)][int]$TimeoutSeconds=30,[scriptblock]$AcceptHandoff)
  $c=Get-FtextConfig $ConfigPath;$folder=$c.workFolder
- # LAB-only opt-in. Local monotonic clock, NOT physical EFTPOS activation.
+ # Optional local stopwatch. Scoped production observer remains OFF by default.
+ # Never infer physical EFTPOS amount-visible from FTEXT result completion.
  $labTiming=($env:MWS_FTEXT_LAB_TIMING -ceq '1')
- $labClock=if($labTiming) {[Diagnostics.Stopwatch]::StartNew()} else {$null}
+ $rizareioPassive=($env:MWS_FTEXT_RIZAREIO_PASSIVE_TIMING -ceq '1' -and
+  [string]$c.storeId -ceq 'cmvgtyt6d000zh7gtbsp1en3p' -and
+  [string]$c.terminalPos -ceq 'RIZAREIO-POS-01' -and
+  [string]$c.serialNumber -ceq 'DSM24014923')
+ $timingEnabled=($labTiming -or $rizareioPassive)
+ $labClock=if($timingEnabled) {[Diagnostics.Stopwatch]::StartNew()} else {$null}
  $labPublishedMs=$null;$labResultMs=$null
  $hash=Get-FtextCashHash ([Text.Encoding]::UTF8.GetBytes($folder.ToUpperInvariant()))
  $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtext_'+$hash.ToUpperInvariant()));$held=$false
@@ -167,7 +173,7 @@ function Invoke-FtextCashRequest {
    $s=[IO.File]::Open($temp,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
    try {$s.Write($commandBytes,0,$commandBytes.Length);$s.Flush($true)} finally {$s.Dispose()}
    [IO.File]::Move($temp,$target)
-   if($labTiming) {$labPublishedMs=$labClock.ElapsedMilliseconds}
+   if($timingEnabled) {$labPublishedMs=$labClock.ElapsedMilliseconds}
   }
   $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds);$bytes=$null
   while([DateTime]::UtcNow -lt $deadline) {
@@ -177,7 +183,7 @@ function Invoke-FtextCashRequest {
      $s=[IO.File]::Open($resultPath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
      if($s.Length -gt 65536) {break};$buffer=New-Object byte[] ([int]$s.Length);$offset=0
      while($offset -lt $buffer.Length) {$n=$s.Read($buffer,$offset,$buffer.Length-$offset);if($n -eq 0) {break};$offset+=$n}
-     if($offset -eq $buffer.Length) {$bytes=$buffer;if($labTiming){$labResultMs=$labClock.ElapsedMilliseconds};break}
+     if($offset -eq $buffer.Length) {$bytes=$buffer;if($timingEnabled){$labResultMs=$labClock.ElapsedMilliseconds};break}
     } catch [IO.IOException] {} finally {if($s) {$s.Dispose()}}
    }
    Start-Sleep -Milliseconds 200
@@ -185,10 +191,11 @@ function Invoke-FtextCashRequest {
   $report=Read-FtextCashResult $(if($bytes){$bytes}else{[byte[]]@()}) $c $Request
   Write-FtextCashDurable $reportPath $report
   # Diagnostics are only a local, non-transactional, best-effort display.
-  if($labTiming -and $null -ne $labPublishedMs) {
+  if($timingEnabled -and $null -ne $labPublishedMs) {
    try {
     $wait=if($null -ne $labResultMs) {[string]($labResultMs-$labPublishedMs)} else {'NOT_OBSERVED'}
-    Write-Host ('FTEXT_LAB_TIMING requestId='+[string]$Request.id+' publish_to_result_ms='+$wait+' elapsed_ms='+[string]$labClock.ElapsedMilliseconds+' eftpos_visible_ms=NOT_OBSERVED')
+    $prefix=if($rizareioPassive) {'FTEXT_RIZAREIO_PASSIVE_TIMING'} else {'FTEXT_LAB_TIMING'}
+    Write-Host ($prefix+' requestId='+[string]$Request.id+' publish_to_result_ms='+$wait+' elapsed_ms='+[string]$labClock.ElapsedMilliseconds+' eftpos_visible_ms=NOT_OBSERVED')
    } catch {}
   }
   return $report
