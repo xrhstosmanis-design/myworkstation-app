@@ -1,0 +1,5 @@
+# POS order proposal activation admission — 25/11/2026
+
+ASSIGNED /root · fix/pos-order-suggestions-module-admission-20261125 · existing4193owner retained. SOURCE NOT STARTED. Scope: one ORDER_SUGGESTIONS catalog entry and regression tests; no other modules, price defaults, user grants, fiscal or schema changes.
+
+User screenshot: correct menu Λειτουργίες POS, LAB POS2, no proposal. Read-only DB confirms active employee/credential/posAccess/orderSuggestionsPos=true; active LAB license/store; CompanyModuleORDER_SUGGESTIONS=false with no store override. Actual SuperAdmin UI confirms proposal module disabled ΥΠΟ ΑΝΑΠΤΥΞΗ. Installed4197/4204 source cannot be normally activated. Need complete the installed read-only module catalog availability, remaining opt-in and owner-restricted, no default plan inclusion or automatic charge. Existing routes retain explicit license and operator checks. No UI/DB workaround of disabled control. Future activation confined to LAB; no business writes or blanket user grants. Full CI/deploy and real UI verification required. Weekly alarm remains separate BLOCKED4194.
