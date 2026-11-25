@@ -36,7 +36,7 @@ export function createAttendedRemoteRouter({db=prisma,authenticate=auth,env=proc
   if(res.destroyed)return;
   s=await device(req);res.json({commands:remote.sessions.takeCommands(s)});
  }));
- router.post('/device/:id/stop',wrap(async(req,res)=>{const s=remote.sessions.device(req.params.id,String(req.headers.authorization||'').replace(/^Bearer /,''));remote.stop(s.id,'DEVICE_STOP');res.json({stopped:true});}));
+ router.post('/device/:id/stop',wrap(async(req,res)=>{const s=remote.sessions.device(req.params.id,String(req.headers.authorization||'').replace(/^Bearer /,''));const allowedReasons=new Set(['COMMAND_POLL_TIMEOUT','COMMAND_TRANSPORT_ERROR','COMMAND_RESPONSE_ERROR','COMMAND_CHANNEL_ERROR']);const reason=allowedReasons.has(req.body?.reason)?req.body.reason:'DEVICE_STOP';remote.stop(s.id,reason);res.json({stopped:true});}));
  const transferRoutes=(prefix,resolve,sender)=>{
   router.post(`${prefix}/files`,wrap(async(req,res)=>{const s=await resolve(req);const file=remote.files.create(s.id,sender,req.body||{});try{await audit(s,'ATTENDED_REMOTE_FILE_STARTED');}catch(e){remote.files.remove(s.id,file.id);throw e;}res.status(201).json(file);}));
   router.post(`${prefix}/files/:fileId/chunk`,wrap(async(req,res)=>{const s=await resolve(req);res.json(remote.files.append(s.id,req.params.fileId,sender,req.body||{}));}));
