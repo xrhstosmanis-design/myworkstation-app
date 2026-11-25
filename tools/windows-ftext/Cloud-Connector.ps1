@@ -100,9 +100,13 @@ try {
                     }
                 }
                 if(-not $late -and -not $recheck -and $null -eq $readinessWorker -and $c.PSObject.Properties['outputVersion'] -and $c.outputVersion -eq 1) {
-                    if($outputQueue.Count -gt 0 -and [DateTime]::UtcNow -lt $nextReadiness) {
+                    # Each work poll gives fiscal work first chance. Bound the
+                    # optional archival burst before polling again, and do not
+                    # start another group once readiness is due.
+                    $outputBudget=[Diagnostics.Stopwatch]::StartNew()
+                    for($group=0;$group -lt 3 -and $outputQueue.Count -gt 0 -and $outputBudget.ElapsedMilliseconds -lt 150 -and [DateTime]::UtcNow -lt $nextReadiness;$group++) {
                         $entry=$outputQueue.Dequeue()
-                        try {$moved=Invoke-FtextCloudOutputArchive $c ([string]$entry.kind) $entry.proof;Write-Host ('OUTPUT: '+$moved.movedFiles+' completed evidence files preserved.')} catch {Write-Host 'OUTPUT group retained for later verification.'}
+                        try {$moved=Invoke-FtextCloudOutputArchive $c ([string]$entry.kind) $entry.proof;Write-Host ('OUTPUT: '+$moved.movedFiles+' completed evidence files preserved.')} catch {Write-Host 'OUTPUT group retained for later verification.';break}
                     }
                     if($null -eq $outputWorker -and $outputQueue.Count -eq 0 -and [DateTime]::UtcNow -ge $nextOutput) {try {$outputWorker=Start-FtextOutputDiscovery $ConfigPath $cashOutputCursor $statusOutputCursor} catch {$nextOutput=[DateTime]::UtcNow.AddMinutes(1)}}
                 }

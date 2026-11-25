@@ -67,7 +67,7 @@ function Start-FtextCloudReadiness($Path) {return [pscustomobject]@{Async=@{IsCo
 function Receive-FtextCloudReadiness($Worker) {$Worker | Add-Member -NotePropertyName RefreshAt -NotePropertyValue ([DateTime]::UtcNow.AddSeconds(10)) -Force;return $true}
 function Stop-FtextCloudReadiness($Worker) {}
 function Start-FtextOutputDiscovery($Path,$Cash,$Status) {$script:outputFixtureWorker=[pscustomobject]@{Async=@{IsCompleted=$false}};return $script:outputFixtureWorker}
-function Receive-FtextOutputDiscovery($Worker) {return [pscustomobject]@{cashCursor='cash';statusCursor='status';entries=@([pscustomobject]@{kind='STATUS';proof=@{requestId=('1'*32)}})}}
+function Receive-FtextOutputDiscovery($Worker) {return [pscustomobject]@{cashCursor='cash';statusCursor='status';entries=@(1..8 | ForEach-Object {[pscustomobject]@{kind='STATUS';proof=@{requestId=('{0:x32}' -f $_)}}})}}
 function Invoke-FtextCloudOutputArchive($Config,$Kind,$Proof) {[IO.File]::AppendAllText(($Config.workFolder+'.log'),'move'+[Environment]::NewLine);return @{movedFiles=2}}
 Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPoll,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Start-FtextOutputDiscovery,Receive-FtextOutputDiscovery,Invoke-FtextCloudOutputArchive
 '@
@@ -83,6 +83,6 @@ Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPoll,Start-F
  Check-OutputCloud $stopped 'Actual loop did not complete its fixture cycles.'
  $log=@(Get-Content -LiteralPath ($folder+'.log'))
  Check-OutputCloud (@($log | Where-Object {$_ -ceq 'poll'}).Count -eq 5) 'Metadata discovery stopped heartbeat/work polling.'
- Check-OutputCloud (@($log | Where-Object {$_ -ceq 'move'}).Count -eq 1) 'Joined output was not moved once during idle work window.'
+ Check-OutputCloud (($log -join ',') -ceq 'poll,poll,poll,poll,move,move,move,poll,move,move,move') 'Idle OUTPUT did not preserve the bounded burst and intervening work polls.'
  Write-Host 'OUTPUT cloud smoke PASS: bounded authenticated metadata, foreign/duplicate refusal, untouched input and actual loop polling during asynchronous discovery.'
 } finally {if(Test-Path -LiteralPath $root) {Remove-Item -LiteralPath $root -Recurse -Force}}
