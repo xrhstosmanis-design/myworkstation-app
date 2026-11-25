@@ -44,6 +44,10 @@ export function providerOriginalRecoveryLinkPattern({includeExistingImpact = fal
   ]);
 }
 
+export function epsilonFileRecoveryLinkPattern() {
+  return originalRecoveryLinkPattern(["epsilondigital[.]epsilonnet[.]gr/fd/[a-f0-9]{32}:8"]);
+}
+
 export function originalDownloadUrl(xml,issuerVat){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
@@ -94,6 +98,20 @@ export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf,
     throw cause;
   }
 }
+export function fetchEpsilonFileRecoveryPdf(row,fetcher=fetch,reader=readOriginalPdf){
+  return fetchOriginalPdf(row,(canonicalUrl,options)=>{
+    const url=new URL(canonicalUrl);
+    const shortId=url.pathname.match(/^\/fd\/([a-f0-9]{32}):8\/pdf$/i)?.[1];
+    if(url.hostname!=="epsilondigital.epsilonnet.gr"||!shortId)
+      throw error("Η εναλλακτική λήψη δεν υποστηρίζει αυτή τη μορφή Epsilon.");
+    const documentId=shortId.replace(/^(........)(....)(....)(....)(............)$/,"$1-$2-$3-$4-$5");
+    url.pathname="/filedocument/getfile";
+    url.searchParams.set("fileType","2");
+    url.searchParams.set("documentId",documentId);
+    return fetcher(url.href,options);
+  },reader);
+}
+
 async function downloadOriginalPdf(row,fetcher,reader,signal,identityReader){
   const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat);
   const response=await fetcher(url,{redirect:"error",signal,headers:{Accept:"application/pdf"}});

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import PDFDocument from 'pdfkit';
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
 import {acquireOriginal,fetchOriginalPdf,providerOriginalRecoveryLinkPattern} from '../src/mydata-original.js';
+import {recoverPanormouEpsilonFileOriginals} from '../src/services/mydata-panormou-epsilon-recovery.js';
 import {readMonthlyInvoiceAudit,readMonthlyInvoiceAuditRecord} from '../src/services/monthly-invoice-audit.js';
 
 const scope={companyId:'c',storeId:'s',inboxId:'delivery-inbox'};
@@ -101,6 +102,61 @@ async function download(row){
   return new Response(bytes,{headers:{'content-type':'application/pdf'}});
  });
 }
+test('native exhausted Panormou Epsilon recovery is scoped, persists one draft, and stamps a failed replay', {
+ skip:!isolatedInvoiceDb()&&process.env.CI!=='true'?'Isolated PostgreSQL unavailable locally':false,timeout:180000,
+},async()=>{
+ assert.ok(isolatedInvoiceDb(),'Isolated PostgreSQL is mandatory in CI');
+ const f=await fixture();
+ const storeId='cmwqvuxrx001is8g4uqlyzwg2',source='AADE_MYDATA_PRODUCTION';
+ const epsilon='https://epsilondigital.epsilonnet.gr/fd/'+'b'.repeat(32)+':8';
+ const flags=[
+  ['epsilon-good',storeId,source,'2026-11-04',3,epsilon],
+  ['epsilon-html',storeId,source,'2026-11-05',3,epsilon],
+  ['epsilon-wrong-store','s',source,'2026-11-05',3,epsilon],
+  ['epsilon-sandbox',storeId,'AADE_MYDATA_SANDBOX','2026-11-05',3,epsilon],
+  ['epsilon-december',storeId,source,'2026-12-01',3,epsilon],
+  ['epsilon-unexhausted',storeId,source,'2026-11-05',2,epsilon],
+  ['epsilon-wrong-profile',storeId,source,'2026-11-05',3,epsilon.replace('epsilondigital.','epsilondigital3.').replace(':8',':84')],
+ ];
+ try{
+  await f.db.$executeRaw`INSERT INTO "Store"("id","companyId","name","active") VALUES(${storeId},'c','Synthetic recovery',true)`;
+  for(const [id,store,origin,date,attempts,url] of flags){
+   await f.db.$executeRaw`INSERT INTO "DocumentInbox"("id","companyId","storeId","status") VALUES(${id},'c',${store},'RECEIVED')`;
+   const raw=JSON.stringify({source:origin,xml:`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`,originalPending:true,originalAttempts:attempts});
+   await f.db.$executeRaw`INSERT INTO "MyDataInboundDocument"
+    ("id","companyId","storeId","inboxId","mark","issuerVat","counterpartVat","series","documentNumber","issueDate","invoiceType","currency","totalGross","rawPayload")
+    VALUES(${id},'c',${store},${id},${mark},'099999999','088888888','E','93',${date}::date,'1.1','EUR',5,${raw}::jsonb)`;
+  }
+  const bytes=await actualPdf(),requested=[];
+  const recover=()=>recoverPanormouEpsilonFileOriginals({db:f.db,companyId:'c',storeId,userId:'owner',source,
+   acquire:async(db,company,store,inboxId,actor,enabled,download)=>{
+    requested.push(inboxId);
+    return acquireOriginal(db,company,store,inboxId,actor,enabled,row=>download(row,async(url,options)=>{
+     assert.equal(new URL(url).pathname,'/filedocument/getfile');
+     assert.equal(options.redirect,'error');
+     return inboxId==='epsilon-good'?new Response(bytes,{headers:{'content-type':'application/pdf'}})
+       :new Response('<html>login</html>',{headers:{'content-type':'text/html'}});
+    }));
+   },
+  });
+  assert.deepEqual(await recover(),{downloaded:1,failed:1});
+  assert.deepEqual(await recover(),{downloaded:0,failed:0});
+  assert.deepEqual(requested,['epsilon-good','epsilon-html']);
+  const [readback]=await f.db.$queryRaw`SELECT i."status",o."status" AS "orderStatus",a."mimeType"
+   FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
+   JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=i."companyId" AND a."storeId"=i."storeId"
+   JOIN "PurchaseOrder" o ON o."id"=m."rawPayload"->>'mydataDraftOrderId' AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
+   WHERE m."id"='epsilon-good'`;
+  assert.deepEqual(readback,{status:'IN_REVIEW',orderStatus:'NEW',mimeType:'application/pdf'});
+  const [failed]=await f.db.$queryRaw`SELECT "rawPayload"->>'epsilonFileRecoveryVersion' AS version,("rawPayload"->>'originalAttempts')::int AS attempts
+   FROM "MyDataInboundDocument" WHERE "id"='epsilon-html'`;
+  assert.deepEqual(failed,{version:'epsilon-digital-file-v1',attempts:3});
+  const [effects]=await f.db.$queryRaw`SELECT (SELECT count(*)::int FROM "StockMovement") AS stock,
+   (SELECT count(*)::int FROM "StoreTransaction") AS transactions,(SELECT count(*)::int FROM "PurchaseOrder") AS orders`;
+  assert.deepEqual(effects,{stock:0,transactions:0,orders:1});
+ }finally{await f.close();}
+});
+
 const acquire=(db,loader=download,enabled=true)=>acquireOriginal(db,scope.companyId,scope.storeId,scope.inboxId,owner.id,enabled,loader);
 async function state(db){
  const [inbox]=await db.$queryRaw`SELECT "attachmentId","status","note" FROM "DocumentInbox" WHERE "id"='delivery-inbox'`;

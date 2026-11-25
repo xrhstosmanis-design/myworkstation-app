@@ -16,6 +16,7 @@ import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
 import {acquireOriginal,fetchStaffMyDataInboxOriginal,prefillStoredMyDataDraft,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
+import {recoverPanormouEpsilonFileOriginals} from "../services/mydata-panormou-epsilon-recovery.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
@@ -372,6 +373,13 @@ async function performSync(req,branch=null){
   });
   originalsDownloaded += recovery.downloaded;
   originalsFailed += recovery.failed;
+  if(panormouProduction&&canPrepareDraft){
+    const alternate=await recoverPanormouEpsilonFileOriginals({
+      db:prisma,companyId:req.user.companyId,storeId:store.id,userId:req.user.id,source,
+    });
+    originalsDownloaded+=alternate.downloaded;
+    originalsFailed+=alternate.failed;
+  }
   const existingPhotosLinked=canPrepareDraft?await prisma.$transaction(tx=>linkStoredPosInvoicePhotos(tx,{companyId:req.user.companyId,storeId:store.id})):0;
   if(canPrepareDraft){
     const draftsToPrepare=await prisma.$queryRaw`
