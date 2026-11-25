@@ -58,8 +58,19 @@ Console.WriteLine("Remote Agent actual loopback HTTP tests PASS; desktop/Windows
  await closing;Check(inputs==0&&failures==0,"late command response after STOP never applies");
 }
 {
- using var cancel=new CancellationTokenSource();int failures=0,inputs=0;
- await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new HttpRequestException("uncertain transport")),_=>inputs++,()=>true,()=>{failures++;cancel.Cancel();},cancel.Token);
+ using var cancel=new CancellationTokenSource();int failures=0,inputs=0;string? reason=null;
+ await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new HttpRequestException("uncertain transport")),_=>inputs++,()=>true,()=>{failures++;cancel.Cancel();},cancel.Token,cause=>reason=cause);
  await channel.Completion;Check(failures==1&&inputs==0&&cancel.IsCancellationRequested,"uncertain command transport stops session without retry");
+ Check(reason=="COMMAND_TRANSPORT_ERROR","native transport failure emits safe categorical stop reason");
+}
+{
+ using var cancel=new CancellationTokenSource();int failures=0;string? reason=null;
+ await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new TaskCanceledException("poll timed out")),_=>{},()=>true,()=>{failures++;cancel.Cancel();},cancel.Token,cause=>reason=cause);
+ await channel.Completion;Check(failures==1&&reason=="COMMAND_POLL_TIMEOUT","native poll timeout is distinguished from operator STOP");
+}
+{
+ using var cancel=new CancellationTokenSource();int failures=0;string? reason=null;
+ await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new System.Text.Json.JsonException("bad reply")),_=>{},()=>true,()=>{failures++;cancel.Cancel();},cancel.Token,cause=>reason=cause);
+ await channel.Completion;Check(failures==1&&reason=="COMMAND_RESPONSE_ERROR","native bad response is distinguished from operator STOP");
 }
 Console.WriteLine("Remote command wake, stale input, cancellation and uncertain transport tests PASS; physical speed remains NOT TESTED.");
