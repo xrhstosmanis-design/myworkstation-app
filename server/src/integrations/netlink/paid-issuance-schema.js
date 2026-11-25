@@ -1,5 +1,7 @@
+import {NETLINK_PROVIDER_SEQUENCE_SQL} from './provider-request-id.js';
 // Applied by the existing reviewed Netlink startup preparation, never by a POS read.
 export const netlinkPaidIssuanceSql=[
+ NETLINK_PROVIDER_SEQUENCE_SQL,
  'ALTER TABLE "NetlinkTransaction" ADD COLUMN IF NOT EXISTS "issuanceIntentEnc" TEXT',
  'ALTER TABLE "NetlinkTransaction" ADD COLUMN IF NOT EXISTS "checkoutId" TEXT',
  'ALTER TABLE "NetlinkTransaction" ADD COLUMN IF NOT EXISTS "cashReceivedTotal" NUMERIC(14,2)',
