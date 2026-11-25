@@ -5,7 +5,7 @@ export function createRemoteFrameFreshness({now=()=>performance.now(),maxAgeMs=5
  return {
   observe(frame,{serverAgeMs}={}){
    if(!frame||!Number.isSafeInteger(frame.sequence)||frame.sequence<1)return false;
-   if(Number.isFinite(serverAgeMs)&&serverAgeMs>maxAgeMs)return false;
+   if(!Number.isFinite(serverAgeMs)||serverAgeMs<0||serverAgeMs>=maxAgeMs)return false;
    if(lastSequence!==null&&frame.sequence<=lastSequence)return false;
    lastSequence=frame.sequence;lastReceived=now();return true;
   },
