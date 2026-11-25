@@ -1115,3 +1115,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 25/11/2026 · Νο 5 · [Πρόσθετες προβολές λειτουργίας καταστήματος](CHANGES/2026-11-25-no5-store-operations-delegation.md).
 
 - 25/11/2026 · Νο 5 · [Προβολές ραδιοφώνου, καμερών, χονδρικής και OCR](CHANGES/2026-11-25-no5-observation-reads.md).
+
+- 25/11/2026 · Νο 5 · [Εταιρικό δικαίωμα πρόχειρου τιμοκαταλόγου χονδρικής](CHANGES/2026-11-25-no5-wholesale-drafts.md).
