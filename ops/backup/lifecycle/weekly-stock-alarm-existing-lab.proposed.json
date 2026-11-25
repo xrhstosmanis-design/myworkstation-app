@@ -1,0 +1,1492 @@
+{
+  "runtimeColumnCompatibility": [
+    {
+      "table": "CashShiftSession",
+      "sourceColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "status",
+          "text",
+          true
+        ],
+        [
+          "shiftLabel",
+          "text",
+          true
+        ],
+        [
+          "openedBy",
+          "text",
+          true
+        ],
+        [
+          "openedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "openingDrawer",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingCustody",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingCoins",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingSafe",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingOperational",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingNote",
+          "text",
+          false
+        ],
+        [
+          "closedBy",
+          "text",
+          false
+        ],
+        [
+          "closedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "cashSales",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "cardSales",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "expenses",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "closingDrawer",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingCustody",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingCoins",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingSafe",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "expectedOperational",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "actualOperational",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "variance",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "nextOpeningTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingNote",
+          "text",
+          false
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "openedByName",
+          "text",
+          false
+        ],
+        [
+          "closedByName",
+          "text",
+          false
+        ],
+        [
+          "eftposTotal",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "cardVariance",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "duplicateReviewJson",
+          "jsonb",
+          true
+        ],
+        [
+          "expectedOpeningOperational",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingVariance",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "terminalPos",
+          "text",
+          true
+        ]
+      ],
+      "targetColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "status",
+          "text",
+          true
+        ],
+        [
+          "shiftLabel",
+          "text",
+          true
+        ],
+        [
+          "openedBy",
+          "text",
+          true
+        ],
+        [
+          "openedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "openingDrawer",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingCustody",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingCoins",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingSafe",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingOperational",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "openingNote",
+          "text",
+          false
+        ],
+        [
+          "closedBy",
+          "text",
+          false
+        ],
+        [
+          "closedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "cashSales",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "cardSales",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "expenses",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "closingDrawer",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingCustody",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingCoins",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingSafe",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "expectedOperational",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "actualOperational",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "variance",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "nextOpeningTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "closingNote",
+          "text",
+          false
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "openedByName",
+          "text",
+          false
+        ],
+        [
+          "closedByName",
+          "text",
+          false
+        ],
+        [
+          "eftposTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "cardVariance",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "duplicateReviewJson",
+          "jsonb",
+          true
+        ],
+        [
+          "expectedOpeningOperational",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "openingVariance",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "terminalPos",
+          "text",
+          true
+        ],
+        [
+          "closeReconciliationStatus",
+          "text",
+          false
+        ]
+      ],
+      "ownerSources": [
+        "server/src/routes/cash-control.js",
+        "server/src/routes/owner-shifts.js"
+      ]
+    },
+    {
+      "table": "StoreIntegrationCredential",
+      "sourceColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "kind",
+          "text",
+          true
+        ],
+        [
+          "providerName",
+          "text",
+          true
+        ],
+        [
+          "environment",
+          "text",
+          true
+        ],
+        [
+          "credentialsEnc",
+          "text",
+          true
+        ],
+        [
+          "accountHint",
+          "text",
+          false
+        ],
+        [
+          "enabled",
+          "boolean",
+          true
+        ],
+        [
+          "updatedBy",
+          "text",
+          false
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "metadataJson",
+          "jsonb",
+          true
+        ],
+        [
+          "webhookKey",
+          "text",
+          false
+        ],
+        [
+          "externalCallsEnabled",
+          "boolean",
+          true
+        ],
+        [
+          "sandboxValidatedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookSecretHash",
+          "text",
+          false
+        ],
+        [
+          "webhookTestOpenedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookTestExpiresAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookTestConsumedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookTestClosedReason",
+          "text",
+          false
+        ],
+        [
+          "webhookTestEventId",
+          "text",
+          false
+        ]
+      ],
+      "targetColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "kind",
+          "text",
+          true
+        ],
+        [
+          "providerName",
+          "text",
+          true
+        ],
+        [
+          "environment",
+          "text",
+          true
+        ],
+        [
+          "credentialsEnc",
+          "text",
+          true
+        ],
+        [
+          "accountHint",
+          "text",
+          false
+        ],
+        [
+          "enabled",
+          "boolean",
+          true
+        ],
+        [
+          "updatedBy",
+          "text",
+          false
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "metadataJson",
+          "jsonb",
+          true
+        ],
+        [
+          "webhookKey",
+          "text",
+          false
+        ],
+        [
+          "externalCallsEnabled",
+          "boolean",
+          true
+        ],
+        [
+          "sandboxValidatedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookSecretHash",
+          "text",
+          false
+        ],
+        [
+          "webhookTestOpenedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookTestExpiresAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookTestConsumedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "webhookTestClosedReason",
+          "text",
+          false
+        ],
+        [
+          "webhookTestEventId",
+          "text",
+          false
+        ],
+        [
+          "receiveFromDate",
+          "date",
+          false
+        ]
+      ],
+      "ownerSources": [
+        "server/src/routes/platform-store-integrations.js"
+      ]
+    },
+    {
+      "table": "NetlinkTransaction",
+      "sourceColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "saleId",
+          "text",
+          false
+        ],
+        [
+          "requestId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "flow",
+          "text",
+          true
+        ],
+        [
+          "status",
+          "text",
+          true
+        ],
+        [
+          "providerTransactionId",
+          "text",
+          false
+        ],
+        [
+          "providerReference",
+          "text",
+          false
+        ],
+        [
+          "amount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "serviceFeeAmount",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "customerTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "commissionRate",
+          "numeric(8,6)",
+          true
+        ],
+        [
+          "commissionAmount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "paymentMethod",
+          "text",
+          false
+        ],
+        [
+          "operatorId",
+          "text",
+          false
+        ],
+        [
+          "operatorName",
+          "text",
+          false
+        ],
+        [
+          "errorCode",
+          "text",
+          false
+        ],
+        [
+          "errorMessage",
+          "text",
+          false
+        ],
+        [
+          "preparedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "fiscalDocumentId",
+          "text",
+          false
+        ],
+        [
+          "fiscalNumber",
+          "text",
+          false
+        ],
+        [
+          "fiscalIssuedAt",
+          "timestamp(3) without time zone",
+          false
+        ]
+      ],
+      "targetColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "saleId",
+          "text",
+          false
+        ],
+        [
+          "requestId",
+          "text",
+          true
+        ],
+        [
+          "productId",
+          "text",
+          true
+        ],
+        [
+          "flow",
+          "text",
+          true
+        ],
+        [
+          "status",
+          "text",
+          true
+        ],
+        [
+          "providerTransactionId",
+          "text",
+          false
+        ],
+        [
+          "providerReference",
+          "text",
+          false
+        ],
+        [
+          "amount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "serviceFeeAmount",
+          "numeric(14,2)",
+          true
+        ],
+        [
+          "customerTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "commissionRate",
+          "numeric(8,6)",
+          true
+        ],
+        [
+          "commissionAmount",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "paymentMethod",
+          "text",
+          false
+        ],
+        [
+          "operatorId",
+          "text",
+          false
+        ],
+        [
+          "operatorName",
+          "text",
+          false
+        ],
+        [
+          "errorCode",
+          "text",
+          false
+        ],
+        [
+          "errorMessage",
+          "text",
+          false
+        ],
+        [
+          "preparedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "createdAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp with time zone",
+          true
+        ],
+        [
+          "fiscalDocumentId",
+          "text",
+          false
+        ],
+        [
+          "fiscalNumber",
+          "text",
+          false
+        ],
+        [
+          "fiscalIssuedAt",
+          "timestamp(3) without time zone",
+          false
+        ],
+        [
+          "issuanceIntentEnc",
+          "text",
+          false
+        ],
+        [
+          "checkoutId",
+          "text",
+          false
+        ],
+        [
+          "cashReceivedTotal",
+          "numeric(14,2)",
+          false
+        ],
+        [
+          "issuanceResultEnc",
+          "text",
+          false
+        ],
+        [
+          "cashReceivedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "cashReceivedBy",
+          "text",
+          false
+        ],
+        [
+          "providerDispatchedAt",
+          "timestamp with time zone",
+          false
+        ],
+        [
+          "fiscalEvidence",
+          "jsonb",
+          false
+        ]
+      ],
+      "ownerSources": [
+        "server/src/integrations/netlink/paid-issuance-schema.js"
+      ]
+    },
+    {
+      "table": "StoreChatMessage",
+      "sourceColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "senderId",
+          "text",
+          true
+        ],
+        [
+          "category",
+          "text",
+          true
+        ],
+        [
+          "body",
+          "text",
+          true
+        ],
+        [
+          "important",
+          "boolean",
+          true
+        ],
+        [
+          "pinned",
+          "boolean",
+          true
+        ],
+        [
+          "completed",
+          "boolean",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "attachmentName",
+          "text",
+          false
+        ],
+        [
+          "attachmentMimeType",
+          "text",
+          false
+        ],
+        [
+          "attachmentSize",
+          "integer",
+          false
+        ],
+        [
+          "attachmentChecksum",
+          "text",
+          false
+        ],
+        [
+          "attachmentData",
+          "text",
+          false
+        ],
+        [
+          "completedBy",
+          "text",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "aiReaderJobId",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentBy",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "replyToId",
+          "text",
+          false
+        ],
+        [
+          "forwardBinding",
+          "text",
+          false
+        ]
+      ],
+      "targetColumns": [
+        [
+          "id",
+          "text",
+          true
+        ],
+        [
+          "companyId",
+          "text",
+          true
+        ],
+        [
+          "storeId",
+          "text",
+          true
+        ],
+        [
+          "senderId",
+          "text",
+          true
+        ],
+        [
+          "category",
+          "text",
+          true
+        ],
+        [
+          "body",
+          "text",
+          true
+        ],
+        [
+          "important",
+          "boolean",
+          true
+        ],
+        [
+          "pinned",
+          "boolean",
+          true
+        ],
+        [
+          "completed",
+          "boolean",
+          true
+        ],
+        [
+          "createdAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "updatedAt",
+          "timestamp without time zone",
+          true
+        ],
+        [
+          "attachmentName",
+          "text",
+          false
+        ],
+        [
+          "attachmentMimeType",
+          "text",
+          false
+        ],
+        [
+          "attachmentSize",
+          "integer",
+          false
+        ],
+        [
+          "attachmentChecksum",
+          "text",
+          false
+        ],
+        [
+          "attachmentData",
+          "text",
+          false
+        ],
+        [
+          "completedBy",
+          "text",
+          false
+        ],
+        [
+          "completedAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "aiReaderJobId",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentBy",
+          "text",
+          false
+        ],
+        [
+          "aiReaderSentAt",
+          "timestamp without time zone",
+          false
+        ],
+        [
+          "replyToId",
+          "text",
+          false
+        ],
+        [
+          "forwardBinding",
+          "text",
+          false
+        ],
+        [
+          "cashDay",
+          "date",
+          false
+        ]
+      ],
+      "ownerSources": [
+        "server/src/routes/store-chat.js"
+      ]
+    }
+  ],
+  "format": "MWS_WEEKLY_EXISTING_EFOOD_LAB_V1",
+  "ownerSource": "server/src/integrations/efood/lab-order-postgres.js",
+  "ownerSourceHash": "5ab05a5878a19b563a98d9f56acf31796e41202bb2892c6619ff3b14a8aa3922",
+  "columns": {
+    "EfoodLabOrderRun": [
+      [
+        "integrationId",
+        "text",
+        true
+      ],
+      [
+        "runId",
+        "uuid",
+        true
+      ],
+      [
+        "stock",
+        "integer",
+        true
+      ],
+      [
+        "orderRecord",
+        "jsonb",
+        false
+      ]
+    ],
+    "EfoodLabOrderRunEvent": [
+      [
+        "integrationId",
+        "text",
+        true
+      ],
+      [
+        "runId",
+        "uuid",
+        true
+      ],
+      [
+        "eventKey",
+        "text",
+        true
+      ],
+      [
+        "payloadHash",
+        "text",
+        true
+      ],
+      [
+        "stockDelta",
+        "integer",
+        true
+      ]
+    ]
+  },
+  "catalogue": {
+    "relations": [
+      {
+        "name": "EfoodLabOrderRun",
+        "kind": "r",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "inherited": false,
+        "rewritten": false
+      },
+      {
+        "name": "EfoodLabOrderRunEvent",
+        "kind": "r",
+        "partition": false,
+        "rls": false,
+        "forced": false,
+        "inherited": false,
+        "rewritten": false
+      }
+    ],
+    "columns": [
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "integrationId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "runId",
+        "type": "uuid",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "stock",
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "orderRecord",
+        "type": "jsonb",
+        "notNull": false,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "integrationId",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "runId",
+        "type": "uuid",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "eventKey",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "payloadHash",
+        "type": "text",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "stockDelta",
+        "type": "integer",
+        "notNull": true,
+        "identity": "",
+        "generated": "",
+        "defaultExpression": null
+      }
+    ],
+    "constraints": [
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "EfoodLabOrderRun_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (\"integrationId\", \"runId\")"
+      },
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "EfoodLabOrderRun_stock_check",
+        "type": "c",
+        "definition": "CHECK (stock >= 0)"
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "EfoodLabOrderRunEvent_integrationId_runId_fkey",
+        "type": "f",
+        "definition": "FOREIGN KEY (\"integrationId\", \"runId\") REFERENCES \"EfoodLabOrderRun\"(\"integrationId\", \"runId\") ON DELETE CASCADE"
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "EfoodLabOrderRunEvent_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (\"integrationId\", \"runId\", \"eventKey\")"
+      }
+    ],
+    "indexes": [
+      {
+        "table": "EfoodLabOrderRun",
+        "name": "EfoodLabOrderRun_pkey",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"EfoodLabOrderRun_pkey\" ON __SCHEMA__.\"EfoodLabOrderRun\" USING btree (\"integrationId\", \"runId\")"
+      },
+      {
+        "table": "EfoodLabOrderRunEvent",
+        "name": "EfoodLabOrderRunEvent_pkey",
+        "valid": true,
+        "ready": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX \"EfoodLabOrderRunEvent_pkey\" ON __SCHEMA__.\"EfoodLabOrderRunEvent\" USING btree (\"integrationId\", \"runId\", \"eventKey\")"
+      }
+    ],
+    "triggers": []
+  },
+  "runtimeCatalogueAdditions": [
+    {
+      "table": "NetlinkTransaction",
+      "columns": [
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "issuanceIntentEnc",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "checkoutId",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "cashReceivedTotal",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "numeric(14,2)"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "issuanceResultEnc",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "cashReceivedAt",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "timestamp with time zone"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "cashReceivedBy",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "text"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "providerDispatchedAt",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "timestamp with time zone"
+        },
+        {
+          "defaultExpression": null,
+          "generated": "",
+          "identity": "",
+          "name": "fiscalEvidence",
+          "notNull": false,
+          "table": "NetlinkTransaction",
+          "type": "jsonb"
+        }
+      ],
+      "indexes": [
+        {
+          "definition": "CREATE INDEX \"NetlinkTransaction_paid_checkout_idx\" ON __SCHEMA__.\"NetlinkTransaction\" USING btree (\"companyId\", \"storeId\", \"checkoutId\") WHERE (\"issuanceIntentEnc\" IS NOT NULL)",
+          "name": "NetlinkTransaction_paid_checkout_idx",
+          "ready": true,
+          "table": "NetlinkTransaction",
+          "unique": false,
+          "valid": true
+        }
+      ],
+      "ownerSource": "server/src/integrations/netlink/paid-issuance-schema.js",
+      "ownerSourceHash": "5c306947892934c925742b058a6da0a1b3c42f015ed182606065aaadf5b69a85"
+    },
+    {
+      "table": "StoreChatMessage",
+      "columns": [
+        {
+          "table": "StoreChatMessage",
+          "name": "cashDay",
+          "type": "date",
+          "notNull": false,
+          "identity": "",
+          "generated": "",
+          "defaultExpression": null
+        }
+      ],
+      "indexes": [],
+      "ownerSource": "server/src/routes/store-chat.js",
+      "ownerSourceHash": "0892cae09a315a494e3c6f8226cdec193cdfb7aeae0ed989c81245108985d881"
+    }
+  ]
+}

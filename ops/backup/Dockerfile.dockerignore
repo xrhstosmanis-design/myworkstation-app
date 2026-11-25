@@ -69,3 +69,10 @@
 
 !ops/backup/lifecycle/report-column-compatibility.proposed.json
 !server/src/services/automatic-report-column-compatibility.js
+
+!ops/backup/lifecycle/weekly_stock_alarm_profile.py
+!ops/backup/lifecycle/weekly-stock-alarm-definition.proposed.json
+!server/src/services/weekly-stock-alarm-profile.js
+!server/src/services/weekly-stock-alarm-catalogue.js
+!server/src/services/weekly-stock-alarm-existing-lab.js
+!ops/backup/lifecycle/weekly-stock-alarm-existing-lab.proposed.json

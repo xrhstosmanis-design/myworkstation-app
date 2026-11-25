@@ -26,6 +26,9 @@ ASSIGNED /root · docs/central-weekly-stock-alarm-claim-20261124 · PR #4193.
 
 25/11/2026 · Retained4194owner /root · weekly alarm continuation; bounded versioned admission extension, old profiles/defaults/No7-No14 owners retained. SOURCE NOT STARTED / PRODUCTION OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-continuation.md.
 
+25/11/2026 · Retained4194owner /root · weekly-only source READY, native102PASS + No7compat11PASS/3Docker-pending; explicit versioned security/existing-lab/schema admission; old plan/profile hashes preserved, code source bindings63. Full CI/install/LAB pending; runtime OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-admission-source.md.
+
+25/11/2026 · Weekly4194 same owner: actual299-table column reconciliation0mismatch, exact preserved No5/myDATA nullable/added columns included in optional versioned runtime metadata descriptor; production still OFF. New exact-head CI required. See weekly-stock-alarm-admission-source checkpoint.
 25/11/2026 · Weekly4194 retained /root: Διαδόχου module enabled0cost, actualsales calculation preview only; no minimum/runtime activation. Newhead4dbd6b16 fullCI45643643734/AIwallet45643643611 pending after exact Netlink catalogue preservation. Next: green CI→explicit installation→measured Διαδόχου STORE-only test. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-diadochou-handoff.md.
 
 25/11/2026 · ASSIGNED retained4194 /root, before-source extension of4236: exact existing StoreChatMessage.cashDay DATE NULL from unchanged No7 store-chat.js is the only further mismatch in all299physical table shapes. Preserve via bounded metadata-only runtime descriptor and exact nullable/default-free column catalogue, native replay/tamper checks; no Chat writer/row/access/session changes, No7 owner retained. No generic unknown-column allowance. Operational test remains Διαδόχου, weekly OFF.

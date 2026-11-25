@@ -101,6 +101,8 @@ class WorkerContract(unittest.TestCase):
             for value in ('', ' ', 'base', 'MONTHLY_INVENTORY_CAPTURE_V1 ', '../manifest.json', 'UNKNOWN', None, 1):
                 with self.subTest(value=value), self.assertRaises(ValueError):
                     worker.selected_manifest_file({'MWS_STORE_LIFECYCLE_PROFILE': value})
+                with self.subTest(document=value), self.assertRaises(ValueError):
+                    worker.selected_manifest_document({'MWS_STORE_LIFECYCLE_PROFILE': value})
             query.assert_not_called()
     def test_original_admitted_manifest_is_not_reread_after_lease(self): self.attempt(change_manifest=True)
     def test_success_exact_version_and_bound_publication(self): self.attempt()

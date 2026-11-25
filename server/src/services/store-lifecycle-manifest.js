@@ -1,3 +1,4 @@
+import {withWeeklyStockAlarmProfile,WEEKLY_PROFILE_SUFFIX,parseWeeklyStockAlarmProfile} from './weekly-stock-alarm-profile.js';
 import {withReportSecurityCompatibility} from './automatic-report-security-transition.js';
 import {withExpectedReceiptProfile,EXPECTED_RECEIPT_TARGET_PROFILE,EXPECTED_RECEIPT_SOURCE_PROFILE} from './supplier-expected-receipts-lifecycle-profile.js';
 import {withReportOperationalCompatibility,withReportColumnCompatibility,withReportChatCompatibility} from './automatic-report-operational-profile.js';
@@ -12,6 +13,7 @@ const document=JSON.parse(readFileSync(baseUrl,'utf8'));
 export const reviewedFreshStoreManifest=()=>structuredClone(document);
 export function selectedStoreLifecycleManifest(env=process.env){
  const profile=env.MWS_STORE_LIFECYCLE_PROFILE;
+ if(typeof profile==='string'&&profile.endsWith(WEEKLY_PROFILE_SUFFIX)){const {sourceProfile,...options}=parseWeeklyStockAlarmProfile(profile);return withWeeklyStockAlarmProfile(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:sourceProfile}),options);}
  if(profile===EXPECTED_RECEIPT_TARGET_PROFILE)return withExpectedReceiptProfile(selectedStoreLifecycleManifest({MWS_STORE_LIFECYCLE_PROFILE:EXPECTED_RECEIPT_SOURCE_PROFILE}));
  if(['BACKOFFICE_COMPANY_BASE_V1','BACKOFFICE_COMPANY_CAPTURE_V1','BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'].includes(profile))return backofficeCompanyProfile(env).manifest;
  if(profile===undefined||profile==='BASE')return reviewedFreshStoreManifest();

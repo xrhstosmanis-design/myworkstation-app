@@ -1,3 +1,6 @@
+import weeklyStockAlarmRoutes from './routes/weekly-stock-alarm.js';
+import {createWeeklyStockAlarmScheduler} from './services/weekly-stock-alarm-scheduler.js';
+import {createWeeklyStockAlarmInstallationRouter} from './routes/weekly-stock-alarm-installation.js';
 import posOrderSuggestionsRoutes from './routes/pos-order-suggestions.js';
 import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
 import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
@@ -404,6 +407,8 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceVatLookupRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
 app.use("/api/pos-order-suggestions",auth,posOrderSuggestionsRoutes);
+app.use("/api/stock-alarms",auth,weeklyStockAlarmRoutes);
+app.use("/api/platform/weekly-stock-alarm-installation/stores/:storeId",auth,createWeeklyStockAlarmInstallationRouter(prisma));
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
@@ -459,6 +464,7 @@ const invoiceStockEmailScheduler=createInvoiceStockExclusionEmailScheduler({
   db:prisma,work:backgroundDrain,
   send:({companyId,storeId,...message})=>createAutomaticReportSmtpTransport({companyId,storeId}).sendMail(message)
 });
+const weeklyStockAlarmScheduler=createWeeklyStockAlarmScheduler({db:prisma,work:backgroundDrain});
 const server=app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
@@ -471,5 +477,6 @@ const server=app.listen(process.env.PORT||8080,()=>{
   monthlyInventoryReportScheduler.start();
   invoiceStockEmailScheduler.start();
   monthlyInventoryCaptureScheduler.start();
+  weeklyStockAlarmScheduler.start();
 });
 shutdown.install(server);

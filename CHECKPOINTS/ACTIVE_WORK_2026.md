@@ -1080,6 +1080,19 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 25/11/2026 · Retained4194owner /root · weekly alarm continuation; bounded versioned admission extension, old profiles/defaults/No7-No14 owners retained. SOURCE NOT STARTED / PRODUCTION OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-continuation.md.
 
+25/11/2026 · Retained4194owner /root · weekly-only source READY, native102PASS + No7compat11PASS/3Docker-pending; explicit versioned security/existing-lab/schema admission; old plan/profile hashes preserved, code source bindings63. Full CI/install/LAB pending; runtime OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-admission-source.md.
+
+25/11/2026 · Weekly4194 same owner: actual299-table column reconciliation0mismatch, exact preserved No5/myDATA nullable/added columns included in optional versioned runtime metadata descriptor; production still OFF. New exact-head CI required. See weekly-stock-alarm-admission-source checkpoint.
+
+25/11/2026 · Weekly4194: full CI found2failures of one Python non-string profile guard; fixed both selectors,27Python +10JS PASS. New full CI required. User requests Διαδόχου test: fresh baseline/preview then store-only opt-in after admission, production currently OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-ci-type-guard.md.
+
+25/11/2026 · Weekly4194 exact Netlink catalogue continuation after4236claim: incoming main retained,8nullable columns+1partial index preserved/verified, JS-Python profiles and native102PASS. Full newCI/release required; Diadochou module active0cost and preview only, weekly runtimeOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-netlink-catalogue-source.md.
+
+25/11/2026 · Weekly4194 after4240claim: exact existingcashDay preserved, all299table columnshapes0mismatch, native102PASS, newfullCI required. Clean isolatedrelease leaves unrelated uncommittedinvoice edits untouched. Diadochou preview only; weeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-cashday-catalogue-source.md.
+
+25/11/2026 · Weekly4194 parent installer now actually rendered before policy/schema readiness; integrated central packet→verified install→policy reload test14UI PASS, production buildPASS. Full exact-headCI pending, alarmOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-parent-installer.md.
+
+25/11/2026 · Weekly4194 outage recovered;65d fullCI fullyGREEN after browserretry. CurrentNetlink4241/main6b3c retained, unchanged8column/index owner source witness refreshed, native103PASS and buildPASS. New exactheadCI needed, productionweeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-resume-numeric-netlink.md.
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση μηνιαίων ελέγχων και εκκρεμοτήτων](CHANGES/2026-11-25-no5-store-report-reads.md).
 
 - 25/11/2026 · Νο 7 · Έκδοση Android με ημερομηνία ταμείου · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day-android-release.md).
