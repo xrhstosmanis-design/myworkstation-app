@@ -182,3 +182,27 @@ test('store schedule gates daily delivery before source work and allows explicit
  h.configuration.deliverySchedules.cashDaily.enabled=true;
  assert.equal((await read.readContext(h.tx,scope,NOW)).inputs.length,1);
 });
+
+test('daily cash covers the business day in progress when the store and recipient were authorized',async()=>{
+ const h=fixture(),read=createAutomaticReportEligibilityReader(h);
+ const {administratorAuthorizationProof}=await import('../src/services/automatic-report-administrator-authorization.js');
+ const authorizeRecipient=(fixture,authorizedAt)=>{
+  const {recipient,consent}=fixture.auth.recipients[0];
+  Object.assign(recipient,{companyId:'c',storeId:'s',verifiedAt:null});
+  Object.assign(consent,{consentedAt:authorizedAt,consentedBy:'report-superadmin:sa'});
+  consent.proofHash=administratorAuthorizationProof(recipient,consent);
+ };
+ const authorizedAt='2026-10-21T09:00:00.000Z';
+ h.auth.grant.createdAt=h.auth.grant.grantedAt=h.auth.grant.notBefore=authorizedAt;
+ authorizeRecipient(h,authorizedAt);
+ const candidate=await read.readContext(h.tx,scope,NOW);
+ assert.equal(candidate.inputs[0].periodFrom,'2026-10-21T04:00:00.000Z');
+ assert.equal(candidate.inputs[0].periodTo,'2026-10-22T04:00:00.000Z');
+ for(const boundary of ['grant','recipient']){
+  const late=fixture(),reader=createAutomaticReportEligibilityReader(late);
+  const end=candidate.inputs[0].periodTo;
+  if(boundary==='grant')late.auth.grant.notBefore=end;
+  else authorizeRecipient(late,end);
+  await assert.rejects(reader.readContext(late.tx,scope,NOW));
+ }
+});

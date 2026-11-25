@@ -95,7 +95,10 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    ? {from:monthBoundary(completedSupplierReportMonth(Date.parse(month+'-15T12:00:00Z'))),to:monthBoundary(month)}
    : completedReportPeriod(new Date(now),scope.frequency,configuration);
   const from=period.from.toISOString(),to=period.to.toISOString();
-  if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<(nonCash?iso(grant.notBefore):cashGrantPeriodStart(grant,scope.frequency)))hold();
+  const dailyCash=!nonCash&&scope.frequency==='DAILY';
+  const periodAfterAuthorization=authorizedAt=>dailyCash?authorizedAt<to:authorizedAt<=from;
+  if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||
+     !periodAfterAuthorization(nonCash?iso(grant.notBefore):cashGrantPeriodStart(grant,scope.frequency)))hold();
   const settingsVersion=nonCash?safe(policy.revision):settings.version;
   let payload;
   if(monthlyInventory){
@@ -130,7 +133,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   const eligible=[],authorities={};
   for(const {recipient,consent} of recipients){
    const authority=reportRecipientAuthority(recipient,consent,{generation:lifecycle.generation,principalId:principal.id});
-   if(!authority||!consent.allowedFrequencies.includes(scope.frequency)||authority.authorizedAt<control.issuedAt||authority.authorizedAt>now||from<authority.authorizedAt||authority.basis==='RECIPIENT'&&iso(recipient.verifiedAt)>now)continue;
+   if(!authority||!consent.allowedFrequencies.includes(scope.frequency)||authority.authorizedAt<control.issuedAt||authority.authorizedAt>now||(authority.basis==='SUPER_ADMIN'?!periodAfterAuthorization(authority.authorizedAt):from<authority.authorizedAt)||authority.basis==='RECIPIENT'&&iso(recipient.verifiedAt)>now)continue;
    const recipientVersion=safe(recipient.version),consentRevision=safe(consent.revision);
    if(typeof recipient.email!=='string'||!recipient.recipientId)hold();
    const policyFingerprint=persistence.dispatchPolicyFingerprint?persistence.dispatchPolicyFingerprint({policy,grant,recipient}):createHash('sha256').update(canonical({format:'MWS_DISPATCH_AUTHORIZATION_V1',policy,grant,recipientId:recipient.recipientId})).digest('hex');
