@@ -48,7 +48,7 @@
     "server/src/services/store-lifecycle-executor.js": "b4e2ef83d268e5528a315fd6c9034bbfb95481747b9ee46c36eb28ee02b18615",
     "server/src/services/store-lifecycle-worker-ready.js": "35730d0f89545a1d5bbfcd5feec74390cc4465363e102d34bb748f6c5ace12b8",
     "server/src/services/store-lifecycle-manifest.js": "a51e6b30ef254b7e9448e3b3af459dd43435247ab6b451e3907d0f478d5b731f",
-    "ops/backup/lifecycle/worker.py": "7ae8d52e9129bab7cb33e5ed8817fa9cec53344920b111b8a26b065abf6d1561",
+    "ops/backup/lifecycle/worker.py": "a865417e3d425d267d0b73b958ab39c2b2b11c319ef5ef95f83859934529c9a6",
     "ops/backup/lifecycle/verify_restore.py": "fe5afb951424b2338b0b9d4f746838adb44e7b502ebf0e2bc23dfb09ba8aa212",
     "server/src/services/backoffice-company-profile.js": "a4cee6730eb2bb7075f5721578a9686ca0486458c77b91f5f2a3b9db361fc11d",
     "ops/backup/lifecycle/backoffice_company_profile.py": "c8e76a717aa718d2608d4acb4a4376b8a7cb0875e0fff3da6f8419b157d3145e",

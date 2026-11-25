@@ -22,6 +22,8 @@ COMPANY_READ_PROTOCOL = 'MWS_BACKOFFICE_COMPANY_READ_CAPABILITY_V1'
 def selected_manifest_file(env=None):
     configuration = os.environ if env is None else env
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if not isinstance(profile, str):
+        raise ValueError('Invalid store lifecycle profile')
     if profile.endswith('__WEEKLY_STOCK_ALARM_V1'):
         from weekly_stock_alarm_profile import weekly_source
         source=weekly_source(profile)
@@ -38,7 +40,10 @@ def selected_manifest_file(env=None):
 
 def selected_manifest_document(env=None):
     configuration = os.environ if env is None else env
-    if configuration.get('MWS_STORE_LIFECYCLE_PROFILE','').endswith('__WEEKLY_STOCK_ALARM_V1'):
+    profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if not isinstance(profile, str):
+        raise ValueError('Invalid store lifecycle profile')
+    if profile.endswith('__WEEKLY_STOCK_ALARM_V1'):
         from weekly_stock_alarm_profile import weekly_manifest
         return weekly_manifest(configuration['MWS_STORE_LIFECYCLE_PROFILE'],selected_manifest_document)
     document = json.loads(selected_manifest_file(configuration).read_text())
