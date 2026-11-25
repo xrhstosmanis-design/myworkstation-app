@@ -440,6 +440,10 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 | — | OWNER-SHIFT-TIME-FILTER | /root | #3872 | Hosted LAB PASS · 3→1 | [Τεκμήριο](CHANGES/2026-11-10-owner-shift-time-filter.md) |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
 
+## 24/11/2026 - Price catalog product card - LAB pending
+
+Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the full product card for a selected store. [Checkpoint](CHANGES/2026-11-24-price-catalog-product-card.md).
+
 ## Κεντρικός συντονισμός σελίδων — 13/11/2026
 
 Η παρούσα σελίδα συντονισμού αναλαμβάνει τη συνέχεια του «Ελέγχου αναθέσεων εκκρεμοτήτων». Οι υπεύθυνοι των ήδη ανατεθειμένων εργασιών παραμένουν στις εγγραφές τους στο OPEN_WORK_TRACKER.
