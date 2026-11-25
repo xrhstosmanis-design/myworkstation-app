@@ -1,3 +1,4 @@
+import {manualPaymentAllocation} from "../services/manual-payment-allocation.js";
 import { findMyDataPurchase, hasMyDataPurchaseLines } from "../lib/mydata-pos-receipt.js";
 import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
@@ -848,6 +849,24 @@ router.get("/supplier-settlements/:settlementId/attachment",requireSuperAdminSet
   if(!rows[0]?.attachmentData)return res.status(404).json({error:"Δεν βρέθηκε αποδεικτικό εκκρεμούς πληρωμής."});
   res.json({dataUrl:rows[0].attachmentData,mimeType:rows[0].attachmentMimeType,filename:rows[0].attachmentFilename});
 }));
+
+// Manual allocation of an existing cash payment: no new ledger transaction.
+const manualAllocationInput=z.object({
+  companyId:z.string().min(1).max(180),storeId:z.string().min(1).max(180),
+  targetSupplierId:z.string().min(1).max(180),
+  allocations:z.array(z.object({purchaseDocumentId:z.string().min(1).max(180),amount:z.number().positive().max(999999999)}).strict()).min(1).max(80),
+  confirmSupplierChange:z.boolean().default(false),
+  reason:z.string().trim().min(5).max(500),
+  expectedVersion:z.string().regex(/^[a-f0-9]{64}$/).optional()
+}).strict();
+for(const action of ['preview','apply']){
+  router.post('/supplier-settlements/:settlementId/manual-allocation/'+action,requireSuperAdminSettlementReview,route(async(req,res)=>{
+    const body=manualAllocationInput.parse(req.body||{});
+    if(action==='apply'&&!body.expectedVersion)return res.status(400).json({error:'PREVIEW_REQUIRED'});
+    const result=await manualPaymentAllocation(prisma,req.user,{...body,settlementId:req.params.settlementId},{preview:action==='preview'});
+    res.json({ok:true,...result});
+  }));
+}
 
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
