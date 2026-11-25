@@ -1,0 +1,51 @@
+import {z} from 'zod';
+import {randomUUID} from 'node:crypto';
+import {greeceDateInput,greeceRangeDate} from '../../../shared/greece-time.mjs';
+import {readOrderSuggestions} from '../routes/order-suggestions.js';
+export const proposalError=(status,message)=>Object.assign(new Error(message),{status});
+const shiftDate=(date,days)=>new Date(Date.parse(date+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
+export function parsePosProposalOptions(query={},now=new Date()){
+ const raw=z.object({fromDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),toDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),supplierId:z.string().trim().max(200).default(''),coverageDays:z.coerce.number().int().min(1).max(60).default(7),leadDays:z.coerce.number().int().min(0).max(30).default(3),historyDays:z.coerce.number().int().min(7).max(90).default(28)}).parse(query);
+ if(Boolean(raw.fromDate)!==Boolean(raw.toDate))throw proposalError(400,'Συμπλήρωσε και τις δύο ημερομηνίες πωλήσεων.');
+ const today=greeceDateInput(now),toDate=raw.toDate||today,fromDate=raw.fromDate||shiftDate(today,1-raw.historyDays);
+ const from=greeceRangeDate(fromDate),toExclusive=greeceRangeDate(shiftDate(toDate,1));greeceRangeDate(toDate);
+ const days=(Date.parse(toDate+'T00:00:00Z')-Date.parse(fromDate+'T00:00:00Z'))/86400000+1;
+ if(!Number.isInteger(days)||days<1||days>366||toDate>today)throw proposalError(400,'Επίλεξε περίοδο πωλήσεων 1–366 ημερών, έως σήμερα.');
+ return {supplierId:raw.supplierId,options:{historyDays:days,coverageDays:raw.coverageDays,leadDays:raw.leadDays},salesPeriod:{from,toExclusive},period:{fromDate,toDate,days,timeZone:'Europe/Athens'}};
+}
+export async function readPosProposalSuppliers(db,{storeId,companyId}){
+ const rows=await db.$queryRaw`SELECT s."id",s."name",s."email" FROM "Supplier" s WHERE s."companyId"=${companyId} AND s."active"=TRUE AND (
+  EXISTS(SELECT 1 FROM "PurchaseOrder" o WHERE o."companyId"=${companyId} AND o."storeId"=${storeId} AND o."supplierId"=s."id")
+  OR EXISTS(SELECT 1 FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."supplierId"=s."id" AND d."status"='APPROVED' AND d."documentType"='INVOICE')) ORDER BY s."name",s."id" LIMIT 1001`;
+ if(rows.length>1000)throw proposalError(422,'Η λίστα προμηθευτών υπερβαίνει το όριο προβολής.');
+ return rows;
+}
+export async function readPosOrderProposal(db,scope){
+ return db.$transaction(async tx=>{
+  const suppliers=await readPosProposalSuppliers(tx,scope),supplier=scope.supplierId?suppliers.find(s=>s.id===scope.supplierId):null;
+  if(scope.supplierId&&!supplier)throw proposalError(404,'Δεν βρέθηκε ενεργός προμηθευτής του καταστήματος.');
+  const proposal=await readOrderSuggestions(tx,scope);
+  let rows=proposal.rows;
+  if(supplier){
+   const matches=await tx.$queryRaw`SELECT p."id" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${scope.storeId} AND sp."active"=TRUE WHERE p."companyId"=${scope.companyId} AND p."active"=TRUE AND (
+    EXISTS(SELECT 1 FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=p."id" AND d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."supplierId"=${supplier.id} AND d."status"='APPROVED' AND d."documentType"='INVOICE' AND l."quantity">0)
+    OR EXISTS(SELECT 1 FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=p."id" AND o."companyId"=${scope.companyId} AND o."storeId"=${scope.storeId} AND o."supplierId"=${supplier.id} AND o."status"='FINAL' AND o."awaitingInvoice"=FALSE AND l."quantity">0))`;
+   const ids=new Set(matches.map(x=>x.id));rows=rows.filter(r=>ids.has(r.productId));
+  }
+  return {...proposal,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:false};
+ },{isolationLevel:'RepeatableRead',timeout:30000});
+}
+export function createPosProposalSnapshots({now=()=>Date.now(),ttl=600000,maxEntries=20,maxBytes=16777216}={}){
+ const entries=new Map();let bytes=0;
+ const remove=id=>{const x=entries.get(id);if(x){bytes-=x.bytes;entries.delete(id)}};
+ return {
+  create(report,scope){
+   for(const [id,x] of entries)if(x.expires<=now())remove(id);
+   const copy=JSON.parse(JSON.stringify(report)),size=Buffer.byteLength(JSON.stringify(copy));
+   if(size>2097152||size>maxBytes)throw proposalError(422,'Η πρόταση είναι πολύ μεγάλη. Επίλεξε προμηθευτή για μικρότερη προβολή.');
+   while(entries.size>=maxEntries||bytes+size>maxBytes){const key=[...entries].find(([,x])=>x.state!=='sending')?.[0];if(!key)throw proposalError(503,'Υπάρχουν αποστολές σε εξέλιξη. Προσπάθησε αργότερα.');remove(key)}
+   const id=randomUUID(),entry={report:copy,...scope,expires:now()+ttl,state:'ready',bytes:size};entries.set(id,entry);bytes+=size;return {id,report:copy};
+  },
+  get(id,scope){const x=entries.get(id);if(!x||x.expires<=now()||['companyId','storeId','actorId'].some(k=>x[k]!==scope[k]))throw proposalError(409,'Η πρόταση έληξε ή δεν ανήκει σε αυτή τη συνεδρία. Υπολόγισέ την ξανά.');return x;}
+ };
+}
