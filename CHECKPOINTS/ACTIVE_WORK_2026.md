@@ -2,6 +2,8 @@
 
 Owner-directed continuation, existing POS-ATTENDED-REMOTE-02 assignment retained. Branch `fix/remote-rizareio-frame-freshness-20261125`, checkpoint `CHECKPOINTS/CHANGES/2026-11-25-remote-rizareio-input.md`. Read-only audit: attended connection 19:42:40Z, DEVICE_STOP 19:48:38Z; no fixed expiry and no proof of manual STOP. Bounded source fix planned for cross-clock frame freshness gate, with fail-closed original input security. Do not touch remote Windows consent or production, no real desktop/finance input. Native CI and physical owner retest required; PASS NOT TESTED.
 
+- 25/11/2026 · [Ριζάρειο: ιστορικό STATUS 101 χωρίς τιμή InputLine](CHANGES/2026-11-25-ftext-status101-empty-inputline.md) · Εκκρεμεί αποδοχή στο POS.
+
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
