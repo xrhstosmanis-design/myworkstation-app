@@ -39,11 +39,11 @@ export function createNetlinkPaidStore({db,provider,clock=()=>new Date(),evidenc
    const previous=await load(scope,requestId);if(previous){if(previous.operatorId!==actorId)throw netlinkPaidError('NETLINK_INTENT_OPERATOR','Το ίδιο αίτημα ανήκει σε διαφορετικό χειριστή.',403);if(previous.productId!==productId||previous.checkoutId!==checkoutId)fail('NETLINK_DUPLICATE_REQUEST','Το ίδιο αίτημα αφορά διαφορετική κάρτα.');return {...(previous.status==='READY_FOR_PAYMENT'?checkoutView(previous,await readNetlinkPaidConfig(db,scope)):view(previous)),idempotentReplay:true}}
    const sale=(await db.$queryRaw`SELECT "id" FROM "Sale" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${checkoutId} LIMIT 1`)[0];
    if(sale)fail('NETLINK_SALE_ALREADY_EXISTS','Η κάρτα πρέπει να επιλεγεί πριν από την πληρωμή.');
-   const config=await readNetlinkPaidConfig(db,scope),card=fixedCardFromMenu(await provider(scope).menu(),productId);
+   const config=await readNetlinkPaidConfig(db,scope);let menu;try{menu=await provider(scope).menu()}catch{throw netlinkPaidError("NETLINK_CATALOGUE_UNAVAILABLE","Δεν φορτώθηκε ο κατάλογος Netlink. Δεν έγινε αγορά κάρτας.",502)}const card=fixedCardFromMenu(menu,productId);
    const value={version:1,...binding(scope,requestId),checkoutId,productId,title:card.title,amount:card.amountCents/100,saleProductId:config.saleProduct.id,serviceFeeProductId:config.serviceFeeProduct.id,providerRequestId:BigInt('0x'+crypto.randomBytes(16).toString('hex')).toString(),expiresAt:new Date(clock().getTime()+30*60000).toISOString()};
    const enc=encryptStoreIntegrationValue(value),total=(card.amountCents+50)/100;
    const inserted=await db.$executeRaw`INSERT INTO "NetlinkTransaction" ("id","companyId","storeId","requestId","checkoutId","productId","flow","status","amount","serviceFeeAmount","customerTotal","operatorId","operatorName","issuanceIntentEnc") VALUES (${crypto.randomUUID()},${scope.companyId},${scope.storeId},${requestId},${checkoutId},${productId},'PAID_ISSUANCE_V1','READY_FOR_PAYMENT',${value.amount},0.50,${total},${actorId},${actorName||null},${enc}) ON CONFLICT ("storeId","requestId") DO NOTHING`;
-   const saved=await load(scope,requestId);if(!saved||saved.productId!==productId)fail('NETLINK_DUPLICATE_REQUEST','Το ίδιο αίτημα αφορά διαφορετική κάρτα.');
+   const saved=await load(scope,requestId);if(!saved||saved.productId!==productId||saved.checkoutId!==checkoutId||saved.operatorId!==actorId)fail('NETLINK_DUPLICATE_REQUEST','Το ίδιο αίτημα αφορά διαφορετική κάρτα.');
    return {...checkoutView(saved,config),idempotentReplay:Number(inserted)===0};
   },
   async cashReceived(scope,checkoutId,{requestIds,actorId,amount}){

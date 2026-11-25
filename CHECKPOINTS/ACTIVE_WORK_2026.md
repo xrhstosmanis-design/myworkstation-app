@@ -1,6 +1,6 @@
 ##25Nov2026 — Netlink paid mixed basket implementation — ASSIGNED /root
 
-Branch `fix/netlink-paid-issuance-20261125`, continuation of claim PR#4225. Adds encrypted scoped card intents, EUR0.50 per card, mixed ordinary goods/multiple cards, whole basket cash/card and native fiscal proof, atomic provider dispatch, safe recovery/reprint, central accounting-product mapping.32 targeted local tests PASS; PostgreSQL/HTTP test added for isolated CI (locally skipped without test DB). Client production build PASS. NOT LIVE, NOT LAB/USER PASS; execute flag remains unchanged. Full CI and user acceptance remain pending. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-mixed-basket.md`.
+Branch `fix/netlink-paid-issuance-20261125`, continuation of claim PR#4225. Adds encrypted scoped card intents, EUR0.50 per card, mixed ordinary goods/multiple cards, whole basket cash/card and native fiscal proof, atomic provider dispatch, safe recovery/reprint, central accounting-product mapping.58 all-Netlink local tests PASS with isolated PostgreSQL18.7,0FAIL/0SKIP; includes native SQL/HTTP and mounted React. CI45629329482 found migration-test prepared-statement execution and the changed integration-form count; both corrected,58native Netlink and2integration-preview tests PASS locally. Client production build PASS. NOT LIVE, NOT LAB/USER PASS; execute flag remains unchanged. Full CI and user acceptance remain pending. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-mixed-basket.md`.
 
 ## 25/11/2026 — NETLINK paid issuance with automatic0.50 service — ASSIGNED /root
 

@@ -22,7 +22,7 @@ test('native paid issuance SQL/HTTP: mixed basket, encryption, receipt gate, onc
    'CREATE TABLE "FiscalDocument"("id" text,"saleId" text,"status" text,"fiscalNumber" text,"issuedAt" timestamp)',
    'CREATE TABLE "StoreOperatorAudit"("id" text,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb)'
   ])await db.$executeRawUnsafe(sql);
-  for(const name of ['20260825130500_netlink_prepaid_storage','20260826210000_netlink_fiscal_receipt_gate','20261125130000_netlink_paid_issuance'])await db.$executeRawUnsafe(await readFile(new URL(`../prisma/migrations/${name}/migration.sql`,import.meta.url),'utf8'));
+  for(const name of ['20260825130500_netlink_prepaid_storage','20260826210000_netlink_fiscal_receipt_gate','20261125130000_netlink_paid_issuance']){const sql=await readFile(new URL(`../prisma/migrations/${name}/migration.sql`,import.meta.url),'utf8');for(const statement of sql.replace(/--[^\n]*/g,'').split(';').map(s=>s.trim()).filter(Boolean))await db.$executeRawUnsafe(statement)}
   const {ensureNetlinkPaidIssuanceSchema}=await import('../src/integrations/netlink/paid-issuance-schema.js');
   await ensureNetlinkPaidIssuanceSchema(db);await ensureNetlinkPaidIssuanceSchema(db);
   await db.$executeRaw`INSERT INTO "Product" VALUES('value','company','Card accounting','VALUE',0,false,0,true),('fee','company','Service accounting','FEE',24,false,.5,true)`;
