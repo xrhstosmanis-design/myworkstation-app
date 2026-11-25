@@ -9,19 +9,27 @@ export async function readCashChatEvidence(db, {companyId, storeId}, window=null
   try {
     // Do not read binary bytes, invoke invoice intake, mark messages read or call AI.
     // Latest uploads are only discovery candidates, including late-uploaded papers.
-    const rows = window?await db.$queryRaw`
+    const rows = window?.cashDay?await db.$queryRaw`
       SELECT "id", "companyId", "storeId", "category", "createdAt",
         "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum", "cashDay"::text AS "cashDay"
       FROM "StoreChatMessage"
       WHERE "companyId"=${companyId} AND "storeId"=${storeId}
         AND "createdAt"<${window.to}
-        AND ((("cashDay" IS NULL OR ${window.cashDay??null}::date IS NULL) AND "createdAt">=${window.from}) OR
-             ("cashDay" IS NOT NULL AND "cashDay"=${window.cashDay??null}::date))
+        AND (("cashDay" IS NULL AND "createdAt">=${window.from}) OR
+             ("cashDay" IS NOT NULL AND "cashDay"=${window.cashDay}::date))
         AND "category" IN ('CASH','SHIFT') AND "attachmentData" IS NOT NULL
         AND "attachmentMimeType" IN ('image/jpeg','image/png','image/webp','application/pdf')
-      ORDER BY ("cashDay" IS NOT NULL) DESC, "createdAt" DESC, "id" DESC LIMIT 51` : await db.$queryRaw`
+      ORDER BY ("cashDay" IS NOT NULL) DESC, "createdAt" DESC, "id" DESC LIMIT 51` : window?await db.$queryRaw`
       SELECT "id", "companyId", "storeId", "category", "createdAt",
-        "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum", "cashDay"::text AS "cashDay"
+        "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum"
+      FROM "StoreChatMessage"
+      WHERE "companyId"=${companyId} AND "storeId"=${storeId}
+        AND "createdAt">=${window.from} AND "createdAt"<${window.to}
+        AND "category" IN ('CASH','SHIFT') AND "attachmentData" IS NOT NULL
+        AND "attachmentMimeType" IN ('image/jpeg','image/png','image/webp','application/pdf')
+      ORDER BY "createdAt" DESC, "id" DESC LIMIT 51` : await db.$queryRaw`
+      SELECT "id", "companyId", "storeId", "category", "createdAt",
+        "attachmentName", "attachmentMimeType", "attachmentSize", "attachmentChecksum"
       FROM "StoreChatMessage"
       WHERE "companyId"=${companyId} AND "storeId"=${storeId}
         AND "category" IN ('CASH','SHIFT')
