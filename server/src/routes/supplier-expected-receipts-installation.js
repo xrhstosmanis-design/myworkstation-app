@@ -1,3 +1,4 @@
+import {WEEKLY_PROFILE_SUFFIX} from '../services/weekly-stock-alarm-profile.js';
 import {Router} from 'express';
 
 const inputError=()=>Object.assign(new Error('Έλεγξε τα στοιχεία προετοιμασίας αναφορών.'),{status:400,code:'EXPECTED_RECEIPT_INSTALL_INPUT_INVALID'});
@@ -40,7 +41,7 @@ export function createExpectedReceiptInstallationRouter(db,{env=process.env,crea
    if(method==='install'&&input.explicitAuthorization!==true)throw inputError();
    const sourceRevision=env.RENDER_GIT_COMMIT||env.GIT_COMMIT;
    if(typeof sourceRevision!=='string'||!/^[a-f0-9]{40}$/.test(sourceRevision))return res.status(503).json({code:'EXPECTED_RECEIPT_INSTALL_REVISION_REQUIRED',error:'Δεν επιβεβαιώθηκε η έκδοση εγκατάστασης.'});
-   const service=await createInstallation(db,{sourceRevision,enabled:env.AUTOMATIC_REPORT_EVENT_INSTALL_ENABLED==='1'});
+   const service=await createInstallation(db,{sourceRevision,...(typeof env.MWS_STORE_LIFECYCLE_PROFILE==='string'&&env.MWS_STORE_LIFECYCLE_PROFILE.endsWith(WEEKLY_PROFILE_SUFFIX)?{weeklyStockAlarm:true,existingLab:env.MWS_STORE_LIFECYCLE_PROFILE.includes('__EXISTING_EFOOD_LAB_V1'),sourceProfile:env.MWS_STORE_LIFECYCLE_PROFILE.replace(/__WEEKLY_STOCK_ALARM_V1$/,'').replace(/__NO14_COMPAT_V2$/,'').replace(/__EXISTING_EFOOD_LAB_V1$/,'')}:{}),enabled:env.AUTOMATIC_REPORT_EVENT_INSTALL_ENABLED==='1'});
    const scope={companyId:req.expectedReceiptCompanyId,storeId:req.params.storeId};
    const result=method==='describe'?await service.describe():await service[method](req.user,{...scope,...(method==='install'?{packet:input.packet,explicitAuthorization:true}:{})});
    res.json(result);

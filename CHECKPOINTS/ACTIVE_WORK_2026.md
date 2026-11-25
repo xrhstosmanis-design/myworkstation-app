@@ -8,6 +8,14 @@ User reports a real cash checkout/fiscal receipt and correct separate card/servi
 
 Continuation branch `fix/netlink-unknown-request-id-20261125`: bound future provider IDs to seconds-sized numeric range using an atomic non-cycling SQL sequence, reject legacy oversized READY intents before payment/dispatch, expose scoped non-secret provider trace ID for support, and retain only safe HTTP status diagnostics. The28Aug provider email recommends seconds rather than millisecond/nanosecond timestamps; this is a compatibility correction, not proof of the historical exception's cause. Existing paid UNKNOWN intent must never be rewritten/resubmitted.63Netlink local tests PASS with isolated PostgreSQL18.7,0FAIL/0SKIP. Full CI/build/release pending. Existing catalogue/report printing PASS remains intact. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-request-id.md`.
 
+
+## 25/11/2026 - Αυτόματο alarm stock: κεντρικά LIVE, πρώτη Διαδόχου LIVE PASS
+
+Retained owner /root /4194. FullCI45664460655 all5jobsPASS + AIwallet45664460868PASS; merged/deployed0fce7daa0eec2e1a461fa6773d7c3deb8ae2cf6a. Explicit3table installation299→302, existingfencegeneration0preserved/target93d396e0; runtimeLIVE, installerOFF. ΜόνοΔιαδόχουSTOREon28/3/2/floor0. Αυτόματη αλλαγήSKU1002071→8 στις20:02:40Athens, ιστορικόb6325860-c4af-4cca-b49c-9b6f7c47e69f/εβδομάδα23Nov, μοναδικήεγγραφή, απόθεμα0/οικονομικάαμετάβλητα. Αυτό αντικαθιστά τις ιστορικές SOURCE/OFF/INSTALLpendingεγγραφές για το συγκεκριμένοscope.
+
+Δεν κλείνει ολόκληροGate14/No14. Full-store completion, future-week rollover, automaticdecreases withavailability/promotionhistory, sharedrestoreexercise and long-durationperformance remainOPEN. ExistingPOSprint/inboxacceptance separate. Nootherstoresactivated. [Checkpoint](../../CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-central-release.md) · [Manual](../manual/weekly-stock-alarm/PASS.md).
+
+
 ##25Nov2026 — Netlink paid issuance installed; production setup complete — AWAITING USER ACCEPTANCE /root
 
 PR#4229 head e7ed47d3125a2a589716d2079a84532dd7be89f0 passed full CI45633162691 (all5jobs), merged7623888cc63d95f1c1f4283231e4e938b565f397. Render code deploy dep-dc3fgqd9el5s73d8tuqg and activation deploy dep-dc3fllk0916s738m9v80 LIVE at the same source revision. Global paid-execution feature enabled with all payment/fiscal/tenant gates retained. Selected production-store POS mapping completed through authenticated UI; existing fee reused as non-stock service, dedicated non-stock electronic value item created with existing fiscal department. Read-only SQL confirms the existing fee stock and movement history stayed unchanged. No real card/provider purchase or physical voucher print test performed.61targeted local tests PASS including isolated native PostgreSQL and mounted UI; user acceptance remains OPEN. Existing catalogue/report-print USER PASS remains protected. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-paid-live-setup.md`.
@@ -195,6 +203,8 @@ Source#4037/head8975b1ca, mergec36a4ffb. PR CI44393082061:6264PASS/0FAIL/2option
 - 25/11/2026 · Νο 7 · Ημερήσια αναφορά ταμείων την ημέρα ενεργοποίησης · [Checkpoint](CHANGES/2026-11-25-no7-daily-cash-activation-day.md).
 
 - 25/11/2026 · Νο 7 · Ημερομηνία ταμείου στο Chat · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day.md).
+
+- 25/11/2026 · Νο 7 · Επιλογή χειρογράφων ανά περίοδο · [Checkpoint](CHANGES/2026-11-25-no7-cash-paper-period-selection.md).
 
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
@@ -1080,6 +1090,19 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 25/11/2026 · Retained4194owner /root · weekly alarm continuation; bounded versioned admission extension, old profiles/defaults/No7-No14 owners retained. SOURCE NOT STARTED / PRODUCTION OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-continuation.md.
 
+25/11/2026 · Retained4194owner /root · weekly-only source READY, native102PASS + No7compat11PASS/3Docker-pending; explicit versioned security/existing-lab/schema admission; old plan/profile hashes preserved, code source bindings63. Full CI/install/LAB pending; runtime OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-admission-source.md.
+
+25/11/2026 · Weekly4194 same owner: actual299-table column reconciliation0mismatch, exact preserved No5/myDATA nullable/added columns included in optional versioned runtime metadata descriptor; production still OFF. New exact-head CI required. See weekly-stock-alarm-admission-source checkpoint.
+
+25/11/2026 · Weekly4194: full CI found2failures of one Python non-string profile guard; fixed both selectors,27Python +10JS PASS. New full CI required. User requests Διαδόχου test: fresh baseline/preview then store-only opt-in after admission, production currently OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-ci-type-guard.md.
+
+25/11/2026 · Weekly4194 exact Netlink catalogue continuation after4236claim: incoming main retained,8nullable columns+1partial index preserved/verified, JS-Python profiles and native102PASS. Full newCI/release required; Diadochou module active0cost and preview only, weekly runtimeOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-netlink-catalogue-source.md.
+
+25/11/2026 · Weekly4194 after4240claim: exact existingcashDay preserved, all299table columnshapes0mismatch, native102PASS, newfullCI required. Clean isolatedrelease leaves unrelated uncommittedinvoice edits untouched. Diadochou preview only; weeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-cashday-catalogue-source.md.
+
+25/11/2026 · Weekly4194 parent installer now actually rendered before policy/schema readiness; integrated central packet→verified install→policy reload test14UI PASS, production buildPASS. Full exact-headCI pending, alarmOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-parent-installer.md.
+
+25/11/2026 · Weekly4194 outage recovered;65d fullCI fullyGREEN after browserretry. CurrentNetlink4241/main6b3c retained, unchanged8column/index owner source witness refreshed, native103PASS and buildPASS. New exactheadCI needed, productionweeklyOFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-resume-numeric-netlink.md.
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση μηνιαίων ελέγχων και εκκρεμοτήτων](CHANGES/2026-11-25-no5-store-report-reads.md).
 
 - 25/11/2026 · Νο 7 · Έκδοση Android με ημερομηνία ταμείου · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day-android-release.md).
@@ -1091,4 +1114,4 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 25/11/2026 · ASSIGNED retained4194 /root: bounded weekly-alarm preservation of newly deployed Netlink paid-issuance catalogue from7623888/4229. Before-source claim: verify the exact8nullable NetlinkTransaction columns and paid_checkout partial index against unchanged dedicated-owner DDL, version metadata-only source projection/target declaration, refresh source bindings and native both-order/tamper controls. No Netlink writer/row/fiscal/provider behavior ownership or changes, no generic unknown-column admission. Existing No7/No14/efood/Netlink owners retained. Operational test requested by user at Διαδόχου, preflight/module activation only so far; weekly runtime OFF. Source4194 still pending finalCI/release and new exact-catalogue integration.
 - 25/11/2026 · Νο 5 · [Πρόσθετες προβολές λειτουργίας καταστήματος](CHANGES/2026-11-25-no5-store-operations-delegation.md).
 
-- 25/11/2026 · Νο 7 · Επιλογή χειρογράφων ανά περίοδο · [Checkpoint](CHANGES/2026-11-25-no7-cash-paper-period-selection.md).
+- 25/11/2026 · Νο 5 · [Προβολές ραδιοφώνου, καμερών, χονδρικής και OCR](CHANGES/2026-11-25-no5-observation-reads.md).

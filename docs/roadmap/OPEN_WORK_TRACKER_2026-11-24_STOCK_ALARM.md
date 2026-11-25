@@ -1,3 +1,9 @@
+## 25/11/2026 - Αυτόματο alarm stock: κεντρικά LIVE, πρώτη Διαδόχου LIVE PASS
+
+Retained owner /root /4194. FullCI45664460655 all5jobsPASS + AIwallet45664460868PASS; merged/deployed0fce7daa0eec2e1a461fa6773d7c3deb8ae2cf6a. Explicit3table installation299→302, existingfencegeneration0preserved/target93d396e0; runtimeLIVE, installerOFF. ΜόνοΔιαδόχουSTOREon28/3/2/floor0. Αυτόματη αλλαγήSKU1002071→8 στις20:02:40Athens, ιστορικόb6325860-c4af-4cca-b49c-9b6f7c47e69f/εβδομάδα23Nov, μοναδικήεγγραφή, απόθεμα0/οικονομικάαμετάβλητα. Αυτό αντικαθιστά τις ιστορικές SOURCE/OFF/INSTALLpendingεγγραφές για το συγκεκριμένοscope.
+
+Δεν κλείνει ολόκληροGate14/No14. Full-store completion, future-week rollover, automaticdecreases withavailability/promotionhistory, sharedrestoreexercise and long-durationperformance remainOPEN. ExistingPOSprint/inboxacceptance separate. Nootherstoresactivated. [Checkpoint](../../CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-central-release.md) · [Manual](../manual/weekly-stock-alarm/PASS.md).
+
 - 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE LIVE 678e4645 / full CI PASS / native PostgreSQL + adapter 7PASS / LAB acceptance pending. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
 
 ## 24/11/2026 — Ξεχωριστό POS υποσύνολο
@@ -26,8 +32,13 @@ ASSIGNED /root · docs/central-weekly-stock-alarm-claim-20261124 · PR #4193.
 
 25/11/2026 · Retained4194owner /root · weekly alarm continuation; bounded versioned admission extension, old profiles/defaults/No7-No14 owners retained. SOURCE NOT STARTED / PRODUCTION OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-continuation.md.
 
+25/11/2026 · Retained4194owner /root · weekly-only source READY, native102PASS + No7compat11PASS/3Docker-pending; explicit versioned security/existing-lab/schema admission; old plan/profile hashes preserved, code source bindings63. Full CI/install/LAB pending; runtime OFF. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-admission-source.md.
+
+25/11/2026 · Weekly4194 same owner: actual299-table column reconciliation0mismatch, exact preserved No5/myDATA nullable/added columns included in optional versioned runtime metadata descriptor; production still OFF. New exact-head CI required. See weekly-stock-alarm-admission-source checkpoint.
 25/11/2026 · Weekly4194 retained /root: Διαδόχου module enabled0cost, actualsales calculation preview only; no minimum/runtime activation. Newhead4dbd6b16 fullCI45643643734/AIwallet45643643611 pending after exact Netlink catalogue preservation. Next: green CI→explicit installation→measured Διαδόχου STORE-only test. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-diadochou-handoff.md.
 
 25/11/2026 · ASSIGNED retained4194 /root, before-source extension of4236: exact existing StoreChatMessage.cashDay DATE NULL from unchanged No7 store-chat.js is the only further mismatch in all299physical table shapes. Preserve via bounded metadata-only runtime descriptor and exact nullable/default-free column catalogue, native replay/tamper checks; no Chat writer/row/access/session changes, No7 owner retained. No generic unknown-column allowance. Operational test remains Διαδόχου, weekly OFF.
 
 25/11/2026 · ASSIGNED retained4194 /root: bounded weekly-alarm preservation of newly deployed Netlink paid-issuance catalogue from7623888/4229. Before-source claim: verify the exact8nullable NetlinkTransaction columns and paid_checkout partial index against unchanged dedicated-owner DDL, version metadata-only source projection/target declaration, refresh source bindings and native both-order/tamper controls. No Netlink writer/row/fiscal/provider behavior ownership or changes, no generic unknown-column admission. Existing No7/No14/efood/Netlink owners retained. Operational test requested by user at Διαδόχου, preflight/module activation only so far; weekly runtime OFF. Source4194 still pending finalCI/release and new exact-catalogue integration.
+
+[Κεντρική κατάσταση PDF](MyWorkStation_Stock_Alarm_Status_2026-11-25.pdf).

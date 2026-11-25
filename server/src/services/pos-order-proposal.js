@@ -1,3 +1,4 @@
+import {readWeeklyStockAlarmState} from './weekly-stock-alarm.js';
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
 import {greeceDateInput,greeceRangeDate} from '../../../shared/greece-time.mjs';
@@ -32,7 +33,8 @@ export async function readPosOrderProposal(db,scope){
     OR EXISTS(SELECT 1 FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=p."id" AND o."companyId"=${scope.companyId} AND o."storeId"=${scope.storeId} AND o."supplierId"=${supplier.id} AND o."status"='FINAL' AND o."awaitingInvoice"=FALSE AND l."quantity">0))`;
    const ids=new Set(matches.map(x=>x.id));rows=rows.filter(r=>ids.has(r.productId));
   }
-  return {...proposal,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:false};
+  const alarmState=await readWeeklyStockAlarmState(tx,scope);
+  return {...proposal,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:alarmState.enabled,alarmState};
  },{isolationLevel:'RepeatableRead',timeout:30000});
 }
 export function createPosProposalSnapshots({now=()=>Date.now(),ttl=600000,maxEntries=20,maxBytes=16777216}={}){

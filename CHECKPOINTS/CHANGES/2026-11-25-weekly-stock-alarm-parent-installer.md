@@ -1,0 +1,7 @@
+# Weekly alarm: real settings parent mounts installer before admission
+
+25/11/2026 · retained4194owner /root. Review of the actual policy settings parent found it imported but did not render the privileged installer child. The standalone installer UI tests passed while this complete user path was absent. Fixed the existing claimed parent only: after a store is selected, render the session-bound installer outside the draft/readiness block, and refresh saved policy state after independently verified installation. Ordinary owners/operators still cannot obtain central install authority; the child retains its existing server/session gate. No server/source-binding/schema changes in this correction.
+
+New mounted integration test renders the real settings parent, exercises policy GET failure before schema admission, confirms explicit checkbox gating, posts one central actor/store-bound install packet, verifies target by a subsequent inspection, and asserts automatic policy reload with no settings PUT or business write. Full mounted installer/context/parent14PASS/0FAIL/0SKIP; production frontendbuildPASS. Prior current-schema native102PASS remains relevant, with this additional integrated UI test. Previous standalone-only UI coverage is not claimed as proof of this parent path.
+
+New exact-head fullCI required. Production alarm remainsOFF; no schema/minStock/currentStock write or automaticLIVEPASS. Diadochou policy/test remains the next operational action after code/schema/runtimeadmission.

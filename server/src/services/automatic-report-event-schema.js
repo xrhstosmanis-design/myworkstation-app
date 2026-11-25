@@ -1,3 +1,4 @@
+import {parseWeeklyStockAlarmProfile} from './weekly-stock-alarm-profile.js';
 // Explicit lifecycle profile for event report authorizations. The default
 // manifest remains usable before the optional event schema is provisioned.
 import {readFileSync} from 'node:fs';
@@ -39,5 +40,6 @@ export function monthlyInventorySummaryLifecycleReady(env=process.env){
 }
 
 export function automaticReportEventLifecycleReady(env=process.env){
+ if(typeof env.MWS_STORE_LIFECYCLE_PROFILE==='string'&&env.MWS_STORE_LIFECYCLE_PROFILE.endsWith('__WEEKLY_STOCK_ALARM_V1')){try{parseWeeklyStockAlarmProfile(env.MWS_STORE_LIFECYCLE_PROFILE);return true}catch{return false}}
   return ['AUTOMATIC_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4','MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5'].includes(env.MWS_STORE_LIFECYCLE_PROFILE);
 }

@@ -13,6 +13,9 @@ COPY ops/backup/lifecycle /backup/lifecycle
 # These are data/source files only; the backup image does not execute Node.
 COPY ops/backup/lifecycle /backup/company-source/ops/backup/lifecycle
 COPY server/src/services/store-lifecycle-executor.js \
+     server/src/services/weekly-stock-alarm-profile.js \
+     server/src/services/weekly-stock-alarm-catalogue.js \
+     server/src/services/weekly-stock-alarm-existing-lab.js \
      server/src/services/supplier-expected-receipts-lifecycle-profile.js \
      server/src/services/supplier-expected-receipts-lifecycle-inspection.js \
      server/src/services/supplier-expected-receipts-compatibility-definition.js \

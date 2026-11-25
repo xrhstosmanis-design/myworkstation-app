@@ -22,6 +22,8 @@ SOURCE_PATHS += ('server/src/services/supplier-expected-receipts-lifecycle-profi
 
 SOURCE_PATHS += ('server/src/services/automatic-report-security-transition.js', 'server/src/services/automatic-report-security-compatibility.js', 'ops/backup/lifecycle/report-security-profile.proposed.json', 'ops/backup/lifecycle/report-security-compatibility.proposed.json')
 
+SOURCE_PATHS += ('server/src/services/weekly-stock-alarm-profile.js', 'server/src/services/weekly-stock-alarm-catalogue.js', 'server/src/services/weekly-stock-alarm-existing-lab.js', 'ops/backup/lifecycle/weekly-stock-alarm-definition.proposed.json', 'ops/backup/lifecycle/weekly-stock-alarm-existing-lab.proposed.json', 'ops/backup/lifecycle/weekly_stock_alarm_profile.py')
+
 def compact(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
 

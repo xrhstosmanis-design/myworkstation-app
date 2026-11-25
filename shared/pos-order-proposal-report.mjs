@@ -11,7 +11,7 @@ export function renderPosOrderProposal(report,search=''){
  const details=[`Κατάστημα: ${report.storeName||report.storeId}`,`Προμηθευτής: ${supplier}`,`Πωλήσεις: ${period.fromDate||report.from} έως ${period.toDate||report.to} · ${report.options.historyDays} ημέρες`,
   `Κάλυψη: ${report.options.coverageDays} ημέρες · μέχρι παράδοση: ${report.options.leadDays} ημέρες`,
   `Υπολογισμός: ${greeceDateTimeInput(report.generatedAt,true).replace('T',' ')} (ώρα Ελλάδας)`,
-  ...(search.trim()?[`Αναζήτηση: ${search.trim()}`]:[]),'Χρησιμοποιείται το τρέχον αποθηκευμένο alarm. Η εβδομαδιαία αυτόματη αναπροσαρμογή δεν είναι ενεργή.',
+  ...(search.trim()?[`Αναζήτηση: ${search.trim()}`]:[]),report.automaticAlarm?'Χρησιμοποιείται το τρέχον αποθηκευμένο alarm. Η εβδομαδιαία αυτόματη αναπροσαρμογή είναι ενεργοποιημένη.':'Χρησιμοποιείται το τρέχον αποθηκευμένο alarm. Η εβδομαδιαία αυτόματη αναπροσαρμογή δεν είναι ενεργή.',
   ...(report.expectedReceipts?.available===false?['Οι αναμενόμενες παραλαβές δεν είναι διαθέσιμες στον υπολογισμό. Έλεγξέ τες πριν παραγγείλεις.']:[]),
   'Πρόταση για έλεγχο. Η αποστολή ή η εκτύπωση δεν καταχωρίζει παραγγελία.'];
  const review=r=>[r.reason,...(r.warnings||[]),...(r.expectedReceiptReviewReasons||[]),...(r.confirmedPendingStockQuantity>0?[`Επιβεβαιωμένο αναμενόμενο υπόλοιπο: ${fmt(r.confirmedPendingStockQuantity)} ${r.unitLabel}`]:[]),...(r.pendingPurchaseReview||[]).map(x=>`${x.status==='NEW'?'Πρόχειρες αγορές':'Προς τιμολόγηση'}: ${x.orderCount} · ${x.recordedStockQuantity==null?'μετατροπή προς έλεγχο':fmt(x.recordedStockQuantity)+' '+r.unitLabel}`)].filter(Boolean);

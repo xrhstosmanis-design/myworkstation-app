@@ -22,6 +22,13 @@ COMPANY_READ_PROTOCOL = 'MWS_BACKOFFICE_COMPANY_READ_CAPABILITY_V1'
 def selected_manifest_file(env=None):
     configuration = os.environ if env is None else env
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if not isinstance(profile, str):
+        raise ValueError('Invalid store lifecycle profile')
+    if profile.endswith('__WEEKLY_STOCK_ALARM_V1'):
+        from weekly_stock_alarm_profile import weekly_source
+        source=weekly_source(profile)
+        if source=='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_NO14_V1': source='MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3'
+        return selected_manifest_file({'MWS_STORE_LIFECYCLE_PROFILE':source})
     if profile in ('BASE', 'AUTOMATIC_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_BASE_V1'):
         filename = 'manifest.json'
     elif profile in ('MONTHLY_INVENTORY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_V1', 'BACKOFFICE_COMPANY_CAPTURE_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V1', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V2', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V3', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V4', 'MONTHLY_INVENTORY_CAPTURE_EVENT_REPORTS_ONLY_V5', 'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1'):
@@ -33,6 +40,12 @@ def selected_manifest_file(env=None):
 
 def selected_manifest_document(env=None):
     configuration = os.environ if env is None else env
+    profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if not isinstance(profile, str):
+        raise ValueError('Invalid store lifecycle profile')
+    if profile.endswith('__WEEKLY_STOCK_ALARM_V1'):
+        from weekly_stock_alarm_profile import weekly_manifest
+        return weekly_manifest(configuration['MWS_STORE_LIFECYCLE_PROFILE'],selected_manifest_document)
     document = json.loads(selected_manifest_file(configuration).read_text())
     profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
     if profile == 'BACKOFFICE_COMPANY_CURRENT_CAPTURE_V1':
