@@ -1,3 +1,13 @@
+## 25/11/2026 — NETLINK central catalogue and report print / SOURCE, AWAITING CI + RELEASE
+
+Owner /root; continuation claim PR4217 merged92ad27933579548289ab7b2c1e5e2a3f1cf2cf24 after CI45601536239 SUCCESS. Source branch fix/netlink-catalogue-source-20261125. Owner explicitly requests common correction for every store and report print button. No real-store identifiers or credentials are recorded.
+
+Cause: common panel assumed groups at root, while provider menu uses data.tabs[].groups[]. Add shared adapter for tabs/direct groups and mock id/name compatibility, unique group anchors, disabled products/tabs preservation and explicit malformed-menu error. Refresh clears stale selection. Provider response replay yields22groups/113available services (no provider transaction). Existing credential/auth/module/store/fiscal/execute locks remain unchanged. No prepare/execute/PIN/charge calls added.
+
+Add selected internal report print for detail/summary/weekly, selected-store name/identity and date range, values/totals/cancellation status and explicit MyWorkStation ledger label (not provider statement). Text-only DOM construction, popup failure handling and58mm print stylesheet. Print disabled while refreshing, on errors, before current report context matches store+period; no request/submission from printing. Both common POS callers pass their existing selected-store name. Browser printer dialogue selects device; physical58mm print NOT TESTED.
+
+Local Node20.20.2:8/8 targeted tests PASS,0FAIL0SKIP, including actual mounted common panel with nested provider tabs/disabled item, popup print/current report, refresh lock and stale store response; three print report variants, escaped provider text, totals/period/store and blocked popup. Existing credential-save/store/unmount fences and no-execute tests passed. Frontend build PASS, TABLE_SERVICE verifier PASS. git diff --check PASS. These are local automated results, not LAB/LIVE feature PASS. Production catalogue display/physical printer/provider identity/sale remain NOT TESTED. Source not installed; review/green full CI and release required. No production config/schema/credentials/financial mutation in this change. Certification/report contract remains externally blocked.
+
 - 24/11/2026 · ASSIGNED /root · POS4197 deployment dependency: null-category VAT0 startup no-op recognition; prior owner retained. SOURCE LIVE 678e4645 / full CI PASS / native PostgreSQL + adapter 7PASS / LAB acceptance pending. Checkpoint: CHECKPOINTS/CHANGES/2026-11-24-pos-proposal-startup-null-category.md.
 - 24/11/2026 · ASSIGNED /root · Πρόσθετοι παραλήπτες ειδοποιήσεων πορτοφολιού AI · [Checkpoint](CHANGES/2026-11-24-ai-wallet-extra-email.md) · Υλοποίηση σε έλεγχο CI και PostgreSQL.
 
@@ -142,6 +152,8 @@ Owner `/root` Νο2, συνέχεια ρητού αιτήματος πραγμα
 ### Νεότερη κατάσταση 18/11/2026 — Νο2 — ΕΓΚΑΤΕΣΤΗΜΕΝΟ / LIMITED LIVE UI PASS
 
 Source#4037/head8975b1ca, mergec36a4ffb. PR CI44393082061:6264PASS/0FAIL/2optionalPG-WASM skips+8backupPASS. Main CI44395223533:6271PASS/0FAIL/3optionalPG-WASM skips+8backupPASS· actual nativePG και Chromium counter flows PASS χωρίς skip. Render c36 LIVE23:13:02Ελλάδας, descendant893e009c LIVE23:16:14 με ίδια τέσσερα runtime blobs Νο2 και exact health. LIVE προσωπικό Super Admin/Chromium desktop23:17:23: «Δεν έχουν καταχωριστεί» ακριβές υποσύνολο, «Εξοφλημένα» πρώτη50+τελευταία σελίδα μόνο πράσινα, «Οικονομικές εκκρεμότητες» μόνο καταγεγραμμένες διαφορές. Χωρίς νέα πληρωμή/ανέβασμα/έγκριση/stock πράξη. Η συνεδρία άλλαξε έπειτα· άλλοι μετρητές έχουν CI PASS αλλά όχι νέο hosted PASS, λοιποί ρόλοι/συσκευές και κοινή τελική Νο2 αποδοχή OPEN. [Receipt](CHANGES/2026-11-18-no2-counter-live-receipt.md), [Manual](../docs/manual/monthly-invoice-audit/PASS.md). C classifier/D1/writers/dispatch και άλλοι owners διατηρούνται. Το email preview κληρονομεί τα διορθωμένα ordinary workflow counts, χωρίς νέα financial μορφοποίηση ή αποστολή. Δεν επαναλαμβάνουμε τεκμηριωμένες συναλλαγές.
+
+- 25/11/2026 · Νο 7 · Ημερήσια αναφορά ταμείων την ημέρα ενεργοποίησης · [Checkpoint](CHANGES/2026-11-25-no7-daily-cash-activation-day.md).
 
 ## 18/11/2026 — Νο2 — summary counter drill-down / ASSIGNED BEFORE SOURCE
 
@@ -1018,5 +1030,3 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 25/11/2026 · ASSIGNED /root · POS proposal supplier/coverage/sales dates/email/print combined package, LIVE669763de / FULL CI45598388164 all5PASS / LAB business hashes unchanged / common POS-print-inbox acceptance pending / existing4193owner retained. CHECKPOINTS/CHANGES/2026-11-25-pos-order-proposal-controls-output.md. Weeklyalarm separateblocked.
 - 25/11/2026 · Νο 5 · [Πέντε επιπλέον προβολές για επανεκχώρηση BackOffice](CHANGES/2026-11-25-no5-more-read-delegation.md).
-
-- 25/11/2026 · Νο 7 · Ημερήσια αναφορά ταμείων την ημέρα ενεργοποίησης · [Checkpoint](CHANGES/2026-11-25-no7-daily-cash-activation-day.md).
