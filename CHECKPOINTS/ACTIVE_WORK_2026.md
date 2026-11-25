@@ -1052,3 +1052,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση προβολών απογραφής και απούλητων ειδών](CHANGES/2026-11-25-no5-stock-report-delegation.md).
 
 - 25/11/2026 · Νο 5 · [Επανεκχώρηση προβολών πωλήσεων, προσφορών και μεταφορών](CHANGES/2026-11-25-no5-more-store-reports.md).
+
+- 25/11/2026 · Νο 7 · Ημερομηνία ταμείου στο Chat · [Checkpoint](CHANGES/2026-11-25-no7-chat-cash-day.md).
