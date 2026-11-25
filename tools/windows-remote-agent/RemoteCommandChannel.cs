@@ -6,8 +6,10 @@ namespace MyWorkStation.RemoteAgent;
 internal sealed class RemoteCommandChannel : IAsyncDisposable {
  readonly CancellationTokenSource lifetime;
  readonly SemaphoreSlim captureWake = new(0,1);
+ readonly Action<string>? diagnostic;
  public Task Completion { get; }
- public RemoteCommandChannel(Func<CancellationToken,Task<JsonElement>> poll,Action<JsonElement> apply,Func<bool> allowed,Action failed,CancellationToken token) {
+ public RemoteCommandChannel(Func<CancellationToken,Task<JsonElement>> poll,Action<JsonElement> apply,Func<bool> allowed,Action failed,CancellationToken token,Action<string>? diagnostic=null) {
+  this.diagnostic=diagnostic;
   lifetime=CancellationTokenSource.CreateLinkedTokenSource(token);
   Completion=Run(poll,apply,allowed,failed);
  }
@@ -25,7 +27,10 @@ internal sealed class RemoteCommandChannel : IAsyncDisposable {
     }
    }
   }catch(OperationCanceledException)when(lifetime.IsCancellationRequested){}
-  catch{failed();}
+  catch(OperationCanceledException){diagnostic?.Invoke("COMMAND_POLL_TIMEOUT");failed();}
+  catch(HttpRequestException){diagnostic?.Invoke("COMMAND_TRANSPORT_ERROR");failed();}
+  catch(JsonException){diagnostic?.Invoke("COMMAND_RESPONSE_ERROR");failed();}
+  catch{diagnostic?.Invoke("COMMAND_CHANNEL_ERROR");failed();}
  }
  public async Task WaitForCapture(CancellationToken token) {
   if(await captureWake.WaitAsync(900,token))await Task.Delay(75,token);
