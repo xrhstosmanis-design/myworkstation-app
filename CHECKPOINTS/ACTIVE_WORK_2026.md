@@ -214,6 +214,8 @@ The real HTTP E2E batch reached `netlink-prepaid-flow.mjs` and correctly rejecte
 
 Next: exact-head full CI including the corrected existing mock-provider E2E, then review/approved installation and the final common LAB session. No real store, credential, transaction, source merge or production deployment was changed. Same /root owner and source PR #4016.
 
+- 25/11/2026 · Νο 7 · Δημοσίευση Android Chat 0.1.18 · [Checkpoint](CHANGES/2026-11-25-no7-chat-android-018-publication.md).
+
 ## 20/11/2026 — Ανάκτηση PDF myDATA Νοεμβρίου
 
 PR #4048. Έλεγχοι CI και LAB 5/5 στο b9bdd08a. Εκκρεμεί εγκατάσταση. [Checkpoint](CHANGES/2026-11-19-mydata-pdf-recovery-three-stores.md).
@@ -1074,7 +1076,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 25/11/2026 · Weekly4194 retained /root: Διαδόχου module enabled0cost, actualsales calculation preview only; no minimum/runtime activation. Newhead4dbd6b16 fullCI45643643734/AIwallet45643643611 pending after exact Netlink catalogue preservation. Next: green CI→explicit installation→measured Διαδόχου STORE-only test. CHECKPOINTS/CHANGES/2026-11-25-weekly-stock-alarm-diadochou-handoff.md.
 
+25/11/2026 · ASSIGNED retained4194 /root, before-source extension of4236: exact existing StoreChatMessage.cashDay DATE NULL from unchanged No7 store-chat.js is the only further mismatch in all299physical table shapes. Preserve via bounded metadata-only runtime descriptor and exact nullable/default-free column catalogue, native replay/tamper checks; no Chat writer/row/access/session changes, No7 owner retained. No generic unknown-column allowance. Operational test remains Διαδόχου, weekly OFF.
+
 25/11/2026 · ASSIGNED retained4194 /root: bounded weekly-alarm preservation of newly deployed Netlink paid-issuance catalogue from7623888/4229. Before-source claim: verify the exact8nullable NetlinkTransaction columns and paid_checkout partial index against unchanged dedicated-owner DDL, version metadata-only source projection/target declaration, refresh source bindings and native both-order/tamper controls. No Netlink writer/row/fiscal/provider behavior ownership or changes, no generic unknown-column admission. Existing No7/No14/efood/Netlink owners retained. Operational test requested by user at Διαδόχου, preflight/module activation only so far; weekly runtime OFF. Source4194 still pending finalCI/release and new exact-catalogue integration.
 - 25/11/2026 · Νο 5 · [Πρόσθετες προβολές λειτουργίας καταστήματος](CHANGES/2026-11-25-no5-store-operations-delegation.md).
-
-- 25/11/2026 · Νο 7 · Δημοσίευση Android Chat 0.1.18 · [Checkpoint](CHANGES/2026-11-25-no7-chat-android-018-publication.md).
