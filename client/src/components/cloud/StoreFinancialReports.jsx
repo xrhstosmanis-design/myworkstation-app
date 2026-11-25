@@ -74,6 +74,8 @@ export default function StoreFinancialReports({api,store,version=0}) {
     setSearchTerm('');
   }
 
+  const categoryMode = mode==='categories';
+
   return <section className="panel store-financial-reports" aria-label="Οικονομικές αναφορές">
     <h2>Οικονομικές αναφορές · {store.name}</h2>
     <div className="store-financial-filters">
@@ -94,18 +96,19 @@ export default function StoreFinancialReports({api,store,version=0}) {
       </label>}
     </div>
     {!range&&<p role="status">Επίλεξε έγκυρη περίοδο.</p>}
-    {(options.loading||detail.loading)&&<p role="status">Φόρτωση αναφοράς…</p>}
-    {(options.error||detail.error)&&<p role="alert">{options.error||detail.error}</p>}
+    {(options.loading||(!categoryMode&&detail.loading))&&<p role="status">Φόρτωση αναφοράς…</p>}
+    {(options.error||(!categoryMode&&detail.error))&&<p role="alert">{options.error||detail.error}</p>}
     {options.data&&!rows.length&&<p>Δεν βρέθηκαν αποτελέσματα για τα επιλεγμένα φίλτρα.</p>}
     {mode==='products'&&rows.length===100&&<p>Χρησιμοποίησε όνομα ή barcode για πιο συγκεκριμένα αποτελέσματα.</p>}
     {mode==='suppliers'&&<p>Η αναφορά χρησιμοποιεί τις ενεργές συνδέσεις ειδών με προμηθευτές. Ένα είδος με πολλούς προμηθευτές εμφανίζεται στην αναφορά καθενός.</p>}
     {options.data&&mode==='monthly'&&<Results data={options.data} kind="monthly" from={from}/>}
-    {options.data&&mode==='categories'&&<Results data={options.data} kind="categories" selected={choice?.id} onSelect={setSelected}/>}
-    {detail.data&&<><h3>{choice.name}</h3><Results data={detail.data} kind={detailMode} from={from}/></>}
+    {options.data&&mode==='categories'&&<Results data={options.data} kind="categories" selected={choice?.id} detail={detail}
+      onSelect={id=>setSelected(current=>current===id?'':id)}/>}
+    {!categoryMode&&detail.data&&<><h3>{choice.name}</h3><Results data={detail.data} kind={detailMode} from={from}/></>}
   </section>;
 }
 
-function Results({data,kind,selected,onSelect,from}) {
+function Results({data,kind,selected,onSelect,from,detail}) {
   const {rows,days} = data;
   const monthly = kind==='monthly';
   const dated = monthly||kind==='product-days';
@@ -124,12 +127,17 @@ function Results({data,kind,selected,onSelect,from}) {
       <thead><tr><th scope="col">{dated?'Ημέρα':kind==='categories'?'Κατηγορία / υποκατηγορία':'Είδος'}</th>
         <th scope="col">{monthly?'Πωλήσεις':'Τεμάχια'}</th><th scope="col">Αξία πωλήσεων</th>
         {!monthly&&!dated&&<th scope="col">Μ.Ο. τεμαχίων / ημέρα</th>}</tr></thead>
-      <tbody>{displayRows.map(row=><tr key={row.day||JSON.stringify([row.id,row.name])}>
-        <th scope="row">{dated?dayLabel(row.day):onSelect?<button type="button" aria-pressed={selected===row.id}
-          onClick={()=>onSelect(row.id)}>{row.name}</button>:row.name+(row.sku?' · '+row.sku:'')}</th>
-        <td>{number.format(monthly?row.sales:row.quantity)}</td><td>{euro.format(row.revenue)}</td>
-        {!monthly&&!dated&&<td>{number.format(Number(row.quantity)/days)}</td>}
-      </tr>)}</tbody>
+      <tbody>{displayRows.map(row=><React.Fragment key={row.day||JSON.stringify([row.id,row.name])}>
+        <tr>
+          <th scope="row">{dated?dayLabel(row.day):onSelect?<button className="store-financial-category-toggle"
+            type="button" aria-expanded={selected===row.id} onClick={()=>onSelect(row.id)}>
+            <span aria-hidden="true">{selected===row.id?'▾':'▸'}</span> {row.name}
+          </button>:row.name+(row.sku?' · '+row.sku:'')}</th>
+          <td>{number.format(monthly?row.sales:row.quantity)}</td><td>{euro.format(row.revenue)}</td>
+          {!monthly&&!dated&&<td>{number.format(Number(row.quantity)/days)}</td>}
+        </tr>
+        {onSelect&&selected===row.id&&<CategoryProducts detail={detail}/>}
+      </React.Fragment>)}</tbody>
       {kind!=='categories'&&<tfoot><tr><th scope="row">Σύνολο περιόδου</th><td>{number.format(monthly?totals.sales:totals.quantity)}</td>
         <td>{euro.format(totals.revenue)}</td>{!monthly&&!dated&&<td>{number.format(totals.quantity/days)}</td>}</tr></tfoot>}
     </table>
@@ -137,4 +145,20 @@ function Results({data,kind,selected,onSelect,from}) {
       ? ' · '+euro.format(totals.revenue/days)
       : ' · '+number.format(totals.quantity/days)+' τεμ. · '+euro.format(totals.revenue/days)}</p>}
   </div>;
+}
+
+function CategoryProducts({detail}) {
+  if(detail.error||detail.loading||!detail.data?.rows.length){
+    return <tr className="store-financial-category-product"><td colSpan={4}>
+      {detail.error?<span role="alert">{detail.error}</span>:<span role="status">
+        {detail.loading?'Φόρτωση προϊόντων…':'Δεν βρέθηκαν προϊόντα για την επιλεγμένη περίοδο.'}
+      </span>}
+    </td></tr>;
+  }
+  return detail.data.rows.map(product=><tr className="store-financial-category-product"
+    key={JSON.stringify([product.id,product.name])}>
+    <th scope="row">{product.name}{product.sku?' · '+product.sku:''}</th>
+    <td>{number.format(product.quantity)}</td><td>{euro.format(product.revenue)}</td>
+    <td>{number.format(Number(product.quantity)/detail.data.days)}</td>
+  </tr>);
 }
