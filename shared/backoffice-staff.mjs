@@ -13,7 +13,8 @@ export const staffDelegatableReadKeys=Object.freeze([
   'stock.read','inventory.duplicates.read','order-suggestions.read','low-value-products.read','supplier-price-comparison.read',
   'inventory.history.read','inventory.expected.read','unsold-products.read',
   'analytics.read','promotions.read','stock-transfers.read',
-  'monthly-inventory.read','monthly-invoice-audit.read','pending.read'
+  'monthly-inventory.read','monthly-invoice-audit.read','pending.read',
+  'handover.read','printers.read','baking.read','online-orders.read','table-service.read'
 ]);
 export const staffReadDelegationCapability='staff-grants.manage-reads';
 
