@@ -28,6 +28,14 @@ try {
  Assert-Output ([Math]::Abs(((Get-Item -LiteralPath (Join-Path $moved.outputPath ('mws-status-'+$statusId+'.res'))).LastWriteTimeUtc-$stamp).TotalSeconds) -lt 0.01) 'Original timestamp changed.'
  Assert-Output ([IO.File]::ReadAllText($protected) -ceq 'UNCERTAIN ORIGINAL') 'Uncertain fiscal evidence changed.'
  Reject-Output {Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$statusId})}
+ $failedId='3'*32;$failedPrefix=Join-Path $folder ('mws-status-'+$failedId)
+ $failedBytes=[Text.Encoding]::GetEncoding(1253).GetBytes("101`r`nNo response from device`r`nSTATUS`r`n")
+ $e.requestId=$failedId;$e.result=Read-FtextStatusResult $failedBytes $c.serialNumber
+ [IO.File]::WriteAllText(($failedPrefix+'.json'),($e | ConvertTo-Json -Depth 6))
+ [IO.File]::WriteAllBytes(($failedPrefix+'.res'),$failedBytes)
+ Reject-Output {Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$failedId})}
+ $failed=Invoke-FtextOutputArchive $c STATUS ([pscustomobject]@{requestId=$failedId;code=101})
+ Assert-Output ($failed.movedFiles -eq 2) 'Acknowledged STATUS 101 was not archived.'
  $id='22222222-2222-4222-8222-222222222222';$prefix=Join-Path $folder ('mws-cash-'+$id)
  $raw=[Text.Encoding]::UTF8.GetBytes('ORIGINAL FINAL RECEIPT BYTES');[IO.File]::WriteAllBytes(($prefix+'.res'),$raw)
  $rawHash=(Get-FileHash -LiteralPath ($prefix+'.res') -Algorithm SHA256).Hash.ToLowerInvariant()

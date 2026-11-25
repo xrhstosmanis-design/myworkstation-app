@@ -374,7 +374,10 @@ function Invoke-FtextOutputArchive {
         $readJson={param($suffix);Get-Content -LiteralPath $paths[($prefix+$id+$suffix)] -Raw -Encoding UTF8 | ConvertFrom-Json}
         if($Kind -ceq 'STATUS') {
             $e=& $readJson '.json';$parsed=Read-FtextArchiveStatus $paths[($prefix+$id+'.res')] ([string]$Config.serialNumber)
-            if($e.requestId -cne $id -or -not $parsed.ok -or ($e.result | ConvertTo-Json -Compress) -cne ($parsed | ConvertTo-Json -Compress)) {throw 'STATUS output does not match acknowledged success.'}
+            $expectedCode=if($Proof.PSObject.Properties['code']) {$Proof.code} else {0}
+            $matchesOutcome=($expectedCode -eq 0 -and $parsed.ok -and $parsed.code -eq 0) -or
+                ($expectedCode -eq 101 -and -not $parsed.ok -and $parsed.code -eq 101 -and $parsed.failedCommand -ceq 'STATUS')
+            if($e.requestId -cne $id -or -not $matchesOutcome -or ($e.result | ConvertTo-Json -Compress) -cne ($parsed | ConvertTo-Json -Compress)) {throw 'STATUS output does not match acknowledged outcome.'}
             foreach($key in @('companyId','storeId','terminalPos')) {if([string]$e.$key -cne [string]$Config.$key) {throw 'Foreign STATUS retained.'}}
         } else {
             $intent=& $readJson '.intent.json';$publish=& $readJson '.publish.json';$report=& $readJson '.report.json'
