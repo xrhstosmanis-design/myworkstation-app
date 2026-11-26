@@ -97,7 +97,7 @@ test('backoffice paid recovery mounts the common selected-store review without a
   if(url.includes('/status'))return {configured:true,executeEnabled:false};if(url.includes('/config'))return {configured:true};if(url.includes('/menu'))return {groups:[]};
   if(url.includes('/nonexecution-review')){state='RECOVERY_READY';return {status:state}};
   if(url.endsWith('/recover-paid')){state='UNKNOWN';return {status:'UNKNOWN'}};
-  if(url.includes('/issuance-intents?'))return {items:[{...item,status:state}],canAuthorizeRecovery:true,recoveryEnabled:true,recoveryStationId:'12345'};
+  if(url.includes('/issuance-intents?'))return {items:[{...item,status:state}],canAuthorizeRecovery:true,canCompleteReviewedRecovery:true,recoveryEnabled:true,recoveryStationId:'12345'};
   throw Error('Unexpected route '+url);
  };
  const button=label=>[...document.querySelectorAll('button')].find(b=>b.textContent===label);
@@ -111,5 +111,31 @@ test('backoffice paid recovery mounts the common selected-store review without a
   assert.equal(calls.filter(c=>c.url.endsWith('/nonexecution-review')).length,1);assert.equal(calls.filter(c=>c.url.endsWith('/recover-paid')).length,0);assert.match(document.body.textContent,/Επιβεβαιώθηκε μη εκτέλεση/);
   window.confirm=()=>true;await f.act(async()=>button('Ολοκλήρωση πληρωμένης κάρτας').click());assert.equal(calls.filter(c=>c.url.endsWith('/recover-paid')).length,1);assert.deepEqual(calls.find(c=>c.url.endsWith('/recover-paid')).body,{storeId:'A',fulfillExistingPaidPurchase:true});assert.match(document.body.textContent,/Μην κάνεις δεύτερη πληρωμή/);assert.equal(button('Ολοκλήρωση πληρωμένης κάρτας'),undefined);
   assert.ok(calls.every(c=>!/cash-received|checkout|\/issue$|\/execute|\/prepare/.test(c.url)));
+ }finally{await f.close()}
+});
+
+
+test('mounted employee completes a reviewed card from another shift without a new checkout or review authority',async()=>{
+ const f=await fixture('../../client/src/components/commerce/NetlinkPosPanel.jsx'),calls=[],completed=[];
+ const item={requestId:'00000000-0000-4000-8000-000000000004',title:'Other shift paid card',status:'RECOVERY_READY',paid:true,customerTotal:5.5};
+ const api=async url=>{calls.push(url);if(url.includes('/status'))return {configured:true,executeEnabled:false};if(url.includes('/config'))return {configured:true};if(url.includes('/menu'))return {groups:[]};if(url.includes('/issuance-intents?'))return {items:[item],canAuthorizeRecovery:false,canCompleteReviewedRecovery:true,recoveryEnabled:true};throw Error(url)};
+ try{
+  await f.render({api,storeId:'A',operatorId:'cashier-b',onRecover:async card=>{completed.push(card.requestId);item.status='COMPLETED'}});
+  assert.match(document.body.textContent,/Other shift paid card/);assert.match(document.body.textContent,/Χωρίς νέα είσπραξη ή απόδειξη/);
+  assert.equal(document.querySelector('form'),null);assert.equal(document.querySelector('input[type="checkbox"]'),null);
+  const button=[...document.querySelectorAll('button')].find(b=>b.textContent==='Ολοκλήρωση πληρωμένης κάρτας');assert.ok(button);assert.equal(button.disabled,false);
+  await f.act(async()=>button.click());assert.deepEqual(completed,[item.requestId]);assert.match(document.body.textContent,/Επανεκτύπωση ίδιας κάρτας/);
+  assert.ok(calls.every(url=>!/cash-received|checkout|nonexecution-review|recover-paid|\/issue$|\/execute|\/prepare/.test(url)));
+ }finally{await f.close()}
+});
+
+test('switching POS operator in the same store discards pending prior-operator permissions and cards',async()=>{
+ const f=await fixture('../../client/src/components/commerce/NetlinkPosPanel.jsx'),old=deferred();let actor='old';
+ const api=async url=>{if(url.includes('/status'))return {configured:true,executeEnabled:false};if(url.includes('/config'))return {configured:true};if(url.includes('/menu'))return {groups:[]};if(url.includes('/issuance-intents?'))return actor==='old'?old.promise:{items:[],canAuthorizeRecovery:false,canCompleteReviewedRecovery:true,recoveryEnabled:true};throw Error(url)};
+ try{
+  await f.render({api,storeId:'A',operatorId:'old',onRecover:async()=>{}});
+  actor='new';await f.render({api,storeId:'A',operatorId:'new',onRecover:async()=>{}});
+  await f.act(async()=>old.resolve({items:[{requestId:'old-card',title:'Prior private card',paid:true,status:'UNKNOWN'}],canAuthorizeRecovery:true,canCompleteReviewedRecovery:true,recoveryEnabled:true,recoveryStationId:'12345'}));
+  assert.doesNotMatch(document.body.textContent,/Prior private card/);assert.equal(document.querySelector('form'),null);assert.equal(document.querySelector('input[type="checkbox"]'),null);
  }finally{await f.close()}
 });

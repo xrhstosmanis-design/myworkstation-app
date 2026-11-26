@@ -1,3 +1,4 @@
+import {readReviewedRecoveryAccess} from '../integrations/netlink/paid-recovery-access.js';
 import {createNetlinkPaidRecovery} from '../integrations/netlink/paid-recovery.js';
 import {Router} from 'express';
 import {z} from 'zod';
@@ -8,10 +9,23 @@ const requestId=z.string().uuid();
 export function createPaidNetlinkRouter({db,provider,storeFor,prepareCheckout}){
  const router=Router(),store=createNetlinkPaidStore({db,provider}),recovery=createNetlinkPaidRecovery({db,provider});
  const privileged=user=>['OWNER','ADMIN','MANAGER'].includes(user?.role);
- async function authorized(req,tenant,id){const row=await store.load(tenant,id);if(!row)throw Object.assign(new Error('Δεν βρέθηκε η κάρτα.'),{status:404});if(row.operatorId!==req.user.id&&!privileged(req.user))throw Object.assign(new Error('Η κάρτα ανήκει σε διαφορετικό χειριστή.'),{status:403});return row;}
+ const storeOperator=(user,tenant)=>user?.tokenType==='STORE_OPERATOR'&&['EMPLOYEE','MANAGER'].includes(user.role)&&user.storeId===tenant.storeId;
+ async function authorized(req,tenant,id,{reviewedRecovery=false,receipt=false}={}){
+  const row=await store.load(tenant,id);if(!row)throw Object.assign(new Error('Δεν βρέθηκε η κάρτα.'),{status:404});
+  if(row.operatorId===req.user.id||privileged(req.user))return row;
+  if((reviewedRecovery||receipt)&&storeOperator(req.user,tenant)){
+   const access=(await readReviewedRecoveryAccess(db,tenant,req.user.id,id))[0];
+   if(access&&(access.handledByActor||reviewedRecovery&&access.ready))return row;
+  }
+  throw Object.assign(new Error('Η κάρτα ανήκει σε διαφορετικό χειριστή.'),{status:403});
+ }
  const enabled=()=>{if(process.env.NETLINK_ENABLE_EXECUTE!=='true')throw Object.assign(new Error('Η έκδοση καρτών δεν έχει ενεργοποιηθεί κεντρικά.'),{status:409,code:'NETLINK_EXECUTE_LOCKED'})};
  async function scope(req,input){const {storeId}=scopeSchema.parse(input);await storeFor(req,storeId);return {companyId:req.user.companyId,storeId}}
- router.get('/issuance-intents',async(req,res,next)=>{try{res.set('Cache-Control','no-store');const tenant=await scope(req,req.query);res.json({items:await store.list(tenant,privileged(req.user)?null:req.user.id),canAuthorizeRecovery:privileged(req.user),recoveryStationId:privileged(req.user)?(await recovery.reviewContext(tenant).catch(()=>null))?.stationId||null:null,recoveryEnabled:process.env.NETLINK_ENABLE_PAID_RECOVERY==='true'})}catch(e){next(e)}});
+ router.get('/issuance-intents',async(req,res,next)=>{try{
+  res.set('Cache-Control','no-store');const tenant=await scope(req,req.query),isPos=storeOperator(req.user,tenant);
+  const shared=isPos&&!privileged(req.user)?await readReviewedRecoveryAccess(db,tenant,req.user.id):[];
+  res.json({items:await store.list(tenant,privileged(req.user)?null:req.user.id,shared.map(x=>x.requestId)),canAuthorizeRecovery:privileged(req.user),canCompleteReviewedRecovery:privileged(req.user)||isPos,recoveryStationId:privileged(req.user)?(await recovery.reviewContext(tenant).catch(()=>null))?.stationId||null:null,recoveryEnabled:process.env.NETLINK_ENABLE_PAID_RECOVERY==='true'});
+ }catch(e){next(e)}});
  router.post('/issuance-intents',async(req,res,next)=>{try{
   enabled();const body=z.object({storeId:scopeSchema.shape.storeId,requestId,checkoutId:requestId,productId:z.string().trim().min(1).max(160)}).strict().parse(req.body);const tenant=await scope(req,body);
   if(prepareCheckout)await prepareCheckout(db,tenant,body.checkoutId,req);
@@ -32,12 +46,12 @@ export function createPaidNetlinkRouter({db,provider,storeFor,prepareCheckout}){
  }catch(e){next(e)}});
  router.post('/issuance-intents/:requestId/recover-paid',async(req,res,next)=>{try{
   res.set('Cache-Control','no-store');const body=scopeSchema.extend({fulfillExistingPaidPurchase:z.literal(true)}).strict().parse(req.body),tenant=await scope(req,body),id=requestId.parse(req.params.requestId);
-  if(!privileged(req.user))throw Object.assign(new Error('Η ολοκλήρωση απαιτεί υπεύθυνο καταστήματος.'),{status:403});await authorized(req,tenant,id);
+  if(!privileged(req.user)&&!storeOperator(req.user,tenant))throw Object.assign(new Error('Η ολοκλήρωση απαιτεί είσοδο στο POS του καταστήματος.'),{status:403});await authorized(req,tenant,id,{reviewedRecovery:true});
   if(process.env.NETLINK_ENABLE_PAID_RECOVERY!=='true')throw Object.assign(new Error('Η ολοκλήρωση πληρωμένων καρτών δεν έχει ενεργοποιηθεί.'),{status:409,code:'NETLINK_RECOVERY_LOCKED'});
-  res.json(await recovery.fulfill(tenant,id));
+  res.json(await recovery.fulfill(tenant,id,{actorId:req.user.id}));
  }catch(e){next(e)}});
  router.post('/issuance-intents/:requestId/receipt',async(req,res,next)=>{try{
-  res.set('Cache-Control','no-store');const tenant=await scope(req,req.body),id=requestId.parse(req.params.requestId);await authorized(req,tenant,id);const receipt=await store.receipt(tenant,id);
+  res.set('Cache-Control','no-store');const tenant=await scope(req,req.body),id=requestId.parse(req.params.requestId);await authorized(req,tenant,id,{receipt:true});const receipt=await store.receipt(tenant,id);
   await db.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${tenant.companyId},${tenant.storeId},${req.user.operatorId||req.user.id},${req.user.id},'NETLINK_RECEIPT_VIEWED',${JSON.stringify({requestId:id})}::jsonb)`;
   res.json(receipt);
  }catch(e){next(e)}});
