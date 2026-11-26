@@ -52,16 +52,21 @@ function fingerprint(companyId,supplierId,documentNumber){
   return crypto.createHash("sha256").update(`${companyId}|${supplierId}|${normalized}`).digest("hex");
 }
 
-async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=null}){
+async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=null,sourceDocumentId=null}){
   const normalized=normalizeDocumentNumber(documentNumber);
   if(!supplierId||!normalized)return null;
   const excludedOrderId=orderId||"";
+  const [supplier]=await tx.$queryRaw`SELECT REGEXP_REPLACE(COALESCE("taxId",''),'[^0-9]','','g') AS "taxId"
+    FROM "Supplier" WHERE "companyId"=${companyId} AND "id"=${supplierId}`;
+  const supplierTaxId=supplier?.taxId||"";
   const orderRows=await tx.$queryRaw`
     SELECT o."id",o."invoiceNumber",o."status",o."createdAt",s."name" AS "supplierName",st."name" AS "storeName"
     FROM "PurchaseOrder" o
     LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
     LEFT JOIN "Store" st ON st."id"=o."storeId"
-    WHERE o."companyId"=${companyId} AND o."supplierId"=${supplierId}
+    WHERE o."companyId"=${companyId}
+      AND (o."supplierId"=${supplierId} OR (${supplierTaxId}<>'' AND s."companyId"=${companyId}
+        AND REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${supplierTaxId}))
       AND (${excludedOrderId}='' OR o."id"<>${excludedOrderId})
       AND o."status" IN ('NEW','FINAL','INVOICED')
       AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${normalized}
@@ -73,8 +78,11 @@ async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=
     FROM "PurchaseDocument" d
     LEFT JOIN "Supplier" s ON s."id"=d."supplierId"
     LEFT JOIN "Store" st ON st."id"=d."storeId"
-    WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId}
-      AND (${excludedOrderId}='' OR d."id"<>${excludedOrderId})
+    WHERE d."companyId"=${companyId}
+      AND (d."supplierId"=${supplierId} OR (${supplierTaxId}<>'' AND s."companyId"=${companyId}
+        AND REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${supplierTaxId}))
+      AND d."id"<>${excludedOrderId}
+      AND d."id"<>${sourceDocumentId||""}
       AND d."status"='APPROVED'
       AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(d."documentNumber",'')),'\\s+','','g'))=${normalized}
     ORDER BY d."documentDate" DESC LIMIT 1`;
@@ -173,7 +181,20 @@ router.delete("/:orderId",async(req,res,next)=>{
 router.patch("/:orderId",async(req,res,next)=>{
   try{
     const requestedStatus=req.body?.status;
-    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED"&&!(requestedStatus==="NEW"&&req.body.returnForCorrection===true))return next();
+    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED"&&!(requestedStatus==="NEW"&&req.body.returnForCorrection===true)){
+      if(req.body?.supplierId==null&&req.body?.invoiceNumber==null)return next();
+      const companyId=req.user.companyId;
+      const [draft]=await prisma.$queryRaw`SELECT "id","storeId","supplierId","invoiceNumber","sourceDocumentId"
+        FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} AND "status"='NEW'`;
+      if(!draft||req.user.storeId&&req.user.storeId!==draft.storeId)return next();
+      const documentNumber=req.body.invoiceNumber??draft.invoiceNumber;
+      const duplicate=await prisma.$transaction(async tx=>{
+        if(req.user.staffAccess===true)await requireStaffAction(tx,req,draft.storeId,'invoices.edit');
+        return duplicateDetails(tx,{companyId,supplierId:req.body.supplierId??draft.supplierId,documentNumber,orderId:draft.id,sourceDocumentId:draft.sourceDocumentId});
+      });
+      if(!duplicate)return next();
+      return res.status(409).json({error:`Το παραστατικό ${documentNumber} υπάρχει ήδη (${duplicate.status}). Έλεγξε την υπάρχουσα εγγραφή πριν συνεχίσεις.`,code:"INVOICE_DUPLICATE_REVIEW_REQUIRED"});
+    }
     if(requestedStatus==="NEW"||requestedStatus==="INVOICED"){
       if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Η διόρθωση και η τελική τιμολόγηση γίνονται από εξουσιοδοτημένο χρήστη στο BackOffice."});
     }
@@ -225,7 +246,14 @@ router.patch("/:orderId",async(req,res,next)=>{
         if(!supplier[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
       }
 
-      const duplicate=await duplicateDetails(tx,{companyId,supplierId:effectiveSupplierId,documentNumber:effectiveInvoiceNumber,orderId:found.id});
+      const [supplierIdentity]=effectiveSupplierId?await tx.$queryRaw`SELECT REGEXP_REPLACE(COALESCE("taxId",''),'[^0-9]','','g') AS "taxId"
+        FROM "Supplier" WHERE "companyId"=${companyId} AND "id"=${effectiveSupplierId}`:[];
+      const normalizedNumber=normalizeDocumentNumber(effectiveInvoiceNumber);
+      if(effectiveSupplierId&&normalizedNumber){
+        const lockKey=JSON.stringify(["purchase-order-posting",companyId,supplierIdentity?.taxId||effectiveSupplierId,normalizedNumber]);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey},0))`;
+      }
+      const duplicate=await duplicateDetails(tx,{companyId,supplierId:effectiveSupplierId,documentNumber:effectiveInvoiceNumber,orderId:found.id,sourceDocumentId:found.sourceDocumentId});
       if(duplicate){
         const error=new Error(`Το παραστατικό ${effectiveInvoiceNumber} έχει ήδη καταχωρηθεί${duplicate.storeName?` στο ${duplicate.storeName}`:""}. Δεν έγινε δεύτερη καταχώρηση.`);
         error.status=409;
