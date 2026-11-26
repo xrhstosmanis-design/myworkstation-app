@@ -2,6 +2,10 @@
 
 Provider now explicitly confirms the original request never arrived/executed, superseding the pending-email/external-result blocker in25Nov notes. Retained /root after claim4256/a28d786. Source adds privileged evidence/station-bound review and once-only fulfillment of the existing paid intent with preserved original identity/history, no new sale/payment/fiscal receipt, no schema addition. Separate recovery flag defaults closed; new issuance remains paused.65targeted native SQL/HTTP/mounted tests PASS,0FAIL/0SKIP, including atomic audit rollback and uncertain recovery no-repeat. Node20 frontend build PASS. Full CI/release/actual voucher acceptance pending; no production review/issuance performed. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-paid-recovery-source.md`. Earlier live report/catalogue USER PASS remains narrow; real card/PIN printing NOT TESTED.
 
+## 26/11/2026 — Κάλυψη POS από παραλαβές
+
+Προστέθηκε προτεινόμενη κάλυψη με επιλογή εφαρμογής ανά προμηθευτή και κατάστημα. Εκκρεμεί δοκιμή στην παραγωγή. Βλ. CHECKPOINTS/CHANGES/2026-11-26-pos-receipt-cadence.md.
+
 - 25/11/2026 · [Ριζάρειο: ιστορικό STATUS 101 χωρίς τιμή InputLine](CHANGES/2026-11-25-ftext-status101-empty-inputline.md) · Εκκρεμεί αποδοχή στο POS.
 
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
@@ -1127,3 +1131,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 25/11/2026 · Νο 5 · [Εταιρικό δικαίωμα πρόχειρου τιμοκαταλόγου χονδρικής](CHANGES/2026-11-25-no5-wholesale-drafts.md).
 
 - 25/11/2026 · Νο 5 · [Εταιρικό δικαίωμα πρόχειρης προσφοράς](CHANGES/2026-11-25-no5-promotion-drafts.md).
+
+- 26/11/2026 · Νο 5 · [Εταιρικό δικαίωμα μετονομασίας προϊόντος](CHANGES/2026-11-26-no5-product-rename.md).
