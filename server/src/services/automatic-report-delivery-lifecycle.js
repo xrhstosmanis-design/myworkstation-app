@@ -46,7 +46,7 @@ function integer(value,min=1){if(!Number.isSafeInteger(value)||value<min)invalid
 function detached(value){return JSON.parse(JSON.stringify(value));}
 function frozen(value){if(value&&typeof value==="object"){for(const v of Object.values(value))frozen(v);Object.freeze(value);}return value;}
 const output=value=>frozen(detached(value));
-function inputKeys(value){return ["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value?.reportType)?[...INPUT_KEYS,"eventId"]:INPUT_KEYS;}
+function inputKeys(value){return ["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value?.reportType)?[...INPUT_KEYS,"eventId"]:Object.hasOwn(value??{},"stage")?[...INPUT_KEYS,"stage"]:INPUT_KEYS;}
 function normalizeInput(value){
   safe(value);shape(value,inputKeys(value));const result={};
   result.companyId=text(value.companyId,"companyId");result.storeId=text(value.storeId,"storeId");
@@ -55,6 +55,10 @@ function normalizeInput(value){
   const promotionResult=["PROMOTION_RESULT","INVENTORY_RESULT"].includes(value.reportType)&&value.frequency==="EVENT";
   if(!cash&&!monthlyReport&&!promotionResult)invalid("Unsupported report kind.");
   if(promotionResult)result.eventId=text(value.eventId,"eventId");
+  if(Object.hasOwn(value,"stage")){
+    if(!cash||value.frequency!=="DAILY"||value.stage!=="FINAL")invalid("Only daily cash reports support a final delivery stage.");
+    result.stage=value.stage;
+  }
   result.reportType=value.reportType;result.frequency=value.frequency;
   if(instant(value.periodFrom)>=instant(value.periodTo))invalid("Nonempty exclusive period required.");
   result.periodFrom=value.periodFrom;result.periodTo=value.periodTo;
@@ -77,8 +81,10 @@ function normalizeInput(value){
   result.snapshot.lifecycleGeneration=generation;
   for(const k of ["sourceFingerprint","payloadFingerprint","policyFingerprint"]){if(typeof value.snapshot[k]!=="string"||!/^([a-f0-9]{64})$/.test(value.snapshot[k]))invalid("Canonical SHA256 fingerprint required.");result.snapshot[k]=value.snapshot[k];}
   result.snapshot.principalId=text(value.snapshot.principalId,"principalId");
-  if(value.snapshot.financialFinality!=="PROVISIONAL"||value.snapshot.financialReconciliationComplete!==false)invalid("This model only supports explicitly provisional reports.");
-  result.snapshot.financialFinality="PROVISIONAL";result.snapshot.financialReconciliationComplete=false;
+  const final=result.stage==="FINAL";
+  const financialFinality=final?"FINAL":"PROVISIONAL";
+  if(value.snapshot.financialFinality!==financialFinality||value.snapshot.financialReconciliationComplete!==final)invalid("Financial finality must agree with the delivery stage.");
+  result.snapshot.financialFinality=financialFinality;result.snapshot.financialReconciliationComplete=final;
   return result;
 }
 function slotId(input){
@@ -87,15 +93,17 @@ function slotId(input){
   const identity=["PROMOTION_RESULT","INVENTORY_RESULT"].includes(input.reportType)
     ?[input.companyId,input.storeId,input.reportType,input.eventId,input.recipient]
     :[input.companyId,input.storeId,input.reportType,input.frequency,input.periodFrom,input.periodTo,input.recipient];
+  if(input.stage==="FINAL")identity.push(input.stage);
   return createHash("sha256").update(JSON.stringify(identity)).digest("hex");
 }
 function gate(input,current,now){
   safe(current);
   const administrator=current?.recipientAuthorizationBasis==='SUPER_ADMIN';
-  shape(current,[...inputKeys(input),"checkedAt",...GATES,"maintenanceBlocked",...(administrator?["recipientAuthorizationBasis","administratorAuthorizationActive"]:[])]);
+  const gates=input.stage==="FINAL"?GATES.map(key=>key==="policyAllowsProvisional"?"policyAllowsFinal":key):GATES;
+  shape(current,[...inputKeys(input),"checkedAt",...gates,"maintenanceBlocked",...(administrator?["recipientAuthorizationBasis","administratorAuthorizationActive"]:[])]);
   const metadata=Object.fromEntries(inputKeys(input).map(k=>[k,current[k]]));
   if(JSON.stringify(normalizeInput(metadata))!==JSON.stringify(input)||current.checkedAt!==now)fail("STALE_GATE","Fresh exact scope/snapshot assertions required.");
-  const required=administrator?GATES.filter(k=>!["recipientVerified","consentActive"].includes(k)):GATES;
+  const required=administrator?gates.filter(k=>!["recipientVerified","consentActive"].includes(k)):gates;
   if(required.some(k=>current[k]!==true)||current.maintenanceBlocked!==false||administrator&&(current.administratorAuthorizationActive!==true||current.consentActive!==false||typeof current.recipientVerified!=='boolean'))fail("DELIVERY_BLOCKED","Delivery is not explicitly eligible.");
   if(instant(input.periodTo)>instant(now))fail("DELIVERY_BLOCKED","Report period is not closed.");
 }
