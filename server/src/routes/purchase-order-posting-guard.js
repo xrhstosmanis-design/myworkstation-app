@@ -1,4 +1,4 @@
-import {recordPurchaseCostIncrease} from "../services/purchase-cost-increase-event.js";
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from "../services/purchase-cost-increase-event.js";
 import {applyPackStockCorrectionInTransaction} from "./purchase-order-unresolved-guard.js";
 import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {assertReopenedIdentity,reuseReopenedPurchaseDocument} from "../services/purchase-order-reopen.js";
@@ -349,6 +349,8 @@ router.patch("/:orderId",async(req,res,next)=>{
             INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount")
             VALUES (${id()},${purchaseDocumentId},${row.productId},${row.description},${n(row.quantity)},'PIECE',${n(row.unitCost)},${n(row.netAmount)+n(row.exciseTotal)},${n(row.vatRate)},${n(row.vatAmount)},${n(row.grossAmount)})`;
         }
+
+        await recordSupplierDiscountReduction(tx,{companyId,storeId:found.storeId,actorId:req.user.id||req.user.operatorId,supplierId:effectiveSupplierId,documentId:purchaseDocumentId});
 
         const excludedStockLines=req.body?.excludeStockLineIds;
         if(excludedStockLines!==undefined&&(!deferredPosting||!Array.isArray(excludedStockLines)||excludedStockLines.some(lineId=>typeof lineId!=="string"||!lines.some(line=>line.id===lineId&&line.productId)))){
