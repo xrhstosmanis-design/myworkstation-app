@@ -2,6 +2,7 @@ import {withTwinScope,validTwinScope,guardTwinRequest} from "./ai-command-twin-n
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,CheckCircle2,FileText,RefreshCw,ShieldCheck,X} from "lucide-react";
 import "./supplier-review-summary.css";
+import ManualSupplierAllocation from "./ManualSupplierAllocation.jsx";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const dateTime=value=>value?new Intl.DateTimeFormat("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens",hour12:false}).format(new Date(value)):"—";
@@ -9,6 +10,7 @@ const paymentMethod={CASH_SHIFT:"Μετρητά ενεργής βάρδιας",C
 
 export default function SupplierSettlementReviewCenter({request:baseRequest,onClose,setMessage,entryScope=null}){
   const [items,setItems]=useState([]);
+  const [allocationId,setAllocationId]=useState("");
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState("");
   const [error,setError]=useState("");
@@ -35,7 +37,7 @@ export default function SupplierSettlementReviewCenter({request:baseRequest,onCl
   useEffect(()=>{load();return()=>{loadSequence.current++}},[entryScope?.companyId,entryScope?.storeId]);
   const totals=useMemo(()=>({count:items.length,amount:items.reduce((sum,item)=>sum+Number(item.amount||0),0),discrepancies:items.filter(item=>item.status==="DISCREPANCY").length}),[items]);
   const changeNote=(id,value)=>setNotes(current=>({...current,[id]:value}));
-  const updateFilter=(key,value)=>{loadSequence.current++;setItems([]);setLoading(false);setFilters(current=>({...current,[key]:value,...(key==="companyId"?{storeId:""}:{})}))};
+  const updateFilter=(key,value)=>{setAllocationId("");loadSequence.current++;setItems([]);setLoading(false);setFilters(current=>({...current,[key]:value,...(key==="companyId"?{storeId:""}:{})}))};
   const visibleStores=stores.filter(store=>!filters.companyId||store.companyId===filters.companyId);
   const openEvidence=async item=>{
     const key=`evidence:${item.id}`;setBusy(key);setError("");
@@ -68,7 +70,8 @@ export default function SupplierSettlementReviewCenter({request:baseRequest,onCl
       <div className="supplier-review-meta"><span><b>Αποτέλεσμα αυτόματου ελέγχου:</b> {matched?`Συμφωνία ποσού ${money(item.automaticCheck?.allocationTotal)} με την πληρωμή.`:checks.join(" ")}</span></div>
       {item.note&&<p className="supplier-review-operator-note"><b>Σημείωση χειριστή:</b> {item.note}</p>}
       <label className="supplier-review-note">Παρατήρηση ελέγχου (προαιρετική)<textarea value={notes[item.id]||""} onChange={event=>changeNote(item.id,event.target.value)} maxLength="500" placeholder="Προαιρετική παρατήρηση για τον έλεγχο."/></label>
-      <footer><button type="button" className="secondary" onClick={()=>openEvidence(item)} disabled={busy===`evidence:${item.id}`}><FileText/>{busy===`evidence:${item.id}`?"Άνοιγμα…":"Προβολή αποδεικτικού"}</button><button type="button" onClick={()=>review(item)} disabled={Boolean(busy)}><ShieldCheck/>Επιβεβαίωση ελέγχου</button></footer>
+      {allocationId===item.id&&<ManualSupplierAllocation item={item} request={request} onCancel={()=>setAllocationId("")} onSaved={async()=>{setAllocationId("");setMessage("Η υπάρχουσα πληρωμή αντιστοιχίστηκε χωρίς νέα εκταμίευση.");await load()}}/>}
+      <footer><button type="button" className="secondary" disabled={Boolean(busy)||Boolean(allocationId)} onClick={()=>setAllocationId(item.id)}>Αντιστοίχιση πληρωμής</button><button type="button" className="secondary" onClick={()=>openEvidence(item)} disabled={busy===`evidence:${item.id}`}><FileText/>{busy===`evidence:${item.id}`?"Άνοιγμα…":"Προβολή αποδεικτικού"}</button><button type="button" onClick={()=>review(item)} disabled={Boolean(busy)||Boolean(allocationId)}><ShieldCheck/>Επιβεβαίωση ελέγχου</button></footer>
     </article>})}</div>
   </section></div>;
 }

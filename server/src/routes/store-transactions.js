@@ -1,3 +1,4 @@
+import {manualPaymentAllocation} from "../services/manual-payment-allocation.js";
 import { findMyDataPurchase, hasMyDataPurchaseLines } from "../lib/mydata-pos-receipt.js";
 import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
@@ -849,6 +850,48 @@ router.get("/supplier-settlements/:settlementId/attachment",requireSuperAdminSet
   res.json({dataUrl:rows[0].attachmentData,mimeType:rows[0].attachmentMimeType,filename:rows[0].attachmentFilename});
 }));
 
+// Manual allocation of an existing cash payment: no new ledger transaction.
+function manualAllocationActor(req){
+  const user=req.user;
+  if(!user?.id||user.staffAccess===true||user.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(user.role)){
+    throw Object.assign(new Error('FORBIDDEN'),{status:403});
+  }
+  if(user.supportContext){
+    return {...user,role:'OWNER',storeId:user.supportContext.storeId||user.storeId};
+  }
+  return isSuperAdminReview(req)?{...user,role:'SUPER_ADMIN'}:user;
+}
+
+router.get('/supplier-settlements/:settlementId/manual-allocation/context',requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const user=manualAllocationActor(req);
+  const [payment]=await prisma.$queryRaw`SELECT ss."id",ss."companyId",ss."storeId",ss."supplierId",t."amount", (t."attachmentData" IS NOT NULL) AS "hasBankProof", ss."paymentMethod" FROM "SupplierPaymentSettlement" ss JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND t."storeId"=ss."storeId" WHERE ss."id"=${req.params.settlementId} AND (${user.role==='SUPER_ADMIN'} OR ss."companyId"=${user.companyId||''}) AND (${user.storeId||null}::text IS NULL OR ss."storeId"=${user.storeId||null}) AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY') AND t."paymentMethod"=ss."paymentMethod" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL`;
+  if(!payment)return res.status(409).json({error:'PAYMENT_NOT_ELIGIBLE'});
+  const existingAllocations=await prisma.$queryRaw`SELECT a."purchaseDocumentId",a."amount",d."documentNumber" FROM "SupplierPaymentAllocation" a LEFT JOIN "PurchaseDocument" d ON d."id"=a."purchaseDocumentId" AND d."companyId"=a."companyId" AND d."storeId"=${payment.storeId} WHERE a."settlementId"=${payment.id} AND a."companyId"=${payment.companyId} ORDER BY a."id"`;
+  const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${payment.companyId} AND "active"=true ORDER BY "name"`;
+  const supplierId=String(req.query.supplierId||payment.supplierId);
+  if(existingAllocations.length&&supplierId!==payment.supplierId)return res.status(409).json({error:'SUPPLIER_CHANGE_WITH_EXISTING_ALLOCATIONS'});
+  if(!suppliers.some(s=>s.id===supplierId))return res.status(400).json({error:'INVALID_SUPPLIER'});
+  const documents=await prisma.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."totalGross",d."totalGross"-COALESCE((SELECT SUM(a."amount") FROM "SupplierPaymentAllocation" a WHERE a."purchaseDocumentId"=d."id"),0) AS "availableAmount" FROM "PurchaseDocument" d WHERE d."companyId"=${payment.companyId} AND d."storeId"=${payment.storeId} AND d."supplierId"=${supplierId} AND d."status"='APPROVED' AND d."documentType"='INVOICE' AND d."paymentTransactionId" IS NULL AND (d."settlementMode" IS NULL OR d."settlementMode"='CREDIT') AND EXISTS(SELECT 1 FROM "PurchaseOrderPosting" p JOIN "PurchaseOrder" o ON o."id"=p."orderId" AND o."companyId"=p."companyId" WHERE p."purchaseDocumentId"=d."id" AND p."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."status"='INVOICED') ORDER BY d."documentDate" DESC LIMIT 300`;
+  res.json({payment:{...payment,amount:Number(payment.amount)},existingAllocations:existingAllocations.map(a=>({...a,amount:Number(a.amount)})),suppliers,documents:documents.map(d=>({...d,totalGross:Number(d.totalGross),availableAmount:Number(d.availableAmount)})).filter(d=>d.availableAmount>0)});
+}));
+
+const manualAllocationInput=z.object({
+  companyId:z.string().min(1).max(180),storeId:z.string().min(1).max(180),
+  targetSupplierId:z.string().min(1).max(180),
+  allocations:z.array(z.object({purchaseDocumentId:z.string().min(1).max(180),amount:z.number().positive().max(999999999)}).strict()).min(1).max(80),
+  confirmSupplierChange:z.boolean().default(false),
+  reason:z.string().trim().min(5).max(500),
+  expectedVersion:z.string().regex(/^[a-f0-9]{64}$/).optional()
+}).strict();
+for(const action of ['preview','apply']){
+  router.post('/supplier-settlements/:settlementId/manual-allocation/'+action,requireSuperAdminSettlementReview,route(async(req,res)=>{
+    const body=manualAllocationInput.parse(req.body||{});
+    if(action==='apply'&&!body.expectedVersion)return res.status(400).json({error:'PREVIEW_REQUIRED'});
+    const result=await manualPaymentAllocation(prisma,manualAllocationActor(req),{...body,settlementId:req.params.settlementId},{preview:action==='preview'});
+    res.json({ok:true,...result});
+  }));
+}
+
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY"]).optional().default("CONFIRMED"),note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
@@ -856,7 +899,11 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
   const rows=await prisma.$transaction(async tx=>{
     const updated=await tx.$queryRaw`
       UPDATE "SupplierPaymentSettlement" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
-      WHERE "id"=${req.params.settlementId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
+      WHERE "id"=${req.params.settlementId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY')
+        AND (${status}<>'CONFIRMED' OR "paymentMethod"<>'BANK_TRANSFER' OR EXISTS (
+          SELECT 1 FROM "StoreTransaction" t WHERE t."id"="SupplierPaymentSettlement"."transactionId"
+            AND t."companyId"="SupplierPaymentSettlement"."companyId" AND t."attachmentData" IS NOT NULL
+        )) RETURNING *
     `;
     if(!updated[0])return updated;
     await tx.$executeRaw`

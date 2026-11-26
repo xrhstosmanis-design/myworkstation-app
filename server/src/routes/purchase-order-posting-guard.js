@@ -52,16 +52,21 @@ function fingerprint(companyId,supplierId,documentNumber){
   return crypto.createHash("sha256").update(`${companyId}|${supplierId}|${normalized}`).digest("hex");
 }
 
-async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=null}){
+async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=null,sourceDocumentId=null}){
   const normalized=normalizeDocumentNumber(documentNumber);
   if(!supplierId||!normalized)return null;
   const excludedOrderId=orderId||"";
+  const [supplier]=await tx.$queryRaw`SELECT REGEXP_REPLACE(COALESCE("taxId",''),'[^0-9]','','g') AS "taxId"
+    FROM "Supplier" WHERE "companyId"=${companyId} AND "id"=${supplierId}`;
+  const supplierTaxId=supplier?.taxId||"";
   const orderRows=await tx.$queryRaw`
     SELECT o."id",o."invoiceNumber",o."status",o."createdAt",s."name" AS "supplierName",st."name" AS "storeName"
     FROM "PurchaseOrder" o
     LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
     LEFT JOIN "Store" st ON st."id"=o."storeId"
-    WHERE o."companyId"=${companyId} AND o."supplierId"=${supplierId}
+    WHERE o."companyId"=${companyId}
+      AND (o."supplierId"=${supplierId} OR (${supplierTaxId}<>'' AND s."companyId"=${companyId}
+        AND REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${supplierTaxId}))
       AND (${excludedOrderId}='' OR o."id"<>${excludedOrderId})
       AND o."status" IN ('NEW','FINAL','INVOICED')
       AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${normalized}
@@ -73,8 +78,11 @@ async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=
     FROM "PurchaseDocument" d
     LEFT JOIN "Supplier" s ON s."id"=d."supplierId"
     LEFT JOIN "Store" st ON st."id"=d."storeId"
-    WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId}
-      AND (${excludedOrderId}='' OR d."id"<>${excludedOrderId})
+    WHERE d."companyId"=${companyId}
+      AND (d."supplierId"=${supplierId} OR (${supplierTaxId}<>'' AND s."companyId"=${companyId}
+        AND REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${supplierTaxId}))
+      AND d."id"<>${excludedOrderId}
+      AND d."id"<>${sourceDocumentId||""}
       AND d."status"='APPROVED'
       AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(d."documentNumber",'')),'\\s+','','g'))=${normalized}
     ORDER BY d."documentDate" DESC LIMIT 1`;
@@ -173,7 +181,20 @@ router.delete("/:orderId",async(req,res,next)=>{
 router.patch("/:orderId",async(req,res,next)=>{
   try{
     const requestedStatus=req.body?.status;
-    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED"&&!(requestedStatus==="NEW"&&req.body.returnForCorrection===true))return next();
+    if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED"&&!(requestedStatus==="NEW"&&req.body.returnForCorrection===true)){
+      if(req.body?.supplierId==null&&req.body?.invoiceNumber==null)return next();
+      const companyId=req.user.companyId;
+      const [draft]=await prisma.$queryRaw`SELECT "id","storeId","supplierId","invoiceNumber","sourceDocumentId"
+        FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} AND "status"='NEW'`;
+      if(!draft||req.user.storeId&&req.user.storeId!==draft.storeId)return next();
+      const documentNumber=req.body.invoiceNumber??draft.invoiceNumber;
+      const duplicate=await prisma.$transaction(async tx=>{
+        if(req.user.staffAccess===true)await requireStaffAction(tx,req,draft.storeId,'invoices.edit');
+        return duplicateDetails(tx,{companyId,supplierId:req.body.supplierId??draft.supplierId,documentNumber,orderId:draft.id,sourceDocumentId:draft.sourceDocumentId});
+      });
+      if(!duplicate)return next();
+      return res.status(409).json({error:`Το παραστατικό ${documentNumber} υπάρχει ήδη (${duplicate.status}). Έλεγξε την υπάρχουσα εγγραφή πριν συνεχίσεις.`,code:"INVOICE_DUPLICATE_REVIEW_REQUIRED"});
+    }
     if(requestedStatus==="NEW"||requestedStatus==="INVOICED"){
       if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Η διόρθωση και η τελική τιμολόγηση γίνονται από εξουσιοδοτημένο χρήστη στο BackOffice."});
     }
@@ -225,7 +246,14 @@ router.patch("/:orderId",async(req,res,next)=>{
         if(!supplier[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
       }
 
-      const duplicate=await duplicateDetails(tx,{companyId,supplierId:effectiveSupplierId,documentNumber:effectiveInvoiceNumber,orderId:found.id});
+      const [supplierIdentity]=effectiveSupplierId?await tx.$queryRaw`SELECT REGEXP_REPLACE(COALESCE("taxId",''),'[^0-9]','','g') AS "taxId"
+        FROM "Supplier" WHERE "companyId"=${companyId} AND "id"=${effectiveSupplierId}`:[];
+      const normalizedNumber=normalizeDocumentNumber(effectiveInvoiceNumber);
+      if(effectiveSupplierId&&normalizedNumber){
+        const lockKey=JSON.stringify(["purchase-order-posting",companyId,supplierIdentity?.taxId||effectiveSupplierId,normalizedNumber]);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey},0))`;
+      }
+      const duplicate=await duplicateDetails(tx,{companyId,supplierId:effectiveSupplierId,documentNumber:effectiveInvoiceNumber,orderId:found.id,sourceDocumentId:found.sourceDocumentId});
       if(duplicate){
         const error=new Error(`Το παραστατικό ${effectiveInvoiceNumber} έχει ήδη καταχωρηθεί${duplicate.storeName?` στο ${duplicate.storeName}`:""}. Δεν έγινε δεύτερη καταχώρηση.`);
         error.status=409;
@@ -292,10 +320,15 @@ router.patch("/:orderId",async(req,res,next)=>{
           if(Math.abs(gross-n(credit.totalGross))>0.05)throw Object.assign(new Error("Οι γραμμές πιστωτικού δεν συμφωνούν με το τυπωμένο συνολικό ποσό. Δεν έγινε κίνηση αποθήκης ή συμψηφισμός."),{status:409});
           await tx.$executeRaw`DELETE FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${credit.id}`;
           for(const line of lines){
-            await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${credit.id},${line.productId},${line.supplierCode||null},${line.description},${n(line.quantity)},'PIECE',${n(line.unitCost)},${n(line.netAmount)+n(line.exciseTotal)},${n(line.vatRate)},${n(line.vatAmount)},${n(line.grossAmount)})`;
+            const stockUnits=line.invoiceUnit==="PACKAGE"?n(line.stockUnitsPerInvoiceUnit):1;
+            if(!Number.isInteger(stockUnits)||stockUnits<1)
+              throw Object.assign(new Error("Έλεγξε τα τεμάχια ανά συσκευασία του πιστωτικού."),{status:409});
+            const stockQuantity=n(line.quantity)*stockUnits;
+            const unitCost=n(line.unitCost)/stockUnits;
+            await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${credit.id},${line.productId},${line.supplierCode||null},${line.description},${stockQuantity},'PIECE',${unitCost},${n(line.netAmount)+n(line.exciseTotal)},${n(line.vatRate)},${n(line.vatAmount)},${n(line.grossAmount)})`;
             if(line.trackStock){
-              await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${found.storeId},${line.productId},${-n(line.quantity)}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${-n(line.quantity)},"updatedAt"=NOW()`;
-              await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${found.storeId},${line.productId},'SUPPLIER_RETURN',${-n(line.quantity)},${n(line.unitCost)},'CREDIT_NOTE_APPROVAL',${credit.id},${`Πιστωτικό προμηθευτή ${effectiveInvoiceNumber||credit.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
+              await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${found.storeId},${line.productId},${-stockQuantity}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${-stockQuantity},"updatedAt"=NOW()`;
+              await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${found.storeId},${line.productId},'SUPPLIER_RETURN',${-stockQuantity},${unitCost},'CREDIT_NOTE_APPROVAL',${credit.id},${`Πιστωτικό προμηθευτή ${effectiveInvoiceNumber||credit.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
             }
           }
           await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${net},"totalVat"=${vat},"totalGross"=${gross},"status"='APPROVED',"updatedAt"=NOW() WHERE "id"=${credit.id} AND "companyId"=${companyId}`;
