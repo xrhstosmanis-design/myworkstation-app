@@ -146,9 +146,9 @@ function build(raw){
     check(same(actual,expected),"Monthly opening-user summary differs from originals.");openingOperatorSummary=expected;
   }else check(!own(p,"openingOperatorSummary"),"Monthly summary on a nonmonthly report.");
   const scope={companyId,storeId};
+  const final=p.frequency==="DAILY"&&p.reviewedReconciliation===true&&Boolean(p.reviewedCash?.finalEvidence);
   const financialLimitations=final?[]:[...LIMITATIONS],disclosures=final?['ΤΕΛΙΚΗ ΗΜΕΡΗΣΙΑ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ','Ολοκληρώθηκε η διασταύρωση των επιλεγμένων βαρδιών και χειρογράφων.']:[...DISCLOSURES];
   if(p.frequency==="MONTHLY")disclosures.push("Οι καταγεγραμμένοι χρήστες έναρξης δεν αποτελούν επιβεβαιωμένη ταυτότητα εργαζομένου ή στοιχείο μισθοδοσίας.");
-  const final=p.frequency==="DAILY"&&p.reviewedReconciliation===true&&Boolean(p.reviewedCash?.finalEvidence);
   const financialFinality=final?"FINAL":"PROVISIONAL";
   const reviewed=p.reviewedReconciliation===true?p.reviewedCash:null;
   check(!reviewed?.dailyEvidence||p.frequency==="DAILY","Daily evidence on a non-daily report.");

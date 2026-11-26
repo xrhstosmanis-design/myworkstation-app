@@ -10,8 +10,9 @@ const iso=value=>value?new Date(value).toISOString():null;
 const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export function recoveryFingerprint(row,proof){
  const paid=assertNetlinkPaidSale({...proof,scope:{companyId:row.companyId,storeId:row.storeId},intent:row});
- if(!row.saleId||proof.sale.id!==row.saleId||!row.providerDispatchedAt||proof.fiscal.fiscalNumber!==row.fiscalNumber||row.providerTransactionId||row.completedAt||row.issuanceResultEnc)fail('NETLINK_RECOVERY_EVIDENCE','Η αρχική πληρωμή ή η απόδειξη χρειάζεται διασταύρωση.');
- return hash([row.companyId,row.storeId,row.requestId,row.checkoutId,row.saleId,row.productId,row.issuanceIntentEnc,iso(row.providerDispatchedAt),paid,proof.lines,proof.payments,proof.cashConfirmation,proof.cardProof||null]);
+ const completion=proof.rbsCommit||proof.fiscal;
+ if(!completion||proof.rbsCommit&&(row.fiscalEvidence?.type!=='RBS_NATIVE_COMMIT'||row.fiscalEvidence?.id!==proof.rbsCommit.evidenceId||row.fiscalNumber!==null)||!row.saleId||proof.sale.id!==row.saleId||!row.providerDispatchedAt||(completion.fiscalNumber??null)!==(row.fiscalNumber??null)||row.providerTransactionId||row.completedAt||row.issuanceResultEnc)fail('NETLINK_RECOVERY_EVIDENCE','Η αρχική πληρωμή ή η απόδειξη χρειάζεται διασταύρωση.');
+ return hash([row.companyId,row.storeId,row.requestId,row.checkoutId,row.saleId,row.productId,row.issuanceIntentEnc,iso(row.providerDispatchedAt),paid,proof.lines,proof.payments,proof.cashConfirmation,proof.cardProof||null,...(proof.rbsCommit?[proof.rbsCommit]:[])]);
 }
 export function createNetlinkPaidRecovery({db,provider,evidence=readNetlinkNativeEvidence,clock=()=>new Date()}){
  async function rowFor(t,scope,id,lock=false){const rows=lock?await t.$queryRaw`SELECT * FROM "NetlinkTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "issuanceIntentEnc" IS NOT NULL FOR UPDATE`:await t.$queryRaw`SELECT * FROM "NetlinkTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "issuanceIntentEnc" IS NOT NULL`;return decodePaidIntent(rows[0],scope)}
@@ -27,19 +28,19 @@ export function createNetlinkPaidRecovery({db,provider,evidence=readNetlinkNativ
   if(a.fingerprint!==recoveryFingerprint(row,proof))fail('NETLINK_RECOVERY_EVIDENCE','Τα στοιχεία της πληρωμένης αγοράς άλλαξαν μετά τον έλεγχο.');
   return {a,proof};
  }
- const repository={
+ const repositoryFor=actorId=>({
   async load(scope,id){const row=await rowFor(db,scope,id);if(!row)return null;if(row.status!=='RECOVERY_READY')return row;const {a}=await approved(db,scope,row);return {...row,status:'READY_FOR_PAYMENT',providerRequestId:a.providerRequestId}},
   async claim(scope,id){return db.$transaction(async tx=>{const row=await rowFor(tx,scope,id,true);if(row?.status!=='RECOVERY_READY')return false;const {a}=await approved(tx,scope,row);
    const n=await tx.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='EXECUTING',"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='RECOVERY_READY'`;
-   if(Number(n)!==1)return false;await audit(tx,scope,a.actorId,'NETLINK_PAID_RECOVERY_DISPATCH',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});return true;
+   if(Number(n)!==1)return false;await audit(tx,scope,actorId,'NETLINK_PAID_RECOVERY_DISPATCH',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});return true;
   },{maxWait:5000,timeout:20000})},
   async uncertain(scope,id,code){await db.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='UNKNOWN',"errorCode"=${code},"errorMessage"='Αβέβαιο αποτέλεσμα ολοκλήρωσης. Απαιτείται νέος έλεγχος παρόχου· καμία επανάληψη.',"updatedAt"=NOW() WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "status"='EXECUTING'`},
   async review(scope,id,encrypted){await db.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='AMOUNT_REVIEW',"issuanceResultEnc"=${encrypted},"errorCode"='NETLINK_PROVIDER_RESULT_REVIEW',"updatedAt"=NOW() WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "status"='EXECUTING'`},
   async complete(scope,id,v){await db.$transaction(async tx=>{const row=await rowFor(tx,scope,id,true);const records=await reviews(tx,scope,id),a=records[0]?.details;if(row?.status!=='EXECUTING'||records.length!==1)fail('NETLINK_RECOVERY_STATE','Η ολοκλήρωση χρειάζεται διασταύρωση.');
    const n=await tx.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='COMPLETED',"issuanceResultEnc"=${v.encrypted},"providerTransactionId"=${v.providerTransactionId},"providerReference"=${v.reference},"commissionAmount"=${v.cardCents/100*.01},"completedAt"=NOW(),"updatedAt"=NOW(),"errorCode"=NULL,"errorMessage"=NULL WHERE "id"=${row.id} AND "status"='EXECUTING'`;
-   if(Number(n)!==1)fail('NETLINK_RECOVERY_STATE','Το αποτέλεσμα χρειάζεται διασταύρωση.');await audit(tx,scope,a.actorId,'NETLINK_PAID_RECOVERY_COMPLETED',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});
+   if(Number(n)!==1)fail('NETLINK_RECOVERY_STATE','Το αποτέλεσμα χρειάζεται διασταύρωση.');await audit(tx,scope,actorId,'NETLINK_PAID_RECOVERY_COMPLETED',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});
   })}
- };
+ });
  return {
   async reviewContext(scope){return connection(db,scope)},
   async authorize(scope,id,{actorId,providerReference,confirmedAt,expectedUpdatedAt,expectedStationId}){
@@ -54,6 +55,6 @@ export function createNetlinkPaidRecovery({db,provider,evidence=readNetlinkNativ
     return {requestId:id,status:'RECOVERY_READY',providerRequestId,resolutionId};
    },{maxWait:5000,timeout:20000});
   },
-  async fulfill(scope,id){return dispatchPaidNetlink({repository,scope,requestId:id,loadEvidence:intent=>evidence(db,scope,intent),provider:provider(scope),encryptResult:async result=>encryptStoreIntegrationValue({...scope,requestId:id,result})})}
+  async fulfill(scope,id,{actorId}={}){if(!actorId)fail('NETLINK_RECOVERY_ACTOR','Απαιτείται συνδεδεμένος χειριστής.');return dispatchPaidNetlink({repository:repositoryFor(actorId),scope,requestId:id,loadEvidence:intent=>evidence(db,scope,intent),provider:provider(scope),encryptResult:async result=>encryptStoreIntegrationValue({...scope,requestId:id,result})})}
  };
 }

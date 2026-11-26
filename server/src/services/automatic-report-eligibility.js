@@ -56,7 +56,8 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
  async function context(tx,raw,now,{inspectPapers=false}={}){
   const scope=automaticReportScopeInput(raw);now=iso(now);
   const final=scope.stage==='FINAL';
-  if(final&&nonCash)hold();
+  const twoPhase=env.CASH_TWO_PHASE_DAILY_EMAIL==='true';
+  if(final&&(nonCash||!twoPhase))hold();
   if(eventReport&&!automaticReportEventLifecycleReady(env)||monthlyInventory&&!monthlyInventorySummaryLifecycleReady(env))hold();
   if((supplier||monthlyInventory)&&scope.frequency!=='MONTHLY'||eventReport&&scope.frequency!=='EVENT'||!eventReport&&scope.frequency==='EVENT')hold();
   const control=activationProvider();if(!control?.valid||!control.enabled)hold();
@@ -151,7 +152,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
          preview.shiftTurnover.shifts.reduce((total,shift)=>total+shift.cash+shift.card,0) !== preview.dailyTurnover.totalCents) hold();
    }
    const args={preview,companyId:scope.companyId,storeId:scope.storeId,settingsVersion:settings.version};
-   const needsNotice=!final&&scope.frequency==='DAILY'&&(preview.sourceReadiness==='HOLD'||preview.complete===false||preview.reviewedCash?.status==='HOLD');
+   const needsNotice=twoPhase&&!final&&scope.frequency==='DAILY'&&(preview.sourceReadiness==='HOLD'||preview.complete===false||preview.reviewedCash?.status==='HOLD');
    payload=needsNotice?buildDailyCashMorningNotice(args):buildAutomaticCashPayload(args);
   }
   if(payload.period.from!==from||payload.period.to!==to||(payload.financialFinality==='FINAL')!==final)hold();
@@ -170,7 +171,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    authorities[recipient.email]={basis:authority.basis,mailboxVerified:!!recipient.verifiedAt};
   }
   if(!eligible.length)hold();
-  return {scope,now,payload,inputs:eligible,activation:control,authorities,automaticPapers:scope.frequency==='DAILY'&&!final?null:automaticPapers};
+  return {scope,now,payload,inputs:eligible,activation:control,authorities,automaticPapers:twoPhase&&scope.frequency==='DAILY'&&!final?null:automaticPapers};
  }
  const reader=async({tx,companyId,storeId,input,now})=>{
   const current=await context(tx,{companyId,storeId,frequency:input.frequency,...(input.eventId?{eventId:input.eventId}:{}),...(input.stage==='FINAL'?{stage:'FINAL',periodFrom:input.periodFrom,periodTo:input.periodTo}:{})},now);

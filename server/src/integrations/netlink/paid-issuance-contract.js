@@ -15,20 +15,21 @@ export function assertNetlinkAmounts({intent,lines,totalValue,discount=0}){
  }
  return {amount,fee,total};
 }
-export function assertNetlinkPaidSale({scope,intent,sale,lines,payments,fiscal,cashConfirmation,cardProof}){
+export function assertNetlinkPaidSale({scope,intent,sale,lines,payments,fiscal,rbsCommit,cashConfirmation,cardProof}){
  if(!sameScope(intent,scope)||!sameScope(sale,scope)||sale.clientTransactionId!==intent.checkoutId)reject('NETLINK_SALE_SCOPE','Η πώληση δεν αντιστοιχεί στην επιλεγμένη κάρτα και το κατάστημα.');
  if(sale.status!=='COMPLETED'||sale.fiscalStatus!=='ISSUED')reject('NETLINK_SALE_NOT_COMPLETED','Πρέπει πρώτα να ολοκληρωθεί η πληρωμή και η απόδειξη.');
  const {amount,fee}=assertNetlinkAmounts({intent,lines,totalValue:intent.customerTotal});
  const total=moneyCents(sale.total);if(total<amount+fee)reject("NETLINK_PAID_TOTAL_MISMATCH","Το πληρωμένο καλάθι δεν καλύπτει την κάρτα και την παροχή.");
  if(!Array.isArray(payments)||payments.length!==1||!['CASH','CARD'].includes(payments[0].method)||moneyCents(payments[0].amount)!==total)reject('NETLINK_PAYMENT_REQUIRED','Απαιτείται πλήρης πληρωμή με μετρητά ή κάρτα.');
- if(!sameScope(fiscal,scope)||fiscal.saleId!==sale.id||!validFiscalReceipt(fiscal))reject('NETLINK_FISCAL_RECEIPT_REQUIRED','Η κάρτα εκδίδεται μόνο μετά την επιβεβαιωμένη απόδειξη της ταμειακής.');
+ const nativeRbs=sameScope(rbsCommit,scope)&&rbsCommit.saleId===sale.id&&rbsCommit.clientTransactionId===intent.checkoutId&&rbsCommit.evidenceType==='RBS_NATIVE_COMMIT'&&rbsCommit.status==='SALE_COMMITTED'&&rbsCommit.evidenceId&&rbsCommit.terminalPos===intent.checkoutContext?.terminalPos&&intent.checkoutContext?.kind==='RBS_NATIVE_COMMIT'&&rbsCommit.paymentMethod===payments[0].method&&moneyCents(rbsCommit.amount)===total;
+ if(intent.checkoutContext?.kind==='RBS_NATIVE_COMMIT'?!nativeRbs:!sameScope(fiscal,scope)||fiscal.saleId!==sale.id||!validFiscalReceipt(fiscal))reject('NETLINK_FISCAL_RECEIPT_REQUIRED','Η κάρτα εκδίδεται μόνο μετά την επιβεβαιωμένη απόδειξη της ταμειακής.');
  const method=payments[0].method;
  if(method==='CASH'){
   if(!sameScope(cashConfirmation,scope)||cashConfirmation.requestId!==intent.requestId||cashConfirmation.checkoutId!==intent.checkoutId||!cashConfirmation.actorId||!cashConfirmation.receivedAt||moneyCents(cashConfirmation.amount)!==total)reject('NETLINK_CASH_NOT_RECEIVED','Ο υπάλληλος πρέπει πρώτα να επιβεβαιώσει την είσπραξη του συνολικού ποσού.');
  }else if(!sameScope(cardProof,scope)||cardProof.saleId!==sale.id||cardProof.clientTransactionId!==intent.checkoutId||cardProof.status!=='SUCCESS'||cardProof.method!=='CARD'||!cardProof.evidenceId||moneyCents(cardProof.amount)!==total){
   reject('NETLINK_CARD_NOT_APPROVED','Δεν έχει επιβεβαιωθεί επιτυχής πληρωμή στο μηχάνημα καρτών.');
  }
- return {paymentMethod:method,totalCents:total,cardCents:amount,serviceCents:fee,fiscalNumber:fiscal.fiscalNumber};
+ return {paymentMethod:method,totalCents:total,cardCents:amount,serviceCents:fee,fiscalNumber:nativeRbs?null:fiscal.fiscalNumber};
 }
 
 // The durable repository owns compare-and-set and commits EXECUTING before this

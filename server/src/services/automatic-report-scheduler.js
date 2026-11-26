@@ -1,6 +1,6 @@
 // Explicitly started, bounded and drained by the existing server shutdown work.
 // No timers or database work run at import or factory construction.
-export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',activationProvider,work,clock=()=>new Date().toISOString(),intervalMs=60000,batchSize=5,maxAttempts=15,timers={setInterval,clearInterval},readPromotionEvents,readInventoryEvents}){
+export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',activationProvider,work,clock=()=>new Date().toISOString(),intervalMs=60000,batchSize=5,maxAttempts=15,timers={setInterval,clearInterval},readPromotionEvents,readInventoryEvents,twoPhaseCash=process.env.CASH_TWO_PHASE_DAILY_EMAIL==='true'}){
  if(!db||!dispatcher||typeof dispatcher.dispatch!=='function'||typeof activationProvider!=='function'||!work||typeof work.track!=='function'||typeof work.onStop!=='function'||!Number.isInteger(intervalMs)||intervalMs<60000||!Number.isInteger(batchSize)||batchSize<1||batchSize>20||!Number.isInteger(maxAttempts)||maxAttempts<1||maxAttempts>60)throw new TypeError('Bounded scheduler dependencies required');
  const frequencies={CASH:['DAILY','WEEKLY','MONTHLY'],SUPPLIER_COMPARISON:['MONTHLY'],MONTHLY_INVENTORY_SUMMARY:['MONTHLY'],PROMOTION_RESULT:['EVENT'],INVENTORY_RESULT:['EVENT']};
  if(!Object.hasOwn(frequencies,reportType))throw new TypeError('Unsupported scheduled report type');
@@ -31,7 +31,7 @@ export function createAutomaticReportScheduler({db,dispatcher,reportType='CASH',
     scopes=events.map(event=>({...row,frequency:'EVENT',eventId:event.eventId}));
     if(events.length===0)eventCursors.delete(eventKey);
    }
-   if(reportType==='CASH'){
+   if(reportType==='CASH'&&twoPhaseCash){
     const after=finalCursors.get(eventKey)??'';
     try{
      const pending=await db.$queryRaw`SELECT DISTINCT morning."record"->'input'->>'periodFrom' AS "periodFrom",
