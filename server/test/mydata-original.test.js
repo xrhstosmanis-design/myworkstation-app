@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal} from "../src/mydata-original.js";
+import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,fetchEpsilonFileRecoveryPdf,acquireOriginal} from "../src/mydata-original.js";
 const base="https://einvoice.impact.gr/p/EL099999999/"+ "A".repeat(40)+"/"+"B".repeat(32);
 const row={inboxId:"inbox",issuerVat:"099999999",counterpartVat:"088888888",mark:"400000000000001",documentNumber:"42",totalGross:"12.4",status:"RECEIVED",invoiceType:"1.1",currency:"EUR",issueDate:"2026-09-28",rawPayload:{xml:`<invoice><downloadingInvoiceUrl>${base}</downloadingInvoiceUrl></invoice>`}};
 test("invoice number accepts leading zero padding without relaxing MARK or VAT",()=>{
@@ -85,6 +85,59 @@ test("Epsilon Digital original uses a restricted provider URL and verifies PDF i
   assert.deepEqual(result.bytes, bytes);
   await assert.rejects(fetchOriginalPdf(epsilonRow, fetchPdf, async () => ({text: text.replace(row.mark, "0"), pageCount: 1})), /δεν επιβεβαιώνει/);
 });
+test("Epsilon file recovery stays on the known host and checks PDF identity", async()=>{
+  const token="11223344aabbccddeeff001122334455";
+  const original="https://epsilondigital.epsilonnet.gr/fd/"+token+":8";
+  const source=url=>({...row,rawPayload:{xml:`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`}});
+  const bytes=Buffer.from("%PDF-"+"x".repeat(110));
+  const identity=`${row.mark} ${row.issuerVat} ${row.counterpartVat} ${row.documentNumber}`;
+  let requests=0;
+  const fetcher=async(url,options)=>{
+    requests++;
+    assert.equal(url,"https://epsilondigital.epsilonnet.gr/filedocument/getfile?fileType=2&documentId=11223344-aabb-ccdd-eeff-001122334455");
+    assert.equal(options.redirect,"error");
+    assert.equal(options.headers.Accept,"application/pdf");
+    return new Response(bytes,{headers:{"content-type":"application/pdf"}});
+  };
+  const recovered=await fetchEpsilonFileRecoveryPdf(source(original+"/"),fetcher,async()=>({text:identity,pageCount:1}));
+  assert.deepEqual(recovered.bytes,bytes);
+  await assert.rejects(fetchEpsilonFileRecoveryPdf(source(original),fetcher,
+    async()=>({text:identity.replace(row.issuerVat,""),pageCount:1})),/δεν επιβεβαιώνει/);
+  await assert.rejects(fetchEpsilonFileRecoveryPdf(source(original),
+    async()=>new Response("<html>login</html>",{headers:{"content-type":"text/html"}})),/PDF/);
+  for(const bad of [original.replace(":8",":84"),original.replace("epsilondigital.","epsilondigital3.").replace(":8",":84"),
+    original.replace("https:","http:"),original+"?redirect=1",original.replace("epsilonnet.gr","epsilonnet.gr.example"),base]){
+    await assert.rejects(fetchEpsilonFileRecoveryPdf(source(bad),fetcher));
+  }
+  assert.equal(requests,2);
+});
+
+test("InvoiceLink PDF format suffix preserves the QR value and rejects unrelated URLs", async()=>{
+  const original="https://invoicelink.megasoft.gr/invoiceinspect/qr?QrCode="+"a".repeat(100);
+  const withLink=url=>({...row,rawPayload:{xml:`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`}});
+  assert.equal(originalDownloadUrl(withLink(original).rawPayload.xml,row.issuerVat),original+"/pdf");
+  assert.equal(originalDownloadUrl(withLink(original+"/pdf").rawPayload.xml,row.issuerVat),original+"/pdf");
+  assert.throws(()=>originalDownloadUrl(withLink(original).rawPayload.xml,"invalid"));
+  for(const bad of [original+"x",original.slice(0,-1),original+"/xml",original+"#private",original+"&amp;other=1",
+    original.replace("https://","https://user@"),original.replace("megasoft.gr","megasoft.gr.example"),
+    original.replace("megasoft.gr","megasoft.gr:443"),original.replace("/qr?","/qr/pdf?"),original.replace("QrCode","qrcode")]){
+    assert.throws(()=>originalDownloadUrl(withLink(bad).rawPayload.xml,row.issuerVat));
+  }
+  const bytes=Buffer.from("%PDF-"+"x".repeat(110));
+  const serve=async(url,options)=>{
+    assert.equal(url,original+"/pdf");
+    assert.equal(options.redirect,"error");
+    return new Response(bytes,{headers:{"content-type":"application/pdf"}});
+  };
+  const identity=`${row.mark} ${row.issuerVat} ${row.counterpartVat} ${row.documentNumber}`;
+  const result=await fetchOriginalPdf(withLink(original),serve,async()=>({text:identity,pageCount:1}));
+  assert.deepEqual(result.bytes,bytes);
+  await assert.rejects(fetchOriginalPdf(withLink(original),serve,
+    async()=>({text:identity.replace(row.issuerVat,""),pageCount:1})),/δεν επιβεβαιώνει/);
+  await assert.rejects(fetchOriginalPdf(withLink(original),
+    async()=>new Response("<html>viewer</html>",{headers:{"content-type":"text/html"}})),/PDF/);
+});
+
 test("only verified provider host and path combinations are allowed for inbound PDFs", () => {
   const short = "a".repeat(32);
   const uuid = "12345678-1234-1234-1234-123456789abc";

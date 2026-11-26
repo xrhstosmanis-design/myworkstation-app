@@ -1076,6 +1076,8 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 22/11/2026 · Πανόρμου · myDATA Smart 9 / 217 και αναδρομική ανάκτηση από 1/1/2026 · CI και πραγματικό PDF σε εκκρεμότητα · [Checkpoint](CHANGES/2026-11-22-panormou-mydata-smart9-recovery.md).
 
+- 25/11/2026 · Πανόρμου · Αναγνώριση ήδη επαληθευμένων μορφών παρόχων στην αυτόματη ουρά myDATA · [Checkpoint](CHANGES/2026-11-25-panormou-mydata-original-queue.md).
+
 - 24/11/2026 · Πανόρμου · Αυτόματη ανάκτηση προχείρων myDATA · [Checkpoint](CHANGES/2026-11-24-panormou-automatic-mydraft.md).
 
 - 24/11/2026 · Νέες εγκαταστάσεις myDATA · Σταθερή ημερομηνία έναρξης από την πρώτη του μήνα της αρχικής ρύθμισης · [Checkpoint](CHANGES/2026-11-24-mydata-new-store-start-month.md).

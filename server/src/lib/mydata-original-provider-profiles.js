@@ -1,7 +1,7 @@
 // Exact Epsilon host/format pairs verified against actual provider PDFs and the
 // unchanged MARK, issuer/recipient VAT and document-number text identity guard.
 // A matching URL only permits a download attempt; it never verifies its bytes.
-const epsilonFormats=new Map([
+const epsilonRecoveryFormats = [
  ['epsilondigital.epsilonnet.gr','8'],
  ['epsilondigital3.epsilonnet.gr','84'],
  ['epsilondigital14.epsilonnet.gr','160'],
@@ -14,6 +14,8 @@ const epsilonFormats=new Map([
  ['epsilondigital18.epsilonnet.gr','172'],
  ['epsilondigital-3rdpartd.epsilonnet.gr','159'],
  ['epsilondigital24.epsilonnet.gr','209'],
+];
+const additionalVerifiedEpsilonFormats = [
  ['epsilondigital19.epsilonnet.gr','177'],
  ['epsilondigital-3rdpartb.epsilonnet.gr','129'],
  ['epsilondigital9.epsilonnet.gr','145'],
@@ -22,7 +24,14 @@ const epsilonFormats=new Map([
  ['epsilondigital-3rdparte.epsilonnet.gr','169'],
  ['epsilondigital-cosmote.epsilonnet.gr','22'],
  ['epsilondigital-telekom.epsilonnet.gr','22'],
-]);
+];
+const epsilonFormats = new Map([...epsilonRecoveryFormats, ...additionalVerifiedEpsilonFormats]);
+
+export function verifiedEpsilonRecoveryLinkFormats(includeAdditionalVerifiedFormats) {
+  const formats = includeAdditionalVerifiedFormats ? epsilonFormats : epsilonRecoveryFormats;
+  return Array.from(formats, ([host, code]) =>
+    host.replaceAll(".", "[.]") + "/fd/[a-f0-9]{32}:" + code);
+}
 
 export function matchesVerifiedEpsilonOriginal(url,issuerVat){
  if(!(url instanceof URL)||!['string','number'].includes(typeof issuerVat)||!/^\d{9}$/.test(String(issuerVat)))return false;
