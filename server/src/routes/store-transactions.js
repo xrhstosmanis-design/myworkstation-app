@@ -851,9 +851,19 @@ router.get("/supplier-settlements/:settlementId/attachment",requireSuperAdminSet
 }));
 
 // Manual allocation of an existing cash payment: no new ledger transaction.
-router.get('/supplier-settlements/:settlementId/manual-allocation/context',requireSuperAdminSettlementReview,route(async(req,res)=>{
+function manualAllocationActor(req){
   const user=req.user;
-  if(user.staffAccess===true||user.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(user.role))return res.status(403).json({error:'FORBIDDEN'});
+  if(!user?.id||user.staffAccess===true||user.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(user.role)){
+    throw Object.assign(new Error('FORBIDDEN'),{status:403});
+  }
+  if(user.supportContext){
+    return {...user,role:'OWNER',storeId:user.supportContext.storeId||user.storeId};
+  }
+  return isSuperAdminReview(req)?{...user,role:'SUPER_ADMIN'}:user;
+}
+
+router.get('/supplier-settlements/:settlementId/manual-allocation/context',requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const user=manualAllocationActor(req);
   const [payment]=await prisma.$queryRaw`SELECT ss."id",ss."companyId",ss."storeId",ss."supplierId",t."amount" FROM "SupplierPaymentSettlement" ss JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND t."storeId"=ss."storeId" WHERE ss."id"=${req.params.settlementId} AND (${user.role==='SUPER_ADMIN'} OR ss."companyId"=${user.companyId||''}) AND (${user.storeId||null}::text IS NULL OR ss."storeId"=${user.storeId||null}) AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY') AND ss."paymentMethod"='CASH_SHIFT' AND t."paymentMethod"='CASH_SHIFT' AND t."reversedAt" IS NULL AND NOT EXISTS(SELECT 1 FROM "SupplierPaymentAllocation" a WHERE a."settlementId"=ss."id")`;
   if(!payment)return res.status(409).json({error:'PAYMENT_NOT_ELIGIBLE'});
   const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${payment.companyId} AND "active"=true ORDER BY "name"`;
@@ -875,7 +885,7 @@ for(const action of ['preview','apply']){
   router.post('/supplier-settlements/:settlementId/manual-allocation/'+action,requireSuperAdminSettlementReview,route(async(req,res)=>{
     const body=manualAllocationInput.parse(req.body||{});
     if(action==='apply'&&!body.expectedVersion)return res.status(400).json({error:'PREVIEW_REQUIRED'});
-    const result=await manualPaymentAllocation(prisma,req.user,{...body,settlementId:req.params.settlementId},{preview:action==='preview'});
+    const result=await manualPaymentAllocation(prisma,manualAllocationActor(req),{...body,settlementId:req.params.settlementId},{preview:action==='preview'});
     res.json({ok:true,...result});
   }));
 }
