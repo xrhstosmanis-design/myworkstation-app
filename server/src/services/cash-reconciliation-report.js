@@ -158,7 +158,7 @@ function cashAuditEventSummary(events){
   }
   return lines;
 }
-export function reconciliationText(report){
+export function reconciliationText(report,{dailyMail=false}={}){
   assertCalculatedCashResult(report);
   assertCashIssues(report);
   assertHandoffIssues(report);
@@ -236,6 +236,17 @@ export function reconciliationText(report){
     for(const finding of row.expenseFindings||[]){
       const amount=money(finding.amountCents),when=finding.occurredAt?new Date(finding.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'short',hour12:false}):'χωρίς ώρα';
       const prefix=isExpenseIssueClosed(report,row,finding)?'Αρχικό εύρημα (κλειστή εκκρεμότητα με τεκμηρίωση)':'Εκκρεμότητα';
+      if(dailyMail){
+        const status=isExpenseIssueClosed(report,row,finding)?'Ελέγχθηκε':'Προς έλεγχο';
+        const detail={
+          EXPENSE_WITHOUT_DOCUMENT:'λείπει παραστατικό εξόδου',
+          EXPENSE_DOCUMENT_MISMATCH:'διαφορά ποσού μεταξύ παραστατικού και καταχωρισμένων κινήσεων',
+          EXPENSE_DOCUMENT_PARTIAL:'μερική κάλυψη του ποσού παραστατικού από καταχωρισμένες κινήσεις',
+          EXPENSE_DOCUMENT_UNVERIFIED:'η τεκμηρίωση της καταχωρισμένης κίνησης χρειάζεται επαλήθευση'
+        }[finding.code];
+        lines.push(`Έλεγχος παραστατικού · ${when} · ${amount} · ${status}: ${detail}.`);
+        continue;
+      }
       lines.push(finding.code==='EXPENSE_WITHOUT_DOCUMENT'?`${prefix} ${when}: έξοδο ${amount} χωρίς παραστατικό.`:`${prefix} ${when}: παραστατικό ή πληρωμή ${amount} χρειάζεται επανέλεγχο.`);
     }
     if(row.automaticallyCalculated)lines.push('Το αποτέλεσμα μετρητών υπολογίστηκε αυτόματα από τις διαθέσιμες κινήσεις και παραδόσεις.');
