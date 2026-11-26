@@ -96,7 +96,7 @@ test('backoffice paid recovery mounts the common selected-store review without a
  const request=async(url,options={})=>{calls.push({url,body:options.body?JSON.parse(options.body):null});
   if(url.includes('/status'))return {configured:true,executeEnabled:false};if(url.includes('/config'))return {configured:true};if(url.includes('/menu'))return {groups:[]};
   if(url.includes('/nonexecution-review')){state='RECOVERY_READY';return {status:state}};
-  if(url.endsWith('/recover-paid'))return {status:'UNKNOWN'};
+  if(url.endsWith('/recover-paid')){state='UNKNOWN';return {status:'UNKNOWN'}};
   if(url.includes('/issuance-intents?'))return {items:[{...item,status:state}],canAuthorizeRecovery:true,recoveryEnabled:true,recoveryStationId:'12345'};
   throw Error('Unexpected route '+url);
  };
@@ -104,12 +104,12 @@ test('backoffice paid recovery mounts the common selected-store review without a
  const fill=async(selector,value)=>f.act(async()=>{const input=document.querySelector(selector);Object.getOwnPropertyDescriptor(f.dom.window.HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}))});
  try{
   await f.render({api:request,storeId:'A',storeName:'Synthetic A',onClose(){}});
-  assert.match(document.body.textContent,/Synthetic paid card/);assert.equal(button('Καταγραφή επιβεβαίωσης Netlink').disabled,true);
+  assert.match(document.body.textContent,/Synthetic paid card/);assert.match(document.body.textContent,/Χωρίς νέα είσπραξη ή απόδειξη/);assert.equal(button('Καταγραφή επιβεβαίωσης Netlink').disabled,true);
   await fill('input[placeholder="Αριθμός αιτήματος ή email παρόχου"]','Synthetic vendor incident confirms no execution');await fill('input[type="datetime-local"]','2026-11-26T09:32');
   await f.act(async()=>document.querySelector('input[type="checkbox"]').click());assert.equal(button('Καταγραφή επιβεβαίωσης Netlink').disabled,false);
   await f.act(async()=>document.querySelector('form').dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true})));
   assert.equal(calls.filter(c=>c.url.endsWith('/nonexecution-review')).length,1);assert.equal(calls.filter(c=>c.url.endsWith('/recover-paid')).length,0);assert.match(document.body.textContent,/Επιβεβαιώθηκε μη εκτέλεση/);
-  window.confirm=()=>true;await f.act(async()=>button('Ολοκλήρωση πληρωμένης κάρτας').click());assert.equal(calls.filter(c=>c.url.endsWith('/recover-paid')).length,1);assert.deepEqual(calls.find(c=>c.url.endsWith('/recover-paid')).body,{storeId:'A',fulfillExistingPaidPurchase:true});assert.match(document.body.textContent,/Μην κάνεις δεύτερη πληρωμή/);
+  window.confirm=()=>true;await f.act(async()=>button('Ολοκλήρωση πληρωμένης κάρτας').click());assert.equal(calls.filter(c=>c.url.endsWith('/recover-paid')).length,1);assert.deepEqual(calls.find(c=>c.url.endsWith('/recover-paid')).body,{storeId:'A',fulfillExistingPaidPurchase:true});assert.match(document.body.textContent,/Μην κάνεις δεύτερη πληρωμή/);assert.equal(button('Ολοκλήρωση πληρωμένης κάρτας'),undefined);
   assert.ok(calls.every(c=>!/cash-received|checkout|\/issue$|\/execute|\/prepare/.test(c.url)));
  }finally{await f.close()}
 });
