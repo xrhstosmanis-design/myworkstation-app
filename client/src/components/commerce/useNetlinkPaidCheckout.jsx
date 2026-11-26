@@ -13,8 +13,8 @@ export function useNetlinkPaidCheckout({api,storeId,operatorId,storeName,getChec
   const valid=current(),key=storeId+':'+result.requestId+':'+(result.deliveryId||'initial'),lock='print:'+key;
   if(!valid()||!result.lines||printed.current.has(key)||locks.current.has(lock))return;locks.current.add(lock);
   setVouchers(rows=>rows.map(row=>row.requestId===result.requestId?{...row,printing:true}:row));
-  let ok=false;try{ok=await printNetlinkVoucher(window,result,storeName);if(ok)printed.current.add(key);else if(valid())onMessage?.('Δεν άνοιξε η αρχική εκτύπωση. Επίτρεψε τα αναδυόμενα παράθυρα και πάτησε «Εκτύπωση κάρτας».');}
-  finally{locks.current.delete(lock);if(valid())setVouchers(rows=>rows.map(row=>row.requestId===result.requestId?{...row,printing:false,printed:ok,...(ok?{lines:undefined}: {})}:row))}
+  let ok=false,submitted=false;try{ok=await printNetlinkVoucher(window,result,storeName,{beforePrint:()=>{if(!valid()||printed.current.has(key))return false;submitted=true;printed.current.add(key);return true}});if(ok)printed.current.add(key);else if(valid())onMessage?.(submitted?'Η εντολή εκτύπωσης δόθηκε. Αν δεν βγήκε σωστά η κάρτα, ζήτησε υπεύθυνο.':'Δεν άνοιξε η αρχική εκτύπωση. Επίτρεψε τα αναδυόμενα παράθυρα και πάτησε «Εκτύπωση κάρτας».');}
+  finally{locks.current.delete(lock);if(valid())setVouchers(rows=>rows.map(row=>row.requestId===result.requestId?{...row,printing:false,printed:ok||submitted,...(ok||submitted?{lines:undefined}: {})}:row))}
  }
  async function receipt(id,{autoPrint=false}={}){const valid=current();const result=await api(`/api/netlink/issuance-intents/${encodeURIComponent(id)}/receipt`,{method:'POST',body:JSON.stringify({storeId})});if(!valid())return;setVouchers(rows=>rows.some(row=>row.requestId===result.requestId)?rows.map(row=>row.requestId===result.requestId?result:row):[...rows,result]);onMessage?.('Η κάρτα εκδόθηκε. Η αρχική εκτύπωση παραδίδεται στον πελάτη.');if(autoPrint)await printOnce(result);}
  async function complete(itemsOrId,{recovery=false}={}){

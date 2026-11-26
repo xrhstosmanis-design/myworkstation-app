@@ -77,3 +77,15 @@ test('initial popup fallback prints once and clears PIN bytes from voucher state
   await f.render({api,storeId:'A',operatorId:'other',getCheckoutId:()=> 'checkout'});assert.equal(f.hook.voucher,null);
  }finally{for(const popup of popups)popup.window.close();await f.close()}
 });
+
+
+test('uncertain browser print submission consumes the initial action and requires responsible recovery',async()=>{
+ const f=await fixture(),popups=[];let prints=0;
+ const api=async url=>url.endsWith('/issue')?{status:'COMPLETED',idempotentReplay:false}:{requestId:ids[0],deliveryId:'uncertain-print',title:'Synthetic',transactionId:'synthetic-tx',amount:5,serviceFeeAmount:.5,customerTotal:5.5,lines:['PRIVATE-SYNTHETIC-PIN']};
+ try{
+  await f.render({api,storeId:'A',operatorId:'employee',getCheckoutId:()=> 'checkout'});
+  window.open=()=>{const popup=new JSDOM('<html><head></head><body></body></html>');popups.push(popup);popup.window.focus=()=>{};popup.window.print=()=>{prints++;throw Error('Synthetic uncertain print failure')};return popup.window};
+  await f.act(async()=>f.hook.complete(ids[0]));assert.equal(prints,1);assert.equal(f.hook.canPrintVoucher,false);assert.equal(f.hook.voucher.lines,undefined);
+  await f.act(async()=>f.hook.printVoucher());assert.equal(prints,1);
+ }finally{for(const popup of popups)popup.window.close();await f.close()}
+});
