@@ -7,12 +7,13 @@ import crypto from 'node:crypto';
 import {z} from 'zod';
 import * as correction from '../src/services/purchase-supplier-correction.js';
 import * as common from '../src/lib/invoice-common-draft.js';
-import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
+import {invoiceDbFixture,isolatedInvoiceDb,installPurchaseAlertFixture} from './helpers/invoice-common-draft-fixture.js';
 const actor={id:'owner',companyId:'c',role:'OWNER',fullName:'Isolated owner'};
 const request=p=>({storeId:'s',supplierId:'target',version:p.version,reason:'Correct supplier against original invoice',confirmOriginal:true,confirmPaymentSupplier:true});
 async function registered(file,db){
  const handlers={},router={use(){},get:(p,...f)=>handlers['GET '+p]=f.at(-1),post:(p,...f)=>handlers['POST '+p]=f.at(-1),patch:(p,...f)=>handlers['PATCH '+p]=f.at(-1),delete(){}};
  const src=(await readFile(new URL(file,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'').replace('default router;','return router;');
+ if(path.endsWith('/purchase-order-posting-guard.js'))await installPurchaseAlertFixture(db);
  const deps={recordPurchaseCostIncrease,recordSupplierDiscountReduction,invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,Router:()=>router,prisma:db,crypto,z,...common,...correction,assertReopenedIdentity:()=>{},reuseReopenedPurchaseDocument:()=>{throw Error('Not reopened')}};
  new Function(...Object.keys(deps),src)(...Object.values(deps));return handlers;
 }

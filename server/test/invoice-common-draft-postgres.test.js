@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {z} from "zod";
-import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from "./helpers/invoice-common-draft-fixture.js";
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb,installPurchaseAlertFixture} from "./helpers/invoice-common-draft-fixture.js";
 import * as common from "../src/lib/invoice-common-draft.js";
 import {loadInvoiceAssistantSource} from "../src/lib/invoice-assistant-source.js";
 import {acquireOriginal} from "../src/mydata-original.js";
@@ -179,6 +179,7 @@ test('native actual approval/order-finalization paths serialize to one stock pos
   await f.seed({posLines:1});const preview=await common.previewInvoiceReconciliation(f.db,scope);await f.db.$transaction(tx=>common.reconcileInvoiceDrafts(tx,scope,confirmed(preview)));
   await f.db.$executeRawUnsafe(`INSERT INTO "PurchaseDocumentLine"("id","purchaseDocumentId","productId","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES('dl','d-pos','p','Fixture',3,'PIECE',1,3,13,.39,3.39)`);
   const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(f.db);
+  await installPurchaseAlertFixture(f.db);
   const orders=await actualHandlers('../src/routes/purchase-order-posting-guard.js',f.db,{applyPackStockCorrectionInTransaction}),docs=await actualHandlers('../src/routes/commerce-invoice-draft-approval.js',f.db);
   const order=()=>invoke(orders['PATCH /:orderId'],{orderId:'pos'},{status:'FINAL'}),document=()=>invoke(docs['POST /purchases/:documentId/approve'],{documentId:'d-pos'});
   if(first==='race'){

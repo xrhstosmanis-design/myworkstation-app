@@ -8,19 +8,18 @@ export async function invoiceDbFixture(){
  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
  const definitions={
   PurchaseOrder:'"id" text PRIMARY KEY,"awaitingInvoice" boolean NOT NULL DEFAULT false,"companyId" text,"storeId" text,"supplierId" text,"status" text,"invoiceNumber" text,"description" text,"sourceType" text,"sourceDocumentId" text,"createdAt" timestamptz DEFAULT NOW(),"updatedAt" timestamptz DEFAULT NOW(),"finalizedAt" timestamptz,"invoicedAt" timestamptz,"createdByUserId" text,"createdByName" text,"updatedByName" text',
-  PurchaseDocument:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"documentType" text,"documentNumber" text,"documentDate" timestamptz,"totalNet" numeric DEFAULT 0,"totalVat" numeric DEFAULT 0,"totalGross" numeric,"status" text,"sourceType" text,"purchaseOrderId" text,"paymentTransactionId" text,"settlementMode" text,"createdByUserId" text,"updatedAt" timestamptz DEFAULT NOW(),"createdAt" timestamptz DEFAULT NOW()',
-  PurchaseOrderLine:'"id" text PRIMARY KEY,"orderId" text,"productId" text,"supplierCode" text,"description" text,"quantity" numeric,"unitCost" numeric,"netAmount" numeric,"exciseTotal" numeric DEFAULT 0,"vatRate" numeric,"vatAmount" numeric,"grossAmount" numeric,"proposedSalePrice" numeric DEFAULT 0,"invoiceUnit" text DEFAULT \'PIECE\',"stockUnitsPerInvoiceUnit" numeric DEFAULT 1,"discount1" numeric DEFAULT 0,"discount2" numeric DEFAULT 0,"discount3" numeric DEFAULT 0,"ocrSequence" int,"ocrRawText" text,"createdAt" timestamptz DEFAULT NOW(),"gift" boolean DEFAULT false',
+  PurchaseDocument:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"documentType" text,"documentNumber" text,"documentDate" timestamptz,"totalNet" numeric DEFAULT 0,"totalVat" numeric DEFAULT 0,"totalGross" numeric,"status" text,"sourceType" text,"purchaseOrderId" text,"paymentTransactionId" text,"settlementMode" text,"createdByUserId" text,"updatedAt" timestamptz DEFAULT NOW()',
+  PurchaseOrderLine:'"id" text PRIMARY KEY,"orderId" text,"productId" text,"supplierCode" text,"description" text,"quantity" numeric,"unitCost" numeric,"netAmount" numeric,"exciseTotal" numeric DEFAULT 0,"vatRate" numeric,"vatAmount" numeric,"grossAmount" numeric,"proposedSalePrice" numeric DEFAULT 0,"invoiceUnit" text DEFAULT \'PIECE\',"stockUnitsPerInvoiceUnit" numeric DEFAULT 1,"discount1" numeric DEFAULT 0,"discount2" numeric DEFAULT 0,"discount3" numeric DEFAULT 0,"ocrSequence" int,"ocrRawText" text,"createdAt" timestamptz DEFAULT NOW()',
   PurchaseDocumentLine:'"id" text PRIMARY KEY,"purchaseDocumentId" text,"productId" text,"supplierItemCode" text,"supplierBarcode" text,"description" text,"quantity" numeric,"unit" text,"unitsPerPackage" numeric DEFAULT 1,"unitCost" numeric,"netAmount" numeric,"vatRate" numeric,"vatAmount" numeric,"grossAmount" numeric',
-  StoreOperatorAudit:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT NOW()',
   Supplier:'"id" text PRIMARY KEY,"companyId" text,"taxId" text,"name" text,"active" boolean DEFAULT true',
-  Store:'"id" text PRIMARY KEY,"companyId" text,"name" text,"active" boolean DEFAULT true',
+  Store:'"id" text PRIMARY KEY,"companyId" text,"name" text',
   StoreTransaction:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"type" text,"amount" numeric,"occurredAt" timestamptz DEFAULT NOW(),"invoiceDocumentNumber" text,"invoicePaymentKey" text,"attachmentFilename" text,"reversedAt" timestamptz,"description" text',
   DocumentInbox:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"attachmentId" text,"status" text,"note" text,"updatedAt" timestamptz DEFAULT NOW()',
   DocumentAttachment:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"filename" text,"mimeType" text,"contentData" text,"checksum" text',
   AiReaderJob:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"purchaseDocumentId" text,"attachmentId" text,"createdAt" timestamptz DEFAULT NOW(),"updatedAt" timestamptz DEFAULT NOW(),"resultJson" jsonb DEFAULT \'{}\',"status" text DEFAULT \'AWAITING_APPROVAL\',"stage" text DEFAULT \'READY\'',
   MyDataInboundDocument:'"id" text PRIMARY KEY,"companyId" text,"storeId" text,"inboxId" text UNIQUE,"mark" text,"issuerVat" text,"counterpartVat" text,"series" text,"documentNumber" text,"issueDate" timestamptz,"invoiceType" text DEFAULT \'1.1\',"totalGross" numeric,"rawPayload" jsonb DEFAULT \'{}\',"fetchedAt" timestamptz DEFAULT NOW()',
-  Product:'"id" text PRIMARY KEY,"companyId" text,"trackStock" boolean DEFAULT true,"costPrice" numeric,"salePrice" numeric,"updatedAt" timestamptz DEFAULT NOW(),"name" text DEFAULT \'Isolated item\'',
-  StoreProduct:'"id" text PRIMARY KEY,"storeId" text,"productId" text,"currentStock" numeric,"salePrice" numeric,"updatedAt" timestamptz DEFAULT NOW(),UNIQUE("storeId","productId"),"active" boolean DEFAULT true',
+  Product:'"id" text PRIMARY KEY,"companyId" text,"trackStock" boolean DEFAULT true,"costPrice" numeric,"salePrice" numeric,"updatedAt" timestamptz DEFAULT NOW()',
+  StoreProduct:'"id" text PRIMARY KEY,"storeId" text,"productId" text,"currentStock" numeric,"salePrice" numeric,"updatedAt" timestamptz DEFAULT NOW(),UNIQUE("storeId","productId")',
   StockMovement:'"id" text PRIMARY KEY,"storeId" text,"productId" text,"movementType" text,"quantity" numeric,"unitCost" numeric,"sourceType" text,"sourceId" text,"note" text,"createdByUserId" text',
   SupplierProductLink:'"id" text PRIMARY KEY,"companyId" text,"supplierId" text,"productId" text,"supplierCode" text,"active" boolean,"source" text,"updatedBy" text,"updatedByName" text,"updatedAt" timestamptz DEFAULT NOW(),UNIQUE("companyId","supplierId","productId")',
   SupplierProductMapping:'"id" text PRIMARY KEY,"companyId" text,"supplierId" text,"supplierItemCode" text,"productId" text,"supplierBarcode" text,"lastDescription" text,"unitsPerPackage" numeric,"lastUnitCost" numeric,"usageCount" int,"confirmedByUserId" text,"confirmedAt" timestamptz,"lastSeenAt" timestamptz,"updatedAt" timestamptz,UNIQUE("companyId","supplierId","supplierItemCode")'
@@ -60,4 +59,13 @@ export async function invoicePackPostingFixture(db,staffCheck){
   ()=>({use(){},patch(){}}),db,crypto,()=>{},lockInvoiceStore,staffCheck);
  await route.ensureSchema();
  return route;
+}
+
+export async function installPurchaseAlertFixture(db){
+ await db.$executeRawUnsafe('ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true');
+ await db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true');
+ await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "name" text');
+ await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "gift" boolean DEFAULT false');
+ await db.$executeRawUnsafe('ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "createdAt" timestamptz DEFAULT NOW()');
+ await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT NOW())`);
 }

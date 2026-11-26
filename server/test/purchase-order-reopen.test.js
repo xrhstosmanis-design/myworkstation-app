@@ -7,7 +7,7 @@ import {z} from 'zod';
 import * as common from '../src/lib/invoice-common-draft.js';
 import * as reopen from '../src/services/purchase-order-reopen.js';
 import {loadInvoiceAssistantSource} from '../src/lib/invoice-assistant-source.js';
-import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb,installPurchaseAlertFixture} from './helpers/invoice-common-draft-fixture.js';
 const actor={id:'owner',companyId:'c',role:'OWNER',fullName:'Isolated owner'};
 const confirmed=p=>({storeId:'s',version:p.version,reason:'Accidental finalization correction',confirm:true});
 async function handlers(file,db,extra={}){
@@ -29,6 +29,7 @@ async function fixture(){
 
  const packHandlers=await handlers('../src/routes/purchase-order-unresolved-guard.js',f.db);
  const packRoute=await invoicePackPostingFixture(f.db);const pack=packRoute.applyPackStockCorrection;
+ await installPurchaseAlertFixture(f.db);
  const posting=await handlers('../src/routes/purchase-order-posting-guard.js',f.db,{applyPackStockCorrectionInTransaction:packRoute.applyPackStockCorrectionInTransaction});
  const patch=(body,user=actor)=>invoke(posting['PATCH /:orderId'],{orderId:'pos'},body,user);
  const finalize=async(version=0)=>{const r=await patch({status:'FINAL',expectedReopenVersion:version});assert.ifError(r.failure);assert.equal(r.result.awaitingInvoice,true);assert.ifError((await patch({status:'INVOICED',expectedReopenVersion:version})).failure)};
