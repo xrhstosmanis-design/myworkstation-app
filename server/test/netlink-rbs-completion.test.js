@@ -19,6 +19,7 @@ for(const method of ['CASH','CARD'])test(`RBS ${method} uses native completion w
  const proof={...f,rbsCommit,lines:[{productId:'CARD',quantity:1,unitPrice:5,lineTotal:5},{productId:'FEE',quantity:1,unitPrice:.5,lineTotal:.5}],payments:[{method,amount:7.5}],cashConfirmation:{...f.scope,requestId:id,checkoutId:'checkout',actorId:'operator',receivedAt:new Date(),amount:7.5},cardProof:{...f.scope,saleId:'sale',clientTransactionId:'checkout',status:'SUCCESS',method:'CARD',amount:7.5,evidenceId:'rbs'}};
  assert.equal(assertNetlinkPaidSale(proof).fiscalNumber,null);
  assert.throws(()=>assertNetlinkPaidSale({...proof,rbsCommit:null}),e=>e.code==='NETLINK_FISCAL_RECEIPT_REQUIRED');
+ assert.throws(()=>assertNetlinkPaidSale({...proof,rbsCommit:null,fiscal:{...f.scope,saleId:'sale',status:'ISSUED',fiscalNumber:'OTHER/1/42'}}),e=>e.code==='NETLINK_FISCAL_RECEIPT_REQUIRED');
  assert.throws(()=>assertNetlinkPaidSale({...proof,payments:[{method,amount:5.5}]}));
  assert.throws(()=>assertNetlinkPaidSale({...proof,cashConfirmation:null,cardProof:null}));
  assert.throws(()=>assertNetlinkPaidSale({...proof,lines:[proof.lines[0],{...proof.lines[1],lineTotal:0}]}));

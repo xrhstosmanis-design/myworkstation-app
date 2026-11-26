@@ -22,7 +22,7 @@ export function assertNetlinkPaidSale({scope,intent,sale,lines,payments,fiscal,r
  const total=moneyCents(sale.total);if(total<amount+fee)reject("NETLINK_PAID_TOTAL_MISMATCH","Το πληρωμένο καλάθι δεν καλύπτει την κάρτα και την παροχή.");
  if(!Array.isArray(payments)||payments.length!==1||!['CASH','CARD'].includes(payments[0].method)||moneyCents(payments[0].amount)!==total)reject('NETLINK_PAYMENT_REQUIRED','Απαιτείται πλήρης πληρωμή με μετρητά ή κάρτα.');
  const nativeRbs=sameScope(rbsCommit,scope)&&rbsCommit.saleId===sale.id&&rbsCommit.clientTransactionId===intent.checkoutId&&rbsCommit.evidenceType==='RBS_NATIVE_COMMIT'&&rbsCommit.status==='SALE_COMMITTED'&&rbsCommit.evidenceId&&rbsCommit.terminalPos===intent.checkoutContext?.terminalPos&&intent.checkoutContext?.kind==='RBS_NATIVE_COMMIT'&&rbsCommit.paymentMethod===payments[0].method&&moneyCents(rbsCommit.amount)===total;
- if(!nativeRbs&&(!sameScope(fiscal,scope)||fiscal.saleId!==sale.id||!validFiscalReceipt(fiscal)))reject('NETLINK_FISCAL_RECEIPT_REQUIRED','Η κάρτα εκδίδεται μόνο μετά την επιβεβαιωμένη απόδειξη της ταμειακής.');
+ if(intent.checkoutContext?.kind==='RBS_NATIVE_COMMIT'?!nativeRbs:!sameScope(fiscal,scope)||fiscal.saleId!==sale.id||!validFiscalReceipt(fiscal))reject('NETLINK_FISCAL_RECEIPT_REQUIRED','Η κάρτα εκδίδεται μόνο μετά την επιβεβαιωμένη απόδειξη της ταμειακής.');
  const method=payments[0].method;
  if(method==='CASH'){
   if(!sameScope(cashConfirmation,scope)||cashConfirmation.requestId!==intent.requestId||cashConfirmation.checkoutId!==intent.checkoutId||!cashConfirmation.actorId||!cashConfirmation.receivedAt||moneyCents(cashConfirmation.amount)!==total)reject('NETLINK_CASH_NOT_RECEIVED','Ο υπάλληλος πρέπει πρώτα να επιβεβαιώσει την είσπραξη του συνολικού ποσού.');
