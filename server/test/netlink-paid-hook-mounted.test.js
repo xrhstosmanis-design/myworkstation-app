@@ -50,3 +50,16 @@ test('several completed cards remain queued for individual printing without anot
   await f.act(async()=>f.hook.closeVoucher());assert.equal(f.hook.voucher,null);assert.equal(calls.length,4);
  }finally{await f.close()}
 });
+
+test('reviewed paid recovery requires explicit confirmation and never repeats payment or fiscal checkout',async()=>{
+ const f=await fixture(),calls=[],errors=[];
+ const api=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return {status:'UNKNOWN'}};
+ try{
+  await f.render({api,storeId:'A',operatorId:'manager',getCheckoutId:()=> 'unused',onError:x=>errors.push(x)});
+  const intent={requestId:ids[0],status:'RECOVERY_READY',paid:true};
+  window.confirm=()=>false;await f.hook.recover(intent);assert.equal(calls.length,0);
+  window.confirm=()=>true;await f.hook.recover(intent);assert.equal(calls.length,1);assert.ok(calls[0].url.endsWith('/recover-paid'));assert.deepEqual(calls[0].body,{storeId:'A',fulfillExistingPaidPurchase:true});assert.equal(errors.length,1);assert.equal(f.hook.voucher,null);
+  const previous=f.hook;await f.render({api,storeId:'B',operatorId:'other',getCheckoutId:()=> 'unused'});await previous.recover(intent);assert.equal(calls.length,1);
+  await f.hook.recover({...intent,status:'UNKNOWN'});assert.equal(calls.length,1);
+ }finally{await f.close()}
+});

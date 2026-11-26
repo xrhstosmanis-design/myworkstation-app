@@ -1,3 +1,7 @@
+##26Nov2026 — Netlink provider-confirmed non-execution; audited paid recovery source — ASSIGNED /root
+
+Provider now explicitly confirms the original request never arrived/executed, superseding the pending-email/external-result blocker in25Nov notes. Retained /root after claim4256/a28d786. Source adds privileged evidence/station-bound review and once-only fulfillment of the existing paid intent with preserved original identity/history, no new sale/payment/fiscal receipt, no schema addition. Separate recovery flag defaults closed; new issuance remains paused.65targeted native SQL/HTTP/mounted tests PASS,0FAIL/0SKIP, including atomic audit rollback and uncertain recovery no-repeat. Node20 frontend build PASS. Full CI/release/actual voucher acceptance pending; no production review/issuance performed. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-paid-recovery-source.md`. Earlier live report/catalogue USER PASS remains narrow; real card/PIN printing NOT TESTED.
+
 - 25/11/2026 · [Ριζάρειο: ιστορικό STATUS 101 χωρίς τιμή InputLine](CHANGES/2026-11-25-ftext-status101-empty-inputline.md) · Εκκρεμεί αποδοχή στο POS.
 
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
