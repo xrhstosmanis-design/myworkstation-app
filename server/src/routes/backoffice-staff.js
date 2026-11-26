@@ -2,6 +2,7 @@ import {saveStaffAccountStatus} from "../services/backoffice-staff-account-statu
 import {saveStaffCompanyVatDepartment,activateStaffCompanyVatDraft} from "../services/backoffice-staff-company-vat.js";
 import {saveStaffDisplayName} from "../services/backoffice-staff-display-name.js";
 import {renameStaffCompanyProduct} from "../services/backoffice-staff-product-rename.js";
+import {activateStaffPromotionDraft,listStaffPromotionDrafts} from "../services/backoffice-staff-promotion-activation.js";
 import {createStaffPromotionDraft} from "../services/backoffice-staff-promotion-draft.js";
 import {renameStaffWholesalePriceList} from "../services/backoffice-staff-wholesale-rename.js";
 import {createStaffWholesalePriceListDraft} from "../services/backoffice-staff-wholesale-draft.js";
@@ -86,6 +87,12 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
   router.use(authenticate);
   router.post("/company/product-renames",async(req,res)=>{
     try{res.json(await renameStaffCompanyProduct(db,req))}catch(error){failure(res,error)}
+  });
+  router.get("/company/promotion-draft-activation",async(req,res)=>{
+    try{res.json(await listStaffPromotionDrafts(db,req))}catch(error){failure(res,error)}
+  });
+  router.post("/company/promotion-draft-activation",async(req,res)=>{
+    try{res.json(await activateStaffPromotionDraft(db,req))}catch(error){failure(res,error)}
   });
   router.post("/company/promotion-drafts",async(req,res)=>{
     try{res.status(201).json(await createStaffPromotionDraft(db,req))}catch(error){failure(res,error)}

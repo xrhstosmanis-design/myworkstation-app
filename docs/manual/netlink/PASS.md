@@ -29,3 +29,29 @@ Unreviewed UNKNOWN still needs documented provider reconciliation by a responsib
 26Nov2026 owner reports the existing card came out; supplied POS screenshots show Issued card, saved-card print dialog and Reprint same card under the normal operator. Scoped native read-only check confirms COMPLETED at11:47:39UTC, saved encrypted result, provider transaction present, exactly one recovery dispatch and one completion audit, one original payment and two original sale lines. No PIN/result text is exposed or copied into public source. This is a narrow USER PASS for existing paid-card fulfillment and saved-voucher UI; physical legibility/redemption/provider terminal statement and a fresh normal purchase are not independently verified.
 
 The completed card stays available for same-card reprint without another charge. The new-card button is independently locked by the global issuance flag; it is not blocked by this reprint entry. Owner authorized activation of new paid cards after the successful completion. Configuration activation is being prepared; a fresh normal cash/card+fiscal+fee purchase remains NOT TESTED. Do not buy a card merely to repeat the already-proven recovery. See `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-new-issuance-activation.md`.
+
+
+## 26Nov2026 — operator reprint policy superseded; source validation pending release
+
+The owner now forbids employee reprint/repeated PIN access. Earlier instructions allowing original/winning employee reprint are historical and superseded. New source permits one audited initial delivery, including manual initial-print fallback when popup opening fails. After print submission, employee print controls and PIN lines are cleared; repeated server delivery is denied. A genuine print failure after delivery is handled by owner/admin/manager via an audited responsible reprint, without buying again. This cannot revoke or prevent copying an already-seen paper/PIN.71 native/HTTP/mounted tests and Node20 build PASS; deployment/actual updated operator UI pending. See `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-source.md`.
+
+
+## 26Nov2026 — employee one-time delivery installed centrally
+
+Source4268/5876386 full CI45817588068 all5SUCCESS, merged172c8c2; deploy dep-dc42dfvlk1mc739e6jng LIVE12:33:40UTC and exact health verified.71 targeted tests PASS. This supersedes all earlier employee reprint instructions.
+
+Refresh the store POS after finishing any unrelated basket. Functions POS > NETLINK: ordinary employees see completed-card status without a reprint button, and a second server PIN delivery is denied. New fixed-value cards use Add to checkout, automatically include0.50 service and issue after successful payment/fiscal receipt. Initial automatic printing and popup-blocked fallback work until print submission. After submission, including an uncertain print error, the employee print action/PIN state is cleared; paper/printer problems need an owner/admin/manager audited exceptional reprint, without another purchase.
+
+The initial paper/PIN still needs immediate customer delivery; the application cannot prevent copying an already-seen original or OS print copies. Owner-confirmed previous-card issuance remains USER PASS. Updated employee UI after refresh and a fresh normal purchase/physical quality/redemption/provider statement remain NOT TESTED. Verify no-reprint visually on the existing completed card, without buying another test card. Receipt: `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-live.md`.
+
+
+## 26Nov2026 — refreshed employee no-reprint visual USER PASS
+
+Owner replied OK after the requested operator refresh/check for absence of Reprint. This closes only that visual acceptance on installed172c8c. Existing-card issuance USER PASS is retained; fresh normal purchase/physical quality/redemption/provider statement acceptance remain OPEN. Read-only Acharnon readiness is NOT READY: POS card/service mappings absent and current service/card goods track stock. No fresh provider access or physical print was tested. See `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-readiness.md`.
+
+
+## 26Nov2026 — Acharnon configuration/catalogue LIVE PASS; normal issuance blocked
+
+Verified on runtime172c8c via selected-store Platform/BackOffice UI. Authorized owner/admin creates/selects separate active non-stock NETLINK_CARD_VALUE (existing CARDS0%/department3) and NETLINK_SERVICE_FEE (0.50, existing SERVICE24%/department7), zero initial stock. Platform > selected Acharnon > Integrations > Netlink items: choose those two services and Save. Observed saved automatic0.50 and native mapping validation. Check access without issuance returned catalogue confirmed; this is not station-identity certification. Existing stock-tracked goods/history were preserved; new services have zero stock movements and no Netlink transaction was created.
+
+The earlier ftext-only/receipt-adapter readiness block is historical and superseded by the owner's26Nov request for common native RBS completion. Source/CI/deployment evidence is recorded outside this PASS manual in `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-rbs-native-completion-live.md`. This entry certifies only the already observed non-stock mapping/catalogue setup. Fresh normal RBS purchase/PIN/thermal-print/provider-statement acceptance remains NOT TESTED; no issuance-flow USER PASS is added here. Existing verified ftext and no-fabricated-receipt boundaries remain protected.

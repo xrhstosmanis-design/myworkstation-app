@@ -24,12 +24,20 @@ const frequencies={DAILY:'Ημερήσια',WEEKLY:'Εβδομαδιαία',MONT
 
 export function automaticCashMailPresentation(content){
  check(content?.format==='MWS_AUTOMATIC_CASH_PAYLOAD_V1'&&Object.hasOwn(frequencies,content.frequency));
- check(content.financialFinality==='PROVISIONAL'&&content.financialReconciliationComplete===false&&content.employeeLiabilityAdjusted===false);
+ const final=content.frequency==='DAILY'&&content.financialFinality==='FINAL'&&Boolean(content.reviewedCash?.finalEvidence);
+ check(content.financialFinality===(final?'FINAL':'PROVISIONAL')&&content.financialReconciliationComplete===final&&content.employeeLiabilityAdjusted===false);
  const store=label(content.storeName),from=local(content.period?.from),to=local(content.period?.to);
- check(content.period.from<content.period.to&&Number.isSafeInteger(content.sourceCount)&&content.sourceCount>0&&content.sourceCount<=1000);
+ check(content.period.from<content.period.to);
+ if(Object.hasOwn(content,'morningNotice')){
+  const reasons={SHIFT_SOURCE_PENDING:'Εκκρεμεί η συγκέντρωση των στοιχείων για τις απαιτούμενες βάρδιες.',SHIFT_REVIEW_PENDING:'Εκκρεμεί ο έλεγχος των στοιχείων των βαρδιών ή των χειρογράφων.'};
+  check(content.frequency==='DAILY'&&!final&&Object.hasOwn(reasons,content.morningNotice)&&!Object.hasOwn(content,'reviewedCash')&&!Object.hasOwn(content,'groups'));
+  return Object.freeze({subject:`Πρωινή ενημέρωση ταμείων · ${store.slice(0,160)} · ${from.slice(0,10)}`,
+    text:[store,`Περίοδος: ${from} – ${to} (ώρα Ελλάδας)`,reasons[content.morningNotice],'Η τελική αναφορά θα αποσταλεί όταν ολοκληρωθεί ο έλεγχος.'].join('\n')});
+ }
+ check(Number.isSafeInteger(content.sourceCount)&&content.sourceCount>0&&content.sourceCount<=1000);
  const frequency=frequencies[content.frequency],turnover=Boolean(content.dailyTurnover);
  const shortStore=store.length>160?store.slice(0,159)+'…':store;
- const subject=`Προσωρινή ${frequency.toLocaleLowerCase('el-GR')} αναφορά ταμείων${turnover?' ΚΑΙ ΤΖΙΡΟΥ':''} · ${shortStore} · ${from.slice(0,10)}`;
+ const subject=`${final?'Τελική':'Προσωρινή'} ${frequency.toLocaleLowerCase('el-GR')} αναφορά ταμείων${turnover?' ΚΑΙ ΤΖΙΡΟΥ':''} · ${shortStore} · ${from.slice(0,10)}`;
  // Retain the separately validated reviewed evidence renderer byte-for-byte.
  if(Object.hasOwn(content,'reviewedCash'))return Object.freeze({subject,text:automaticReviewedMailText(content)});
  check(Array.isArray(content.groups)&&content.groups.length>0&&content.groups.length<=1000);

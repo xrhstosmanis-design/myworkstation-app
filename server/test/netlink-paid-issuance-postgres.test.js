@@ -54,12 +54,21 @@ test('native paid issuance SQL/HTTP: mixed basket, encryption, receipt gate, onc
   assert.ok(concurrent.some(r=>r.body.status==='COMPLETED'));assert.equal(calls,1);assert.doesNotMatch(JSON.stringify(concurrent),/PRIVATE-SYNTHETIC-PIN/);
   assert.equal((await request(`/issuance-intents/${ids[1]}/issue`,{storeId:'store'})).body.status,'COMPLETED');assert.equal(calls,2);
   const replay=await request(`/issuance-intents/${ids[0]}/issue`,{storeId:'store'});assert.equal(replay.body.idempotentReplay,true);assert.equal(calls,2);
-  const printed=await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'});assert.equal(printed.status,200);assert.equal(printed.cache,'no-store');assert.deepEqual(printed.body.lines,['PRIVATE-SYNTHETIC-PIN']);assert.equal(calls,2);
+  const deliveries=await Promise.all([request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'}),request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'})]);assert.deepEqual(deliveries.map(r=>r.status).sort(),[200,403]);const printed=deliveries.find(r=>r.status===200);assert.equal(printed.body.deliveryMode,'INITIAL');assert.equal((await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'})).body.code,'NETLINK_VOUCHER_ALREADY_DELIVERED');assert.equal(printed.cache,'no-store');assert.deepEqual(printed.body.lines,['PRIVATE-SYNTHETIC-PIN']);assert.equal(calls,2);
   assert.equal((await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'},'other-operator')).status,403);
   assert.equal((await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'other'})).status,403);
   const listed=await request('/issuance-intents?storeId=store',null,'operator','GET');assert.equal(listed.body.items.length,2);assert.equal(new Set(listed.body.items.map(row=>row.providerRequestId)).size,2);assert.ok(listed.body.items.every(row=>/^[1-9][0-9]{0,9}$/.test(row.providerRequestId)&&Number(row.providerRequestId)<=2147483647));assert.doesNotMatch(JSON.stringify(listed),/PRIVATE-SYNTHETIC-PIN|issuanceIntentEnc|issuanceResultEnc/);
   const rows=await db.$queryRaw`SELECT "issuanceIntentEnc","issuanceResultEnc" FROM "NetlinkTransaction"`;assert.equal(rows.length,2);assert.doesNotMatch(JSON.stringify(rows),/PRIVATE-SYNTHETIC-PIN/);
   const audit=await db.$queryRaw`SELECT * FROM "StoreOperatorAudit"`;assert.equal(audit.length,1);assert.doesNotMatch(JSON.stringify(audit),/PRIVATE-SYNTHETIC-PIN/);
+  assert.equal(listed.body.canReprintIssued,false);assert.equal(audit[0].details.deliveryMode,'INITIAL');
+  const responsible=await request(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'},'manager');assert.equal(responsible.status,200);assert.equal(responsible.body.deliveryMode,'RESPONSIBLE_REPRINT');assert.equal(calls,2);
+  const responsibleAudit=(await db.$queryRaw`SELECT "actorId","details" FROM "StoreOperatorAudit" WHERE "id"=${responsible.body.deliveryId}`)[0];assert.equal(responsibleAudit.actorId,'manager');assert.equal(responsibleAudit.details.role,'MANAGER');
+  await db.$executeRawUnsafe(`CREATE FUNCTION reject_receipt_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."eventType"='NETLINK_RECEIPT_VIEWED' THEN RAISE EXCEPTION 'synthetic delivery audit failure'; END IF; RETURN NEW; END $$`);
+  await db.$executeRawUnsafe(`CREATE TRIGGER reject_receipt_audit BEFORE INSERT ON "StoreOperatorAudit" FOR EACH ROW EXECUTE FUNCTION reject_receipt_audit()`);
+  const failedDelivery=await request(`/issuance-intents/${ids[1]}/receipt`,{storeId:'store'});assert.equal(failedDelivery.status,500);assert.doesNotMatch(JSON.stringify(failedDelivery),/PRIVATE-SYNTHETIC-PIN/);
+  await db.$executeRawUnsafe('DROP TRIGGER reject_receipt_audit ON "StoreOperatorAudit"');
+  assert.equal((await request(`/issuance-intents/${ids[1]}/receipt`,{storeId:'store'})).body.deliveryMode,'INITIAL');assert.equal(calls,2);
+
   assert.equal((await request('/issuance-intents',{storeId:'store',requestId:randomUUID(),checkoutId,productId:'card10'})).body.code,'NETLINK_SALE_ALREADY_EXISTS');
 
   // Existing paid UNKNOWN: provider-confirmed recovery uses the same sale and receipt.
@@ -109,7 +118,7 @@ test('native paid issuance SQL/HTTP: mixed basket, encryption, receipt gate, onc
    const dispatch=(await db.$queryRaw`SELECT "actorId","operatorId" FROM "StoreOperatorAudit" WHERE "eventType"='NETLINK_PAID_RECOVERY_DISPATCH' AND "details"->>'requestId'=${recoveredId}`)[0];
    assert.ok(['cashier-a','cashier-b'].includes(dispatch.actorId));assert.equal(dispatch.operatorId,dispatch.actorId);const winner=dispatch.actorId,loser=winner==='cashier-a'?'cashier-b':'cashier-a';
    const completion=(await db.$queryRaw`SELECT "actorId" FROM "StoreOperatorAudit" WHERE "eventType"='NETLINK_PAID_RECOVERY_COMPLETED' AND "details"->>'requestId'=${recoveredId}`)[0];assert.equal(completion.actorId,winner);
-   assert.equal((await request(`/issuance-intents/${recoveredId}/receipt`,{storeId:'store'},winner)).status,200);assert.equal((await request(`/issuance-intents/${recoveredId}/receipt`,{storeId:'store'},loser)).status,403);
+   assert.equal((await request(`/issuance-intents/${recoveredId}/receipt`,{storeId:'store'},winner)).status,200);assert.equal((await request(`/issuance-intents/${recoveredId}/receipt`,{storeId:'store'},winner)).body.code,'NETLINK_VOUCHER_ALREADY_DELIVERED');assert.equal((await request(`/issuance-intents/${recoveredId}/receipt`,{storeId:'store'},loser)).status,403);
    const winningList=await request('/issuance-intents?storeId=store',null,winner,'GET'),losingList=await request('/issuance-intents?storeId=store',null,loser,'GET');assert.ok(winningList.body.items.some(i=>i.requestId===recoveredId));assert.ok(!losingList.body.items.some(i=>i.requestId===recoveredId));
    assert.equal((await request(fulfillPath,fulfillBody,loser)).status,403);assert.equal(calls,4);
    assert.equal((await request(fulfillPath,fulfillBody,winner)).body.idempotentReplay,true);assert.equal(calls,4);

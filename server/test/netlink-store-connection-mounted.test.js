@@ -124,7 +124,7 @@ test('mounted employee completes a reviewed card from another shift without a ne
   assert.match(document.body.textContent,/Other shift paid card/);assert.match(document.body.textContent,/Χωρίς νέα είσπραξη ή απόδειξη/);
   assert.equal(document.querySelector('form'),null);assert.equal(document.querySelector('input[type="checkbox"]'),null);
   const button=[...document.querySelectorAll('button')].find(b=>b.textContent==='Ολοκλήρωση πληρωμένης κάρτας');assert.ok(button);assert.equal(button.disabled,false);
-  await f.act(async()=>button.click());assert.deepEqual(completed,[item.requestId]);assert.match(document.body.textContent,/Επανεκτύπωση ίδιας κάρτας/);
+  await f.act(async()=>button.click());assert.deepEqual(completed,[item.requestId]);assert.doesNotMatch(document.body.textContent,/Επανεκτύπωση ίδιας κάρτας/);assert.match(document.body.textContent,/Εκδοθείσα κάρτα/);
   assert.ok(calls.every(url=>!/cash-received|checkout|nonexecution-review|recover-paid|\/issue$|\/execute|\/prepare/.test(url)));
  }finally{await f.close()}
 });
@@ -137,5 +137,15 @@ test('switching POS operator in the same store discards pending prior-operator p
   actor='new';await f.render({api,storeId:'A',operatorId:'new',onRecover:async()=>{}});
   await f.act(async()=>old.resolve({items:[{requestId:'old-card',title:'Prior private card',paid:true,status:'UNKNOWN'}],canAuthorizeRecovery:true,canCompleteReviewedRecovery:true,recoveryEnabled:true,recoveryStationId:'12345'}));
   assert.doesNotMatch(document.body.textContent,/Prior private card/);assert.equal(document.querySelector('form'),null);assert.equal(document.querySelector('input[type="checkbox"]'),null);
+ }finally{await f.close()}
+});
+
+
+test('completed voucher has no employee reprint action; responsible access is explicit',async()=>{
+ const f=await fixture('../../client/src/components/commerce/NetlinkPosPanel.jsx');let responsible=false;
+ const api=async url=>{if(url.includes('/status'))return {configured:true,executeEnabled:true,paidIssuanceVersion:1};if(url.includes('/config'))return {configured:true,serviceFeeAmount:.5};if(url.includes('/menu'))return {groups:[]};if(url.includes('/issuance-intents?'))return {items:[{requestId:'issued',title:'Issued card',status:'COMPLETED',paid:true,customerTotal:5.5}],canReprintIssued:responsible};throw Error(url)};
+ try{
+  await f.render({api,storeId:'A',operatorId:'employee',onRecover:async()=>{}});assert.match(document.body.textContent,/Εκδοθείσα κάρτα/);assert.doesNotMatch(document.body.textContent,/Επανεκτύπωση/);
+  responsible=true;await f.render({api,storeId:'A',operatorId:'manager',onRecover:async()=>{}});assert.match(document.body.textContent,/Επανεκτύπωση ίδιας κάρτας/);
  }finally{await f.close()}
 });

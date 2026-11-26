@@ -46,10 +46,12 @@ function request(raw){
   shape(p.scope,["companyId","storeId"]);
   const monthlyText=[SUPPLIER_COMPARISON_PAYLOAD_FORMAT,MONTHLY_INVENTORY_SUMMARY_FORMAT].includes(p.format);
   const promotion=["MWS_PROMOTION_RESULT_PAYLOAD_V1","MWS_INVENTORY_RESULT_PAYLOAD_V1"].includes(p.format);
-  if((monthlyText?p.frequency!=="MONTHLY":promotion?p.frequency!=="EVENT":p.format!=="MWS_AUTOMATIC_CASH_PAYLOAD_V1")||p.scope.companyId!==args.scope.companyId||p.scope.storeId!==args.scope.storeId||!["DAILY","WEEKLY","MONTHLY",...(promotion?["EVENT"]:[])].includes(p.frequency)||p.financialFinality!=="PROVISIONAL"||p.contentType!=="application/json; charset=utf-8")fail();
+  if((monthlyText?p.frequency!=="MONTHLY":promotion?p.frequency!=="EVENT":p.format!=="MWS_AUTOMATIC_CASH_PAYLOAD_V1")||p.scope.companyId!==args.scope.companyId||p.scope.storeId!==args.scope.storeId||!["DAILY","WEEKLY","MONTHLY",...(promotion?["EVENT"]:[])].includes(p.frequency)||!["PROVISIONAL","FINAL"].includes(p.financialFinality)||p.contentType!=="application/json; charset=utf-8")fail();
   if(typeof p.body!=="string"||!Number.isSafeInteger(p.byteLength)||p.byteLength<1||p.byteLength>2*1024*1024||Buffer.byteLength(p.body,"utf8")!==p.byteLength||p.payloadFingerprint!==hash(p.body)||typeof p.sourceFingerprint!=="string"||!/^[a-f0-9]{64}$/.test(p.sourceFingerprint))fail();
   let content;try{content=JSON.parse(p.body)}catch{fail()}
-  if(!content||content.format!==p.format||content.scope?.companyId!==p.scope.companyId||content.scope?.storeId!==p.scope.storeId||content.frequency!==p.frequency||content.sourceFingerprint!==p.sourceFingerprint||content.financialFinality!=="PROVISIONAL"||content.financialReconciliationComplete!==false||content.employeeLiabilityAdjusted!==false||canonical(content.period)!==canonical(p.period)||canonical(content.financialLimitations)!==canonical(p.financialLimitations))fail();
+  const final=p.financialFinality==="FINAL";
+  if(final&&(monthlyText||promotion||p.frequency!=="DAILY"||!content?.reviewedCash?.finalEvidence))fail();
+  if(!content||content.format!==p.format||content.scope?.companyId!==p.scope.companyId||content.scope?.storeId!==p.scope.storeId||content.frequency!==p.frequency||content.sourceFingerprint!==p.sourceFingerprint||content.financialFinality!==p.financialFinality||content.financialReconciliationComplete!==final||content.employeeLiabilityAdjusted!==false||canonical(content.period)!==canonical(p.period)||canonical(content.financialLimitations)!==canonical(p.financialLimitations))fail();
   if(monthlyText||promotion){
     if(promotion)text(content.eventId);
     text(content.subject,300);
@@ -63,6 +65,7 @@ function started(raw,args){
   const value=copy(raw),r=reconcileDeliverySlot(value,value.input),p=args.payload;
   const reportType=p.format===MONTHLY_INVENTORY_SUMMARY_FORMAT?"MONTHLY_INVENTORY_SUMMARY":p.format===SUPPLIER_COMPARISON_PAYLOAD_FORMAT?"SUPPLIER_COMPARISON":p.format==="MWS_PROMOTION_RESULT_PAYLOAD_V1"?"PROMOTION_RESULT":p.format==="MWS_INVENTORY_RESULT_PAYLOAD_V1"?"INVENTORY_RESULT":"CASH";
   if(["PROMOTION_RESULT","INVENTORY_RESULT"].includes(reportType)&&JSON.parse(p.body).eventId!==r.input.eventId)fail();
+  if((r.input.stage==="FINAL")!==(p.financialFinality==="FINAL")||r.input.snapshot.financialFinality!==p.financialFinality)fail();
   if(r.input.reportType!==reportType||r.status!=="ATTEMPTING"||r.slotId!==args.scope.slotId||r.input.companyId!==args.scope.companyId||r.input.storeId!==args.scope.storeId||r.version!==args.expectedVersion+1||r.token!==args.token||r.attemptStartedAt!==args.now||r.updatedAt!==args.now||r.leaseUntil<=args.now||r.input.frequency!==p.frequency||r.input.periodFrom!==p.period.from||r.input.periodTo!==p.period.to||r.input.snapshot.payloadFingerprint!==p.payloadFingerprint||r.input.snapshot.sourceFingerprint!==p.sourceFingerprint||JSON.parse(p.body).settingsVersion!==r.input.snapshot.settingsVersion)fail();
   return r;
 }

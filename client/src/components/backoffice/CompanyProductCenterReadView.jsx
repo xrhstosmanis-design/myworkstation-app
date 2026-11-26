@@ -1,6 +1,6 @@
 import React,{useRef,useState} from 'react';
 import {greeceDateInput,greeceRangeDate} from '../../../../shared/greece-time.mjs';
-import {productRenameCapability,productRenamePath,promotionDraftCapability,promotionDraftPath} from '../../../../shared/backoffice-staff-company.mjs';
+import {promotionActivateCapability,promotionActivatePath,productRenameCapability,productRenamePath,promotionDraftCapability,promotionDraftPath} from '../../../../shared/backoffice-staff-company.mjs';
 import * as contract from '../../../../shared/backoffice-staff-company-product-center.mjs';
 import useCompanyConfigurationRead from './useCompanyConfigurationRead.js';
 import useProductCenterChoice from './useProductCenterChoice.jsx';
@@ -64,6 +64,39 @@ function PromotionDraftForm(props){
   {message&&<p role={message.error?'alert':'status'}>{message.text}</p>}
  </form></>;
 }
-function Catalog(props){const draft=props.companyCapabilities?.includes(promotionDraftCapability)&&props.companyCapabilities.includes('stores.read'),choice=useProductCenterChoice({...props,hideChoice:!draft});return <>{choice.controls}{draft&&choice.selected&&<PromotionDraftForm key={choice.selected.id} {...props} selected={choice.selected}/>}{choice.read.data&&<><p>Έως 500 ενεργά προϊόντα του καταλόγου. Η επιλογή καρτέλας, barcode, κόστους ή ιστορικού έχει ξεχωριστό δικαίωμα.</p><ProductReadTable label="Κατάλογος ενεργών προϊόντων Owner" items={choice.read.data.items} fields={contract.productCenterCatalogFields}/></>}</>}
+function PromotionDraftActivation(props){
+ const [selectedId,setSelectedId]=useState(''),[confirmed,setConfirmed]=useState(false);
+ const [busy,setBusy]=useState(false),[message,setMessage]=useState(null),pending=useRef(false);
+ const read=useCompanyConfigurationRead({...props,path:promotionActivatePath,enabled:true,
+  validate:(value,{companyId})=>value?.companyId===companyId&&Array.isArray(value.items)&&value.items.length<=100&&
+    value.items.every(row=>typeof row.id==='string'&&typeof row.productName==='string'&&typeof row.storeName==='string'&&
+      typeof row.updatedAt==='string'&&Number.isFinite(Date.parse(row.updatedAt))&&Number.isFinite(row.discountPercent))});
+ const selected=read.data?.items.find(row=>row.id===selectedId);
+ async function submit(event){
+  event.preventDefault();
+  if(pending.current||!selected||!confirmed)return;
+  pending.current=true;setBusy(true);setMessage(null);
+  try{
+   const result=await props.api(promotionActivatePath,{method:'POST',headers:{'x-backoffice-company-id':props.companyId},
+    body:JSON.stringify({promotionId:selected.id,expectedUpdatedAt:selected.updatedAt,confirm:true})});
+   if(result?.ok!==true||result.companyId!==props.companyId||result.id!==selected.id||result.active!==true)throw Error('Δεν επιβεβαιώθηκε η ενεργοποίηση.');
+   setSelectedId('');setMessage({text:'Η προσφορά ενεργοποιήθηκε.'});read.refresh();
+  }catch(error){setMessage({error:true,text:error.message||'Η ενεργοποίηση απέτυχε.'});read.refresh()}
+  finally{setConfirmed(false);pending.current=false;setBusy(false)}
+ }
+ return <section aria-label="Ενεργοποίηση πρόχειρης προσφοράς">
+  <ReadState read={read}/>
+  {read.data&&<form onSubmit={submit}><fieldset disabled={busy}><legend>Ενεργοποίηση πρόχειρης προσφοράς</legend>
+   <label>Πρόχειρη προσφορά<select value={selectedId} onChange={event=>{setSelectedId(event.target.value);setConfirmed(false)}}>
+    <option value="">Επίλεξε προσφορά</option>
+    {read.data.items.map(row=><option key={row.id} value={row.id}>{row.productName} · {row.storeName} · {row.discountPercent}% · {greeceDateInput(row.validFrom)} έως {greeceDateInput(row.validUntil)}</option>)}
+   </select></label>
+   <label><input type="checkbox" checked={confirmed} disabled={!selected} onChange={event=>setConfirmed(event.target.checked)}/>Επιβεβαιώνω την ενεργοποίηση στο POS</label>
+   <button type="submit" disabled={!selected||!confirmed}>Ενεργοποίηση προσφοράς</button>
+  </fieldset></form>}
+  {message&&<p role={message.error?'alert':'status'}>{message.text}</p>}
+ </section>;
+}
+function Catalog(props){const draft=props.companyCapabilities?.includes(promotionDraftCapability)&&props.companyCapabilities.includes('stores.read'),choice=useProductCenterChoice({...props,hideChoice:!draft});return <>{choice.controls}{props.companyCapabilities?.includes(promotionActivateCapability)&&<PromotionDraftActivation {...props}/>} {draft&&choice.selected&&<PromotionDraftForm key={choice.selected.id} {...props} selected={choice.selected}/>}{choice.read.data&&<><p>Έως 500 ενεργά προϊόντα του καταλόγου. Η επιλογή καρτέλας, barcode, κόστους ή ιστορικού έχει ξεχωριστό δικαίωμα.</p><ProductReadTable label="Κατάλογος ενεργών προϊόντων Owner" items={choice.read.data.items} fields={contract.productCenterCatalogFields}/></>}</>}
 function required(key,seen=new Set()){if(seen.has(key))return seen;seen.add(key);for(const parent of contract.companyProductCenterActions.find(row=>row.key===key)?.requires??[])required(parent,seen);return seen}
 export default function CompanyProductCenterReadView(props){const action=contract.companyProductCenterActions.find(row=>row.key===props.capability),allowed=Boolean(action&&props.companyId&&[...required(action.key)].every(key=>props.companyCapabilities?.includes(key)));if(!allowed)return <p role="alert">Δεν επιβεβαιώθηκε η προβολή προϊόντος και η ρητή ονομαστική επιλογή.</p>;const identity=JSON.stringify([props.companyId,props.capability,props.authorityKey,props.companyCapabilities]),next={...props,authorityKey:identity};return <section aria-label="Προβολές προϊόντων και τιμοκαταλόγων μόνο ανάγνωση"><h3>{action.label}</h3><p>Μόνο καταχωρισμένα στοιχεία της τρέχουσας εταιρείας, χωρίς αλλαγές, εκτύπωση, εισαγωγή ή εντολές.</p>{props.capability==='product-center.read'?<Catalog key={identity} {...next}/>:kinds[props.capability]?<NamedProduct key={identity} {...next}/>:<ProductCenterPriceReadView key={identity} {...next}/>}</section>}

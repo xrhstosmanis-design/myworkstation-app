@@ -18,7 +18,7 @@ export function createAutomaticReportDispatcher({db,persistence=defaultPersisten
  async function prepare(raw,inspectPapers=false){
   const scope=automaticReportScopeInput(raw),now=clock();
   return transactional.$transaction(async tx=>{
-   const context=await eligibility.readContext(tx,scope,now);
+   const context=await eligibility.readContext(tx,scope,now,{inspectPapers});
    if(inspectPapers&&context.automaticPapers)return {automaticPapers:context.automaticPapers};
    await persistence.putImmutablePayload(tx,{companyId:scope.companyId,storeId:scope.storeId,payload:context.payload,now,lifecycleGeneration:context.inputs[0].snapshot.lifecycleGeneration});
    const bound=createAutomaticReportDeliveryRepository({db:{$transaction:fn=>fn(tx)},readEligibility:eligibility});

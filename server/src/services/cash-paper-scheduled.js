@@ -27,27 +27,30 @@ export function createScheduledCashPaperReader(db,{
   env=process.env
 }={}){
   return async ({companyId,storeId},period)=>{
+    const final=period.stage==='FINAL';
     const now=Date.parse(period.now),from=Date.parse(period.from),to=Date.parse(period.to);
     if(env.AI_OWNER_WALLET_ENABLED!=='true'||!Number.isFinite(from)||!Number.isFinite(to)||!Number.isFinite(now)||
-      from>=to||now<to||now>=to+maxCompletedPeriodAgeMs)return 'DONE';
+      from>=to||now<to||(!final&&now>=to+maxCompletedPeriodAgeMs))return 'DONE';
     const scope={companyId,storeId,generation:period.generation};
     try{
       if(await repository.generation(scope)!==scope.generation)return 'DONE';
       const [slot]=await db.$queryRaw`SELECT 1 FROM "AutomaticReportDeliverySlot"
         WHERE "companyId"=${companyId} AND "storeId"=${storeId}
           AND "record"->'input'->>'reportType'='CASH' AND "record"->'input'->>'frequency'='DAILY'
-          AND "record"->'input'->>'periodFrom'=${period.from} AND "record"->'input'->>'periodTo'=${period.to} LIMIT 1`;
+          AND "record"->'input'->>'periodFrom'=${period.from} AND "record"->'input'->>'periodTo'=${period.to}
+          AND (NOT ${final} OR "record"->'input'->>'stage'='FINAL') LIMIT 1`;
       if(slot||!await authorized(db,scope))return 'DONE';
       const actor=await db.user.findUnique({where:{id:period.actorId},select:{id:true,role:true,fullName:true,mustChangePassword:true}});
       if(actor?.role!=='SUPER_ADMIN'||actor.mustChangePassword)return 'DONE';
       const formatter=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'});
       const cashDay=formatter.format(new Date(from)),endDay=formatter.format(new Date(to));
-      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(now+1),cashDay});
+      const discovery=await discover(db,scope,{from:new Date(from),to:new Date(final?Math.min(now+1,to+maxCompletedPeriodAgeMs):now+1),cashDay});
       const candidates=discovery.sources.filter(source=>source.checksum&&Number.isSafeInteger(source.sizeBytes)&&
         source.sizeBytes>0&&source.sizeBytes<=7*1024*1024&&source.references[0]?.messageId);
       const inspected=await Promise.all(candidates.map(async source=>({source,reading:await repository.get(scope,source.checksum)})));
       const selected=inspected.filter(({source,reading})=>{
         if(source.references.some(reference=>reference.declaredCashDay===cashDay))return true;
+        if(final&&source.references.some(reference=>reference.declaredCashDay))return false;
         const printedDay=reading.extraction?.documentDate;
         return reading.status!=='EXTRACTED_UNVERIFIED'||!printedDay||(printedDay>=cashDay&&printedDay<=endDay);
       }).slice(0,maxAttachments);
