@@ -4,6 +4,8 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+- 26/11/2026 · Νο 7 · [Έλεγχος παραστατικών στο ημερήσιο email](CHANGES/2026-11-26-no7-cash-email-document-status.md).
+
 ##25Nov2026 — Netlink numeric-ID correction installed; paid UNKNOWN remains OPEN /root
 
 Source#4241 head d2b3dcc82a69ee609cff7c78fe2d6ebc047c79eb passed full CI45647815255 (all5jobs), merged d6694542c758636b4da7f7f39a39b481b3af43cb. Render dep-dc3h5sgu01pc73elbvlg LIVE; public health200/ok confirms exact revision. Native read-only verification confirms bounded provider sequence exists and is unconsumed; original paid UNKNOWN sale/receipt/dispatch record is unchanged. New issuance remains PAUSED. The user reports no corresponding card charge in the provider terminal's current daily report; this is user evidence, not provider final confirmation. No retry, new payment, refund, deletion or fiscal correction was performed. Await provider reconciliation and explicit authorization to transmit the prepared incident email. Next: obtain existing provider result/non-execution confirmation; never replay the UNKNOWN purchase. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-correction-live.md`.
