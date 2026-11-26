@@ -321,10 +321,15 @@ router.patch("/:orderId",async(req,res,next)=>{
           if(Math.abs(gross-n(credit.totalGross))>0.05)throw Object.assign(new Error("Οι γραμμές πιστωτικού δεν συμφωνούν με το τυπωμένο συνολικό ποσό. Δεν έγινε κίνηση αποθήκης ή συμψηφισμός."),{status:409});
           await tx.$executeRaw`DELETE FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${credit.id}`;
           for(const line of lines){
-            await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${credit.id},${line.productId},${line.supplierCode||null},${line.description},${n(line.quantity)},'PIECE',${n(line.unitCost)},${n(line.netAmount)+n(line.exciseTotal)},${n(line.vatRate)},${n(line.vatAmount)},${n(line.grossAmount)})`;
+            const stockUnits=line.invoiceUnit==="PACKAGE"?n(line.stockUnitsPerInvoiceUnit):1;
+            if(!Number.isInteger(stockUnits)||stockUnits<1)
+              throw Object.assign(new Error("Έλεγξε τα τεμάχια ανά συσκευασία του πιστωτικού."),{status:409});
+            const stockQuantity=n(line.quantity)*stockUnits;
+            const unitCost=n(line.unitCost)/stockUnits;
+            await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${credit.id},${line.productId},${line.supplierCode||null},${line.description},${stockQuantity},'PIECE',${unitCost},${n(line.netAmount)+n(line.exciseTotal)},${n(line.vatRate)},${n(line.vatAmount)},${n(line.grossAmount)})`;
             if(line.trackStock){
-              await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${found.storeId},${line.productId},${-n(line.quantity)}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${-n(line.quantity)},"updatedAt"=NOW()`;
-              await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${found.storeId},${line.productId},'SUPPLIER_RETURN',${-n(line.quantity)},${n(line.unitCost)},'CREDIT_NOTE_APPROVAL',${credit.id},${`Πιστωτικό προμηθευτή ${effectiveInvoiceNumber||credit.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
+              await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${found.storeId},${line.productId},${-stockQuantity}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${-stockQuantity},"updatedAt"=NOW()`;
+              await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${found.storeId},${line.productId},'SUPPLIER_RETURN',${-stockQuantity},${unitCost},'CREDIT_NOTE_APPROVAL',${credit.id},${`Πιστωτικό προμηθευτή ${effectiveInvoiceNumber||credit.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
             }
           }
           await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${net},"totalVat"=${vat},"totalGross"=${gross},"status"='APPROVED',"updatedAt"=NOW() WHERE "id"=${credit.id} AND "companyId"=${companyId}`;

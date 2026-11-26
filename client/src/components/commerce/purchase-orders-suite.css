@@ -38,3 +38,5 @@
     grid-template-columns: 1.1fr 1fr 1.5fr .75fr .75fr 52px;
   }
 }
+
+:is(.po-modal,.pos-po-modal) .po-order-toolbar button[data-cancel-invoice]{background:#fff;color:#9f241c;border-color:#bd4d44}

@@ -1,4 +1,10 @@
-- 26/11/2026 · Αύξηση τιμής αγοράς στα Συμβάντα · [Checkpoint](CHANGES/2026-11-26-purchase-cost-increase-events.md).
+- 26/11/2026 · Ειδοποιήσεις αύξησης τιμής αγοράς και μείωσης έκπτωσης · [Checkpoint](CHANGES/2026-11-26-purchase-cost-increase-events.md).
+
+## 26/11/2026 — Χειροκίνητη αντιστοίχιση υπάρχουσας πληρωμής — LAB / AWAITING RELEASE
+
+PR #4272 (αντικαθιστά #4235), εργασία #4232. Προεπισκόπηση, κατανομή με audit, επιλογή προμηθευτή και τιμολογίων, μόνο OWNER/SUPER_ADMIN. Προηγούμενο CI #11187 PASS με απομονωμένη PostgreSQL δοκιμή. CI #11272 PASS πριν τη νέα συγχώνευση του main. Η ίδια φόρμα συνδέθηκε στις Εκκρεμείς επιβεβαιώσεις ιδιοκτήτη. Εκκρεμούν CI της τελικής έκδοσης και LAB. Καμία εγκατάσταση ή αλλαγή παραγωγής. [Checkpoint](CHANGES/2026-11-26-manual-supplier-payment-allocation.md).
+
+- 26/11/2026 · [Μετατροπή συσκευασίας σε πιστωτικά](CHANGES/2026-11-26-credit-note-pack-stock.md) · Εκκρεμεί LAB.
 
 - 26/11/2026 · [Έλεγχος διπλών παραστατικών και ακύρωση πιστωτικού](CHANGES/2026-11-26-purchase-duplicate-actions.md) · Εκκρεμούν PostgreSQL και LAB.
 
@@ -1201,3 +1207,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Ενεργοποίηση πρόχειρης προσφοράς](CHANGES/2026-11-26-no5-promotion-activation.md).
 
 - 26/11/2026 · Νο 5 · [Αλλαγή τιμής κλίμακας χονδρικής](CHANGES/2026-11-26-no5-wholesale-tier-price.md).
+
+- 26/11/2026 · Νο 5 · [Επεξεργασία περιγραφής κοινού είδους](CHANGES/2026-11-26-no5-product-description.md).
+
+- 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.

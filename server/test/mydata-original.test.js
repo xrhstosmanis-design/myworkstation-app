@@ -1,6 +1,48 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal} from "../src/mydata-original.js";
+import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal,panormouOriginalStoreId} from "../src/mydata-original.js";
+
+test("Megasoft appends the PDF suffix to the exact InvoiceLink query value", () => {
+  const link = "https://invoicelink.megasoft.gr/invoiceinspect/qr?QrCode=" + "A".repeat(100);
+  const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
+  const issuer = "099999999";
+  assert.equal(originalDownloadUrl(xml(link), issuer, panormouOriginalStoreId), link + "/pdf");
+  assert.equal(originalDownloadUrl(xml(link + "/pdf"), issuer, panormouOriginalStoreId), link + "/pdf");
+  for (const invalid of [link + "&amp;extra=1", link + "/", link + "#x", link.replace(".gr/", ".gr.example/")]) {
+    assert.throws(() => originalDownloadUrl(xml(invalid), issuer, panormouOriginalStoreId));
+  }
+  assert.throws(() => originalDownloadUrl(xml(link), ""));
+});
+
+test("Primer follows only the provider's exact same-invoice PDF redirect", async () => {
+  const token = "A".repeat(40);
+  const source = `https://mydata.primer.gr/${token}`;
+  const target = `https://mydata-backend.primer.gr/invoice/${token}/pdf`;
+  const identity = {mark:"12345",issuerVat:"099999999",counterpartVat:"088888888",documentNumber:"123"};
+  const invoice = {...identity,storeId:panormouOriginalStoreId,rawPayload:{xml:`<downloadingInvoiceUrl>${source}</downloadingInvoiceUrl>`}};
+  const reader = async () => ({text:Object.values(identity).join(" "),pageCount:1});
+  const bytes = Buffer.from("%PDF-" + "x".repeat(110));
+  const calls = [];
+  const result = await fetchOriginalPdf(invoice, async (url, {redirect}) => {
+    calls.push([url,redirect]);
+    return url === target
+      ? new Response(bytes,{headers:{"content-type":"application/pdf"}})
+      : new Response(null,{status:301,headers:{location:target}});
+  }, reader);
+  assert.deepEqual(calls,[[source+"/pdf","manual"],[target,"error"]]);
+  assert.deepEqual(result.bytes,bytes);
+  await assert.rejects(fetchOriginalPdf({...invoice,storeId:"other-store"}, async () => {
+    assert.fail("provider must not be contacted for another store");
+  }, reader), /διαφορετικό υποστηριζόμενο πάροχο/);
+  for (const location of [target.replace(".gr/",".gr.example/"),target.replace(token,"B".repeat(40)),target+"?extra=1"]) {
+    let requests = 0;
+    await assert.rejects(fetchOriginalPdf(invoice, async () => {
+      requests++;
+      return new Response(null,{status:301,headers:{location}});
+    }, reader), /μη αναμενόμενη ανακατεύθυνση/);
+    assert.equal(requests,1);
+  }
+});
 const base="https://einvoice.impact.gr/p/EL099999999/"+ "A".repeat(40)+"/"+"B".repeat(32);
 const row={inboxId:"inbox",issuerVat:"099999999",counterpartVat:"088888888",mark:"400000000000001",documentNumber:"42",totalGross:"12.4",status:"RECEIVED",invoiceType:"1.1",currency:"EUR",issueDate:"2026-09-28",rawPayload:{xml:`<invoice><downloadingInvoiceUrl>${base}</downloadingInvoiceUrl></invoice>`}};
 test("invoice number accepts leading zero padding without relaxing MARK or VAT",()=>{
