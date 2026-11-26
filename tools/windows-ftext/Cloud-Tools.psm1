@@ -69,7 +69,7 @@ function Get-FtextReadinessRefreshAt([DateTime]$CheckedAt,[DateTime]$PostStarted
     $refresh=$expiry.AddSeconds(-$reserve)
     if($refresh -le $Now){return $Now}
     # Bound idle work opportunity even when the preceding sample was very fast.
-    if($refresh -gt $Now.AddSeconds(10)){return $Now.AddSeconds(10)}
+    if($refresh -gt $Now.AddSeconds(15)){return $Now.AddSeconds(15)}
     return $refresh
 }
 function Invoke-FtextCloudReadiness([string]$ConfigPath,[ValidateRange(1,30)][int]$TimeoutSeconds=5) {
