@@ -27,19 +27,19 @@ export function createNetlinkPaidRecovery({db,provider,evidence=readNetlinkNativ
   if(a.fingerprint!==recoveryFingerprint(row,proof))fail('NETLINK_RECOVERY_EVIDENCE','Τα στοιχεία της πληρωμένης αγοράς άλλαξαν μετά τον έλεγχο.');
   return {a,proof};
  }
- const repository={
+ const repositoryFor=actorId=>({
   async load(scope,id){const row=await rowFor(db,scope,id);if(!row)return null;if(row.status!=='RECOVERY_READY')return row;const {a}=await approved(db,scope,row);return {...row,status:'READY_FOR_PAYMENT',providerRequestId:a.providerRequestId}},
   async claim(scope,id){return db.$transaction(async tx=>{const row=await rowFor(tx,scope,id,true);if(row?.status!=='RECOVERY_READY')return false;const {a}=await approved(tx,scope,row);
    const n=await tx.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='EXECUTING',"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='RECOVERY_READY'`;
-   if(Number(n)!==1)return false;await audit(tx,scope,a.actorId,'NETLINK_PAID_RECOVERY_DISPATCH',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});return true;
+   if(Number(n)!==1)return false;await audit(tx,scope,actorId,'NETLINK_PAID_RECOVERY_DISPATCH',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});return true;
   },{maxWait:5000,timeout:20000})},
   async uncertain(scope,id,code){await db.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='UNKNOWN',"errorCode"=${code},"errorMessage"='Αβέβαιο αποτέλεσμα ολοκλήρωσης. Απαιτείται νέος έλεγχος παρόχου· καμία επανάληψη.',"updatedAt"=NOW() WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "status"='EXECUTING'`},
   async review(scope,id,encrypted){await db.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='AMOUNT_REVIEW',"issuanceResultEnc"=${encrypted},"errorCode"='NETLINK_PROVIDER_RESULT_REVIEW',"updatedAt"=NOW() WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "status"='EXECUTING'`},
   async complete(scope,id,v){await db.$transaction(async tx=>{const row=await rowFor(tx,scope,id,true);const records=await reviews(tx,scope,id),a=records[0]?.details;if(row?.status!=='EXECUTING'||records.length!==1)fail('NETLINK_RECOVERY_STATE','Η ολοκλήρωση χρειάζεται διασταύρωση.');
    const n=await tx.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='COMPLETED',"issuanceResultEnc"=${v.encrypted},"providerTransactionId"=${v.providerTransactionId},"providerReference"=${v.reference},"commissionAmount"=${v.cardCents/100*.01},"completedAt"=NOW(),"updatedAt"=NOW(),"errorCode"=NULL,"errorMessage"=NULL WHERE "id"=${row.id} AND "status"='EXECUTING'`;
-   if(Number(n)!==1)fail('NETLINK_RECOVERY_STATE','Το αποτέλεσμα χρειάζεται διασταύρωση.');await audit(tx,scope,a.actorId,'NETLINK_PAID_RECOVERY_COMPLETED',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});
+   if(Number(n)!==1)fail('NETLINK_RECOVERY_STATE','Το αποτέλεσμα χρειάζεται διασταύρωση.');await audit(tx,scope,actorId,'NETLINK_PAID_RECOVERY_COMPLETED',{requestId:id,resolutionId:a.resolutionId,providerRequestId:a.providerRequestId});
   })}
- };
+ });
  return {
   async reviewContext(scope){return connection(db,scope)},
   async authorize(scope,id,{actorId,providerReference,confirmedAt,expectedUpdatedAt,expectedStationId}){
@@ -54,6 +54,6 @@ export function createNetlinkPaidRecovery({db,provider,evidence=readNetlinkNativ
     return {requestId:id,status:'RECOVERY_READY',providerRequestId,resolutionId};
    },{maxWait:5000,timeout:20000});
   },
-  async fulfill(scope,id){return dispatchPaidNetlink({repository,scope,requestId:id,loadEvidence:intent=>evidence(db,scope,intent),provider:provider(scope),encryptResult:async result=>encryptStoreIntegrationValue({...scope,requestId:id,result})})}
+  async fulfill(scope,id,{actorId}={}){if(!actorId)fail('NETLINK_RECOVERY_ACTOR','Απαιτείται συνδεδεμένος χειριστής.');return dispatchPaidNetlink({repository:repositoryFor(actorId),scope,requestId:id,loadEvidence:intent=>evidence(db,scope,intent),provider:provider(scope),encryptResult:async result=>encryptStoreIntegrationValue({...scope,requestId:id,result})})}
  };
 }
