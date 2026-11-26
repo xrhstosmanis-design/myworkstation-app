@@ -1,3 +1,4 @@
+import NetlinkPaidRecoveryWorkspace from './NetlinkPaidRecoveryWorkspace.jsx';
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {BarChart3,Boxes,Camera,ChevronRight,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
@@ -83,6 +84,8 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
   const [posCategory,setPosCategory]=useState("");
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
+  const [netlinkRecoveryAccess,setNetlinkRecoveryAccess]=useState({storeId:null,available:false});
+  useEffect(()=>{let current=true;setNetlinkRecoveryAccess({storeId:null,available:false});if(storeId&&stores.some(s=>s.id===storeId))api(`/api/netlink/status?${new URLSearchParams({storeId})}`).then(()=>{if(current)setNetlinkRecoveryAccess({storeId,available:true})}).catch(()=>{});return()=>{current=false}},[api,storeId]);
   const active=new Set(activeModules);
   const lowValueCompanyAccess=active.has("LOW_VALUE_PRODUCTS");
   const canReadLowValue=Boolean(storeId)&&lowValueAccessStoreId===storeId;
@@ -231,6 +234,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
         <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> Ανάγνωση τιμολογίων</button>
         <button disabled={!active.has("ATTENDANCE")} className={`${tab==="attendance"?"active":""} ${!active.has("ATTENDANCE")?"locked":""}`} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="dispatch"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("dispatch")}><Truck/> Δελτία / Πάροχος</button>
+        {netlinkRecoveryAccess.available&&netlinkRecoveryAccess.storeId===storeId&&<button className={tab==="netlinkPaid"?"active":""} onClick={()=>setTab("netlinkPaid")}>Πληρωμένες κάρτες Netlink</button>}
         <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
         <button disabled={!active.has("VIDEO_EVENTS")} className={`${tab==="video"?"active":""} ${!active.has("VIDEO_EVENTS")?"locked":""}`} onClick={()=>setTab("video")}><Camera/> Κάμερες / Video Audit</button>
       </div>
@@ -240,6 +244,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
 
     {tab==="modules"&&<section className="commerce-status-grid commerce-reference-modules">{statusModules.map(module=>{const visual=moduleVisuals[module.key]||{tone:"blue",icon:"◆",subtitle:module.description};return <article key={module.key} className={`commerce-status-card commerce-reference-card tone-${visual.tone} ${module.active?"active":""} ${!module.commercialReady?"locked":""}`}><span className="commerce-reference-icon" aria-hidden="true">{visual.icon}</span><div className="commerce-reference-copy"><b>{module.name}</b><p>{visual.subtitle||module.description}</p></div><span className="commerce-reference-arrow" aria-hidden="true"><ChevronRight/></span><em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΔΙΑΘΕΣΙΜΟ":"ΚΛΕΙΔΩΜΕΝΟ"}</em>{!module.commercialReady&&<LockKeyhole className="commerce-reference-lock"/>}</article>})}</section>}
 
+    {tab==="netlinkPaid"&&netlinkRecoveryAccess.available&&netlinkRecoveryAccess.storeId===storeId&&stores.some(s=>s.id===storeId)&&<NetlinkPaidRecoveryWorkspace key={storeId} api={api} storeId={storeId} storeName={stores.find(s=>s.id===storeId)?.name} onClose={()=>setTab("modules")}/>}
     {tab==="ownerAssistant"&&<OwnerAssistantPanel key={assistantStoreId} api={api} storeId={stores.find(s=>s.id===assistantStoreId)?.id||""} storeName={stores.find(s=>s.id===assistantStoreId)?.name||""}/>}
     {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}
     {tab==="supplierComparison"&&active.has("INVENTORY")&&<SupplierPriceComparisonPanel key={storeId} api={api} storeId={storeId}/>}
