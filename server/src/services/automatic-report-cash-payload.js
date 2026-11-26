@@ -132,20 +132,22 @@ function build(raw){
     check(same(actual,expected),"Monthly opening-user summary differs from originals.");openingOperatorSummary=expected;
   }else check(!own(p,"openingOperatorSummary"),"Monthly summary on a nonmonthly report.");
   const scope={companyId,storeId};
-  const financialLimitations=[...LIMITATIONS],disclosures=[...DISCLOSURES];
+  const financialLimitations=final?[]:[...LIMITATIONS],disclosures=final?['ΤΕΛΙΚΗ ΗΜΕΡΗΣΙΑ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ','Ολοκληρώθηκε η διασταύρωση των επιλεγμένων βαρδιών και χειρογράφων.']:[...DISCLOSURES];
   if(p.frequency==="MONTHLY")disclosures.push("Οι καταγεγραμμένοι χρήστες έναρξης δεν αποτελούν επιβεβαιωμένη ταυτότητα εργαζομένου ή στοιχείο μισθοδοσίας.");
+  const final=p.frequency==="DAILY"&&p.reviewedReconciliation===true&&Boolean(p.reviewedCash?.finalEvidence);
+  const financialFinality=final?"FINAL":"PROVISIONAL";
   const reviewed=p.reviewedReconciliation===true?p.reviewedCash:null;
   check(!reviewed?.dailyEvidence||p.frequency==="DAILY","Daily evidence on a non-daily report.");
-  if(p.reviewedReconciliation===true)check(validateAutomaticReviewedReceipt(reviewed,{companyId,storeId,groups,rule,dayStartHour:bounds.dayStartHour,sourceFingerprint:p.sourceFingerprint}),"Reviewed cash result unavailable or changed.");
+  if(p.reviewedReconciliation===true)check(validateAutomaticReviewedReceipt(reviewed,{companyId,storeId,groups,rule,dayStartHour:bounds.dayStartHour,sourceFingerprint:p.sourceFingerprint,requireFinal:final}),"Reviewed cash result unavailable or changed.");
   else check(!own(p,"reviewedCash"),"Unexpected reviewed cash result.");
-  const content={format:FORMAT,scope,storeName:p.store.name,period:bounds,frequency:p.frequency,settingsVersion,sourceFingerprint:p.sourceFingerprint,sourceCount:p.sourceCount,financialFinality:"PROVISIONAL",financialReconciliationComplete:false,financialLimitations,employeeLiabilityAdjusted:false,disclosures,rule:{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled},groups,dayReadiness,...(openingOperatorSummary?{openingOperatorSummary}:{}),...(reviewed?{reviewedCash:reviewed}:{}),...(p.dailyTurnover?{dailyTurnover:p.dailyTurnover}:{}),...(p.shiftTurnover?{shiftTurnover:p.shiftTurnover}:{})};
+  const content={format:FORMAT,scope,storeName:p.store.name,period:bounds,frequency:p.frequency,settingsVersion,sourceFingerprint:p.sourceFingerprint,sourceCount:p.sourceCount,financialFinality,financialReconciliationComplete:final,financialLimitations,employeeLiabilityAdjusted:false,disclosures,rule:{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled},groups,dayReadiness,...(openingOperatorSummary?{openingOperatorSummary}:{}),...(reviewed?{reviewedCash:reviewed}:{}),...(p.dailyTurnover?{dailyTurnover:p.dailyTurnover}:{}),...(p.shiftTurnover?{shiftTurnover:p.shiftTurnover}:{})};
   const body=canonical(content),byteLength=Buffer.byteLength(body,"utf8");check(byteLength<=2*1024*1024,"Payload exceeds two MiB.");
-  return freeze({format:FORMAT,scope,period:bounds,frequency:p.frequency,sourceFingerprint:p.sourceFingerprint,financialFinality:"PROVISIONAL",financialLimitations,contentType:"application/json; charset=utf-8",body,byteLength,payloadFingerprint:createHash("sha256").update(body,"utf8").digest("hex")});
+  return freeze({format:FORMAT,scope,period:bounds,frequency:p.frequency,sourceFingerprint:p.sourceFingerprint,financialFinality,financialLimitations,contentType:"application/json; charset=utf-8",body,byteLength,payloadFingerprint:createHash("sha256").update(body,"utf8").digest("hex")});
 }
 
 export function automaticReviewedMailText(content){
   check(content&&Array.isArray(content.disclosures)&&content.disclosures.every(v=>typeof v==='string'&&v.length<=1000&&!/[\u0000-\u001f\u007f]/.test(v)),"Invalid disclosures.");
-  check(validateAutomaticReviewedReceipt(content.reviewedCash,{companyId:content.scope?.companyId,storeId:content.scope?.storeId,groups:content.groups,rule:content.rule,dayStartHour:content.period?.dayStartHour,sourceFingerprint:content.sourceFingerprint}),"Invalid reviewed cash result.");
+  check(validateAutomaticReviewedReceipt(content.reviewedCash,{companyId:content.scope?.companyId,storeId:content.scope?.storeId,groups:content.groups,rule:content.rule,dayStartHour:content.period?.dayStartHour,sourceFingerprint:content.sourceFingerprint,requireFinal:content.financialFinality==='FINAL'}),"Invalid reviewed cash result.");
   const {report,dailyEvidence}=content.reviewedCash;
   check(!dailyEvidence||content.frequency==="DAILY","Daily evidence on a non-daily report.");
   return [...content.disclosures,'',content.frequency==='DAILY'?reconciliationText(report,{dailyMail:true}):report.text,...(dailyEvidence?['',...dailyCashEvidenceText(dailyEvidence,report)]:[])].join('\n');
