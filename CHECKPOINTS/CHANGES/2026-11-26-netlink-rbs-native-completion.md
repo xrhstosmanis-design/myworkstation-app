@@ -1,3 +1,5 @@
+Authoritative release follow-up: CHECKPOINTS/CHANGES/2026-11-26-netlink-rbs-native-completion-live.md. PR4278 final237710e, fullCI45832944403 all5SUCCESS, merged96278b0 exact tested tree; Render LIVE/exact health verified26Nov14:08:06UTC. Source/CI/deployment complete; physical/fresh normal purchase/provider acceptance still AWAITING USER. Earlier pending release labels below are historical.
+
 # Common Netlink RBS native completion — 26 November 2026
 
 Owner /root retains Netlink. Before-source claim4277/09e1d330 merged9f4cad6422be5f8305a3f674d82985f0af64e9a9. Explicit owner policy: same flow for every RBS store, CASH after successful native MyWorkStation close and acknowledged receipt of full basket amount; CARD after persisted operator YES and completed native sale. No general RBS fiscal/accounting ownership takeover.
