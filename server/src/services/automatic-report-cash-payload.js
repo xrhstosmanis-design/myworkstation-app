@@ -1,3 +1,4 @@
+import {reconciliationText} from './cash-reconciliation-report.js';
 import {dailyCashEvidenceText} from './cash-daily-delivery-evidence.js';
 import {createHash} from "node:crypto";
 import {cashPreviewPeriod,reportBusinessPeriod,reportDayOffset,summarizeOpeningOperators} from "./automatic-report-policy.js";
@@ -147,5 +148,5 @@ export function automaticReviewedMailText(content){
   check(validateAutomaticReviewedReceipt(content.reviewedCash,{companyId:content.scope?.companyId,storeId:content.scope?.storeId,groups:content.groups,rule:content.rule,dayStartHour:content.period?.dayStartHour,sourceFingerprint:content.sourceFingerprint}),"Invalid reviewed cash result.");
   const {report,dailyEvidence}=content.reviewedCash;
   check(!dailyEvidence||content.frequency==="DAILY","Daily evidence on a non-daily report.");
-  return [...content.disclosures,'',report.text,...(dailyEvidence?['',...dailyCashEvidenceText(dailyEvidence,report)]:[])].join('\n');
+  return [...content.disclosures,'',content.frequency==='DAILY'?reconciliationText(report,{dailyMail:true}):report.text,...(dailyEvidence?['',...dailyCashEvidenceText(dailyEvidence,report)]:[])].join('\n');
 }

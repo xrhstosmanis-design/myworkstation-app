@@ -582,6 +582,8 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / delegated bank transfer history. [Checkpoint](CHANGES/2026-11-13-manager-payment-history-implementation.md), PR #3851. CI passed before synchronization; hosted LAB pending.
 
 
+- 26/11/2026 · Νο 7 · [Έλεγχος παραστατικών στο ημερήσιο email](CHANGES/2026-11-26-no7-cash-email-document-status.md).
+
 ## 19/11/2026 — Νο 16 · Chat καταστημάτων / #4028
 
 21/11/2026 · Διαχείριση μελών και πρόσβασης μέσα στο Android Chat, με τα δικαιώματα του #4109 και ανανέωση ανοικτής συνομιλίας. [Checkpoint](CHANGES/2026-11-21-android-chat-moderation.md).
