@@ -1198,4 +1198,6 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 26/11/2026 · Νο 5 · [Ενεργοποίηση πρόχειρης προσφοράς](CHANGES/2026-11-26-no5-promotion-activation.md).
 
-- 2026-11-26 · Πανόρμου · [PDF Primer και Megasoft](CHANGES/2026-11-26-panormou-confirmed-provider-pdf.md) · Η Primer επαληθεύτηκε σε πραγματικό δείγμα. Τρία εκκρεμή δείγματα Megasoft επέστρεψαν HTTP 403. Εκκρεμεί LAB.
+- 26/11/2026 · Νο 5 · [Αλλαγή τιμής κλίμακας χονδρικής](CHANGES/2026-11-26-no5-wholesale-tier-price.md).
+
+- 26/11/2026 · Νο 5 · [Επεξεργασία περιγραφής κοινού είδους](CHANGES/2026-11-26-no5-product-description.md).
