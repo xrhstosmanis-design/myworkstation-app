@@ -8,6 +8,10 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+## 26Nov2026 — Netlink operator recovery installed centrally — AWAITING STORE ACCEPTANCE /root
+
+PR4263/4139977 passed full CI45802678789 all5SUCCESS, merged af7998a (same tested source tree). Render dep-dc40uhd6e07s73drioa0 LIVE10:53:29UTC; exact public health ok/revision verified. 68 targeted native/mounted tests PASS. Any active same-store POS operator can complete a privileged-reviewed paid card across shifts; actual completing actor is audited and can reopen the same saved voucher. Review remains privileged; unrelated completed PINs stay isolated. Original paid intent/payment/fiscal/counts unchanged in read-only before/after; reviewed card still pending with no recovery dispatch/provider result. No role/PIN/env/schema/new sale changes. Actual operator fulfillment/provider charge/PIN/physical print remains OPEN. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-operator-recovery-live.md`.
+
 ## 26Nov2026 — Netlink operator-first reviewed paid recovery — AWAITING RELEASE /root
 
 Any authenticated active same-store POS operator can complete a canonically reviewed already-paid recovery from another shift. Provider non-execution review remains privileged. Original operator/privileged users retain access; the actual winning recovery operator gains same saved voucher/reprint access, while other employees cannot retrieve that PIN. Atomic dispatch/completion audit records the completing actor. Mounted operator change discards old permissions/cards. Native SQL/HTTP and mounted suite: 68 PASS, zero skipped/failed; Node20 frontend build PASS. Full CI/deploy pending. No production execution, sale/payment/fiscal change or new-issuance flag change. Real store voucher/print acceptance remains OPEN. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-operator-recovery-source.md`.
