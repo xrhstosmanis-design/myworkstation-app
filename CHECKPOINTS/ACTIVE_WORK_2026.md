@@ -8,6 +8,10 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+## 26Nov2026 — Acharnon Netlink mapped/catalogue LIVE PASS; RBS receipt adapter BLOCKED /root
+
+Claim4275 merged before normal-UI setup. Two separate non-stock Netlink services created with reviewed0%/24% departments; automatic0.50 mapping saved. Actual no-issuance catalogue check PASS. Native before/after original goods/history/stock unchanged, new services zero movements, Netlink transactions0. Current runtime172c8c unchanged. Remaining concrete blocker: Netlink preflight/evidence requires verified fiscal receipt; current Acharnon RBS Writer acknowledges written commands without a verified receipt result, and no FiscalDocument evidence exists. Do not bypass or fabricate proof. /root retains Netlink boundary pending documented RBS receipt-return contract/sample; physical printer/new sale/provider station statement NOT TESTED. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-configured-fiscal-blocker.md`.
+
 ## 26Nov2026 — Netlink operator visual USER PASS; Acharnon NOT READY /root
 
 Owner confirms employee reprint is absent after refresh: narrow visual USER PASS on installed172c8c, not a fresh-sale/physical/provider-statement acceptance. Read-only Acharnon check finds active stored connection/module but no Netlink POS mapping; existing0.50 service/card goods track stock. Active RBS heartbeat is not complete readiness proof; fresh provider access/physical print untested. No state or financial change. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-readiness.md`.

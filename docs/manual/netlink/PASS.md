@@ -48,3 +48,10 @@ The initial paper/PIN still needs immediate customer delivery; the application c
 ## 26Nov2026 — refreshed employee no-reprint visual USER PASS
 
 Owner replied OK after the requested operator refresh/check for absence of Reprint. This closes only that visual acceptance on installed172c8c. Existing-card issuance USER PASS is retained; fresh normal purchase/physical quality/redemption/provider statement acceptance remain OPEN. Read-only Acharnon readiness is NOT READY: POS card/service mappings absent and current service/card goods track stock. No fresh provider access or physical print was tested. See `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-readiness.md`.
+
+
+## 26Nov2026 — Acharnon configuration/catalogue LIVE PASS; normal issuance blocked
+
+Verified on runtime172c8c via selected-store Platform/BackOffice UI. Authorized owner/admin creates/selects separate active non-stock NETLINK_CARD_VALUE (existing CARDS0%/department3) and NETLINK_SERVICE_FEE (0.50, existing SERVICE24%/department7), zero initial stock. Platform > selected Acharnon > Integrations > Netlink items: choose those two services and Save. Observed saved automatic0.50 and native mapping validation. Check access without issuance returned catalogue confirmed; this is not station-identity certification. Existing stock-tracked goods/history were preserved; new services have zero stock movements and no Netlink transaction was created.
+
+Actual regular sale/PIN/thermal-print readiness is NOT PASS: present Netlink preflight supports verified ftext evidence, while current RBS CAPDriver ACK only reports a written command. A verified RBS receipt-result adapter/contract is still required. Preserve the block before payment; do not create a purchase, fake fiscal document, reset the register or substitute another terminal to force it. /root retains this boundary. See `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-configured-fiscal-blocker.md`.
