@@ -2,6 +2,8 @@
 
 PR #4272 (αντικαθιστά #4235), εργασία #4232. Προεπισκόπηση, κατανομή με audit, επιλογή προμηθευτή και τιμολογίων, μόνο OWNER/SUPER_ADMIN. Προηγούμενο CI #11187 PASS με απομονωμένη PostgreSQL δοκιμή. Νέος έλεγχος μετά τη μεταφορά στο main και ειδική δοκιμή οθόνης εκκρεμούν. Καμία εγκατάσταση ή αλλαγή παραγωγής. [Checkpoint](CHANGES/2026-11-26-manual-supplier-payment-allocation.md).
 
+- 26/11/2026 · [Μετατροπή συσκευασίας σε πιστωτικά](CHANGES/2026-11-26-credit-note-pack-stock.md) · Εκκρεμεί LAB.
+
 - 26/11/2026 · [Έλεγχος διπλών παραστατικών και ακύρωση πιστωτικού](CHANGES/2026-11-26-purchase-duplicate-actions.md) · Εκκρεμούν PostgreSQL και LAB.
 
 - 26/11/2026 · [Ριζάρειο: χρόνος παραλαβής αποτελέσματος FTEXT](CHANGES/2026-11-26-ftext-result-received-at.md) · Εκκρεμεί μέτρηση μετά την εγκατάσταση.
@@ -1205,3 +1207,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Αλλαγή τιμής κλίμακας χονδρικής](CHANGES/2026-11-26-no5-wholesale-tier-price.md).
 
 - 26/11/2026 · Νο 5 · [Επεξεργασία περιγραφής κοινού είδους](CHANGES/2026-11-26-no5-product-description.md).
+
+- 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
