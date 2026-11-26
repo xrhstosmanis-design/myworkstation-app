@@ -55,26 +55,27 @@ const megasoftOriginalLink = "invoicelink[.]megasoft[.]gr/invoiceinspect/qr[?]Qr
 const megasoftOriginalUrl = new RegExp("^https://" + megasoftOriginalLink + "$");
 
 // PostgreSQL ARE syntax, with host and paths anchored inside the XML value.
-export function providerOriginalRecoveryLinkPattern({includeExistingImpact = false} = {}) {
+export const panormouOriginalStoreId = "cmwqvuxrx001is8g4uqlyzwg2";
+
+export function providerOriginalRecoveryLinkPattern({includeExistingImpact = false, storeId} = {}) {
   return originalRecoveryLinkPattern([
     ...epsilonRecoveryFormats,
     ...(includeExistingImpact ? ["einvoice[.]impact[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}"] : []),
     "einvoice[.]s1ecos[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}",
-    "mydata[.]primer[.]gr/[a-f0-9]{40}",
-    megasoftOriginalLink + "(?!/)",
+    ...(storeId === panormouOriginalStoreId ? ["mydata[.]primer[.]gr/[a-f0-9]{40}"] : []),
     "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}",
     String.raw`vs[.]gr/iv/invoice/download/([a-z0-9]{4}_[0-9])/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}`,
   ]);
 }
 
-export function originalDownloadUrl(xml,issuerVat){
+export function originalDownloadUrl(xml,issuerVat,storeId){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
   const decoded=raw.trim().replace(/&amp;/g,"&").replace(/&#(x[0-9a-f]+|\d+);/gi,(_,n)=>String.fromCodePoint(n[0].toLowerCase()==="x"?parseInt(n.slice(1),16):Number(n)));
   if(/[\u0000-\u0020\u007f]/.test(decoded))throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.");
   let url;try{url=new URL(decoded)}catch{throw error("Μη έγκυρος σύνδεσμος πρωτοτύπου.")}
   const validIssuer = /^\d{9}$/.test(issuerVat);
-  if (validIssuer && megasoftOriginalUrl.test(decoded)) {
+  if (validIssuer && storeId === panormouOriginalStoreId && megasoftOriginalUrl.test(decoded)) {
     return decoded.endsWith("/pdf") ? decoded : decoded + "/pdf";
   }
   const impact = validIssuer && ["einvoice.impact.gr","einvoice.s1ecos.gr"].includes(url.hostname)
@@ -88,7 +89,7 @@ export function originalDownloadUrl(xml,issuerVat){
     && /^\/iv\/invoice\/download\/([A-Za-z0-9]{4}_[0-9])\/\1~k1~[a-f0-9]{40}~[A-Za-z0-9_-]{43}\/?$/.test(url.pathname);
   const onesign = validIssuer && url.hostname === "onesign-api.onesys.gr"
     && /^\/invoice\/public\/download\/[0-9]{1,20}\/?$/.test(url.pathname);
-  const primer = validIssuer && url.hostname === "mydata.primer.gr"
+  const primer = validIssuer && storeId === panormouOriginalStoreId && url.hostname === "mydata.primer.gr"
     && /^\/[a-f0-9]{40}\/?$/i.test(url.pathname);
   if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon || einvoicing || vs || onesign || primer)) {
     throw error("Ο σύνδεσμος απαιτεί διαφορετικό υποστηριζόμενο πάροχο ή δεν συμφωνεί με το ΑΦΜ εκδότη.");
@@ -125,7 +126,7 @@ export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf,
   }
 }
 async function downloadOriginalPdf(row,fetcher,reader,signal,identityReader){
-  const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat);
+  const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat,row.storeId);
   const sourceUrl = new URL(url);
   const primer = sourceUrl.hostname === "mydata.primer.gr";
   const options = {redirect:"error",signal,headers:{Accept:"application/pdf"}};
