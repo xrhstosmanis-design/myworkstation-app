@@ -1,6 +1,7 @@
 import {saveStaffAccountStatus} from "../services/backoffice-staff-account-status.js";
 import {saveStaffCompanyVatDepartment,activateStaffCompanyVatDraft} from "../services/backoffice-staff-company-vat.js";
 import {saveStaffDisplayName} from "../services/backoffice-staff-display-name.js";
+import {saveStaffProductDescription} from "../services/backoffice-staff-product-description.js";
 import {renameStaffCompanyProduct} from "../services/backoffice-staff-product-rename.js";
 import {activateStaffPromotionDraft,listStaffPromotionDrafts} from "../services/backoffice-staff-promotion-activation.js";
 import {createStaffPromotionDraft} from "../services/backoffice-staff-promotion-draft.js";
@@ -86,6 +87,9 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     res.json(result.session);
   }catch(error){failure(res,error)}});
   router.use(authenticate);
+  router.post("/company/product-descriptions",async(req,res)=>{
+    try{res.json(await saveStaffProductDescription(db,req))}catch(error){failure(res,error)}
+  });
   router.post("/company/product-renames",async(req,res)=>{
     try{res.json(await renameStaffCompanyProduct(db,req))}catch(error){failure(res,error)}
   });
