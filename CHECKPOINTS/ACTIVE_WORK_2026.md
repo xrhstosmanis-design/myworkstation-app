@@ -8,6 +8,10 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+## 26Nov2026 — Netlink employee no-reprint installed centrally — AWAITING VISUAL ACCEPTANCE /root
+
+PR4268 final5876386 passed full CI45817588068 all5SUCCESS, merged172c8c2 (same tested tree).71 targeted native/mounted tests PASS. Render dep-dc42dfvlk1mc739e6jng LIVE12:33:40UTC, exact health verified. Ordinary employee reprint is hidden and repeated PIN delivery is server-denied under row lock/historical audit; initial print submission is consumed even on uncertain print errors. Responsible exceptional reprint remains audited. New-card flag already enabled by prior d199718 config release; no env/schema/role/credential changes here. Original completed-card financial state, one provider dispatch and delivery count unchanged before/after; no agent production PIN read/purchase. Existing-card USER PASS retained; refreshed employee visual check and fresh normal purchase/physical/redemption/provider statement remain OPEN. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-live.md`.
+
 ## 26Nov2026 — Netlink employee no-reprint source — AWAITING RELEASE /root
 
 Retained claim4267/30b50bf, newer explicit owner security policy supersedes employee saved-card reprint. Common catalog hides employee completed-card print action; server row-lock/legacy-audit gate allows only the initial unprivileged PIN delivery. Repeat requests403, responsible reprints get explicit audit mode/actor. Initial popup fallback remains, successful print action clears PIN state/button and duplicate callbacks are locked.71 native/HTTP/mounted tests PASS0skip, Node20 client build PASS. Full CI/release/live UI pending. New paid issuance flag now active from d199718 env release; no extra financial action. Existing one-card USER PASS retained, fresh-sale/physical/redemption acceptance OPEN. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-source.md`.

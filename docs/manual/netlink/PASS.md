@@ -34,3 +34,12 @@ The completed card stays available for same-card reprint without another charge.
 ## 26Nov2026 — operator reprint policy superseded; source validation pending release
 
 The owner now forbids employee reprint/repeated PIN access. Earlier instructions allowing original/winning employee reprint are historical and superseded. New source permits one audited initial delivery, including manual initial-print fallback when popup opening fails. After print submission, employee print controls and PIN lines are cleared; repeated server delivery is denied. A genuine print failure after delivery is handled by owner/admin/manager via an audited responsible reprint, without buying again. This cannot revoke or prevent copying an already-seen paper/PIN.71 native/HTTP/mounted tests and Node20 build PASS; deployment/actual updated operator UI pending. See `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-source.md`.
+
+
+## 26Nov2026 — employee one-time delivery installed centrally
+
+Source4268/5876386 full CI45817588068 all5SUCCESS, merged172c8c2; deploy dep-dc42dfvlk1mc739e6jng LIVE12:33:40UTC and exact health verified.71 targeted tests PASS. This supersedes all earlier employee reprint instructions.
+
+Refresh the store POS after finishing any unrelated basket. Functions POS > NETLINK: ordinary employees see completed-card status without a reprint button, and a second server PIN delivery is denied. New fixed-value cards use Add to checkout, automatically include0.50 service and issue after successful payment/fiscal receipt. Initial automatic printing and popup-blocked fallback work until print submission. After submission, including an uncertain print error, the employee print action/PIN state is cleared; paper/printer problems need an owner/admin/manager audited exceptional reprint, without another purchase.
+
+The initial paper/PIN still needs immediate customer delivery; the application cannot prevent copying an already-seen original or OS print copies. Owner-confirmed previous-card issuance remains USER PASS. Updated employee UI after refresh and a fresh normal purchase/physical quality/redemption/provider statement remain NOT TESTED. Verify no-reprint visually on the existing completed card, without buying another test card. Receipt: `../../../CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-live.md`.
