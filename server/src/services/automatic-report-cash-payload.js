@@ -74,6 +74,20 @@ function sortedSummary(value){
   }).sort(by(item=>canonical([item.companyId,item.storeId,item.cashChain,item.operatorId,item.operatorId?null:item.sessions[0]?.sessionId])))};
 }
 
+export function buildDailyCashMorningNotice({preview:p,companyId,storeId,settingsVersion}){
+  check(p?.frequency==="DAILY"&&p.kind==="DAILY_CASH_PREVIEW"&&p.deliveryStatus==="PREVIEW_ONLY"&&p.settingsVersion===settingsVersion&&Number.isSafeInteger(settingsVersion)&&settingsVersion>0,"Invalid morning preview.");
+  check(p.store?.id===storeId&&p.store.companyId===companyId&&typeof p.sourceFingerprint==="string"&&/^[a-f0-9]{64}$/.test(p.sourceFingerprint),"Morning preview scope mismatch.");
+  check(p.sourceReadiness==="HOLD"||p.complete===false||p.reviewedCash?.status==="HOLD","A complete report must use the regular payload.");
+  const scope={companyId,storeId},bounds=period(jsonPeriod(p.period),jsonPeriod(cashPreviewPeriod(p.period.fromDay,"DAILY",{dayStartHour:p.period.dayStartHour})));
+  const reason=p.sourceReadiness==="HOLD"||p.complete===false?"SHIFT_SOURCE_PENDING":"SHIFT_REVIEW_PENDING";
+  const financialLimitations=[...LIMITATIONS],financialFinality="PROVISIONAL";
+  const content={format:FORMAT,scope,storeName:label(p.store.name,1000),period:bounds,frequency:"DAILY",settingsVersion,
+    sourceFingerprint:p.sourceFingerprint,financialFinality,financialReconciliationComplete:false,employeeLiabilityAdjusted:false,financialLimitations,morningNotice:reason};
+  const body=canonical(content),byteLength=Buffer.byteLength(body,"utf8");
+  return freeze({format:FORMAT,scope,period:bounds,frequency:"DAILY",sourceFingerprint:p.sourceFingerprint,financialFinality,
+    financialLimitations,contentType:"application/json; charset=utf-8",body,byteLength,payloadFingerprint:createHash("sha256").update(body,"utf8").digest("hex")});
+}
+
 export function buildAutomaticCashPayload(raw){
   try{return build(raw)}catch(error){if(error?.code==="INVALID_CASH_PAYLOAD")throw error;fail("Invalid automatic cash preview.");}
 }

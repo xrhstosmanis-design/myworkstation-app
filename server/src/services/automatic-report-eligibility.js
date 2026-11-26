@@ -12,7 +12,7 @@ import {lockAutomaticReportBoundary} from './automatic-report-lock-boundary.js';
 import {automaticReportConfigurationSchema} from './automatic-report-settings.js';
 import {cashPreviewPeriod,completedReportPeriod,reportScheduleAllows} from './automatic-report-policy.js';
 import {readAutomaticCashPreviewInTransaction} from './automatic-report-source.js';
-import {buildAutomaticCashPayload} from './automatic-report-cash-payload.js';
+import {buildAutomaticCashPayload,buildDailyCashMorningNotice} from './automatic-report-cash-payload.js';
 import {activationAllows} from './automatic-report-activation.js';
 import {reportRecipientAuthority} from './automatic-report-administrator-authorization.js';
 
@@ -150,7 +150,9 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
      if (preview.shiftTurnover.status !== 'AVAILABLE' ||
          preview.shiftTurnover.shifts.reduce((total,shift)=>total+shift.cash+shift.card,0) !== preview.dailyTurnover.totalCents) hold();
    }
-   payload=buildAutomaticCashPayload({preview,companyId:scope.companyId,storeId:scope.storeId,settingsVersion:settings.version});
+   const args={preview,companyId:scope.companyId,storeId:scope.storeId,settingsVersion:settings.version};
+   const needsNotice=!final&&scope.frequency==='DAILY'&&(preview.sourceReadiness==='HOLD'||preview.complete===false||preview.reviewedCash?.status==='HOLD');
+   payload=needsNotice?buildDailyCashMorningNotice(args):buildAutomaticCashPayload(args);
   }
   if(payload.period.from!==from||payload.period.to!==to||(payload.financialFinality==='FINAL')!==final)hold();
   // Re-read activation after source work as well as independently at every start.
@@ -168,7 +170,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    authorities[recipient.email]={basis:authority.basis,mailboxVerified:!!recipient.verifiedAt};
   }
   if(!eligible.length)hold();
-  return {scope,now,payload,inputs:eligible,activation:control,authorities,automaticPapers};
+  return {scope,now,payload,inputs:eligible,activation:control,authorities,automaticPapers:scope.frequency==='DAILY'&&!final?null:automaticPapers};
  }
  const reader=async({tx,companyId,storeId,input,now})=>{
   const current=await context(tx,{companyId,storeId,frequency:input.frequency,...(input.eventId?{eventId:input.eventId}:{}),...(input.stage==='FINAL'?{stage:'FINAL',periodFrom:input.periodFrom,periodTo:input.periodTo}:{})},now);
