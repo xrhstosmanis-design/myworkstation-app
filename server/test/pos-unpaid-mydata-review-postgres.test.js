@@ -79,3 +79,17 @@ test('native wrong scope, VAT, date, type and amount cannot propose an original'
   assert.equal(await snapshot(f),before);
  }finally{await f.close()}
 });
+
+test('native wrong POS date proposes the exact myDATA number and date without writes',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();
+ try{
+  const submitted={...identity,documentNumber:'21-ΤΔΑ 6836',documentDate:'2020-10-12'};
+  const before=await snapshot(f);
+  await assert.rejects(assertNoUnresolvedInbound(f.db,submitted),{code:'INVOICE_HEADER_REVIEW_REQUIRED'});
+  const review=await unpaidMyDataHeaderReview(f.db,submitted);
+  assert.equal(review.canonicalDocumentNumber,'21-ΤΔΑ 6836');
+  assert.equal(review.canonicalDocumentDate,identity.documentDate);
+  await assertNoUnresolvedInbound(f.db,{...submitted,documentDate:review.canonicalDocumentDate});
+  assert.equal(await snapshot(f),before);
+ }finally{await f.close()}
+});
