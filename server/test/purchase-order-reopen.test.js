@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from '../src/services/purchase-cost-increase-event.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -11,7 +12,7 @@ const actor={id:'owner',companyId:'c',role:'OWNER',fullName:'Isolated owner'};
 const confirmed=p=>({storeId:'s',version:p.version,reason:'Accidental finalization correction',confirm:true});
 async function handlers(file,db,extra={}){
  const h={},router={use(){},get:(p,...f)=>h['GET '+p]=f.at(-1),post:(p,...f)=>h['POST '+p]=f.at(-1),patch:(p,...f)=>h['PATCH '+p]=f.at(-1),delete(){}};
- const deps={Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},purchaseOrderTotalReconciliationGuard:()=>{},...common,...reopen,...extra};
+ const deps={recordPurchaseCostIncrease,recordSupplierDiscountReduction,Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},purchaseOrderTotalReconciliationGuard:()=>{},...common,...reopen,...extra};
  const src=(await readFile(new URL(file,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replaceAll('export async function ','async function ');
  new Function(...Object.keys(deps),src)(...Object.values(deps));return h;
 }

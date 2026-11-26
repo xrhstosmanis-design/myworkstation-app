@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from '../src/services/purchase-cost-increase-event.js';
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../src/lib/invoice-line-taxonomy.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -97,7 +98,7 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const handlers={},router={use:()=>{},post:()=>{},delete:()=>{},patch:(path,h)=>handlers[path]=h};
   const posting=(await readFile(new URL('../src/routes/purchase-order-posting-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
   const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(db,requireStaffAction);
-  const bindings={applyPackStockCorrectionInTransaction,Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
+  const bindings={recordPurchaseCostIncrease,recordSupplierDiscountReduction,applyPackStockCorrectionInTransaction,Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
   const approve=(status='FINAL')=>invoke(handlers['/:orderId'],'invoices.approve',{status});
   assert.equal((await approve()).failure?.status,403);assert.equal(await f.snapshot(),beforeApproval);
   await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["invoices.read","invoices.edit","invoices.approve"]'::jsonb`;

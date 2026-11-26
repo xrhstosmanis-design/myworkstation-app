@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from '../src/services/purchase-cost-increase-event.js';
 import test from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -168,7 +169,7 @@ test('native nonempty reviewed rows move once with IDs and values preserved; row
 
 async function actualHandlers(path,db,extra={}){
  const handlers={};const router={use:()=>{},get:()=>{},post:(p,...f)=>handlers['POST '+p]=f.at(-1),patch:(p,...f)=>handlers['PATCH '+p]=f.at(-1),delete:()=>{}};
- const deps={Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},...common,...extra};
+ const deps={recordPurchaseCostIncrease,recordSupplierDiscountReduction,Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},...common,...extra};
  const src=(await readFile(new URL(path,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');new Function(...Object.keys(deps),src)(...Object.values(deps));return handlers;
 }
 async function invoke(handler,params,body={}){let result,failure,status=200;const req={params,body,user:{companyId:'c',id:'owner',role:'OWNER',fullName:'Fixture owner'}};const res={json:value=>{result=value},status:value=>(status=value,res)};await handler(req,res,e=>failure=e);return {result,failure,status};}

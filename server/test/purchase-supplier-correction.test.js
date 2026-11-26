@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from '../src/services/purchase-cost-increase-event.js';
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../src/lib/invoice-line-taxonomy.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ const request=p=>({storeId:'s',supplierId:'target',version:p.version,reason:'Cor
 async function registered(file,db){
  const handlers={},router={use(){},get:(p,...f)=>handlers['GET '+p]=f.at(-1),post:(p,...f)=>handlers['POST '+p]=f.at(-1),patch:(p,...f)=>handlers['PATCH '+p]=f.at(-1),delete(){}};
  const src=(await readFile(new URL(file,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'').replace('default router;','return router;');
- const deps={invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,Router:()=>router,prisma:db,crypto,z,...common,...correction,assertReopenedIdentity:()=>{},reuseReopenedPurchaseDocument:()=>{throw Error('Not reopened')}};
+ const deps={recordPurchaseCostIncrease,recordSupplierDiscountReduction,invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,Router:()=>router,prisma:db,crypto,z,...common,...correction,assertReopenedIdentity:()=>{},reuseReopenedPurchaseDocument:()=>{throw Error('Not reopened')}};
  new Function(...Object.keys(deps),src)(...Object.values(deps));return handlers;
 }
 async function fixture({posted=true,payment=true}={}){
@@ -23,7 +24,7 @@ async function fixture({posted=true,payment=true}={}){
  const posting=await registered('../src/routes/purchase-order-posting-guard.js',f.db);
  // The real posting middleware owns these existing tables in the hosted app.
  await f.db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PurchaseOrderPosting"("orderId" text PRIMARY KEY,"companyId" text,"supplierId" text,"documentFingerprint" text,"purchaseDocumentId" text,"postedAt" timestamptz DEFAULT NOW(),"postedByUserId" text,"postedByName" text,"updatedAt" timestamptz DEFAULT NOW(),UNIQUE("companyId","documentFingerprint"))`);
- await f.db.$executeRawUnsafe(`CREATE TABLE "StoreOperatorAudit"("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT NOW())`);
+ await f.db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit"("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT NOW())`);
  if(posted){await f.db.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL' WHERE "id"='pos'`;let error;await posting['PATCH /:orderId']({user:actor,params:{orderId:'pos'},body:{status:'FINAL'}},{json:()=>{},status:()=>({json:()=>{}})},e=>error=e);assert.ifError(error)}
  const snapshot=async()=>{const state={};for(const table of ['PurchaseOrder','PurchaseDocument','PurchaseOrderLine','PurchaseDocumentLine','StoreTransaction','StoreProduct','StockMovement','PurchaseOrderPosting','InvoiceStockPosting','DocumentAttachment','AiReaderJob','Supplier','SupplierProductLink','SupplierProductMapping'])state[table]=await f.db.$queryRawUnsafe(`SELECT row_to_json(t) AS row FROM "${table}" t ORDER BY COALESCE(to_jsonb(t)->>'id',to_jsonb(t)->>'orderId',to_jsonb(t)->>'sourceDocumentId')`);return state};
  const preview=()=>correction.previewPurchaseSupplierCorrection(f.db,actor,'pos',{storeId:'s',supplierId:'target'});
