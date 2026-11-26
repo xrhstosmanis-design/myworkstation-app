@@ -111,7 +111,7 @@ function fixed(value,places,label){
   return number.toFixed(places);
 }
 
-function cp1253Bytes(text){
+export function cp1253Bytes(text){
   // Windows-1253 is single-byte for Greek text. Reject unsupported characters
   // rather than silently replacing part of a receipt description.
   const bytes=[];
