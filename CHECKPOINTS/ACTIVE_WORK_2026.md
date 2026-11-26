@@ -1,3 +1,5 @@
+- 26/11/2026 · Νο 9 · Διαχείριση μηνιαίας σύνοψης απογραφής LAB · [Checkpoint](CHANGES/2026-11-26-no9-monthly-inventory-management.md).
+
 ## 26/11/2026 — Κάλυψη POS από παραλαβές
 
 Προστέθηκε προτεινόμενη κάλυψη με επιλογή εφαρμογής ανά προμηθευτή και κατάστημα. Εκκρεμεί δοκιμή στην παραγωγή. Βλ. CHECKPOINTS/CHANGES/2026-11-26-pos-receipt-cadence.md.
@@ -416,6 +418,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 <!-- NO5-STATUS:END -->
 
+- 26/11/2026 · Νο 7 · [Πρωινό και τελικό email ταμείων](CHANGES/2026-11-26-no7-two-daily-cash-emails.md).
+
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
 
 Owner approved source merge and publication on 17/11/2026. PR #4011 exact head `0c4f97cc7ea83cc6d1a4d15d3e173351d60c67fa` passed full Node20 CI `44169632000` (all five jobs SUCCESS). Expected-head squash merged `1af6d3173a462cf1f610307db14af5202a5cbf04`. Main retains the unrelated #4010 table-service documentation; runtime source matches the reviewed candidate. Full combined-main CI `44172996676` also passed all five jobs. No required check was bypassed or manually replaced.
@@ -596,8 +600,6 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 - Τιμολόγια · Ο ιδιοκτήτης επιβεβαίωσε από τη σελίδα «διορθώσεις τιμολογίων κτλπ» ότι οριστικοποίησε το τιμολόγιο και είναι ΟΚ. Η οριστικοποίηση κλείνει ως επιβεβαίωση χειριστή. Δεν υπάρχει ανεξάρτητο τεκμήριο για τις τρεις τιμές barcode ανά γραμμή.
 - Απογραφή · Η διασταύρωση των workflow στο `3acf060c` (#3841) και στο `main` έδειξε διαφορά στο βήμα recovery: το branch χτίζει το image από το προεπιλεγμένο Dockerfile, ενώ το main περνά σταθερό digest PostgreSQL 18 και σταθερό digest για την υπηρεσία PostgreSQL 16. Ο επόμενος έλεγχος είναι CI με το workflow του main ώστε να διαπιστωθεί αν υποχωρούν οι αποτυχίες restore του #9770, πριν από την αποδοχή στο LAB. Η αιτία δεν έχει επιβεβαιωθεί με εκτέλεση.
 - Συντονισμός · [CI #9825 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500654258) στο `34896706` του #3860. Το PR έχει mergeable status και παραμένει draft.
-
-- 26/11/2026 · Νο 7 · [Πρωινό και τελικό email ταμείων](CHANGES/2026-11-26-no7-two-daily-cash-emails.md).
 
 ## Κανόνας ενημέρωσης
 
@@ -1185,3 +1187,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Εταιρικό δικαίωμα μετονομασίας προϊόντος](CHANGES/2026-11-26-no5-product-rename.md).
 
 - 26/11/2026 · Νο 5 · [Μετονομασία τιμοκαταλόγου χονδρικής](CHANGES/2026-11-26-no5-wholesale-rename.md).
+
+- 26/11/2026 · Νο 5 · [Ενεργοποίηση πρόχειρης προσφοράς](CHANGES/2026-11-26-no5-promotion-activation.md).
