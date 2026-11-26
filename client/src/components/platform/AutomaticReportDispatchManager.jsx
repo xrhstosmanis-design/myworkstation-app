@@ -29,6 +29,7 @@ function DeliveryHistory({history}){
       ? ['Είδη τιμολογίου εκτός αποθήκης',row.invoiceNumber].filter(Boolean).join(' · ')
       : row.type==='INVENTORY_RESULT' ? ['Αποτελέσματα απογραφής',row.eventId].filter(Boolean).join(' · ')
       : row.type==='PROMOTION_RESULT' ? ['Αποτελέσματα προσφοράς',row.eventId].filter(Boolean).join(' · ')
+      : row.type==='MONTHLY_INVENTORY_SUMMARY' ? 'Μηνιαία σύνοψη απογραφής'
       : row.type==='SUPPLIER_COMPARISON' ? 'Μηνιαία σύγκριση προμηθευτών'
       : [frequencies.find(([value])=>value===row.frequency)?.[1],'αναφορά ταμείου'].filter(Boolean).join(' ')}</td>
      <td>{deliveryStatus[row.status]||'Άγνωστη κατάσταση'}{deliveryFailure[row.failure]&&<div>{deliveryFailure[row.failure]}</div>}</td>
@@ -46,26 +47,28 @@ export default function AutomaticReportDispatchManager(props){
 function ReportDispatchManager(props){
  const [type,setType]=useState('CASH');
  const supplier=type==='SUPPLIER_COMPARISON';
+ const monthlyInventory=type==='MONTHLY_INVENTORY_SUMMARY';
  return <>
   <div role="group" aria-label="Τύπος αυτόματης αναφοράς">
    <button type="button" aria-pressed={type==='CASH'} onClick={()=>setType('CASH')}>Αναφορές ταμείου</button>
    {props.company.name==='MYWORKSTATION LAB'&&props.store.name==='ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ'&&<button type="button" aria-pressed={supplier} onClick={()=>setType('SUPPLIER_COMPARISON')}>Μηνιαία σύγκριση προμηθευτών</button>}
    <button type="button" aria-pressed={type==='PROMOTION_RESULT'} onClick={()=>setType('PROMOTION_RESULT')}>Αποτελέσματα προσφορών</button>
    <button type="button" aria-pressed={type==='INVENTORY_RESULT'} onClick={()=>setType('INVENTORY_RESULT')}>Αποτελέσματα απογραφής</button>
+   {props.company.name==='MYWORKSTATION LAB'&&props.store.name==='ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ'&&<button type="button" aria-pressed={monthlyInventory} onClick={()=>setType('MONTHLY_INVENTORY_SUMMARY')}>Μηνιαία σύνοψη απογραφής</button>}
   </div>
   <ReportEventInstallationManager {...props}/>
-  <ReportDispatchSettings key={type} supplier={supplier} event={['PROMOTION_RESULT','INVENTORY_RESULT'].includes(type)} inventory={type==='INVENTORY_RESULT'} {...props}/>
+  <ReportDispatchSettings key={type} monthlyInventory={monthlyInventory} supplier={supplier} event={['PROMOTION_RESULT','INVENTORY_RESULT'].includes(type)} inventory={type==='INVENTORY_RESULT'} {...props}/>
  </>;
 }
 
-function ReportDispatchSettings({company,store,request,supplier=false,event=false,inventory=false}){
- const scoped=supplier||event;
- const initialFrequencies=event?['EVENT']:supplier?['MONTHLY']:['DAILY'];
+function ReportDispatchSettings({company,store,request,supplier=false,event=false,inventory=false,monthlyInventory=false}){
+ const scoped=supplier||event||monthlyInventory;
+ const initialFrequencies=event?['EVENT']:(supplier||monthlyInventory)?['MONTHLY']:['DAILY'];
  const scope=`${company.id}:${store.id}`,current=useRef(scope),sequence=useRef(0);
  current.current=scope;
  const [data,setData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [email,setEmail]=useState(''),[selected,setSelected]=useState(initialFrequencies),[tokens,setTokens]=useState({}),[ack,setAck]=useState(false);
- const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/report-dispatch${inventory?'/inventory-result':event?'/promotion-results':supplier?'/supplier-comparison':''}`;
+ const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/report-dispatch${inventory?'/inventory-result':event?'/promotion-results':supplier?'/supplier-comparison':monthlyInventory?'/monthly-inventory-summary':''}`;
  const load=async()=>{
   const id=++sequence.current,captured=scope;setBusy(true);setError('');
   try{const result=await request(path);if(id===sequence.current&&captured===current.current){setData({scope:captured,result});if(result.policy?.allowedFrequencies?.length)setSelected(result.policy.allowedFrequencies)}}
@@ -89,7 +92,7 @@ function ReportDispatchSettings({company,store,request,supplier=false,event=fals
   allowedFrequencies:selected,explicitAuthorization:true
  },r=>r.externalActivationEnabled?'Ο παραλήπτης εγκρίθηκε. Η αυτόματη αποστολή ενεργοποιήθηκε για επιλέξιμες περιόδους. Δεν στάλθηκε πρόσκληση.':'Η έγκριση και οι περίοδοι αποθηκεύτηκαν. Η κεντρική αποστολή είναι κλειστή. Δεν στάλθηκε πρόσκληση.');
  return <section className="report-settings-dispatch" aria-label="Αυτόματες αποστολές αναφορών" style={{borderTop:'1px solid #cbd5e1',marginTop:20,paddingTop:16}}>
-  <h3>{inventory?'Αποτελέσματα απογραφής':event?'Αποτελέσματα προσφορών':supplier?'Μηνιαία σύγκριση προμηθευτών LAB':'Αυτόματες αποστολές'}</h3>
+  <h3>{monthlyInventory?'Μηνιαία σύνοψη απογραφής':inventory?'Αποτελέσματα απογραφής':event?'Αποτελέσματα προσφορών':supplier?'Μηνιαία σύγκριση προμηθευτών LAB':'Αυτόματες αποστολές'}</h3>
   <p>Κατάστημα: <strong>{store.name}</strong>. Οι αναφορές είναι προσωρινές· δεν αποτελούν οικονομική πιστοποίηση ή χρέωση εργαζομένου.</p>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
   {!storeData&&!error&&<p>Ανάγνωση κατάστασης αποστολών…</p>}
@@ -99,7 +102,7 @@ function ReportDispatchSettings({company,store,request,supplier=false,event=fals
    <p>Δεν αποστέλλονται παλιές ή ελλιπείς περίοδοι. Έναρξη επιτρεπόμενης περιόδου από {stamp(grant?.notBefore||storeData.activation?.notBefore)}. Οι αβέβαιες αποστολές δεν επαναλαμβάνονται αυτόματα.</p>
    <fieldset disabled={busy}>
     <legend>Περίοδοι και άδεια αποστολής</legend>
-    {scoped?<p>{inventory?'Αυτόματη αποστολή αποτελεσμάτων μετά από κάθε επιλέξιμη οριστικοποιημένη απογραφή.':event?'Αυτόματη αποστολή μετά τη λήξη κάθε επιλέξιμης προσφοράς.':'Μηνιαία αποστολή για το Εργαστήριο Δοκιμών.'}</p>:<>
+    {scoped?<p>{monthlyInventory?'Αυτόματη αποστολή μετά την ολοκλήρωση της μηνιαίας καταγραφής αποθέματος.':inventory?'Αυτόματη αποστολή αποτελεσμάτων μετά από κάθε επιλέξιμη οριστικοποιημένη απογραφή.':event?'Αυτόματη αποστολή μετά τη λήξη κάθε επιλέξιμης προσφοράς.':'Μηνιαία αποστολή για το Εργαστήριο Δοκιμών.'}</p>:<>
     {frequencies.map(([value,label])=><label key={value} style={{display:'inline-block',marginRight:16}}><input type="checkbox" checked={selected.includes(value)} onChange={e=>setSelected(old=>e.target.checked?[...old,value]:old.filter(x=>x!==value))}/>{label}</label>)}
     <label style={{display:'block',margin:'12px 0'}}><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/>Εξουσιοδοτώ την αυτόματη αποστολή προσωρινών αναφορών μόνο για αυτό το κατάστημα και τις επιλεγμένες περιόδους.</label>
     <button type="button" disabled={!ack||!selected.length} onClick={()=>mutate('/grant',{expectedRevision:grant?.revision||0,active:true,allowedFrequencies:selected,explicitAuthorization:true},'Η εξουσιοδότηση αποθηκεύτηκε. Απαιτείται και εγκεκριμένος παραλήπτης.','PUT')}>Αποθήκευση εξουσιοδότησης</button>{' '}
