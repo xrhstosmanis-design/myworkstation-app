@@ -509,7 +509,7 @@ export async function assertNoUnresolvedInbound(tx,identity){
   {...identity,documentType:identity.documentType||"INVOICE"},{documentNumber:[r.series,r.documentNumber].filter(Boolean).join(" "),documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross}));
  if(crossSupplier.length)throw error(`Πιθανό διπλό τιμολόγιο ${identity.documentNumber}: ίδιος αριθμός, ημερομηνία και ποσό στη θυρίδα myDATA, αλλά διαφορετικό ή κενό ΑΦΜ. Έλεγξε τα πρωτότυπα και τον προμηθευτή πριν από νέα πληρωμή ή πρόχειρο.`,"INVOICE_SUPPLIER_IDENTITY_REVIEW");
  const exact=sameSupplier.filter(r=>sameInvoiceNumber(identity.documentNumber,r.series,r.documentNumber)&&day(r.issueDate)===day(identity.documentDate)&&Math.abs(amount(r.totalGross)-amount(identity.totalGross))<=.050001);
- if(sameSupplier.length&&exact.length!==1)throw error("Υπάρχει πιθανό ίδιο τιμολόγιο στη θυρίδα myDATA με διαφορετικά στοιχεία. Αντιστοίχισε τα πρωτότυπα στο BackOffice πριν από νέα πληρωμή ή πρόχειρο.");
+ if(sameSupplier.length&&exact.length!==1)throw error("Υπάρχει πιθανό ίδιο τιμολόγιο στη θυρίδα myDATA με διαφορετικά στοιχεία. Αντιστοίχισε τα πρωτότυπα στο BackOffice πριν από νέα πληρωμή ή πρόχειρο.","INVOICE_HEADER_REVIEW_REQUIRED");
 }
 // Covers the race where myDATA created its shell after POS's initial precheck.
 // Payment validation has already run in the POS route; this binds stored pages.
