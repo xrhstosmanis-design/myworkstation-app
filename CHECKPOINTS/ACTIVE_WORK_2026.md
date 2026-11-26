@@ -2,6 +2,14 @@
 
 PR #4272 (αντικαθιστά #4235), εργασία #4232. Προεπισκόπηση, κατανομή με audit, επιλογή προμηθευτή και τιμολογίων, μόνο OWNER/SUPER_ADMIN. Προηγούμενο CI #11187 PASS με απομονωμένη PostgreSQL δοκιμή. Νέος έλεγχος μετά τη μεταφορά στο main και ειδική δοκιμή οθόνης εκκρεμούν. Καμία εγκατάσταση ή αλλαγή παραγωγής. [Checkpoint](CHANGES/2026-11-26-manual-supplier-payment-allocation.md).
 
+- 26/11/2026 · [Ριζάρειο: χρόνος παραλαβής αποτελέσματος FTEXT](CHANGES/2026-11-26-ftext-result-received-at.md) · Εκκρεμεί μέτρηση μετά την εγκατάσταση.
+
+- 26/11/2026 · [Ριζάρειο: ετοιμότητα στη διαδοχική πληρωμή](CHANGES/2026-11-26-ftext-consecutive-checkout.md) · Εκκρεμεί αποδοχή στο LAB.
+
+- 26/11/2026 · [Ριζάρειο: προτεραιότητα πωλήσεων με έγκυρο STATUS](CHANGES/2026-11-26-ftext-valid-readiness-work-window.md) · Εκκρεμεί αποδοχή στο POS.
+
+- 26/11/2026 · Νο 9 · Διαχείριση μηνιαίας σύνοψης απογραφής LAB · [Checkpoint](CHANGES/2026-11-26-no9-monthly-inventory-management.md).
+
 ## 26/11/2026 — Κάλυψη POS από παραλαβές
 
 Προστέθηκε προτεινόμενη κάλυψη με επιλογή εφαρμογής ανά προμηθευτή και κατάστημα. Εκκρεμεί δοκιμή στην παραγωγή. Βλ. CHECKPOINTS/CHANGES/2026-11-26-pos-receipt-cadence.md.
@@ -11,6 +19,22 @@ PR #4272 (αντικαθιστά #4235), εργασία #4232. Προεπισκ�
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
+
+## 26Nov2026 — Common Netlink RBS completion installed centrally /root — AWAITING USER
+
+SourcePR4278 final237710e652757ea611d7837ca974dbe0e10057fd: fullCI45832944403 all5SUCCESS. Merged96278b0fce39c49bc6c9bd0c4696dc0d765e27f4 has identical tested treecf6b5e4a6d134aae6c5928cbb0c6a296cb7369e7. Render dep-dc43pjt6e07s73e3aot0 LIVE26Nov14:08:06UTC; exact public health ok/revision96278b0 verified. Common code for every configured/licensed RBS store: after native CASH close/acknowledged collection or persisted CARD YES+native completion; automatic0.50 per card, mixed goods/multiple cards, canonical scoped paid evidence, once-only issue and reviewed same-purchase recovery. No fake machine fiscal number. Existing ftext and employee initial-only PIN/no-reprint policies retained.145 local native/SQL/HTTP/mounted/regression tests0FAIL0SKIP and Node20buildPASS. Acharnon scoped read-only configuration/licence/online writer preflight confirmed, no agent purchase/PIN/financial mutation. Fresh physical/normal-sale/provider acceptance remains NOT TESTED. Earlier receipt-adapter-only blocker superseded by explicit owner native-RBS policy. /root retains scope. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-rbs-native-completion-live.md`.
+
+## 26Nov2026 — Common Netlink RBS native completion /root — AWAITING CI/LAB
+
+Owner explicitly requests the same native CASH close / CARD YES+close flow for ALL RBS stores, superseding the earlier ftext-only readiness assumption for RBS only. Claim4277 merged9f4cad6 before source. New server-only encrypted intent context binds authenticated terminal and lifecycle; current licensed signed/scoped writer readiness before selection. Actual SALE_COMMITTED RBS request, native sale/payment/audit, canonical original-manifest hash and CP1253 command hash rechecked under once-only claim. Explicit RBS_NATIVE_COMMIT provenance; no invented machine receipt number. Both background finalizers and ordinary continuation write the Netlink manifest. Responsible-reviewed UNKNOWN recovery binds original RBS evidence and completes the same paid purchase once, preserving ftext fingerprints. ftext verified receipt,0.50 allocation/mixed goods/multiple cards, UNKNOWN no-retry and employee first-only PIN delivery preserved. Local145 native/HTTP/mounted/regression tests PASS0skip; Node20 client build PASS. Full CI/central deploy/physical acceptance pending; no production purchase or financial mutation. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-rbs-native-completion.md`.
+
+## 26Nov2026 — Acharnon Netlink mapped/catalogue LIVE PASS; RBS receipt adapter BLOCKED /root
+
+Claim4275 merged before normal-UI setup. Two separate non-stock Netlink services created with reviewed0%/24% departments; automatic0.50 mapping saved. Actual no-issuance catalogue check PASS. Native before/after original goods/history/stock unchanged, new services zero movements, Netlink transactions0. Current runtime172c8c unchanged. Remaining concrete blocker: Netlink preflight/evidence requires verified fiscal receipt; current Acharnon RBS Writer acknowledges written commands without a verified receipt result, and no FiscalDocument evidence exists. Do not bypass or fabricate proof. /root retains Netlink boundary pending documented RBS receipt-return contract/sample; physical printer/new sale/provider station statement NOT TESTED. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-configured-fiscal-blocker.md`.
+
+## 26Nov2026 — Netlink operator visual USER PASS; Acharnon NOT READY /root
+
+Owner confirms employee reprint is absent after refresh: narrow visual USER PASS on installed172c8c, not a fresh-sale/physical/provider-statement acceptance. Read-only Acharnon check finds active stored connection/module but no Netlink POS mapping; existing0.50 service/card goods track stock. Active RBS heartbeat is not complete readiness proof; fresh provider access/physical print untested. No state or financial change. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-readiness.md`.
 
 ## 26Nov2026 — Netlink employee no-reprint installed centrally — AWAITING VISUAL ACCEPTANCE /root
 
@@ -403,6 +427,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 22/11 No5 — delegated edits to employee contact and shift availability. [Checkpoint](CHANGES/2026-11-22-no5-workforce-employee-details.md).
 
 <!-- NO5-STATUS:END -->
+
+- 26/11/2026 · Νο 7 · [Πρωινό και τελικό email ταμείων](CHANGES/2026-11-26-no7-two-daily-cash-emails.md).
 
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
 
@@ -1171,3 +1197,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Εταιρικό δικαίωμα μετονομασίας προϊόντος](CHANGES/2026-11-26-no5-product-rename.md).
 
 - 26/11/2026 · Νο 5 · [Μετονομασία τιμοκαταλόγου χονδρικής](CHANGES/2026-11-26-no5-wholesale-rename.md).
+
+- 26/11/2026 · Νο 5 · [Ενεργοποίηση πρόχειρης προσφοράς](CHANGES/2026-11-26-no5-promotion-activation.md).

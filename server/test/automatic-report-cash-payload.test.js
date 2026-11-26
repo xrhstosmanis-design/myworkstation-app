@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {buildAutomaticCashPayload} from '../src/services/automatic-report-cash-payload.js';
+import {buildAutomaticCashPayload,buildDailyCashMorningNotice} from '../src/services/automatic-report-cash-payload.js';
 import {readAutomaticCashPreview} from '../src/services/automatic-report-source.js';
 import {cashPreviewPeriod, reportDayOffset, reportWallTime} from '../src/services/automatic-report-policy.js';
 
@@ -220,4 +220,14 @@ test('aggregate UTF-8 values and metadata keys are bounded even when omitted fro
   const manyKeys = Object.fromEntries(Array.from({length: 1001}, (_, i) => [`field-${i}`, 0]));
   Object.defineProperty(manyKeys, 'field-0', {enumerable: true, get() {getters++; return 'must not evaluate';}});
   invalid(() => build({...p, ignoredMetadata: manyKeys})); assert.equal(getters, 0);
+});
+
+test('incomplete morning preview produces a period-bound notice without unverified totals',async()=>{
+ const source=await preview('DAILY','2026-10-15',rows=>rows.slice(0,1));
+ const envelope=buildDailyCashMorningNotice({preview:source,companyId:'fixture-company',storeId:'fixture-store',settingsVersion:7});
+ const content=JSON.parse(envelope.body);
+ assert.equal(content.morningNotice,'SHIFT_SOURCE_PENDING');
+ assert.equal(content.financialReconciliationComplete,false);
+ assert.equal(Object.hasOwn(content,'groups'),false);
+ assert.equal(content.period.from,source.period.from.toISOString());
 });

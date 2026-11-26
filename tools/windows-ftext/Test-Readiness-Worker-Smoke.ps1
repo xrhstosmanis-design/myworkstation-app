@@ -24,7 +24,11 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath,[int]$TimeoutSeconds) {
     Import-Module $modulePath -Force
     $now=[DateTime]::UtcNow
     $normal=Get-FtextReadinessRefreshAt $now $now $now 6
-    if(($normal-$now).TotalSeconds -ne 10){throw 'Normal proof did not leave bounded work opportunity'}
+    if(($normal-$now).TotalSeconds -ne 12){throw 'Normal proof did not leave the measured refresh reserve'}
+    $fast=Get-FtextReadinessRefreshAt $now $now $now 1
+    if(($fast-$now).TotalSeconds -ne 15){throw 'Fast proof did not leave the capped fiscal work window'}
+    $aged=Get-FtextReadinessRefreshAt ($now.AddSeconds(-4)) $now $now 6
+    if(($aged-$now).TotalSeconds -ne 8){throw 'Aged proof lost its refresh reserve'}
     foreach($elapsed in @(20,30)) {if((Get-FtextReadinessRefreshAt $now $now $now $elapsed) -ne $now){throw 'Slow STATUS extended proof'}}
     if((Get-FtextReadinessRefreshAt ($now.AddSeconds(-19)) $now $now 6) -ne $now){throw 'Old original proof was re-dated'}
     if((Get-FtextReadinessRefreshAt ($now.AddSeconds(3)) $now $now 6) -ne $now){throw 'Future proof scheduled a delay'}
@@ -68,7 +72,7 @@ function Start-FtextCloudReadiness($Path) {
     if($script:worker -and -not $script:worker.Async.IsCompleted) {throw 'Second concurrent worker'}
     $script:started++;$script:worker=@{Async=@{IsCompleted=$false}};return $script:worker
 }
-function Receive-FtextCloudReadiness($Worker) {$script:received++;if($global:MwsReadinessFixtureSchedule){$Worker | Add-Member -NotePropertyName RefreshAt -NotePropertyValue ([DateTime]::UtcNow.AddSeconds(5)) -Force};return $true}
+function Receive-FtextCloudReadiness($Worker) {$script:received++;if($global:MwsReadinessFixtureSchedule){$Worker | Add-Member -NotePropertyName RefreshAt -NotePropertyValue ([DateTime]::UtcNow.AddSeconds(12)) -Force};return $true}
 function Set-ReadinessFixture($Schedule) {$script:polls=0;$script:worker=$null;$script:started=0;$script:received=0;$script:stopped=0;$script:flags=@();$global:MwsReadinessFixtureSchedule=$Schedule}
 function Stop-FtextCloudReadiness($Worker) {if($Worker){$script:stopped++}}
 function Get-ReadinessFixture {return @{polls=$script:polls;started=$script:started;received=$script:received;stopped=$script:stopped;flags=$script:flags}}

@@ -37,7 +37,7 @@ try {
             try {
                 $ready=Receive-FtextCloudReadiness $readinessWorker
                 $nextReadiness=[DateTime]::UtcNow
-                if($ready -and $readinessWorker.PSObject.Properties['RefreshAt'] -and $readinessWorker.RefreshAt -is [DateTime] -and $readinessWorker.RefreshAt -gt $nextReadiness -and $readinessWorker.RefreshAt -le $nextReadiness.AddSeconds(10)) {
+                if($ready -and $readinessWorker.PSObject.Properties['RefreshAt'] -and $readinessWorker.RefreshAt -is [DateTime] -and $readinessWorker.RefreshAt -gt $nextReadiness -and $readinessWorker.RefreshAt -le $nextReadiness.AddSeconds(15)) {
                     $nextReadiness=$readinessWorker.RefreshAt
                 }
                 if($ready) {Write-Host 'Register ready: verified nonfiscal STATUS.'} else {Write-Host 'Register is not ready. No payment was sent.'}

@@ -38,7 +38,8 @@ function payloadMetadata({companyId,storeId,payload},generation){
  const bytes=Buffer.from(payload.body,'utf8');if(bytes.length<1||bytes.length>2097152||payload.byteLength!==bytes.length||hash(payload.body)!==payload.payloadFingerprint)fail(400,'REPORT_PAYLOAD_INVALID');
  let body;try{body=JSON.parse(payload.body)}catch{fail(400,'REPORT_PAYLOAD_INVALID')}
  if(body.scope?.companyId!==companyId||body.scope?.storeId!==storeId||body.settingsVersion<1||body.frequency!==payload.frequency||body.sourceFingerprint!==payload.sourceFingerprint||body.period?.from!==payload.period?.from||body.period?.to!==payload.period?.to)fail(400,'REPORT_PAYLOAD_INVALID');
- if(typeof generation!=='string'||!/^(0|[1-9]\d{0,18})$/.test(generation)||BigInt(generation)>9223372036854775807n||!Number.isSafeInteger(body.settingsVersion)||body.financialFinality!=='PROVISIONAL'||body.financialReconciliationComplete!==false||body.employeeLiabilityAdjusted!==false)fail(400,'REPORT_PAYLOAD_INVALID');
+ const final=payload.format==='MWS_AUTOMATIC_CASH_PAYLOAD_V1'&&payload.frequency==='DAILY'&&body.financialFinality==='FINAL'&&Boolean(body.reviewedCash?.finalEvidence);
+ if(typeof generation!=='string'||!/^(0|[1-9]\d{0,18})$/.test(generation)||BigInt(generation)>9223372036854775807n||!Number.isSafeInteger(body.settingsVersion)||body.financialFinality!==(final?'FINAL':'PROVISIONAL')||body.financialFinality!==payload.financialFinality||body.financialReconciliationComplete!==final||body.employeeLiabilityAdjusted!==false)fail(400,'REPORT_PAYLOAD_INVALID');
  return {bytes,body,generation,payloadId:hash(['MWS_REPORT_PAYLOAD_V1',companyId,storeId,payload.frequency,payload.period.from,payload.period.to,payload.payloadFingerprint])};
 }
 export async function putImmutablePayload(tx,args){

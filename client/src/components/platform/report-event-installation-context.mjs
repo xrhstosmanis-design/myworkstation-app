@@ -1,6 +1,6 @@
 const retainedKey='myworkstation.reportInstaller.centralSession.v1';
 const invalidatedValue='!invalidated';
-const profiles=new Set(['BASE','CAPTURE','CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4']);
+const profiles=new Set(['BASE','CAPTURE','CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4','REPORTS_ONLY_V4_TO_V5']);
 const denied=(message,code='REPORT_INSTALLER_SESSION_REQUIRED')=>Object.assign(new Error(message),{status:403,code});
 function claims(token){
  if(typeof token!=='string'||token!==token.trim()||token.split('.').length!==3)return null;

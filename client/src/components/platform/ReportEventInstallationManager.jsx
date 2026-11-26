@@ -14,6 +14,7 @@ export default function ReportEventInstallationManager({company,store,request}){
     <option value="CAPTURE">Εγκατάσταση με μηνιαία καταγραφή απογραφής</option>
     <option value="CAPTURE_REPORTS_ONLY">Μηνιαία καταγραφή και συμβατότητα λειτουργικών πινάκων μόνο για αναφορές</option>
     <option value="CAPTURE_REPORTS_ONLY_V2">Ενημερωμένη διαμόρφωση συμβατότητας αναφορών</option>
+    <option value="REPORTS_ONLY_V4_TO_V5">Αναβάθμιση για μηνιαία σύνοψη απογραφής</option>
     <option value="REPORTS_ONLY_V3_TO_V4">Ενημέρωση συμβατότητας αναφορών και ασφάλειας συνομιλίας</option>
     <option value="CAPTURE_REPORTS_ONLY_V3">Συμβατότητα αναφορών με τις ομάδες συνομιλίας</option>
    </select>
@@ -60,7 +61,7 @@ function Installation({company,store,request,profile,session}){
   finally{pending.current=false;if(alive.current)setBusy(false);}
  }
  return <section aria-label="Εγκατάσταση αυτόματων αναφορών">
-  {['CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4'].includes(profile)&&<p>Το προφίλ επιτρέπει την προετοιμασία αναφορών. Η επαναφορά, εξαγωγή και διαγραφή επιλεγμένου καταστήματος παραμένουν μη διαθέσιμες μέχρι να ολοκληρωθεί ο έλεγχος των λειτουργικών πινάκων.</p>}
+  {['CAPTURE_REPORTS_ONLY','CAPTURE_REPORTS_ONLY_V2','CAPTURE_REPORTS_ONLY_V3','REPORTS_ONLY_V3_TO_V4','REPORTS_ONLY_V4_TO_V5'].includes(profile)&&<p>Το προφίλ επιτρέπει την προετοιμασία αναφορών. Η επαναφορά, εξαγωγή και διαγραφή επιλεγμένου καταστήματος παραμένουν μη διαθέσιμες μέχρι να ολοκληρωθεί ο έλεγχος των λειτουργικών πινάκων.</p>}
   <p>Εταιρεία {company.name||company.id} · Κατάστημα {store.name||store.id}</p>
   <button type="button" disabled={busy} onClick={()=>run(false)}>Έλεγχος εγκατάστασης αναφορών</button>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}

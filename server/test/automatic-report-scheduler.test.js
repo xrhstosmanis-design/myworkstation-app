@@ -39,3 +39,19 @@ test('supplier scheduler selects its own policies and only runs monthly',async()
  assert.deepEqual(h.queries[0].values,['SUPPLIER_COMPARISON',2]);
  assert.deepEqual(h.calls.map(call=>call.scope.frequency),['MONTHLY','MONTHLY']);
 });
+
+test('enabled two-stage scheduler revisits the original accepted morning period',async()=>{
+ const sent=[],period={periodFrom:'2026-11-24T05:00:00.000Z',periodTo:'2026-11-25T05:00:00.000Z'};
+ const db={$queryRaw:async(strings,...values)=>{
+  if(strings.join('?').includes('DISTINCT morning')){
+   assert.deepEqual(values,['c','s','']);
+   return [period];
+  }
+  return [{companyId:'c',storeId:'s'}];
+ }};
+ const scheduler=createAutomaticReportScheduler({db,twoPhaseCash:true,work:createBackgroundDrain(),
+  clock:()=> '2026-11-26T06:00:00.000Z',activationProvider:()=>({valid:true,enabled:true,fingerprint:'one'}),
+  dispatcher:{dispatch:async scope=>{sent.push(scope);return {attempted:0}}}});
+ await scheduler.sweep();
+ assert.deepEqual(sent.at(-1),{companyId:'c',storeId:'s',frequency:'DAILY',stage:'FINAL',...period});
+});
