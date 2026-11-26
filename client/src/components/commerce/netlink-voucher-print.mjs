@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 const euro=v=>Number(v).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
-export async function printNetlinkVoucher(browser,receipt,storeName){
+export async function printNetlinkVoucher(browser,receipt,storeName,{beforePrint}={}){
  if(!receipt?.transactionId||!Array.isArray(receipt.lines)||!receipt.lines.every(x=>typeof x==='string'))return false;
  const popup=browser.open('','_blank');if(!popup)return false;
  try{
@@ -17,6 +17,6 @@ export async function printNetlinkVoucher(browser,receipt,storeName){
   }
   const footer=el('section');footer.className='footer';footer.append(el('p',`Παροχή υπηρεσίας: ${euro(receipt.serviceFeeAmount)}`),el('p',`Σύνολο κάρτας και παροχής: ${euro(receipt.customerTotal)}`),el('p',`Συναλλαγή Netlink: ${receipt.transactionId}`),el('p',`Απόδειξη: ${receipt.fiscalNumber||'—'}`));d.body.append(footer);
   await Promise.all(images);if(d.fonts?.ready)await d.fonts.ready;
-  popup.addEventListener('afterprint',()=>popup.close(),{once:true});popup.focus();popup.print();return true;
+  popup.addEventListener('afterprint',()=>popup.close(),{once:true});popup.focus();if(beforePrint&&beforePrint()!==true){popup.close();return false;}popup.print();return true;
  }catch{popup.close();return false}
 }

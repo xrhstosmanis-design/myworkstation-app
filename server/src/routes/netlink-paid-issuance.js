@@ -1,8 +1,8 @@
+import {recordNetlinkVoucherDelivery} from '../integrations/netlink/voucher-delivery.js';
 import {readReviewedRecoveryAccess} from '../integrations/netlink/paid-recovery-access.js';
 import {createNetlinkPaidRecovery} from '../integrations/netlink/paid-recovery.js';
 import {Router} from 'express';
 import {z} from 'zod';
-import crypto from 'node:crypto';
 import {createNetlinkPaidStore} from '../integrations/netlink/paid-issuance-store.js';
 const scopeSchema=z.object({storeId:z.string().trim().min(1).max(200)});
 const requestId=z.string().uuid();
@@ -24,7 +24,7 @@ export function createPaidNetlinkRouter({db,provider,storeFor,prepareCheckout}){
  router.get('/issuance-intents',async(req,res,next)=>{try{
   res.set('Cache-Control','no-store');const tenant=await scope(req,req.query),isPos=storeOperator(req.user,tenant);
   const shared=isPos&&!privileged(req.user)?await readReviewedRecoveryAccess(db,tenant,req.user.id):[];
-  res.json({items:await store.list(tenant,privileged(req.user)?null:req.user.id,shared.map(x=>x.requestId)),canAuthorizeRecovery:privileged(req.user),canCompleteReviewedRecovery:privileged(req.user)||isPos,recoveryStationId:privileged(req.user)?(await recovery.reviewContext(tenant).catch(()=>null))?.stationId||null:null,recoveryEnabled:process.env.NETLINK_ENABLE_PAID_RECOVERY==='true'});
+  res.json({items:await store.list(tenant,privileged(req.user)?null:req.user.id,shared.map(x=>x.requestId)),canAuthorizeRecovery:privileged(req.user),canReprintIssued:privileged(req.user),canCompleteReviewedRecovery:privileged(req.user)||isPos,recoveryStationId:privileged(req.user)?(await recovery.reviewContext(tenant).catch(()=>null))?.stationId||null:null,recoveryEnabled:process.env.NETLINK_ENABLE_PAID_RECOVERY==='true'});
  }catch(e){next(e)}});
  router.post('/issuance-intents',async(req,res,next)=>{try{
   enabled();const body=z.object({storeId:scopeSchema.shape.storeId,requestId,checkoutId:requestId,productId:z.string().trim().min(1).max(160)}).strict().parse(req.body);const tenant=await scope(req,body);
@@ -52,8 +52,8 @@ export function createPaidNetlinkRouter({db,provider,storeFor,prepareCheckout}){
  }catch(e){next(e)}});
  router.post('/issuance-intents/:requestId/receipt',async(req,res,next)=>{try{
   res.set('Cache-Control','no-store');const tenant=await scope(req,req.body),id=requestId.parse(req.params.requestId);await authorized(req,tenant,id,{receipt:true});const receipt=await store.receipt(tenant,id);
-  await db.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${tenant.companyId},${tenant.storeId},${req.user.operatorId||req.user.id},${req.user.id},'NETLINK_RECEIPT_VIEWED',${JSON.stringify({requestId:id})}::jsonb)`;
-  res.json(receipt);
+  const delivery=await recordNetlinkVoucherDelivery({db,scope:tenant,requestId:id,actorId:req.user.id,operatorId:req.user.operatorId||req.user.id,role:req.user.role,allowReprint:privileged(req.user)});
+  res.json({...receipt,...delivery});
  }catch(e){next(e)}});
  return router;
 }
