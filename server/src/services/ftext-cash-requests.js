@@ -77,5 +77,5 @@ export async function recordFtextCashResult(tx,device,settings,input){
   if(reused)fail('FTEXT_CASH_RECEIPT_REUSED','Η ίδια φορολογική απόδειξη έχει ήδη συνδεθεί με άλλη συναλλαγή. Δεν έγινε δεύτερη καταχώριση.');
  }
  if(row.status!=='DISPATCHED')fail('FTEXT_CASH_RESULT_STATE','Η εντολή δεν βρίσκεται σε κατάσταση αποστολής.');
- return (await tx.$queryRaw`UPDATE "FtextCashRequest" SET "result"=${JSON.stringify(result)}::jsonb,"resultHash"=${resultHash},"status"=${result.outcome},"updatedAt"=NOW() WHERE "id"=${row.id} RETURNING *`)[0];
+ return (await tx.$queryRaw`UPDATE "FtextCashRequest" SET "result"=${JSON.stringify(result)}::jsonb,"resultHash"=${resultHash},"status"=${result.outcome},"checkoutJson"=jsonb_set("checkoutJson", '{ftextResultReceivedAt}', to_jsonb(clock_timestamp())),"updatedAt"=NOW() WHERE "id"=${row.id} RETURNING *`)[0];
 }
