@@ -4,7 +4,7 @@ import {createScheduledCashPaperReader} from '../src/services/cash-paper-schedul
 
 const scope={companyId:'synthetic-company',storeId:'synthetic-store'};
 const period={actorId:'synthetic-admin',generation:'1',from:'2026-11-21T03:00:00.000Z',to:'2026-11-22T03:00:00.000Z',now:'2026-11-22T03:10:00.000Z'};
-function fixture({slot=false,enabled=true,allowed=true,pendingAt,foreignDate,declaredDay}={}){
+function fixture({slot=false,finalSlot=false,enabled=true,allowed=true,pendingAt,foreignDate,declaredDay}={}){
   const sources=['a','b','c','d'].map(key=>({checksum:key.repeat(64),sizeBytes:300,references:[{messageId:key}]}));
   const calls=[],readings=new Map([[sources[0].checksum,{status:'EXTRACTED_UNVERIFIED',canReread:true}]]);
   if(declaredDay)sources[0].references[0].declaredCashDay=declaredDay;
@@ -19,7 +19,7 @@ function fixture({slot=false,enabled=true,allowed=true,pendingAt,foreignDate,dec
     readings.set(request.checksum,{status:'EXTRACTED_UNVERIFIED'});
   };
   const run=createScheduledCashPaperReader({
-    $queryRaw:async()=>slot?[{}]:[],
+    $queryRaw:async (_sql,_company,_store,_from,_to,final)=>final?(finalSlot?[{}]:[]):(slot?[{}]:[]),
     user:{findUnique:async()=>({id:period.actorId,role:'SUPER_ADMIN'})}
   },{
     env:{AI_OWNER_WALLET_ENABLED:String(enabled)},authorized:async()=>allowed,
@@ -81,4 +81,14 @@ test('an explicit matching cash day keeps the photo eligible for re-reading when
   const {run,calls}=fixture({foreignDate:'2026-11-20',declaredDay:'2026-11-21'});
   assert.equal(await run(scope,period),'MORE');
   assert.deepEqual(calls,[['reread','a']]);
+});
+
+test('the final review can read after morning delivery and day rollover',async()=>{
+ const afterMorning={...period,stage:'FINAL',now:'2026-11-23T05:00:00.000Z'};
+ const pending=fixture({slot:true});
+ assert.equal(await pending.run(scope,afterMorning),'MORE');
+ assert.deepEqual(pending.calls,[['reread','a']]);
+ const recorded=fixture({slot:true,finalSlot:true});
+ assert.equal(await recorded.run(scope,afterMorning),'DONE');
+ assert.deepEqual(recorded.calls,[]);
 });
