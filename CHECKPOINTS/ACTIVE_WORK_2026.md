@@ -1,10 +1,12 @@
+## 26/11/2026 — Κάλυψη POS από παραλαβές
+
+Προστέθηκε προτεινόμενη κάλυψη με επιλογή εφαρμογής ανά προμηθευτή και κατάστημα. Εκκρεμεί δοκιμή στην παραγωγή. Βλ. CHECKPOINTS/CHANGES/2026-11-26-pos-receipt-cadence.md.
+
 - 25/11/2026 · [Ριζάρειο: ιστορικό STATUS 101 χωρίς τιμή InputLine](CHANGES/2026-11-25-ftext-status101-empty-inputline.md) · Εκκρεμεί αποδοχή στο POS.
 
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
-
-- 26/11/2026 · Νο 7 · [Έλεγχος παραστατικών στο ημερήσιο email](CHANGES/2026-11-26-no7-cash-email-document-status.md).
 
 ##25Nov2026 — Netlink numeric-ID correction installed; paid UNKNOWN remains OPEN /root
 
@@ -580,6 +582,8 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 13/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / delegated bank transfer history. [Checkpoint](CHANGES/2026-11-13-manager-payment-history-implementation.md), PR #3851. CI passed before synchronization; hosted LAB pending.
 
 
+- 26/11/2026 · Νο 7 · [Έλεγχος παραστατικών στο ημερήσιο email](CHANGES/2026-11-26-no7-cash-email-document-status.md).
+
 ## 19/11/2026 — Νο 16 · Chat καταστημάτων / #4028
 
 21/11/2026 · Διαχείριση μελών και πρόσβασης μέσα στο Android Chat, με τα δικαιώματα του #4109 και ανανέωση ανοικτής συνομιλίας. [Checkpoint](CHANGES/2026-11-21-android-chat-moderation.md).
@@ -1125,3 +1129,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 25/11/2026 · Νο 5 · [Εταιρικό δικαίωμα πρόχειρου τιμοκαταλόγου χονδρικής](CHANGES/2026-11-25-no5-wholesale-drafts.md).
 
 - 25/11/2026 · Νο 5 · [Εταιρικό δικαίωμα πρόχειρης προσφοράς](CHANGES/2026-11-25-no5-promotion-drafts.md).
+
+- 26/11/2026 · Νο 5 · [Εταιρικό δικαίωμα μετονομασίας προϊόντος](CHANGES/2026-11-26-no5-product-rename.md).

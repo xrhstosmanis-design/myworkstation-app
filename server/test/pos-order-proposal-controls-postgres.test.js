@@ -12,6 +12,7 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);target.searchParams.set('schema',schema);process.env.DATABASE_URL=target.href;db=new PrismaClient({datasourceUrl:target.href});
  const tables={Company:'"id" TEXT PRIMARY KEY,"name" TEXT,"active" BOOLEAN,"licenseStatus" TEXT,"subscriptionEndsAt" TIMESTAMP',CompanyModule:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMP,"endsAt" TIMESTAMP',Store:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"active" BOOLEAN',StorePaidModule:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMP,"endsAt" TIMESTAMP',Product:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"sku" TEXT,"unit" TEXT,"active" BOOLEAN,"trackStock" BOOLEAN',StoreProduct:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"currentStock" NUMERIC,"minStock" NUMERIC,"active" BOOLEAN',Recipe:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"active" BOOLEAN',PreparationRecipeLine:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"automatic" BOOLEAN',Sale:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT,"source" TEXT,"occurredAt" TIMESTAMP',SaleLine:'"id" TEXT PRIMARY KEY,"saleId" TEXT,"productId" TEXT,"quantity" NUMERIC',PurchaseOrder:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT,"awaitingInvoice" BOOLEAN',PurchaseOrderLine:'"id" TEXT PRIMARY KEY,"orderId" TEXT,"productId" TEXT,"quantity" NUMERIC,"stockUnitsPerInvoiceUnit" NUMERIC',Employee:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"active" BOOLEAN',StoreOperatorCredential:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"employeeId" TEXT,"active" BOOLEAN',StoreOperatorProfile:'"companyId" TEXT,"storeId" TEXT,"employeeId" TEXT,"permissions" JSONB,"posAccess" BOOLEAN'};
   tables.PurchaseOrder+=',"supplierId" TEXT';
+  tables.StockMovement='"id" TEXT PRIMARY KEY,"storeId" TEXT,"sourceId" TEXT,"sourceType" TEXT,"movementType" TEXT,"quantity" NUMERIC,"createdAt" TIMESTAMP';
   tables.Supplier='"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"email" TEXT,"active" BOOLEAN';
   tables.PurchaseDocument='"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"status" TEXT,"documentType" TEXT,"documentDate" TIMESTAMP';
   tables.PurchaseDocumentLine='"id" TEXT PRIMARY KEY,"purchaseDocumentId" TEXT,"productId" TEXT,"quantity" NUMERIC';
@@ -27,6 +28,15 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
    `INSERT INTO "StoreOperatorCredential" VALUES ('op','a','a1','e',true)`,
    `INSERT INTO "StoreOperatorProfile" VALUES ('a','a1','e','{"orderSuggestionsPos":true}',true)`,
    `INSERT INTO "Supplier" VALUES ('sup','a','Local supplier','supplier@example.invalid',true),('other','a','Other store','other@example.invalid',true),('b','b','Foreign supplier','foreign@example.invalid',true),('inactive','a','Inactive','inactive@example.invalid',false)`,
+   `INSERT INTO "PurchaseOrder" ("id","companyId","storeId","status","awaitingInvoice","supplierId") VALUES ('receipt','a','a1','FINAL',false,'sup')`,
+   `INSERT INTO "StockMovement" VALUES
+    ('r1','a1','receipt','PURCHASE_ORDER','PURCHASE',1,'2026-11-12 22:30:00'),
+    ('r2','a1','receipt','PURCHASE_ORDER','PURCHASE',1,'2026-11-13 08:00:00'),
+    ('r3','a1','receipt','PURCHASE_ORDER','PURCHASE',1,'2026-11-16 08:00:00'),
+    ('r4','a1','receipt','PURCHASE_ORDER','PURCHASE',1,'2026-11-19 08:00:00'),
+    ('r5','a1','receipt','PURCHASE_ORDER','PURCHASE',1,'2026-11-22 08:00:00'),
+    ('other','a2','receipt','PURCHASE_ORDER','PURCHASE',1,'2026-11-24 08:00:00'),
+    ('return','a1','receipt','PURCHASE_ORDER','SUPPLIER_RETURN',1,'2026-11-24 08:00:00')`,
    `INSERT INTO "PurchaseDocument" VALUES ('old','a','a1','sup','APPROVED','INVOICE','2025-01-01'),('other','a','a2','other','APPROVED','INVOICE','2025-01-01'),('foreign','b','b1','b','APPROVED','INVOICE','2025-01-01')`,
    `INSERT INTO "PurchaseDocumentLine" VALUES ('d1','old','p',1),('d2','other','q',1),('d3','foreign','foreign',1)`,
    `INSERT INTO "Sale" VALUES ('start','a','a1','COMPLETED','POS','2026-10-31 22:00:00'),('last','a','a1','COMPLETED','POS','2026-11-02 21:59:59.999999'),('end','a','a1','COMPLETED','POS','2026-11-02 22:00:00'),('before','a','a1','COMPLETED','POS','2026-10-31 21:59:59.999999'),('return','a','a1','COMPLETED','POS_REVERSAL','2026-11-01 10:00:00'),('other','a','a2','COMPLETED','POS','2026-11-01 10:00:00'),('foreign','b','b1','COMPLETED','POS','2026-11-01 10:00:00'),('draft','a','a1','DRAFT','POS','2026-11-01 10:00:00'),('waste','a','a1','COMPLETED','WASTE','2026-11-01 10:00:00')`,
@@ -46,7 +56,10 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
   const controls=async()=>JSON.stringify(await db.$queryRaw`SELECT (SELECT jsonb_agg(to_jsonb(p) ORDER BY p."id") FROM "StoreProduct" p) stocks,(SELECT jsonb_agg(to_jsonb(s) ORDER BY s."id") FROM "Sale" s) sales,(SELECT COUNT(*)::int FROM "PurchaseOrder") purchases`);
   const before=await controls();
   await t.test('old supplier evidence remains usable independently of selected sales dates; exact Greece boundaries and net quantity',async()=>{
-   const suppliers=await (await get('/stores/a1/suppliers')).json();assert.deepEqual(suppliers.suppliers.map(s=>s.id),['sup']);
+   const response=await get('/stores/a1/suppliers'),suppliers=await response.json();
+   assert.equal(response.status,200,JSON.stringify(suppliers));
+   assert.deepEqual(suppliers.suppliers.map(s=>s.id),['sup']);
+   assert.deepEqual(suppliers.suppliers[0].receiptCadence,{coverageDays:3,receiptDays:4,latestReceipt:'2026-11-22'});
    const r=await calculate();assert.equal(r.rows.length,1);assert.equal(r.rows[0].productId,'p');assert.equal(r.rows[0].soldQuantity,20);assert.equal(r.rows[0].returnedQuantity,4);assert.equal(r.rows[0].netQuantity,16);assert.equal(r.rows[0].suggestedQuantity,30);assert.equal(r.options.historyDays,2);assert.equal(r.period.timeZone,'Europe/Athens');assert.equal(r.supplier.id,'sup');
    dataTimeZone='UTC';const utc=await calculate();assert.deepEqual(utc.rows,r.rows);dataTimeZone='Europe/Athens';
    for(const supplier of ['other','b','inactive'])assert.equal((await get(path.replace('supplierId=sup','supplierId='+supplier))).status,404);
