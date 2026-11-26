@@ -418,6 +418,8 @@ Installation candidate integrates 868feb5d. Resolved seven shared-file overlaps 
 
 <!-- NO5-STATUS:END -->
 
+- 26/11/2026 · Νο 7 · [Πρωινό και τελικό email ταμείων](CHANGES/2026-11-26-no7-two-daily-cash-emails.md).
+
 ## 17/11/2026 — SHIFT-CLOSE-INVOICE-MOBILE-01 — TECHNICALLY LIVE / AWAITING COMMON LAB
 
 Owner approved source merge and publication on 17/11/2026. PR #4011 exact head `0c4f97cc7ea83cc6d1a4d15d3e173351d60c67fa` passed full Node20 CI `44169632000` (all five jobs SUCCESS). Expected-head squash merged `1af6d3173a462cf1f610307db14af5202a5cbf04`. Main retains the unrelated #4010 table-service documentation; runtime source matches the reviewed candidate. Full combined-main CI `44172996676` also passed all five jobs. No required check was bypassed or manually replaced.

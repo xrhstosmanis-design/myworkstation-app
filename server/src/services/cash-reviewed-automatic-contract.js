@@ -92,10 +92,17 @@ export function canSendProvisionalCashReport(report){
  }catch{return false}
 }
 
-const receiptSchema=z.object({status:z.literal('READY'),reason:z.null(),companyId:id,storeId:id,generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/),head:z.union([sha,z.literal('ROOT')]),sourceFingerprint:sha,report:reportSchema,dailyEvidence:dailyCashEvidenceSchema.optional(),fingerprint:sha}).strict();
-export function validateAutomaticReviewedReceipt(value,{companyId,storeId,groups,rule,dayStartHour,sourceFingerprint}){
+const finalEvidenceSchema=z.object({shifts:z.array(z.object({sessionId:id,auditFingerprint:sha}).strict()).min(1).max(200),evidenceFingerprint:sha}).strict();
+const receiptSchema=z.object({status:z.literal('READY'),reason:z.null(),companyId:id,storeId:id,generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/),head:z.union([sha,z.literal('ROOT')]),sourceFingerprint:sha,report:reportSchema,dailyEvidence:dailyCashEvidenceSchema.optional(),finalEvidence:finalEvidenceSchema.optional(),fingerprint:sha}).strict();
+export function validateAutomaticReviewedReceipt(value,{companyId,storeId,groups,rule,dayStartHour,sourceFingerprint,requireFinal=false}){
  try{
   const receipt=receiptSchema.parse(value),{fingerprint,...unsigned}=receipt;
+  if(requireFinal!==Boolean(receipt.finalEvidence))return false;
+  if(requireFinal){
+   if(!receipt.dailyEvidence||receipt.finalEvidence.evidenceFingerprint!==hash(receipt.dailyEvidence))return false;
+   const finalIds=new Set(receipt.report.rows.map(row=>row.sessionId));
+   if(receipt.finalEvidence.shifts.length!==finalIds.size||receipt.finalEvidence.shifts.some(shift=>!finalIds.delete(shift.sessionId)))return false;
+  }
   if(receipt.dailyEvidence){
    const ids=new Set(receipt.report.rows.map(row=>row.sessionId));
    if(receipt.dailyEvidence.shifts.length!==ids.size||receipt.dailyEvidence.shifts.some(shift=>!ids.delete(shift.sessionId)))return false;

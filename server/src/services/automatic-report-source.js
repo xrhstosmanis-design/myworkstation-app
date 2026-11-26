@@ -29,7 +29,7 @@ export async function readAutomaticCashPreview(db,input){
 }
 // Internal caller owns the transaction, isolation and read-only mode. This is
 // still a Super Admin preview reader, never a service-principal authorization.
-export async function readAutomaticCashPreviewInTransaction(tx,{actorId,companyId,storeId,day,frequency="DAILY",configuration,settingsVersion,now=new Date()}){
+export async function readAutomaticCashPreviewInTransaction(tx,{actorId,companyId,storeId,day,frequency="DAILY",configuration,settingsVersion,now=new Date(),requireFinal=false}){
   const {settings,period}=previewContext({actorId,companyId,storeId,day,frequency,configuration,now});
     const actor=await tx.user.findUnique({where:{id:actorId},select:{id:true,role:true}});
     if(actor?.role!=="SUPER_ADMIN")throw error(403,"Η προεπισκόπηση αυτόματων αναφορών απαιτεί Super Admin.");
@@ -87,7 +87,7 @@ export async function readAutomaticCashPreviewInTransaction(tx,{actorId,companyI
     // snapshot has totals; original employee amounts always remain unadjusted.
     const groups=ready?summarizeCashVariances(ownedRows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
     const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,frequency,period,configuration,rule,rows})).digest("hex");
-    const reviewedCash=configuration.reviewedReconciliation===true?await readReviewedAutomaticCash(tx,{actorId,companyId,storeId,period,rows:ownedRows,groups,rule,sourceFingerprint,ready,includeDailyEvidence:frequency==="DAILY"}):null;
+    const reviewedCash=configuration.reviewedReconciliation===true?await readReviewedAutomaticCash(tx,{actorId,companyId,storeId,period,rows:ownedRows,groups,rule,sourceFingerprint,ready,includeDailyEvidence:frequency==="DAILY",requireFinal}):null;
     return {kind:`${frequency}_CASH_PREVIEW`,frequency,store,period,ready,holds,dayReadiness,sourceCount:ownedRows.length,
       ...(configuration.reviewedReconciliation===true?{reviewedReconciliation:true,reviewedCash}:{}),
       complete:rows.length<=sourceLimit,groups,...(frequency==="MONTHLY"?{openingOperatorSummary:ready?summarizeOpeningOperators(groups):null}:{}),sourceFingerprint,generatedAt:new Date(now),
