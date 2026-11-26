@@ -1,0 +1,10 @@
+import React,{useState,useRef,useEffect} from 'react';
+export default function NetlinkRecoveryReview({api,storeId,intent,stationId,onReviewed}){
+ const [reference,setReference]=useState(''),[confirmedAt,setConfirmedAt]=useState(''),[confirmed,setConfirmed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const alive=useRef(true),locked=useRef(false);useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
+ async function submit(e){e.preventDefault();if(locked.current)return;locked.current=true;setBusy(true);setError('');try{
+  await api(`/api/netlink/issuance-intents/${encodeURIComponent(intent.requestId)}/nonexecution-review`,{method:'POST',body:JSON.stringify({storeId,confirmedNotExecuted:true,expectedStationId:stationId,providerReference:reference.trim(),confirmedAt:new Date(confirmedAt).toISOString(),expectedUpdatedAt:new Date(intent.updatedAt).toISOString()})});
+  if(alive.current)onReviewed();
+ }catch(e){if(alive.current)setError(e.message||'Δεν καταχωρίστηκε ο έλεγχος.')}finally{locked.current=false;if(alive.current)setBusy(false)}}
+ return <form onSubmit={submit}><p>Σταθμός Netlink: <b>{stationId}</b></p><p>Μόνο με ρητή επιβεβαίωση της Netlink ότι η συγκεκριμένη αγορά δεν εκτελέστηκε.</p><label>Αναφορά επιβεβαίωσης παρόχου<input maxLength={500} minLength={10} required value={reference} onChange={e=>setReference(e.target.value)} placeholder="Αριθμός αιτήματος ή email παρόχου"/></label><label>Ώρα επιβεβαίωσης<input type="datetime-local" required value={confirmedAt} onChange={e=>setConfirmedAt(e.target.value)}/></label><label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>Η Netlink επιβεβαίωσε ότι αυτή η αγορά δεν εκτελέστηκε.</label>{error&&<p role="alert">{error}</p>}<button type="submit" disabled={busy||!stationId||!confirmed||reference.trim().length<10||!confirmedAt}>{busy?'Αποθήκευση…':'Καταγραφή επιβεβαίωσης Netlink'}</button><p>Η καταγραφή δεν εκδίδει κάρτα. Η πληρωμή και η απόδειξη παραμένουν οι αρχικές.</p></form>;
+}

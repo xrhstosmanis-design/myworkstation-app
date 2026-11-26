@@ -46,3 +46,10 @@ test("Netlink execute sends the provider-required requestId and payload wrapper"
     assert.deepEqual(JSON.parse(calls[1].options.body),{requestId:"request-123",payload:{}});
   }finally{globalThis.fetch=originalFetch}
 });
+
+// A POST response can be uncertain even when authentication middleware rejects it.
+test("Netlink mutation 401 is never automatically replayed",async()=>{
+ const previous=globalThis.fetch;let tokens=0,posts=0;
+ globalThis.fetch=async(url,opts)=>{if(url===config.tokenUrl){tokens++;return new Response(JSON.stringify({access_token:'test-token'}),{status:200})}posts++;return new Response('{}',{status:401})};
+ try{await assert.rejects(()=>new NetlinkClient(config).execute('243',{requestId:'1790000001',payload:{}}),e=>e.providerStatus===401);assert.equal(tokens,1);assert.equal(posts,1)}finally{globalThis.fetch=previous}
+});

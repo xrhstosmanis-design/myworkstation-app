@@ -8,6 +8,14 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+##26Nov2026 — Owner BackOffice entry for reviewed paid Netlink recovery
+
+The selected-store owner BackOffice now mounts the same audited paid-recovery panel and saved-voucher hook after its authorized module/status check. No employee privilege or PIN change; it cannot add cards, create a checkout or bypass provider/payment/fiscal review. This addresses the observed lack of a privileged POS login in the selected store.66targeted native SQL/HTTP/mounted tests and Node20 frontend build PASS. Existing source db55 passed full CI45783983521 all5jobs; current exact-head combined CI is required. Actual production review/fulfillment remains NOT TESTED. Same /root and claim4256.
+
+##26Nov2026 — Netlink provider-confirmed non-execution; audited paid recovery source — ASSIGNED /root
+
+Provider now explicitly confirms the original request never arrived/executed, superseding the pending-email/external-result blocker in25Nov notes. Retained /root after claim4256/a28d786. Source adds privileged evidence/station-bound review and once-only fulfillment of the existing paid intent with preserved original identity/history, no new sale/payment/fiscal receipt, no schema addition. Separate recovery flag defaults closed; new issuance remains paused.66targeted native SQL/HTTP/mounted tests PASS,0FAIL/0SKIP, including atomic audit rollback and uncertain recovery no-repeat. Node20 frontend build PASS. Full CI/release/actual voucher acceptance pending; no production review/issuance performed. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-paid-recovery-source.md`. Earlier live report/catalogue USER PASS remains narrow; real card/PIN printing NOT TESTED.
+
 ##25Nov2026 — Netlink numeric-ID correction installed; paid UNKNOWN remains OPEN /root
 
 Source#4241 head d2b3dcc82a69ee609cff7c78fe2d6ebc047c79eb passed full CI45647815255 (all5jobs), merged d6694542c758636b4da7f7f39a39b481b3af43cb. Render dep-dc3h5sgu01pc73elbvlg LIVE; public health200/ok confirms exact revision. Native read-only verification confirms bounded provider sequence exists and is unconsumed; original paid UNKNOWN sale/receipt/dispatch record is unchanged. New issuance remains PAUSED. The user reports no corresponding card charge in the provider terminal's current daily report; this is user evidence, not provider final confirmation. No retry, new payment, refund, deletion or fiscal correction was performed. Await provider reconciliation and explicit authorization to transmit the prepared incident email. Next: obtain existing provider result/non-execution confirmation; never replay the UNKNOWN purchase. See `CHECKPOINTS/CHANGES/2026-11-25-netlink-unknown-correction-live.md`.
