@@ -8,6 +8,10 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+## 26Nov2026 — Netlink operator visual USER PASS; Acharnon NOT READY /root
+
+Owner confirms employee reprint is absent after refresh: narrow visual USER PASS on installed172c8c, not a fresh-sale/physical/provider-statement acceptance. Read-only Acharnon check finds active stored connection/module but no Netlink POS mapping; existing0.50 service/card goods track stock. Active RBS heartbeat is not complete readiness proof; fresh provider access/physical print untested. No state or financial change. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-acharnon-readiness.md`.
+
 ## 26Nov2026 — Netlink employee no-reprint installed centrally — AWAITING VISUAL ACCEPTANCE /root
 
 PR4268 final5876386 passed full CI45817588068 all5SUCCESS, merged172c8c2 (same tested tree).71 targeted native/mounted tests PASS. Render dep-dc42dfvlk1mc739e6jng LIVE12:33:40UTC, exact health verified. Ordinary employee reprint is hidden and repeated PIN delivery is server-denied under row lock/historical audit; initial print submission is consumed even on uncertain print errors. Responsible exceptional reprint remains audited. New-card flag already enabled by prior d199718 config release; no env/schema/role/credential changes here. Original completed-card financial state, one provider dispatch and delivery count unchanged before/after; no agent production PIN read/purchase. Existing-card USER PASS retained; refreshed employee visual check and fresh normal purchase/physical/redemption/provider statement remain OPEN. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-live.md`.
