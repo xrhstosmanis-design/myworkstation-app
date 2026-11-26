@@ -63,3 +63,17 @@ test('reviewed paid recovery requires explicit confirmation and never repeats pa
   await f.hook.recover({...intent,status:'UNKNOWN'});assert.equal(calls.length,1);
  }finally{await f.close()}
 });
+
+
+test('initial popup fallback prints once and clears PIN bytes from voucher state',async()=>{
+ const f=await fixture(),calls=[],popups=[];let prints=0;
+ const api=async url=>{calls.push(url);return url.endsWith('/issue')?{status:'COMPLETED',idempotentReplay:false}:{requestId:ids[0],deliveryId:'initial-delivery',title:'Synthetic',transactionId:'synthetic-tx',amount:5,serviceFeeAmount:.5,customerTotal:5.5,lines:['PRIVATE-SYNTHETIC-PIN']}};
+ try{
+  await f.render({api,storeId:'A',operatorId:'employee',getCheckoutId:()=> 'checkout'});window.open=()=>null;
+  await f.act(async()=>f.hook.complete(ids[0]));assert.equal(f.hook.canPrintVoucher,true);assert.deepEqual(f.hook.voucher.lines,['PRIVATE-SYNTHETIC-PIN']);
+  window.open=()=>{const popup=new JSDOM('<html><head></head><body></body></html>');popups.push(popup);popup.window.focus=()=>{};popup.window.print=()=>{prints++};return popup.window};
+  const before=f.hook;await f.act(async()=>Promise.all([before.printVoucher(),before.printVoucher()]));assert.equal(prints,1);assert.equal(f.hook.canPrintVoucher,false);assert.equal(f.hook.voucher.lines,undefined);
+  await f.act(async()=>before.printVoucher());await f.act(async()=>f.hook.printVoucher());assert.equal(prints,1);assert.equal(calls.filter(url=>url.endsWith('/receipt')).length,1);
+  await f.render({api,storeId:'A',operatorId:'other',getCheckoutId:()=> 'checkout'});assert.equal(f.hook.voucher,null);
+ }finally{for(const popup of popups)popup.window.close();await f.close()}
+});

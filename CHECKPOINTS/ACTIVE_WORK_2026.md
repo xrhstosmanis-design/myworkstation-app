@@ -8,6 +8,10 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+## 26Nov2026 — Netlink employee no-reprint source — AWAITING RELEASE /root
+
+Retained claim4267/30b50bf, newer explicit owner security policy supersedes employee saved-card reprint. Common catalog hides employee completed-card print action; server row-lock/legacy-audit gate allows only the initial unprivileged PIN delivery. Repeat requests403, responsible reprints get explicit audit mode/actor. Initial popup fallback remains, successful print action clears PIN state/button and duplicate callbacks are locked.70 native/HTTP/mounted tests PASS0skip, Node20 client build PASS. Full CI/release/live UI pending. New paid issuance flag now active from d199718 env release; no extra financial action. Existing one-card USER PASS retained, fresh-sale/physical/redemption acceptance OPEN. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-voucher-no-reprint-source.md`.
+
 ## 26Nov2026 — Netlink existing card issued; new-card activation ASSIGNED /root
 
 26Nov2026 owner reports the existing card came out; supplied POS screenshots show Issued card, saved-card print dialog and Reprint same card under the normal operator. Scoped native read-only check confirms COMPLETED at11:47:39UTC, saved encrypted result, provider transaction present, exactly one recovery dispatch and one completion audit, one original payment and two original sale lines. No PIN/result text is exposed or copied into public source. This is a narrow USER PASS for existing paid-card fulfillment and saved-voucher UI; physical legibility/redemption/provider terminal statement and a fresh normal purchase are not independently verified.

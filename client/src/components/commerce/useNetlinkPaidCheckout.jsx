@@ -9,15 +9,22 @@ export function useNetlinkPaidCheckout({api,storeId,operatorId,storeName,getChec
  useEffect(()=>{alive.current=true;setBuying(false);setVouchers([]);return()=>{alive.current=false}},[storeId,api,operatorId]);
  const renderToken=token.current;
  const current=()=>()=>alive.current&&token.current===renderToken;
- async function receipt(id,{autoPrint=false}={}){const valid=current();const result=await api(`/api/netlink/issuance-intents/${encodeURIComponent(id)}/receipt`,{method:'POST',body:JSON.stringify({storeId})});if(!valid())return;setVouchers(rows=>rows.some(row=>row.requestId===result.requestId)?rows.map(row=>row.requestId===result.requestId?result:row):[...rows,result]);onMessage?.('Η κάρτα εκδόθηκε. Η επανεκτύπωση χρησιμοποιεί την ίδια κάρτα, χωρίς νέα χρέωση.');if(autoPrint&&!printed.current.has(storeId+':'+id)){printed.current.add(storeId+':'+id);if(!await printNetlinkVoucher(window,result,storeName)&&valid())onMessage?.('Η κάρτα εκδόθηκε. Πάτησε «Εκτύπωση κάρτας» στο παράθυρο που άνοιξε.')}}
+ async function printOnce(result){
+  const valid=current(),key=storeId+':'+result.requestId+':'+(result.deliveryId||'initial'),lock='print:'+key;
+  if(!valid()||!result.lines||printed.current.has(key)||locks.current.has(lock))return;locks.current.add(lock);
+  setVouchers(rows=>rows.map(row=>row.requestId===result.requestId?{...row,printing:true}:row));
+  let ok=false;try{ok=await printNetlinkVoucher(window,result,storeName);if(ok)printed.current.add(key);else if(valid())onMessage?.('Δεν άνοιξε η αρχική εκτύπωση. Επίτρεψε τα αναδυόμενα παράθυρα και πάτησε «Εκτύπωση κάρτας».');}
+  finally{locks.current.delete(lock);if(valid())setVouchers(rows=>rows.map(row=>row.requestId===result.requestId?{...row,printing:false,printed:ok,...(ok?{lines:undefined}: {})}:row))}
+ }
+ async function receipt(id,{autoPrint=false}={}){const valid=current();const result=await api(`/api/netlink/issuance-intents/${encodeURIComponent(id)}/receipt`,{method:'POST',body:JSON.stringify({storeId})});if(!valid())return;setVouchers(rows=>rows.some(row=>row.requestId===result.requestId)?rows.map(row=>row.requestId===result.requestId?result:row):[...rows,result]);onMessage?.('Η κάρτα εκδόθηκε. Η αρχική εκτύπωση παραδίδεται στον πελάτη.');if(autoPrint)await printOnce(result);}
  async function complete(itemsOrId,{recovery=false}={}){
   const batchValid=current();if(!batchValid())return;
   if(Array.isArray(itemsOrId)){for(const id of netlinkIntentIdsFromItems(itemsOrId)){if(!batchValid())break;await complete(id)}return}
   const id=itemsOrId;if(!id)return;const key=storeId+':'+id;if(locks.current.has(key))return;locks.current.add(key);const valid=current();
-  try{const result=await api(`/api/netlink/issuance-intents/${encodeURIComponent(id)}/${recovery?'recover-paid':'issue'}`,{method:'POST',body:JSON.stringify({storeId,...(recovery?{fulfillExistingPaidPurchase:true}:{})})});if(!valid())return;if(result.status==='COMPLETED')await receipt(id,{autoPrint:result.idempotentReplay!==true});else onError?.('Η έκδοση της κάρτας εκκρεμεί για έλεγχο Netlink. Μην κάνεις δεύτερη πληρωμή ή νέα αγορά κάρτας.');}
+  try{const result=await api(`/api/netlink/issuance-intents/${encodeURIComponent(id)}/${recovery?'recover-paid':'issue'}`,{method:'POST',body:JSON.stringify({storeId,...(recovery?{fulfillExistingPaidPurchase:true}:{})})});if(!valid())return;if(result.status==='COMPLETED'){try{await receipt(id,{autoPrint:result.idempotentReplay!==true})}catch{if(valid())onError?.('Η κάρτα έχει εκδοθεί. Η πρόσβαση στην εκτύπωση χρειάζεται υπεύθυνο. Μην κάνεις νέα αγορά.')}}else onError?.('Η έκδοση της κάρτας εκκρεμεί για έλεγχο Netlink. Μην κάνεις δεύτερη πληρωμή ή νέα αγορά κάρτας.');}
   catch{if(valid())onError?.('Η έκδοση Netlink δεν επιβεβαιώθηκε. Έλεγξε την εκκρεμή κάρτα από το Netlink, χωρίς δεύτερη πληρωμή.');}finally{locks.current.delete(key)}
  }
- return {buying,voucher,pendingVoucherCount:vouchers.length,closeVoucher:()=>setVouchers(rows=>rows.slice(1)),printVoucher:async()=>{if(voucher&&!await printNetlinkVoucher(window,voucher,storeName))onError?.('Δεν άνοιξε η εκτύπωση. Επίτρεψε τα αναδυόμενα παράθυρα και επίλεξε τον θερμικό εκτυπωτή.')},
+ return {buying,voucher,pendingVoucherCount:vouchers.length,closeVoucher:()=>setVouchers(rows=>rows.slice(1)),canPrintVoucher:Boolean(voucher&&!voucher.printed&&!voucher.printing),printVoucher:async()=>{if(voucher)await printOnce(voucher)},
   async selectCard(productId){if(locks.current.has('buy'))return;locks.current.add('buy');const valid=current();setBuying(true);try{const intent=await api('/api/netlink/issuance-intents',{method:'POST',body:JSON.stringify({storeId,productId,requestId:crypto.randomUUID(),checkoutId:getCheckoutId()})});if(valid())onReady(intent);}catch(e){if(valid())onError?.(e.message||'Δεν προστέθηκε η κάρτα.')}finally{locks.current.delete('buy');if(valid())setBuying(false)}},
   async beforePayment(method,items,total,clientTransactionId){
    const ids=netlinkIntentIdsFromItems(items);if(!ids.length)return true;
