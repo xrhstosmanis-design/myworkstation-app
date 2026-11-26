@@ -5,7 +5,7 @@ export async function recordPurchaseCostIncrease(tx,{companyId,storeId,actorId,p
   await tx.$executeRaw`
     INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details")
     SELECT ${randomUUID()},p."companyId",s."id",${actorId},'PURCHASE_COST_INCREASED',
-      jsonb_build_object('productId',p."id",'productName',${productName}::text,
+      jsonb_build_object('productId',p."id",'emailStatus','PENDING','productName',${productName}::text,
         'previousCost',${String(previousCost)}::numeric,'newCost',p."costPrice",
         'supplierId',${supplierId}::text,'documentId',${documentId}::text,'source',${source}::text,
         'description',concat('Αύξηση τιμής αγοράς · ',${productName}::text,' · ',${String(previousCost)}::numeric,' € → ',p."costPrice",' €'))
@@ -50,7 +50,7 @@ export async function recordSupplierDiscountReduction(tx,{companyId,storeId,acto
     )
     INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details")
     SELECT gen_random_uuid()::text,${companyId},${storeId},${actorId},'SUPPLIER_DISCOUNT_REDUCED',
-      jsonb_build_object('productId',p."id",'productName',p."name",'supplierId',s."id",'supplierName',s."name",
+      jsonb_build_object('productId',p."id",'emailStatus','PENDING','productName',p."name",'supplierId',s."id",'supplierName',s."name",
         'documentId',${documentId}::text,'previousDiscount',old.discount,'newDiscount',latest.discount,
         'description',concat('Μείωση έκπτωσης προμηθευτή · ',p."name",' · ',old.discount,'% → ',latest.discount,'%'))
     FROM rates latest JOIN rates old ON old."productId"=latest."productId" AND NOT old.current
