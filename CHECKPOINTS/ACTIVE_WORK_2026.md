@@ -8,6 +8,10 @@
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
 
+##26Nov2026 — Netlink recovery installed; original paid card reviewed — OPEN /root
+
+PR4257/651ba888 passed fullCI45793599247 all5SUCCESS, merged89cc197; Render dep-dc404vui0phs738op950 LIVE and exact health200/ok verified.66native targeted tests and client build PASS. New issuance remains OFF; separately gated reviewed paid recovery ON. Actual selected-store SuperAdmin/Full BackOffice review recorded one provider non-execution attestation and showed RECOVERY_READY with enabled fulfillment button. Read-only before/after preserves original encrypted intent hash, sale/checkout, dispatch, fiscal receipt, payment and lines; no provider dispatch/result/completion. Limited metadata review LIVE PASS only, manual synchronized. Actual card/PIN/provider statement/physical print OPEN; user must perform the final consequential fulfillment. Never recollect or create another sale for this paid card. See `CHECKPOINTS/CHANGES/2026-11-26-netlink-paid-recovery-live.md`.
+
 ##26Nov2026 — Owner BackOffice entry for reviewed paid Netlink recovery
 
 The selected-store owner BackOffice now mounts the same audited paid-recovery panel and saved-voucher hook after its authorized module/status check. No employee privilege or PIN change; it cannot add cards, create a checkout or bypass provider/payment/fiscal review. This addresses the observed lack of a privileged POS login in the selected store.66targeted native SQL/HTTP/mounted tests and Node20 frontend build PASS. Existing source db55 passed full CI45783983521 all5jobs; current exact-head combined CI is required. Actual production review/fulfillment remains NOT TESTED. Same /root and claim4256.
