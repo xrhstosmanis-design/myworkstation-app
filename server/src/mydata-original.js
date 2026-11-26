@@ -57,6 +57,7 @@ export function providerOriginalRecoveryLinkPattern({includeExistingImpact = fal
     ...epsilonRecoveryFormats,
     ...(includeExistingImpact ? ["einvoice[.]impact[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}"] : []),
     "einvoice[.]s1ecos[.]gr/p/EL[0-9]{9}/[a-f0-9]{40}/[a-f0-9]{32}",
+    "mydata[.]primer[.]gr/[a-f0-9]{40}",
     "e-invoicing[.]gr/edocuments/ViewInvoice/-1/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}_[a-z0-9]{7}",
     String.raw`vs[.]gr/iv/invoice/download/([a-z0-9]{4}_[0-9])/\1~k1~[a-f0-9]{40}~[a-z0-9_-]{43}`,
   ]);
@@ -80,7 +81,9 @@ export function originalDownloadUrl(xml,issuerVat){
     && /^\/iv\/invoice\/download\/([A-Za-z0-9]{4}_[0-9])\/\1~k1~[a-f0-9]{40}~[A-Za-z0-9_-]{43}\/?$/.test(url.pathname);
   const onesign = validIssuer && url.hostname === "onesign-api.onesys.gr"
     && /^\/invoice\/public\/download\/[0-9]{1,20}\/?$/.test(url.pathname);
-  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon || einvoicing || vs || onesign)) {
+  const primer = validIssuer && url.hostname === "mydata.primer.gr"
+    && /^\/[a-f0-9]{40}\/?$/i.test(url.pathname);
+  if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || !(impact || epsilon || einvoicing || vs || onesign || primer)) {
     throw error("Ο σύνδεσμος απαιτεί διαφορετικό υποστηριζόμενο πάροχο ή δεν συμφωνεί με το ΑΦΜ εκδότη.");
   }
   url.pathname=url.pathname.replace(/\/$/,"")+(onesign?"":"/pdf");
@@ -116,7 +119,18 @@ export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf,
 }
 async function downloadOriginalPdf(row,fetcher,reader,signal,identityReader){
   const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat);
-  const response=await fetcher(url,{redirect:"error",signal,headers:{Accept:"application/pdf"}});
+  const sourceUrl = new URL(url);
+  const primer = sourceUrl.hostname === "mydata.primer.gr";
+  const options = {redirect:"error",signal,headers:{Accept:"application/pdf"}};
+  let response = await fetcher(url, primer ? {...options,redirect:"manual"} : options);
+  if (primer && response.status === 301) {
+    const expected = `https://mydata-backend.primer.gr/invoice${sourceUrl.pathname}`;
+    await response.body?.cancel();
+    if (response.headers.get("location") !== expected) {
+      throw error("Η Primer επέστρεψε μη αναμενόμενη ανακατεύθυνση για το PDF.");
+    }
+    response = await fetcher(expected, options);
+  }
   if(!response.ok||!/^application\/pdf\b/i.test(response.headers.get("content-type")||""))throw error("Ο πάροχος δεν επέστρεψε πρωτότυπο PDF.");
   const max=3400000;
   if(Number(response.headers.get("content-length"))>max)throw error("Το PDF υπερβαίνει τα 3,4 MB.");
