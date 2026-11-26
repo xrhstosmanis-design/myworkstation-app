@@ -10,8 +10,9 @@ const iso=value=>value?new Date(value).toISOString():null;
 const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export function recoveryFingerprint(row,proof){
  const paid=assertNetlinkPaidSale({...proof,scope:{companyId:row.companyId,storeId:row.storeId},intent:row});
- if(!row.saleId||proof.sale.id!==row.saleId||!row.providerDispatchedAt||proof.fiscal.fiscalNumber!==row.fiscalNumber||row.providerTransactionId||row.completedAt||row.issuanceResultEnc)fail('NETLINK_RECOVERY_EVIDENCE','Η αρχική πληρωμή ή η απόδειξη χρειάζεται διασταύρωση.');
- return hash([row.companyId,row.storeId,row.requestId,row.checkoutId,row.saleId,row.productId,row.issuanceIntentEnc,iso(row.providerDispatchedAt),paid,proof.lines,proof.payments,proof.cashConfirmation,proof.cardProof||null]);
+ const completion=proof.rbsCommit||proof.fiscal;
+ if(!completion||proof.rbsCommit&&(row.fiscalEvidence?.type!=='RBS_NATIVE_COMMIT'||row.fiscalEvidence?.id!==proof.rbsCommit.evidenceId||row.fiscalNumber!==null)||!row.saleId||proof.sale.id!==row.saleId||!row.providerDispatchedAt||(completion.fiscalNumber??null)!==(row.fiscalNumber??null)||row.providerTransactionId||row.completedAt||row.issuanceResultEnc)fail('NETLINK_RECOVERY_EVIDENCE','Η αρχική πληρωμή ή η απόδειξη χρειάζεται διασταύρωση.');
+ return hash([row.companyId,row.storeId,row.requestId,row.checkoutId,row.saleId,row.productId,row.issuanceIntentEnc,iso(row.providerDispatchedAt),paid,proof.lines,proof.payments,proof.cashConfirmation,proof.cardProof||null,...(proof.rbsCommit?[proof.rbsCommit]:[])]);
 }
 export function createNetlinkPaidRecovery({db,provider,evidence=readNetlinkNativeEvidence,clock=()=>new Date()}){
  async function rowFor(t,scope,id,lock=false){const rows=lock?await t.$queryRaw`SELECT * FROM "NetlinkTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "issuanceIntentEnc" IS NOT NULL FOR UPDATE`:await t.$queryRaw`SELECT * FROM "NetlinkTransaction" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "requestId"=${id} AND "issuanceIntentEnc" IS NOT NULL`;return decodePaidIntent(rows[0],scope)}

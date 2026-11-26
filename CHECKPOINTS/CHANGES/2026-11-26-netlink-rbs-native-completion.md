@@ -12,6 +12,8 @@ RBS_NATIVE_COMMIT is explicit application-native evidence, not a machine-confirm
 
 Native POS already calls the common Netlink hook after a successful continuation or recovered SALE_COMMITTED using original checkout items. Mounted real POS tests cover asynchronous CASH/CARD recovery and pending/uncertain/declined refusal. Ordinary operators retain initial-only voucher delivery and no completed-card reprint. Responsible exceptions stay audited. UNKNOWN/reviewed recovery policy and existing completed vouchers unchanged.
 
+Reviewed UNKNOWN recovery also binds the original RBS_NATIVE_COMMIT evidence ID and canonical native proof in the immutable review fingerprint. Existing ftext fingerprint bytes are unchanged. Actual SQL/HTTP tests exercise provider nonexecution confirmation by a responsible reviewer, operator completion of the same paid purchase once, zero new Sale/Payment, and no unreviewed UNKNOWN retry. No production UNKNOWN is retried.
+
 ## Validation
 
 Node20:145 targeted tests PASS,0FAIL,0SKIP. Includes actual isolated PostgreSQL database, real cash/card RBS finalizers, native stock/Payment/audit, real Netlink HTTP router/readiness and serialized provider repository with a synthetic provider. Two cards plus ordinary goods per basket; concurrency dispatch once; offline/foreign terminal refusal; native audit corruption refusal; explicit RBS provenance/no fake fiscal number; repeated employee PIN delivery403; full ftext/Netlink regression and real mounted POS recovery. Native test commits only synthetic local data and drops its isolated test DB. Node20 frontend build PASS; git diff --check PASS. Full CI and exact central deployment pending.

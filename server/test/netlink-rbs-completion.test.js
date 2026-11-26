@@ -1,3 +1,4 @@
+import {recoveryFingerprint} from '../src/integrations/netlink/paid-recovery.js';
 import {cp1253Bytes} from '../src/rbs-capdriver-v1.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,6 +19,10 @@ for(const method of ['CASH','CARD'])test(`RBS ${method} uses native completion w
  const f=rbsFixture(method),rbsCommit=assertRbsNativeCompletion(f);
  const proof={...f,rbsCommit,lines:[{productId:'CARD',quantity:1,unitPrice:5,lineTotal:5},{productId:'FEE',quantity:1,unitPrice:.5,lineTotal:.5}],payments:[{method,amount:7.5}],cashConfirmation:{...f.scope,requestId:id,checkoutId:'checkout',actorId:'operator',receivedAt:new Date(),amount:7.5},cardProof:{...f.scope,saleId:'sale',clientTransactionId:'checkout',status:'SUCCESS',method:'CARD',amount:7.5,evidenceId:'rbs'}};
  assert.equal(assertNetlinkPaidSale(proof).fiscalNumber,null);
+ const recoveryRow={...f.intent,saleId:'sale',providerDispatchedAt:new Date(),fiscalNumber:null,fiscalEvidence:{type:'RBS_NATIVE_COMMIT',id:'rbs'}};
+ const fingerprint=recoveryFingerprint(recoveryRow,proof);assert.equal(typeof fingerprint,'string');
+ assert.throws(()=>recoveryFingerprint({...recoveryRow,fiscalEvidence:{type:'RBS_NATIVE_COMMIT',id:'other'}},proof));
+ assert.notEqual(recoveryFingerprint(recoveryRow,{...proof,rbsCommit:{...rbsCommit,issuedAt:'changed'}}),fingerprint);
  assert.throws(()=>assertNetlinkPaidSale({...proof,rbsCommit:null}),e=>e.code==='NETLINK_FISCAL_RECEIPT_REQUIRED');
  assert.throws(()=>assertNetlinkPaidSale({...proof,rbsCommit:null,fiscal:{...f.scope,saleId:'sale',status:'ISSUED',fiscalNumber:'OTHER/1/42'}}),e=>e.code==='NETLINK_FISCAL_RECEIPT_REQUIRED');
  assert.throws(()=>assertNetlinkPaidSale({...proof,payments:[{method,amount:5.5}]}));

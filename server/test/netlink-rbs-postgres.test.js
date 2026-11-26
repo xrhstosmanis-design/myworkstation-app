@@ -7,7 +7,7 @@ const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process
 test('native RBS readiness → real cash/card finalizers → SQL/HTTP once-only Netlink issuance',{skip:!isolated()},async()=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),name='netlink_rbs_test_'+randomUUID().replaceAll('-','');
  const url=new URL(process.env.DATABASE_URL);url.pathname='/'+name;url.searchParams.delete('schema');
- let db,server;const key=process.env.INTEGRATION_CREDENTIALS_KEY,enabled=process.env.NETLINK_ENABLE_EXECUTE;
+ let db,server;const key=process.env.INTEGRATION_CREDENTIALS_KEY,enabled=process.env.NETLINK_ENABLE_EXECUTE,recoveryEnabled=process.env.NETLINK_ENABLE_PAID_RECOVERY;
  try{
   await admin.$executeRawUnsafe(`CREATE DATABASE "${name}"`);db=new PrismaClient({datasourceUrl:url.toString()});
   process.env.INTEGRATION_CREDENTIALS_KEY='synthetic-rbs-key';process.env.NETLINK_ENABLE_EXECUTE='true';
@@ -49,11 +49,13 @@ test('native RBS readiness → real cash/card finalizers → SQL/HTTP once-only 
   }
   const {ensureNetlinkPaidIssuanceSchema}=await import('../src/integrations/netlink/paid-issuance-schema.js');await ensureNetlinkPaidIssuanceSchema(db);
   await db.$executeRawUnsafe(`INSERT INTO "NetlinkStoreConfig"("storeId","companyId","saleProductId","serviceFeeProductId") VALUES('store','company','value','fee')`);
+  await db.$executeRawUnsafe(`CREATE TABLE "StoreIntegrationCredential"("companyId" text,"storeId" text,"kind" text,"accountHint" text,"enabled" boolean,"updatedAt" timestamptz DEFAULT NOW())`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreIntegrationCredential"("companyId","storeId","kind","accountHint","enabled") VALUES('company','store','NETLINK','12345',true)`);
   const {prepareNetlinkPaidCheckout}=await import('../src/integrations/netlink/paid-checkout-readiness.js');
   const {finalizeDispatchedCashRequest,finalizeConfirmedCardRequest}=await import('../src/rbs-capdriver-v1-sale-finalize.js');
   const {createPaidNetlinkRouter}=await import('../src/routes/netlink-paid-issuance.js'),express=(await import('express')).default;
-  let calls=0;
-  const provider=()=>({menu:async()=>({groups:[{products:[{productId:'synthetic5',title:'Synthetic card 5€',flow:'execute'}]}]}),execute:async(id,body)=>{calls++;return {data:{requestId:body.requestId,transactionId:'synthetic-'+body.requestId,amount:5,lines:['SYNTHETIC-PIN']}}}});
+  let calls=0,failNext=false;
+  const provider=()=>({menu:async()=>({groups:[{products:[{productId:'synthetic5',title:'Synthetic card 5€',flow:'execute'}]}]}),execute:async(id,body)=>{calls++;if(failNext){failNext=false;throw Error('SYNTHETIC NONEXECUTION');}return {data:{requestId:body.requestId,transactionId:'synthetic-'+body.requestId,amount:5,lines:['SYNTHETIC-PIN']}}}});
   const app=express();app.use(express.json());app.use((req,res,next)=>{req.user={id:'operator',companyId:'company',role:'EMPLOYEE',tokenType:'STORE_OPERATOR',storeId:'store',terminalPos:req.headers['x-test-terminal']||'POS1'};next()});
   app.use(createPaidNetlinkRouter({db,provider,prepareCheckout:prepareNetlinkPaidCheckout,storeFor:async(req,id)=>{if(id!=='store')throw Object.assign(Error('scope'),{status:403})}}));app.use((e,req,res,next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
@@ -85,7 +87,18 @@ test('native RBS readiness → real cash/card finalizers → SQL/HTTP once-only 
    await db.$executeRaw`UPDATE "StoreOperatorAudit" SET "details"=${JSON.stringify(audit.details)}::jsonb WHERE "details"->>'saleId'=${committed.saleId}`;
    assert.equal((await post(`/issuance-intents/${ids[0]}/issue`,{storeId:'store'},'POS2')).body.code,'NETLINK_CHECKOUT_TERMINAL');
    const issued=await Promise.all([post(`/issuance-intents/${ids[0]}/issue`,{storeId:'store'}),post(`/issuance-intents/${ids[0]}/issue`,{storeId:'store'})]);assert.ok(issued.some(r=>r.body.status==='COMPLETED'),JSON.stringify(issued));
-   assert.equal((await post(`/issuance-intents/${ids[1]}/issue`,{storeId:'store'})).body.status,'COMPLETED');assert.equal(calls,method==='CASH'?2:4);
+   if(method==='CASH')assert.equal((await post(`/issuance-intents/${ids[1]}/issue`,{storeId:'store'})).body.status,'COMPLETED');
+   else{
+    failNext=true;assert.equal((await post(`/issuance-intents/${ids[1]}/issue`,{storeId:'store'})).body.status,'UNKNOWN');
+    assert.equal((await post(`/issuance-intents/${ids[1]}/issue`,{storeId:'store'})).body.status,'UNKNOWN');assert.equal(calls,4);
+    const row=(await db.$queryRaw`SELECT * FROM "NetlinkTransaction" WHERE "requestId"=${ids[1]}`)[0];
+    const {createNetlinkPaidRecovery}=await import('../src/integrations/netlink/paid-recovery.js');const recovery=createNetlinkPaidRecovery({db,provider});
+    await recovery.authorize({companyId:'company',storeId:'store'},ids[1],{actorId:'manager',providerReference:'SYNTHETIC CONFIRMED NOT EXECUTED',confirmedAt:new Date().toISOString(),expectedUpdatedAt:row.updatedAt.toISOString(),expectedStationId:'12345'});
+    process.env.NETLINK_ENABLE_PAID_RECOVERY='true';
+    const recovered=await post(`/issuance-intents/${ids[1]}/recover-paid`,{storeId:'store',fulfillExistingPaidPurchase:true});assert.equal(recovered.body.status,'COMPLETED',JSON.stringify(recovered));
+    assert.equal((await post(`/issuance-intents/${ids[1]}/recover-paid`,{storeId:'store',fulfillExistingPaidPurchase:true})).body.status,'COMPLETED');
+   }
+   assert.equal(calls,method==='CASH'?2:5);
    const rows=await db.$queryRaw`SELECT "fiscalNumber","fiscalEvidence" FROM "NetlinkTransaction" WHERE "checkoutId"=${checkout}`;assert.ok(rows.every(r=>r.fiscalNumber===null&&r.fiscalEvidence.type==='RBS_NATIVE_COMMIT'));
    const delivery=await post(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'});assert.equal(delivery.status,200);assert.equal((await post(`/issuance-intents/${ids[0]}/receipt`,{storeId:'store'})).status,403);assert.equal((await finalizer(requestId,{db})).skipped,true);
   }
@@ -95,6 +108,6 @@ test('native RBS readiness → real cash/card finalizers → SQL/HTTP once-only 
   assert.equal(Number((await db.$queryRawUnsafe(`SELECT "currentStock" FROM "StoreProduct" WHERE "productId"='fee'`))[0].currentStock),0);
  }finally{
   if(server)await new Promise(r=>server.close(r));if(db)await db.$disconnect();await admin.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${name}"`);await admin.$disconnect();
-  key===undefined?delete process.env.INTEGRATION_CREDENTIALS_KEY:process.env.INTEGRATION_CREDENTIALS_KEY=key;enabled===undefined?delete process.env.NETLINK_ENABLE_EXECUTE:process.env.NETLINK_ENABLE_EXECUTE=enabled;
+  key===undefined?delete process.env.INTEGRATION_CREDENTIALS_KEY:process.env.INTEGRATION_CREDENTIALS_KEY=key;enabled===undefined?delete process.env.NETLINK_ENABLE_EXECUTE:process.env.NETLINK_ENABLE_EXECUTE=enabled;recoveryEnabled===undefined?delete process.env.NETLINK_ENABLE_PAID_RECOVERY:process.env.NETLINK_ENABLE_PAID_RECOVERY=recoveryEnabled;
  }
 });
