@@ -28,19 +28,23 @@ export default function SupplierPriceComparisonPanel({api,storeId}){
       if(!groups.has(row.productId))groups.set(row.productId,{id:row.productId,name:row.productName,sku:row.sku,unitLabel:row.unitLabel,suppliers:[]});
       groups.get(row.productId).suppliers.push(row);
     });
-    return [...groups.values()].filter(product=>searchText([product.name,product.sku,...product.suppliers.map(row=>row.supplierName)].join(" ")).includes(searchText(query.trim())));
+    const terms=searchText(query.trim()).split(/\s+/).filter(Boolean);
+    return [...groups.values()].filter(product=>{
+      const item=searchText([product.name,product.sku].join(" "));
+      return terms.every(term=>item.includes(term));
+    });
   },[rows,query]);
   return <section className="commerce-box supplier-comparison" aria-label="Σύγκριση Προμηθευτών">
     <div className="supplier-comparison-head"><div><h3>Σύγκριση Προμηθευτών</h3><p>Κόστος ανά κοινή μονάδα από εγκεκριμένες αγορές του επιλεγμένου καταστήματος.</p></div><button className="commerce-primary" disabled={loading||!storeId} onClick={load}>Ανανέωση σύγκρισης</button></div>
     <div className="supplier-comparison-filters">
-      <label>Προϊόν, κωδικός ή προμηθευτής<input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Αναζήτηση στη σύγκριση"/></label>
+      <label>Αναζήτηση είδους<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Όνομα ή κωδικός είδους"/></label>
       <label>Βάση σύγκρισης<select value={basis} onChange={e=>setBasis(e.target.value)}><option value="lastCost">Τελευταία αγορά ανά προμηθευτή</option><option value="bestCost">Χαμηλότερη ιστορική τιμή</option></select></label>
     </div>
     <div className="supplier-comparison-body" aria-busy={loading}>
       {error?<div className="commerce-error" role="alert">{error} Πάτησε «Ανανέωση σύγκρισης» για νέα προσπάθεια.</div>
         :loading?<div role="status">Φόρτωση εγκεκριμένων αγορών…</div>
         :!storeId?<div className="supplier-comparison-empty">Επίλεξε κατάστημα για σύγκριση.</div>
-        :rows.length===0?<div className="supplier-comparison-empty">Δεν υπάρχουν εγκεκριμένες αγορές με συνδεδεμένο προϊόν και προμηθευτή σε αυτό το κατάστημα.</div>
+        :rows.length===0?<div className="supplier-comparison-empty">Δεν υπάρχουν είδη με καταχωρισμένη αγορά από τουλάχιστον δύο διαφορετικούς προμηθευτές σε αυτό το κατάστημα.</div>
         :products.length===0?<div className="supplier-comparison-empty">Δεν βρέθηκαν προϊόντα με αυτή την αναζήτηση.</div>
         :<><p className="supplier-comparison-status" role="status">{products.length} {products.length===1?"προϊόν":"προϊόντα"} · {basis==="lastCost"?"Σύγκριση τελευταίων αγορών":"Σύγκριση ιστορικών ελαχίστων"} · χωρίς ΦΠΑ</p><div className="supplier-comparison-products">{products.map(product=>{
           const suppliers=[...product.suppliers].sort((a,b)=>validCost(a[basis])&&validCost(b[basis])?Number(a[basis])-Number(b[basis]):validCost(a[basis])?-1:validCost(b[basis])?1:String(a.supplierName).localeCompare(String(b.supplierName),"el"));

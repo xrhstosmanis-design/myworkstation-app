@@ -36,13 +36,12 @@ export async function readSupplierComparison(db,{companyId,storeId,month}) {
           AND po."status" IN ('FINAL','INVOICED') AND pl."productId"=p."id"
       ) original ON d."sourceType"='PURCHASE_ORDER'
       WHERE d."companyId"=${companyId} AND d."storeId"=${storeId}
-        AND d."status"='APPROVED' AND d."documentType"='INVOICE'
+        AND d."status"='APPROVED' AND d."documentType"='INVOICE' AND l."quantity">0
         AND (${fromDay}::date IS NULL OR (d."documentDate">=${fromDay}::date
           AND d."documentDate"<${fromDay}::date + INTERVAL '1 month'))
       ORDER BY p."name",s."name",d."documentDate" DESC,d."createdAt" DESC,d."id",l."id"
     `;
     const suppliers = buildSupplierPriceComparison(lines);
-    if (!month) return suppliers;
 
     const products = new Map();
     for (const supplier of suppliers) {
@@ -50,7 +49,10 @@ export async function readSupplierComparison(db,{companyId,storeId,month}) {
       group.push(supplier);
       products.set(supplier.productId, group);
     }
-    return [...products.values()].filter(group => group.length >= 2).map(group => {
+    const eligibleProducts = [...products.values()].filter(group => group.length >= 2);
+    if (!month) return eligibleProducts.flat();
+
+    return eligibleProducts.map(group => {
       const {productId,productName,unitLabel} = group[0];
       const comparable = group.filter(supplier => supplier.lastCost > 0);
       const lowestCost = comparable.length >= 2 ? Math.min(...comparable.map(supplier => supplier.lastCost)) : null;

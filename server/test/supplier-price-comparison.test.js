@@ -66,14 +66,14 @@ test("comparison route uses the licensed target store/company and only reads app
   const registrations=[];
   const router=Object.fromEntries(["get","post","patch","put","delete","use"].map(method=>[method,(...args)=>registrations.push({method,args})]));
   const queries=[];
-  const prisma={$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join("?"),values});return [line({netAmount:10})];},$executeRaw:()=>{throw new Error("Unexpected write");}};
+  const prisma={$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join("?"),values});return [line({netAmount:10}),line({supplierId:"s2",netAmount:20}),line({productId:"single",netAmount:10})];},$executeRaw:()=>{throw new Error("Unexpected write");}};
   const module=source.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"");
   new Function("Router","prisma","requireCompanyModule","requireStoreModule","readSupplierComparison","orderSuggestionsRouter","lowValueProductsRouter",module)(()=>router,prisma,()=>()=>{},key=>{assert.equal(key,"INVENTORY");return "STORE_LICENSE_GUARD";},readSupplierComparison,()=>{},()=>{});
   const route=registrations.find(r=>r.method==="get"&&r.args[0]==="/supplier-price-comparison");
   assert.equal(route.args[1],"STORE_LICENSE_GUARD");
   let body,error;
   await route.args[2]({user:{companyId:"different-login-company"},targetStore:{id:"target-store",companyId:"target-company"}},{json:data=>{body=data;}},e=>{error=e;});
-  assert.equal(error,undefined);assert.equal(body[0].lastCost,1);
+  assert.equal(error,undefined);assert.equal(body[0].lastCost,1);assert.equal(body.length,2);
   const {sql,values}=queries[0];
   assert.match(sql,/d\."status"='APPROVED' AND d\."documentType"='INVOICE'/);
   assert.match(sql,/p\."companyId"=\?/);assert.match(sql,/s\."companyId"=\?/);assert.match(sql,/d\."storeId"=\?/);

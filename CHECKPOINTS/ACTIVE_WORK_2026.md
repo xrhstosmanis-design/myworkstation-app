@@ -1,3 +1,5 @@
+- 26/11/2026 · Νο 8 · Σύγκριση πραγματικών αγορών ανά είδος · [Checkpoint](CHANGES/2026-11-26-supplier-comparison-purchased-products.md).
+
 - 26/11/2026 · [Ριζάρειο: χρόνος παραλαβής αποτελέσματος FTEXT](CHANGES/2026-11-26-ftext-result-received-at.md) · Εκκρεμεί μέτρηση μετά την εγκατάσταση.
 
 - 26/11/2026 · [Ριζάρειο: ετοιμότητα στη διαδοχική πληρωμή](CHANGES/2026-11-26-ftext-consecutive-checkout.md) · Εκκρεμεί αποδοχή στο LAB.

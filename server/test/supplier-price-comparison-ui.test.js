@@ -81,10 +81,10 @@ test("supplier comparison production panel: isolated React/DOM acceptance",async
       assert.equal(cells(rows()[0])[4],"—");
       assert.match(body(),/χρειάζεται δεύτερος προμηθευτής/);
     });
-    await t.test("Greek search matches accents, SKU and supplier; missing query is empty",async()=>{
+    await t.test("Item search matches unaccented names and SKU, and ignores supplier names",async()=>{
       await mount(async()=>pair,"search");
-      for(const query of ["καφες","FIX-29","αλφα"]){await search(query);assert.equal(rows().length,3,query);}
-      await search("not-a-product");assert.equal(rows().length,0);assert.match(body(),/Δεν βρέθηκαν προϊόντα/);
+      for(const query of ["καφες","FIX-29","FIX-29 καφες"]){await search(query);assert.equal(rows().length,3,query);}
+      await search("αλφα");assert.equal(rows().length,0);assert.match(body(),/Δεν βρέθηκαν προϊόντα/);
       await search("");assert.equal(rows().length,3);
     });
     await t.test("loading, API rejection and malformed reply recover through the real refresh button",async()=>{
