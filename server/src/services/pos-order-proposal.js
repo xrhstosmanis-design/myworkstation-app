@@ -14,12 +14,42 @@ export function parsePosProposalOptions(query={},now=new Date()){
  if(!Number.isInteger(days)||days<1||days>366||toDate>today)throw proposalError(400,'Επίλεξε περίοδο πωλήσεων 1–366 ημερών, έως σήμερα.');
  return {supplierId:raw.supplierId,options:{historyDays:days,coverageDays:raw.coverageDays,leadDays:raw.leadDays},salesPeriod:{from,toExclusive},period:{fromDate,toDate,days,timeZone:'Europe/Athens'}};
 }
-export async function readPosProposalSuppliers(db,{storeId,companyId}){
+// Estimate coverage between deliveries from distinct local receipt days.
+export function estimateReceiptCadence(days, today){
+ const uniqueDays=[...new Set(days)].sort();
+ if(uniqueDays.length<4)return null;
+ const toDay=date=>Date.parse(date+'T00:00:00Z')/86400000;
+ const gaps=uniqueDays.slice(1).map((day,index)=>toDay(day)-toDay(uniqueDays[index])).sort((a,b)=>a-b);
+ const middle=Math.floor(gaps.length/2);
+ const coverageDays=Math.ceil(gaps.length%2?gaps[middle]:(gaps[middle-1]+gaps[middle])/2);
+ const latestReceipt=uniqueDays.at(-1);
+ if(coverageDays<1||coverageDays>60||toDay(today)-toDay(latestReceipt)>Math.max(14,coverageDays*2))return null;
+ return {coverageDays,receiptDays:uniqueDays.length,latestReceipt};
+}
+
+export async function readPosProposalSuppliers(db,{storeId,companyId,includeCadence=false,now=new Date()}){
  const rows=await db.$queryRaw`SELECT s."id",s."name",s."email" FROM "Supplier" s WHERE s."companyId"=${companyId} AND s."active"=TRUE AND (
   EXISTS(SELECT 1 FROM "PurchaseOrder" o WHERE o."companyId"=${companyId} AND o."storeId"=${storeId} AND o."supplierId"=s."id")
   OR EXISTS(SELECT 1 FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."supplierId"=s."id" AND d."status"='APPROVED' AND d."documentType"='INVOICE')) ORDER BY s."name",s."id" LIMIT 1001`;
  if(rows.length>1000)throw proposalError(422,'Η λίστα προμηθευτών υπερβαίνει το όριο προβολής.');
- return rows;
+ if(!includeCadence||!rows.length)return rows;
+ const today=greeceDateInput(now);
+ const from=greeceRangeDate(shiftDate(today,-55)).toISOString().slice(0,-1);
+ const until=now.toISOString().slice(0,-1);
+ const receipts=await db.$queryRaw`
+  SELECT DISTINCT o."supplierId", ((m."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Athens')::date::text AS day
+  FROM "PurchaseOrder" o
+  JOIN "StockMovement" m ON m."sourceId"=o."id" AND m."storeId"=o."storeId"
+  WHERE o."companyId"=${companyId} AND o."storeId"=${storeId}
+    AND o."supplierId" IS NOT NULL AND o."status" IN ('FINAL','INVOICED')
+    AND m."sourceType"='PURCHASE_ORDER' AND m."movementType"='PURCHASE' AND m."quantity">0
+    AND m."createdAt">=${from}::timestamp AND m."createdAt"<=${until}::timestamp`;
+ const daysBySupplier=new Map();
+ for(const receipt of receipts){
+  if(!daysBySupplier.has(receipt.supplierId))daysBySupplier.set(receipt.supplierId,[]);
+  daysBySupplier.get(receipt.supplierId).push(receipt.day);
+ }
+ return rows.map(supplier=>({...supplier,receiptCadence:estimateReceiptCadence(daysBySupplier.get(supplier.id)||[],today)}));
 }
 export async function readPosOrderProposal(db,scope){
  return db.$transaction(async tx=>{

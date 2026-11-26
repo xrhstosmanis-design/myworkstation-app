@@ -30,6 +30,7 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
   return()=>{live=false};
  },[api,store.id,open,allowed,request,dirty]);
  if(!allowed)return null;
+ const cadence=suppliers.find(s=>s.id===filters.supplierId)?.receiptCadence;
  const rows=data?posProposalRows(data,q):[],ready=Boolean(data?.reportId)&&!dirty&&!busy&&rows.length>0;
  const change=(key,value)=>{setFilters(current=>({...current,[key]:value}));setData(null);setError('');setMessage('');setEmailOpen(false);if(key==='supplierId')setRecipients(suppliers.find(s=>s.id===value)?.email||'')};
  const calculate=e=>{e.preventDefault();setRequest({...filters});setEmailOpen(false)};
@@ -52,6 +53,11 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
    <label>Ημέρες μέχρι παράδοση<input aria-label="Ημέρες μέχρι παράδοση" type="number" min="0" max="30" required value={filters.leadDays} disabled={sending} onChange={e=>change('leadDays',e.target.value)}/></label>
    <button type="submit" disabled={busy||sending}>{busy?'Υπολογισμός…':'Υπολογισμός πρότασης'}</button>
   </form>
+  {filters.supplierId&&<div className="pos-order-proposals-hint">
+   {cadence?<><span>Κάλυψη βάσει παραλαβών: {cadence.coverageDays} ημέρες ({cadence.receiptDays} ημέρες με καταχωρισμένη παραλαβή στις τελευταίες 56).</span>{' '}
+    <button type="button" disabled={sending||Number(filters.coverageDays)===cadence.coverageDays} onClick={()=>change('coverageDays',String(cadence.coverageDays))}>Χρήση προτεινόμενης κάλυψης</button></>
+    :<span>Χρειάζονται περισσότερες πρόσφατες ημέρες παραλαβής για εκτίμηση κάλυψης.</span>}
+  </div>}
   <p className="pos-order-proposals-hint">Περίοδος πωλήσεων έως 366 ημέρες, με τις δύο ημερομηνίες μέσα στον υπολογισμό. Τα είδη προμηθευτή προκύπτουν από προηγούμενες εγκεκριμένες αγορές του καταστήματος. Η σημερινή ημέρα μπορεί να είναι μερική.</p>
   {data&&<p>Χρησιμοποιείται το τρέχον αποθηκευμένο alarm. {data?.automaticAlarm?'Η εβδομαδιαία αυτόματη αναπροσαρμογή είναι ενεργοποιημένη.':'Η εβδομαδιαία αυτόματη αναπροσαρμογή δεν είναι ενεργή.'}</p>}
   {dirty&&<p role="status">Άλλαξαν τα κριτήρια. Πάτησε «Υπολογισμός πρότασης».</p>}
