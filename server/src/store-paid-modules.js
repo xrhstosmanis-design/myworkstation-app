@@ -1,5 +1,5 @@
 import {prisma} from "./prisma.js";
-import {moduleCatalog} from "./services/module-catalog.js";
+import {storeModuleCatalog} from "./services/module-catalog.js";
 import {
   AI_STAFF_SCHEDULER,
   PERSONNEL_AI,
@@ -56,7 +56,7 @@ async function storePaidModuleRows(storeId){
 export async function storePaidModuleCatalogStates(storeId,now=new Date()){
   const rows=await storePaidModuleRows(storeId);
   const byKey=new Map(rows.map(row=>[row.moduleKey,row]));
-  return moduleCatalog.map(definition=>{
+  return storeModuleCatalog.map(definition=>{
     const row=byKey.get(definition.key);
     return {
       ...definition,

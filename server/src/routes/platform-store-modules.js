@@ -3,7 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
-import {moduleCatalog,moduleKeys} from "../services/module-catalog.js";
+import {storeModuleCatalog,storeModuleKeys} from "../services/module-catalog.js";
 import {companyModuleState} from "../middleware/module-access.js";
 import {buildModuleAccessMatrix} from "../services/module-access-matrix.js";
 import platformWorkforceV2Routes from "./platform-workforce-v2.js";
@@ -45,12 +45,12 @@ async function moduleResponse(store){
   const companyActive=new Set(companyModules.filter(row=>row.active&&(!row.startsAt||row.startsAt<=now)&&(!row.endsAt||row.endsAt>=now)).map(row=>row.moduleKey));
   return {
     store,
-    catalog:moduleCatalog,
+    catalog:storeModuleCatalog,
     modules:storeModules.map(module=>({
       ...module,
-      companyActive:companyActive.has(module.key),
-      effectiveActive:module.configured?module.active:companyActive.has(module.key),
-      inheritedFromCompany:!module.configured&&companyActive.has(module.key)
+      companyActive:!module.storeOnly&&companyActive.has(module.key),
+      effectiveActive:module.configured?module.active:!module.storeOnly&&companyActive.has(module.key),
+      inheritedFromCompany:!module.storeOnly&&!module.configured&&companyActive.has(module.key)
     })),
     packages:PERSONNEL_PACKAGE_DEFINITIONS,
     states:resolved.states,
@@ -80,7 +80,7 @@ router.get("/companies/:companyId/stores/:storeId/access-matrix",async(req,res,n
       store,
       checkedAt:new Date().toISOString(),
       ...buildModuleAccessMatrix({
-        catalog:moduleCatalog,
+        catalog:storeModuleCatalog,
         licenseAllowed:license.licenseAllowed,
         companyActiveModules:license.activeModules,
         storeModules
@@ -94,7 +94,7 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
     await ensureStorePaidModulesSchema();
     await ownedStore(req.params.companyId,req.params.storeId);
     const body=z.object({
-      moduleKey:z.enum([...new Set([...PERSONNEL_WRITABLE_MODULE_KEYS,...moduleKeys])]).optional().default(AI_STAFF_SCHEDULER),
+      moduleKey:z.enum([...new Set([...PERSONNEL_WRITABLE_MODULE_KEYS,...storeModuleKeys])]).optional().default(AI_STAFF_SCHEDULER),
       active:z.boolean(),
       monthlyPrice:z.coerce.number().min(0).max(100000),
       startsAt:z.string().datetime().nullable().optional(),
@@ -106,7 +106,7 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
 
     if(body.moduleKey==="CORE"&&!body.active)return res.status(400).json({error:"Το MyWorkStation Core δεν μπορεί να απενεργοποιηθεί για κατάστημα."});
     const store=await withStoreModuleMutation(prisma,{companyId:req.params.companyId,storeId:req.params.storeId},async({tx,store})=>{
-      const catalogModule=moduleCatalog.find(module=>module.key===body.moduleKey);
+      const catalogModule=storeModuleCatalog.find(module=>module.key===body.moduleKey);
       if(body.active&&catalogModule&&!catalogModule.commercialReady){
         const companyModule=await tx.companyModule.findUnique({where:{companyId_moduleKey:{companyId:store.companyId,moduleKey:body.moduleKey}},select:{active:true}});
         if(!companyModule?.active)throw Object.assign(new Error(`Το module «${catalogModule.name}» δεν είναι ακόμη διαθέσιμο για εμπορική ενεργοποίηση.`),{status:400});

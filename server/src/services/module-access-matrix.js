@@ -11,7 +11,7 @@ export function buildModuleAccessMatrix({catalog=[],licenseAllowed=false,company
   const storeByKey=new Map(storeModules.map(module=>[module.key,module]));
   const rows=catalog.map(module=>{
     const storeState=storeByKey.get(module.key);
-    const companyEnabled=Boolean(licenseAllowed)&&companyActive.has(module.key);
+    const companyEnabled=Boolean(licenseAllowed)&&!module.storeOnly&&companyActive.has(module.key);
     const effectiveActive=Boolean(licenseAllowed)&&(storeState?.configured?Boolean(storeState.active):companyEnabled);
     const employeeRoleAllowed=userMayAccessModule({role:"EMPLOYEE"},module.key);
     const employeeWithPermission=userMayAccessModule({role:"EMPLOYEE",permissions:[`MODULE:${module.key}`]},module.key);
@@ -20,7 +20,7 @@ export function buildModuleAccessMatrix({catalog=[],licenseAllowed=false,company
       name:module.name,
       category:module.category,
       commercialReady:Boolean(module.commercialReady),
-      source:storeState?.configured?"STORE_OVERRIDE":"COMPANY",
+      source:module.storeOnly||storeState?.configured?"STORE_OVERRIDE":"COMPANY",
       companyActive:companyEnabled,
       storeConfigured:Boolean(storeState?.configured),
       effectiveActive,

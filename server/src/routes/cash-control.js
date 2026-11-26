@@ -1,3 +1,7 @@
+import {sendDigitalWorkCardAlert} from "../services/digital-work-card-alerts.js";
+import {isErganiTrialEmployee} from "./digital-work-card-trial-clock.js";
+import {openCashShiftWithWorkCard} from "../services/digital-work-card-recording.js";
+import {cashShiftRequiresDigitalDeparture} from "../services/digital-work-card-departure.js";
 import {readCashExpenseEvidence,cashExpenseFindings} from "../services/cash-expense-evidence.js";
 import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {readCashReviewEvidence} from "../services/cash-review-evidence.js";
@@ -588,7 +592,11 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
       JOIN "StoreOperatorSession" os ON os."operatorId"=c."id" AND os."companyId"=c."companyId" AND os."storeId"=c."storeId"
       LEFT JOIN "StoreOperatorProfile" p ON p."employeeId"=c."employeeId" AND p."storeId"=c."storeId" AND p."companyId"=c."companyId"
       WHERE c."id"=${credential.id} AND os."id"=${req.user.operatorSessionId} AND os."revokedAt" IS NULL AND os."expiresAt">NOW()`;
-    return access?.posAccess===true?insertSession(tx):null;
+    if(access?.posAccess!==true)return null;
+    if(isErganiTrialEmployee(req.user,store.id)){
+      return openCashShiftWithWorkCard(tx,{storeId:store.id,employeeId:req.user.employeeId,cashShiftId:sessionId},insertSession);
+    }
+    return insertSession(tx);
   }):insertSession(prisma));
   if(!rows)return res.status(403).json({error:"Η πρόσβαση POS του χειριστή δεν είναι πλέον ενεργή.",code:"STORE_OPERATOR_POS_ACCESS_DISABLED"});
 
@@ -630,6 +638,18 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     if(req.user?.staffAccess===true&&String(session.terminalPos||'MAIN').toUpperCase()!==await requestTerminal(req))throw Object.assign(new Error('Επίλεξε το ταμείο της βάρδιας.'),{status:403});
     const authentication=await verifyShiftCloseCredential(tx,req.user,session,body);
     if(!authentication.ok)return {authFailed:authentication};
+    if(isErganiTrialEmployee(req.user,session.storeId) && session.openedBy===req.user.id){
+      const scope={storeId:session.storeId,employeeId:req.user.employeeId,cashShiftId:session.id};
+      const workSessions=await tx.digitalWorkSession.findMany({
+        where:{...scope,entryStatus:"ACCEPTED"},
+        select:{id:true,entryAt:true,departureAt:true,departureStatus:true}
+      });
+      const pendingDeparture=workSessions.find(row=>cashShiftRequiresDigitalDeparture({
+        ...scope,workSession:{...scope,entryAcceptedAt:row.entryAt,
+          departureAcceptedAt:row.departureStatus==="ACCEPTED"?row.departureAt:null}
+      }));
+      if(pendingDeparture)return {digitalDepartureRequired:true,storeId:session.storeId,workSessionId:pendingDeparture.id};
+    }
     const pendingInvoices=await checkClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session});
     if(pendingInvoices.confirmationRequired)return {pendingInvoiceConfirmationRequired:true,pendingInvoices};
     // KAT_SAFE_VAULT_CLOSE_ALERT_V1
@@ -660,6 +680,14 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
   if(closeResult.authFailed)return res.status(closeResult.authFailed.status).json({code:closeResult.authFailed.code,error:closeResult.authFailed.error});
+  if(closeResult.digitalDepartureRequired){
+    void sendDigitalWorkCardAlert({
+      db:prisma, companyId:req.user.companyId, storeId:closeResult.storeId,
+      sessionId:closeResult.workSessionId, kind:"CLOSE_PENDING",
+      audience:"LAB", trialRecipients:process.env.ERGANI_TRIAL_ALERT_RECIPIENTS
+    }).catch(() => console.warn("Digital Work Card trial alert could not be recorded."));
+    return res.status(409).json({code:"DIGITAL_WORK_DEPARTURE_REQUIRED",error:"ΧΡΕΙΑΖΕΤΑΙ ΣΗΜΑΝΣΗ ΑΠΟΧΩΡΗΣΗΣ. Χτύπησε την Ψηφιακή σου Κάρτα και δοκίμασε ξανά."});
+  }
   if(closeResult.pendingInvoiceConfirmationRequired)return res.status(409).json({code:"MISSING_INVOICES_CONFIRMATION_REQUIRED",error:"Υπάρχουν εκκρεμότητες τιμολογίων. Σύνδεσε τα παραστατικά με τις υπάρχουσες πληρωμές πριν κλείσεις τη βάρδια.",pendingInvoices:closeResult.pendingInvoices});
   if(closeResult.recountRequired)return res.status(409).json({code:"SHIFT_RECOUNT_REQUIRED",error:`Βρέθηκε έλλειμμα ${Number(closeResult.shortage).toFixed(2)} €. Θέλεις να ξαναμετρήσεις; Πάτησε ΝΑΙ για επανακαταμέτρηση ή ΟΧΙ για κλείσιμο της βάρδιας με καταγεγραμμένο έλλειμμα. Η απόπειρα και τα ποσά καταγράφηκαν στα Συμβάντα.`,...closeResult});
   const {closed,storeId,safeChange,attendanceSync}=closeResult;

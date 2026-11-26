@@ -138,6 +138,7 @@ import commerceV1Routes from "./routes/commerce-v1.js";
 import expenseDocumentRoutes from "./routes/expense-documents.js";
 import mobileInvoiceUploadRoutes from "./routes/mobile-invoice-upload.js";
 import attendanceRoutes from "./routes/attendance.js";
+import digitalWorkCardRoutes from "./routes/digital-work-card.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
 import connectorObserverRoutes from "./routes/connector-observer.js";
 import fiscalBridgeDryRunRoutes from "./routes/fiscal-bridge-dry-run.js";
@@ -412,6 +413,7 @@ app.use("/api/platform/weekly-stock-alarm-installation/stores/:storeId",auth,cre
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
+app.use("/api/digital-work-card",auth,digitalWorkCardRoutes);
 app.use("/api/logistics",auth,requireCompanyModule("INVENTORY"),providerLogisticsRoutes);
 app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),connectorObserverRoutes);
 app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),fiscalBridgeDryRunRoutes);

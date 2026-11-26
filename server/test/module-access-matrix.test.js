@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {buildModuleAccessMatrix} from "../src/services/module-access-matrix.js";
 
+import {DIGITAL_WORK_CARD,moduleKeys,storeModuleCatalog} from "../src/services/module-catalog.js";
+
 const catalog=[
   {key:"CORE",name:"Core",category:"CORE",commercialReady:true},
   {key:"PROFITABILITY",name:"Κερδοφορία",category:"REPORTS",commercialReady:false}
@@ -42,4 +44,17 @@ test("Super Admin exposes a read-only access matrix in the store controls",async
   assert.match(route,/buildModuleAccessMatrix/);
   assert.match(ui,/Έλεγχος δικαιωμάτων/);
   assert.match(ui,/Μόνιμη πρόσβαση/);
+});
+
+test("Digital Work Card requires an active store entitlement and cannot inherit a company entitlement",()=>{
+  const definition=storeModuleCatalog.find(item=>item.key===DIGITAL_WORK_CARD);
+  assert.ok(definition);
+  assert.equal(moduleKeys.includes(DIGITAL_WORK_CARD),false);
+
+  const options={catalog:[definition],licenseAllowed:true,companyActiveModules:[DIGITAL_WORK_CARD]};
+  const storeOverride={key:DIGITAL_WORK_CARD,configured:true,active:true};
+  assert.equal(buildModuleAccessMatrix(options).rows[0].effectiveActive,false);
+  assert.equal(buildModuleAccessMatrix({...options,storeModules:[storeOverride]}).rows[0].effectiveActive,true);
+  assert.equal(buildModuleAccessMatrix({...options,storeModules:[{...storeOverride,active:false}]}).rows[0].effectiveActive,false);
+  assert.equal(buildModuleAccessMatrix({...options,licenseAllowed:false,storeModules:[storeOverride]}).rows[0].effectiveActive,false);
 });

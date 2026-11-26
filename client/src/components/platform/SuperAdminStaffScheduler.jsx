@@ -39,6 +39,7 @@ export default function SuperAdminStaffScheduler({company,store,companies=[],req
     return result;
   },[schedule]);
 
+  const digitalWorkCard=moduleInfo?.store?.id===selectedStore?.id&&moduleInfo?.modules?.find(item=>item.key==="DIGITAL_WORK_CARD");
   const packages=moduleInfo?.packages?.length?moduleInfo.packages:FALLBACK_PACKAGES;
   const stateFor=key=>moduleInfo?.states?.[key]||{moduleKey:key,active:false,effectiveActive:false,inherited:false,monthlyPrice:0};
 
@@ -58,7 +59,8 @@ export default function SuperAdminStaffScheduler({company,store,companies=[],req
   useEffect(()=>{loadPackages()},[selectedCompany?.id,selectedStore?.id]);
 
   const savePackage=async(moduleKey,nextActive,priceOnly=false)=>{
-    const definition=packages.find(item=>item.key===moduleKey)||{title:moduleKey};
+    const service=digitalWorkCard?.key===moduleKey?digitalWorkCard:null;
+    const definition=service?{title:service.name}:packages.find(item=>item.key===moduleKey)||{title:moduleKey};
     const action=priceOnly?"αποθηκευτεί η νέα τιμή για":nextActive?"ενεργοποιηθεί":"απενεργοποιηθεί";
     if(!window.confirm(`Να ${action} το πακέτο «${definition.title}» για το κατάστημα «${selectedStore.name}»;`))return;
     setBusy(moduleKey);
@@ -66,7 +68,7 @@ export default function SuperAdminStaffScheduler({company,store,companies=[],req
     try{
       const result=await request(`/api/platform/store-modules/companies/${selectedCompany.id}/stores/${selectedStore.id}`,{
         method:"PUT",
-        body:JSON.stringify({moduleKey,active:nextActive,monthlyPrice:Number(prices[moduleKey]||0),startsAt:null,endsAt:null,notes:stateFor(moduleKey).notes||""})
+        body:JSON.stringify({moduleKey,active:nextActive,monthlyPrice:service?.monthlyPrice??Number(prices[moduleKey]||0),startsAt:service?.startsAt??null,endsAt:service?.endsAt??null,notes:service?.notes??stateFor(moduleKey).notes??""})
       });
       setModuleInfo(result);
       setPrices(current=>({...current,[moduleKey]:String(result.states?.[moduleKey]?.monthlyPrice??current[moduleKey]??0)}));
@@ -146,6 +148,20 @@ export default function SuperAdminStaffScheduler({company,store,companies=[],req
           })}
         </div>
       </section>
+
+      {digitalWorkCard&&<section className="workforce-v2-section">
+        <div className="workforce-v2-section-title">
+          <div>
+            <h3>{digitalWorkCard.name}</h3>
+            <p>Υπηρεσία επί πληρωμή στο κατάστημα {selectedStore.name}.</p>
+          </div>
+          <button onClick={()=>savePackage(digitalWorkCard.key,!digitalWorkCard.effectiveActive)} disabled={Boolean(busy)}>
+            {digitalWorkCard.effectiveActive?"Απενεργοποίηση υπηρεσίας":"Ενεργοποίηση υπηρεσίας"}
+          </button>
+        </div>
+        <p>{digitalWorkCard.effectiveActive?"Ενεργή άδεια καταστήματος":"Ανενεργή άδεια καταστήματος"}</p>
+        <p>Η σύνδεση και η αποστολή σημάνσεων στο ΕΡΓΑΝΗ ΙΙ εκκρεμούν.</p>
+      </section>}
 
       <section className="workforce-v2-section">
         <WorkforceV2EmployeesPanel key={`${selectedCompany.id}:${selectedStore.id}`} company={selectedCompany} store={selectedStore} request={request}/>
