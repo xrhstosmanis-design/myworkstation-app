@@ -53,7 +53,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
  const eventReport=promotion||inventory;
  const nonCash=supplier||monthlyInventory||eventReport;
  const moduleKey=nonCash?'INVENTORY':'CASH_CONTROL';
- async function context(tx,raw,now){
+ async function context(tx,raw,now,{inspectPapers=false}={}){
   const scope=automaticReportScopeInput(raw);now=iso(now);
   const final=scope.stage==='FINAL';
   if(final&&nonCash)hold();
@@ -117,6 +117,14 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||
      !periodAfterAuthorization(nonCash?iso(grant.notBefore):cashGrantPeriodStart(grant,scope.frequency)))hold();
   const settingsVersion=nonCash?safe(policy.revision):settings.version;
+  const automaticPapers=!nonCash&&scope.frequency==='DAILY'&&configuration.automaticPaperReading===true
+   ? {actorId:principal.id,generation:lifecycle.generation,from,to,now,...(final?{stage:'FINAL'}:{})}:null;
+  if(final&&automaticPapers&&inspectPapers&&recipients.some(({recipient,consent})=>{
+   const authority=reportRecipientAuthority(recipient,consent,{generation:lifecycle.generation,principalId:principal.id});
+   return authority&&typeof recipient.email==='string'&&morningRecipients.has(recipient.email.trim().toLowerCase())&&
+    consent.allowedFrequencies.includes('DAILY')&&authority.authorizedAt>=control.issuedAt&&authority.authorizedAt<=now&&
+    (authority.basis==='SUPER_ADMIN'?periodAfterAuthorization(authority.authorizedAt):from>=authority.authorizedAt&&iso(recipient.verifiedAt)<=now);
+  }))return {automaticPapers};
   let payload;
   if(monthlyInventory){
    const receipt=await readSettledMonthlySnapshotForReport(tx,{...scope,lifecycleGeneration:lifecycle.generation,issueMonth:month});
@@ -160,8 +168,6 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
    authorities[recipient.email]={basis:authority.basis,mailboxVerified:!!recipient.verifiedAt};
   }
   if(!eligible.length)hold();
-  const automaticPapers=!final&&!nonCash&&scope.frequency==='DAILY'&&configuration.automaticPaperReading===true
-   ? {actorId:principal.id,generation:lifecycle.generation,from,to,now}:null;
   return {scope,now,payload,inputs:eligible,activation:control,authorities,automaticPapers};
  }
  const reader=async({tx,companyId,storeId,input,now})=>{

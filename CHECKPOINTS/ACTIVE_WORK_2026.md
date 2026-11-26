@@ -1141,3 +1141,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Εταιρικό δικαίωμα μετονομασίας προϊόντος](CHANGES/2026-11-26-no5-product-rename.md).
 
 - 26/11/2026 · Νο 5 · [Μετονομασία τιμοκαταλόγου χονδρικής](CHANGES/2026-11-26-no5-wholesale-rename.md).
+
+- 26/11/2026 · Νο 7 · [Πρωινό και τελικό email ταμείων](CHANGES/2026-11-26-no7-two-daily-cash-emails.md).
