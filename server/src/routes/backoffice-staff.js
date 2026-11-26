@@ -3,6 +3,7 @@ import {saveStaffCompanyVatDepartment,activateStaffCompanyVatDraft} from "../ser
 import {saveStaffDisplayName} from "../services/backoffice-staff-display-name.js";
 import {renameStaffCompanyProduct} from "../services/backoffice-staff-product-rename.js";
 import {createStaffPromotionDraft} from "../services/backoffice-staff-promotion-draft.js";
+import {renameStaffWholesalePriceList} from "../services/backoffice-staff-wholesale-rename.js";
 import {createStaffWholesalePriceListDraft} from "../services/backoffice-staff-wholesale-draft.js";
 import {saveStaffCompanyCategory,reactivateStaffCompanyCategory} from "../services/backoffice-staff-company-taxonomy.js";
 import {correctStaffSupplierTaxId} from '../services/backoffice-staff-supplier-tax-id.js';
@@ -88,6 +89,9 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
   });
   router.post("/company/promotion-drafts",async(req,res)=>{
     try{res.status(201).json(await createStaffPromotionDraft(db,req))}catch(error){failure(res,error)}
+  });
+  router.post("/company/wholesale-config/price-list-renames",async(req,res)=>{
+    try{res.json(await renameStaffWholesalePriceList(db,req))}catch(error){failure(res,error)}
   });
   router.post("/company/wholesale-config/price-list-drafts",async(req,res)=>{
     try{res.status(201).json(await createStaffWholesalePriceListDraft(db,req))}catch(error){failure(res,error)}
