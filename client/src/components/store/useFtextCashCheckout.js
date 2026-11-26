@@ -28,3 +28,27 @@ export default function useFtextCashCheckout({api,storeId,pending,onRequest,onCo
   check();const timer=setInterval(check,1800);return()=>{cancelled=true;clearInterval(timer)};
  },[api,storeId,requestId]);
 }
+
+// This response is sent before the server creates a fiscal request. Retry the
+// same checkout payload and transaction ID only while that response is explicit.
+export async function submitFtextCheckout(api,path,options,{isCurrent,onWait,onFinished}){
+ const retryUntil=performance.now()+15000;
+ let waiting=false;
+ try {
+  while(true){
+   try {
+    return await api(path,options);
+   }catch(error){
+    if(error.status!==503||error.code!=='FTEXT_REGISTER_NOT_READY'||performance.now()+1500>retryUntil||!isCurrent())throw error;
+    if(!waiting){
+     waiting=true;
+     onWait();
+    }
+    await new Promise(resolve=>setTimeout(resolve,1500));
+    if(!isCurrent()||performance.now()>=retryUntil)throw error;
+   }
+  }
+ }finally{
+  if(waiting)onFinished();
+ }
+}
