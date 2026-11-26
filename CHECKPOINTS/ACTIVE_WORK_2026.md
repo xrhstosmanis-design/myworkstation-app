@@ -1195,3 +1195,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Μετονομασία τιμοκαταλόγου χονδρικής](CHANGES/2026-11-26-no5-wholesale-rename.md).
 
 - 26/11/2026 · Νο 5 · [Ενεργοποίηση πρόχειρης προσφοράς](CHANGES/2026-11-26-no5-promotion-activation.md).
+
+- 26/11/2026 · Νο 5 · [Αλλαγή τιμής κλίμακας χονδρικής](CHANGES/2026-11-26-no5-wholesale-tier-price.md).
