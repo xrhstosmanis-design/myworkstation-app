@@ -1,6 +1,6 @@
 // Pure validation for existing cash settlements. No DB writes.
-const cents=v=>{const n=Number(v);if(v===null||v===undefined||v===''||!Number.isFinite(n)||!Number.isSafeInteger(Math.round(n*100))||Math.abs(n*100-Math.round(n*100))>0.00001)throw new Error('INVALID_AMOUNT');return Math.round(n*100)};
-const fail=code=>{throw new Error(code)};
+const cents=v=>{const n=Number(v);if(v===null||v===undefined||v===''||!Number.isFinite(n)||!Number.isSafeInteger(Math.round(n*100))||Math.abs(n*100-Math.round(n*100))>0.00001)fail('INVALID_AMOUNT');return Math.round(n*100)};
+const fail=code=>{throw Object.assign(new Error(code),{status:409})};
 export function planManualPaymentAllocation({payment,documents,allocations,targetSupplier,confirmSupplierChange=false}){
  if(!payment||!targetSupplier?.active||!payment.companyId||!payment.storeId||targetSupplier.companyId!==payment.companyId)fail('INVALID_SCOPE');
  if(!['PENDING_REVIEW','DISCREPANCY'].includes(payment.status)||payment.paymentMethod!=='CASH_SHIFT'||payment.transactionMethod!=='CASH_SHIFT'||payment.type!=='SUPPLIER_PAYMENT'||!payment.sessionId||payment.reversedAt||payment.bank||payment.hasDirectDocument||payment.supplierId!==payment.transactionSupplierId)fail('PAYMENT_NOT_ELIGIBLE');
