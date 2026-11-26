@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal} from "../src/mydata-original.js";
+import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal,panormouOriginalStoreId} from "../src/mydata-original.js";
 
 test("Megasoft appends the PDF suffix to the exact InvoiceLink query value", () => {
   const link = "https://invoicelink.megasoft.gr/invoiceinspect/qr?QrCode=" + "A".repeat(100);
   const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
   const issuer = "099999999";
-  assert.equal(originalDownloadUrl(xml(link), issuer), link + "/pdf");
-  assert.equal(originalDownloadUrl(xml(link + "/pdf"), issuer), link + "/pdf");
+  assert.equal(originalDownloadUrl(xml(link), issuer, panormouOriginalStoreId), link + "/pdf");
+  assert.equal(originalDownloadUrl(xml(link + "/pdf"), issuer, panormouOriginalStoreId), link + "/pdf");
   for (const invalid of [link + "&amp;extra=1", link + "/", link + "#x", link.replace(".gr/", ".gr.example/")]) {
-    assert.throws(() => originalDownloadUrl(xml(invalid), issuer));
+    assert.throws(() => originalDownloadUrl(xml(invalid), issuer, panormouOriginalStoreId));
   }
   assert.throws(() => originalDownloadUrl(xml(link), ""));
 });
@@ -19,7 +19,7 @@ test("Primer follows only the provider's exact same-invoice PDF redirect", async
   const source = `https://mydata.primer.gr/${token}`;
   const target = `https://mydata-backend.primer.gr/invoice/${token}/pdf`;
   const identity = {mark:"12345",issuerVat:"099999999",counterpartVat:"088888888",documentNumber:"123"};
-  const invoice = {...identity,rawPayload:{xml:`<downloadingInvoiceUrl>${source}</downloadingInvoiceUrl>`}};
+  const invoice = {...identity,storeId:panormouOriginalStoreId,rawPayload:{xml:`<downloadingInvoiceUrl>${source}</downloadingInvoiceUrl>`}};
   const reader = async () => ({text:Object.values(identity).join(" "),pageCount:1});
   const bytes = Buffer.from("%PDF-" + "x".repeat(110));
   const calls = [];
@@ -31,6 +31,9 @@ test("Primer follows only the provider's exact same-invoice PDF redirect", async
   }, reader);
   assert.deepEqual(calls,[[source+"/pdf","manual"],[target,"error"]]);
   assert.deepEqual(result.bytes,bytes);
+  await assert.rejects(fetchOriginalPdf({...invoice,storeId:"other-store"}, async () => {
+    assert.fail("provider must not be contacted for another store");
+  }, reader), /διαφορετικό υποστηριζόμενο πάροχο/);
   for (const location of [target.replace(".gr/",".gr.example/"),target.replace(token,"B".repeat(40)),target+"?extra=1"]) {
     let requests = 0;
     await assert.rejects(fetchOriginalPdf(invoice, async () => {
