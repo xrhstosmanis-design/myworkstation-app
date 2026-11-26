@@ -1,3 +1,4 @@
+import {readNetlinkRbsContext} from './paid-rbs-evidence.js';
 import {createFtextInstallationService} from '../../services/ftext-installation.js';
 import {companyModuleState} from '../../middleware/module-access.js';
 import {netlinkPaidError} from './paid-issuance-contract.js';
@@ -17,11 +18,13 @@ export async function netlinkCheckoutTerminal(db,scope,req){
 export async function prepareNetlinkPaidCheckout(db,scope,checkoutId,req){
  const terminalPos=await netlinkCheckoutTerminal(db,scope,req);
  const service=createFtextInstallationService({db,moduleState:(id,tx)=>companyModuleState(id,{db:tx}),secret:()=>process.env.JWT_SECRET});
- // A request UUID or an operator click alone is not a fiscal receipt. Require
- // a native integration that can return verifiable receipt evidence, up front.
+ // Choose the native route before any paid intent; ftext never falls back.
  try{
-  await db.$transaction(tx=>service.cashContext(tx,{...scope,terminalPos}));
+  const devices=(await db.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'CloudDevice'))::text AS name`)[0]?.name;
+  const ftext=devices&&(await db.$queryRaw`SELECT 1 FROM "CloudDevice" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "deviceKey"=${'ftext:'+terminalPos} AND "platform"='WINDOWS_FTEXT_V1' LIMIT 1`).length;
+  if(ftext){await db.$transaction(tx=>service.cashContext(tx,{...scope,terminalPos}));return {kind:'FTEXT_RECEIPT',terminalPos};}
+  return await db.$transaction(async tx=>{const context=await readNetlinkRbsContext(tx,{...scope,terminalPos},{requireOnline:true});return {kind:'RBS_NATIVE_COMMIT',terminalPos,lifecycleGeneration:context.lifecycleGeneration};});
  }catch{
-  throw netlinkPaidError('NETLINK_RECEIPT_CAPABILITY_REQUIRED','Η έκδοση κάρτας απαιτεί έτοιμη σύνδεση ταμειακής που επιβεβαιώνει την απόδειξη. Δεν έχει γίνει χρέωση ή έκδοση κάρτας.');
+  throw netlinkPaidError('NETLINK_RECEIPT_CAPABILITY_REQUIRED','Η έκδοση κάρτας απαιτεί έτοιμη σύνδεση ταμειακής για αυτό το POS. Δεν έχει γίνει χρέωση ή έκδοση κάρτας.');
  }
 }
