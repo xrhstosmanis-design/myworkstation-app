@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease} from "../services/purchase-cost-increase-event.js";
 import {financialReportFilters,readStoreFinancialReport} from "../services/store-financial-reports.js";
 import {LOCAL_INVOICE_OCR_LIMITS} from "../../../shared/local-invoice-ocr-limits.mjs";
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
@@ -105,7 +106,11 @@ router.patch("/products/:productId",requireCompanyModule("INVENTORY"),async(req,
     const product=await ownedProduct(req.user.companyId,req.params.productId);
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
     const body=z.object({name:z.string().trim().min(1).max(180).optional(),salePrice:z.coerce.number().min(0).optional(),costPrice:z.coerce.number().min(0).optional(),vatRate:z.coerce.number().min(0).max(100).optional(),active:z.boolean().optional()}).parse(req.body||{});
-    await prisma.$executeRaw`UPDATE "Product" SET "name"=COALESCE(${body.name??null},"name"),"salePrice"=COALESCE(${body.salePrice??null},"salePrice"),"costPrice"=COALESCE(${body.costPrice??null},"costPrice"),"vatRate"=COALESCE(${body.vatRate??null},"vatRate"),"active"=COALESCE(${body.active??null},"active"),"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.productId} AND "companyId"=${req.user.companyId}`;
+    await prisma.$transaction(async tx=>{
+      const [previous]=body.costPrice===undefined?[]:await tx.$queryRaw`SELECT "name","costPrice" FROM "Product" WHERE "id"=${product.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
+      await tx.$executeRaw`UPDATE "Product" SET "name"=COALESCE(${body.name??null},"name"),"salePrice"=COALESCE(${body.salePrice??null},"salePrice"),"costPrice"=COALESCE(${body.costPrice??null},"costPrice"),"vatRate"=COALESCE(${body.vatRate??null},"vatRate"),"active"=COALESCE(${body.active??null},"active"),"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.productId} AND "companyId"=${req.user.companyId}`;
+      if(previous)await recordPurchaseCostIncrease(tx,{companyId:req.user.companyId,actorId:req.user.id,productId:product.id,productName:body.name??previous.name,previousCost:previous.costPrice,source:"COMMERCE_PRODUCT"});
+    });
     res.json({ok:true});
   }catch(error){next(error)}
 });

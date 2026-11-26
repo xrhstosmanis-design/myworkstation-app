@@ -172,7 +172,10 @@ router.post("/activate",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
           if(!companyDuplicate[0])await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode") VALUES (${uid()},${productId},${row.barcode})`;
         }
       }else{
+        const [previous]=await tx.$queryRaw`SELECT "costPrice" FROM "Product" WHERE "id"=${productId} AND "companyId"=${company} FOR UPDATE`;
         await tx.$executeRaw`UPDATE "Product" SET "active"=true,"salePrice"=${basePrice},"costPrice"=${cost},"vatRate"=${vat},"vatVerified"=${vatVerified},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${productId}`;
+        if(previous)await recordPurchaseCostIncrease(tx,{companyId:company,actorId:req.user.id,productId,productName:master.name,previousCost:previous.costPrice,source:"MASTER_CATALOG"});
+
       }
       for(const config of body.storeConfigs){
         await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","active") VALUES (${uid()},${config.storeId},${productId},${config.salePrice??basePrice},${config.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
