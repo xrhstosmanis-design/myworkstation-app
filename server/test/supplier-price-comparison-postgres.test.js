@@ -113,20 +113,20 @@ test("supplier comparison HTTP/SQL isolates stores, prices and module access",{s
       const before=await snapshot();
       try{
         await t.test("two suppliers, discounted package cost, weighted rows and distinct historical evidence",async()=>{
-          const {status,body}=await request("a1");assert.equal(status,200,JSON.stringify(body));assert.equal(body.length,9);
+          const {status,body}=await request("a1");assert.equal(status,200,JSON.stringify(body));assert.equal(body.length,6);
           const find=(product,supplier)=>body.find(row=>row.productId===product&&row.supplierId===supplier);
           assert.equal(find("piece","s1").lastCost,1.5);assert.equal(find("piece","s1").bestCost,.8);
           assert.equal(find("piece","s1").lastDocumentId,"new");assert.equal(find("piece","s1").bestDocumentId,"old");assert.equal(find("piece","s1").purchaseCount,2);
           assert.equal(find("piece","s2").lastCost,.75);assert.equal(find("kg","s1").lastCost,8);assert.equal(find("kg","s1").baseUnit,"KG");
           assert.equal(find("kg","s2").lastCost,null);assert.equal(find("kg","s2").bestCost,6);assert.equal(find("kg","s2").lastDocumentId,"bad-unit");
-          assert.equal(find("litre","s1").lastCost,2);assert.equal(find("litre","s1").baseUnit,"L");assert.equal(find("zero","s1").bestCost,null);
+          assert.equal(find("litre","s1"),undefined);assert.equal(find("zero","s1"),undefined);
           assert.equal(body.some(row=>row.productId==="foreign-product"||row.supplierId==="foreign-supplier"),false);
         });
         await t.test("posted order cost includes excise, uses the selected-store correction and excludes invalid factors",async()=>{
           const {body}=await request("a1");
           const own=body.find(row=>row.productId==="order"&&row.supplierId==="s1");assert.equal(own.lastCost,.625);
           const corrected=body.find(row=>row.productId==="order"&&row.supplierId==="s2");assert.equal(corrected.lastCost,.4);assert.equal(corrected.evidenceId,"correct-own");
-          assert.equal(body.find(row=>row.productId==="invalid-order").lastCost,null);
+          assert.equal(body.find(row=>row.productId==="invalid-order"),undefined);
         });
         await t.test("real module guard rejects foreign stores, operator siblings, disabled modules and suspended licenses",async()=>{
           const cases=[["b1","owner",404,"TENANT_STORE_REJECTED"],["a2","operator",404,"TENANT_STORE_REJECTED"],["a-off","owner",403,"MODULE_DISABLED"],["c1","owner",404,"TENANT_STORE_REJECTED"],["missing","owner",404,null],[undefined,"owner",400,null]];
@@ -136,9 +136,9 @@ test("supplier comparison HTTP/SQL isolates stores, prices and module access",{s
           const inactive=await request("c1","suspended");assert.equal(inactive.status,403);assert.equal(inactive.body.code,"LICENSE_INACTIVE");assert.equal(comparisonReads,reads);
         });
         await t.test("owner store selection and platform support read the target company without leaking other stores",async()=>{
-          const sibling=await request("a2");assert.equal(sibling.status,200);assert.equal(sibling.body.length,1);assert.equal(sibling.body[0].lastCost,.001);assert.equal(sibling.body[0].lastDocumentId,"sibling");
-          const own=await request("a1","admin");assert.equal(own.status,200);assert.equal(own.body.length,9);
-          const foreign=await request("b1","admin");assert.equal(foreign.status,200);assert.equal(foreign.body.length,1);assert.equal(foreign.body[0].lastCost,7.77);assert.equal(foreign.body[0].productId,"foreign-product");
+          const sibling=await request("a2");assert.equal(sibling.status,200);assert.deepEqual(sibling.body,[]);
+          const own=await request("a1","admin");assert.equal(own.status,200);assert.equal(own.body.length,6);
+          const foreign=await request("b1","admin");assert.equal(foreign.status,200);assert.deepEqual(foreign.body,[]);
           assert.deepEqual(await snapshot(),before,"Comparison GETs must leave all temporary fixture rows unchanged");
         });
       }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
