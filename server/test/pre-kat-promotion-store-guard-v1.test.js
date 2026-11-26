@@ -24,17 +24,19 @@ test("manual promotion writes are tenant product and active-store scoped",()=>{
   assert.match(route,/PriceCatalogPromotionStore/);
 });
 
+const storeScope=read("server/src/services/promotion-store-scope.js");
+
 test("same product and promotion type cannot overlap on the same selected stores",()=>{
-  assert.match(route,/pr\."productId"=\$\{productId\}/);
-  assert.match(route,/pr\."promotionType"=\$\{promotionType\}/);
-  assert.match(route,/ps\."storeId"=ANY\(\$\{storeIds\}::text\[\]\)/);
-  assert.match(route,/pr\."validFrom"<=\$\{overlapSqlDateEnd\(validUntil\)\}/);
-  assert.match(route,/COALESCE\(pr\."validUntil",'infinity'::timestamptz\)>=\$\{validFrom\}/);
+  assert.match(storeScope,/pr\."productId"=\$\{productId\}/);
+  assert.match(storeScope,/pr\."promotionType"=\$\{promotionType\}/);
+  assert.match(storeScope,/ps\."storeId"=ANY\(\$\{storeIds\}::text\[\]\)/);
+  assert.match(storeScope,/pr\."validFrom"<=\$\{overlapSqlDateEnd\(validUntil\)\}/);
+  assert.match(storeScope,/COALESCE\(pr\."validUntil",'infinity'::timestamptz\)>=\$\{validFrom\}/);
   assert.match(route,/PROMOTION_STORE_OVERLAP/);
 });
 
 test("overlap validation is serialized inside the same database transaction",()=>{
-  assert.match(route,/pg_advisory_xact_lock\(hashtext\(\$\{key\}\)\)/);
+  assert.match(storeScope,/pg_advisory_xact_lock\(hashtext\(\$\{key\}\)\)/);
   const post=route.indexOf('router.post("/promotions/scoped"');
   const tx=route.indexOf('prisma.$transaction',post);
   const lock=route.indexOf('lockScope(tx',tx);
