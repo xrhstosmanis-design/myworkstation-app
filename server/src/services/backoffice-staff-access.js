@@ -1,3 +1,4 @@
+import {operationalFinancialCapabilities} from '../../../shared/financial-consumption.mjs';
 import {decodeStoredStaffCapabilities} from "./staff-pos-permission-ceiling.js";
 import {finalPassiveStoreActions,finalPassiveStoreRequest} from '../../../shared/backoffice-staff-final-passive.mjs';
 import {storeReportCapabilities,freeStoreReportCapabilities} from '../../../shared/backoffice-staff-reports.mjs';
@@ -73,7 +74,7 @@ export async function enforceBackofficeStaff(db,req,res){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
     const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','inventory.duplicates.read','cash.read','products.read','sales.read','shifts.read','invoices.read','supplier-price-comparison.read','low-value-products.read','order-suggestions.read','analytics.read','handover.read','employees.read','schedule.read','attendance.read','leaves.read','stock.read','payroll.read','pending.read','promotions.read','baking.read','monthly-invoice-audit.read','online-orders.read','table-service.read','stock-transfers.read','invoice-ai.read','wholesale.read','video.read','printers.read','chat.read','radio.read','approvals.read','monthly-inventory.read','workforce-roles.read','workforce-rules.read','shift-templates.read','workforce-audit.read','unsold-products.read','sales-journal.read'].includes(c)):[];
-    reads.push(...(Array.isArray(row?.capabilities)?row.capabilities.filter(c=>storeReportCapabilities.includes(c)||finalPassiveStoreActions.some(action=>action.key===c)):[]));
+    reads.push(...(Array.isArray(row?.capabilities)?row.capabilities.filter(c=>operationalFinancialCapabilities.includes(c)||storeReportCapabilities.includes(c)||finalPassiveStoreActions.some(action=>action.key===c)):[]));
     let disabled;
     for(const read of reads){
       try{await requireStaffGrant(db,user,storeId,read);req.user={...req.user,storeId};return true}
@@ -146,6 +147,7 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
+ if(operationalFinancialCapabilities.includes(capability))return ['INVENTORY'];
  const passive=finalPassiveStoreActions.find(action=>action.key===capability);if(passive)return [...passive.modules];
  if(storeReportCapabilities.includes(capability))return freeStoreReportCapabilities.includes(capability)?[]:['INVENTORY'];
  if(capability==='unsold-products.read')return ['SALES_ANALYTICS'];

@@ -1,3 +1,5 @@
+import storeConsumptionFinancialRoutes from './routes/store-consumption-financial.js';
+import supplierDepositRoutes from "./routes/supplier-deposits.js";
 import weeklyStockAlarmRoutes from './routes/weekly-stock-alarm.js';
 import {createWeeklyStockAlarmScheduler} from './services/weekly-stock-alarm-scheduler.js';
 import {createWeeklyStockAlarmInstallationRouter} from './routes/weekly-stock-alarm-installation.js';
@@ -313,6 +315,7 @@ app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOr
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderRoutes);
 app.use("/api/purchase-document-adjustments",auth,requireCompanyModule("INVENTORY"),purchaseDocumentAdjustmentRoutes);
 app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierControlRoutes);
+app.use("/api/supplier-deposits",auth,requireCompanyModule("INVENTORY"),supplierDepositRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlReversalAwareRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerOperatorCardRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
@@ -411,6 +414,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
 app.use("/api/pos-order-suggestions",auth,posOrderSuggestionsRoutes);
 app.use("/api/stock-alarms",auth,weeklyStockAlarmRoutes);
 app.use("/api/platform/weekly-stock-alarm-installation/stores/:storeId",auth,createWeeklyStockAlarmInstallationRouter(prisma));
+app.use("/api/commerce/sales/financial-reports",auth,commerceTenantGuard,storeConsumptionFinancialRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);

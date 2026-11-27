@@ -35,7 +35,7 @@ export default function StoreCloudPage(props){
   return <StoreWorkspace key={props.store.id} {...props}/>;
 }
 
-function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCommerce,navigationLocked=false,canConfigureMyDataBranch=false,canOpenFinancialReports=false,primaryView,onPrimaryChange}){
+function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCommerce,navigationLocked=false,canConfigureMyDataBranch=false,canOpenFinancialReports=false,financialReportModes,primaryView,onPrimaryChange}){
   const delegated=Array.isArray(capabilities);
   const can=key=>!delegated||capabilities.includes(key);
   const salesAllowed=can('sales.read');
@@ -178,7 +178,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
       </div>
     </div>
 
-    {canOpenFinancialReports&&financialOpen&&<StoreFinancialReports api={api} store={store} version={version}/>}
+    {canOpenFinancialReports&&financialOpen&&<StoreFinancialReports api={api} store={store} version={version} allowedModes={financialReportModes}/>}
     <div className="cloud-hero">
       <div>
         <span className="cloud-kicker">MYWORKSTATION · BACKOFFICE</span>

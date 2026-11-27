@@ -2,6 +2,22 @@
 
 Τέσσερις αλλαγές BackOffice για δοκιμή πριν την παραγωγή. [Checkpoint](CHANGES/2026-11-27-inventory-payroll-chat-workflows.md).
 
+## 27/11/2026 — Καταστροφές / Ιδιοκατανάλωση στις Οικονομικές αναφορές
+
+ASSIGNED /root, feat/financial-consumption-20261127. Υλοποίηση και26στοχευμένοι έλεγχοι PASS, πλήρες CI/εγκατάσταση/LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-27-financial-consumption.md). [Ανεξάρτητο μητρώο](../docs/roadmap/OPEN_WORK_TRACKER_FINANCIAL_CONSUMPTION_2026-11-27.md).
+
+## 27/11/2026 — FINANCIAL-CONSUMPTION-01 — ASSIGNED /root
+
+- 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).
+
+Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
+
+Independent additive scope. Preserve financial sales, existing POS consumption writers, stock/fiscal, dispatch controls and other assignments. Before source: merge claim green/main. Then read-only selected-store endpoint, independent report permissions, historical approved purchase evidence without present-price substitution, recorded sale value, missing-value/limit disclosure, panel choices, immutable monthly cash-payload supplement through the existing delivery lifecycle. No new recipient or consent schema, activation, production DB write or diagnostic POS transaction.
+
+Current evidence: NOT TESTED. Read instructions/current registries, financial25Nov and consumption31Oct checkpoints, automatic-report implementation. Existing sales and POS entry limited PASS retained. Require date/source/precision/limits/isolation/rights/revocation/UI-switch/monthly-payload tests, full CI, exact guarded release, grouped LAB. CI is not LAB PASS.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-11-27-financial-consumption.md`. Next: merge claim before source.
+
 ## 27/11/2026 — Επιλέξιμα τιμολόγια στην αντιστοίχιση πληρωμής — LAB
 
 Κοινός έλεγχος επιλεξιμότητας λίστας και προεπισκόπησης για την εργασία #4232. [Checkpoint](CHANGES/2026-11-27-manual-allocation-eligible-documents.md).
@@ -603,6 +619,10 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 | — | OWNER-SHIFT-TIME-FILTER | /root | #3872 | Hosted LAB PASS · 3→1 | [Τεκμήριο](CHANGES/2026-11-10-owner-shift-time-filter.md) |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
 
+## 27/11/2026 — Έξοδα ΝΕΤΛΙΝΚ / ΟΚΤΟ ανά βάρδια
+
+[Checkpoint](CHANGES/2026-11-27-prepaid-expenses-by-shift.md). Εκκρεμεί LAB.
+
 ## 24/11/2026 - Price catalog product card - LAB pending
 
 Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the full product card for a selected store. [Checkpoint](CHANGES/2026-11-24-price-catalog-product-card.md).
@@ -636,6 +656,8 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 - Τιμολόγια · Ο ιδιοκτήτης επιβεβαίωσε από τη σελίδα «διορθώσεις τιμολογίων κτλπ» ότι οριστικοποίησε το τιμολόγιο και είναι ΟΚ. Η οριστικοποίηση κλείνει ως επιβεβαίωση χειριστή. Δεν υπάρχει ανεξάρτητο τεκμήριο για τις τρεις τιμές barcode ανά γραμμή.
 - Απογραφή · Η διασταύρωση των workflow στο `3acf060c` (#3841) και στο `main` έδειξε διαφορά στο βήμα recovery: το branch χτίζει το image από το προεπιλεγμένο Dockerfile, ενώ το main περνά σταθερό digest PostgreSQL 18 και σταθερό digest για την υπηρεσία PostgreSQL 16. Ο επόμενος έλεγχος είναι CI με το workflow του main ώστε να διαπιστωθεί αν υποχωρούν οι αποτυχίες restore του #9770, πριν από την αποδοχή στο LAB. Η αιτία δεν έχει επιβεβαιωθεί με εκτέλεση.
 - Συντονισμός · [CI #9825 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500654258) στο `34896706` του #3860. Το PR έχει mergeable status και παραμένει draft.
+
+- 27/11/2026 · [Android Chat: ανανέωση σύνδεσης στην επιστροφή](CHANGES/2026-11-27-chat-android-resume-session.md).
 
 ## Κανόνας ενημέρωσης
 
@@ -1232,6 +1254,14 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
 
+- 27/11/2026 · Περιγραφή συμβάντων αλλαγής τιμής και έκπτωσης · [Checkpoint](CHANGES/2026-11-27-purchase-alert-event-description.md).
+
 ## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
 
 [Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
+
+- 27/11/2026 · [Android Chat 0.1.19](CHANGES/2026-11-27-chat-android-019.md).
+
+- 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
+
+- 27/11/2026 · [Επιστροφές εγγυοδοσίας προμηθευτών](CHANGES/2026-11-27-supplier-deposit-reminders.md) · Ελέγχθηκε σε απομονωμένη PostgreSQL. Εκκρεμεί LAB BackOffice.
