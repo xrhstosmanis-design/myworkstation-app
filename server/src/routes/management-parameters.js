@@ -91,7 +91,6 @@ async function getRow(companyId){
   await prisma.$executeRaw`INSERT INTO "ManagementParameters" ("id","companyId") VALUES (${id},${companyId}) ON CONFLICT ("companyId") DO NOTHING`;
   return (await prisma.$queryRaw`SELECT * FROM "ManagementParameters" WHERE "companyId"=${companyId} LIMIT 1`)[0];
 }
-const mergeSection=(settings,section,value)=>({...settings,[section]:{...(settings?.[section]||{}),...value}});
 const publicSecrets=row=>({woltPasswordConfigured:Boolean(row.woltPasswordEnc),efoodPasswordConfigured:Boolean(row.efoodPasswordEnc),aadePasswordConfigured:Boolean(row.aadePasswordEnc),managerPinConfigured:Boolean(row.managerPinEnc)});
 
 router.get("/",async(req,res,next)=>{try{
@@ -122,8 +121,8 @@ router.patch("/:section",async(req,res,next)=>{try{
     if(Object.keys(companyData).length)await prisma.company.update({where:{id:companyId},data:companyData});
   }
   if(section==="email"&&payload.businessEmail!==undefined)await prisma.company.update({where:{id:companyId},data:{email:payload.businessEmail||null}});
-  const settings=mergeSection(row.settings||{},section,Object.fromEntries(Object.entries(payload).filter(([,v])=>v!==undefined)));
-  await prisma.$executeRaw`UPDATE "ManagementParameters" SET "settings"=${JSON.stringify(settings)}::jsonb,"woltPasswordEnc"=${woltPasswordEnc},"efoodPasswordEnc"=${efoodPasswordEnc},"aadePasswordEnc"=${aadePasswordEnc},"managerPinEnc"=${managerPinEnc},"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
+  const settings=JSON.stringify(Object.fromEntries(Object.entries(payload).filter(([,v])=>v!==undefined)));
+  await prisma.$executeRaw`UPDATE "ManagementParameters" SET "settings"=jsonb_set("settings",ARRAY[${section}]::text[],COALESCE("settings"->${section},'{}'::jsonb)||${settings}::jsonb),"woltPasswordEnc"=${woltPasswordEnc},"efoodPasswordEnc"=${efoodPasswordEnc},"aadePasswordEnc"=${aadePasswordEnc},"managerPinEnc"=${managerPinEnc},"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
   await prisma.$executeRaw`INSERT INTO "ManagementParameterAudit" ("id","companyId","section","actorId","actorName") VALUES (${uid()},${companyId},${section},${req.user.id||null},${req.user.fullName||req.user.email||req.user.role||null})`;
   res.json({ok:true,secrets:publicSecrets({woltPasswordEnc,efoodPasswordEnc,aadePasswordEnc,managerPinEnc})});
 }catch(error){next(error)}});
