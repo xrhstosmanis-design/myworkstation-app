@@ -318,6 +318,8 @@ export function staffRequestCapability(method,path,body={},query={}){
     return null;
   }
   if(method==='POST'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/issuer-supplier$/.test(path))return 'invoices.supplier-create';
+  if(method==='GET'&&path==='/api/supplier-deposits')return 'invoices.read';
+  if(method==='POST'&&/^\/api\/supplier-deposits(?:\/[^/]+\/(?:RETURN|CREDIT))?$/.test(path))return 'invoices.edit';
   if(method==='GET'&&(path==='/api/purchase-orders/report'||/^\/api\/purchase-orders\/[^/]+\/detail$/.test(path)))return 'invoices.read';
   if(method==='GET'&&/^\/api\/purchase-orders\/[^/]+\/lines\/[^/]+\/product-reference$/.test(path))return 'invoices.read';
   const invoiceProductCompanyPath=/^\/api\/purchase-orders\/[^/]+\/lines\/[^/]+\/product-company-(card|barcodes)$/.test(path);

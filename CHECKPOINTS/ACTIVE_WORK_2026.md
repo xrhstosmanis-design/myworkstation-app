@@ -1240,6 +1240,10 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
 
+## 27/11/2026 — Έξοδα ΝΕΤΛΙΝΚ / ΟΚΤΟ ανά βάρδια
+
+[Checkpoint](CHANGES/2026-11-27-prepaid-expenses-by-shift.md). Εκκρεμεί LAB.
+
 ## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
 
 [Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
@@ -1248,6 +1252,4 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
 
-## 27/11/2026 — Έξοδα ΝΕΤΛΙΝΚ / ΟΚΤΟ ανά βάρδια
-
-[Checkpoint](CHANGES/2026-11-27-prepaid-expenses-by-shift.md). Εκκρεμεί LAB.
+- 27/11/2026 · [Επιστροφές εγγυοδοσίας προμηθευτών](CHANGES/2026-11-27-supplier-deposit-reminders.md) · Ελέγχθηκε σε απομονωμένη PostgreSQL. Εκκρεμεί LAB BackOffice.

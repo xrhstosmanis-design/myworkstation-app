@@ -1,3 +1,4 @@
+import supplierDepositRoutes from "./routes/supplier-deposits.js";
 import weeklyStockAlarmRoutes from './routes/weekly-stock-alarm.js';
 import {createWeeklyStockAlarmScheduler} from './services/weekly-stock-alarm-scheduler.js';
 import {createWeeklyStockAlarmInstallationRouter} from './routes/weekly-stock-alarm-installation.js';
@@ -312,6 +313,7 @@ app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOr
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderRoutes);
 app.use("/api/purchase-document-adjustments",auth,requireCompanyModule("INVENTORY"),purchaseDocumentAdjustmentRoutes);
 app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierControlRoutes);
+app.use("/api/supplier-deposits",auth,requireCompanyModule("INVENTORY"),supplierDepositRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlReversalAwareRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerOperatorCardRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
