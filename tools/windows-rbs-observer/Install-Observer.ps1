@@ -41,5 +41,5 @@ $shortcut=$shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Common
 $shortcut.TargetPath="powershell.exe";$shortcut.Arguments=('-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f (Join-Path $root "Status-Observer.ps1"));$shortcut.WorkingDirectory=$root;$shortcut.Save()
 Write-Host "INSTALLATION COMPLETE - READ ONLY" -ForegroundColor Green
 Write-Host "Backup: $backupRoot"
-Write-Host "No Kiosk Manager or CapDriver files were modified."
+Write-Host "No fiscal software or CapDriver files were modified."
 Read-Host "Press Enter to close"

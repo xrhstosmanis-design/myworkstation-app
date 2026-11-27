@@ -199,7 +199,7 @@ router.get("/availability",async(req,res)=>{
   res.json({
     saleListDeletions:{available:false,reason:"Δεν υπάρχει ακόμη audit ledger για διαγραφές γραμμών πριν την ολοκλήρωση πώλησης."},
     productDeactivations:{available:false,reason:"Υπάρχει τρέχουσα κατάσταση προϊόντος αλλά όχι πλήρες ιστορικό ενεργό/ανενεργό για παλιές εγγραφές."},
-    fiscalZ:{available:false,reason:"Το φορολογικό Ζ παραμένει στο Kiosk Manager/RBS μέχρι πραγματική σύνδεση Connector."}
+    fiscalZ:{available:false,reason:"Το φορολογικό Ζ παραμένει στο ταμειακό σύστημα/RBS μέχρι πραγματική σύνδεση Connector."}
   });
 });
 

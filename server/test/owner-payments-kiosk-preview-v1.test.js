@@ -26,7 +26,7 @@ test("preview summarizes before final import",()=>{
 
 test("client requires explicit confirmation after preview",()=>{
   assert.match(client,/owner-payments\/preview-kiosk/);
-  assert.match(client,/Προεπισκόπηση Kiosk/);
+  assert.match(client,/Προεπισκόπηση πληρωμών/);
   assert.match(client,/καμία εγγραφή δεν έχει αποθηκευτεί/);
   assert.match(client,/Οριστική εισαγωγή/);
   assert.match(client,/data-kiosk-confirm/);

@@ -44,7 +44,7 @@ test("physical pilot smoke tests are explicitly confirmed without fiscal automat
   assert.match(route,/key:"shiftSmoke"[\s\S]*blocking:true/);
   assert.match(route,/key:"kioskIsolation"[\s\S]*blocking:true/);
   assert.match(ui,/Είσοδος με PIN\/κάρτα/);
-  assert.match(ui,/Kiosk Manager ανεπηρέαστο/);
+  assert.match(ui,/Ταμειακό σύστημα ανεπηρέαστο/);
   assert.match(ui,/δεν στέλνει εντολές σε RBS ή ταμειακή/);
 });
 
