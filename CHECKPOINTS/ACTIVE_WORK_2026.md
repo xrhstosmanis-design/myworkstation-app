@@ -1,3 +1,7 @@
+## 27/11/2026 23:48 Athens — branding and sales fields / TECHNICALLY INSTALLED / AWAITING USER VISUAL
+
+Owner /root / fix/myworkstation-visible-branding-20261127 retained. #4311 merged c16d5694; full PR CI46068024100 and exact main CI46070545528 SUCCESS. Guarded release46072139313 / Render dep-dc4vj8jl550s73e3gaug live; health exact c16d5694 and served application entry verified. Existing LAB report read-only presentation observed, no business operation or financial LAB/USER PASS declared. Both source scopes complete. Only common owner visual acceptance remains; next action: full refresh and inspect selected-store Sales/items. No duplicate source assignment. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
+
 ## 27/11/2026 — branding + sales fields / source prepared / AWAITING CI
 
 Owner /root retained. Claim4310 merged6e4ba424 before edits. Visible competitor copy removed; protocol/path/import identity preserved. Existing historical-cost reader unchanged; explicit store-scoped detailed items/categories/results, full-source cap validation, genuine missing-cost states and Athens calendar daily averages/CSV. 61 focused PASS + separate10 native PostgreSQL PASS; build PASS before final print CSS. Full CI/release/visual acceptance pending; no functional/manual PASS. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
