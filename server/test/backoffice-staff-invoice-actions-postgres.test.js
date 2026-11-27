@@ -1,10 +1,11 @@
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from '../src/services/purchase-cost-increase-event.js';
 import {invoiceTaxonomySchema,saveInvoiceStoreTaxonomy} from "../src/lib/invoice-line-taxonomy.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {z} from 'zod';
-import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb,installPurchaseAlertFixture} from './helpers/invoice-common-draft-fixture.js';
 import {installStaffActionPolicy} from './helpers/backoffice-staff-actions-fixture.js';
 import {requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
 import * as common from '../src/lib/invoice-common-draft.js';
@@ -95,9 +96,10 @@ test('native delegated invoice metadata and canonical approval preserve one post
   assert.ifError(savedTransfer.failure);
   assert.equal(savedTransfer.result.count,1);
   const handlers={},router={use:()=>{},post:()=>{},delete:()=>{},patch:(path,h)=>handlers[path]=h};
+  await installPurchaseAlertFixture(db);
   const posting=(await readFile(new URL('../src/routes/purchase-order-posting-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
   const {applyPackStockCorrectionInTransaction}=await invoicePackPostingFixture(db,requireStaffAction);
-  const bindings={applyPackStockCorrectionInTransaction,Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
+  const bindings={recordPurchaseCostIncrease,recordSupplierDiscountReduction,applyPackStockCorrectionInTransaction,Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
   const approve=(status='FINAL')=>invoke(handlers['/:orderId'],'invoices.approve',{status});
   assert.equal((await approve()).failure?.status,403);assert.equal(await f.snapshot(),beforeApproval);
   await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["invoices.read","invoices.edit","invoices.approve"]'::jsonb`;

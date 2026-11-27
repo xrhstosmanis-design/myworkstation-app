@@ -5,6 +5,7 @@ import posOrderSuggestionsRoutes from './routes/pos-order-suggestions.js';
 import {readStaffStoreReport} from './services/backoffice-staff-store-reports.js';
 import {readStaffSalesExtra} from './services/backoffice-staff-sales-extra.js';
 import {readStaffWorkforceView} from './services/backoffice-staff-workforce.js';
+import {createPurchaseCostAlertScheduler} from "./services/purchase-cost-alert-email.js";
 import {createInvoiceStockExclusionEmailScheduler} from "./services/invoice-stock-exclusion-email.js";
 import {readStaffCompanyDirectory} from './services/backoffice-staff-company.js';
 import {createAutomaticReportSmtpTransport} from "./services/mail.js";
@@ -466,6 +467,10 @@ const invoiceStockEmailScheduler=createInvoiceStockExclusionEmailScheduler({
   db:prisma,work:backgroundDrain,
   send:({companyId,storeId,...message})=>createAutomaticReportSmtpTransport({companyId,storeId}).sendMail(message)
 });
+const purchaseCostAlertScheduler=createPurchaseCostAlertScheduler({
+  db:prisma,work:backgroundDrain,
+  send:({companyId,storeId,...message})=>createAutomaticReportSmtpTransport({companyId,storeId}).sendMail(message)
+});
 const weeklyStockAlarmScheduler=createWeeklyStockAlarmScheduler({db:prisma,work:backgroundDrain});
 const server=app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
@@ -478,6 +483,7 @@ const server=app.listen(process.env.PORT||8080,()=>{
   inventoryResultScheduler.start();
   monthlyInventoryReportScheduler.start();
   invoiceStockEmailScheduler.start();
+  purchaseCostAlertScheduler.start();
   monthlyInventoryCaptureScheduler.start();
   weeklyStockAlarmScheduler.start();
 });

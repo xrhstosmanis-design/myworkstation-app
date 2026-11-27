@@ -63,22 +63,40 @@ async function prepareRasterLabel(data) {
       }
       ctx.fillText(value, canvas.width / 2, y);
     };
-    // Preserve the existing label's five rows and physical dimensions. Scale
-    // text down only for the already-supported smallest (25mm high) labels.
-    const fontScale = Math.min(1, innerHeight / px(32));
+    // Allocate more space to product/price text, with a compact barcode.
+    // Scale the entire layout for the already-supported short label sizes.
+    const fontScale = Math.min(1, innerHeight / px(34));
+    const productPt = 14 * fontScale, pricePt = 22 * fontScale;
+    ctx.font = `bold ${productPt * dpi / 72}px Arial, sans-serif`;
+    const name = Array.from(String(data.productName).replace(/[\r\n\t]/g, ' ').trim());
+    let split = name.length;
+    if (ctx.measureText(name.join('')).width > innerWidth) {
+      let low = 0, high = name.length;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if (ctx.measureText(name.slice(0, mid).join('')).width <= innerWidth) low = mid;
+        else high = mid - 1;
+      }
+      split = Math.max(1, low);
+      const space = name.slice(0, split).lastIndexOf(' ');
+      if (space > 0) split = space;
+    }
+    const productLines = [name.slice(0, split).join('').trim()];
+    if (split < name.length) productLines.push(name.slice(split).join('').trim());
     const storeHeight = 6 * dpi / 72 * 1.1 * fontScale;
-    const nameHeight = 9 * dpi / 72 * 1.1 * fontScale;
-    const digitsHeight = 9 * dpi / 72 * fontScale;
-    const priceHeight = 11 * dpi / 72 * 1.1 * fontScale;
-    const barHeight = Math.round(innerHeight * 0.42);
+    const nameLineHeight = productPt * dpi / 72 * 1.1;
+    const nameHeight = nameLineHeight * productLines.length;
+    const digitsHeight = 8 * dpi / 72 * fontScale;
+    const priceHeight = pricePt * dpi / 72 * 1.1;
+    const barHeight = px(7 * fontScale);
     const gap = Math.max(0, (innerHeight - storeHeight - nameHeight - digitsHeight - priceHeight - barHeight) / 4);
     let y = paddingY;
     textLine(data.storeName, 6 * fontScale, 'normal', y);
     y += storeHeight + gap;
-    textLine(data.productName, 9 * fontScale, 'bold', y);
+    productLines.forEach((line, index) => textLine(line, productPt, 'bold', y + index * nameLineHeight));
     y += nameHeight + gap;
     // Integer pixel modules and a >=10-module quiet zone on both sides.
-    const moduleWidth = Math.floor(innerWidth / 115);
+    const moduleWidth = Math.min(4, Math.floor(innerWidth / 115));
     if (moduleWidth < 1) throw new Error('BARCODE_TOO_NARROW');
     const start = Math.floor((canvas.width - 95 * moduleWidth) / 2);
     const top = Math.round(y);
@@ -88,9 +106,11 @@ async function prepareRasterLabel(data) {
       ctx.fillRect(start + index * moduleWidth, top, moduleWidth, guard ? barHeight : Math.round(barHeight * 52 / 58));
     }
     y += barHeight + gap;
-    textLine(data.barcode, 9 * fontScale, 'normal', y);
+    textLine(data.barcode, 8 * fontScale, 'normal', y);
     y += digitsHeight + gap;
-    textLine(data.priceText, 11 * fontScale, 'bold', y);
+    // Keep the full monetary amount visible even on narrow configured stock.
+    ctx.font = `bold ${pricePt * dpi / 72}px Arial, sans-serif`;
+    ctx.fillText(data.priceText, canvas.width / 2, y, innerWidth);
     const png = canvas.toDataURL('image/png');
     if (!png.startsWith('data:image/png;base64,')) throw new Error('PNG_UNAVAILABLE');
     image.src = png;

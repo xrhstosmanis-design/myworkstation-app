@@ -59,6 +59,7 @@ test('native audit extraction retains all original SQL, financial calculations a
  // the original frozen hash remain protected. Its behavior has independent
  // native transaction, formatter and HTTP authorization regression coverage.
  const withdrawalAdapters=[
+  ["'MASTER_PRODUCTS_DISPATCHED','PURCHASE_COST_INCREASED','SUPPLIER_DISCOUNT_REDUCED','PRODUCT_CARD_UPDATED'","'MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED'"],
   ["'OWNER_CASH_WITHDRAWAL_RECORDED','SUPPLIER_CREDIT_CASH_APPLIED'", "'SUPPLIER_CREDIT_CASH_APPLIED'"],
   ['const eventAmount=r.eventType==="OWNER_CASH_WITHDRAWAL_RECORDED"?n(details.amount):','const eventAmount='],
   ['      const withdrawalDescription=r.eventType==="OWNER_CASH_WITHDRAWAL_RECORDED"?ownerWithdrawalEventDescription(details,r.createdAt):null;\n',''],
