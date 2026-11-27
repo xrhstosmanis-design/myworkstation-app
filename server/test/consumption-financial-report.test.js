@@ -1,3 +1,4 @@
+import {enforceBackofficeStaff} from '../src/services/backoffice-staff-access.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {allowedFinancialModes,operationalFinancialRequestCapability} from '../../shared/financial-consumption.mjs';
@@ -45,4 +46,23 @@ test('monthly supplement uses a closed Athens calendar month and immutable text,
   await assert.rejects(readMonthlyConsumptionSupplement({}, {...scope,toDay:'2026-11-29'}));
   const unavailable=await readMonthlyConsumptionSupplement({},scope,async()=>{throw Error('private error')});
   assert.match(unavailable.text,/πηγή δεν ήταν διαθέσιμη/);assert.doesNotMatch(unavailable.text,/private error|Τελικό σύνολο αγοράς: 0/);
+});
+
+test('shared live staff gate admits only the explicitly granted financial read, module and lifecycle context',async()=>{
+  let caps=['financial-self-consumption.read'],moduleActive=true;
+  const db={company:{findUnique:async()=>({id:'c',active:true,licenseStatus:'ACTIVE',modules:moduleActive?[{moduleKey:'INVENTORY',active:true}]:[]})},
+    $queryRaw:async(strings)=>{const sql=strings.join('?');
+      if(sql.includes('FROM "BackofficeStaffAccount" a'))return [{userId:'u',companyId:'c',mustChangePassword:false}];
+      if(sql.includes('FROM "BackofficeStaffGrant"'))return [{profile:'MANAGER',capabilities:caps}];
+      if(sql.includes('FROM "StorePaidModule"'))return [];
+      throw Error('Unexpected source query: '+sql);
+    }};
+  const req=path=>({user:{id:'u',companyId:'c',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true,sessionId:'session',sessionVersion:1},method:'GET',originalUrl:path,query:{storeId:'s'},body:{},get:name=>name==='x-backoffice-store-id'?'s':undefined});
+  const res={setHeader(){}};
+  const valid=req('/api/commerce/sales/financial-reports/self-consumption');await enforceBackofficeStaff(db,valid,res);
+  assert.equal(valid.staffGrant.capability,'financial-self-consumption.read');assert.deepEqual(valid.user.permissions,['INVENTORY']);
+  await assert.rejects(enforceBackofficeStaff(db,req('/api/commerce/sales/financial-reports/destructions'),res));
+  await enforceBackofficeStaff(db,req('/api/lifecycle/stores/s'),res);
+  moduleActive=false;await assert.rejects(enforceBackofficeStaff(db,req('/api/commerce/sales/financial-reports/self-consumption'),res),{code:'MODULE_DISABLED'});
+  moduleActive=true;caps=[];await assert.rejects(enforceBackofficeStaff(db,req('/api/commerce/sales/financial-reports/self-consumption'),res));
 });
