@@ -1,3 +1,7 @@
+## 27/11/2026 — Διανομή υπογεγραμμένου Android Chat 0.1.19 — LAB
+
+Δημοσίευση του ελεγμένου APK από το signing run 46067143226. [Checkpoint](CHANGES/2026-11-27-chat-android-019-distribution.md).
+
 ## 27/11/2026 — branding + sales fields / source prepared / AWAITING CI
 
 Owner /root retained. Claim4310 merged6e4ba424 before edits. Visible competitor copy removed; protocol/path/import identity preserved. Existing historical-cost reader unchanged; explicit store-scoped detailed items/categories/results, full-source cap validation, genuine missing-cost states and Athens calendar daily averages/CSV. 61 focused PASS + separate10 native PostgreSQL PASS; build PASS before final print CSS. Full CI/release/visual acceptance pending; no functional/manual PASS. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
