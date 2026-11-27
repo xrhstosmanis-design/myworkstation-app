@@ -35,7 +35,7 @@ export default function CashKioskImportPanel({api,storeId,storeName,generation,f
   }catch(e){if(isCurrent()){setError((e.message||'Δεν επιβεβαιώθηκε η ενέργεια.')+' Ανανέωσε τον έλεγχο πριν ξαναδοκιμάσεις.');release();onUncertain?.();}}
   finally{if(isCurrent())release();}
  };
- return <details aria-label="Αρχεία συμβάντων Kiosk" onToggle={e=>{if(e.currentTarget.open&&!loaded.current&&active())void refresh();}}><summary>Excel συμβάντων και ημερολόγια Kiosk</summary>
+ return <details aria-label="Αρχεία συμβάντων Kiosk" onToggle={e=>{if(e.currentTarget.open&&!loaded.current&&active())void refresh();}}><summary>Excel συμβάντων και ημερολόγια ταμειακής</summary>
   <p>Κατάστημα: <strong>{storeName}</strong>. Τα χειρόγραφα συνεχίζουν να ανεβαίνουν στο Chat του καταστήματος.</p>
   <button type="button" disabled={busy||disabled||!active()} onClick={refresh}>Ανανέωση λίστας αρχείων</button>
   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}{busy&&<p role="status">Ανάγνωση αρχείου…</p>}
@@ -44,11 +44,11 @@ export default function CashKioskImportPanel({api,storeId,storeName,generation,f
    <label>Περιεχόμενο<select value={kind} disabled={busy||disabled} onChange={e=>{setKind(e.target.value);setConfirmed(false);}}><option value="EVENTS">ΣΥΜΒΑΝΤΑ ΣΥΣΤΗΜΑΤΟΣ</option><option value="JOURNAL">Ημερολόγιο κινήσεων βάρδιας</option></select></label>
    <label>Περίοδος αρχείου από<input type="date" value={start} disabled={busy||disabled} onChange={e=>{setStart(e.target.value);setConfirmed(false);}}/></label>
    <label>Έως<input type="date" value={end} disabled={busy||disabled} onChange={e=>{setEnd(e.target.value);setConfirmed(false);}}/></label>
-   {kind==='JOURNAL'&&<><label>Αριθμός βάρδιας στο Kiosk<input value={shift} maxLength={100} disabled={busy||disabled} onChange={e=>{setShift(e.target.value);setConfirmed(false);}}/></label><label>Κωδικός χειριστή στο Kiosk<input value={operator} maxLength={100} disabled={busy||disabled} onChange={e=>{setOperator(e.target.value);setConfirmed(false);}}/></label><p>Συμπλήρωσε τους κωδικούς του πρωτοτύπου.</p></>}
+   {kind==='JOURNAL'&&<><label>Αριθμός βάρδιας στο αρχείο<input value={shift} maxLength={100} disabled={busy||disabled} onChange={e=>{setShift(e.target.value);setConfirmed(false);}}/></label><label>Κωδικός χειριστή στο αρχείο<input value={operator} maxLength={100} disabled={busy||disabled} onChange={e=>{setOperator(e.target.value);setConfirmed(false);}}/></label><p>Συμπλήρωσε τους κωδικούς του πρωτοτύπου.</p></>}
    <label><input type="checkbox" checked={confirmed} disabled={busy||disabled||!file||!active()} onChange={e=>setConfirmed(e.target.checked)}/>Επιβεβαίωσα ότι το αρχείο αφορά το {storeName}, την παραπάνω περίοδο και τους δηλωμένους κωδικούς.</label>
    <button type="submit" disabled={busy||disabled||!active()||!file||!confirmed||!start||!end||start>end||kind==='JOURNAL'&&(!shift.trim()||!operator.trim())}>Σύνδεση αρχείου με τον έλεγχο</button>
   </form>
-  <ul>{sources.map(s=><li key={s.id}>{s.fileName} · {s.period.from} έως {s.period.to}{s.sequence?` · καταχώριση ${s.sequence}`:''}{s.kind==='JOURNAL'?` · Kiosk ${s.binding.kioskShiftId} / ${s.binding.kioskOperator}`:''}{s.status==='LIMITED'?' · ελλιπής ανάγνωση':''}<button type="button" disabled={busy||disabled} onClick={()=>{setTarget(s.id);setReason('');setRevokeConfirmed(false);}}>Αφαίρεση από την ανάλυση</button></li>)}</ul>
+  <ul>{sources.map(s=><li key={s.id}>{s.fileName} · {s.period.from} έως {s.period.to}{s.sequence?` · καταχώριση ${s.sequence}`:''}{s.kind==='JOURNAL'?` · Πηγή ${s.binding.kioskShiftId} / ${s.binding.kioskOperator}`:''}{s.status==='LIMITED'?' · ελλιπής ανάγνωση':''}<button type="button" disabled={busy||disabled} onClick={()=>{setTarget(s.id);setReason('');setRevokeConfirmed(false);}}>Αφαίρεση από την ανάλυση</button></li>)}</ul>
   {target&&<form onSubmit={e=>{e.preventDefault();void send('REVOKE');}}><label>Αιτία αφαίρεσης<textarea value={reason} minLength={10} maxLength={500} disabled={busy||disabled} onChange={e=>{setReason(e.target.value);setRevokeConfirmed(false);}}/></label><label><input type="checkbox" checked={revokeConfirmed} disabled={busy||disabled} onChange={e=>setRevokeConfirmed(e.target.checked)}/>Επιβεβαιώνω την αφαίρεση μόνο από την ανάλυση.</label><button type="submit" disabled={busy||disabled||reason.trim().length<10||!revokeConfirmed}>Επιβεβαίωση αφαίρεσης</button></form>}
  </details>;
 }

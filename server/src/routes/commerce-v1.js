@@ -1,3 +1,4 @@
+import {readSalesItemDetails} from "../services/sales-item-details.js";
 import {recordPurchaseCostIncrease} from "../services/purchase-cost-increase-event.js";
 import {financialReportFilters,readStoreFinancialReport} from "../services/store-financial-reports.js";
 import {LOCAL_INVOICE_OCR_LIMITS} from "../../../shared/local-invoice-ocr-limits.mjs";
@@ -250,7 +251,7 @@ router.post("/sales",requireCompanyModule("POS"),async(req,res,next)=>{
       for(const payment of body.payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount","terminalRef") VALUES (${id()},${saleId},${payment.method},${payment.amount},${payment.terminalRef||null})`;
       if(body.customerId&&body.payments.some(p=>p.method==='CREDIT')){const credit=body.payments.filter(p=>p.method==='CREDIT').reduce((s,p)=>s+p.amount,0);await tx.$executeRaw`UPDATE "Customer" SET "balance"="balance"+${credit},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${body.customerId} AND "companyId"=${req.user.companyId}`;await tx.$executeRaw`INSERT INTO "CustomerLedger" ("id","customerId","storeId","entryType","amount","referenceType","referenceId","note") VALUES (${id()},${body.customerId},${body.storeId},'SALE_CREDIT',${credit},'SALE',${saleId},'Πίστωση από πώληση')`;}
     });
-    res.status(201).json({id:saleId,subtotal,discount,total,fiscalStatus:"NON_FISCAL",message:"Η πώληση καταγράφηκε μη φορολογικά. Η φορολογική απόδειξη παραμένει στον Kiosk Manager/RBS μέχρι την ενεργοποίηση του Connector."});
+    res.status(201).json({id:saleId,subtotal,discount,total,fiscalStatus:"NON_FISCAL",message:"Η πώληση καταγράφηκε μη φορολογικά. Η φορολογική απόδειξη παραμένει στο ταμειακό σύστημα/RBS μέχρι την ενεργοποίηση του Connector."});
   }catch(error){next(error)}
 });
 
@@ -328,6 +329,12 @@ router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),asyn
     }
     const storeId=req.query.storeId?String(req.query.storeId):null;if(storeId&&!await ownedStore(req.user.companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     const to=req.query.to?greeceRangeDate(req.query.to,true):new Date(),from=req.query.from?greeceRangeDate(req.query.from):new Date(to.getTime()-30*86400000);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
+    if(req.query.itemDetails!==undefined){
+      if(req.query.itemDetails!=="1")return res.status(400).json({error:"Μη έγκυρη επιλογή αναλυτικών ειδών."});
+      const details=await readSalesItemDetails({companyId:req.user.companyId,storeId,from:req.query.from,to:req.query.to,timeZone:req.query.timeZone});
+      if(delegated)await requireStaffGrant(prisma,req.user,req.user.storeId,'analytics.read');
+      return res.json(details);
+    }
     const duration=to.getTime()-from.getTime(),compareTo=req.query.compareTo?greeceRangeDate(req.query.compareTo,true):new Date(from.getTime()-1),compareFrom=req.query.compareFrom?greeceRangeDate(req.query.compareFrom):new Date(compareTo.getTime()-duration);
     const [summary,comparison,daily,hours,categories,products,employees,storeRows,methods,statuses]=await Promise.all([
       prisma.$queryRaw`SELECT COUNT(*) FILTER (WHERE "status"='COMPLETED')::int AS sales,COALESCE(SUM("total") FILTER (WHERE "status"='COMPLETED'),0) AS revenue,COALESCE(AVG("total") FILTER (WHERE "status"='COMPLETED'),0) AS average,COALESCE(SUM("discount") FILTER (WHERE "status"='COMPLETED'),0) AS discounts FROM "Sale" WHERE "companyId"=${req.user.companyId} AND (${storeId}::text IS NULL OR "storeId"=${storeId}) AND "occurredAt">=${from} AND "occurredAt"<=${to}`,

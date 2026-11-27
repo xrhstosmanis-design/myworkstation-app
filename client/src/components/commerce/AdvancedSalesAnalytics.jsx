@@ -82,7 +82,7 @@ export default function AdvancedSalesAnalytics({api,stores=[],initialStoreId=""}
 
   return <div className={`kiosk-sales ${drawerOpen?"with-drawer":""}`}>
     <section className="kiosk-main">
-      <div className="kiosk-titlebar"><div><h2>Πωλήσεις</h2><p>Οικεία ροή Kiosk Manager με τις πρόσθετες δυνατότητες MyWorkStation.</p></div><div className="kiosk-top-controls"><label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><button onClick={()=>load(selected?.id)} disabled={busy}><RefreshCw/>{busy?"Φόρτωση":"Ανανέωση"}</button></div></div>
+      <div className="kiosk-titlebar"><div><h2>Πωλήσεις</h2><p>Ανάλυση πωλήσεων MyWorkStation.</p></div><div className="kiosk-top-controls"><label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><button onClick={()=>load(selected?.id)} disabled={busy}><RefreshCw/>{busy?"Φόρτωση":"Ανανέωση"}</button></div></div>
       {error&&<div className="commerce-error" role="alert">{error}</div>}
       <div className="commerce-notice"><b>ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΑΝΑΛΥΣΗ.</b> Οι Κατηγορίες και οι Εργαζόμενοι προέρχονται μόνο από πραγματικές καταγραφές MyWorkStation. Ακυρώσεις και επιστροφές εμφανίζονται μόνο όταν υπάρχει πραγματική σχετική εγγραφή στο σύστημα.</div>
       <div className="kiosk-subtabs"><button className="active"><CalendarDays/>Βάρδιες σε εξέλιξη</button><button><BarChart3/>Δείκτες απόδοσης</button><button><BarChart3/>Απόδοση ανά ημέρα</button><button><WalletCards/>Διελεύσεις πελατών</button></div>

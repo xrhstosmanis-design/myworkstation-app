@@ -42,7 +42,7 @@ $report=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_KAT_R
   "Result: "+$(if($DryRun){"DRY_RUN_PASSED"}else{"SHORTCUT_RECOVERED"}),
   "Rollback checkpoint: "+$(if($shortcutChecksum -eq "MISSING"){"NO PREVIOUS SHORTCUT"}else{"PREVIOUS SHORTCUT BACKUP REQUIRED"}),
   "Next manual action: "+$(if($DryRun){"Run RECOVER_KAT.cmd only inside the approved maintenance window."}else{"Open Store Mode and confirm health/login without fiscal test."}),
-  "Safety: NO RBS / NO KIOSK MANAGER / NO CAPDRIVER CHANGES"
+  "Safety: NO RBS / NO FISCAL SOFTWARE / NO CAPDRIVER CHANGES"
 )|Set-Content -LiteralPath $report -Encoding UTF8
 Write-Host $(if($DryRun){"Το recovery dry-run πέρασε χωρίς αλλαγή συντόμευσης."}else{"Η συντόμευση Store Mode ανακτήθηκε με ασφάλεια."})
 Write-Host "Report: $report"

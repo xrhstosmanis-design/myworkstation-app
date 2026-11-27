@@ -22,5 +22,5 @@ test("Commerce V1 ready modules are activatable while technical modules stay loc
 test("Commerce Hub contains visible non-fiscal warning",async()=>{
   const source=await fs.readFile(new URL("../../client/src/components/commerce/CommerceHub.jsx",import.meta.url),"utf8");
   assert.match(source,/ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΛΕΙΤΟΥΡΓΙΑ PILOT/);
-  assert.match(source,/Kiosk Manager\/RBS/);
+  assert.match(source,/ταμειακό σύστημα\/RBS/);
 });

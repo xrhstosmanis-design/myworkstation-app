@@ -17,7 +17,7 @@ RECOVERY
 Αν δεν υπάρχει έγκυρο installation state, σταματά χωρίς αλλαγές.
 
 Δεν απαιτούνται Node, npm, Git ή κωδικός χρήστη.
-Δεν αλλάζει RBS, Kiosk Manager, CapDriver, υπηρεσίες Windows ή registry.
+Δεν αλλάζει RBS, το ταμειακό σύστημα, CapDriver, υπηρεσίες Windows ή registry.
 Ο RBS Observer είναι ξεχωριστή τεχνική εγκατάσταση και δεν ενεργοποιείται από εδώ.
 
 Για την πραγματική δοκιμή ακολουθήστε με τη σειρά το KAT_REAL_TEST_CHECKLIST.txt.

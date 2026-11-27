@@ -17,7 +17,7 @@ Read [the Greek technician manual](../../docs/manual/pilot-installation/CAPDRIVE
 This package targets the first/current CAP Driver file path. It does not read or
 write the newer driver's `OUTPUT` folder.
 
-## Current register profiles from the supplied Kiosk Manager screen
+## Current register profiles from the supplied fiscal software screen
 
 Configure each profile in MyWorkStation's **Τμήματα ΦΠΑ** settings, including
 its Kiosk VAT code (`legacyVatCode`), rate, and cash-register department. Assign
@@ -38,7 +38,7 @@ creating a request.
 | 63 | 21 | 0% | Είδη 0 |
 
 KAT cash uses payment code `6`, counter card `2`, and standalone delayed card `3`. Delivery code3 is KAT-only; other-store Delivery mapping is not implemented. Mixed with a configured writer is blocked. Verify the new register before using 6/2, matching the
-provided Kiosk Manager capture. Do not add a VAT profile based only on rate;
+provided fiscal software capture. Do not add a VAT profile based only on rate;
 several categories share a rate but use different register departments.
 
 ## Pairing and operation

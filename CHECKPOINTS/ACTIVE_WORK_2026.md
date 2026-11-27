@@ -1,3 +1,7 @@
+## 27/11/2026 — branding + sales fields / source prepared / AWAITING CI
+
+Owner /root retained. Claim4310 merged6e4ba424 before edits. Visible competitor copy removed; protocol/path/import identity preserved. Existing historical-cost reader unchanged; explicit store-scoped detailed items/categories/results, full-source cap validation, genuine missing-cost states and Athens calendar daily averages/CSV. 61 focused PASS + separate10 native PostgreSQL PASS; build PASS before final print CSS. Full CI/release/visual acceptance pending; no functional/manual PASS. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
+
 ## 27/11/2026 — ASSIGNED /root — branding and sales-item completeness
 
 Explicit owner approval covers public code/docs publication. Bounded visible-copy cleanup and selected-store sales metadata/cost/daily-average display; existing writers, fiscal/auth/store/cost invariants and other owners preserved. Claim before source, NOT TESTED/NOT INSTALLED. [Scope](CHANGES/2026-11-27-visible-branding.md).
@@ -1269,5 +1273,10 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
 
 - 27/11/2026 · [Επιστροφές εγγυοδοσίας προμηθευτών](CHANGES/2026-11-27-supplier-deposit-reminders.md) · Ελέγχθηκε σε απομονωμένη PostgreSQL. Εκκρεμεί LAB BackOffice.
+
+
+## Source CI follow-up — 27/11/2026
+
+PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs passed. Full server suite:7491PASS/1FAIL/4SKIP (7496tests); the sole failure was the old visible «Προεπισκόπηση Kiosk» expectation in owner-payments-kiosk-preview-v1.test.js. Updated only that expectation to «Προεπισκόπηση πληρωμών»; confirmation/cancel/read-only/tenant assertions are unchanged. Focused preview suite4PASS/0FAIL/0SKIP. Final frontend build passed13.69s and generated JS/HTML contains no «Kiosk Manager». Full source rerun / main CI / guarded release / user visual acceptance remain pending. NOT LAB PASS / NOT INSTALLED.
 
 - 27/11/2026: Proposal packaging cost, line removal and presentation. See CHECKPOINTS/CHANGES/2026-11-27-proposal-pack-cost.md. CI and operational acceptance pending.
