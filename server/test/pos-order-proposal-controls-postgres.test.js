@@ -15,7 +15,7 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
   tables.StockMovement='"id" TEXT PRIMARY KEY,"storeId" TEXT,"sourceId" TEXT,"sourceType" TEXT,"movementType" TEXT,"quantity" NUMERIC,"createdAt" TIMESTAMP';
   tables.Supplier='"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"email" TEXT,"active" BOOLEAN';
   tables.PurchaseDocument='"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"status" TEXT,"documentType" TEXT,"documentDate" TIMESTAMP';
-  tables.PurchaseDocumentLine='"id" TEXT PRIMARY KEY,"purchaseDocumentId" TEXT,"productId" TEXT,"quantity" NUMERIC';
+  tables.PurchaseDocumentLine='"id" TEXT PRIMARY KEY,"purchaseDocumentId" TEXT,"productId" TEXT,"quantity" NUMERIC,"unit" TEXT,"unitsPerPackage" NUMERIC,"netAmount" NUMERIC';
   tables.AuthAudit='"id" TEXT PRIMARY KEY,"userId" TEXT,"email" TEXT,"event" TEXT,"success" BOOLEAN,"deviceName" TEXT,"userAgent" TEXT,"ipAddress" TEXT,"createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP';
   for(const [name,columns] of Object.entries(tables))await db.$executeRawUnsafe(`CREATE TABLE "${name}" (${columns})`);
   for(const sql of [
@@ -38,7 +38,7 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
     ('other','a2','receipt','PURCHASE_ORDER','PURCHASE',1,'2026-11-24 08:00:00'),
     ('return','a1','receipt','PURCHASE_ORDER','SUPPLIER_RETURN',1,'2026-11-24 08:00:00')`,
    `INSERT INTO "PurchaseDocument" VALUES ('old','a','a1','sup','APPROVED','INVOICE','2025-01-01'),('other','a','a2','other','APPROVED','INVOICE','2025-01-01'),('foreign','b','b1','b','APPROVED','INVOICE','2025-01-01')`,
-   `INSERT INTO "PurchaseDocumentLine" VALUES ('d1','old','p',1),('d2','other','q',1),('d3','foreign','foreign',1)`,
+   `INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","quantity") VALUES ('d1','old','p',1),('d2','other','q',1),('d3','foreign','foreign',1)`,
    `INSERT INTO "Sale" VALUES ('start','a','a1','COMPLETED','POS','2026-10-31 22:00:00'),('last','a','a1','COMPLETED','POS','2026-11-02 21:59:59.999999'),('end','a','a1','COMPLETED','POS','2026-11-02 22:00:00'),('before','a','a1','COMPLETED','POS','2026-10-31 21:59:59.999999'),('return','a','a1','COMPLETED','POS_REVERSAL','2026-11-01 10:00:00'),('other','a','a2','COMPLETED','POS','2026-11-01 10:00:00'),('foreign','b','b1','COMPLETED','POS','2026-11-01 10:00:00'),('draft','a','a1','DRAFT','POS','2026-11-01 10:00:00'),('waste','a','a1','COMPLETED','WASTE','2026-11-01 10:00:00')`,
    `INSERT INTO "SaleLine" VALUES ('l1','start','p',10),('l2','last','p',10),('l3','end','p',100),('l4','before','p',100),('l5','return','p',4),('l6','other','p',100),('l7','foreign','p',100),('l8','draft','p',100),('l9','waste','p',100)`
   ])await db.$executeRawUnsafe(sql);

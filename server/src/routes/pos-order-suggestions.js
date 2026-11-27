@@ -1,3 +1,4 @@
+import {applyProposalQuantities} from '../../../shared/order-proposal-quantities.mjs';
 import {Router} from 'express';
 import {z} from 'zod';
 import {prisma as defaultPrisma} from '../prisma.js';
@@ -46,10 +47,13 @@ export function createPosOrderSuggestionsRouter({db=defaultPrisma,read=readPosOr
   const snapshot=snapshots.create(report,scope(req));res.json({...snapshot.report,reportId:snapshot.id});
  }));
  router.post('/stores/:storeId/email',admission,moduleGuard,handler(async(req,res)=>{
-  const input=z.object({reportId:z.string().uuid(),recipients:reportRecipientListSchema.refine(x=>x.length>0,'Συμπλήρωσε τουλάχιστον ένα email.'),search:z.string().trim().max(200).default('')}).parse(req.body);
+  const input=z.object({reportId:z.string().uuid(),recipients:reportRecipientListSchema.refine(x=>x.length>0,'Συμπλήρωσε τουλάχιστον ένα email.'),search:z.string().trim().max(200).default(''),quantities:z.record(z.number().finite().min(0).max(100000000)).default({})}).parse(req.body);
   const entry=snapshots.get(input.reportId,scope(req));
   if(entry.state!=='ready')throw fail(409,'Υπάρχει ήδη απόπειρα αποστολής αυτής της πρότασης. Έλεγξε την κατάστασή της πριν από νέα αποστολή.');
-  const rendered=renderPosOrderProposal(entry.report,input.search);
+  let report;
+  try{report=applyProposalQuantities(entry.report,input.quantities)}
+  catch(error){throw fail(422,error.message)}
+  const rendered=renderPosOrderProposal(report,input.search);
   if(!rendered.rowCount)throw fail(422,'Δεν υπάρχουν είδη για αποστολή με αυτά τα κριτήρια.');
   const to=normalizeReportRecipients(input.recipients),auditId=`pos-proposal-email:${input.reportId}`;
   const auditContext={reportId:input.reportId,...scope(req),recipients:to,search:input.search,period:entry.report.period,supplierId:entry.report.supplier?.id||null};
