@@ -339,7 +339,7 @@ test('native personal manager cancellation requires a live store grant and audit
    'CREATE TABLE "Company" ("id" text PRIMARY KEY,"name" text NOT NULL,"active" boolean DEFAULT true,"licenseStatus" text DEFAULT \'ACTIVE\',"subscriptionEndsAt" timestamptz)',
    'CREATE TABLE "CompanyModule" ("id" text PRIMARY KEY,"companyId" text,"moduleKey" text,"active" boolean DEFAULT true,"startsAt" timestamptz,"endsAt" timestamptz)',
    'CREATE TABLE "StorePaidModule" ("storeId" text,"moduleKey" text,"active" boolean,"startsAt" timestamptz,"endsAt" timestamptz)',
-   'ALTER TABLE "Store" ADD COLUMN "active" boolean DEFAULT true',
+   'ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true',
    'ALTER TABLE "User" ADD COLUMN "fullName" text,ADD COLUMN "email" text,ADD COLUMN "role" text,ADD COLUMN "sessionVersion" integer DEFAULT 0,ADD COLUMN "mustChangePassword" boolean DEFAULT false',
    'CREATE TABLE "UserSession" ("id" text PRIMARY KEY,"userId" text,"expiresAt" timestamptz,"revokedAt" timestamptz)',
   ])await f.db.$executeRawUnsafe(sql);

@@ -13,7 +13,7 @@ const request=p=>({storeId:'s',supplierId:'target',version:p.version,reason:'Cor
 async function registered(file,db){
  const handlers={},router={use(){},get:(p,...f)=>handlers['GET '+p]=f.at(-1),post:(p,...f)=>handlers['POST '+p]=f.at(-1),patch:(p,...f)=>handlers['PATCH '+p]=f.at(-1),delete(){}};
  const src=(await readFile(new URL(file,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'').replace('default router;','return router;');
- if(path.endsWith('/purchase-order-posting-guard.js'))await installPurchaseAlertFixture(db);
+ if(file.endsWith('/purchase-order-posting-guard.js'))await installPurchaseAlertFixture(db);
  const deps={recordPurchaseCostIncrease,recordSupplierDiscountReduction,invoiceTaxonomySchema,saveInvoiceStoreTaxonomy,Router:()=>router,prisma:db,crypto,z,...common,...correction,assertReopenedIdentity:()=>{},reuseReopenedPurchaseDocument:()=>{throw Error('Not reopened')}};
  new Function(...Object.keys(deps),src)(...Object.values(deps));return handlers;
 }
