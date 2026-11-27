@@ -1,3 +1,7 @@
+## 27/11/2026 — Επιλέξιμα τιμολόγια στην αντιστοίχιση πληρωμής — LAB
+
+Κοινός έλεγχος επιλεξιμότητας λίστας και προεπισκόπησης για την εργασία #4232. [Checkpoint](CHANGES/2026-11-27-manual-allocation-eligible-documents.md).
+
 - 27/11/2026 · Ειδοποιήσεις αύξησης τιμής αγοράς και μείωσης έκπτωσης · [Checkpoint](CHANGES/2026-11-26-purchase-cost-increase-events.md).
 
 ## 26/11/2026 — Συμπλήρωση μερικής αντιστοίχισης πληρωμών — LAB
@@ -629,6 +633,8 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 - Απογραφή · Η διασταύρωση των workflow στο `3acf060c` (#3841) και στο `main` έδειξε διαφορά στο βήμα recovery: το branch χτίζει το image από το προεπιλεγμένο Dockerfile, ενώ το main περνά σταθερό digest PostgreSQL 18 και σταθερό digest για την υπηρεσία PostgreSQL 16. Ο επόμενος έλεγχος είναι CI με το workflow του main ώστε να διαπιστωθεί αν υποχωρούν οι αποτυχίες restore του #9770, πριν από την αποδοχή στο LAB. Η αιτία δεν έχει επιβεβαιωθεί με εκτέλεση.
 - Συντονισμός · [CI #9825 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500654258) στο `34896706` του #3860. Το PR έχει mergeable status και παραμένει draft.
 
+- 27/11/2026 · [Android Chat: ανανέωση σύνδεσης στην επιστροφή](CHANGES/2026-11-27-chat-android-resume-session.md).
+
 ## Κανόνας ενημέρωσης
 
 10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
@@ -1224,4 +1230,8 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
 
-- 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Full CI and operational acceptance pending.
+## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
+
+[Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
+
+- 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
