@@ -1242,6 +1242,8 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
 
+- 27/11/2026 · Περιγραφή συμβάντων αλλαγής τιμής και έκπτωσης · [Checkpoint](CHANGES/2026-11-27-purchase-alert-event-description.md).
+
 ## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
 
 [Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
