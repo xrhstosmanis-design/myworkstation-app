@@ -88,3 +88,25 @@ export async function authenticateErganiTrial({username, password, fetchImpl = f
   }
   throw new Error("Η δοκιμαστική σύνδεση στο ΕΡΓΑΝΗ δεν επιβεβαιώθηκε.");
 }
+
+export async function listErganiTrialEmployerServices({token, fetchImpl = fetch}) {
+  if (typeof token !== "string" || !token.trim()) throw new Error("Λείπει η πρόσβαση στο δοκιμαστικό ΕΡΓΑΝΗ.");
+
+  try {
+    const response = await fetchImpl(TRIAL_API + "WebServices/ServicesList", {
+      method:"GET",
+      headers:{Authorization:`Bearer ${token.trim()}`, Accept:"application/json"},
+      redirect:"error",
+      signal:AbortSignal.timeout(8_000)
+    });
+    if (response.status === 200) {
+      const services = await response.json();
+      if (Array.isArray(services) && services.every(service =>
+        typeof service?.name === "string" && service.name.trim() && Array.isArray(service.parameters)
+      )) return services;
+    }
+  } catch {
+    // Authentication and response details stay inside the provider boundary.
+  }
+  throw new Error("Δεν επιβεβαιώθηκε ο κατάλογος υπηρεσιών του δοκιμαστικού ΕΡΓΑΝΗ.");
+}

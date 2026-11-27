@@ -80,3 +80,16 @@ test("authentication uses the trial endpoint and returns only the access token",
     fetchImpl:async () => Response.json({error:"test-password"}, {status:401})}),
     {message:"Η δοκιμαστική σύνδεση στο ΕΡΓΑΝΗ δεν επιβεβαιώθηκε."});
 });
+
+test("discovers employer services with a read-only trial API call", async () => {
+  const {listErganiTrialEmployerServices} = await import("../src/services/ergani-trial-work-card.js");
+  const services = [{name:"EX_BASE_01",description:"Στοιχεία εργοδότη",parameters:[]}];
+  assert.deepEqual(await listErganiTrialEmployerServices({token:"test", fetchImpl:async (url, options) => {
+    assert.equal(url, "https://trialv2eservices.yeka.gr/WebServicesApi/api/WebServices/ServicesList");
+    assert.equal(options.method, "GET");
+    assert.equal(options.headers.Authorization, "Bearer test");
+    assert.equal(options.redirect, "error");
+    return Response.json(services);
+  }}), services);
+  await assert.rejects(listErganiTrialEmployerServices({token:"test",fetchImpl:async () => Response.json({})}));
+});
