@@ -488,3 +488,13 @@
  .ia-margin-form button{grid-column:1/-1}
  .ia-toolbar{position:static}
 }
+
+.ia-stock-reset {
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid #c8d8e8;
+  border-radius: 8px;
+}
+.ia-stock-reset legend { font-weight: 700; padding: 0 5px; }
+.ia-stock-reset p { margin: 0 0 8px; }
+.ia-stock-reset-actions { display: flex; flex-wrap: wrap; gap: 8px; }
