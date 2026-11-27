@@ -10,6 +10,7 @@ import LowValueProductsPanel from "./LowValueProductsPanel.jsx";
 import RecipeManagementPanel from "./RecipeManagementPanel.jsx";
 import AdvancedSalesAnalytics from "./AdvancedSalesAnalytics.jsx";
 import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
+import DigitalWorkCardEvents from "./DigitalWorkCardEvents.jsx";
 import DispatchProviderPanel from "./DispatchProviderPanel.jsx";
 import ConnectorObserverPanel from "./ConnectorObserverPanel.jsx";
 import PendingCenterPanel from "./PendingCenterPanel.jsx";
@@ -233,6 +234,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
         <button disabled={!active.has("DOCUMENTS")} className={`${tab==="documents"?"active":""} ${!active.has("DOCUMENTS")?"locked":""}`} onClick={()=>setTab("documents")}><Files/> Θυρίδα Τιμολογίων</button>
         <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> Ανάγνωση τιμολογίων</button>
         <button disabled={!active.has("ATTENDANCE")} className={`${tab==="attendance"?"active":""} ${!active.has("ATTENDANCE")?"locked":""}`} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
+        <button type="button" className={tab==="digitalWorkCard"?"active":""} onClick={()=>setTab("digitalWorkCard")}>Ψηφιακή Κάρτα Εργασίας</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="dispatch"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("dispatch")}><Truck/> Δελτία / Πάροχος</button>
         {netlinkRecoveryAccess.available&&netlinkRecoveryAccess.storeId===storeId&&<button className={tab==="netlinkPaid"?"active":""} onClick={()=>setTab("netlinkPaid")}>Πληρωμένες κάρτες Netlink</button>}
         <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
@@ -288,6 +290,7 @@ export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="
     {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi} focusJobId={aiFocusJobId}/>}
 
     {tab==="attendance"&&<AttendanceManagementPanel api={api} stores={stores} initialStoreId={storeId}/>}
+    {tab==="digitalWorkCard"&&<DigitalWorkCardEvents key={storeId} api={api} storeId={storeId}/>}
 
     {tab==="dispatch"&&<DispatchProviderPanel api={api} stores={stores} initialStoreId={storeId}/>}
 

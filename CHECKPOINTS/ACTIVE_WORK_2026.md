@@ -609,6 +609,8 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 | — | OWNER-SHIFT-TIME-FILTER | /root | #3872 | Hosted LAB PASS · 3→1 | [Τεκμήριο](CHANGES/2026-11-10-owner-shift-time-filter.md) |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
 
+- 26/11/2026 · [Ψηφιακή Κάρτα Εργασίας](CHANGES/2026-11-26-ergani-work-card.md) · PR #4292, εκκρεμεί αποδοχή στο LAB.
+
 ## 24/11/2026 - Price catalog product card - LAB pending
 
 Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the full product card for a selected store. [Checkpoint](CHANGES/2026-11-24-price-catalog-product-card.md).

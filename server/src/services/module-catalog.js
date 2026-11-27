@@ -39,6 +39,13 @@ export const moduleCatalog=[
   {key:"SMART_AUDIT",name:"Έξυπνο Audit",description:"Συμπεράσματα και μοτίβα πάνω στα υφιστάμενα συμβάντα Audit.",category:"CONTROL",commercialReady:false,ownerOnly:true}
 ];
 
+export const DIGITAL_WORK_CARD="DIGITAL_WORK_CARD";
+export const storeModuleCatalog=[
+  ...moduleCatalog,
+  {key:DIGITAL_WORK_CARD,name:"Ψηφιακή Κάρτα Εργασίας",description:"Ξεχωριστή υπηρεσία επί πληρωμή ανά κατάστημα για τη διασύνδεση με το ΕΡΓΑΝΗ ΙΙ.",category:"HR",commercialReady:true,storeOnly:true}
+];
+export const storeModuleKeys=storeModuleCatalog.map(module=>module.key);
+
 export const moduleKeys=moduleCatalog.map(module=>module.key);
 export const ownerRestrictedModuleKeys=Object.freeze(moduleCatalog.filter(module=>module.ownerOnly).map(module=>module.key));
 

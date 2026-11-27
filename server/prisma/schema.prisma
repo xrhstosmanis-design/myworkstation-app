@@ -151,6 +151,7 @@ model Store {
   shifts    ShiftType[]
   schedules Schedule[]
   paidModules StorePaidModule[]
+  digitalWorkSessions DigitalWorkSession[]
   customerDemo CustomerDemo? @relation("DemoStore")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -179,6 +180,8 @@ model Employee {
   leaveRequests   LeaveRequest[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  digitalWorkSessions DigitalWorkSession[]
 
   @@index([storeId])
 }
@@ -706,4 +709,51 @@ model WorkforceChatCommand {
   schedule         WorkforceSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
 
   @@index([companyId, storeId, createdAt])
+}
+
+enum DigitalWorkSubmissionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  UNKNOWN
+}
+
+model DigitalWorkSession {
+  id                    String   @id @default(cuid())
+  storeId               String
+  store                 Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  employeeId            String
+  employee              Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  cashShiftId           String?
+  declaredStartAt       DateTime? @db.Timestamptz(6)
+  declaredEndAt         DateTime? @db.Timestamptz(6)
+  declaredRestDay       Boolean?
+  entryRequestId        String   @unique
+  entryAt               DateTime @db.Timestamptz(6)
+  entryStatus           DigitalWorkSubmissionStatus @default(PENDING)
+  entryErganiReference  String?
+  entryError            String?
+  departureRequestId    String?  @unique
+  departureAt           DateTime? @db.Timestamptz(6)
+  departureStatus       DigitalWorkSubmissionStatus?
+  departureErganiReference String?
+  departureError        String?
+  departureReason       String?
+  alerts                DigitalWorkAlert[]
+  createdAt             DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([storeId, entryAt])
+  @@index([storeId, employeeId, cashShiftId])
+}
+
+model DigitalWorkAlert {
+  sessionId   String
+  session     DigitalWorkSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  kind        String
+  status      String
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  sentAt      DateTime? @db.Timestamptz(6)
+
+  @@id([sessionId, kind])
 }
