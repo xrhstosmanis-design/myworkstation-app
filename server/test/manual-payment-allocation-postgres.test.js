@@ -17,6 +17,7 @@ test('manual allocation PostgreSQL: authorization, preview, stale preview, rollb
  await admin.$executeRawUnsafe('CREATE SCHEMA "'+schema+'"');
  for(const s of [
  'CREATE TABLE "StoreTransaction" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"amount" NUMERIC(14,2),"type" TEXT,"paymentMethod" TEXT,"sessionId" TEXT,"reversedAt" TIMESTAMPTZ,"invoiceDocumentNumber" TEXT,"invoicePaymentKey" TEXT)',
+ 'ALTER TABLE "StoreTransaction" ADD COLUMN "attachmentData" TEXT',
  'CREATE TABLE "SupplierPaymentSettlement" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"transactionId" TEXT,"supplierId" TEXT,"status" TEXT,"paymentMethod" TEXT,"reviewedBy" TEXT,"reviewedAt" TIMESTAMPTZ,"reviewNote" TEXT)',
  'CREATE TABLE "SupplierPaymentAllocation" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"settlementId" TEXT,"purchaseDocumentId" TEXT,"amount" NUMERIC(14,2),UNIQUE("settlementId","purchaseDocumentId"))',
  'CREATE TABLE "Supplier" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"taxId" TEXT,"active" BOOLEAN)',
@@ -28,7 +29,7 @@ test('manual allocation PostgreSQL: authorization, preview, stale preview, rollb
  'CREATE TABLE "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"operatorId" TEXT,"actorId" TEXT,"eventType" TEXT,"details" JSONB)',
  'CREATE TABLE "StockMovement" ("id" TEXT PRIMARY KEY,"quantity" NUMERIC)',
  'INSERT INTO "Supplier" VALUES (\'old\',\'c\',\'Old\',NULL,true),(\'new\',\'c\',\'New\',\'123456789\',true)',
- 'INSERT INTO "StoreTransaction" VALUES (\'pay\',\'c\',\'s\',\'old\',90.17,\'SUPPLIER_PAYMENT\',\'CASH_SHIFT\',\'shift\',NULL,NULL,NULL)',
+ 'INSERT INTO "StoreTransaction" ("id","companyId","storeId","supplierId","amount","type","paymentMethod","sessionId","reversedAt","invoiceDocumentNumber","invoicePaymentKey") VALUES (\'pay\',\'c\',\'s\',\'old\',90.17,\'SUPPLIER_PAYMENT\',\'CASH_SHIFT\',\'shift\',NULL,NULL,NULL)',
  'INSERT INTO "SupplierPaymentSettlement" VALUES (\'settlement\',\'c\',\'s\',\'pay\',\'old\',\'PENDING_REVIEW\',\'CASH_SHIFT\',NULL,NULL,NULL)',
  'INSERT INTO "PurchaseDocument" VALUES (\'doc\',\'c\',\'s\',\'new\',\'APPROVED\',\'INVOICE\',NULL,NULL,\'35375\',90.17),(\'source\',\'c\',\'s\',\'new\',\'DRAFT\',\'INVOICE\',NULL,NULL,\'35375\',90.17)',
  'INSERT INTO "PurchaseOrder" VALUES (\'order\',\'c\',\'s\',\'source\',\'INVOICED\')',
