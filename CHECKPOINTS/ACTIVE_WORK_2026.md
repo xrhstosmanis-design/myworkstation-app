@@ -1,3 +1,13 @@
+## 27/11/2026 — FINANCIAL-CONSUMPTION-01 — ASSIGNED /root
+
+Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
+
+Independent additive scope. Preserve financial sales, existing POS consumption writers, stock/fiscal, dispatch controls and other assignments. Before source: merge claim green/main. Then read-only selected-store endpoint, independent report permissions, historical approved purchase evidence without present-price substitution, recorded sale value, missing-value/limit disclosure, panel choices, immutable monthly cash-payload supplement through the existing delivery lifecycle. No new recipient or consent schema, activation, production DB write or diagnostic POS transaction.
+
+Current evidence: NOT TESTED. Read instructions/current registries, financial25Nov and consumption31Oct checkpoints, automatic-report implementation. Existing sales and POS entry limited PASS retained. Require date/source/precision/limits/isolation/rights/revocation/UI-switch/monthly-payload tests, full CI, exact guarded release, grouped LAB. CI is not LAB PASS.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-11-27-financial-consumption.md`. Next: merge claim before source.
+
 ## 27/11/2026 — Επιλέξιμα τιμολόγια στην αντιστοίχιση πληρωμής — LAB
 
 Κοινός έλεγχος επιλεξιμότητας λίστας και προεπισκόπησης για την εργασία #4232. [Checkpoint](CHANGES/2026-11-27-manual-allocation-eligible-documents.md).
@@ -598,6 +608,8 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 | — | STORE-CATALOG-APPEND-XLSX | /root | #3811, #3813 | Hosted LAB PASS · 1 νέο είδος · επαλήθευση και με τα δύο barcode | [Τεκμήριο](CHANGES/2026-11-10-store-catalog-append.md) |
 | — | OWNER-SHIFT-TIME-FILTER | /root | #3872 | Hosted LAB PASS · 3→1 | [Τεκμήριο](CHANGES/2026-11-10-owner-shift-time-filter.md) |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
+
+- 26/11/2026 · [Ψηφιακή Κάρτα Εργασίας](CHANGES/2026-11-26-ergani-work-card.md) · PR #4292, εκκρεμεί αποδοχή στο LAB.
 
 ## 24/11/2026 - Price catalog product card - LAB pending
 
@@ -1234,4 +1246,4 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 [Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
 
-- 26/11/2026 · [Ψηφιακή Κάρτα Εργασίας](CHANGES/2026-11-26-ergani-work-card.md) · PR #4292, εκκρεμεί αποδοχή στο LAB.
+- 27/11/2026 · [Android Chat 0.1.19](CHANGES/2026-11-27-chat-android-019.md).
