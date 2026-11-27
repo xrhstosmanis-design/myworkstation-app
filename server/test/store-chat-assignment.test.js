@@ -32,7 +32,7 @@ function harness(){
     },
     $transaction:async callback=>{const before=structuredClone(task),beforeEvents=events.length;try{return await callback(db)}catch(error){task=before;events.splice(beforeEvents);throw error}},
   };
-  const router={get:(p,...handlers)=>routes.set(`GET ${p}`,handlers.at(-1)),post:()=>{},put:()=>{},patch:(p,...handlers)=>routes.set(`PATCH ${p}`,handlers.at(-1))};
+  const router={delete(){},get:(p,...handlers)=>routes.set(`GET ${p}`,handlers.at(-1)),post:()=>{},put:()=>{},patch:(p,...handlers)=>routes.set(`PATCH ${p}`,handlers.at(-1))};
   const source=fs.readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace('export async function','async function').replace('export default router;','return router;');
   new Function('express','prisma','isPlatformSuperAdmin','crypto','chatTopic','topicRow','mountChatGroups','chatAccessRevoked',source)({Router:()=>router},db,u=>u?.role==='SUPER_ADMIN',crypto,chatTopic,topicRow,mountChatGroups,async()=>false);
   return {events,writes,employeeLists,async messages(user){const res={statusCode:200,status(c){this.statusCode=c;return this},setHeader(){},json(data){this.body=data;return this}};let error;await routes.get("GET /stores/:storeId/messages")({params:{storeId:"store"},query:{},user},res,e=>{error=e});return {...res,error}},get task(){return task},failAudit:()=>{failAudit=true},async patch(body,user={id:'owner',role:'OWNER',companyId:'company'},taskId='task'){

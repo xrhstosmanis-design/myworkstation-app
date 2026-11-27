@@ -1,3 +1,4 @@
+import {resetOwnerStock} from "../lib/owner-bulk-stock-reset.js";
 import {inventoryDenied} from "../services/pos-inventory-access.js";
 import {previewInventoryMerge,confirmInventoryMerge} from '../lib/inventory-product-merge.js';
 import {saveInventoryBulkCard} from '../lib/inventory-bulk-card.js';
@@ -152,35 +153,7 @@ router.post("/bulk-stock-reset",requireCompanyModule("INVENTORY"),async(req,res,
     const storeScope=req.user.supportContext?.storeId||req.user.storeId;
     if(storeScope&&storeScope!==body.storeId)return res.status(403).json({error:"Το κατάστημα βρίσκεται εκτός των δικαιωμάτων σου."});
     const ids=[...new Set(body.productIds||[])],all=body.scope==="ALL",batchId=uid();
-    const changed=await prisma.$transaction(async tx=>{
-      const stores=await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "companyId"=${company} AND "id"=${body.storeId} AND "active"=true FOR KEY SHARE`;
-      if(!stores.length)throw Object.assign(new Error("Δεν βρέθηκε ενεργό κατάστημα."),{status:404});
-      if(!all){
-        const rows=await tx.$queryRaw`
-          SELECT sp."productId" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId"
-          WHERE sp."storeId"=${body.storeId} AND p."companyId"=${company} AND sp."productId"=ANY(${ids}::text[])
-          ORDER BY sp."productId" FOR UPDATE OF sp`;
-        if(rows.length!==ids.length)throw Object.assign(new Error("Κάποια επιλεγμένα προϊόντα δεν ανήκουν στο συγκεκριμένο κατάστημα."),{status:409});
-      }
-      const result=await tx.$queryRaw`
-        WITH targets AS MATERIALIZED (
-          SELECT sp."productId",sp."currentStock" AS previous,p."costPrice"
-          FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId"
-          WHERE sp."storeId"=${body.storeId} AND p."companyId"=${company}
-            AND sp."currentStock"<>0 AND (${all} OR sp."productId"=ANY(${ids}::text[]))
-          ORDER BY sp."productId" FOR UPDATE OF sp
-        ), changed AS (
-          UPDATE "StoreProduct" sp SET "currentStock"=0,"updatedAt"=CURRENT_TIMESTAMP
-          FROM targets t WHERE sp."storeId"=${body.storeId} AND sp."productId"=t."productId"
-          RETURNING sp."productId",t.previous,t."costPrice"
-        ), logged AS (
-          INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId")
-          SELECT gen_random_uuid()::text,${body.storeId},c."productId",'MANUAL_ADJUSTMENT',-c.previous,COALESCE(c."costPrice",0),
-                 'PRODUCT_CARD',${batchId},'Ομαδικός μηδενισμός αποθήκης',${req.user.id}
-          FROM changed c RETURNING "id"
-        ) SELECT count(*)::int AS changed FROM logged`;
-      return result[0].changed;
-    },{timeout:30000});
+    const changed=await resetOwnerStock(prisma,{company,storeId:body.storeId,ids,all,batchId,userId:req.user.id});
     res.json({ok:true,changed,batchId});
   }catch(error){
     if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε κατάστημα και έγκυρο σύνολο ειδών."});
