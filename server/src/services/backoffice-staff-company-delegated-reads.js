@@ -42,7 +42,7 @@ export function changeCompanyDelegatedRead(db,req){
   if(user?.staffAccess!==true||!user.companyId||user.id===userId)throw staffError();
   const {companyId}=user;
   return db.$transaction(async tx=>{
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'staff-company-read-delegation:'+companyId},0))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'staff-read-delegation:'+companyId},0))`;
     const editableKeys=await authorize(tx,req);
     if(!editableKeys.includes(key))throw staffError(403,'STAFF_COMPANY_DELEGATION_CEILING','Η προβολή είναι εκτός του ορίου επανεκχώρησης.');
     if(enabled)await requireStaffCompanyGrant(tx,user,key);
