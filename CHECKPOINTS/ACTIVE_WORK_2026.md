@@ -1233,3 +1233,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 ## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
 
 [Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
+
+- 27/11/2026 · [Android Chat 0.1.19](CHANGES/2026-11-27-chat-android-019.md).
