@@ -1,3 +1,4 @@
+import {readCompanyDelegationCeiling,saveCompanyDelegationCeiling} from '../services/backoffice-staff-company-delegation-ceiling.js';
 import {saveStaffAccountStatus} from "../services/backoffice-staff-account-status.js";
 import {saveStaffCompanyVatDepartment,activateStaffCompanyVatDraft} from "../services/backoffice-staff-company-vat.js";
 import {saveStaffDisplayName} from "../services/backoffice-staff-display-name.js";
@@ -205,6 +206,12 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     if(companyInstalled&&(!await isBackofficeCompanyInstalled(db)||companyPolicies.length!==accounts.length||accounts.some(a=>!companyPolicies.some(p=>p.userId===a.id&&p.revision===a.revision))))throw staffError(409,'STAFF_STALE');
     res.json({companyId:req.user.companyId,canEditPosPermissionCeiling,canEditBackofficeReadDelegationCeiling:canEditPosPermissionCeiling,accounts:accounts.map(a=>({...a,grants:visibleGrants.filter(g=>g.userId===a.id),...(companyInstalled?{companyCapabilities:companyPolicies.find(p=>p.userId===a.id).companyCapabilities}:{})})),stores,profiles:staffProfiles,...(companyInstalled?{companyAuthority:companyAuthorityDescription()}:{})});
   }catch(error){failure(res,error)}});
+  router.get('/admin/accounts/:userId/company-read-delegation',async(req,res)=>{
+    try{res.json(await readCompanyDelegationCeiling(db,req.user,req.params.userId))}catch(error){failure(res,error)}
+  });
+  router.put('/admin/accounts/:userId/company-read-delegation',async(req,res)=>{
+    try{res.json(await saveCompanyDelegationCeiling(db,req.user,req.params.userId,req.body))}catch(error){failure(res,error)}
+  });
   router.post('/admin/accounts',async(req,res)=>{try{res.status(201).json(await createStaffAccount(db,req.user,req.body))}catch(error){failure(res,error)}});
   router.put('/admin/accounts/:userId',async(req,res)=>{try{res.json(await updateStaffAccount(db,req.user,req.params.userId,req.body))}catch(error){failure(res,error)}});
   for(const [section,capability] of [['sales','sales.read'],['shifts','shifts.close']])router.get(`/${section}/stores/:storeId/terminals`,async(req,res)=>{try{
