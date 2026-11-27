@@ -17,3 +17,15 @@ test('delegation cannot add a writer or bypass a dependency',()=>{
   assert.deepEqual(companyCapabilitiesAfterDelegation(['categories.read','license-status.read'],'category-products.read',true),
     ['categories.read','license-status.read','category-products.read']);
 });
+
+
+test('each additional directory requires both explicit selections',()=>{
+  const keys=['expense-categories.read','customer-categories.read','professions.read','shipping-methods.read'];
+  assert.equal(validCompanyReadDelegationCeiling(keys),true);
+  assert.deepEqual(companyReadDelegationOptions(keys,keys),keys);
+  for(const key of keys){
+    assert.deepEqual(companyReadDelegationOptions(keys,[key]),[key]);
+    assert.deepEqual(companyReadDelegationOptions(keys.filter(item=>item!==key),[key]),[]);
+    assert.deepEqual(companyCapabilitiesAfterDelegation([],key,true),[key]);
+  }
+});
