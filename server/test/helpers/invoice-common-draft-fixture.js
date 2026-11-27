@@ -60,3 +60,12 @@ export async function invoicePackPostingFixture(db,staffCheck){
  await route.ensureSchema();
  return route;
 }
+
+export async function installPurchaseAlertFixture(db){
+ await db.$executeRawUnsafe('ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true');
+ await db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true');
+ await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "name" text');
+ await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "gift" boolean DEFAULT false');
+ await db.$executeRawUnsafe('ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "createdAt" timestamptz DEFAULT NOW()');
+ await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT NOW())`);
+}

@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from '../src/services/purchase-cost-increase-event.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -6,12 +7,12 @@ import {z} from 'zod';
 import * as common from '../src/lib/invoice-common-draft.js';
 import * as reopen from '../src/services/purchase-order-reopen.js';
 import {loadInvoiceAssistantSource} from '../src/lib/invoice-assistant-source.js';
-import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
+import {invoiceDbFixture,invoicePackPostingFixture,isolatedInvoiceDb,installPurchaseAlertFixture} from './helpers/invoice-common-draft-fixture.js';
 const actor={id:'owner',companyId:'c',role:'OWNER',fullName:'Isolated owner'};
 const confirmed=p=>({storeId:'s',version:p.version,reason:'Accidental finalization correction',confirm:true});
 async function handlers(file,db,extra={}){
  const h={},router={use(){},get:(p,...f)=>h['GET '+p]=f.at(-1),post:(p,...f)=>h['POST '+p]=f.at(-1),patch:(p,...f)=>h['PATCH '+p]=f.at(-1),delete(){}};
- const deps={Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},purchaseOrderTotalReconciliationGuard:()=>{},...common,...reopen,...extra};
+ const deps={recordPurchaseCostIncrease,recordSupplierDiscountReduction,Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},purchaseOrderTotalReconciliationGuard:()=>{},...common,...reopen,...extra};
  const src=(await readFile(new URL(file,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replaceAll('export async function ','async function ');
  new Function(...Object.keys(deps),src)(...Object.values(deps));return h;
 }
@@ -28,6 +29,7 @@ async function fixture(){
 
  const packHandlers=await handlers('../src/routes/purchase-order-unresolved-guard.js',f.db);
  const packRoute=await invoicePackPostingFixture(f.db);const pack=packRoute.applyPackStockCorrection;
+ await installPurchaseAlertFixture(f.db);
  const posting=await handlers('../src/routes/purchase-order-posting-guard.js',f.db,{applyPackStockCorrectionInTransaction:packRoute.applyPackStockCorrectionInTransaction});
  const patch=(body,user=actor)=>invoke(posting['PATCH /:orderId'],{orderId:'pos'},body,user);
  const finalize=async(version=0)=>{const r=await patch({status:'FINAL',expectedReopenVersion:version});assert.ifError(r.failure);assert.equal(r.result.awaitingInvoice,true);assert.ifError((await patch({status:'INVOICED',expectedReopenVersion:version})).failure)};
@@ -337,7 +339,7 @@ test('native personal manager cancellation requires a live store grant and audit
    'CREATE TABLE "Company" ("id" text PRIMARY KEY,"name" text NOT NULL,"active" boolean DEFAULT true,"licenseStatus" text DEFAULT \'ACTIVE\',"subscriptionEndsAt" timestamptz)',
    'CREATE TABLE "CompanyModule" ("id" text PRIMARY KEY,"companyId" text,"moduleKey" text,"active" boolean DEFAULT true,"startsAt" timestamptz,"endsAt" timestamptz)',
    'CREATE TABLE "StorePaidModule" ("storeId" text,"moduleKey" text,"active" boolean,"startsAt" timestamptz,"endsAt" timestamptz)',
-   'ALTER TABLE "Store" ADD COLUMN "active" boolean DEFAULT true',
+   'ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true',
    'ALTER TABLE "User" ADD COLUMN "fullName" text,ADD COLUMN "email" text,ADD COLUMN "role" text,ADD COLUMN "sessionVersion" integer DEFAULT 0,ADD COLUMN "mustChangePassword" boolean DEFAULT false',
    'CREATE TABLE "UserSession" ("id" text PRIMARY KEY,"userId" text,"expiresAt" timestamptz,"revokedAt" timestamptz)',
   ])await f.db.$executeRawUnsafe(sql);

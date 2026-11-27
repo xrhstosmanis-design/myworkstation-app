@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease,recordSupplierDiscountReduction} from "../services/purchase-cost-increase-event.js";
 import {applyPackStockCorrectionInTransaction} from "./purchase-order-unresolved-guard.js";
 import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {assertReopenedIdentity,reuseReopenedPurchaseDocument} from "../services/purchase-order-reopen.js";
@@ -354,6 +355,8 @@ router.patch("/:orderId",async(req,res,next)=>{
             VALUES (${id()},${purchaseDocumentId},${row.productId},${row.description},${n(row.quantity)},'PIECE',${n(row.unitCost)},${n(row.netAmount)+n(row.exciseTotal)},${n(row.vatRate)},${n(row.vatAmount)},${n(row.grossAmount)})`;
         }
 
+        await recordSupplierDiscountReduction(tx,{companyId,storeId:found.storeId,actorId:req.user.id||req.user.operatorId,supplierId:effectiveSupplierId,documentId:purchaseDocumentId});
+
         const excludedStockLines=req.body?.excludeStockLineIds;
         if(excludedStockLines!==undefined&&(!deferredPosting||!Array.isArray(excludedStockLines)||excludedStockLines.some(lineId=>typeof lineId!=="string"||!lines.some(line=>line.id===lineId&&line.productId)))){
           throw Object.assign(new Error("Η επιλογή αποθήκης περιέχει μη έγκυρες γραμμές τιμολογίου."),{status:400});
@@ -382,6 +385,7 @@ router.patch("/:orderId",async(req,res,next)=>{
         }
 
         for(const [productId,agg] of stockByProduct){
+          const [previousProduct]=await tx.$queryRaw`SELECT "name","costPrice" FROM "Product" WHERE "id"=${productId} AND "companyId"=${companyId} FOR UPDATE`;
           const landedUnitCost=agg.quantity>0?(agg.net+agg.excise)/agg.quantity:0;
           if(agg.stockQuantity!==0||agg.proposedSalePrice>0)await tx.$executeRaw`
             INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock")
@@ -399,6 +403,7 @@ router.patch("/:orderId",async(req,res,next)=>{
               "salePrice"=CASE WHEN ${agg.proposedSalePrice}>0 THEN ${agg.proposedSalePrice} ELSE "salePrice" END,
               "updatedAt"=NOW()
             WHERE "id"=${productId} AND "companyId"=${companyId}`;
+          if(previousProduct)await recordPurchaseCostIncrease(tx,{companyId,storeId:found.storeId,actorId:req.user.id||req.user.operatorId,productId,productName:previousProduct.name,previousCost:previousProduct.costPrice,supplierId:effectiveSupplierId,documentId:purchaseDocumentId,source:"PURCHASE_ORDER"});
           if(effectiveSupplierId){
             await tx.$executeRaw`
               INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","supplierCode","active","source","updatedBy","updatedByName")

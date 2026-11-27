@@ -2,6 +2,8 @@
 
 [Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
 
+- 27/11/2026 · Ειδοποιήσεις αύξησης τιμής αγοράς και μείωσης έκπτωσης · [Checkpoint](CHANGES/2026-11-26-purchase-cost-increase-events.md).
+
 ## 26/11/2026 — Συμπλήρωση μερικής αντιστοίχισης πληρωμών — LAB
 
 Επέκταση #4232 για εκκρεμείς πληρωμές προμηθευτών, υπάρχουσες κατανομές και τραπεζικό αποδεικτικό. [Checkpoint](CHANGES/2026-11-26-pending-supplier-allocation.md).
@@ -31,6 +33,10 @@ PR #4272 (αντικαθιστά #4235), εργασία #4232. Προεπισκ�
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
+
+## 27Nov2026 — Price-label readability /root — INSTALLED / AWAITING OWNER PRINT
+
+Source #4294/388c578 full CI46001286938 and exact main dc469c7 CI46003914361 SUCCESS; guarded46007060712 SUCCESS. Render dep-dc4oa4ei0phs73b0rttg LIVE15:28:31 Athens; exact public health and actual served minified renderer verified15:29:46. Larger product/price and compact barcode are installed centrally. Eight local real-browser/decoder/contract checks and client build PASS. New physical print/scanner readback remain OPEN; old user photo is not new acceptance. Retained Citizen device owner unchanged; no driver/settings/financial/Netlink changes. See `CHECKPOINTS/CHANGES/2026-11-27-label-readability-live.md`.
 
 ## 27Nov2026 — Price-label readability /root — SOURCE READY / AWAITING CI/LAB
 
