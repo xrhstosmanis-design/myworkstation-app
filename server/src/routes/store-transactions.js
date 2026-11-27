@@ -1,4 +1,4 @@
-import {manualPaymentAllocation} from "../services/manual-payment-allocation.js";
+import {listManualAllocationDocuments,manualPaymentAllocation} from "../services/manual-payment-allocation.js";
 import { findMyDataPurchase, hasMyDataPurchaseLines } from "../lib/mydata-pos-receipt.js";
 import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
@@ -871,8 +871,8 @@ router.get('/supplier-settlements/:settlementId/manual-allocation/context',requi
   const supplierId=String(req.query.supplierId||payment.supplierId);
   if(existingAllocations.length&&supplierId!==payment.supplierId)return res.status(409).json({error:'SUPPLIER_CHANGE_WITH_EXISTING_ALLOCATIONS'});
   if(!suppliers.some(s=>s.id===supplierId))return res.status(400).json({error:'INVALID_SUPPLIER'});
-  const documents=await prisma.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."totalGross",d."totalGross"-COALESCE((SELECT SUM(a."amount") FROM "SupplierPaymentAllocation" a WHERE a."purchaseDocumentId"=d."id"),0) AS "availableAmount" FROM "PurchaseDocument" d WHERE d."companyId"=${payment.companyId} AND d."storeId"=${payment.storeId} AND d."supplierId"=${supplierId} AND d."status"='APPROVED' AND d."documentType"='INVOICE' AND d."paymentTransactionId" IS NULL AND (d."settlementMode" IS NULL OR d."settlementMode"='CREDIT') AND EXISTS(SELECT 1 FROM "PurchaseOrderPosting" p JOIN "PurchaseOrder" o ON o."id"=p."orderId" AND o."companyId"=p."companyId" WHERE p."purchaseDocumentId"=d."id" AND p."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."status"='INVOICED') ORDER BY d."documentDate" DESC LIMIT 300`;
-  res.json({payment:{...payment,amount:Number(payment.amount)},existingAllocations:existingAllocations.map(a=>({...a,amount:Number(a.amount)})),suppliers,documents:documents.map(d=>({...d,totalGross:Number(d.totalGross),availableAmount:Number(d.availableAmount)})).filter(d=>d.availableAmount>0)});
+  const documents=await listManualAllocationDocuments(prisma,payment.companyId,payment.storeId,supplierId);
+  res.json({payment:{...payment,amount:Number(payment.amount)},existingAllocations:existingAllocations.map(a=>({...a,amount:Number(a.amount)})),suppliers,documents});
 }));
 
 const manualAllocationInput=z.object({

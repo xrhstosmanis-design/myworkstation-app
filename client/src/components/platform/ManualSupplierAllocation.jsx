@@ -21,7 +21,7 @@ export default function ManualSupplierAllocation({item,request,onCancel,onSaved}
    const body={companyId:context.payment.companyId,storeId:context.payment.storeId,targetSupplierId:target,allocations,confirmSupplierChange:confirmed,reason:reason.trim(),...(apply?{expectedVersion:preview.version}:{})};
    const result=await request(base+(apply?'apply':'preview'),{method:'POST',body:JSON.stringify(body)});
    if(apply){onSaved(result);return}setPreview(result);
-  }catch(e){setPreview(null);setError(e.message)}finally{saving.current=false;setBusy(false)}
+  }catch(e){setPreview(null);setError(e.message==='DOCUMENT_NOT_ELIGIBLE'?'Το τιμολόγιο δεν είναι πλέον διαθέσιμο για αντιστοίχιση. Κλείστε και ανοίξτε ξανά τη φόρμα για ενημέρωση της λίστας.':e.message)}finally{saving.current=false;setBusy(false)}
  }
  return <section className="supplier-review-note" aria-label="Αντιστοίχιση υπάρχουσας πληρωμής">
   <h3>Αντιστοίχιση πληρωμής — {money(item.amount)}</h3>

@@ -4,6 +4,23 @@ import {lockInvoiceStore} from '../lib/invoice-common-draft.js';
 const fail=message=>Object.assign(new Error(message),{status:409});
 const raw=(tx,sql,...args)=>tx.$queryRawUnsafe(sql,...args);
 const run=(tx,sql,...args)=>tx.$executeRawUnsafe(sql,...args);
+const allocationDocuments = `SELECT d.*,COALESCE((SELECT SUM(a."amount") FROM "SupplierPaymentAllocation" a WHERE a."purchaseDocumentId"=d."id"),0) AS "reservedAmount",
+    EXISTS(SELECT 1 FROM "PurchaseOrderPosting" p JOIN "InvoiceStockPosting" s ON s."orderId"=p."orderId" AND s."companyId"=p."companyId" JOIN "PurchaseOrder" o ON o."id"=p."orderId" AND o."companyId"=p."companyId" JOIN "PurchaseDocument" src ON src."id"=o."sourceDocumentId" AND src."companyId"=o."companyId" AND src."storeId"=o."storeId" WHERE p."purchaseDocumentId"=d."id" AND p."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."status"='INVOICED' AND s."postedDocumentId"=d."id" AND s."storeId"=d."storeId" AND s."sourceDocumentId"=src."id" AND src."paymentTransactionId" IS NULL AND src."settlementMode" IS DISTINCT FROM 'PAID' AND NOT EXISTS(SELECT 1 FROM "SupplierPaymentAllocation" a WHERE a."purchaseDocumentId"=src."id")) AS "canonicalVerified",
+    EXISTS(SELECT 1 FROM "PurchaseDocument" other WHERE other."companyId"=d."companyId" AND other."id"<>d."id" AND other."status"='APPROVED' AND other."supplierId"=d."supplierId" AND regexp_replace(upper(coalesce(other."documentNumber",'')),'[^A-ZΑ-Ω0-9]','','g')=regexp_replace(upper(coalesce(d."documentNumber",'')),'[^A-ZΑ-Ω0-9]','','g')) AS "duplicateRisk"
+    FROM "PurchaseDocument" d WHERE d."companyId"=$1 AND d."storeId"=$2`;
+export async function listManualAllocationDocuments(db,companyId,storeId,supplierId){
+ const documents=await raw(db,`SELECT "id","documentNumber","documentDate","totalGross",
+    "totalGross"-"reservedAmount" AS "availableAmount"
+   FROM (${allocationDocuments}
+    AND d."supplierId"=$3 AND d."status"='APPROVED' AND d."documentType"='INVOICE'
+    AND d."paymentTransactionId" IS NULL AND (d."settlementMode" IS NULL OR d."settlementMode"='CREDIT')
+   ) candidates
+   WHERE "canonicalVerified" AND NOT "duplicateRisk" AND "reservedAmount">=0
+     AND "totalGross">"reservedAmount"
+     AND "totalGross"=round("totalGross",2) AND "reservedAmount"=round("reservedAmount",2)
+   ORDER BY "documentDate" DESC,"id" LIMIT 300`,companyId,storeId,supplierId);
+ return documents.map(d=>({...d,totalGross:Number(d.totalGross),availableAmount:Number(d.availableAmount)}));
+}
 export async function manualPaymentAllocation(db,actor,input,{preview=true}={}){
  if(!actor?.id||actor.tokenType==='STORE_OPERATOR'||actor.staffAccess===true||!['OWNER','SUPER_ADMIN'].includes(actor.role))throw Object.assign(new Error('FORBIDDEN'),{status:403});
  const {companyId,storeId,settlementId,targetSupplierId,allocations,confirmSupplierChange,reason,expectedVersion}=input;
@@ -17,10 +34,8 @@ export async function manualPaymentAllocation(db,actor,input,{preview=true}={}){
   if(!payment)throw fail('PAYMENT_NOT_FOUND');
   payment.existingAllocations=await raw(tx,'SELECT "id","amount","purchaseDocumentId" FROM "SupplierPaymentAllocation" WHERE "settlementId"=$1 ORDER BY "id"',settlementId);
   const [targetSupplier]=await raw(tx,'SELECT "id","companyId","name","taxId","active" FROM "Supplier" WHERE "id"=$1 AND "companyId"=$2 FOR SHARE',targetSupplierId,companyId);
-  const documents=await raw(tx,`SELECT d.*,COALESCE((SELECT SUM(a."amount") FROM "SupplierPaymentAllocation" a WHERE a."purchaseDocumentId"=d."id"),0) AS "reservedAmount",
-    EXISTS(SELECT 1 FROM "PurchaseOrderPosting" p JOIN "InvoiceStockPosting" s ON s."orderId"=p."orderId" AND s."companyId"=p."companyId" JOIN "PurchaseOrder" o ON o."id"=p."orderId" AND o."companyId"=p."companyId" JOIN "PurchaseDocument" src ON src."id"=o."sourceDocumentId" AND src."companyId"=o."companyId" AND src."storeId"=o."storeId" WHERE p."purchaseDocumentId"=d."id" AND p."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."status"='INVOICED' AND s."postedDocumentId"=d."id" AND s."storeId"=d."storeId" AND s."sourceDocumentId"=src."id" AND src."paymentTransactionId" IS NULL AND src."settlementMode" IS DISTINCT FROM 'PAID' AND NOT EXISTS(SELECT 1 FROM "SupplierPaymentAllocation" a WHERE a."purchaseDocumentId"=src."id")) AS "canonicalVerified",
-    EXISTS(SELECT 1 FROM "PurchaseDocument" other WHERE other."companyId"=d."companyId" AND other."id"<>d."id" AND other."status"='APPROVED' AND other."supplierId"=d."supplierId" AND regexp_replace(upper(coalesce(other."documentNumber",'')),'[^A-ZΑ-Ω0-9]','','g')=regexp_replace(upper(coalesce(d."documentNumber",'')),'[^A-ZΑ-Ω0-9]','','g')) AS "duplicateRisk"
-    FROM "PurchaseDocument" d WHERE d."companyId"=$1 AND d."storeId"=$2 AND d."id"=ANY($3::text[]) ORDER BY d."id" FOR UPDATE OF d`,companyId,storeId,ids);
+  const documents=await raw(tx,`${allocationDocuments}
+    AND d."id"=ANY($3::text[]) ORDER BY d."id" FOR UPDATE OF d`,companyId,storeId,ids);
   if(payment.invoicePaymentKey||payment.invoiceDocumentNumber)throw fail('EXISTING_REFERENCE_REQUIRES_REVIEW');
   const plan=planManualPaymentAllocation({payment,documents,allocations,targetSupplier,confirmSupplierChange});
   const version=crypto.createHash('sha256').update(JSON.stringify({payment,documents,targetSupplier,plan,reason,confirmSupplierChange},(_,v)=>typeof v==='bigint'?v.toString():v)).digest('hex');

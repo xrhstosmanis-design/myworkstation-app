@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 const local=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test('manual allocation PostgreSQL: authorization, preview, stale preview, rollback, one allocation and no new cash or stock', {skip:!local(),timeout:60000},async()=>{
  const {PrismaClient}=await import('@prisma/client');
- const {manualPaymentAllocation}=await import('../src/services/manual-payment-allocation.js');
+ const {listManualAllocationDocuments,manualPaymentAllocation}=await import('../src/services/manual-payment-allocation.js');
  const schema='manual_alloc_'+crypto.randomBytes(6).toString('hex');
  const url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
  const admin=new PrismaClient(),db=new PrismaClient({datasources:{db:{url:url.toString()}}});
@@ -22,7 +22,7 @@ test('manual allocation PostgreSQL: authorization, preview, stale preview, rollb
  'CREATE TABLE "SupplierPaymentAllocation" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"settlementId" TEXT,"purchaseDocumentId" TEXT,"amount" NUMERIC(14,2),UNIQUE("settlementId","purchaseDocumentId"))',
  'CREATE TABLE "Supplier" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"taxId" TEXT,"active" BOOLEAN)',
  'CREATE TABLE "BankLedgerEntry" ("sourceTransactionId" TEXT)',
- 'CREATE TABLE "PurchaseDocument" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"status" TEXT,"documentType" TEXT,"settlementMode" TEXT,"paymentTransactionId" TEXT,"documentNumber" TEXT,"totalGross" NUMERIC(14,2))',
+ 'CREATE TABLE "PurchaseDocument" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"status" TEXT,"documentType" TEXT,"settlementMode" TEXT,"paymentTransactionId" TEXT,"documentNumber" TEXT,"totalGross" NUMERIC(14,2),"documentDate" TIMESTAMP DEFAULT NOW())',
  'CREATE TABLE "PurchaseOrderPosting" ("orderId" TEXT,"companyId" TEXT,"purchaseDocumentId" TEXT)',
  'CREATE TABLE "InvoiceStockPosting" ("orderId" TEXT,"companyId" TEXT,"storeId" TEXT,"sourceDocumentId" TEXT,"postedDocumentId" TEXT)',
  'CREATE TABLE "PurchaseOrder" ("id" TEXT,"companyId" TEXT,"storeId" TEXT,"sourceDocumentId" TEXT,"status" TEXT)',
@@ -31,12 +31,17 @@ test('manual allocation PostgreSQL: authorization, preview, stale preview, rollb
  'INSERT INTO "Supplier" VALUES (\'old\',\'c\',\'Old\',NULL,true),(\'new\',\'c\',\'New\',\'123456789\',true)',
  'INSERT INTO "StoreTransaction" ("id","companyId","storeId","supplierId","amount","type","paymentMethod","sessionId","reversedAt","invoiceDocumentNumber","invoicePaymentKey") VALUES (\'pay\',\'c\',\'s\',\'old\',90.17,\'SUPPLIER_PAYMENT\',\'CASH_SHIFT\',\'shift\',NULL,NULL,NULL)',
  'INSERT INTO "SupplierPaymentSettlement" VALUES (\'settlement\',\'c\',\'s\',\'pay\',\'old\',\'PENDING_REVIEW\',\'CASH_SHIFT\',NULL,NULL,NULL)',
- 'INSERT INTO "PurchaseDocument" VALUES (\'doc\',\'c\',\'s\',\'new\',\'APPROVED\',\'INVOICE\',NULL,NULL,\'35375\',90.17),(\'source\',\'c\',\'s\',\'new\',\'DRAFT\',\'INVOICE\',NULL,NULL,\'35375\',90.17)',
+ 'INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","status","documentType","settlementMode","paymentTransactionId","documentNumber","totalGross") VALUES (\'doc\',\'c\',\'s\',\'new\',\'APPROVED\',\'INVOICE\',NULL,NULL,\'35375\',90.17),(\'source\',\'c\',\'s\',\'new\',\'DRAFT\',\'INVOICE\',NULL,NULL,\'35375\',90.17)',
  'INSERT INTO "PurchaseOrder" VALUES (\'order\',\'c\',\'s\',\'source\',\'INVOICED\')',
  'INSERT INTO "PurchaseOrderPosting" VALUES (\'order\',\'c\',\'doc\')',
  'INSERT INTO "InvoiceStockPosting" VALUES (\'order\',\'c\',\'s\',\'source\',\'doc\')',
  'INSERT INTO "StockMovement" VALUES (\'stock\',156)'
  ])await sql(s);
+ assert.deepEqual((await listManualAllocationDocuments(db,'c','s','new')).map(d=>[d.id,d.availableAmount]),[['doc',90.17]]);
+ await sql(`UPDATE "PurchaseDocument" SET "paymentTransactionId"='prior-payment',"settlementMode"='PAID' WHERE "id"='source'`);
+ assert.deepEqual(await listManualAllocationDocuments(db,'c','s','new'),[]);
+ await assert.rejects(manualPaymentAllocation(db,actor,input),/DOCUMENT_NOT_ELIGIBLE/);
+ await sql(`UPDATE "PurchaseDocument" SET "paymentTransactionId"=NULL,"settlementMode"=NULL WHERE "id"='source'`);
  const before=await snapshot();
  await assert.rejects(manualPaymentAllocation(db,{...actor,companyId:'other'},input),/FORBIDDEN_SCOPE/);
  await assert.rejects(manualPaymentAllocation(db,{...actor,tokenType:'STORE_OPERATOR'},input),/FORBIDDEN/);
