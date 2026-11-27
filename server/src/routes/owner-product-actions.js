@@ -139,6 +139,56 @@ router.patch("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,
   }catch(error){next(error)}
 });
 
+router.post("/bulk-stock-reset",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);
+    if(!company||scope||req.user.staffAccess===true||req.user.tokenType==="STORE_OPERATOR"||!["OWNER","SUPER_ADMIN"].includes(req.user.role)){
+      return res.status(403).json({error:"Ο ομαδικός μηδενισμός είναι διαθέσιμος μόνο στον ιδιοκτήτη."});
+    }
+    const body=z.discriminatedUnion("scope",[
+      z.object({scope:z.literal("SELECTED"),storeId:z.string().min(1),productIds:z.array(z.string().min(1)).min(1).max(10000)}),
+      z.object({scope:z.literal("ALL"),storeId:z.string().min(1)})
+    ]).parse(req.body);
+    const storeScope=req.user.supportContext?.storeId||req.user.storeId;
+    if(storeScope&&storeScope!==body.storeId)return res.status(403).json({error:"Το κατάστημα βρίσκεται εκτός των δικαιωμάτων σου."});
+    const ids=[...new Set(body.productIds||[])],all=body.scope==="ALL",batchId=uid();
+    const changed=await prisma.$transaction(async tx=>{
+      const stores=await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "companyId"=${company} AND "id"=${body.storeId} AND "active"=true FOR KEY SHARE`;
+      if(!stores.length)throw Object.assign(new Error("Δεν βρέθηκε ενεργό κατάστημα."),{status:404});
+      if(!all){
+        const rows=await tx.$queryRaw`
+          SELECT sp."productId" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId"
+          WHERE sp."storeId"=${body.storeId} AND p."companyId"=${company} AND sp."productId"=ANY(${ids}::text[])
+          ORDER BY sp."productId" FOR UPDATE OF sp`;
+        if(rows.length!==ids.length)throw Object.assign(new Error("Κάποια επιλεγμένα προϊόντα δεν ανήκουν στο συγκεκριμένο κατάστημα."),{status:409});
+      }
+      const result=await tx.$queryRaw`
+        WITH targets AS MATERIALIZED (
+          SELECT sp."productId",sp."currentStock" AS previous,p."costPrice"
+          FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId"
+          WHERE sp."storeId"=${body.storeId} AND p."companyId"=${company}
+            AND sp."currentStock"<>0 AND (${all} OR sp."productId"=ANY(${ids}::text[]))
+          ORDER BY sp."productId" FOR UPDATE OF sp
+        ), changed AS (
+          UPDATE "StoreProduct" sp SET "currentStock"=0,"updatedAt"=CURRENT_TIMESTAMP
+          FROM targets t WHERE sp."storeId"=${body.storeId} AND sp."productId"=t."productId"
+          RETURNING sp."productId",t.previous,t."costPrice"
+        ), logged AS (
+          INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId")
+          SELECT gen_random_uuid()::text,${body.storeId},c."productId",'MANUAL_ADJUSTMENT',-c.previous,COALESCE(c."costPrice",0),
+                 'PRODUCT_CARD',${batchId},'Ομαδικός μηδενισμός αποθήκης',${req.user.id}
+          FROM changed c RETURNING "id"
+        ) SELECT count(*)::int AS changed FROM logged`;
+      return result[0].changed;
+    },{timeout:30000});
+    res.json({ok:true,changed,batchId});
+  }catch(error){
+    if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε κατάστημα και έγκυρο σύνολο ειδών."});
+    if([403,404,409].includes(error.status))return res.status(error.status).json({error:error.message});
+    next(error);
+  }
+});
+
 router.post("/:productId/stock-adjustment",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});

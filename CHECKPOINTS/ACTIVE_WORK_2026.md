@@ -1,3 +1,7 @@
+## 27/11/2026 — Απογραφή, μισθοδοσία, μηδενισμός αποθήκης και Chat — LAB
+
+Τέσσερις αλλαγές BackOffice για δοκιμή πριν την παραγωγή. [Checkpoint](CHANGES/2026-11-27-inventory-payroll-chat-workflows.md).
+
 ## 27/11/2026 — Επιλέξιμα τιμολόγια στην αντιστοίχιση πληρωμής — LAB
 
 Κοινός έλεγχος επιλεξιμότητας λίστας και προεπισκόπησης για την εργασία #4232. [Checkpoint](CHANGES/2026-11-27-manual-allocation-eligible-documents.md).
