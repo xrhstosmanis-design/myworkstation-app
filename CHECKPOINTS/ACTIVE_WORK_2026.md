@@ -1278,3 +1278,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 ## Source CI follow-up — 27/11/2026
 
 PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs passed. Full server suite:7491PASS/1FAIL/4SKIP (7496tests); the sole failure was the old visible «Προεπισκόπηση Kiosk» expectation in owner-payments-kiosk-preview-v1.test.js. Updated only that expectation to «Προεπισκόπηση πληρωμών»; confirmation/cancel/read-only/tenant assertions are unchanged. Focused preview suite4PASS/0FAIL/0SKIP. Final frontend build passed13.69s and generated JS/HTML contains no «Kiosk Manager». Full source rerun / main CI / guarded release / user visual acceptance remain pending. NOT LAB PASS / NOT INSTALLED.
+
+## 27/11/2026 — Μηδενισμός αποθέματος στο Αρχείο ειδών — LAB
+
+Μηδενισμός επιλεγμένων, αρνητικών ή όλων από την Ομαδική διόρθωση του Αρχείου ειδών. [Checkpoint](CHANGES/2026-11-27-inventory-archive-stock-reset.md).

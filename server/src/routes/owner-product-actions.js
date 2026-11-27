@@ -148,12 +148,13 @@ router.post("/bulk-stock-reset",requireCompanyModule("INVENTORY"),async(req,res,
     }
     const body=z.discriminatedUnion("scope",[
       z.object({scope:z.literal("SELECTED"),storeId:z.string().min(1),productIds:z.array(z.string().min(1)).min(1).max(10000)}),
-      z.object({scope:z.literal("ALL"),storeId:z.string().min(1)})
+      z.object({scope:z.literal("ALL"),storeId:z.string().min(1)}),
+      z.object({scope:z.literal("NEGATIVE"),storeId:z.string().min(1)})
     ]).parse(req.body);
     const storeScope=req.user.supportContext?.storeId||req.user.storeId;
     if(storeScope&&storeScope!==body.storeId)return res.status(403).json({error:"Το κατάστημα βρίσκεται εκτός των δικαιωμάτων σου."});
-    const ids=[...new Set(body.productIds||[])],all=body.scope==="ALL",batchId=uid();
-    const changed=await resetOwnerStock(prisma,{company,storeId:body.storeId,ids,all,batchId,userId:req.user.id});
+    const ids=[...new Set(body.productIds||[])],all=body.scope!=="SELECTED",batchId=uid();
+    const changed=await resetOwnerStock(prisma,{company,storeId:body.storeId,ids,all,negativeOnly:body.scope==="NEGATIVE",batchId,userId:req.user.id});
     res.json({ok:true,changed,batchId});
   }catch(error){
     if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε κατάστημα και έγκυρο σύνολο ειδών."});
