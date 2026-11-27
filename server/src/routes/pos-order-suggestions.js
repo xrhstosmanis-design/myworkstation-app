@@ -1,3 +1,4 @@
+import {supplierMinimumKey,supplierMinimumSection} from '../lib/proposal-supplier-minimum.js';
 import {randomUUID} from 'node:crypto';
 import {applyProposalQuantities} from '../../../shared/order-proposal-quantities.mjs';
 import {Router} from 'express';
@@ -56,20 +57,28 @@ export function createPosOrderSuggestionsRouter({db=defaultPrisma,read=readPosOr
   if(!row?.orderSupplierId)throw fail(422,'Επίλεξε είδος με προμηθευτή.');
   if(!entry.report.supplierMinimumAvailable)throw fail(503,'Η μόνιμη αποθήκευση ελάχιστου δεν έχει εγκατασταθεί.');
   await recheck(req);
-  const saved=input.minimum===null?await db.$queryRaw`
-   UPDATE "SupplierProductLink" SET "purchaseMinimumQuantity"=NULL,"updatedAt"=NOW(),"updatedBy"=${req.user.id}
-   WHERE "companyId"=${entry.companyId} AND "supplierId"=${row.orderSupplierId}
-    AND "productId"=${row.productId} AND "active"=TRUE RETURNING "productId"`:await db.$queryRaw`
-   INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","source","updatedBy","purchaseMinimumQuantity")
-   SELECT ${randomUUID()},s."companyId",s."id",p."id",'MANUAL',${req.user.id},${input.minimum}
-   FROM "Supplier" s JOIN "Product" p ON p."companyId"=s."companyId"
-   WHERE s."companyId"=${entry.companyId} AND s."id"=${row.orderSupplierId} AND s."active"=TRUE
-    AND p."id"=${row.productId} AND p."active"=TRUE
-   ON CONFLICT ("companyId","supplierId","productId") DO UPDATE
-    SET "purchaseMinimumQuantity"=EXCLUDED."purchaseMinimumQuantity", "updatedAt"=NOW(),"updatedBy"=EXCLUDED."updatedBy"
-    WHERE "SupplierProductLink"."active"=TRUE
-   RETURNING "productId"`;
-  if(!saved.length)throw fail(409,'Το είδος ή η σύνδεση προμηθευτή δεν είναι ενεργή.');
+  const key=supplierMinimumKey(row.orderSupplierId,row.productId);
+  await db.$transaction(async tx=>{
+   const eligible=await tx.$queryRaw`
+    SELECT s."id" FROM "Supplier" s JOIN "Product" p ON p."companyId"=s."companyId"
+    WHERE s."companyId"=${entry.companyId} AND s."id"=${row.orderSupplierId} AND s."active"=TRUE
+     AND p."id"=${row.productId} AND p."active"=TRUE FOR SHARE OF s,p`;
+   if(!eligible.length)throw fail(409,'Το είδος ή ο προμηθευτής δεν είναι ενεργός.');
+   if(input.minimum===null){
+    await tx.$executeRaw`UPDATE "ManagementParameters"
+     SET "settings"="settings" #- ARRAY[${supplierMinimumSection},${key}]::text[], "updatedAt"=NOW()
+     WHERE "companyId"=${entry.companyId}`;
+   }else{
+    const values=JSON.stringify({[key]:input.minimum});
+    await tx.$executeRaw`INSERT INTO "ManagementParameters" ("id","companyId","settings")
+     VALUES (${randomUUID()},${entry.companyId},jsonb_build_object(${supplierMinimumSection}::text,${values}::jsonb))
+     ON CONFLICT ("companyId") DO UPDATE
+     SET "settings"=jsonb_set("ManagementParameters"."settings",ARRAY[${supplierMinimumSection}]::text[],
+      COALESCE("ManagementParameters"."settings"->${supplierMinimumSection},'{}'::jsonb)||${values}::jsonb),"updatedAt"=NOW()`;
+   }
+   await tx.$executeRaw`INSERT INTO "ManagementParameterAudit" ("id","companyId","section","actorId","actorName")
+    VALUES (${randomUUID()},${entry.companyId},${supplierMinimumSection},${req.user.id},${req.user.fullName||req.user.email||null})`;
+  });
   res.json({ok:true});
  }));
  router.post('/stores/:storeId/email',admission,moduleGuard,handler(async(req,res)=>{

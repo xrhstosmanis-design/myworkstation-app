@@ -12,6 +12,8 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);target.searchParams.set('schema',schema);process.env.DATABASE_URL=target.href;db=new PrismaClient({datasourceUrl:target.href});
  const tables={Company:'"id" TEXT PRIMARY KEY,"name" TEXT,"active" BOOLEAN,"licenseStatus" TEXT,"subscriptionEndsAt" TIMESTAMP',CompanyModule:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMP,"endsAt" TIMESTAMP',Store:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"active" BOOLEAN',StorePaidModule:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMP,"endsAt" TIMESTAMP',Product:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"sku" TEXT,"unit" TEXT,"active" BOOLEAN,"trackStock" BOOLEAN',StoreProduct:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"productId" TEXT,"currentStock" NUMERIC,"minStock" NUMERIC,"active" BOOLEAN',Recipe:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"active" BOOLEAN',PreparationRecipeLine:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"productId" TEXT,"automatic" BOOLEAN',Sale:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT,"source" TEXT,"occurredAt" TIMESTAMP',SaleLine:'"id" TEXT PRIMARY KEY,"saleId" TEXT,"productId" TEXT,"quantity" NUMERIC',PurchaseOrder:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"status" TEXT,"awaitingInvoice" BOOLEAN',PurchaseOrderLine:'"id" TEXT PRIMARY KEY,"orderId" TEXT,"productId" TEXT,"quantity" NUMERIC,"stockUnitsPerInvoiceUnit" NUMERIC',Employee:'"id" TEXT PRIMARY KEY,"storeId" TEXT,"active" BOOLEAN',StoreOperatorCredential:'"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"employeeId" TEXT,"active" BOOLEAN',StoreOperatorProfile:'"companyId" TEXT,"storeId" TEXT,"employeeId" TEXT,"permissions" JSONB,"posAccess" BOOLEAN'};
   tables.PurchaseOrder+=',"supplierId" TEXT';
+  tables.ManagementParameters='"id" TEXT PRIMARY KEY,"companyId" TEXT UNIQUE,"settings" JSONB,"updatedAt" TIMESTAMPTZ';
+  tables.ManagementParameterAudit='"id" TEXT PRIMARY KEY,"companyId" TEXT,"section" TEXT,"actorId" TEXT,"actorName" TEXT';
   tables.StockMovement='"id" TEXT PRIMARY KEY,"storeId" TEXT,"sourceId" TEXT,"sourceType" TEXT,"movementType" TEXT,"quantity" NUMERIC,"createdAt" TIMESTAMP';
   tables.Supplier='"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"email" TEXT,"active" BOOLEAN';
   tables.PurchaseDocument='"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"status" TEXT,"documentType" TEXT,"documentDate" TIMESTAMP';
@@ -64,6 +66,20 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
    dataTimeZone='UTC';const utc=await calculate();assert.deepEqual(utc.rows,r.rows);dataTimeZone='Europe/Athens';
    for(const supplier of ['other','b','inactive'])assert.equal((await get(path.replace('supplierId=sup','supplierId='+supplier))).status,404);
    assert.equal((await get(path.replace('2026-11-01','2026-02-30'))).status,400);assert.equal((await get('/stores/a2/suppliers')).status,403);
+  });
+  await t.test('owner saves a supplier minimum and POS applies it on the next calculation',async()=>{
+   const ownerHeaders={'x-actor':'owner','content-type':'application/json'};
+   const ownerReport=await (await fetch(root+path,{headers:ownerHeaders})).json();
+   const save=(minimum,headers=ownerHeaders)=>fetch(root+'/stores/a1/supplier-minimum',{
+    method:'PUT',headers,body:JSON.stringify({reportId:ownerReport.reportId,productId:'p',minimum})
+   });
+   assert.equal((await save(48,{'content-type':'application/json'})).status,403);
+   const saved=await save(48);assert.equal(saved.status,200,await saved.clone().text());
+   const next=await calculate();
+   assert.equal(next.rows[0].supplierMinimum,48);
+   assert.equal(next.rows[0].suggestedQuantity,48);
+   const clear=await save(null);assert.equal(clear.status,200,await clear.clone().text());
+   assert.equal((await calculate()).rows[0].suggestedQuantity,30);
   });
   await t.test('mail uses the displayed snapshot even after later calculations; duplicate send is rejected and audited',async()=>{
    const report=await calculate(),expected=renderPosOrderProposal(report,'WATER');await calculate();

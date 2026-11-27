@@ -1,3 +1,4 @@
+import {supplierMinimumKey,supplierMinimumSection} from '../lib/proposal-supplier-minimum.js';
 import {roundSupplierQuantity} from '../../../shared/order-proposal-quantities.mjs';
 import {readWeeklyStockAlarmState} from './weekly-stock-alarm.js';
 import {z} from 'zod';
@@ -76,20 +77,15 @@ export async function readPosOrderProposal(db,scope){
     AND (${supplier?.id??''}='' OR d."supplierId"=${supplier?.id??''})
    ORDER BY l."productId",d."documentDate" DESC NULLS LAST,d."id" DESC,l."id" DESC`:[];
   const byProduct=new Map(purchases.map(row=>[row.productId,row]));
-  const [minimumSchema]=await tx.$queryRaw`
-   SELECT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('"SupplierProductLink"')
-    AND attname='purchaseMinimumQuantity' AND NOT attisdropped) AS ready`;
-  const minimums=minimumSchema?.ready&&candidates.length?await tx.$queryRaw`
-   SELECT "supplierId","productId","purchaseMinimumQuantity" FROM "SupplierProductLink"
-   WHERE "companyId"=${scope.companyId} AND "active"=TRUE
-    AND "productId"=ANY(${candidates.map(row=>row.productId)}::text[])
-    AND "purchaseMinimumQuantity" IS NOT NULL`:[];
-  const bySupplierProduct=new Map(minimums.map(row=>[JSON.stringify([row.supplierId,row.productId]),Number(row.purchaseMinimumQuantity)]));
+  const [minimumSchema]=await tx.$queryRaw`SELECT to_regclass('"ManagementParameters"') IS NOT NULL AS ready`;
+  const [configuration]=minimumSchema?.ready?await tx.$queryRaw`
+   SELECT "settings"->${supplierMinimumSection} AS minimums FROM "ManagementParameters" WHERE "companyId"=${scope.companyId}`:[];
   rows=candidates.map(row=>{
    const purchase=byProduct.get(row.productId);
    const pack=purchase?.unit==='PACKAGE'&&Number(purchase.unitsPerPackage)>1?Number(purchase.unitsPerPackage):null;
    const supplierId=supplier?.id??purchase?.supplierId??null;
-   const minimum=bySupplierProduct.get(JSON.stringify([supplierId,row.productId]))??null;
+   const configured=supplierId?configuration?.minimums?.[supplierMinimumKey(supplierId,row.productId)]:null;
+   const minimum=Number.isFinite(configured)&&configured>0&&configured<=100000000?configured:null;
    return {...row,supplierPack:pack,supplierMinimum:minimum,requiredQuantity:row.suggestedQuantity,
     suggestedQuantity:roundSupplierQuantity(row.suggestedQuantity,pack,minimum??0),
     orderSupplierId:supplierId,
