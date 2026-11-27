@@ -1,5 +1,7 @@
 ## 27/11/2026 — FINANCIAL-CONSUMPTION-01 — ASSIGNED /root
 
+- 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).
+
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
 
 Independent additive scope. Preserve financial sales, existing POS consumption writers, stock/fiscal, dispatch controls and other assignments. Before source: merge claim green/main. Then read-only selected-store endpoint, independent report permissions, historical approved purchase evidence without present-price substitution, recorded sale value, missing-value/limit disclosure, panel choices, immutable monthly cash-payload supplement through the existing delivery lifecycle. No new recipient or consent schema, activation, production DB write or diagnostic POS transaction.
@@ -1240,6 +1242,8 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
 
+- 27/11/2026 · Περιγραφή συμβάντων αλλαγής τιμής και έκπτωσης · [Checkpoint](CHANGES/2026-11-27-purchase-alert-event-description.md).
+
 ## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
 
 [Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
@@ -1248,4 +1252,4 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
 
-- 27/11/2026 · Περιγραφή συμβάντων αλλαγής τιμής και έκπτωσης · [Checkpoint](CHANGES/2026-11-27-purchase-alert-event-description.md).
+- 27/11/2026 · [Επιστροφές εγγυοδοσίας προμηθευτών](CHANGES/2026-11-27-supplier-deposit-reminders.md) · Ελέγχθηκε σε απομονωμένη PostgreSQL. Εκκρεμεί LAB BackOffice.
