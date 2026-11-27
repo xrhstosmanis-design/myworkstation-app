@@ -1,3 +1,5 @@
+import {DIGITAL_WORK_CARD} from "../services/module-catalog.js";
+import {storePaidModuleState} from "../store-paid-modules.js";
 import {requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
 import {packageCatalog} from '../lib/pos-stock-packages.js';
 import {revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
@@ -375,7 +377,9 @@ router.get("/stores/:storeId",async(req,res,next)=>{
         ORDER BY c."name" NULLS LAST,p."name"`
     ]);
     const layout=layoutForAccess(layoutRows[0]?.layoutJson||null,access);
-    res.json({store,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:(await packageCatalog(prisma,{companyId:req.user.companyId,storeId:store.id},products)).map(row=>({...row,sourceCode:row.masterCode||row.sku||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
+    const digitalWorkCard = process.env.ERGANI_TRIAL_CLOCK_ENABLED === "true" && req.user.tokenType === "STORE_OPERATOR"
+      && (await storePaidModuleState(store.id, DIGITAL_WORK_CARD)).effectiveActive === true;
+    res.json({store,digitalWorkCard,lifecycle:await readLifecycleGeneration(prisma,{companyId:req.user.companyId,storeId:store.id}),layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:(await packageCatalog(prisma,{companyId:req.user.companyId,storeId:store.id},products)).map(row=>({...row,sourceCode:row.masterCode||row.sku||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
   }catch(error){next(error)}
 });
 
