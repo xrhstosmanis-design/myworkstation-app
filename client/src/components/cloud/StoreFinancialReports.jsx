@@ -2,12 +2,14 @@ import React, {useEffect,useState} from 'react';
 import {greeceDateInput} from '../../../../shared/greece-time.mjs';
 
 import './store-financial-reports.css';
+import {operationalFinancialReports} from '../../../../shared/financial-consumption.mjs';
 
 const modes = {
   monthly:'Πωλήσεις μήνα',
   categories:'Πωλήσεις ανά κατηγορία / υποκατηγορία',
   suppliers:'Πωλήσεις ανά προμηθευτή',
-  products:'Πωλήσεις συγκεκριμένου είδους'
+  products:'Πωλήσεις συγκεκριμένου είδους',
+  ...Object.fromEntries(Object.entries(operationalFinancialReports).map(([key,r])=>[key,r.label]))
 };
 const euro = new Intl.NumberFormat('el-GR',{style:'currency',currency:'EUR'});
 const number = new Intl.NumberFormat('el-GR',{maximumFractionDigits:2});
@@ -23,7 +25,8 @@ function useReport(api, storeId, params, version) {
       if(!controller.signal.aborted)setResponse({query,api,version,...result});
     };
     set({loading:true});
-    api('/api/commerce/sales/financial-reports?' + query,{signal:controller.signal,cache:'no-store'})
+    const suffix=operationalFinancialReports[params.report]?'/'+params.report:'';
+    api('/api/commerce/sales/financial-reports'+suffix+'?' + query,{signal:controller.signal,cache:'no-store'})
       .then(data=>{
         if(data.storeId!==storeId)throw Error('Δεν επιβεβαιώθηκε το επιλεγμένο κατάστημα.');
         set({data});
@@ -35,9 +38,12 @@ function useReport(api, storeId, params, version) {
     ? response : {loading:true};
 }
 
-export default function StoreFinancialReports({api,store,version=0}) {
+export default function StoreFinancialReports({api,store,version=0,allowedModes=Object.keys(modes)}) {
   const today = greeceDateInput();
-  const [mode,setMode] = useState('monthly');
+  const [requestedMode,setMode] = useState('monthly');
+  const enabledModes=Object.keys(modes).filter(key=>allowedModes.includes(key));
+  const mode=enabledModes.includes(requestedMode)?requestedMode:enabledModes[0]||'';
+  const operational=Boolean(operationalFinancialReports[mode]);
   const [from,setFrom] = useState(today.slice(0,7)+'-01');
   const [to,setTo] = useState(today);
   const [selected,setSelected] = useState('');
@@ -49,8 +55,8 @@ export default function StoreFinancialReports({api,store,version=0}) {
   },[search]);
 
   const range = from && to && from<=to ? {from,to} : null;
-  const options = useReport(api,store.id,range && {
-    ...range,report:mode,search:mode==='products'?searchTerm:''
+  const options = useReport(api,store.id,range && mode && {
+    ...range,report:mode,search:mode==='products'||operational?searchTerm:''
   },version);
   const rows = options.data?.rows || [];
   const choice = rows.find(row=>row.id===selected);
@@ -76,14 +82,19 @@ export default function StoreFinancialReports({api,store,version=0}) {
 
   return <section className="panel store-financial-reports" aria-label="Οικονομικές αναφορές">
     <h2>Οικονομικές αναφορές · {store.name}</h2>
+    <div className="store-financial-operation-choices" aria-label="Καταστροφές και ιδιοκατανάλωση">
+      {Object.entries(operationalFinancialReports).filter(([key])=>enabledModes.includes(key)).map(([key,r])=>
+        <button type="button" key={key} aria-pressed={mode===key} onClick={()=>changeMode(key)}>{r.label}</button>)}
+    </div>
+    {!enabledModes.length&&<p role="status">Δεν υπάρχει ενεργό δικαίωμα οικονομικής αναφοράς.</p>}
     <div className="store-financial-filters">
       <label>Αναφορά<select value={mode} onChange={event=>changeMode(event.target.value)}>
-        {Object.entries(modes).map(([value,label])=><option key={value} value={value}>{label}</option>)}
+        {Object.entries(modes).filter(([key])=>enabledModes.includes(key)).map(([value,label])=><option key={value} value={value}>{label}</option>)}
       </select></label>
       <label>Μήνας<input type="month" value={from.slice(0,7)} max={today.slice(0,7)} onChange={event=>changeMonth(event.target.value)}/></label>
       <label>Από<input type="date" value={from} max={to||undefined} onChange={event=>setFrom(event.target.value)}/></label>
       <label>Έως<input type="date" value={to} min={from||undefined} max={today} onChange={event=>setTo(event.target.value)}/></label>
-      {mode==='products'&&<label>Όνομα, SKU ή barcode<input value={search} maxLength={120}
+      {(mode==='products'||operational)&&<label>{operational?'Όνομα ή SKU':'Όνομα, SKU ή barcode'}<input value={search} maxLength={120}
         onChange={event=>{setSearch(event.target.value);setSelected('');}}/></label>}
       {(mode==='suppliers'||mode==='products')&&<label>{mode==='suppliers'?'Προμηθευτής':'Είδος'}
         <select value={choice?.id||''} disabled={!rows.length||(mode==='products'&&search.trim()!==searchTerm)}
@@ -97,8 +108,9 @@ export default function StoreFinancialReports({api,store,version=0}) {
     {(options.loading||detail.loading)&&<p role="status">Φόρτωση αναφοράς…</p>}
     {(options.error||detail.error)&&<p role="alert">{options.error||detail.error}</p>}
     {options.data&&!rows.length&&<p>Δεν βρέθηκαν αποτελέσματα για τα επιλεγμένα φίλτρα.</p>}
-    {mode==='products'&&rows.length===100&&<p>Χρησιμοποίησε όνομα ή barcode για πιο συγκεκριμένα αποτελέσματα.</p>}
+    {!operational&&mode==='products'&&rows.length===100&&<p>Χρησιμοποίησε όνομα ή barcode για πιο συγκεκριμένα αποτελέσματα.</p>}
     {mode==='suppliers'&&<p>Η αναφορά χρησιμοποιεί τις ενεργές συνδέσεις ειδών με προμηθευτές. Ένα είδος με πολλούς προμηθευτές εμφανίζεται στην αναφορά καθενός.</p>}
+    {options.data&&operational&&<ConsumptionResults data={options.data}/> }
     {options.data&&mode==='monthly'&&<Results data={options.data} kind="monthly" from={from}/>}
     {options.data&&mode==='categories'&&<Results data={options.data} kind="categories" selected={choice?.id} onSelect={setSelected}/>}
     {detail.data&&<><h3>{choice.name}</h3><Results data={detail.data} kind={detailMode} from={from}/></>}
@@ -136,5 +148,18 @@ function Results({data,kind,selected,onSelect,from}) {
     {dated&&<p>Μέσος όρος ανά ημέρα ({days} ημερολογιακές ημέρες){monthly
       ? ' · '+euro.format(totals.revenue/days)
       : ' · '+number.format(totals.quantity/days)+' τεμ. · '+euro.format(totals.revenue/days)}</p>}
+  </div>;
+}
+
+function ConsumptionResults({data}) {
+  const value=n=>n===null?'Μη διαθέσιμο':euro.format(n);
+  return <div className="store-financial-table">
+    <p>{data.purchaseBasis}</p><p>{data.saleBasis}</p>
+    {data.truncated&&<p role="alert">Πάνω από {data.limit} γραμμές. Επίλεξε μικρότερο διάστημα ή συγκεκριμένο είδος. Δεν εμφανίζεται πλήρες τελικό σύνολο.</p>}
+    {Boolean(data.missingPurchase||data.missingSale)&&<p role="status">Ελλιπής αποτίμηση: {data.missingPurchase} γραμμές χωρίς τιμή αγοράς και {data.missingSale} χωρίς τιμή πώλησης. Οι άγνωστες αξίες δεν υπολογίζονται ως μηδέν.</p>}
+    <table><thead><tr><th>Ημερομηνία</th><th>Είδος</th><th>Ποσότητα</th><th>Τιμή αγοράς</th><th>Αξία αγοράς</th><th>Τιμή πώλησης</th><th>Αξία πώλησης</th><th>Χειριστής καταχώρισης</th><th>Αιτιολογία</th></tr></thead>
+      <tbody>{data.rows.map(r=><tr key={r.id}><td>{new Date(r.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false})}</td><th scope="row">{r.name}{r.sku?' · '+r.sku:''}{r.source==='PRODUCT_CARD'?' · Καρτέλα είδους':''}</th><td>{number.format(r.quantity)} {r.unit||''}</td><td>{value(r.purchasePrice)}</td><td>{value(r.purchaseTotal)}</td><td>{value(r.salePrice)}</td><td>{value(r.saleTotal)}</td><td>{r.operatorName||'Μη καταγεγραμμένος'}</td><td>{r.note||'—'}</td></tr>)}</tbody>
+      <tfoot><tr><th colSpan={4} scope="row">{data.periodComplete?'Τελικό σύνολο περιόδου':'Σύνολο καταχωρίσεων έως τώρα'}</th><td>{value(data.totalPurchase)}</td><td/><td>{value(data.totalSale)}</td><td colSpan={2}/></tr></tfoot>
+    </table>
   </div>;
 }

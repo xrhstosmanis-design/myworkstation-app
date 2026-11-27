@@ -1,3 +1,4 @@
+import {validateConsumptionMonthly} from './consumption-monthly-presentation.js';
 import {reconciliationText} from './cash-reconciliation-report.js';
 import {dailyCashEvidenceText} from './cash-daily-delivery-evidence.js';
 import {createHash} from "node:crypto";
@@ -31,8 +32,9 @@ function copy(value,path=[],depth=0,budget={nodes:0,bytes:0}){
   if(value===null||typeof value==="boolean")return value;
   if(typeof value==="string"){
     const reviewed=path[0]==="preview"&&path[1]==="reviewedCash";
+    const monthlyProse=path.join(".")==="preview.consumptionMonthly.text";
     const prose=reviewed&&path.join(".")==="preview.reviewedCash.report.text";
-    check(value.length<=(prose?200000:8192)&&!(reviewed?/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/:/[\u0000-\u001f\u007f]/).test(value),"Invalid text metadata.");textBudget(value,budget);return value;}
+    check(value.length<=(monthlyProse?700000:prose?200000:8192)&&!((reviewed||monthlyProse)?/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/:/[\u0000-\u001f\u007f]/).test(value),"Invalid text metadata.");textBudget(value,budget);return value;}
   if(typeof value==="number"){check(Number.isFinite(value),"Nonfinite metadata.");return value;}
   check(value&&typeof value==="object","Only plain metadata is accepted.");
   const prototype=Object.getPrototypeOf(value);
@@ -154,7 +156,12 @@ function build(raw){
   check(!reviewed?.dailyEvidence||p.frequency==="DAILY","Daily evidence on a non-daily report.");
   if(p.reviewedReconciliation===true)check(validateAutomaticReviewedReceipt(reviewed,{companyId,storeId,groups,rule,dayStartHour:bounds.dayStartHour,sourceFingerprint:p.sourceFingerprint,requireFinal:final}),"Reviewed cash result unavailable or changed.");
   else check(!own(p,"reviewedCash"),"Unexpected reviewed cash result.");
-  const content={format:FORMAT,scope,storeName:p.store.name,period:bounds,frequency:p.frequency,settingsVersion,sourceFingerprint:p.sourceFingerprint,sourceCount:p.sourceCount,financialFinality,financialReconciliationComplete:final,financialLimitations,employeeLiabilityAdjusted:false,disclosures,rule:{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled},groups,dayReadiness,...(openingOperatorSummary?{openingOperatorSummary}:{}),...(reviewed?{reviewedCash:reviewed}:{}),...(p.dailyTurnover?{dailyTurnover:p.dailyTurnover}:{}),...(p.shiftTurnover?{shiftTurnover:p.shiftTurnover}:{})};
+  let consumptionMonthly;
+  if(own(p,'consumptionMonthly')){
+    check(p.frequency==='MONTHLY','Consumption supplement on a nonmonthly report.');
+    consumptionMonthly=validateConsumptionMonthly(p.consumptionMonthly,{companyId,storeId,fromDay:bounds.fromDay,toDay:bounds.toDay});
+  }
+  const content={format:FORMAT,scope,storeName:p.store.name,period:bounds,frequency:p.frequency,settingsVersion,sourceFingerprint:p.sourceFingerprint,sourceCount:p.sourceCount,financialFinality,financialReconciliationComplete:final,financialLimitations,employeeLiabilityAdjusted:false,disclosures,rule:{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled},groups,dayReadiness,...(openingOperatorSummary?{openingOperatorSummary}:{}),...(reviewed?{reviewedCash:reviewed}:{}),...(p.dailyTurnover?{dailyTurnover:p.dailyTurnover}:{}),...(p.shiftTurnover?{shiftTurnover:p.shiftTurnover}:{}),...(consumptionMonthly?{consumptionMonthly}:{})};
   const body=canonical(content),byteLength=Buffer.byteLength(body,"utf8");check(byteLength<=2*1024*1024,"Payload exceeds two MiB.");
   return freeze({format:FORMAT,scope,period:bounds,frequency:p.frequency,sourceFingerprint:p.sourceFingerprint,financialFinality,financialLimitations,contentType:"application/json; charset=utf-8",body,byteLength,payloadFingerprint:createHash("sha256").update(body,"utf8").digest("hex")});
 }

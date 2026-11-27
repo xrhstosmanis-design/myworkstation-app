@@ -12,3 +12,5 @@ Current evidence: NOT TESTED. Read instructions/current registries, financial25N
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-11-27-financial-consumption.md`. Next: merge claim before source.
 
+
+Implementation ready for full CI. Owner /root retained. LAB NOT TESTED. See [current checkpoint](../../CHECKPOINTS/CHANGES/2026-11-27-financial-consumption.md) for exact implementation, test limits and single next action.

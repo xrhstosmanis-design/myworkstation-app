@@ -1,3 +1,4 @@
+import {validateConsumptionMonthly} from './consumption-monthly-presentation.js';
 import {automaticCashMailPresentation} from './automatic-report-cash-mail-presentation.js';
 import {monthlyTurnoverMailSections} from './daily-turnover-report.js';
 import {MONTHLY_INVENTORY_SUMMARY_FORMAT} from './monthly-inventory-summary-email.js';
@@ -56,6 +57,10 @@ function request(raw){
     if(promotion)text(content.eventId);
     text(content.subject,300);
     if(typeof content.text!=='string'||!content.text.trim())fail();
+  }
+  if(content.consumptionMonthly){
+    if(monthlyText||promotion||content.frequency!=='MONTHLY')fail();
+    try{validateConsumptionMonthly(content.consumptionMonthly,{companyId:p.scope.companyId,storeId:p.scope.storeId,fromDay:content.period.fromDay,toDay:content.period.toDay})}catch{fail()}
   }
   if(!monthlyText&&!promotion)try{automaticCashMailPresentation(content)}catch{fail()}
   if(!iso(p.period?.from)||!iso(p.period?.to)||p.period.from>=p.period.to||p.period.to>args.now)fail();
@@ -128,9 +133,10 @@ export function createAutomaticReportMailAdapter({startAttempt,sendMail}){
       const presentation=automaticCashMailPresentation(content);
       const cashText=presentation.text;
       const turnover = content.dailyTurnover;
-      const text = turnover
+      const baseText = turnover
         ? [...monthlyTurnoverMailSections(turnover, content.shiftTurnover, content.storeName), cashText].join("\n\n")
         : cashText;
+      const text=[baseText,...(content.consumptionMonthly?[content.consumptionMonthly.text]:[])].join('\n\n');
       const subject=presentation.subject;
       const result=await sendMail(Object.freeze({to:r.input.recipient,subject,text}));
       return evidence(result,r.input.recipient);
