@@ -10,8 +10,8 @@ export function printPosOrderProposal(report,search='',openWindow=()=>window.ope
  const popup=openWindow();if(!popup)throw Error('Ο browser μπλόκαρε την εκτύπωση. Επίτρεψε το παράθυρο εκτύπωσης.');
  popup.opener=null;popup.document.write(renderPosOrderProposal(report,search).html);popup.document.close();popup.focus();popup.print();
 }
-function SupplierMinimum({row,sending,onApply}){
- const [value,setValue]=useState('');
+function SupplierMinimum({row,sending,onApply,onSave}){
+ const [value,setValue]=useState(()=>String(row.supplierMinimum??''));
  const minimum=Number(value);
  const valid=value!==''&&minimum>0&&minimum<=100000000&&Number(minimum.toFixed(4))===minimum;
  const quantity=valid?roundSupplierQuantity(row.requiredQuantity,row.supplierPack,minimum):null;
@@ -23,6 +23,8 @@ function SupplierMinimum({row,sending,onApply}){
   </label>
   <button type="button" disabled={sending||!(quantity>0)||quantity>100000000}
    onClick={()=>onApply(quantity)}>Εφαρμογή ελάχιστου</button>
+  {onSave&&<button type="button" disabled={sending||(!valid&&!(value===''&&row.supplierMinimum))}
+   onClick={()=>onSave(value===''?null:minimum)}>{value===''?'Κατάργηση μόνιμου ελάχιστου':'Αποθήκευση ελάχιστου για επόμενες προτάσεις'}</button>}
  </div>;
 }
 export default function PosOrderSuggestions({api,store,operator,open,onOpen,onClose,backoffice=false}){
@@ -58,6 +60,20 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
  const ready=Boolean(finalReport?.reportId)&&!dirty&&!busy&&finalRows.length>0;
  const change=(key,value)=>{setFilters(current=>({...current,[key]:value}));setData(null);setError('');setMessage('');setEmailOpen(false);if(key==='supplierId')setRecipients(suppliers.find(s=>s.id===value)?.email||'')};
  const calculate=e=>{e.preventDefault();setRequest({...filters});setEmailOpen(false)};
+ const saveMinimum=async(row,minimum)=>{
+  if(sendingRef.current||!data?.reportId)return;
+  const id=generation.current,reportId=data.reportId;
+  sendingRef.current=true;setSending(true);setError('');
+  try{
+   await api(`/api/pos-order-suggestions/stores/${encodeURIComponent(store.id)}/supplier-minimum`,{
+    method:'PUT',body:JSON.stringify({reportId,productId:row.productId,minimum})
+   });
+   if(id!==generation.current)return;
+   setData(current=>current?.reportId===reportId?{...current,rows:current.rows.map(item=>item.productId===row.productId?{...item,supplierMinimum:minimum}:item)}:current);
+   setMessage('Αποθηκεύτηκε για τις επόμενες προτάσεις. Πάτησε «Εφαρμογή ελάχιστου» για την τρέχουσα ποσότητα.');
+  }catch(error){if(id===generation.current)setError(error.message)}
+  finally{if(id===generation.current){sendingRef.current=false;setSending(false)}}
+ };
  const send=async e=>{e.preventDefault();if(!ready||sendingRef.current||attempted===data.reportId)return;
   const emails=[...new Set(recipients.split(/[,;]/).map(x=>x.trim().toLowerCase()).filter(Boolean))];
   if(!emails.length||emails.length>10||/[\r\n]/.test(recipients)||emails.some(x=>!/^\S+@\S+\.\S+$/.test(x))){setError('Συμπλήρωσε έως 10 έγκυρα email, χωρισμένα με κόμμα.');return;}
@@ -92,7 +108,7 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
   {editable&&totals.map(total=><p key={total.id??''}><strong>{total.name}</strong> · Εκτιμώμενη καθαρή αξία {fmt(total.cents/100)} €{total.missing>0&&` · ${total.missing} είδη χωρίς πλήρη εκτίμηση`}</p>)}
   {data&&!finalReport&&<p role="alert">Συμπλήρωσε έγκυρες ποσότητες. Βάλε 0 για εξαίρεση είδους.</p>}
   {data&&<div className="pos-order-proposals-scroll"><table><thead><tr><th>Είδος</th><th>Καθαρές πωλήσεις περιόδου</th><th>Απόθεμα</th><th>Alarm</th><th>Πρόταση</th><th>Έλεγχος</th></tr></thead><tbody>{rows.map(r=><tr key={r.productId}><td>{r.name}<small>{r.sku}</small></td><td>{fmt(r.netQuantity)}<small>Πωλήσεις {fmt(r.soldQuantity)} · επιστροφές {fmt(r.returnedQuantity)}</small></td><td>{fmt(r.currentStock)}</td><td>{fmt(r.minStock)}</td><td>{editable?<><input type="number" min="0" max="100000000" step="0.0001" aria-label={`Ποσότητα ${r.name}`} disabled={sending} value={Object.hasOwn(quantities,r.productId)?quantities[r.productId]??'':r.suggestedQuantity??''} onChange={e=>{const value=e.target.value;setQuantities(current=>({...current,[r.productId]:value===''?null:Number(value)}));setMessage('')}}/> {r.unitLabel}
-   {r.orderSupplierId&&r.requiredQuantity>0&&<SupplierMinimum row={r} sending={sending}
+   {r.orderSupplierId&&r.requiredQuantity>0&&<SupplierMinimum row={r} sending={sending} onSave={backoffice&&data.supplierMinimumAvailable?minimum=>saveMinimum(r,minimum):null}
     onApply={quantity=>{setQuantities(current=>({...current,[r.productId]:quantity}));setMessage('')}}/>}
    {r.supplierPack&&<small>Συσκευασία {fmt(r.supplierPack)} · ανάγκη {fmt(r.requiredQuantity)}</small>}
    <small>{r.orderSupplierName||'Χωρίς προμηθευτή'} · {r.orderUnitCost==null?'Κόστος προς έλεγχο':`${fmt(r.orderUnitCost)} € / ${r.unitLabel} χωρίς ΦΠΑ`}</small>

@@ -76,17 +76,28 @@ export async function readPosOrderProposal(db,scope){
     AND (${supplier?.id??''}='' OR d."supplierId"=${supplier?.id??''})
    ORDER BY l."productId",d."documentDate" DESC NULLS LAST,d."id" DESC,l."id" DESC`:[];
   const byProduct=new Map(purchases.map(row=>[row.productId,row]));
+  const [minimumSchema]=await tx.$queryRaw`
+   SELECT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('"SupplierProductLink"')
+    AND attname='purchaseMinimumQuantity' AND NOT attisdropped) AS ready`;
+  const minimums=minimumSchema?.ready&&candidates.length?await tx.$queryRaw`
+   SELECT "supplierId","productId","purchaseMinimumQuantity" FROM "SupplierProductLink"
+   WHERE "companyId"=${scope.companyId} AND "active"=TRUE
+    AND "productId"=ANY(${candidates.map(row=>row.productId)}::text[])
+    AND "purchaseMinimumQuantity" IS NOT NULL`:[];
+  const bySupplierProduct=new Map(minimums.map(row=>[JSON.stringify([row.supplierId,row.productId]),Number(row.purchaseMinimumQuantity)]));
   rows=candidates.map(row=>{
    const purchase=byProduct.get(row.productId);
    const pack=purchase?.unit==='PACKAGE'&&Number(purchase.unitsPerPackage)>1?Number(purchase.unitsPerPackage):null;
-   return {...row,supplierPack:pack,requiredQuantity:row.suggestedQuantity,
-    suggestedQuantity:roundSupplierQuantity(row.suggestedQuantity,pack),
-    orderSupplierId:supplier?.id??purchase?.supplierId??null,
+   const supplierId=supplier?.id??purchase?.supplierId??null;
+   const minimum=bySupplierProduct.get(JSON.stringify([supplierId,row.productId]))??null;
+   return {...row,supplierPack:pack,supplierMinimum:minimum,requiredQuantity:row.suggestedQuantity,
+    suggestedQuantity:roundSupplierQuantity(row.suggestedQuantity,pack,minimum??0),
+    orderSupplierId:supplierId,
     orderSupplierName:supplier?.name??purchase?.supplierName??null,
     orderUnitCost:purchase?.unitCost!=null&&Number(purchase.unitCost)>=0?Number(purchase.unitCost):null};
   });
   const alarmState=await readWeeklyStockAlarmState(tx,scope);
-  return {...proposal,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:alarmState.enabled,alarmState};
+  return {...proposal,supplierMinimumAvailable:minimumSchema?.ready===true,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:alarmState.enabled,alarmState};
  },{isolationLevel:'RepeatableRead',timeout:30000});
 }
 export function createPosProposalSnapshots({now=()=>Date.now(),ttl=600000,maxEntries=20,maxBytes=16777216}={}){

@@ -1,3 +1,4 @@
+import {randomUUID} from 'node:crypto';
 import {applyProposalQuantities} from '../../../shared/order-proposal-quantities.mjs';
 import {Router} from 'express';
 import {z} from 'zod';
@@ -45,6 +46,31 @@ export function createPosOrderSuggestionsRouter({db=defaultPrisma,read=readPosOr
   await recheck(req);
   const report={...result,storeName:req.posProposalStore.name,period:parsed.period,supplier:result.supplier||null};
   const snapshot=snapshots.create(report,scope(req));res.json({...snapshot.report,reportId:snapshot.id});
+ }));
+ router.put('/stores/:storeId/supplier-minimum',admission,moduleGuard,handler(async(req,res)=>{
+  if(req.user.tokenType==='STORE_OPERATOR'||(!isPlatformSuperAdmin(req.user)&&!['OWNER','ADMIN'].includes(req.user.role)))throw fail(403,'Απαιτείται πρόσβαση διαχειριστή.');
+  const input=z.object({reportId:z.string().uuid(),productId:z.string().min(1).max(200),
+   minimum:z.number().positive().max(100000000).refine(value=>Number(value.toFixed(4))===value).nullable()}).strict().parse(req.body);
+  const entry=snapshots.get(input.reportId,scope(req));
+  const row=entry.report.rows.find(item=>item.productId===input.productId);
+  if(!row?.orderSupplierId)throw fail(422,'Επίλεξε είδος με προμηθευτή.');
+  if(!entry.report.supplierMinimumAvailable)throw fail(503,'Η μόνιμη αποθήκευση ελάχιστου δεν έχει εγκατασταθεί.');
+  await recheck(req);
+  const saved=input.minimum===null?await db.$queryRaw`
+   UPDATE "SupplierProductLink" SET "purchaseMinimumQuantity"=NULL,"updatedAt"=NOW(),"updatedBy"=${req.user.id}
+   WHERE "companyId"=${entry.companyId} AND "supplierId"=${row.orderSupplierId}
+    AND "productId"=${row.productId} AND "active"=TRUE RETURNING "productId"`:await db.$queryRaw`
+   INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","source","updatedBy","purchaseMinimumQuantity")
+   SELECT ${randomUUID()},s."companyId",s."id",p."id",'MANUAL',${req.user.id},${input.minimum}
+   FROM "Supplier" s JOIN "Product" p ON p."companyId"=s."companyId"
+   WHERE s."companyId"=${entry.companyId} AND s."id"=${row.orderSupplierId} AND s."active"=TRUE
+    AND p."id"=${row.productId} AND p."active"=TRUE
+   ON CONFLICT ("companyId","supplierId","productId") DO UPDATE
+    SET "purchaseMinimumQuantity"=EXCLUDED."purchaseMinimumQuantity", "updatedAt"=NOW(),"updatedBy"=EXCLUDED."updatedBy"
+    WHERE "SupplierProductLink"."active"=TRUE
+   RETURNING "productId"`;
+  if(!saved.length)throw fail(409,'Το είδος ή η σύνδεση προμηθευτή δεν είναι ενεργή.');
+  res.json({ok:true});
  }));
  router.post('/stores/:storeId/email',admission,moduleGuard,handler(async(req,res)=>{
   const input=z.object({reportId:z.string().uuid(),recipients:reportRecipientListSchema.refine(x=>x.length>0,'Συμπλήρωσε τουλάχιστον ένα email.'),search:z.string().trim().max(200).default(''),quantities:z.record(z.number().finite().min(0).max(100000000)).default({})}).parse(req.body);
