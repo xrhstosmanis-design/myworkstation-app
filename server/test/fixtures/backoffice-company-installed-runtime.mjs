@@ -1,3 +1,5 @@
+import {readCompanyDelegationCeiling,saveCompanyDelegationCeiling} from '../../src/services/backoffice-staff-company-delegation-ceiling.js';
+import {listCompanyDelegatedReads,changeCompanyDelegatedRead} from '../../src/services/backoffice-staff-company-delegated-reads.js';
 import {companyReadWorkerMac} from '../../src/services/backoffice-company-read-worker-ready.js';
 import assert from 'node:assert/strict';
 import {isBackofficeCompanyInstalled,backofficeCompanyProfile} from '../../src/services/backoffice-company-profile.js';
@@ -25,6 +27,36 @@ export async function verifyInstalledCompanyRuntime({db,profile,revision,secret,
   await db.$executeRawUnsafe('INSERT INTO "User"("id","companyId","email","passwordHash","fullName","role","updatedAt") VALUES (\'company-owner\',\'company\',\'company-owner@native.invalid\',\'NOT-LOGIN\',\'Native Owner\',\'OWNER\',NOW())');
   await db.$executeRawUnsafe('INSERT INTO "UserSession"("id","userId","expiresAt") VALUES (\'company-owner-session\',\'company-owner\',NOW()+INTERVAL \'1 hour\')');
   const owner={id:'company-owner',companyId:'company',role:'OWNER',tokenType:'BACKOFFICE_USER',sessionId:'company-owner-session',sessionVersion:0};
+  const manager=await createStaffAccount(db,owner,{username:'delegation.manager.native',fullName:'Delegation Manager',pin:'987654',grants:[],companyCapabilities:['staff-policy.read','categories.read','stores.read']});
+  const recipient=await createStaffAccount(db,owner,{username:'delegation.recipient.native',fullName:'Delegation Recipient',pin:'987654',grants:[],companyCapabilities:[]});
+  assert.deepEqual((await readCompanyDelegationCeiling(db,owner,manager.id)).capabilities,[]);
+  const saved=await saveCompanyDelegationCeiling(db,owner,manager.id,{expectedRevision:1,capabilities:['categories.read']});
+  assert.equal(saved.revision,2);
+  assert.deepEqual(await readCompanyDelegationCeiling(db,owner,manager.id),saved);
+  await assert.rejects(saveCompanyDelegationCeiling(db,owner,manager.id,{expectedRevision:1,capabilities:[]}),{code:'STAFF_STALE'});
+  await db.$executeRawUnsafe(`INSERT INTO "UserSession"("id","userId","expiresAt") VALUES ('delegation-manager-session',$1,NOW()+INTERVAL '1 hour')`,manager.id);
+  const [managerLogin]=await db.$queryRawUnsafe('SELECT "sessionVersion" FROM "User" WHERE "id"=$1',manager.id);
+  const actor={id:manager.id,companyId:'company',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true,sessionId:'delegation-manager-session',sessionVersion:managerLogin.sessionVersion};
+  const delegationRequest=async(method,body)=>{
+   const get=name=>name==='x-backoffice-company-id'?'company':undefined;
+   const req={method,user:actor,originalUrl:'/api/backoffice-staff/company/delegated-reads',get,query:{},body};
+   await enforceStaffCompanyRequest(db,req);return req;
+  };
+  const list=await listCompanyDelegatedReads(db,await delegationRequest('GET'));
+  assert.deepEqual(list.editableKeys,['categories.read']);
+  assert.ok(!list.items.some(row=>row.userId===manager.id));
+  const patch=async overrides=>changeCompanyDelegatedRead(db,await delegationRequest('PATCH',{
+   userId:recipient.id,key:'categories.read',enabled:true,expectedRevision:1,...overrides
+  }));
+  await assert.rejects(patch({key:'stores.read'}),{code:'STAFF_COMPANY_DELEGATION_CEILING'});
+  await assert.rejects(patch({userId:manager.id}),{code:'STAFF_ACCESS_DENIED'});
+  await assert.rejects(patch({userId:'foreign'}),{code:'STAFF_NOT_FOUND'});
+  assert.deepEqual(await patch({}),{companyId:'company',userId:recipient.id,revision:2,capabilities:['categories.read']});
+  await assert.rejects(patch({enabled:false}),{code:'STAFF_STALE'});
+  const [trace]=await db.$queryRawUnsafe(`SELECT "detail" FROM "BackofficeStaffAudit" WHERE "targetUserId"=$1 AND "event"='COMPANY_READ_DELEGATED'`,recipient.id);
+  assert.deepEqual(trace.detail,{key:'categories.read',before:false,enabled:true,revision:2});
+  await saveCompanyDelegationCeiling(db,owner,manager.id,{expectedRevision:2,capabilities:[]});
+  await assert.rejects(delegationRequest('GET'),{code:'STAFF_SESSION_INVALID'});
   const capabilities=['stores.read','suppliers.read','customers.read','expense-categories.read','customer-categories.read','professions.read','shipping-methods.read','categories.read','categories.manage','categories.reactivate','staff-policy.read','staff-display-name.edit','staff-account-status.manage','vat-departments.read','vat-departments.manage','vat-departments.activate-draft','product-companies.read','banks.read','company-products.read','purchases.read','recipes.read','supplier-details.read'];
   await assert.rejects(createStaffAccount(db,owner,{username:'orphan.detail.native',fullName:'Rejected Orphan',pin:'987654',grants:[],companyCapabilities:['supplier-details.read']}),{name:'ZodError'});
   const created=await createStaffAccount(db,owner,{username:'company.only.native',fullName:'Company Only Native',pin:'987654',grants:[],companyCapabilities:capabilities});

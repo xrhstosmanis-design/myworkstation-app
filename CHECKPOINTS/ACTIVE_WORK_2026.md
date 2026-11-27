@@ -1,5 +1,7 @@
 ## 27/11/2026 — FINANCIAL-CONSUMPTION-01 — ASSIGNED /root
 
+- 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).
+
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
 
 Independent additive scope. Preserve financial sales, existing POS consumption writers, stock/fiscal, dispatch controls and other assignments. Before source: merge claim green/main. Then read-only selected-store endpoint, independent report permissions, historical approved purchase evidence without present-price substitution, recorded sale value, missing-value/limit disclosure, panel choices, immutable monthly cash-payload supplement through the existing delivery lifecycle. No new recipient or consent schema, activation, production DB write or diagnostic POS transaction.
@@ -608,6 +610,10 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 | — | STORE-CATALOG-APPEND-XLSX | /root | #3811, #3813 | Hosted LAB PASS · 1 νέο είδος · επαλήθευση και με τα δύο barcode | [Τεκμήριο](CHANGES/2026-11-10-store-catalog-append.md) |
 | — | OWNER-SHIFT-TIME-FILTER | /root | #3872 | Hosted LAB PASS · 3→1 | [Τεκμήριο](CHANGES/2026-11-10-owner-shift-time-filter.md) |
 | 1 | Email delivery history | /root · feat/email-delivery-history | #3793 | IN REVIEW · SMTP evidence and store history | [Checkpoint](CHANGES/2026-11-12-email-delivery-history.md) |
+
+## 27/11/2026 — Έξοδα ΝΕΤΛΙΝΚ / ΟΚΤΟ ανά βάρδια
+
+[Checkpoint](CHANGES/2026-11-27-prepaid-expenses-by-shift.md). Εκκρεμεί LAB.
 
 ## 24/11/2026 - Price catalog product card - LAB pending
 
@@ -1240,9 +1246,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
 
-## 27/11/2026 — Έξοδα ΝΕΤΛΙΝΚ / ΟΚΤΟ ανά βάρδια
-
-[Checkpoint](CHANGES/2026-11-27-prepaid-expenses-by-shift.md). Εκκρεμεί LAB.
+- 27/11/2026 · Περιγραφή συμβάντων αλλαγής τιμής και έκπτωσης · [Checkpoint](CHANGES/2026-11-27-purchase-alert-event-description.md).
 
 ## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
 

@@ -1,3 +1,4 @@
+import StaffReadDelegation from './StaffReadDelegation.jsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {greeceDateInput,greeceRangeDate} from '../../../../shared/greece-time.mjs';
 import {finalPassiveCompanyActions as actions,finalPassiveCompanyPrefix as prefix,passiveTaxonomyProductFields,passiveMovementFields} from '../../../../shared/backoffice-staff-final-passive.mjs';
@@ -88,6 +89,7 @@ function AccountStatusEditor({api,companyId,account,onSaved,onCancel}){
 }
 function Policy(props){
   const read=useRead(props,prefix+'/staff-policy','policy');
+  const [showDelegation,setShowDelegation]=useState(false);
   const [chosen,setChosen]=useState(''),[grantId,setGrant]=useState(''),[editing,setEditing]=useState(''),[statusId,setStatusId]=useState(''),[notice,setNotice]=useState('');
   const selected=read.data?.items.find(row=>row.id===chosen),grant=selected?.grants.find(row=>row.storeId===grantId);
   const mayRename=Boolean(props.staffActorId&&props.companyCapabilities?.includes(staffDisplayNameCapability));
@@ -103,6 +105,8 @@ function Policy(props){
   const statusAccount=mayChangeStatus&&statusId!==props.staffActorId?read.data?.items.find(row=>row.id===statusId):null;
   const account=mayRename&&editing!==props.staffActorId?read.data?.items.find(row=>row.id===editing):null;
   return <><ReadState read={read}/>
+    {props.staffActorId&&read.data&&<button type="button" aria-expanded={showDelegation} onClick={()=>setShowDelegation(value=>!value)}>Επανεκχώρηση εταιρικών προβολών</button>}
+    {showDelegation&&props.staffActorId&&<StaffReadDelegation api={props.api} companyId={props.companyId} userId={props.staffActorId} onSaved={read.refresh}/>}
     {notice&&<p role="status">{notice}</p>}
     {read.data&&<>
       <p>Η εμφάνιση δικαιωμάτων άλλου λογαριασμού δεν τα παραχωρεί στον δικό σου λογαριασμό.</p>
