@@ -1,3 +1,4 @@
+import {operationalFinancialReports} from './financial-consumption.mjs';
 import {finalPassiveCompanyActions,finalPassiveStoreActions} from './backoffice-staff-final-passive.mjs';
 import {companyProductCenterActions} from './backoffice-staff-company-product-center.mjs';
 import {observerLogisticsActions} from './backoffice-staff-company-observer-logistics.mjs';
@@ -11,6 +12,7 @@ import {storeReportNames,storeReportLabels} from './backoffice-staff-reports.mjs
 // STORE rights cannot authorize COMPANY operations. Existing persisted rights
 // stay unchanged; adding a catalogue entry never grants access automatically.
 export const backofficeFunctionCatalogue=Object.freeze([
+ ...Object.values(operationalFinancialReports).map(r=>({key:r.capability.slice(0,-5),label:r.label+' · Οικονομικές αναφορές καταστήματος',scope:'STORE',actions:['read']})),
  ...finalPassiveCompanyActions.map(action=>({key:'company-passive-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),
  ...finalPassiveStoreActions.map(action=>({key:'store-passive-'+action.key.slice(0,-5),label:action.label,scope:'STORE',actions:['read']})),
  ...companyProductCenterActions.map(action=>({key:'company-product-center-'+action.key.slice(0,-5),label:action.label,scope:'COMPANY',actions:['read']})),

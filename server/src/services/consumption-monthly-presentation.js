@@ -11,7 +11,7 @@ export function consumptionMonthlySection(label,report){
   if(!report.rows.length)lines.push('Δεν βρέθηκαν καταχωρίσεις στο συγκεκριμένο διάστημα.');
   if(report.truncated)lines.push(`Πάνω από ${report.limit} γραμμές — περιορισμένη ανάλυση, χωρίς πλήρη τελικά σύνολα.`);
   for(const r of report.rows)lines.push([
-    new Date(r.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens'}),clean(r.name),
+    new Date(r.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false}),clean(r.name),
     `${r.quantity} ${clean(r.unit)}`,`Αγορά ${money(r.purchaseTotal)}`,`Πώληση ${money(r.saleTotal)}`,
     `Χειριστής καταχώρισης: ${clean(r.operatorName)}`,`Αιτιολογία: ${clean(r.note)}`
   ].join(' · '));
