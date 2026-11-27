@@ -72,7 +72,7 @@ $report=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_KAT_I
   "Recovery state: "+$stateFile,
   "Package integrity: VERIFIED",
   "Result: READY FOR NON-FISCAL PILOT TEST",
-  "Safety: NO RBS / NO KIOSK MANAGER / NO CAPDRIVER CHANGES",
+  "Safety: NO RBS / NO FISCAL SOFTWARE / NO CAPDRIVER CHANGES",
   "Observer: NOT INSTALLED - separate technical activation required"
 )|Set-Content -LiteralPath $report -Encoding UTF8
 Write-Host "Opening one-time activation for $terminalPos..."

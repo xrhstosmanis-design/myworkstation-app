@@ -40,7 +40,7 @@ test("historical kiosk imports cannot alter shift or fiscal state",()=>{
 });
 
 test("owner dashboard exposes Kiosk Excel CSV import",()=>{
-  assert.match(client,/Εισαγωγή Kiosk Excel \/ CSV/);
+  assert.match(client,/Εισαγωγή πληρωμών Excel \/ CSV/);
   assert.match(client,/data-op-store/);
   assert.match(client,/Επίλεξε πρώτα συγκεκριμένο κατάστημα/);
   assert.match(client,/owner-payments\/import-kiosk/);

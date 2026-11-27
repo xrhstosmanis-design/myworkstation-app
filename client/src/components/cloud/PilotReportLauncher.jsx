@@ -32,7 +32,7 @@ export default function PilotReportLauncher(){
     {open&&<div className="pilot-launch-modal">
       <div className="pilot-launch-backdrop" onClick={()=>setOpen(false)}/>
       <div className="pilot-launch-dialog">
-        <div className="pilot-launch-top"><div><b>Ημερήσια Αναφορά Εμπορικής Δοκιμής</b><span>Σύγκριση MyWorkStation με Kiosk Manager</span></div><select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select><button onClick={()=>setOpen(false)}><X/></button></div>
+        <div className="pilot-launch-top"><div><b>Ημερήσια Αναφορά Εμπορικής Δοκιμής</b><span>Συμφωνία πωλήσεων και ταμειακής</span></div><select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select><button onClick={()=>setOpen(false)}><X/></button></div>
         {error?<div className="cloud-alert cloud-error">{error}</div>:store?<PilotDailyReport api={api} store={store}/>:<div className="cloud-loading">Φόρτωση καταστημάτων…</div>}
       </div>
     </div>}

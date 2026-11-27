@@ -40,7 +40,7 @@ export default function StaffKioskPaymentsImport({api,storeId}){
   }
 
   return <section className="panel staff-panel">
-    <h3>Εισαγωγή πληρωμών Kiosk</h3>
+    <h3>Εισαγωγή πληρωμών Excel / CSV</h3>
     <label>Αρχείο Excel ή CSV <input type="file" accept=".xlsx,.xls,.csv" onChange={choose} disabled={busy}/></label>
     {error&&<p role="alert">{error}</p>}
     {notice&&<p role="status">{notice}</p>}

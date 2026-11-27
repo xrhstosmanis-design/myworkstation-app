@@ -2,7 +2,7 @@ MYWORKSTATION - KAT ΠΡΑΓΜΑΤΙΚΗ ΔΟΚΙΜΗ
 
 ΚΑΝΟΝΕΣ
 [ ] Δεν εκτελούμε δοκιμή σε ώρα πραγματικής λειτουργίας χωρίς έγκριση.
-[ ] Δεν αλλάζουμε RBS, Kiosk Manager, CapDriver ή Netlink από αυτό το πακέτο.
+[ ] Δεν αλλάζουμε RBS, το ταμειακό σύστημα, CapDriver ή Netlink από αυτό το πακέτο.
 [ ] Κρατάμε τα reports Preflight, Installation και Recovery από την Επιφάνεια Εργασίας.
 
 Α. HOME PC - SOFTWARE PILOT
@@ -44,7 +44,7 @@ MYWORKSTATION - KAT ΠΡΑΓΜΑΤΙΚΗ ΔΟΚΙΜΗ
 [ ] RECOVER_KAT_DRY_RUN.cmd γράφει DRY_RUN_PASSED, checksum/revision και δεν αλλάζει τη συντόμευση.
 [ ] RECOVER_KAT.cmd επαναφέρει το αποθηκευμένο HTTPS Store Mode URL μόνο μετά από εγκεκριμένο maintenance window.
 [ ] Δημιουργείται MyWorkStation_KAT_Recovery.txt.
-[ ] Επιβεβαίωση ότι Kiosk Manager, CapDriver, RBS και Windows services έμειναν αμετάβλητα.
+[ ] Επιβεβαίωση ότι το ταμειακό σύστημα, CapDriver, RBS και Windows services έμειναν αμετάβλητα.
 
 ΤΕΛΙΚΟ ΑΠΟΤΕΛΕΣΜΑ
 [ ] PASS - όλα τα παραπάνω ολοκληρώθηκαν.

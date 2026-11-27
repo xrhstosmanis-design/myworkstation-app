@@ -1,3 +1,7 @@
+## 27/11/2026 — branding + sales fields / source prepared / AWAITING CI
+
+Owner /root retained. Claim4310 merged6e4ba424 before edits. Visible competitor copy removed; protocol/path/import identity preserved. Existing historical-cost reader unchanged; explicit store-scoped detailed items/categories/results, full-source cap validation, genuine missing-cost states and Athens calendar daily averages/CSV. 61 focused PASS + separate10 native PostgreSQL PASS; build PASS before final print CSS. Full CI/release/visual acceptance pending; no functional/manual PASS. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
+
 ## 27/11/2026 — ASSIGNED /root — branding and sales-item completeness
 
 Explicit owner approval covers public code/docs publication. Bounded visible-copy cleanup and selected-store sales metadata/cost/daily-average display; existing writers, fiscal/auth/store/cost invariants and other owners preserved. Claim before source, NOT TESTED/NOT INSTALLED. [Scope](CHANGES/2026-11-27-visible-branding.md).
