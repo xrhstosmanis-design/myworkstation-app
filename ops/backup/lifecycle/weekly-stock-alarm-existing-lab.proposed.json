@@ -1482,29 +1482,11 @@
           "identity": "",
           "generated": "",
           "defaultExpression": null
-        },
-        {
-          "table": "StoreChatMessage",
-          "name": "deletedAt",
-          "type": "timestamp without time zone",
-          "notNull": false,
-          "identity": "",
-          "generated": "",
-          "defaultExpression": null
-        },
-        {
-          "table": "StoreChatMessage",
-          "name": "editedAt",
-          "type": "timestamp without time zone",
-          "notNull": false,
-          "identity": "",
-          "generated": "",
-          "defaultExpression": null
         }
       ],
       "indexes": [],
       "ownerSource": "server/src/routes/store-chat.js",
-      "ownerSourceHash": "a1ff411114f743d1d10ab505f06c8e89d65037e4757b63e5820ad8e33895d8a7"
+      "ownerSourceHash": "0892cae09a315a494e3c6f8226cdec193cdfb7aeae0ed989c81245108985d881"
     }
   ]
 }

@@ -757,7 +757,7 @@ public final class MainActivity extends Activity {
                 imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
             })));
         }
-        if (own && row != null && row.optBoolean("canChangeOwn") && ChatInteractions.validId(row.optString("id"))) {
+        if (own && row != null && row.isNull("taskId") && row.isNull("aiReaderJobId") && !row.optString("body").equals("Το μήνυμα διαγράφηκε.") && ChatInteractions.validId(row.optString("id"))) {
             actions.addView(button("Διόρθωση μηνύματος", scopedMessageAction(() -> changeOwnMessage(row, false))));
             actions.addView(button("Διαγραφή μηνύματος", scopedMessageAction(() -> changeOwnMessage(row, true))));
         }

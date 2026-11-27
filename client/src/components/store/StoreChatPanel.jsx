@@ -86,8 +86,9 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
   useEffect(()=>()=>Object.values(previewRef.current).forEach(preview=>URL.revokeObjectURL(preview.url)),[]);
   useEffect(()=>{const clear=()=>{if(!document.hidden)return;previewEpoch.current++;setMenuRow(null);setToolsOpen(false);setAttachOpen(false);setAnnouncementsOpen(false);setGroupsOpen(false);setPhoto(null);setPreviews(values=>{Object.values(values).forEach(p=>URL.revokeObjectURL(p.url));return{}})};document.addEventListener("visibilitychange",clear);return()=>{previewEpoch.current++;clearTimeout(press.current);document.removeEventListener("visibilitychange",clear)}},[]);
   useEffect(()=>()=>{if(photo)URL.revokeObjectURL(photo.url)},[photo]);
+  const canChangeOwn=row=>row.ownMessage&&!row.taskId&&!row.aiReaderJobId&&row.body!=="Το μήνυμα διαγράφηκε.";
   const changeOwnMessage=async(row,remove)=>{
-    if(!row.canChangeOwn||!active())return;
+    if(!canChangeOwn(row)||!active())return;
     const body=remove?null:window.prompt("Διόρθωση μηνύματος",row.body);
     if(remove?!window.confirm("Να διαγραφεί αυτό το μήνυμα για όλους;"):body===null||!body.trim()||body.trim()===row.body)return;
     setError("");
@@ -97,11 +98,11 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
       });
       if(!active())return;
       if(remove){setPhoto(null);setReplyTo(current=>current?.id===row.id?null:current);}
-      setRows(current=>current.map(message=>message.id===row.id?{...message,...result.message,...(remove?{hasAttachment:false,canChangeOwn:false,pinned:false,important:false}: {})}:message));
+      setRows(current=>current.map(message=>message.id===row.id?{...message,...result.message,...(remove?{hasAttachment:false,pinned:false,important:false}: {})}:message));
       await load(true);
     }catch(error){if(active())setError(error.message);}
   };
-  const openMenu=row=>{if(active()&&!row.deletedAt){clearTimeout(press.current);setMenuRow(row.id)}};
+  const openMenu=row=>{if(active()&&row.body!=="Το μήνυμα διαγράφηκε."){clearTimeout(press.current);setMenuRow(row.id)}};
   const openMessage=async row=>{if(row.readByMe||openingId)return;setOpeningId(row.id);try{await api(`/api/store-chat/stores/${encodeURIComponent(store.id)}/messages/${encodeURIComponent(row.id)}/read`,{method:"POST"});await load(true)}catch(e){setError(e.message)}finally{setOpeningId(null)}};
   const cashAttachment=attachment&&topic==="CASH";
   const athensDate=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -224,7 +225,7 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
       {row.aiReaderJobId&&<small className="store-chat-ai-badge"><Bot/>Στάλθηκε στο AI Reader από: {row.aiReaderSentByName||row.aiReaderSentBy} · {new Date(row.aiReaderSentAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}</small>}
       {row.category==="ANNOUNCEMENT"&&settings.announcementAcknowledgementRequired&&acknowledgements.length>0&&<small className="store-chat-ack-list"><BadgeCheck/>Επιβεβαίωσαν: {acknowledgements.map(item=>item.name||item.id).filter(Boolean).join(", ")}</small>}
       <div hidden={menuRow!==row.id}>{menuRow===row.id&&<ChatActionSheet label="Ενέργειες μηνύματος" onClose={()=>{suppressPreview.current=null;setMenuRow(null)}}><div onClickCapture={e=>{if(e.target.closest('button')){suppressPreview.current=null;setMenuRow(null)}}}>
-      {row.canChangeOwn&&<div className="store-chat-actions">
+      {canChangeOwn(row)&&<div className="store-chat-actions">
         <button type="button" disabled={busy} onClick={()=>changeOwnMessage(row,false)}>Διόρθωση μηνύματος</button>
         <button type="button" disabled={busy} onClick={()=>changeOwnMessage(row,true)}>Διαγραφή μηνύματος</button>
       </div>}
@@ -263,8 +264,7 @@ function StoreChatEditable(props){
 
 function ChatMessageSummary({row,unread}){return <>
       <small>{row.pinned&&<b className="store-chat-pinned-label"><Pin/>ΚΑΡΦΙΤΣΩΜΕΝΗ · </b>}{unread&&<b className="store-chat-new">ΝΕΟ · </b>}<b className="store-chat-category">{labels[row.category]||row.category}</b> · {new Date(row.createdAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}</small><b className="store-chat-sender">Από: {row.senderName||row.senderId}</b>{row.body&&<p>{row.body}</p>}
-      {row.editedAt&&!row.deletedAt&&<small className="store-chat-read">Διορθώθηκε</small>}
-      {row.forwarded&&!row.deletedAt&&<small className="store-chat-read">Προωθημένο μήνυμα</small>}
+      {row.forwarded&&row.body!=="Το μήνυμα διαγράφηκε."&&<small className="store-chat-read">Προωθημένο μήνυμα</small>}
       {row.replyTo&&<blockquote className="store-chat-quote"><b>Απάντηση σε: {row.replyTo.senderName||"Χρήστης"}</b><p>{row.replyTo.body||row.replyTo.attachmentName||"Μήνυμα"}</p></blockquote>}
 
 </>}

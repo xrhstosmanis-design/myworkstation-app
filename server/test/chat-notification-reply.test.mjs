@@ -28,7 +28,7 @@ test('notification replies inherit scoped parent category and deduplicate exact 
     $executeRaw:async(...data)=>audits.push(data)
   };
   let handler;
-  const router={delete(){},get(){},post(path,callback){if(path.endsWith('/notification-reply'))handler=callback},put(){},patch(){}};
+  const router={get(){},post(path,callback){if(path.endsWith('/notification-reply'))handler=callback},put(){},patch(){}};
   const source=readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8')
     .replace(/^import .*;$/gm,'').replace('export async function','async function').replace('export default router;','return router;');
   new Function('express','prisma','crypto','isPlatformSuperAdmin','chatMessageId','chatSendContext','categoryTopic','sendStoreChatPush','nativePushStatus','mountChatGroups','chatAccessRevoked',source)(
