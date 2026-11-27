@@ -1,3 +1,7 @@
+## 27/11/2026 — ASSIGNED /root — branding and sales-item completeness
+
+Explicit owner approval covers public code/docs publication. Bounded visible-copy cleanup and selected-store sales metadata/cost/daily-average display; existing writers, fiscal/auth/store/cost invariants and other owners preserved. Claim before source, NOT TESTED/NOT INSTALLED. [Scope](CHANGES/2026-11-27-visible-branding.md).
+
 ## 27/11/2026 — Απογραφή, μισθοδοσία, μηδενισμός αποθήκης και Chat — LAB
 
 Τέσσερις αλλαγές BackOffice για δοκιμή πριν την παραγωγή. [Checkpoint](CHANGES/2026-11-27-inventory-payroll-chat-workflows.md).
