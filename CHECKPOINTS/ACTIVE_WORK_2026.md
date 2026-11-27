@@ -1,3 +1,7 @@
+## 27/11/2026 — Καταστροφές / Ιδιοκατανάλωση στις Οικονομικές αναφορές
+
+ASSIGNED /root, feat/financial-consumption-20261127. Υλοποίηση και26στοχευμένοι έλεγχοι PASS, πλήρες CI/εγκατάσταση/LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-27-financial-consumption.md). [Ανεξάρτητο μητρώο](../docs/roadmap/OPEN_WORK_TRACKER_FINANCIAL_CONSUMPTION_2026-11-27.md).
+
 ## 27/11/2026 — FINANCIAL-CONSUMPTION-01 — ASSIGNED /root
 
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.

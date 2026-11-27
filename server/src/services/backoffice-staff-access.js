@@ -1,3 +1,4 @@
+import {operationalFinancialCapabilities} from '../../../shared/financial-consumption.mjs';
 import {decodeStoredStaffCapabilities} from "./staff-pos-permission-ceiling.js";
 import {finalPassiveStoreActions,finalPassiveStoreRequest} from '../../../shared/backoffice-staff-final-passive.mjs';
 import {storeReportCapabilities,freeStoreReportCapabilities} from '../../../shared/backoffice-staff-reports.mjs';
@@ -146,6 +147,7 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
+ if(operationalFinancialCapabilities.includes(capability))return ['INVENTORY'];
  const passive=finalPassiveStoreActions.find(action=>action.key===capability);if(passive)return [...passive.modules];
  if(storeReportCapabilities.includes(capability))return freeStoreReportCapabilities.includes(capability)?[]:['INVENTORY'];
  if(capability==='unsold-products.read')return ['SALES_ANALYTICS'];

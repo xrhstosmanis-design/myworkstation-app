@@ -1,3 +1,4 @@
+import {readMonthlyConsumptionSupplement} from './consumption-monthly-report.js';
 import {readSettledMonthlySnapshotForReport} from './monthly-inventory-snapshot-repository.js';
 import {buildMonthlyInventorySummaryPayload} from './monthly-inventory-summary-email.js';
 import {monthlyInventorySnapshotPeriod} from './monthly-inventory-snapshot-period.js';
@@ -151,6 +152,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
      if (preview.shiftTurnover.status !== 'AVAILABLE' ||
          preview.shiftTurnover.shifts.reduce((total,shift)=>total+shift.cash+shift.card,0) !== preview.dailyTurnover.totalCents) hold();
    }
+   if(scope.frequency==='MONTHLY')preview.consumptionMonthly=await readMonthlyConsumptionSupplement(tx,{companyId:scope.companyId,storeId:scope.storeId,fromDay:preview.period.fromDay,toDay:preview.period.toDay,now:new Date(now)});
    const args={preview,companyId:scope.companyId,storeId:scope.storeId,settingsVersion:settings.version};
    const needsNotice=twoPhase&&!final&&scope.frequency==='DAILY'&&(preview.sourceReadiness==='HOLD'||preview.complete===false||preview.reviewedCash?.status==='HOLD');
    payload=needsNotice?buildDailyCashMorningNotice(args):buildAutomaticCashPayload(args);

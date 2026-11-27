@@ -10,3 +10,5 @@
 @media (min-width: 751px) {
   .store-operations-front .cloud-titlebar-actions { flex-wrap: wrap; }
 }
+
+.store-financial-operation-choices{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.store-financial-operation-choices button{min-height:44px;padding:10px 18px;border:1px solid #457161;border-radius:8px;background:#f3f8f5;color:#164734;font:inherit;cursor:pointer}.store-financial-operation-choices button[aria-pressed="true"]{background:#164734;color:white}.store-financial-operation-choices button:focus-visible{outline:3px solid #68a4df;outline-offset:2px}

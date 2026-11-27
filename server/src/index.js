@@ -1,3 +1,4 @@
+import storeConsumptionFinancialRoutes from './routes/store-consumption-financial.js';
 import weeklyStockAlarmRoutes from './routes/weekly-stock-alarm.js';
 import {createWeeklyStockAlarmScheduler} from './services/weekly-stock-alarm-scheduler.js';
 import {createWeeklyStockAlarmInstallationRouter} from './routes/weekly-stock-alarm-installation.js';
@@ -410,6 +411,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,expectedReceiptRoutes);
 app.use("/api/pos-order-suggestions",auth,posOrderSuggestionsRoutes);
 app.use("/api/stock-alarms",auth,weeklyStockAlarmRoutes);
 app.use("/api/platform/weekly-stock-alarm-installation/stores/:storeId",auth,createWeeklyStockAlarmInstallationRouter(prisma));
+app.use("/api/commerce/sales/financial-reports",auth,commerceTenantGuard,storeConsumptionFinancialRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/commerce/internet-product-search",auth,commerceTenantGuard,commerceAdvancedOnlineSearchRoutes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);

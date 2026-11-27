@@ -1,3 +1,4 @@
+import {allowedFinancialModes} from '../../../shared/financial-consumption.mjs';
 import {Boxes, ChartNoAxesCombined, ChevronDown, ClipboardList, Headset, ReceiptText, ShoppingCart, UsersRound} from "lucide-react";
 import CompanyAuthorityReadiness,{companyAuthoritySupported} from './backoffice/CompanyAuthorityReadiness.jsx';
 import StoreFinalPassiveReadView from './backoffice/StoreFinalPassiveReadView.jsx';
@@ -85,7 +86,8 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
   const openCommerce=commerceView?()=>setView(commerceView):undefined;
   useEffect(()=>{let live=true;setIdentity(null);api('/api/backoffice-staff/me').then(d=>{if(live){identitySource.current={api,user};setIdentity(d)}}).catch(e=>{if(live)setError(e.message)});return()=>{live=false;sequence.current++}},[api,user]);
   useEffect(()=>{sequence.current++;selectedStocktakeId.current=null;setData(null);setDetail(null);setInventoryPages([]);setError('');setBusy(false);setNewProduct(false);setInventoryNewOrigin(null);setStocktakeMessage('');if(view==='inventory'&&storeId&&capabilities.includes('inventory.read'))void load()},[storeId,view,from,to]);
-  const canOpenFinancialReports=selected?.profile==='MANAGER'&&capabilities.includes('store-reports-sales-analysis.read')&&
+  const financialModes=allowedFinancialModes(capabilities);
+  const canOpenFinancialReports=selected?.profile==='MANAGER'&&financialModes.length>0&&
     identitySource.current?.api===api&&identitySource.current?.user===user;
   const scoped=useCallback(async(path,options={})=>{
     const own=scope.current;
@@ -258,7 +260,7 @@ export default function BackofficeStaffWorkspace({api,user,onLogout}){
       {view==='handover'&&selected&&capabilities.includes('handover.read')&&<React.Suspense fallback={<p role="status">Φόρτωση παραδόσεων βάρδιας…</p>}><StoreHandoverPanel key={storeId} api={scoped} store={selected} readOnly/></React.Suspense>}
       {page!=='company'&&view==='financial-reports'&&canOpenFinancialReports&&
         <React.Suspense fallback={<p role="status">Φόρτωση αναφορών…</p>}>
-          <StoreFinancialReports key={storeId} api={scoped} store={selected}/>
+          <StoreFinancialReports key={storeId} api={scoped} store={selected} allowedModes={financialModes}/>
         </React.Suspense>}
       {view==='analytics'&&selected&&capabilities.includes('analytics.read')&&<React.Suspense fallback={<p role="status">Φόρτωση ανάλυσης πωλήσεων…</p>}><AdvancedSalesAnalytics key={storeId} api={scoped} stores={[selected]} initialStoreId={storeId}/></React.Suspense>}
       {view==='order-suggestions'&&selected&&capabilities.includes('order-suggestions.read')&&<React.Suspense fallback={<p role="status">Φόρτωση προτάσεων παραγγελίας…</p>}><OrderSuggestionsPanel key={storeId} api={scoped} storeId={storeId}/></React.Suspense>}
