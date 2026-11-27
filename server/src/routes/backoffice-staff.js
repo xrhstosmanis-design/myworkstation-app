@@ -1,3 +1,4 @@
+import {listCompanyDelegatedReads,changeCompanyDelegatedRead} from '../services/backoffice-staff-company-delegated-reads.js';
 import {readCompanyDelegationCeiling,saveCompanyDelegationCeiling} from '../services/backoffice-staff-company-delegation-ceiling.js';
 import {saveStaffAccountStatus} from "../services/backoffice-staff-account-status.js";
 import {saveStaffCompanyVatDepartment,activateStaffCompanyVatDraft} from "../services/backoffice-staff-company-vat.js";
@@ -88,6 +89,12 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     res.json(result.session);
   }catch(error){failure(res,error)}});
   router.use(authenticate);
+  router.get('/company/delegated-reads',async(req,res)=>{
+    try{res.json(await listCompanyDelegatedReads(db,req))}catch(error){failure(res,error)}
+  });
+  router.patch('/company/delegated-reads',async(req,res)=>{
+    try{res.json(await changeCompanyDelegatedRead(db,req))}catch(error){failure(res,error)}
+  });
   router.post("/company/product-descriptions",async(req,res)=>{
     try{res.json(await saveStaffProductDescription(db,req))}catch(error){failure(res,error)}
   });

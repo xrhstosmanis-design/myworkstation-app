@@ -1,3 +1,4 @@
+import CompanyReadDelegationCeiling from './backoffice/CompanyReadDelegationCeiling.jsx';
 import {delegatedReadOptions,readDelegationRight} from './backoffice/StaffReadDelegation.jsx';
 import {POS_MENU_PERMISSIONS,POS_PERMISSIONS} from '../../../shared/pos-operator-permissions.mjs';
 import CompanyAuthorityReadiness,{companyAuthoritySupported} from './backoffice/CompanyAuthorityReadiness.jsx';
@@ -26,6 +27,7 @@ function grantsMatch(expected,stored){
 export default function BackofficeStaffAdmin({api}){
   const [area,setArea]=useState('BACKOFFICE'),[posStoreId,setPosStoreId]=useState('');
   const [data,setData]=useState(null),[edit,setEdit]=useState(null),[grants,setGrants]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const [ceilingAccount,setCeilingAccount]=useState(null);
   const [companyCapabilities,setCompanyCapabilities]=useState([]);
   const canEditReadDelegationCeiling=data?.canEditBackofficeReadDelegationCeiling===true;
   const canEditPosPermissionCeiling=data?.canEditPosPermissionCeiling===true;
@@ -42,8 +44,8 @@ export default function BackofficeStaffAdmin({api}){
       return result;
     }catch(e){if(id===sequence.current)setError(e.message);return null}
   };
-  useEffect(()=>{load();return()=>{sequence.current++}},[api]);
-  const open=account=>{formApi.current=api;setCompanyCapabilities(Array.isArray(account?.companyCapabilities)?[...account.companyCapabilities]:[]);setEdit(account||{id:null,active:true});setGrants((account?.grants||[]).map(({storeId,profile,capabilities,posPermissionCeiling,backofficeReadDelegationCeiling})=>({storeId,profile,capabilities,...(canEditPosPermissionCeiling&&posPermissionCeiling!==undefined?{posPermissionCeiling}:{}),...(canEditReadDelegationCeiling&&Array.isArray(backofficeReadDelegationCeiling)?{backofficeReadDelegationCeiling}:{})})));setError('');setMessage('')};
+  useEffect(()=>{setCeilingAccount(null);load();return()=>{sequence.current++}},[api]);
+  const open=account=>{setCeilingAccount(null);formApi.current=api;setCompanyCapabilities(Array.isArray(account?.companyCapabilities)?[...account.companyCapabilities]:[]);setEdit(account||{id:null,active:true});setGrants((account?.grants||[]).map(({storeId,profile,capabilities,posPermissionCeiling,backofficeReadDelegationCeiling})=>({storeId,profile,capabilities,...(canEditPosPermissionCeiling&&posPermissionCeiling!==undefined?{posPermissionCeiling}:{}),...(canEditReadDelegationCeiling&&Array.isArray(backofficeReadDelegationCeiling)?{backofficeReadDelegationCeiling}:{})})));setError('');setMessage('')};
   const toggleStore=(storeId,on)=>setGrants(rows=>on?[...rows,{storeId,profile:'STOCKTAKER',capabilities:[]}]:rows.filter(r=>r.storeId!==storeId));
   const setPosCeiling=(storeId,ceiling)=>setGrants(rows=>rows.map(row=>
     row.storeId===storeId?{...row,posPermissionCeiling:ceiling}:row));
@@ -80,9 +82,10 @@ export default function BackofficeStaffAdmin({api}){
     <div hidden={area!=='BACKOFFICE'}>
     <p>Ο ρόλος περιγράφει τη θέση του χειριστή. Τα επιλεγμένα δικαιώματα ορίζουν την πρόσβασή του. Η αλλαγή ρόλου δεν αλλάζει αυτόματα τα δικαιώματα.</p>
     {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
-    <div className="staff-actions"><button type="button" disabled={busy} onClick={()=>{setEdit(null);load()}}>Ανανέωση λίστας</button><button type="button" disabled={busy||!data} onClick={()=>open(null)}>Νέος χειριστής</button></div>
+    <div className="staff-actions"><button type="button" disabled={busy} onClick={()=>{setEdit(null);setCeilingAccount(null);load()}}>Ανανέωση λίστας</button><button type="button" disabled={busy||!data} onClick={()=>open(null)}>Νέος χειριστής</button></div>
     {data&&<CompanyAuthorityReadiness authority={data.companyAuthority}/>}
-    {data&&<><ul className="staff-accounts">{data.accounts.map(a=><li key={a.id}><b>{a.fullName}</b> · {a.username} · {a.active?'Ενεργός':'Ανενεργός'}<span>{a.grants.length} καταστήματα</span><button type="button" disabled={busy} onClick={()=>open(a)}>Δικαιώματα / Απενεργοποίηση</button></li>)}</ul>{!data.accounts.length&&<p>Δεν έχουν δημιουργηθεί προσωπικές προσβάσεις.</p>}</>}
+    {data&&<><ul className="staff-accounts">{data.accounts.map(a=><li key={a.id}><b>{a.fullName}</b> · {a.username} · {a.active?'Ενεργός':'Ανενεργός'}<span>{a.grants.length} καταστήματα</span><button type="button" disabled={busy} onClick={()=>open(a)}>Δικαιώματα / Απενεργοποίηση</button>{companySupported&&canEditReadDelegationCeiling&&<button type="button" disabled={busy} onClick={()=>{setEdit(null);setCeilingAccount(a);setMessage('')}}>Όριο εταιρικής επανεκχώρησης</button>}</li>)}</ul>{!data.accounts.length&&<p>Δεν έχουν δημιουργηθεί προσωπικές προσβάσεις.</p>}</>}
+    {ceilingAccount&&data&&companySupported&&canEditReadDelegationCeiling&&<CompanyReadDelegationCeiling key={JSON.stringify([data.companyId,ceilingAccount.id])} api={api} companyId={data.companyId} account={ceilingAccount} onClose={()=>setCeilingAccount(null)} onSaved={()=>{setCeilingAccount(null);setMessage('Αποθηκεύτηκε το όριο εταιρικής επανεκχώρησης.');load()}}/>}
     {edit&&data&&formApi.current===api&&<form key={edit.id||'new'} onSubmit={save} autoComplete="off"><h3>{edit.id?`${edit.fullName} · ${edit.username}`:'Νέος λογαριασμός'}</h3>
       {!edit.id&&<><label>Ονοματεπώνυμο<input name="fullName" required minLength={2} maxLength={180}/></label><label>Username<input name="username" required pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,79}" minLength={3} maxLength={80} autoComplete="off"/></label></>}
       <label>{edit.id?'Νέος κωδικός (προαιρετικά)':'Προσωπικός κωδικός (προαιρετικά)'}<input name="password" type="password" autoComplete="new-password" minLength={10} maxLength={100}/></label>
