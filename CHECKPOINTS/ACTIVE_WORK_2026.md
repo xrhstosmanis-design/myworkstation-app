@@ -1,8 +1,16 @@
 - 27/11/2026 · [Αντιστοιχίσεις συσκευασίας στο POS OCR](CHANGES/2026-11-27-pos-ocr-supplier-pack.md) · Εκκρεμεί δοκιμή ολοκληρωμένης ροής.
 
+## 27/11/2026 — ASSIGNED /root — branding and sales-item completeness
+
+Explicit owner approval covers public code/docs publication. Bounded visible-copy cleanup and selected-store sales metadata/cost/daily-average display; existing writers, fiscal/auth/store/cost invariants and other owners preserved. Claim before source, NOT TESTED/NOT INSTALLED. [Scope](CHANGES/2026-11-27-visible-branding.md).
+
+## 27/11/2026 — Απογραφή, μισθοδοσία, μηδενισμός αποθήκης και Chat — LAB
+
+Τέσσερις αλλαγές BackOffice για δοκιμή πριν την παραγωγή. [Checkpoint](CHANGES/2026-11-27-inventory-payroll-chat-workflows.md).
+
 ## 27/11/2026 — Καταστροφές / Ιδιοκατανάλωση στις Οικονομικές αναφορές
 
-ASSIGNED /root, feat/financial-consumption-20261127. Υλοποίηση και26στοχευμένοι έλεγχοι PASS, πλήρες CI/εγκατάσταση/LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-27-financial-consumption.md). [Ανεξάρτητο μητρώο](../docs/roadmap/OPEN_WORK_TRACKER_FINANCIAL_CONSUMPTION_2026-11-27.md).
+ASSIGNED /root. INSTALLED: source #4308, green full PR/main CI; exact healthy runtime f66e1db. Both inside-panel report reads observed in controlled LAB support. AWAITING GROUPED LAB for ordinary Owner/Manager rights, independent totals and first scheduled monthly delivery. [Checkpoint](CHANGES/2026-11-27-financial-consumption.md). [Ανεξάρτητο μητρώο](../docs/roadmap/OPEN_WORK_TRACKER_FINANCIAL_CONSUMPTION_2026-11-27.md).
 
 ## 27/11/2026 — FINANCIAL-CONSUMPTION-01 — ASSIGNED /root
 
