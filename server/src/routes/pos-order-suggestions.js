@@ -1,3 +1,6 @@
+import {supplierMinimumKey,supplierMinimumSection} from '../lib/proposal-supplier-minimum.js';
+import {randomUUID} from 'node:crypto';
+import {applyProposalQuantities} from '../../../shared/order-proposal-quantities.mjs';
 import {Router} from 'express';
 import {z} from 'zod';
 import {prisma as defaultPrisma} from '../prisma.js';
@@ -45,11 +48,47 @@ export function createPosOrderSuggestionsRouter({db=defaultPrisma,read=readPosOr
   const report={...result,storeName:req.posProposalStore.name,period:parsed.period,supplier:result.supplier||null};
   const snapshot=snapshots.create(report,scope(req));res.json({...snapshot.report,reportId:snapshot.id});
  }));
+ router.put('/stores/:storeId/supplier-minimum',admission,moduleGuard,handler(async(req,res)=>{
+  if(req.user.tokenType==='STORE_OPERATOR'||(!isPlatformSuperAdmin(req.user)&&!['OWNER','ADMIN'].includes(req.user.role)))throw fail(403,'Απαιτείται πρόσβαση διαχειριστή.');
+  const input=z.object({reportId:z.string().uuid(),productId:z.string().min(1).max(200),
+   minimum:z.number().positive().max(100000000).refine(value=>Number(value.toFixed(4))===value).nullable()}).strict().parse(req.body);
+  const entry=snapshots.get(input.reportId,scope(req));
+  const row=entry.report.rows.find(item=>item.productId===input.productId);
+  if(!row?.orderSupplierId)throw fail(422,'Επίλεξε είδος με προμηθευτή.');
+  if(!entry.report.supplierMinimumAvailable)throw fail(503,'Η μόνιμη αποθήκευση ελάχιστου δεν έχει εγκατασταθεί.');
+  await recheck(req);
+  const key=supplierMinimumKey(row.orderSupplierId,row.productId);
+  await db.$transaction(async tx=>{
+   const eligible=await tx.$queryRaw`
+    SELECT s."id" FROM "Supplier" s JOIN "Product" p ON p."companyId"=s."companyId"
+    WHERE s."companyId"=${entry.companyId} AND s."id"=${row.orderSupplierId} AND s."active"=TRUE
+     AND p."id"=${row.productId} AND p."active"=TRUE FOR SHARE OF s,p`;
+   if(!eligible.length)throw fail(409,'Το είδος ή ο προμηθευτής δεν είναι ενεργός.');
+   if(input.minimum===null){
+    await tx.$executeRaw`UPDATE "ManagementParameters"
+     SET "settings"="settings" #- ARRAY[${supplierMinimumSection},${key}]::text[], "updatedAt"=NOW()
+     WHERE "companyId"=${entry.companyId}`;
+   }else{
+    const values=JSON.stringify({[key]:input.minimum});
+    await tx.$executeRaw`INSERT INTO "ManagementParameters" ("id","companyId","settings")
+     VALUES (${randomUUID()},${entry.companyId},jsonb_build_object(${supplierMinimumSection}::text,${values}::jsonb))
+     ON CONFLICT ("companyId") DO UPDATE
+     SET "settings"=jsonb_set("ManagementParameters"."settings",ARRAY[${supplierMinimumSection}]::text[],
+      COALESCE("ManagementParameters"."settings"->${supplierMinimumSection},'{}'::jsonb)||${values}::jsonb),"updatedAt"=NOW()`;
+   }
+   await tx.$executeRaw`INSERT INTO "ManagementParameterAudit" ("id","companyId","section","actorId","actorName")
+    VALUES (${randomUUID()},${entry.companyId},${supplierMinimumSection},${req.user.id},${req.user.fullName||req.user.email||null})`;
+  });
+  res.json({ok:true});
+ }));
  router.post('/stores/:storeId/email',admission,moduleGuard,handler(async(req,res)=>{
-  const input=z.object({reportId:z.string().uuid(),recipients:reportRecipientListSchema.refine(x=>x.length>0,'Συμπλήρωσε τουλάχιστον ένα email.'),search:z.string().trim().max(200).default('')}).parse(req.body);
+  const input=z.object({reportId:z.string().uuid(),recipients:reportRecipientListSchema.refine(x=>x.length>0,'Συμπλήρωσε τουλάχιστον ένα email.'),search:z.string().trim().max(200).default(''),quantities:z.record(z.number().finite().min(0).max(100000000)).default({})}).parse(req.body);
   const entry=snapshots.get(input.reportId,scope(req));
   if(entry.state!=='ready')throw fail(409,'Υπάρχει ήδη απόπειρα αποστολής αυτής της πρότασης. Έλεγξε την κατάστασή της πριν από νέα αποστολή.');
-  const rendered=renderPosOrderProposal(entry.report,input.search);
+  let report;
+  try{report=applyProposalQuantities(entry.report,input.quantities)}
+  catch(error){throw fail(422,error.message)}
+  const rendered=renderPosOrderProposal(report,input.search);
   if(!rendered.rowCount)throw fail(422,'Δεν υπάρχουν είδη για αποστολή με αυτά τα κριτήρια.');
   const to=normalizeReportRecipients(input.recipients),auditId=`pos-proposal-email:${input.reportId}`;
   const auditContext={reportId:input.reportId,...scope(req),recipients:to,search:input.search,period:entry.report.period,supplierId:entry.report.supplier?.id||null};

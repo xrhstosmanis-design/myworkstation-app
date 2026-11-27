@@ -1,3 +1,5 @@
+import {supplierMinimumKey,supplierMinimumSection} from '../lib/proposal-supplier-minimum.js';
+import {roundSupplierQuantity} from '../../../shared/order-proposal-quantities.mjs';
 import {readWeeklyStockAlarmState} from './weekly-stock-alarm.js';
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
@@ -63,8 +65,35 @@ export async function readPosOrderProposal(db,scope){
     OR EXISTS(SELECT 1 FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=p."id" AND o."companyId"=${scope.companyId} AND o."storeId"=${scope.storeId} AND o."supplierId"=${supplier.id} AND o."status"='FINAL' AND o."awaitingInvoice"=FALSE AND l."quantity">0))`;
    const ids=new Set(matches.map(x=>x.id));rows=rows.filter(r=>ids.has(r.productId));
   }
+  const candidates=rows.filter(row=>row.suggestedQuantity>0||row.suggestedQuantity==null);
+  const purchases=candidates.length?await tx.$queryRaw`
+   SELECT DISTINCT ON (l."productId") l."productId",s."id" AS "supplierId",s."name" AS "supplierName",
+    l."unit",l."unitsPerPackage",
+    l."netAmount"/NULLIF(l."quantity" * CASE WHEN l."unit"='PACKAGE' THEN NULLIF(l."unitsPerPackage",0) ELSE 1 END,0) AS "unitCost"
+   FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+   JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId" AND s."active"=TRUE
+   WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."status"='APPROVED'
+    AND d."documentType"='INVOICE' AND l."quantity">0 AND l."productId"=ANY(${candidates.map(row=>row.productId)}::text[])
+    AND (${supplier?.id??''}='' OR d."supplierId"=${supplier?.id??''})
+   ORDER BY l."productId",d."documentDate" DESC NULLS LAST,d."id" DESC,l."id" DESC`:[];
+  const byProduct=new Map(purchases.map(row=>[row.productId,row]));
+  const [minimumSchema]=await tx.$queryRaw`SELECT to_regclass('"ManagementParameters"') IS NOT NULL AS ready`;
+  const [configuration]=minimumSchema?.ready?await tx.$queryRaw`
+   SELECT "settings"->${supplierMinimumSection} AS minimums FROM "ManagementParameters" WHERE "companyId"=${scope.companyId}`:[];
+  rows=candidates.map(row=>{
+   const purchase=byProduct.get(row.productId);
+   const pack=purchase?.unit==='PACKAGE'&&Number(purchase.unitsPerPackage)>1?Number(purchase.unitsPerPackage):null;
+   const supplierId=supplier?.id??purchase?.supplierId??null;
+   const configured=supplierId?configuration?.minimums?.[supplierMinimumKey(supplierId,row.productId)]:null;
+   const minimum=Number.isFinite(configured)&&configured>0&&configured<=100000000?configured:null;
+   return {...row,supplierPack:pack,supplierMinimum:minimum,requiredQuantity:row.suggestedQuantity,
+    suggestedQuantity:roundSupplierQuantity(row.suggestedQuantity,pack,minimum??0),
+    orderSupplierId:supplierId,
+    orderSupplierName:supplier?.name??purchase?.supplierName??null,
+    orderUnitCost:purchase?.unitCost!=null&&Number(purchase.unitCost)>=0?Number(purchase.unitCost):null};
+  });
   const alarmState=await readWeeklyStockAlarmState(tx,scope);
-  return {...proposal,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:alarmState.enabled,alarmState};
+  return {...proposal,supplierMinimumAvailable:minimumSchema?.ready===true,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:alarmState.enabled,alarmState};
  },{isolationLevel:'RepeatableRead',timeout:30000});
 }
 export function createPosProposalSnapshots({now=()=>Date.now(),ttl=600000,maxEntries=20,maxBytes=16777216}={}){
