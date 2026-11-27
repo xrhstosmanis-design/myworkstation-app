@@ -1,6 +1,3 @@
-import React from "react";
-import {createRoot} from "react-dom/client";
-import PosOrderSuggestions from "../store/PosOrderSuggestions.jsx";
 import {installMyDataPrintedEconomicsNotice} from "../../lib/mydata-printed-economics-notice.mjs";
 import {installInvoiceLineTaxonomy} from "./invoiceLineTaxonomy.js";
 import {showPurchaseSupplierCorrection} from "./purchaseSupplierCorrection.js";
@@ -70,10 +67,18 @@ function selectOrderView(root,status){
   return loadReport(root,true);
 }
 function ordersHtml(){const r=state.report||{},s=r.summary||{},rows=r.orders||[];return `${posContext?"":orderViewButtons()}${filters()}<div class="po-cards"><article><small>Παραγγελίες</small><b>${s.count||0}</b></article><article><small>Νέες</small><b>${s.NEW||0}</b></article><article><small>Οριστικές</small><b>${s.FINAL||0}</b></article><article><small>Τιμολογημένες</small><b>${s.INVOICED||0}</b></article><article><small>Αξία χωρίς ΦΠΑ</small><b>${money(s.net)}</b></article><article><small>Αξία με ΦΠΑ</small><b>${money(s.gross)}</b></article></div><section class="po-panel"><div class="po-panel-head"><b>Παραγγελίες</b><small>Το μολύβι ανοίγει πλήρη διόρθωση παραγγελίας.</small></div><div class="po-orders-table"><div class="row head"><span></span><span>Κατάσταση</span><span>Αρ. τιμολογίου</span><span>Προμηθευτής</span><span>Κατάστημα</span><span>Αξία (χ.ΦΠΑ)</span><span>Αξία (με ΦΠΑ)</span><span>Περιγραφή</span><span>Ενημέρωση</span><span>Χειριστής ενημέρωσης</span></div>${rows.map(o=>`<div class="row"><span><button class="icon" data-po-open="${esc(o.id)}">✎</button></span><span><b class="status ${String(o.status).toLowerCase()}">${o.awaitingInvoice?"Προς έλεγχο / Τιμολόγηση":statusLabel(o.status)}</b></span><span>${esc(o.invoiceNumber||String(o.id).slice(0,8))}</span><span><b>${esc(o.supplierName||"—")}</b><small>${o.lineCount||0} είδη</small></span><span>${esc(o.storeName||"—")}</span><strong>${money(o.totalNet)}</strong><strong>${money(o.totalGross)}</strong><span>${esc(assistantDraftDescription(o.description,o.status))}${ocrJobDiagnostic(o.ocrJob,o.status)}</span><span>${fmt(o.updatedAt)}</span><span>${esc(o.updatedByName||o.createdByName||"—")}</span></div>`).join("")||'<div class="po-empty">Δεν υπάρχουν παραγγελίες για τα κριτήρια.</div>'}</div></section>`}
-function openEditableProposal(root){
+async function openEditableProposal(root){
  const store=(state.report?.stores||[]).find(candidate=>candidate.id===state.storeId);
  if(!store){notify(root,"Επίλεξε κατάστημα.",true);return}
+ let React,createRoot,PosOrderSuggestions;
+ try{
+  const [react,dom,proposal]=await Promise.all([import("react"),import("react-dom/client"),import("../store/PosOrderSuggestions.jsx")]);
+  React=react.default;createRoot=dom.createRoot;PosOrderSuggestions=proposal.default;
+ }catch(error){if(root.isConnected)notify(root,error.message,true);return}
+ if(!root.isConnected||root.hidden||state.tab!=="proposal"||state.storeId!==store.id||
+    document.querySelector("[data-po-edit-proposal-host]"))return;
  const host=document.createElement("div");
+ host.dataset.poEditProposalHost="1";
  document.body.appendChild(host);
  const view=createRoot(host);
  const close=()=>{view.unmount();host.remove()};
