@@ -239,7 +239,10 @@ export function companyCategoryReactivateRoute(method,path){
   const id=supplierRouteId(rawId);
   return id?{kind,id}:null;
 }
+export const companyDelegatedReadsPath='/api/backoffice-staff/company/delegated-reads';
+export const isCompanyDelegatedReadsRequest=(method,path)=>['GET','PATCH'].includes(method)&&path===companyDelegatedReadsPath;
 export function staffCompanyRequestCapability(method,path){
+  if(isCompanyDelegatedReadsRequest(method,path))return 'staff-policy.read';
   if(isProductDescriptionRequest(method,path))return productDescriptionCapability;
   if(isProductRenameRequest(method,path))return productRenameCapability;
   if(isPromotionActivationRequest(method,path))return promotionActivateCapability;
