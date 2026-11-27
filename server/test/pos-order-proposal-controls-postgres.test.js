@@ -14,6 +14,8 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
   tables.PurchaseOrder+=',"supplierId" TEXT';
   tables.ManagementParameters='"id" TEXT PRIMARY KEY,"companyId" TEXT UNIQUE,"settings" JSONB,"updatedAt" TIMESTAMPTZ';
   tables.ManagementParameterAudit='"id" TEXT PRIMARY KEY,"companyId" TEXT,"section" TEXT,"actorId" TEXT,"actorName" TEXT';
+  tables.PurchaseOrderPosting='"purchaseDocumentId" TEXT,"companyId" TEXT,"supplierId" TEXT,"orderId" TEXT';
+  tables.PurchaseOrderLine+=',"invoiceUnit" TEXT';
   tables.StockMovement='"id" TEXT PRIMARY KEY,"storeId" TEXT,"sourceId" TEXT,"sourceType" TEXT,"movementType" TEXT,"quantity" NUMERIC,"createdAt" TIMESTAMP';
   tables.Supplier='"id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"email" TEXT,"active" BOOLEAN';
   tables.PurchaseDocument='"id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"status" TEXT,"documentType" TEXT,"documentDate" TIMESTAMP';
@@ -80,6 +82,27 @@ test('actual POS proposal HTTP/PostgreSQL: Greek date bounds, supplier scope, sn
    assert.equal(next.rows[0].suggestedQuantity,48);
    const clear=await save(null);assert.equal(clear.status,200,await clear.clone().text());
    assert.equal((await calculate()).rows[0].suggestedQuantity,30);
+  });
+  await t.test('invoice line marked piece uses linked pack evidence and flags equal-price unit conflict',async()=>{
+   await db.$executeRaw`UPDATE "PurchaseDocumentLine" SET "unit"='PIECE',"netAmount"=3.45 WHERE "id"='d1'`;
+   await db.$executeRaw`INSERT INTO "PurchaseOrderPosting" VALUES ('old','a','sup','receipt')`;
+   await db.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","quantity","stockUnitsPerInvoiceUnit","invoiceUnit") VALUES ('pack','receipt','p',1,12,'PACKAGE')`;
+   await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES ('new-piece','a','a1','sup','APPROVED','INVOICE','2026-11-23')`;
+   await db.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","quantity","unit","netAmount") VALUES ('piece','new-piece','p',2,'PIECE',6.90)`;
+   try{
+    const [line]=(await calculate()).rows;
+    assert.equal(line.supplierPack,12);
+    assert.equal(line.orderPackageCost,3.45);
+    assert.equal(line.orderUnitCost,3.45/12);
+    assert.equal(line.suggestedQuantity,36);
+    assert.match(line.warnings.join(' '),/ίδια τιμή κιβωτίου/);
+   }finally{
+    await db.$executeRaw`DELETE FROM "PurchaseDocumentLine" WHERE "id"='piece'`;
+    await db.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"='new-piece'`;
+    await db.$executeRaw`DELETE FROM "PurchaseOrderPosting" WHERE "purchaseDocumentId"='old'`;
+    await db.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "id"='pack'`;
+    await db.$executeRaw`UPDATE "PurchaseDocumentLine" SET "unit"=NULL,"netAmount"=NULL WHERE "id"='d1'`;
+   }
   });
   await t.test('mail uses the displayed snapshot even after later calculations; duplicate send is rejected and audited',async()=>{
    const report=await calculate(),expected=renderPosOrderProposal(report,'WATER');await calculate();

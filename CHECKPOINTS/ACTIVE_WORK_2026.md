@@ -1269,3 +1269,5 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
 
 - 27/11/2026 · [Επιστροφές εγγυοδοσίας προμηθευτών](CHANGES/2026-11-27-supplier-deposit-reminders.md) · Ελέγχθηκε σε απομονωμένη PostgreSQL. Εκκρεμεί LAB BackOffice.
+
+- 27/11/2026: Proposal packaging cost, line removal and presentation. See CHECKPOINTS/CHANGES/2026-11-27-proposal-pack-cost.md. CI and operational acceptance pending.
