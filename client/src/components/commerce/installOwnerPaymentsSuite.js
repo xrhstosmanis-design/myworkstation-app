@@ -68,7 +68,7 @@ function filterHtml(report){
   </section>`;
 }
 function navHtml(){
-  const items=[["overview","Σύνοψη"],["categories","Κατηγορίες"],["suppliers","Προμηθευτές"],["movements","Αναλυτικές κινήσεις"],["alerts","Έλεγχοι / Alerts"]];
+  const items=[["overview","Σύνοψη"],["prepaid","Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ"],["categories","Κατηγορίες"],["suppliers","Προμηθευτές"],["movements","Αναλυτικές κινήσεις"],["alerts","Έλεγχοι / Alerts"]];
   return `<div class="owner-payments-nav">${items.map(([id,label])=>`<button data-op-tab="${id}" class="${state.tab===id?"active":""}">${label}</button>`).join("")}</div>`;
 }
 function overviewHtml(report){
@@ -132,7 +132,24 @@ function alertsHtml(report){
   return `<div class="owner-payments-alerts">${alerts.map(a=>`<article class="${a.level}"><b>${esc(a.title)}</b><span>${esc(a.body)}</span></article>`).join("")}</div>
     ${high.length?`<section class="owner-payments-panel"><div class="owner-payments-panel-head"><h3>Κινήσεις για έλεγχο ποσού</h3></div><div class="owner-payments-table alerts"><div class="row head"><span>Ημερομηνία</span><span>Κατάστημα</span><span>Περιγραφή</span><span>Χειριστής</span><span>Ποσό</span></div>${high.map(row=>`<div class="row"><span>${esc(fmt(row.occurredAt))}</span><span>${esc(row.storeName)}</span><span>${esc(displayLedgerText(row.supplierName||row.description||"—"))}</span><span>${esc(row.actorName)}</span><strong>${money(row.amount)}</strong></div>`).join("")}</div></section>`:""}`;
 }
+const prepaidProviderLabel=provider=>provider==="NETLINK"?"ΝΕΤΛΙΝΚ":"ΟΚΤΟ";
+function prepaidCashHtml(report){
+  const rows=report?.prepaidCashExpenses||[];
+  return `<section class="owner-payments-panel">
+    <div class="owner-payments-panel-head"><h3>Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά</h3></div>
+    ${rows.map(row=>`<details>
+      <summary>${esc(row.storeName)} · ${prepaidProviderLabel(row.provider)} · ${row.count} κινήσεις · <strong>${money(row.amount)}</strong></summary>
+      ${row.count>row.movements.length?"<p>Εμφανίζονται οι 100 πιο πρόσφατες κινήσεις. Περιόρισε το διάστημα για παλαιότερες εγγραφές.</p>":""}
+      <div class="owner-payments-table alerts">
+        <div class="row head"><span>Ημερομηνία</span><span>Χειριστής</span><span>Αιτιολογία</span><span>Ποσό</span></div>
+        ${row.movements.map(item=>`<div class="row"><span>${esc(fmt(item.occurredAt))}</span><span>${esc(item.actorName||"—")}</span><span>${esc(auditExpenseReason({eventType:"OTHER_EXPENSE",description:item.description})||"—")}</span><strong>${money(item.amount)}</strong></div>`).join("")}
+      </div>
+    </details>`).join("")}
+    ${rows.length?"":"<p>Δεν βρέθηκαν έξοδα καρτών με μετρητά για τα επιλεγμένα φίλτρα.</p>"}
+  </section>`;
+}
 function bodyHtml(report){
+  if(state.tab==="prepaid")return prepaidCashHtml(report);
   if(state.tab==="categories")return categoriesHtml(report);
   if(state.tab==="suppliers")return suppliersHtml(report);
   if(state.tab==="movements")return movementsHtml(report);
@@ -161,6 +178,12 @@ function exportCsv(){
   for(const row of rows){
     const evidence=row.evidenceMode==="DOCUMENT"?`Ανάγνωση παραστατικού ${row.purchaseDocumentId||""}`:row.evidenceMode==="LEGACY_PHOTO"?"Φωτογραφία":"Χωρίς παραστατικό";
     lines.push([fmt(row.occurredAt),row.storeName,row.type,row.supplierName||"",displayLedgerText(row.description||""),number(row.amount).toFixed(2),row.actorName,row.sessionId||"",row.paymentSource==="CASH_SHIFT"?"ΑΠΟ ΒΑΡΔΙΑ":"ΕΞΩΤΕΡΙΚΗ",evidence,row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"]);
+  }
+  if(state.tab==="prepaid"){
+    lines.splice(0,lines.length,["Κατάστημα","Πάροχος","Κινήσεις","Ποσό"]);
+    for(const row of state.report?.prepaidCashExpenses||[]){
+      lines.push([row.storeName,prepaidProviderLabel(row.provider),row.count,number(row.amount).toFixed(2)]);
+    }
   }
   const csv="\ufeff"+lines.map(row=>row.map(value=>`"${String(value??"").replace(/"/g,'""')}"`).join(";")).join("\n");
   const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
