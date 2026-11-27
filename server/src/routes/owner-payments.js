@@ -1,3 +1,4 @@
+import {Prisma} from "@prisma/client";
 import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {z} from "zod";
@@ -243,16 +244,25 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
     const [stores,suppliers,ledgerTable]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
       prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
-      prisma.$queryRaw`SELECT to_regclass('public."StoreTransaction"') IS NOT NULL AS exists`
+      prisma.$queryRaw`
+        SELECT to_regclass('public."StoreTransaction"') IS NOT NULL AS exists,
+          EXISTS (
+            SELECT 1 FROM pg_attribute
+            WHERE attrelid=to_regclass('public."StoreTransaction"') AND attname='paymentMethod' AND NOT attisdropped
+          ) AS "hasPaymentMethod"
+      `
     ]);
 
     if(!ledgerTable[0]?.exists){
       return ({
         generatedAt:new Date().toISOString(),from,to,stores,suppliers,summary:{count:0,totalExpenses:0,supplierPayments:0,otherExpenses:0,averageExpense:0,missingAttachments:0,reversedCount:0,salesTotal:0,purchasesTotal:0,percentOfSales:0,changePercent:null},
-        byStore:[],bySupplier:[],categories:[],daily:[],movements:[],sourceStatus:{ledger:false,sales:true,purchases:true}
+        byStore:[],bySupplier:[],categories:[],prepaidCashExpenses:[],daily:[],movements:[],sourceStatus:{ledger:false,sales:true,purchases:true}
       });
     }
 
+    const cashExpense=ledgerTable[0].hasPaymentMethod
+      ? Prisma.sql`COALESCE(t."paymentMethod"='CASH_SHIFT',t."subtractFromShift")`
+      : Prisma.sql`t."subtractFromShift"`;
     const duration=Math.max(1,to.getTime()-from.getTime());
     const previousTo=new Date(from.getTime()-1);
     const previousFrom=new Date(previousTo.getTime()-duration);
@@ -281,7 +291,7 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
         AND (${needle}::text IS NULL OR COALESCE(t."description",'') ILIKE ${needle?`%${needle}%`:null} OR COALESCE(t."supplierName",sp."name",'') ILIKE ${needle?`%${needle}%`:null} OR t."actorName" ILIKE ${needle?`%${needle}%`:null} OR st."name" ILIKE ${needle?`%${needle}%`:null})
     `;
 
-    const [summaryRows,previousRows,salesRows,purchaseRows,movementRows,storeExpenseRows,storeSalesRows,storePurchaseRows,supplierPaymentRows,supplierPurchaseRows,categoryRows,dailyExpenseRows,dailySalesRows]=await Promise.all([
+    const [summaryRows,previousRows,salesRows,purchaseRows,movementRows,storeExpenseRows,storeSalesRows,storePurchaseRows,supplierPaymentRows,supplierPurchaseRows,categoryRows,dailyExpenseRows,dailySalesRows,prepaidCashRows]=await Promise.all([
       commonWhere(from,to),
       commonWhere(previousFrom,previousTo),
       prisma.$queryRaw`
@@ -401,6 +411,36 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
         WHERE "companyId"=${companyId} AND (${strictTenant}=false OR EXISTS(SELECT 1 FROM "Store" scopeStore WHERE scopeStore."id"="Sale"."storeId" AND scopeStore."companyId"="Sale"."companyId")) AND "status"='COMPLETED' AND "occurredAt">=${from} AND "occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY DATE("occurredAt" AT TIME ZONE 'Europe/Athens') ORDER BY day
+      `,
+      prisma.$queryRaw`
+        WITH matched AS (
+          SELECT t."id",t."storeId",st."name" AS "storeName",t."amount",t."occurredAt",t."actorName",t."description",
+                 t."description" ~* '\\m(net[[:space:]-]*link|[νΝ][εΕέΈ][τΤ][[:space:]-]*[λΛ][ιΙίΊ][νΝ][κΚ])\\M' AS netlink,
+                 t."description" ~* '\\m(okto|octo|[οΟόΌ][κΚ][τΤ][οΟόΌ])\\M' AS okto
+          FROM "StoreTransaction" t
+          JOIN "Store" st ON st."id"=t."storeId" AND st."companyId"=t."companyId"
+          WHERE t."companyId"=${companyId} AND t."type"='OTHER_EXPENSE' AND t."reversedAt" IS NULL
+            AND ${cashExpense}
+            AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
+            AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
+            AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
+            AND (${type}::text IS NULL OR t."type"=${type})
+            AND (${needle}::text IS NULL OR t."description" ILIKE ${needle?`%${needle}%`:null}
+              OR t."actorName" ILIKE ${needle?`%${needle}%`:null} OR st."name" ILIKE ${needle?`%${needle}%`:null})
+        ), classified AS (
+          SELECT *,CASE WHEN netlink THEN 'NETLINK' ELSE 'OKTO' END AS provider
+          FROM matched WHERE netlink <> okto
+        ), ranked AS (
+          SELECT *,ROW_NUMBER() OVER (PARTITION BY "storeId",provider ORDER BY "occurredAt" DESC,"id" DESC) AS position
+          FROM classified
+        )
+        SELECT "storeId","storeName",provider,COUNT(*)::int AS count,SUM("amount") AS amount,
+               jsonb_agg(jsonb_build_object('id',"id",'occurredAt',"occurredAt",
+                 'actorName',"actorName",'description',"description",'amount',"amount")
+                 ORDER BY position) FILTER (WHERE position<=100) AS movements
+        FROM ranked
+        GROUP BY "storeId","storeName",provider
+        ORDER BY provider,"storeName","storeId"
       `
     ]);
 
@@ -444,7 +484,7 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
         previousTotal
       },
       byStore:byStore.map(row=>({...row,expenses:n(row.expenses),sales:n(row.sales),purchases:n(row.purchases),count:n(row.count)})).sort((a,b)=>b.expenses-a.expenses),
-      bySupplier,categories,daily:[...dailyMap.values()].sort((a,b)=>a.day.localeCompare(b.day)),movements:movementRows.map(mapMovement),
+      bySupplier,categories,prepaidCashExpenses:prepaidCashRows.map(row=>({...row,count:n(row.count),amount:n(row.amount)})),daily:[...dailyMap.values()].sort((a,b)=>a.day.localeCompare(b.day)),movements:movementRows.map(mapMovement),
       sourceStatus:{ledger:true,sales:true,purchases:true}
     });
 
