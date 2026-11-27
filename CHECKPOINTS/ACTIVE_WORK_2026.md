@@ -1,3 +1,9 @@
+## 27/11/2026 — Επιλέξιμα τιμολόγια στην αντιστοίχιση πληρωμής — LAB
+
+Κοινός έλεγχος επιλεξιμότητας λίστας και προεπισκόπησης για την εργασία #4232. [Checkpoint](CHANGES/2026-11-27-manual-allocation-eligible-documents.md).
+
+- 27/11/2026 · Ειδοποιήσεις αύξησης τιμής αγοράς και μείωσης έκπτωσης · [Checkpoint](CHANGES/2026-11-26-purchase-cost-increase-events.md).
+
 ## 26/11/2026 — Συμπλήρωση μερικής αντιστοίχισης πληρωμών — LAB
 
 Επέκταση #4232 για εκκρεμείς πληρωμές προμηθευτών, υπάρχουσες κατανομές και τραπεζικό αποδεικτικό. [Checkpoint](CHANGES/2026-11-26-pending-supplier-allocation.md).
@@ -27,6 +33,14 @@ PR #4272 (αντικαθιστά #4235), εργασία #4232. Προεπισκ�
 - 25/11/2026 · [Ριζάρειο: αρχειοθέτηση ιστορικών STATUS 101](CHANGES/2026-11-25-rizareio-status101-archive.md) · Εκκρεμεί Windows CI και αποδοχή στο POS.
 
 - 25/11/2026 · Ριζάρειο · [Ταχύτερη αρχειοθέτηση FText μεταξύ συναλλαγών](CHANGES/2026-11-25-rizareio-ftext-output-throughput.md) · Εκκρεμεί αποδοχή στο POS.
+
+## 27Nov2026 — Price-label readability /root — INSTALLED / AWAITING OWNER PRINT
+
+Source #4294/388c578 full CI46001286938 and exact main dc469c7 CI46003914361 SUCCESS; guarded46007060712 SUCCESS. Render dep-dc4oa4ei0phs73b0rttg LIVE15:28:31 Athens; exact public health and actual served minified renderer verified15:29:46. Larger product/price and compact barcode are installed centrally. Eight local real-browser/decoder/contract checks and client build PASS. New physical print/scanner readback remain OPEN; old user photo is not new acceptance. Retained Citizen device owner unchanged; no driver/settings/financial/Netlink changes. See `CHECKPOINTS/CHANGES/2026-11-27-label-readability-live.md`.
+
+## 27Nov2026 — Price-label readability /root — SOURCE READY / AWAITING CI/LAB
+
+Independent owner request after successful Acharnon Zebra output: larger product/price text, smaller barcode. Claim4293/1aa691ad green/main1b3457b before source; retained Citizen device/physical-acceptance owner is not reassigned. Shared raster label keeps exact per-store dimensions/PNG decode/explicit print/checksum/95 modules/scoping/Audit; product14pt with at most2lines, price22pt with full amount fitted, compact7mm bars and capped integer module width. No StorePosPanel, settings/device/fiscal/stock/price mutation. Node20 real minified Chromium8PASS0FAIL0SKIP; independent ZXing exact EAN at300dpi and203dpi with both resampling modes, five supported size cases including60x38/70x38.1/min/max, retained error/no-auto-print/XSS/tenant contracts. Build PASS. Earlier local system Chromium wrapper lacked its executable; pinned temporary Chromium143 resolved harness without weakening/skipping tests. Fresh physical layout/scanner acceptance still NOT TESTED. See `CHECKPOINTS/CHANGES/2026-11-27-label-readability.md` and `docs/roadmap/PENDING_WORK_2026-11-27_LABEL_READABILITY.md`.
 
 ## 26Nov2026 — Common Netlink RBS completion installed centrally /root — AWAITING USER
 
@@ -618,6 +632,8 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 - Τιμολόγια · Ο ιδιοκτήτης επιβεβαίωσε από τη σελίδα «διορθώσεις τιμολογίων κτλπ» ότι οριστικοποίησε το τιμολόγιο και είναι ΟΚ. Η οριστικοποίηση κλείνει ως επιβεβαίωση χειριστή. Δεν υπάρχει ανεξάρτητο τεκμήριο για τις τρεις τιμές barcode ανά γραμμή.
 - Απογραφή · Η διασταύρωση των workflow στο `3acf060c` (#3841) και στο `main` έδειξε διαφορά στο βήμα recovery: το branch χτίζει το image από το προεπιλεγμένο Dockerfile, ενώ το main περνά σταθερό digest PostgreSQL 18 και σταθερό digest για την υπηρεσία PostgreSQL 16. Ο επόμενος έλεγχος είναι CI με το workflow του main ώστε να διαπιστωθεί αν υποχωρούν οι αποτυχίες restore του #9770, πριν από την αποδοχή στο LAB. Η αιτία δεν έχει επιβεβαιωθεί με εκτέλεση.
 - Συντονισμός · [CI #9825 PASS](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/43500654258) στο `34896706` του #3860. Το PR έχει mergeable status και παραμένει draft.
+
+- 27/11/2026 · [Android Chat: ανανέωση σύνδεσης στην επιστροφή](CHANGES/2026-11-27-chat-android-resume-session.md).
 
 ## Κανόνας ενημέρωσης
 
@@ -1213,5 +1229,9 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Επεξεργασία περιγραφής κοινού είδους](CHANGES/2026-11-26-no5-product-description.md).
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
+
+## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
+
+[Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
 
 - 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).

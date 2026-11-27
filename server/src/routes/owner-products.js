@@ -1,3 +1,4 @@
+import {recordPurchaseCostIncrease} from "../services/purchase-cost-increase-event.js";
 import {assertInventoryCardRights,inventoryDenied} from "../services/pos-inventory-access.js";
 import {productCardVatOptions,resolveProductCardVat} from '../lib/product-card-vat.js';
 import crypto from "crypto";
@@ -171,7 +172,10 @@ router.post("/activate",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
           if(!companyDuplicate[0])await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode") VALUES (${uid()},${productId},${row.barcode})`;
         }
       }else{
+        const [previous]=await tx.$queryRaw`SELECT "costPrice" FROM "Product" WHERE "id"=${productId} AND "companyId"=${company} FOR UPDATE`;
         await tx.$executeRaw`UPDATE "Product" SET "active"=true,"salePrice"=${basePrice},"costPrice"=${cost},"vatRate"=${vat},"vatVerified"=${vatVerified},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${productId}`;
+        if(previous)await recordPurchaseCostIncrease(tx,{companyId:company,actorId:req.user.id,productId,productName:master.name,previousCost:previous.costPrice,source:"MASTER_CATALOG"});
+
       }
       for(const config of body.storeConfigs){
         await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","active") VALUES (${uid()},${config.storeId},${productId},${config.salePrice??basePrice},${config.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
@@ -345,7 +349,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       return [row.storeId,storeChanges];
     }));
     await prisma.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "id"=${product.id} FOR UPDATE`;
+      const [lockedProduct]=await tx.$queryRaw`SELECT "costPrice","unit" FROM "Product" WHERE "companyId"=${company} AND "id"=${product.id} FOR UPDATE`;
       const currentBarcodeIds=(await tx.$queryRaw`SELECT "id" FROM "ProductBarcode" WHERE "productId"=${product.id} ORDER BY "id"`).map(row=>row.id);
       if(JSON.stringify(currentBarcodeIds)!==JSON.stringify([...body.expectedBarcodeIds].sort())){
         const error=new Error("Τα barcodes του προϊόντος άλλαξαν μετά το άνοιγμα της καρτέλας. Άνοιξέ την ξανά πριν αποθηκεύσεις.");
@@ -359,6 +363,9 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       if(!categoryId&&body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
       if(money(product.salePrice)!==body.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${money(product.salePrice)},${body.salePrice},'PRODUCT_CARD',${scope?null:req.user.id})`;
       await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"sku"=${body.sku||null},"description"=${body.description||null},"categoryId"=${categoryId},"subcategoryId"=${selectedSubcategoryId},"unit"=${body.unit},"salePrice"=${body.salePrice},"costPrice"=${body.costPrice},"vatRate"=${body.vatRate},"vatVerified"=${body.vatVerified},"trackStock"=${body.trackStock},"active"=${body.active},"staffPrice"=${body.staffPrice??null},"deliveryPrice"=${body.deliveryPrice??null},"minOrderQuantity"=${body.minOrderQuantity??null},"capacity"=${body.capacity??null},"allowDiscount"=${body.allowDiscount},"allowPosPriceChange"=${body.allowPosPriceChange},"freeSalePrice"=${body.freeSalePrice},"negativeStockWarning"=${body.negativeStockWarning},"isSet"=${body.isSet},"isRecipe"=${body.isRecipe},"discountA"=${body.discountA},"discountB"=${body.discountB},"discountC"=${body.discountC},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
+      if(lockedProduct?.unit===body.unit)for(const storeId of storeIds){
+        await recordPurchaseCostIncrease(tx,{companyId:company,storeId,actorId:req.user.id,productId:product.id,productName:body.name,previousCost:lockedProduct.costPrice,source:"PRODUCT_CARD"});
+      }
       await tx.$executeRaw`DELETE FROM "ProductBarcode" WHERE "productId"=${product.id}`;
       for(const row of body.barcodes)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier","salePrice","name","updatedAt") VALUES (${uid()},${product.id},${row.barcode},${row.unitMultiplier},${row.salePrice??null},${row.name||null},CURRENT_TIMESTAMP)`;
       await tx.$executeRaw`UPDATE "SupplierProductLink" SET "active"=false,"updatedBy"=${req.user.id},"updatedAt"=NOW() WHERE "companyId"=${company} AND "productId"=${product.id} AND NOT ("supplierId"=ANY(${supplierIds}::text[]))`;
