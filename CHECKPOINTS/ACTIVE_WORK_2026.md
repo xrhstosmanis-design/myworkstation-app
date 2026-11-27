@@ -1,3 +1,5 @@
+- 27/11/2026 · Περιγραφή συμβάντων αλλαγής τιμής και έκπτωσης · [Checkpoint](CHANGES/2026-11-27-purchase-alert-event-description.md).
+
 ## 27/11/2026 — Επιλέξιμα τιμολόγια στην αντιστοίχιση πληρωμής — LAB
 
 Κοινός έλεγχος επιλεξιμότητας λίστας και προεπισκόπησης για την εργασία #4232. [Checkpoint](CHANGES/2026-11-27-manual-allocation-eligible-documents.md).
