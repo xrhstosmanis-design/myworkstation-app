@@ -125,8 +125,9 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume(); foreground = true;
-        if (!token.isEmpty() && NativePush.opted(this) && !needsChatRenewal()) NativePush.register(this, token, ok -> {});
+        if (!token.isEmpty() && NativePush.opted(this) && !needsChatRenewal() && !needsSuperAdminRenewal()) NativePush.register(this, token, ok -> {});
         if (token.isEmpty()) { restoreTwoFactor(); if (!entryStore.isEmpty()) openEntryStore(); else loginScreen(); }
+        else if (needsSuperAdminRenewal()) renewSuperAdminOnResume();
         else if (needsChatRenewal()) renewChatConnection();
         else if (!pushStore.isEmpty()) stores();
         else if (selected != null) conversation();
@@ -275,6 +276,17 @@ public final class MainActivity extends Activity {
             if (selected != null) conversation(); else stores();
         });
         content.addView(button("Συνέχεια χωρίς ανανέωση", () -> { navigate(); stores(); }));
+    }
+    private void renewSuperAdminOnResume() {
+        layout("Σύνδεση Chat", "Ανανέωση της σύνδεσής σου…");
+        call("/api/auth/renew", "POST", object(), false, data -> {
+            saveRenewedSuperAdminConnection(data);
+            if (!pushStore.isEmpty() || selected == null) stores(); else conversation();
+        });
+        content.addView(button("Συνέχεια στο Chat", () -> {
+            navigate();
+            if (!pushStore.isEmpty() || selected == null) stores(); else conversation();
+        }));
     }
     private boolean needsSuperAdminRenewal() {
         if (token.isEmpty() || !identity.optBoolean("isSuperAdmin") ||
