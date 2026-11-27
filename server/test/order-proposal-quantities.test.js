@@ -5,6 +5,9 @@ import {renderPosOrderProposal} from '../../shared/pos-order-proposal-report.mjs
 
 test('rounds positive demand to complete supplier packs', () => {
  assert.equal(roundSupplierQuantity(295, 24), 312);
+ assert.equal(roundSupplierQuantity(2, 24, 50), 72);
+ assert.equal(roundSupplierQuantity(2, null, 50), 50);
+ assert.equal(roundSupplierQuantity(0, 24, 50), 0);
  assert.equal(roundSupplierQuantity(2, 24), 24);
  assert.equal(roundSupplierQuantity(0, 24), 0);
  assert.equal(roundSupplierQuantity(295, null), 295);

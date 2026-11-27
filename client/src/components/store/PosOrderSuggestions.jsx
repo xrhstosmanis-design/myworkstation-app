@@ -1,4 +1,4 @@
-import {applyProposalQuantities,proposalSupplierTotals} from '../../../../shared/order-proposal-quantities.mjs';
+import {applyProposalQuantities,proposalSupplierTotals,roundSupplierQuantity} from '../../../../shared/order-proposal-quantities.mjs';
 import React,{useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {greeceDateInput} from '../../../../shared/greece-time.mjs';
@@ -9,6 +9,21 @@ function defaults(){const toDate=greeceDateInput(),fromDate=new Date(Date.parse(
 export function printPosOrderProposal(report,search='',openWindow=()=>window.open('','_blank','width=1100,height=800')){
  const popup=openWindow();if(!popup)throw Error('Ο browser μπλόκαρε την εκτύπωση. Επίτρεψε το παράθυρο εκτύπωσης.');
  popup.opener=null;popup.document.write(renderPosOrderProposal(report,search).html);popup.document.close();popup.focus();popup.print();
+}
+function SupplierMinimum({row,sending,onApply}){
+ const [value,setValue]=useState('');
+ const minimum=Number(value);
+ const valid=value!==''&&minimum>0&&minimum<=100000000&&Number(minimum.toFixed(4))===minimum;
+ const quantity=valid?roundSupplierQuantity(row.requiredQuantity,row.supplierPack,minimum):null;
+ return <div>
+  <label>Ελάχιστο προμηθευτή για αυτή την πρόταση
+   <input type="number" min="0.0001" max="100000000" step="0.0001"
+    aria-label={`Ελάχιστο προμηθευτή για ${row.name}`} value={value}
+    disabled={sending} onChange={event=>setValue(event.target.value)}/>
+  </label>
+  <button type="button" disabled={sending||!(quantity>0)||quantity>100000000}
+   onClick={()=>onApply(quantity)}>Εφαρμογή ελάχιστου</button>
+ </div>;
 }
 export default function PosOrderSuggestions({api,store,operator,open,onOpen,onClose,backoffice=false}){
  const [quantities,setQuantities]=useState({});
@@ -77,6 +92,8 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
   {editable&&totals.map(total=><p key={total.id??''}><strong>{total.name}</strong> · Εκτιμώμενη καθαρή αξία {fmt(total.cents/100)} €{total.missing>0&&` · ${total.missing} είδη χωρίς πλήρη εκτίμηση`}</p>)}
   {data&&!finalReport&&<p role="alert">Συμπλήρωσε έγκυρες ποσότητες. Βάλε 0 για εξαίρεση είδους.</p>}
   {data&&<div className="pos-order-proposals-scroll"><table><thead><tr><th>Είδος</th><th>Καθαρές πωλήσεις περιόδου</th><th>Απόθεμα</th><th>Alarm</th><th>Πρόταση</th><th>Έλεγχος</th></tr></thead><tbody>{rows.map(r=><tr key={r.productId}><td>{r.name}<small>{r.sku}</small></td><td>{fmt(r.netQuantity)}<small>Πωλήσεις {fmt(r.soldQuantity)} · επιστροφές {fmt(r.returnedQuantity)}</small></td><td>{fmt(r.currentStock)}</td><td>{fmt(r.minStock)}</td><td>{editable?<><input type="number" min="0" max="100000000" step="0.0001" aria-label={`Ποσότητα ${r.name}`} disabled={sending} value={Object.hasOwn(quantities,r.productId)?quantities[r.productId]??'':r.suggestedQuantity??''} onChange={e=>{const value=e.target.value;setQuantities(current=>({...current,[r.productId]:value===''?null:Number(value)}));setMessage('')}}/> {r.unitLabel}
+   {r.orderSupplierId&&r.requiredQuantity>0&&<SupplierMinimum row={r} sending={sending}
+    onApply={quantity=>{setQuantities(current=>({...current,[r.productId]:quantity}));setMessage('')}}/>}
    {r.supplierPack&&<small>Συσκευασία {fmt(r.supplierPack)} · ανάγκη {fmt(r.requiredQuantity)}</small>}
    <small>{r.orderSupplierName||'Χωρίς προμηθευτή'} · {r.orderUnitCost==null?'Κόστος προς έλεγχο':`${fmt(r.orderUnitCost)} € / ${r.unitLabel} χωρίς ΦΠΑ`}</small>
    {finalByProduct.get(r.productId)?.warnings?.includes('Η ποσότητα δεν είναι πολλαπλάσιο της γνωστής συσκευασίας.')&&<small>Έλεγξε τη συσκευασία με τον προμηθευτή.</small>}</>:<>{fmt(r.suggestedQuantity)} {r.unitLabel}</>}</td><td>{r.reason}{r.confirmedPendingStockQuantity>0&&<small>Επιβεβαιωμένο αναμενόμενο υπόλοιπο: {fmt(r.confirmedPendingStockQuantity)} {r.unitLabel}</small>}{r.pendingPurchaseReview?.map(review=><small key={review.status}>{review.status==='NEW'?'Πρόχειρες αγορές':'Προς τιμολόγηση'}: {review.orderCount} · {review.recordedStockQuantity==null?'Μετατροπή προς έλεγχο':`${fmt(review.recordedStockQuantity)} ${r.unitLabel} καταγεγραμμένα`}</small>)}{r.warnings.map(w=><small key={w}>{w}</small>)}</td></tr>)}</tbody></table>{!rows.length&&<p>Δεν υπάρχουν προτάσεις με αυτά τα κριτήρια.</p>}</div>}

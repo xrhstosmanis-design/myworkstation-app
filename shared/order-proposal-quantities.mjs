@@ -1,5 +1,7 @@
-export function roundSupplierQuantity(quantity, pack) {
- if (!(quantity > 0) || !(pack > 1)) return quantity;
+export function roundSupplierQuantity(quantity, pack, minimum = 0) {
+ if (!(quantity > 0)) return quantity;
+ quantity = Math.max(quantity, minimum);
+ if (!(pack > 1)) return quantity;
  return Number((Math.ceil(Number((quantity / pack).toPrecision(12))) * pack).toFixed(4));
 }
 
