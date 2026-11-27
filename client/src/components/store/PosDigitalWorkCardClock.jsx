@@ -18,7 +18,7 @@ export default function PosDigitalWorkCardClock({api, storeId}) {
 
   useEffect(() => {
     let active = true;
-    api(url).then(result => { if (active) setState(result); }).catch(() => {});
+    api(url).then(result => { if (active && result && Object.hasOwn(result, "session")) setState(result); }).catch(() => {});
     return () => { active = false; };
   }, [api, url]);
 

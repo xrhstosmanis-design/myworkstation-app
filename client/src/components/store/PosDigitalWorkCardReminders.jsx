@@ -12,7 +12,7 @@ export default function PosDigitalWorkCardReminders({api, storeId}) {
       let nextRefresh = REFRESH_MS;
       try {
         const result = await api(`/api/digital-work-card/stores/${encodeURIComponent(storeId)}/reminders`);
-        if (!stopped) setReminders(result.reminders);
+        if (!stopped) setReminders(Array.isArray(result?.reminders) ? result.reminders : []);
       } catch (error) {
         if (error.status === 401 || error.status === 403 || error.status === 404) {
           if (!stopped) setReminders([]);

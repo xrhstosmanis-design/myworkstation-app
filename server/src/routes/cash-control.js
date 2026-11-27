@@ -593,7 +593,7 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
       LEFT JOIN "StoreOperatorProfile" p ON p."employeeId"=c."employeeId" AND p."storeId"=c."storeId" AND p."companyId"=c."companyId"
       WHERE c."id"=${credential.id} AND os."id"=${req.user.operatorSessionId} AND os."revokedAt" IS NULL AND os."expiresAt">NOW()`;
     if(access?.posAccess!==true)return null;
-    if(isErganiTrialEmployee(req.user,store.id)){
+    if(process.env.ERGANI_TRIAL_CLOCK_ENABLED==="true" && isErganiTrialEmployee(req.user,store.id)){
       return openCashShiftWithWorkCard(tx,{storeId:store.id,employeeId:req.user.employeeId,cashShiftId:sessionId},insertSession);
     }
     return insertSession(tx);
@@ -638,7 +638,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     if(req.user?.staffAccess===true&&String(session.terminalPos||'MAIN').toUpperCase()!==await requestTerminal(req))throw Object.assign(new Error('Επίλεξε το ταμείο της βάρδιας.'),{status:403});
     const authentication=await verifyShiftCloseCredential(tx,req.user,session,body);
     if(!authentication.ok)return {authFailed:authentication};
-    if(isErganiTrialEmployee(req.user,session.storeId) && session.openedBy===req.user.id){
+    if(process.env.ERGANI_TRIAL_CLOCK_ENABLED==="true" && isErganiTrialEmployee(req.user,session.storeId) && session.openedBy===req.user.id){
       const scope={storeId:session.storeId,employeeId:req.user.employeeId,cashShiftId:session.id};
       const workSessions=await tx.digitalWorkSession.findMany({
         where:{...scope,entryStatus:"ACCEPTED"},
