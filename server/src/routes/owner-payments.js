@@ -256,13 +256,13 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
     if(!ledgerTable[0]?.exists){
       return ({
         generatedAt:new Date().toISOString(),from,to,stores,suppliers,summary:{count:0,totalExpenses:0,supplierPayments:0,otherExpenses:0,averageExpense:0,missingAttachments:0,reversedCount:0,salesTotal:0,purchasesTotal:0,percentOfSales:0,changePercent:null},
-        byStore:[],bySupplier:[],categories:[],prepaidCashExpenses:[],daily:[],movements:[],sourceStatus:{ledger:false,sales:true,purchases:true}
+        byStore:[],bySupplier:[],categories:[],prepaidShiftExpenses:[],daily:[],movements:[],sourceStatus:{ledger:false,sales:true,purchases:true}
       });
     }
 
-    const cashExpense=ledgerTable[0].hasPaymentMethod
-      ? Prisma.sql`COALESCE(t."paymentMethod"='CASH_SHIFT',t."subtractFromShift")`
-      : Prisma.sql`t."subtractFromShift"`;
+    const prepaidPaymentMethod=ledgerTable[0].hasPaymentMethod
+      ? Prisma.sql`COALESCE(t."paymentMethod",CASE WHEN t."subtractFromShift" THEN 'CASH_SHIFT' END)`
+      : Prisma.sql`CASE WHEN t."subtractFromShift" THEN 'CASH_SHIFT' END`;
     const duration=Math.max(1,to.getTime()-from.getTime());
     const previousTo=new Date(from.getTime()-1);
     const previousFrom=new Date(previousTo.getTime()-duration);
@@ -291,7 +291,7 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
         AND (${needle}::text IS NULL OR COALESCE(t."description",'') ILIKE ${needle?`%${needle}%`:null} OR COALESCE(t."supplierName",sp."name",'') ILIKE ${needle?`%${needle}%`:null} OR t."actorName" ILIKE ${needle?`%${needle}%`:null} OR st."name" ILIKE ${needle?`%${needle}%`:null})
     `;
 
-    const [summaryRows,previousRows,salesRows,purchaseRows,movementRows,storeExpenseRows,storeSalesRows,storePurchaseRows,supplierPaymentRows,supplierPurchaseRows,categoryRows,dailyExpenseRows,dailySalesRows,prepaidCashRows]=await Promise.all([
+    const [summaryRows,previousRows,salesRows,purchaseRows,movementRows,storeExpenseRows,storeSalesRows,storePurchaseRows,supplierPaymentRows,supplierPurchaseRows,categoryRows,dailyExpenseRows,dailySalesRows,prepaidShiftRows]=await Promise.all([
       commonWhere(from,to),
       commonWhere(previousFrom,previousTo),
       prisma.$queryRaw`
@@ -414,13 +414,13 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
       `,
       prisma.$queryRaw`
         WITH matched AS (
-          SELECT t."id",t."storeId",st."name" AS "storeName",t."amount",t."occurredAt",t."actorName",t."description",
+          SELECT t."id",t."storeId",st."name" AS "storeName",t."amount",t."occurredAt",t."actorName",t."description",t."sessionId",t."companyId",
+                 ${prepaidPaymentMethod} AS "paymentMethod",
                  t."description" ~* '\\m(net[[:space:]-]*link|[νΝ][εΕέΈ][τΤ][[:space:]-]*[λΛ][ιΙίΊ][νΝ][κΚ])\\M' AS netlink,
                  t."description" ~* '\\m(okto|octo|[οΟόΌ][κΚ][τΤ][οΟόΌ])\\M' AS okto
           FROM "StoreTransaction" t
           JOIN "Store" st ON st."id"=t."storeId" AND st."companyId"=t."companyId"
           WHERE t."companyId"=${companyId} AND t."type"='OTHER_EXPENSE' AND t."reversedAt" IS NULL
-            AND ${cashExpense}
             AND t."occurredAt">=${from} AND t."occurredAt"<=${to}
             AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
             AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
@@ -429,18 +429,36 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
               OR t."actorName" ILIKE ${needle?`%${needle}%`:null} OR st."name" ILIKE ${needle?`%${needle}%`:null})
         ), classified AS (
           SELECT *,CASE WHEN netlink THEN 'NETLINK' ELSE 'OKTO' END AS provider
-          FROM matched WHERE netlink <> okto
+          FROM matched WHERE netlink <> okto AND "paymentMethod" IN ('CASH_SHIFT','CORPORATE_CARD')
+        ), assigned AS (
+          SELECT c.*,shift."id" AS "shiftId",shift."shiftLabel",shift."openedAt",shift."closedAt"
+          FROM classified c
+          LEFT JOIN LATERAL (
+            SELECT CASE WHEN COUNT(*)=1 THEN MIN(candidate."id") END AS "id"
+            FROM (
+              SELECT s."id" FROM "CashShiftSession" s
+              WHERE c."sessionId" IS NULL AND s."companyId"=c."companyId" AND s."storeId"=c."storeId"
+                AND s."openedAt"<=c."occurredAt" AND (s."closedAt">c."occurredAt" OR s."status"='OPEN' AND s."closedAt" IS NULL)
+              LIMIT 2
+            ) candidate
+          ) inferred ON c."sessionId" IS NULL
+          LEFT JOIN "CashShiftSession" shift ON shift."id"=COALESCE(c."sessionId",inferred."id")
+            AND shift."companyId"=c."companyId" AND shift."storeId"=c."storeId"
         ), ranked AS (
-          SELECT *,ROW_NUMBER() OVER (PARTITION BY "storeId",provider ORDER BY "occurredAt" DESC,"id" DESC) AS position
-          FROM classified
+          SELECT *,ROW_NUMBER() OVER (PARTITION BY "storeId",provider,"shiftId" ORDER BY "occurredAt" DESC,"id" DESC) AS position
+          FROM assigned
         )
-        SELECT "storeId","storeName",provider,COUNT(*)::int AS count,SUM("amount") AS amount,
-               jsonb_agg(jsonb_build_object('id',"id",'occurredAt',"occurredAt",
+        SELECT "storeId","storeName",provider,"shiftId","shiftLabel","openedAt","closedAt",
+               COUNT(*) FILTER (WHERE "paymentMethod"='CASH_SHIFT')::int AS "cashCount",
+               COUNT(*) FILTER (WHERE "paymentMethod"='CORPORATE_CARD')::int AS "cardCount",
+               COALESCE(SUM("amount") FILTER (WHERE "paymentMethod"='CASH_SHIFT'),0) AS "cashAmount",
+               COALESCE(SUM("amount") FILTER (WHERE "paymentMethod"='CORPORATE_CARD'),0) AS "cardAmount",
+               jsonb_agg(jsonb_build_object('id',"id",'occurredAt',"occurredAt",'paymentMethod',"paymentMethod",
                  'actorName',"actorName",'description',"description",'amount',"amount")
                  ORDER BY position) FILTER (WHERE position<=100) AS movements
         FROM ranked
-        GROUP BY "storeId","storeName",provider
-        ORDER BY provider,"storeName","storeId"
+        GROUP BY "storeId","storeName",provider,"shiftId","shiftLabel","openedAt","closedAt"
+        ORDER BY "openedAt" DESC NULLS LAST,"storeName","storeId","shiftId",provider
       `
     ]);
 
@@ -484,7 +502,7 @@ export async function readOwnerPaymentReport(scopeCompanyId,rawQuery,{db=prisma,
         previousTotal
       },
       byStore:byStore.map(row=>({...row,expenses:n(row.expenses),sales:n(row.sales),purchases:n(row.purchases),count:n(row.count)})).sort((a,b)=>b.expenses-a.expenses),
-      bySupplier,categories,prepaidCashExpenses:prepaidCashRows.map(row=>({...row,count:n(row.count),amount:n(row.amount)})),daily:[...dailyMap.values()].sort((a,b)=>a.day.localeCompare(b.day)),movements:movementRows.map(mapMovement),
+      bySupplier,categories,prepaidShiftExpenses:prepaidShiftRows.map(row=>({...row,cashAmount:n(row.cashAmount),cardAmount:n(row.cardAmount)})),daily:[...dailyMap.values()].sort((a,b)=>a.day.localeCompare(b.day)),movements:movementRows.map(mapMovement),
       sourceStatus:{ledger:true,sales:true,purchases:true}
     });
 
