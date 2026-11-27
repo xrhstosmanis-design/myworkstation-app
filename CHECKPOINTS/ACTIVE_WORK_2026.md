@@ -1273,3 +1273,8 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
 
 - 27/11/2026 · [Επιστροφές εγγυοδοσίας προμηθευτών](CHANGES/2026-11-27-supplier-deposit-reminders.md) · Ελέγχθηκε σε απομονωμένη PostgreSQL. Εκκρεμεί LAB BackOffice.
+
+
+## Source CI follow-up — 27/11/2026
+
+PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs passed. Full server suite:7491PASS/1FAIL/4SKIP (7496tests); the sole failure was the old visible «Προεπισκόπηση Kiosk» expectation in owner-payments-kiosk-preview-v1.test.js. Updated only that expectation to «Προεπισκόπηση πληρωμών»; confirmation/cancel/read-only/tenant assertions are unchanged. Focused preview suite4PASS/0FAIL/0SKIP. Final frontend build passed13.69s and generated JS/HTML contains no «Kiosk Manager». Full source rerun / main CI / guarded release / user visual acceptance remain pending. NOT LAB PASS / NOT INSTALLED.
