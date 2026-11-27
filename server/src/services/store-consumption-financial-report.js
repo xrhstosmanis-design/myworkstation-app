@@ -38,7 +38,7 @@ export async function readStoreConsumptionFinancialReport(db,{companyId,storeId,
       ) audit ON true
       WHERE sa."companyId"=${companyId} AND sa."storeId"=${storeId}
         AND sa."status"='COMPLETED' AND sa."source"=${kind}
-        AND sa."occurredAt">=${start} AND sa."occurredAt"<${end} AND sa."occurredAt"<=${now}
+        AND sa."occurredAt">=${start.toISOString().slice(0,-1)}::timestamp AND sa."occurredAt"<${end.toISOString().slice(0,-1)}::timestamp AND sa."occurredAt"<=${now.toISOString().slice(0,-1)}::timestamp
       UNION ALL
       SELECT sm."id",s."companyId",sm."storeId",sm."createdAt",sm."productId",
         p."name",p."sku",p."unit",-sm."quantity",NULL::numeric,sm."unitCost",
@@ -48,7 +48,7 @@ export async function readStoreConsumptionFinancialReport(db,{companyId,storeId,
       LEFT JOIN "User" u ON u."id"=sm."createdByUserId" AND u."companyId"=s."companyId"
       WHERE ${kind}='PRODUCT_DESTRUCTION' AND sm."storeId"=${storeId}
         AND sm."movementType"='WASTE' AND sm."sourceType"='PRODUCT_CARD' AND sm."quantity"<0
-        AND sm."createdAt">=${start} AND sm."createdAt"<${end} AND sm."createdAt"<=${now}
+        AND sm."createdAt">=${start.toISOString().slice(0,-1)}::timestamp AND sm."createdAt"<${end.toISOString().slice(0,-1)}::timestamp AND sm."createdAt"<=${now.toISOString().slice(0,-1)}::timestamp
     )
     SELECT entries.*,CASE WHEN source='PRODUCT_CARD' THEN "recordedCost" ELSE lp.cost END AS "purchasePrice",
       lp."documentId" AS "purchaseDocumentId",lp."documentDate" AS "purchaseDate"

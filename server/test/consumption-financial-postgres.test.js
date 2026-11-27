@@ -64,6 +64,10 @@ test('PostgreSQL financial consumption uses net package cost as of event, immuta
     assert.equal(self.rows.find(r=>r.name==='Recorded water').purchaseTotal,1.25);
     assert.equal(self.rows.find(r=>r.name==='Recorded water').operatorName,'Recorded operator');
     assert.equal(self.totalPurchase,null);assert.equal(self.totalSale,3);assert.equal(self.missingPurchase,1);
+    await exec("SET TIME ZONE 'Europe/Athens'");
+    const nonUtc=await readStoreConsumptionFinancialReport(db,{...scope,report:'self-consumption'});
+    assert.deepEqual(nonUtc.rows.map(r=>r.id),self.rows.map(r=>r.id));assert.equal(nonUtc.totalSale,self.totalSale);
+    await exec("SET TIME ZONE 'UTC'");
     assert.doesNotMatch(JSON.stringify(self),/999|CURRENT NAME|FOREIGN|OTHER|EARLY|LATE/);
     const dest=await readStoreConsumptionFinancialReport(db,{...scope,report:'destructions'});
     assert.equal(dest.rows.length,2);assert.equal(dest.totalPurchase,6);assert.equal(dest.totalSale,null);assert.equal(dest.missingSale,1);
