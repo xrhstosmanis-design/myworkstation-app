@@ -1,3 +1,4 @@
+import {resetOwnerStock} from "../lib/owner-bulk-stock-reset.js";
 import {inventoryDenied} from "../services/pos-inventory-access.js";
 import {previewInventoryMerge,confirmInventoryMerge} from '../lib/inventory-product-merge.js';
 import {saveInventoryBulkCard} from '../lib/inventory-bulk-card.js';
@@ -137,6 +138,28 @@ router.patch("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,
     await prisma.$executeRaw`UPDATE "Product" SET "isModifier"=${body.isModifier},"modifierGroup"=${body.modifierGroup||null},"isService"=${body.isService},"eDeliveryEnabled"=${body.eDeliveryEnabled},"efoodEnabled"=${body.efoodEnabled},"woltEnabled"=${body.woltEnabled},"publishStock"=${body.publishStock},"publishPrices"=${body.publishPrices},"efoodPrice"=${body.efoodPrice??null},"woltPrice"=${body.woltPrice??null},"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${company} AND "id"=${req.params.productId}`;
     res.json({ok:true});
   }catch(error){next(error)}
+});
+
+router.post("/bulk-stock-reset",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);
+    if(!company||scope||req.user.staffAccess===true||req.user.tokenType==="STORE_OPERATOR"||!["OWNER","SUPER_ADMIN"].includes(req.user.role)){
+      return res.status(403).json({error:"Ο ομαδικός μηδενισμός είναι διαθέσιμος μόνο στον ιδιοκτήτη."});
+    }
+    const body=z.discriminatedUnion("scope",[
+      z.object({scope:z.literal("SELECTED"),storeId:z.string().min(1),productIds:z.array(z.string().min(1)).min(1).max(10000)}),
+      z.object({scope:z.literal("ALL"),storeId:z.string().min(1)})
+    ]).parse(req.body);
+    const storeScope=req.user.supportContext?.storeId||req.user.storeId;
+    if(storeScope&&storeScope!==body.storeId)return res.status(403).json({error:"Το κατάστημα βρίσκεται εκτός των δικαιωμάτων σου."});
+    const ids=[...new Set(body.productIds||[])],all=body.scope==="ALL",batchId=uid();
+    const changed=await resetOwnerStock(prisma,{company,storeId:body.storeId,ids,all,batchId,userId:req.user.id});
+    res.json({ok:true,changed,batchId});
+  }catch(error){
+    if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε κατάστημα και έγκυρο σύνολο ειδών."});
+    if([403,404,409].includes(error.status))return res.status(error.status).json({error:error.message});
+    next(error);
+  }
 });
 
 router.post("/:productId/stock-adjustment",requireCompanyModule("INVENTORY"),async(req,res,next)=>{

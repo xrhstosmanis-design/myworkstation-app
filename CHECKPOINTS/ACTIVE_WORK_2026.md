@@ -1,3 +1,7 @@
+## 27/11/2026 — Απογραφή, μισθοδοσία, μηδενισμός αποθήκης και Chat — LAB
+
+Τέσσερις αλλαγές BackOffice για δοκιμή πριν την παραγωγή. [Checkpoint](CHANGES/2026-11-27-inventory-payroll-chat-workflows.md).
+
 ## 27/11/2026 — Καταστροφές / Ιδιοκατανάλωση στις Οικονομικές αναφορές
 
 ASSIGNED /root, feat/financial-consumption-20261127. Υλοποίηση και26στοχευμένοι έλεγχοι PASS, πλήρες CI/εγκατάσταση/LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-27-financial-consumption.md). [Ανεξάρτητο μητρώο](../docs/roadmap/OPEN_WORK_TRACKER_FINANCIAL_CONSUMPTION_2026-11-27.md).

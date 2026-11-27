@@ -732,6 +732,27 @@ public final class MainActivity extends Activity {
         final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
         return ()->{if(!busy&&chatScope(generation,captured,store,company)){dismissImage();action.run();}};
     }
+    private void changeOwnMessage(JSONObject row, boolean remove) {
+        String path = chatBase() + "/messages/" + enc(row.optString("id")) + "/own-content";
+        EditText draft = remove ? null : input("Μήνυμα", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE, 5000);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle(remove ? "Διαγραφή μηνύματος" : "Διόρθωση μηνύματος");
+        if (draft == null) {
+            builder.setMessage("Να διαγραφεί αυτό το μήνυμα για όλους;");
+        } else {
+            draft.setText(row.optString("body"));
+            draft.setSelection(draft.length());
+            builder.setView(draft);
+        }
+        Runnable submit = scopedMessageAction(() -> {
+            String body = draft == null ? "" : draft.getText().toString().trim();
+            if (!remove && (body.isEmpty() || body.equals(row.optString("body")))) return;
+            call(path, remove ? "DELETE" : "PATCH", remove ? null : object("body", body), false, ignored -> loadMessages(false));
+        });
+        imageDialog = builder.setNegativeButton("Ακύρωση", null)
+                .setPositiveButton(remove ? "Διαγραφή" : "Αποθήκευση", (dialog, which) -> submit.run()).create();
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        imageDialog.show();
+    }
     private LinearLayout buildMessageActions(JSONObject row, boolean own) {
         final ArrayList<String> readers=own&&row!=null?ReadReceipts.names(row.optJSONArray("readers"),row.optString("senderId")):new ArrayList<>();
         LinearLayout actions=new LinearLayout(this); actions.setOrientation(LinearLayout.VERTICAL); actions.setTag("message-actions");
@@ -747,6 +768,10 @@ public final class MainActivity extends Activity {
                     .setItems(readers.toArray(new String[0]), null).setPositiveButton("Κλείσιμο", null).create();
                 imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
             })));
+        }
+        if (own && row != null && row.isNull("taskId") && row.isNull("aiReaderJobId") && !row.optString("body").equals("Το μήνυμα διαγράφηκε.") && ChatInteractions.validId(row.optString("id"))) {
+            actions.addView(button("Διόρθωση μηνύματος", scopedMessageAction(() -> changeOwnMessage(row, false))));
+            actions.addView(button("Διαγραφή μηνύματος", scopedMessageAction(() -> changeOwnMessage(row, true))));
         }
         if (row != null && interactionsReady && ChatInteractions.validId(row.optString("id"))) {
             actions.addView(button("Απάντηση", scopedMessageAction(() -> chooseChatReply(row))));
