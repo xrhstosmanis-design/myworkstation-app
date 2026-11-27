@@ -1,6 +1,6 @@
-## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
+## 27/11/2026 — Επιλέξιμα τιμολόγια στην αντιστοίχιση πληρωμής — LAB
 
-[Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
+Κοινός έλεγχος επιλεξιμότητας λίστας και προεπισκόπησης για την εργασία #4232. [Checkpoint](CHANGES/2026-11-27-manual-allocation-eligible-documents.md).
 
 - 27/11/2026 · Ειδοποιήσεις αύξησης τιμής αγοράς και μείωσης έκπτωσης · [Checkpoint](CHANGES/2026-11-26-purchase-cost-increase-events.md).
 
@@ -1227,3 +1227,7 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 26/11/2026 · Νο 5 · [Επεξεργασία περιγραφής κοινού είδους](CHANGES/2026-11-26-no5-product-description.md).
 
 - 26/11/2026 · [Ορατή ετικέτα ακύρωσης παραστατικού](CHANGES/2026-11-26-purchase-cancel-button-contrast.md) · Εκκρεμεί ο έλεγχος στο LAB.
+
+## 27/11/2026 — Κάρτες ΝΕΤΛΙΝΚ / ΟΚΤΟ με μετρητά
+
+[Checkpoint](CHANGES/2026-11-27-prepaid-cash-expenses.md). Εκκρεμεί LAB.
