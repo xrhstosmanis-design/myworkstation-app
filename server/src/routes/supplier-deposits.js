@@ -12,10 +12,10 @@ const quantity=z.number().int().min(1).max(100000);
 const error=(status,message)=>Object.assign(new Error(message),{status});
 const storeScope=z.object({storeId:id});
 const depositInput=storeScope.extend({
-  documentId:id, label:z.string().trim().min(1).max(120),
+  documentId:id, productId:id.optional(), label:z.string().trim().min(1).max(120).optional(),
   kind:z.enum(["CRATE","BOTTLE","PALLET"]), quantity,
   unitCents:z.number().int().min(1).max(100000), dueDate:z.string().date().nullable()
-});
+}).refine(b=>b.productId||b.label);
 const activityInput=storeScope.extend({quantity,reference:id});
 let schema;
 function ensureSchema(){
@@ -26,6 +26,9 @@ function ensureSchema(){
       "unitCents" INT NOT NULL,"dueDate" DATE,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"actorId" TEXT NOT NULL,
       UNIQUE ("documentId","kind","label")
     )`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierDeposit" ADD COLUMN IF NOT EXISTS "productId" TEXT`);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SupplierDeposit_document_product_idx"
+      ON "SupplierDeposit" ("documentId","kind","productId") WHERE "productId" IS NOT NULL`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SupplierDeposit_store_idx" ON "SupplierDeposit" ("companyId","storeId","supplierId")`);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierDepositActivity" (
       "id" TEXT PRIMARY KEY,"depositId" TEXT NOT NULL REFERENCES "SupplierDeposit" ("id"),
@@ -60,23 +63,32 @@ async function balances(db,depositId){
   return row;
 }
 router.get("/",async(req,res,next)=>{try{
-  const {storeId}=storeScope.parse(req.query);
+  const {storeId,q}=storeScope.extend({q:z.string().trim().min(2).max(100).optional()}).parse(req.query);
   await scope(prisma,req,storeId,"invoices.read");
-  await ensureSchema();
   const companyId=req.user.companyId;
+  if(q){
+    const products=await prisma.$queryRaw`SELECT p."id",p."name",p."sku" FROM "Product" p
+      JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} AND sp."active"
+      WHERE p."companyId"=${companyId} AND p."active"
+        AND (STRPOS(LOWER(p."name"),LOWER(${q}))>0 OR STRPOS(LOWER(COALESCE(p."sku",'')),LOWER(${q}))>0)
+      ORDER BY p."name",p."id" LIMIT 30`;
+    return res.json({products});
+  }
+  await ensureSchema();
   const [rows,documents]=await Promise.all([
-    prisma.$queryRaw`SELECT d."id",d."kind",d."label",d."quantity",d."unitCents",d."dueDate"::text,
+    prisma.$queryRaw`SELECT d."id",d."kind",COALESCE(product."name",d."label") AS "label",product."sku",d."quantity",d."unitCents",d."dueDate"::text,
       s."name" AS "supplier",d."supplierId",p."documentNumber",p."status" AS "sourceStatus",
       COALESCE(SUM(a."quantity") FILTER(WHERE a."kind"='RETURN'),0)::int AS "returned",
       COALESCE(SUM(a."quantity") FILTER(WHERE a."kind"='CREDIT' AND c."status"='APPROVED'),0)::int AS "credited",
       COALESCE(jsonb_agg(jsonb_build_object('kind',a."kind",'reference',CASE WHEN a."kind"='CREDIT' THEN c."documentNumber" ELSE a."reference" END,'quantity',a."quantity",'date',a."createdAt",'status',c."status")
         ORDER BY a."createdAt",a."id") FILTER(WHERE a."id" IS NOT NULL),'[]'::jsonb) AS "history"
       FROM "SupplierDeposit" d JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
+      LEFT JOIN "Product" product ON product."id"=d."productId" AND product."companyId"=d."companyId"
       LEFT JOIN "PurchaseDocument" p ON p."id"=d."documentId" AND p."companyId"=d."companyId" AND p."storeId"=d."storeId"
       LEFT JOIN "SupplierDepositActivity" a ON a."depositId"=d."id"
       LEFT JOIN "PurchaseDocument" c ON a."kind"='CREDIT' AND c."id"=a."reference"
       WHERE d."companyId"=${companyId} AND d."storeId"=${storeId}
-      GROUP BY d."id",s."name",p."documentNumber",p."status"
+      GROUP BY d."id",s."name",p."documentNumber",p."status",product."id",product."name",product."sku"
       ORDER BY d."dueDate" NULLS LAST,d."createdAt" DESC`,
     prisma.$queryRaw`SELECT d."id",d."supplierId",d."documentNumber",d."documentDate",d."documentType",s."name" AS "supplier"
       FROM "PurchaseDocument" d JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
@@ -94,10 +106,15 @@ router.post("/",async(req,res,next)=>{try{
     await scope(tx,req,b.storeId,"invoices.edit");
     await lockInvoiceStore(tx,user.companyId,b.storeId);
     const p=await document(tx,user.companyId,b.storeId,b.documentId,"INVOICE");
+    const [product]=b.productId?await tx.$queryRaw`SELECT p."id",p."name",p."sku" FROM "Product" p
+      JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${b.storeId} AND sp."active"
+      WHERE p."id"=${b.productId} AND p."companyId"=${user.companyId} AND p."active"`:[];
+    if(b.productId&&!product)throw error(409,"Το είδος δεν είναι ενεργό στον κατάλογο του καταστήματος.");
+    const label=product?`${product.name} (${product.sku||product.id})`:b.label.toLocaleUpperCase("el-GR");
     const depositId=randomUUID();
-    const rows=await tx.$queryRaw`INSERT INTO "SupplierDeposit" ("id","companyId","storeId","supplierId","documentId","kind","label","quantity","unitCents","dueDate","actorId")
-      VALUES (${depositId},${user.companyId},${b.storeId},${p.supplierId},${b.documentId},${b.kind},${b.label.toLocaleUpperCase("el-GR")},${b.quantity},${b.unitCents},${b.dueDate}::date,${user.id})
-      ON CONFLICT ("documentId","kind","label") DO NOTHING RETURNING "id"`;
+    const rows=await tx.$queryRaw`INSERT INTO "SupplierDeposit" ("id","companyId","storeId","supplierId","documentId","kind","label","quantity","unitCents","dueDate","actorId","productId")
+      VALUES (${depositId},${user.companyId},${b.storeId},${p.supplierId},${b.documentId},${b.kind},${label},${b.quantity},${b.unitCents},${b.dueDate}::date,${user.id},${b.productId??null})
+      ON CONFLICT DO NOTHING RETURNING "id"`;
     if(!rows.length)throw error(409,"Η συγκεκριμένη εγγυοδοσία έχει ήδη καταχωριστεί στο παραστατικό.");
     return {id:depositId};
   });

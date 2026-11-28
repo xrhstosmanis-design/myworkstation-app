@@ -22,7 +22,8 @@ export function showSupplierDeposits({modal,api,esc,money,stores,storeId,canWrit
   const form=canWrite?`<details><summary>Νέα εγγυοδοσία</summary><form class="po-form" data-deposit-action="">
     <label>Παραστατικό αγοράς<select name="documentId" required><option value="">Επίλεξε εγκεκριμένο παραστατικό</option>${options(purchases)}</select></label>
     <label>Συσκευασία<select name="kind">${Object.entries(kinds).map(([key,label])=>`<option value="${key}">${label}</option>`).join("")}</select></label>
-    <label>Περιγραφή<input name="label" required maxlength="120"></label>
+    <label>Αναζήτηση είδους (όνομα ή κωδικός)<input name="productSearch" maxlength="100" autocomplete="off"></label>
+    <label>Είδος καταλόγου<select name="productId" required><option value="">Αναζήτησε είδος</option></select></label>
     <label>Ποσότητα<input type="number" name="quantity" required min="1" max="100000"></label>
     <label>Εγγύηση ανά μονάδα (€)<input type="number" name="unit" step="0.01" required min="0.01" max="1000"></label>
     <label>Προθεσμία επιστροφής<input type="date" name="dueDate"></label>
@@ -33,7 +34,7 @@ export function showSupplierDeposits({modal,api,esc,money,stores,storeId,canWrit
    const late=d.dueDate&&d.dueDate<greeceDateInput()&&outstanding>0;
    const active=d.sourceStatus==="APPROVED";
    const credits=data.documents.filter(c=>c.documentType==="CREDIT_NOTE"&&c.supplierId===d.supplierId);
-   return `<details><summary><strong>${esc(d.supplier)} · ${esc(d.label)}</strong> · ${esc(kinds[d.kind])} · ${esc(d.documentNumber||"Χωρίς αριθμό")}
+   return `<details><summary><strong>${esc(d.supplier)} · ${esc(d.label)}</strong> ${d.sku?`(${esc(d.sku)})`:""} · ${esc(kinds[d.kind])} · ${esc(d.documentNumber||"Χωρίς αριθμό")}
     <br>Προς επιστροφή: <b>${outstanding}</b> (${money(outstanding*d.unitCents/100)}) · Αναμονή πιστωτικού: <b>${pending}</b> (${money(pending*d.unitCents/100)}) · Πιστώθηκαν: ${d.credited}
     ${d.dueDate?` · Προθεσμία: ${esc(d.dueDate)}`:""}${late?" · Εκπρόθεσμη επιστροφή":""}${active?"":" · Το αρχικό παραστατικό χρειάζεται έλεγχο"}</summary>
     ${d.history.length?`<ul>${d.history.map(a=>`<li>${a.kind==="RETURN"?"Επιστροφή":"Πιστωτικό"} · ${esc(a.reference||"—")} · ${a.quantity} · ${esc(greeceDateInput(a.date))}${a.kind==="CREDIT"&&a.status!=="APPROVED"?" · Χρειάζεται έλεγχο":""}</li>`).join("")}</ul>`:""}
@@ -63,6 +64,24 @@ export function showSupplierDeposits({modal,api,esc,money,stores,storeId,canWrit
  }
  store.addEventListener("change",refresh);
  supplier.addEventListener("change",draw);
+ let lookupTimer,lookupVersion=0;
+ box.addEventListener("input",event=>{
+  if(event.target.name!=="productSearch")return;
+  clearTimeout(lookupTimer);
+  const field=event.target,select=field.form.elements.productId,q=field.value.trim();
+  const version=++lookupVersion,picked=store.value;
+  select.replaceChildren(new Option(q.length<2?"Γράψε τουλάχιστον 2 χαρακτήρες":"Αναζήτηση…",""));
+  if(q.length<2)return;
+  lookupTimer=setTimeout(async()=>{
+   try{
+    const {products}=await api(`${endpoint}?storeId=${encodeURIComponent(picked)}&q=${encodeURIComponent(q)}`);
+    if(version!==lookupVersion||!select.isConnected||store.value!==picked)return;
+    select.replaceChildren(new Option(products.length?"Επίλεξε είδος":"Δεν βρέθηκε είδος",""));
+    for(const p of products)select.add(new Option(p.sku?`${p.name} (${p.sku})`:p.name,p.id));
+   }catch(e){if(version===lookupVersion&&select.isConnected)select.replaceChildren(new Option(e.message,""))}
+  },250);
+ });
+
  box.addEventListener("submit",async event=>{
   const form=event.target;
   if(!form.matches("[data-deposit-action]"))return;
@@ -70,7 +89,7 @@ export function showSupplierDeposits({modal,api,esc,money,stores,storeId,canWrit
   if(!canWrite||loading||writing||!store.value)return;
   const fields=Object.fromEntries(new FormData(form));
   const path=form.dataset.depositAction;
-  const input=path?{reference:fields.reference}:{documentId:fields.documentId,kind:fields.kind,label:fields.label,unitCents:Math.round(Number(fields.unit)*100),dueDate:fields.dueDate||null};
+  const input=path?{reference:fields.reference}:{documentId:fields.documentId,kind:fields.kind,productId:fields.productId,unitCents:Math.round(Number(fields.unit)*100),dueDate:fields.dueDate||null};
   writing=true;
   store.disabled=supplier.disabled=true;
   const submit=form.querySelector("button[type=submit]");
