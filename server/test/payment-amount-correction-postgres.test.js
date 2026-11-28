@@ -64,8 +64,8 @@ test('isolated PostgreSQL payment correction is atomic, serializes races, preser
   for(const rejectedScope of [{...scope,companyId:'foreign'},{...scope,storeId:'foreign'},{...scope,terminalPos:'CONTROL'},{...scope,user:{...user,id:'other'}},{...scope,user:{...user,permissions:[]}}])await assert.rejects(correctPaymentAmount(db,rejectedScope,request()));
   await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED' WHERE "id"='shift'`;await assert.rejects(correctPaymentAmount(db,scope,request()));assert.equal((await state()).events.length,0);
   const ownerScope={...scope,user:{id:'owner',role:'OWNER',companyId:'company'}};
-  const context=await paymentCorrectionContext(db,ownerScope);
-  assert.equal(context.amount,3);
+  const closedContext=await paymentCorrectionContext(db,ownerScope);
+  assert.equal(closedContext.amount,3);
   const corrected=await correctPaymentAmount(db,ownerScope,request());
   assert.equal(corrected.cashDelta,-2);
   const closedState=await state();
