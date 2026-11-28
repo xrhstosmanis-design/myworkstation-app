@@ -1319,3 +1319,5 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 ## 28/11/2026 — Sales product search/context / LIVE / AWAITING USER VISUAL ONLY
 
 Owner /root / feat/sales-product-search-actions-20261128 retained. Source #4324 head28f273cc passed CI46164107311; merge449b7489 passed exact-main CI46166166601 (7501PASS/0FAIL/4SKIP). Guarded release46168050751 successful; Render dep-dc5gh4m1egvs73bs5gl0 LIVE17:01:50Z, exact health449b7489 and actual entry-BektcMJG.js markers verified. Search all five tabs by description/SKU/barcode; genuine product context card/purchases stay store/period scoped. Browser sign-in wall prevented authenticated visual review; no financial LAB/USER PASS. No further source or data repair assigned. Single next action: owner full refresh and inspect selected-store Sales search/right-click during common final acceptance. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
+
+- 28/11/2026 · [Υπογεγραμμένο Android Chat 0.1.20](CHANGES/2026-11-28-android-chat-020-publication.md).
