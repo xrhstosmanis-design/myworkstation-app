@@ -30,7 +30,7 @@ export default function SupplierSettlementReviewCenter({request:baseRequest,onCl
     setLoading(true);setError("");
     try{
       setLoadedView(filters.view);
-      const query=new URLSearchParams(Object.entries(filters).filter(([,value])=>value));
+      const query=new URLSearchParams(Object.entries(filters).filter(([key,value])=>value&&(key!=="view"||value==="history")));
       const result=await request(`/api/transactions/supplier-settlements/review${query.size?`?${query}`:""}`);
       if(sequence!==loadSequence.current)return;
       setItems(result.items||[]);
