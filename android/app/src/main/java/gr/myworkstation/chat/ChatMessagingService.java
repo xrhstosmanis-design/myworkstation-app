@@ -25,8 +25,12 @@ public final class ChatMessagingService extends FirebaseMessagingService {
     @Override public void onMessageReceived(RemoteMessage message) {
         try {
             String token = new TokenVault(this).load(); Map<String, String> data = message.getData();
-            if (!NativePush.opted(this) || !NativePush.valid(token)) return;
+            if (!NativePush.opted(this) || token.isEmpty()) return;
             JSONObject user = NativePush.identity(token);
+            boolean active = NativePush.valid(token);
+            long expiredFor = System.currentTimeMillis() - user.optLong("exp") * 1000L;
+            if (!active && (!user.optBoolean("isSuperAdmin") || user.optBoolean("supportContext") ||
+                    !"BACKOFFICE_USER".equals(user.optString("tokenType")) || expiredFor < 0 || expiredFor >= 24L * 60 * 60 * 1000)) return;
             if (!PushEnvelope.allowed(data, NativePush.binding(token), user.optString("tokenType").equals("STORE_CHAT_OPERATOR"), user.optString("storeId"), user.optString("companyId"))) return;
             if (!canPost(this)) return;
             String store = data.get("storeId"), company = data.get("companyId"), binding = data.get("binding");
@@ -39,10 +43,10 @@ public final class ChatMessagingService extends FirebaseMessagingService {
                     .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
                     .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
             manager.createNotificationChannel(channel);
-            Notification.Builder builder = notification(this, store, company, binding, messageId)
-                .setContentTitle(PushEnvelope.title(data)).setContentText("Έχεις νέο μήνυμα.");
-            if (messageId != null) builder.addAction(replyAction(store, company, binding, messageId));
-            manager.notify(messageId, NOTIFICATION_ID, builder.build());
+            Notification.Builder builder = notification(this, active ? store : "", active ? company : "", active ? binding : "", active ? messageId : null)
+                .setContentTitle(active ? PushEnvelope.title(data) : "MyWorkStation Chat").setContentText("Έχεις νέο μήνυμα.");
+            if (active && messageId != null) builder.addAction(replyAction(store, company, binding, messageId));
+            manager.notify(active ? messageId : "session-notice", NOTIFICATION_ID, builder.build());
         } catch (Exception ignored) { /* No payload, token or exception logging. */ }
     }
 

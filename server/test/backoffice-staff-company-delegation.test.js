@@ -29,3 +29,13 @@ test('each additional directory requires both explicit selections',()=>{
     assert.deepEqual(companyCapabilitiesAfterDelegation([],key,true),[key]);
   }
 });
+
+test('product read delegation preserves catalogue dependencies and excludes product writers',()=>{
+  const keys=['product-center.read','product-barcodes.read','product-set.read','product-stock-package.read'];
+  assert.deepEqual(companyReadDelegationOptions(keys,keys),keys);
+  assert.deepEqual(companyReadDelegationOptions(keys,['product-barcodes.read']),['product-barcodes.read']);
+  assert.equal(companyCapabilitiesAfterDelegation([],'product-barcodes.read',true),null);
+  assert.deepEqual(companyCapabilitiesAfterDelegation(['product-center.read'],'product-barcodes.read',true),keys.slice(0,2));
+  assert.equal(companyCapabilitiesAfterDelegation(keys,'product-center.read',false),null);
+  assert.equal(validCompanyReadDelegationCeiling(['product-card.rename']),false);
+});

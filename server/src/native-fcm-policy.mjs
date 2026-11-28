@@ -1,4 +1,4 @@
-export async function nativeRecipientAllowed(row,store,{db,storesFor,enabled,authorize,now=Date.now}){
+export async function nativeRecipientAllowed(row,store,{db,storesFor,enabled,authorize,now=Date.now,expiredAdminNotices=process.env.NATIVE_CHAT_EXPIRED_ADMIN_NOTICES==='true'}){
  const u=row.identityJson;
  if(!u||u.id!==row.userId)return false;
  if(u.tokenType==='STORE_OPERATOR'){
@@ -9,7 +9,9 @@ export async function nativeRecipientAllowed(row,store,{db,storesFor,enabled,aut
  if(u.tokenType!=='BACKOFFICE_USER')return false;
  const session=await db.userSession.findUnique({where:{id:row.sessionId},include:{user:{include:{company:true}}}});
  const current=session?.user;
- if(!current||current.id!==row.userId||session.revokedAt||(!Number.isFinite(new Date(session.expiresAt).getTime())||new Date(session.expiresAt).getTime()<=now())||current.role!==(u.platformRole||u.role)||current.sessionVersion!==u.sessionVersion||current.mustChangePassword||(!current.company?.active&&current.role!=='SUPER_ADMIN'))return false;
+ const expires=session?.expiresAt==null?NaN:new Date(session.expiresAt).getTime(), time=now();
+ const noticeWindow=expiredAdminNotices&&current?.role==='SUPER_ADMIN'&&!u.supportContext&&time-expires<24*60*60*1000;
+ if(!current||current.id!==row.userId||session.revokedAt||(!Number.isFinite(expires)||(expires<=time&&!noticeWindow))||current.role!==(u.platformRole||u.role)||current.sessionVersion!==u.sessionVersion||current.mustChangePassword||(!current.company?.active&&current.role!=='SUPER_ADMIN'))return false;
  if(u.supportContext&&u.companyId!==store.companyId)return false;
  const resolved={...u,platformRole:current.role,isSuperAdmin:current.role==='SUPER_ADMIN',sessionId:row.sessionId,companyId:current.companyId,supportContext:u.supportContext?{native:true}:undefined};
  // A support context stays restricted to its originally selected company.

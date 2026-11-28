@@ -1,3 +1,13 @@
+## 28Nov2026 — Shelf label product/barcode/price layout — ASSIGNED /root
+
+- 28/11/2026 · [Ιστορικό πληρωμών προμηθευτών](CHANGES/2026-11-28-supplier-payment-correction-history.md).
+
+Independent owner expansion: no store heading, product at top, compact barcode bottom left, large complete price bottom right, matching supplied shelf-label reference. Existing 27Nov readability owner /root continued; Citizen device owner unchanged. Before-source claim; NOT TESTED. [Checkpoint](CHANGES/2026-11-28-shelf-label-layout.md). [Pending](../docs/roadmap/PENDING_WORK_2026-11-28_SHELF_LABEL.md).
+
+## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
+
+Owner /root / feat/sales-product-search-actions-20261128, same page continuation of #4311/#4318. User explicitly extends all five SalesAnalysisSuite tabs with product search and item-row context actions for product card and purchases. Independent expansion; historical-cost/hourly/report/POS/inventory owners retain other scopes. Before-source only: NOT TESTED / NOT INSTALLED. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
+
 ## 27/11/2026 — Διανομή υπογεγραμμένου Android Chat 0.1.19 — LAB
 
 Δημοσίευση του ελεγμένου APK από το signing run 46067143226. [Checkpoint](CHANGES/2026-11-27-chat-android-019-distribution.md).
@@ -26,6 +36,7 @@ ASSIGNED /root. INSTALLED: source #4308, green full PR/main CI; exact healthy ru
 
 - 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).
 - 27/11/2026 · Νο 5 · [Πρόσθετες εταιρικές προβολές](CHANGES/2026-11-27-no5-more-company-reads.md).
+- 28/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών προϊόντος](CHANGES/2026-11-28-no5-product-read-delegation.md).
 
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
 
@@ -679,6 +690,8 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 
 - 27/11/2026 · [Android Chat: ανανέωση σύνδεσης στην επιστροφή](CHANGES/2026-11-27-chat-android-resume-session.md).
 
+- 28/11/2026 · [Android Chat: ειδοποιήσεις μετά τη λήξη συνεδρίας](CHANGES/2026-11-28-android-chat-background-notice.md).
+
 ## Κανόνας ενημέρωσης
 
 10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
@@ -1299,4 +1312,4 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 
 - 28/11/2026 · [Διόρθωση πληρωμής σε κλεισμένη βάρδια](CHANGES/2026-11-28-closed-shift-payment-correction.md).
 
-- 28/11/2026 · [Ιστορικό πληρωμών προμηθευτών](CHANGES/2026-11-28-supplier-payment-correction-history.md).
+- 27/11/2026: Proposal packaging cost, line removal and presentation. See CHECKPOINTS/CHANGES/2026-11-27-proposal-pack-cost.md. Operational acceptance pending.
