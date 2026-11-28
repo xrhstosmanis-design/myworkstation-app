@@ -1,6 +1,6 @@
-## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
+## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / LIVE / AWAITING USER VISUAL ONLY
 
-Owner /root / feat/sales-product-search-actions-20261128, same page continuation of #4311/#4318. User explicitly extends all five SalesAnalysisSuite tabs with product search and item-row context actions for product card and purchases. Independent expansion; historical-cost/hourly/report/POS/inventory owners retain other scopes. Before-source only: NOT TESTED / NOT INSTALLED. [Checkpoint](../../CHECKPOINTS/CHANGES/2026-11-28-sales-product-search-actions.md).
+ASSIGNED - /root / feat/sales-product-search-actions-20261128 retained until common final visual acceptance. Source #4324, full PR/main CI and guarded live revision449b7489 complete;7501PASS/0FAIL/4SKIP. All five tabs search description/SKU/barcode; genuine product right-click opens read-only card or purchases with selected store/period. No further source, production data repair or financial test assigned. Browser reached sign-in screen; no authenticated live visual acceptance. Single next action: owner full refresh and inspect selected-store Sales search/right-click (expand category products first). Technical installation only; no financial LAB PASS or USER PASS. [Final handoff](../../CHECKPOINTS/CHANGES/2026-11-28-sales-product-search-actions.md).
 
 ## 27/11/2026 23:48 Athens — visible branding and complete sales fields / AWAITING USER VISUAL ONLY
 
