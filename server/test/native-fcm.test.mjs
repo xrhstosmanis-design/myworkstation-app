@@ -192,3 +192,18 @@ test('versioned Android notifications add an opaque reply target while old clien
  assert.throws(()=>nativePayload({...input,messageId:'https://example.test/scope'}));
  assert.throws(()=>nativePayload({...input,messageId:'chat-123',platform:'ios'}));
 });
+
+test('expired admin notice is bounded and requires current authorization',async()=>{
+ const now=Date.parse('2026-11-28T10:00:00Z'),expiresAt=new Date(now-1000);
+ const identity={...user,platformRole:'SUPER_ADMIN'};
+ const candidate={...row,identityJson:identity};
+ const admin={...session,expiresAt,user:{...session.user,role:'SUPER_ADMIN'}};
+ const options={...deps,now:()=>now,expiredAdminNotices:true,db:{userSession:{findUnique:async()=>admin}}};
+ assert.equal(await nativeRecipientAllowed(candidate,store,options),true);
+ assert.equal(await nativeRecipientAllowed(candidate,store,{...options,expiredAdminNotices:false}),false);
+ assert.equal(await nativeRecipientAllowed(candidate,store,{...options,storesFor:async()=>({stores:[]})}),false);
+ assert.equal(await nativeRecipientAllowed({...candidate,identityJson:{...identity,supportContext:true}},store,options),false);
+ for(const record of [{...admin,revokedAt:new Date(now)},{...admin,expiresAt:new Date(now-86400000)},{...admin,user:{...admin.user,sessionVersion:4}},{...admin,user:{...admin.user,mustChangePassword:true}},{...admin,user:session.user}]){
+  assert.equal(await nativeRecipientAllowed(candidate,store,{...options,db:{userSession:{findUnique:async()=>record}}}),false);
+ }
+});
