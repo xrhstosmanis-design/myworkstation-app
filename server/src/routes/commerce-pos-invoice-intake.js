@@ -102,7 +102,7 @@ function candidateOcrRows(resultJson){
       const conversion=stockConversionFromDescription(description,suppliedMultiplier,entry?.invoiceUnit||entry?.unit),rawPackageSize=conversion.multiplier;
       const invoiceUnit=String(entry?.invoiceUnit||entry?.unit||"").toUpperCase()==="PACKAGE"||rawPackageSize>1?"PACKAGE":"PIECE";
       const stockUnitsPerInvoiceUnit=invoiceUnit==="PACKAGE"?(rawPackageSize>0?rawPackageSize:0):1;
-      return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,exciseTotal,vatRate,grossAmount,invoiceUnit,stockUnitsPerInvoiceUnit,stockMeasure:conversion.stockMeasure,packSizeNeedsReview:invoiceUnit==="PACKAGE"&&stockUnitsPerInvoiceUnit<1,confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
+      return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,exciseTotal,vatRate,grossAmount,invoiceUnit,stockUnitsPerInvoiceUnit,stockMeasure:conversion.stockMeasure,packSizeNeedsReview:invoiceUnit==="PACKAGE"&&stockUnitsPerInvoiceUnit<1,verifiedPiece:entry?.sourceColumnsVerified===true&&/^(PIECE|PCS|TEM|TMX|ΤΕΜ|ΤΜΧ)\.?$/i.test(String(entry?.invoiceUnit||entry?.unit||"").trim()),confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
     }).filter(row=>row.description.length>=2);
   }
   const source=Array.isArray(resultJson?.lines)?resultJson.lines:[];
@@ -125,15 +125,30 @@ function candidateOcrRows(resultJson){
   return rows.slice(0,500);
 }
 
-async function matchProducts(tx,companyId,rows){
+async function matchProducts(tx,companyId,supplierId,rows){
   const products=await tx.$queryRaw`
     SELECT p."id",p."name",p."vatRate",p."salePrice",p."costPrice",
       COALESCE((SELECT json_agg(pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes"
     FROM "Product" p WHERE p."companyId"=${companyId} AND p."active"=true`;
   const byBarcode=new Map();
   for(const p of products)for(const barcode of p.barcodes||[])byBarcode.set(String(barcode),p);
+  const byId=new Map(products.map(product=>[product.id,product]));
+  const codes=[...new Set(rows.map(row=>row.code).filter(Boolean))];
+  const mappings=codes.length?await tx.$queryRaw`
+    SELECT "supplierItemCode","productId","unitsPerPackage" FROM "SupplierProductMapping"
+    WHERE "companyId"=${companyId} AND "supplierId"=${supplierId}
+      AND "supplierItemCode"=ANY(${codes}::text[]) AND "confirmedAt" IS NOT NULL`:[];
+  const byCode=new Map(mappings.map(mapping=>[mapping.supplierItemCode,mapping]));
   for(const row of rows){
-    let product=row.barcode?byBarcode.get(String(row.barcode)):null;
+    const mapping=byCode.get(row.code);
+    const mappedProduct=byId.get(mapping?.productId);
+    let product=mappedProduct||(row.barcode?byBarcode.get(String(row.barcode)):null);
+    const pack=Number(mapping?.unitsPerPackage);
+    if(mappedProduct&&!row.verifiedPiece&&row.stockUnitsPerInvoiceUnit<=1&&Number.isInteger(pack)&&pack>1&&pack<=100000){
+      row.invoiceUnit="PACKAGE";
+      row.stockUnitsPerInvoiceUnit=pack;
+      row.packSizeNeedsReview=false;
+    }
     if(!product){
       const key=norm(row.description);
       if(key.length>=4){
@@ -186,7 +201,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber},${body.documentDate||new Date()},0,0,${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId})`;
       await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`OCR τιμολόγιο ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
 
-      const ocrRows=await matchProducts(tx,req.user.companyId,candidateOcrRows(job.resultJson||{}));
+      const ocrRows=await matchProducts(tx,req.user.companyId,body.supplierId,candidateOcrRows(job.resultJson||{}));
       for(const row of ocrRows){
         const product=row.product;
         const quantity=row.structured?Math.max(0,Number(row.quantity||0)):Math.max(0.0001,Number(row.quantity||1));
@@ -197,7 +212,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         const structuredGross=row.structured?Math.max(0,Number(row.grossAmount||0)):0;
         const {exciseTotal,vatAmount,grossAmount}=invoiceLineTaxAmounts({netAmount,exciseTotal:row.structured?row.exciseTotal:0,grossAmount:structuredGross,vatRate});
         const resolutionStatus=product&&!row.packSizeNeedsReview?"MATCHED":"UNRESOLVED";
-        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${product?.id||null},${row.description},${quantity},${unitCost},0,0,0,${exciseTotal},${vatRate},false,${unitCost},0,${Number(product?.salePrice||0)},${netAmount},${vatAmount},${grossAmount},${row.text},${row.confidence},${resolutionStatus},${row.barcode||null},${row.sequence},'PRODUCT',${row.invoiceUnit||'PIECE'},${Number(row.stockUnitsPerInvoiceUnit||1)})`;
+        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","supplierCode","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${product?.id||null},${row.description},${quantity},${unitCost},0,0,0,${exciseTotal},${vatRate},false,${unitCost},0,${Number(product?.salePrice||0)},${netAmount},${vatAmount},${grossAmount},${row.text},${row.confidence},${resolutionStatus},${row.barcode||null},${row.sequence},'PRODUCT',${row.code||null},${row.invoiceUnit||'PIECE'},${Number(row.stockUnitsPerInvoiceUnit||1)})`;
       }
 
       let paymentTransactionId=null;
