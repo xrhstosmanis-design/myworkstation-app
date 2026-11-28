@@ -1,4 +1,5 @@
 import {readSalesItemDetails} from "../services/sales-item-details.js";
+import {salesProductSearch} from '../lib/sales-product-search.js';
 import {recordPurchaseCostIncrease} from "../services/purchase-cost-increase-event.js";
 import {financialReportFilters,readStoreFinancialReport} from "../services/store-financial-reports.js";
 import {LOCAL_INVOICE_OCR_LIMITS} from "../../../shared/local-invoice-ocr-limits.mjs";
@@ -271,6 +272,7 @@ router.get("/sales/report",requireCompanyModule("SALES_ANALYTICS"),async(req,res
 
 router.get("/sales/unsold-products",requireCompanyModule("SALES_ANALYTICS"),async(req,res,next)=>{
   try{
+    const search=salesProductSearch(req.query.q);
     const {storeId,from:fromDate,to:toDate}=z.object({
       storeId:z.string().trim().min(1),
       from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -288,6 +290,9 @@ router.get("/sales/unsold-products",requireCompanyModule("SALES_ANALYTICS"),asyn
       FROM "StoreProduct" sp
       JOIN "Product" p ON p.id=sp."productId" AND p."companyId"=${req.user.companyId}
       WHERE sp."storeId"=${storeId} AND sp.active AND p.active
+      AND (${search.text===''} OR TRANSLATE(LOWER(p.name),'άέήίόύώϊΐϋΰς','αεηιουωιιυυσ') LIKE ${search.like}
+        OR TRANSLATE(LOWER(p.sku),'άέήίόύώϊΐϋΰς','αεηιουωιιυυσ') LIKE ${search.like}
+        OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p.id AND TRANSLATE(LOWER(pb."barcode"),'άέήίόύώϊΐϋΰς','αεηιουωιιυυσ') LIKE ${search.like}))
       AND NOT EXISTS (
         SELECT 1 FROM "SaleLine" l
         JOIN "Sale" s ON s.id=l."saleId"
@@ -296,7 +301,7 @@ router.get("/sales/unsold-products",requireCompanyModule("SALES_ANALYTICS"),asyn
           AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
       )
       ORDER BY p.name,p.sku,p.id`;
-    res.json({storeId,products});
+    res.json({storeId,search:search.text,products});
   }catch(error){next(error)}
 });
 
@@ -331,7 +336,7 @@ router.get("/sales/advanced-report",requireCompanyModule("SALES_ANALYTICS"),asyn
     const to=req.query.to?greeceRangeDate(req.query.to,true):new Date(),from=req.query.from?greeceRangeDate(req.query.from):new Date(to.getTime()-30*86400000);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
     if(req.query.itemDetails!==undefined){
       if(req.query.itemDetails!=="1")return res.status(400).json({error:"Μη έγκυρη επιλογή αναλυτικών ειδών."});
-      const details=await readSalesItemDetails({companyId:req.user.companyId,storeId,from:req.query.from,to:req.query.to,timeZone:req.query.timeZone});
+      const details=await readSalesItemDetails({companyId:req.user.companyId,storeId,from:req.query.from,to:req.query.to,timeZone:req.query.timeZone,q:req.query.q});
       if(delegated)await requireStaffGrant(prisma,req.user,req.user.storeId,'analytics.read');
       return res.json(details);
     }

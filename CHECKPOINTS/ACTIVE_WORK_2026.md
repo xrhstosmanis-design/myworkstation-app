@@ -1,3 +1,7 @@
+## 28/11/2026 — Sales product search/context / SOURCE PREPARED / AWAITING CI
+
+Owner /root / feat/sales-product-search-actions-20261128 retained. Claim4323 green/merged091e524c7 before edits. Common five-tab query, subset totals/averages, pre-cap journal search, genuine-ID context card/purchase reads and stale/tenant boundaries implemented. Focused16 + native PostgreSQL2 passed; frontend build9.64s passed. No financial/write/permission/infrastructure change. Full source CI/release/common visual acceptance pending. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
+
 ## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
 
 Owner /root / feat/sales-product-search-actions-20261128, same page continuation of #4311/#4318. User explicitly extends all five SalesAnalysisSuite tabs with product search and item-row context actions for product card and purchases. Independent expansion; historical-cost/hourly/report/POS/inventory owners retain other scopes. Before-source only: NOT TESTED / NOT INSTALLED. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
