@@ -16,7 +16,7 @@ test('search folds Greek accents/case and treats SQL wildcard characters literal
 
 const tick=()=>new Promise(r=>setTimeout(r,25));
 async function application(){
- const dom=new JSDOM('<div class="kiosk-sales"><main class="kiosk-main"><div class="kiosk-top-controls"><select><option value="s">Store</option><option value="other">Other</option></select></div><div class="kiosk-subtabs"></div></main></div>',{url:'https://test.invalid'});
+ const dom=new JSDOM('<div class="kiosk-top-controls"><select><option value="WRONG-OUTER">Outer</option></select></div><div class="kiosk-sales"><main class="kiosk-main"><div class="kiosk-top-controls"><select><option value="s">Store</option><option value="other">Other</option></select></div><div class="kiosk-subtabs"></div></main></div>',{url:'https://test.invalid'});
  const w=dom.window,calls=[],blobs=[];
  w.localStorage.setItem('token','test-only');w.URL.createObjectURL=b=>{blobs.push(b);return'blob:test'};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=()=>{};
  const read=async url=>{calls.push(url);const q=new URL(url,'https://test.invalid').searchParams,search=q.get('q')||'';
