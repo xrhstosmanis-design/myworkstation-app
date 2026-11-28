@@ -13,6 +13,9 @@ test("supplier deposits reconcile partial returns and credits within one store",
   let server;
   try{
     await f.seed({mydata:false,payment:false});
+    await f.db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN "name" text, ADD COLUMN "sku" text, ADD COLUMN "active" boolean DEFAULT true');
+    await f.db.$executeRawUnsafe('ALTER TABLE "StoreProduct" ADD COLUMN "active" boolean DEFAULT true');
+    await f.db.$executeRawUnsafe(`UPDATE "Product" SET "name"='LAB empty crate',"sku"='CRATE-1' WHERE "id"='p'`);
     await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "status"='APPROVED' WHERE "id"='d-pos'`);
     await f.db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","totalGross","status")
       VALUES ('credit','c','s','sup','CREDIT_NOTE','LAB-CREDIT',6,'APPROVED')`);
@@ -33,7 +36,10 @@ test("supplier deposits reconcile partial returns and credits within one store",
     const base=`http://127.0.0.1:${server.address().port}`;
     const get=async(path,headers)=>fetch(base+path,{headers});
     const post=async(path,body)=>fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    const input={storeId:"s",documentId:"d-pos",kind:"CRATE",label:"LAB crate",quantity:10,unitCents:200,dueDate:"2026-11-25"};
+    const input={storeId:"s",documentId:"d-pos",kind:"CRATE",productId:"p",quantity:10,unitCents:200,dueDate:"2026-11-25"};
+    const products=await (await get("/?storeId=s&q=CRATE-1")).json();
+    assert.deepEqual(products.products,[{id:"p",name:"LAB empty crate",sku:"CRATE-1"}]);
+    assert.equal((await post("/",{...input,productId:"outside-catalog"})).status,409);
     const creation=await post("/",input);
     assert.equal(creation.status,201,await creation.clone().text());
     const {id}=await creation.json();
@@ -50,6 +56,8 @@ test("supplier deposits reconcile partial returns and credits within one store",
     const {rows}=await manager.json();
     assert.deepEqual([rows[0].quantity-rows[0].returned,rows[0].returned-rows[0].credited],[4,3]);
     assert.equal(rows[0].history.length,2);
+    assert.equal(rows[0].label,"LAB empty crate");
+    assert.equal(rows[0].sku,"CRATE-1");
     assert.deepEqual((await (await get("/?storeId=control")).json()).rows,[]);
     assert.equal((await get("/?storeId=s",{"x-test-role":"CASHIER"})).status,403);
     assert.equal((await get("/?storeId=s",{"x-test-staff":"1"})).status,200);
