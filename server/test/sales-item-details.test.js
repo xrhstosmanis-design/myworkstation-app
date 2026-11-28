@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import {readSalesItemDetails} from '../src/services/sales-item-details.js';
 import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
+import {greeceRangeDate} from '../../shared/greece-time.mjs';
+import {installSalesProductActions} from '../../client/src/components/commerce/salesProductActions.js';
 
 const filters={companyId:'c',storeId:'s',from:'2026-03-28',to:'2026-03-30',timeZone:'Europe/Athens'};
 function fixture({items=null,complete=true,owned=true}={}){
  const calls=[];
  const db={$queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});
   if(sql.includes('FROM "Store"'))return owned?[{id:'s'}]:[];
-  if(sql.includes('FROM "Product"'))return [{id:'p',sku:'P',unit:'PIECE',categoryName:'Κατάστημα',subcategoryName:'Υποκατηγορία',brandName:'Brand',currentRetail:'3.5',productCompanyId:'maker'}];
+  if(sql.includes('FROM "Product"'))return [{id:'p',sku:'P',unit:'PIECE',categoryName:'Κατάστημα',subcategoryName:'Υποκατηγορία',brandName:'Brand',currentRetail:'3.5',productCompanyId:'maker',barcodes:['AbC123']}];
   if(sql.includes('to_regclass'))return [{available:true}];
   if(sql.includes('FROM "ManagementProductCompany"'))return [{id:'maker',name:'Εταιρεία'}];
   throw Error('Unexpected read');
@@ -51,6 +53,19 @@ test('empty reports use the selected calendar divisor and perform no product/cat
  assert.equal(out.period.days,27);assert.equal(out.summary.revenue,0);assert.equal(out.summary.dailyRevenue,0);assert.deepEqual(out.products,[]);assert.equal(f.calls.filter(x=>x.sql).length,1);
 });
 
+test('product query filters identities before category totals and daily averages; unknown costs and empty matches stay honest',async()=>{
+ const items=[{productId:'p',storeId:'s',name:'Νερό',sku:'WATER',unit:'PIECE',salesQuantity:6,grossSales:12,netSales:10,costValue:4,_costIncomplete:false},
+ {productId:'q',storeId:'s',name:'Άλλο',sku:'OTHER',unit:'KG',salesQuantity:9,grossSales:90,netSales:80,costValue:0,_costIncomplete:true}];
+ for(const q of ['νερο','AbC123','P']){
+  const out=await readSalesItemDetails({...filters,q},fixture({items}));
+  assert.equal(out.search,q);assert.deepEqual(out.products.map(p=>p.productId),['p']);assert.equal(out.summary.revenue,12);assert.equal(out.summary.dailyRevenue,4);assert.equal(out.summary.dailyQuantity,2);assert.equal(out.summary.profit,6);assert.equal(out.summary.missingCostProducts,0);assert.equal(out.categories[0].revenue,12);
+ }
+ const empty=await readSalesItemDetails({...filters,q:'absent'},fixture({items}));assert.equal(empty.products.length,0);assert.equal(empty.summary.dailyRevenue,0);
+ await assert.rejects(readSalesItemDetails({...filters,q:['x']},fixture()),{status:400});
+ await assert.rejects(readSalesItemDetails({...filters,q:'x'.repeat(161)},fixture()),{status:400});
+ await assert.rejects(readSalesItemDetails({...filters,q:'absent'},fixture({items:[{storeId:'foreign',name:'secret'}]})),{status:502});
+});
+
 test('actual installed items table renders metadata, daily averages and matching CSV without HTML injection',async()=>{
  const source=await readFile(new URL('../../client/src/components/commerce/installSalesAnalysisSuite.js',import.meta.url),'utf8');
  const dom=new JSDOM('<div class="kiosk-sales"><main class="kiosk-main"><div class="kiosk-top-controls"><select><option value="s">STORE</option></select></div><div class="kiosk-subtabs"></div></main></div>',{url:'https://test.invalid'});
@@ -59,9 +74,9 @@ test('actual installed items table renders metadata, daily averages and matching
  window.localStorage.setItem('token','test-only');
  window.URL.createObjectURL=blob=>{blobs.push(blob);return 'blob:test'};window.URL.revokeObjectURL=()=>{};window.HTMLAnchorElement.prototype.click=function(){};
  const fetchImpl=async(url)=>{calls.push(url);return {ok:true,json:async()=>response}};
- const run=new Function('greeceDateInput','document','window','MutationObserver','Element','requestAnimationFrame','localStorage','fetch','Blob','URL',source.replace(/^import .*;$/gm,'').replace('export function installSalesAnalysisSuite','function installSalesAnalysisSuite')+'\nreturn installSalesAnalysisSuite;');
+ const run=new Function('greeceDateInput','greeceRangeDate','installSalesProductActions','document','window','MutationObserver','Element','requestAnimationFrame','localStorage','fetch','Blob','URL',source.replace(/^import .*;$/gm,'').replace('export function installSalesAnalysisSuite','function installSalesAnalysisSuite')+'\nreturn installSalesAnalysisSuite;');
  try{
-  const install=run(()=> '2026-11-27',window.document,window,window.MutationObserver,window.Element,fn=>fn(),window.localStorage,fetchImpl,Blob,window.URL);install();
+  const install=run(()=> '2026-11-27',greeceRangeDate,installSalesProductActions,window.document,window,window.MutationObserver,window.Element,fn=>fn(),window.localStorage,fetchImpl,Blob,window.URL);install();
   window.document.querySelector('[data-tab="items"]').click();await new Promise(r=>setTimeout(r,30));
   assert.match(calls[0],/itemDetails=1/);assert.match(calls[0],/from=2026-11-01/);assert.match(calls[0],/storeId=s/);
   const panel=window.document.querySelector('.sas-content');assert.match(panel.textContent,/Εταιρεία/);assert.match(panel.textContent,/Υποκατηγορία/);assert.match(panel.textContent,/27/);assert.equal(panel.querySelector('img'),null);

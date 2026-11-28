@@ -39,3 +39,16 @@ test('product read delegation preserves catalogue dependencies and excludes prod
   assert.equal(companyCapabilitiesAfterDelegation(keys,'product-center.read',false),null);
   assert.equal(validCompanyReadDelegationCeiling(['product-card.rename']),false);
 });
+
+test('company product details require the catalog and do not grant product mutations',()=>{
+  const parent='product-center.read';
+  const keys=['product-card.read','product-details.read','product-delivery.read','product-price-history.read'];
+  assert.deepEqual(companyReadDelegationOptions([parent,...keys],keys),keys);
+  assert.deepEqual(companyReadDelegationOptions(keys,keys),[]);
+  for(const key of keys){
+    assert.equal(companyCapabilitiesAfterDelegation([],key,true),null);
+    assert.deepEqual(companyCapabilitiesAfterDelegation([parent],key,true),[parent,key]);
+    assert.equal(companyCapabilitiesAfterDelegation([parent,key],parent,false),null);
+  }
+  assert.equal(validCompanyReadDelegationCeiling(['product-card.edit-description']),false);
+});

@@ -1,24 +1,28 @@
 import {prisma} from '../prisma.js';
 import {readSalesAnalysisReport} from '../routes/kiosk-reports-sales-v4.js';
 import {salesReportCalendar} from './sales-report-calendar.js';
+import {salesProductSearch,matchesSalesProductSearch} from '../lib/sales-product-search.js';
 
 const invalid=(message,status=400)=>Object.assign(new Error(message),{status});
 const value=v=>v==null||v===''?null:Number.isFinite(Number(v))?Number(v):null;
 
 // Read-only adapter for the existing authorized sales report. Never infer costs
 // from retail prices or descriptions; preserve the native historical cost rules.
-export async function readSalesItemDetails({companyId,storeId,from,to,timeZone},{db=prisma,readSource=readSalesAnalysisReport}={}){
+export async function readSalesItemDetails({companyId,storeId,from,to,timeZone,q},{db=prisma,readSource=readSalesAnalysisReport}={}){
+  const search=salesProductSearch(q);
   if(!companyId||!storeId||timeZone!=='Europe/Athens')throw invalid('Επίλεξε συγκεκριμένο κατάστημα και ημερομηνίες Ελλάδας.');
   const calendar=salesReportCalendar(from,to);
   const owned=await db.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${storeId} AND "companyId"=${companyId} AND "active"=true`;
   if(owned.length!==1)throw invalid('Δεν βρέθηκε ενεργό κατάστημα.',404);
   const source=await readSource({companyId,storeId,from:calendar.from,to:calendar.to,calendar},{db,strictRead:true});
   if(source.sourceCoverage?.complete!==true)throw invalid('Η αναφορά υπερβαίνει το διαθέσιμο όριο. Επίλεξε μικρότερο διάστημα για πλήρη αποτελέσματα.',422);
+  if(source.items.some(row=>row.storeId!==storeId))throw invalid('Δεν επιβεβαιώθηκε το κατάστημα της ανάλυσης.',502);
   const ids=[...new Set(source.items.map(row=>row.productId).filter(Boolean))];
   const metadata=ids.length?await db.$queryRaw`
     SELECT p."id",p."sku",p."unit",COALESCE(sp."salePrice",p."salePrice") AS "currentRetail",
       c."name" AS "categoryName",sc."name" AS "subcategoryName",mp."brandName",
-      to_jsonb(p)->>'productCompanyId' AS "productCompanyId"
+      to_jsonb(p)->>'productCompanyId' AS "productCompanyId",
+      COALESCE((SELECT json_agg(pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]'::json) AS "barcodes"
     FROM "Product" p
     LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId}
     LEFT JOIN "ProductCategory" c ON c."id"=COALESCE(sp."categoryIdOverride",p."categoryId") AND c."companyId"=p."companyId"
@@ -30,7 +34,7 @@ export async function readSalesItemDetails({companyId,storeId,from,to,timeZone},
   const companies=available[0]?.available?await db.$queryRaw`SELECT "id","name" FROM "ManagementProductCompany" WHERE "companyId"=${companyId} AND "id"=ANY(${companyIds}::text[])`:[];
   const companyNames=new Map(companies.map(row=>[row.id,row.name]));
   const days=(Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000+1;
-  const products=source.items.map(row=>{
+  const products=source.items.filter(row=>matchesSalesProductSearch(search,row.name,row.description,row.sku,meta.get(row.productId)?.sku,meta.get(row.productId)?.barcodes??[])).map(row=>{
     if(row.storeId!==storeId)throw invalid('Δεν επιβεβαιώθηκε το κατάστημα της ανάλυσης.',502);
     const m=meta.get(row.productId),quantity=value(row.salesQuantity)??0,revenue=value(row.grossSales)??0,netSales=value(row.netSales)??0;
     const costValue=row._costIncomplete===true?null:value(row.costValue),profit=costValue===null?null:netSales-costValue;
@@ -47,7 +51,7 @@ export async function readSalesItemDetails({companyId,storeId,from,to,timeZone},
   const sum=key=>products.reduce((total,row)=>total+row[key],0),totalCost=products.some(row=>row.costValue===null)?null:sum('costValue'),net=sum('netSales');
   const units=[...new Set(products.map(row=>row.unit))];
   return {storeId,period:{...source.period,calendarFrom:from,calendarTo:to,timeZone:'Europe/Athens',days},sourceCoverage:source.sourceCoverage,nonFiscal:true,
-    products,categories:[...categories.values()].map(c=>({...c,profit:c.costValue===null?null:c.netSales-c.costValue,margin:c.costValue===null||!c.netSales?null:(c.netSales-c.costValue)/c.netSales*100})),
+    search:search.text,products,categories:[...categories.values()].map(c=>({...c,profit:c.costValue===null?null:c.netSales-c.costValue,margin:c.costValue===null||!c.netSales?null:(c.netSales-c.costValue)/c.netSales*100})),
     summary:{productCount:products.length,quantity:sum('quantity'),revenue:sum('revenue'),netSales:net,discounts:sum('discounts'),costValue:totalCost,profit:totalCost===null?null:net-totalCost,
       margin:totalCost===null||!net?null:(net-totalCost)/net*100,days,dailyQuantity:units.length>1?null:sum('quantity')/days,dailyRevenue:sum('revenue')/days,mixedUnits:units.length>1,missingCostProducts:products.filter(row=>row.costUnavailable).length}};
 }

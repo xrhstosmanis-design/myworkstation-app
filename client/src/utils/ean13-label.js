@@ -48,25 +48,26 @@ async function prepareRasterLabel(data) {
     const paddingX = px(2), paddingY = px(1.5);
     const innerWidth = canvas.width - paddingX * 2;
     const innerHeight = canvas.height - paddingY * 2;
-    const textLine = (text, pt, weight, y) => {
+    const textLine = (text, pt, weight, y, x = canvas.width / 2, width = innerWidth) => {
       ctx.font = `${weight} ${pt * dpi / 72}px Arial, sans-serif`;
       let value = String(text).replace(/[\r\n\t]/g, ' ');
-      if (ctx.measureText(value).width > innerWidth) {
+      if (ctx.measureText(value).width > width) {
         const chars = Array.from(value);
         let low = 0, high = chars.length;
         while (low < high) {
           const mid = Math.ceil((low + high) / 2);
-          if (ctx.measureText(chars.slice(0, mid).join('') + '…').width <= innerWidth) low = mid;
+          if (ctx.measureText(chars.slice(0, mid).join('') + '…').width <= width) low = mid;
           else high = mid - 1;
         }
         value = chars.slice(0, low).join('') + '…';
       }
-      ctx.fillText(value, canvas.width / 2, y);
+      ctx.fillText(value, x, y);
     };
-    // Allocate more space to product/price text, with a compact barcode.
-    // Scale the entire layout for the already-supported short label sizes.
+    // Shelf label: product above, compact EAN left and a dominant price right.
+    // Narrow stock retains a stacked fallback so the barcode stays scannable.
+    const sideBySide = innerWidth >= px(46);
     const fontScale = Math.min(1, innerHeight / px(34));
-    const productPt = 14 * fontScale, pricePt = 22 * fontScale;
+    const productPt = 16 * fontScale, pricePt = (sideBySide ? 36 : 22) * fontScale;
     ctx.font = `bold ${productPt * dpi / 72}px Arial, sans-serif`;
     const name = Array.from(String(data.productName).replace(/[\r\n\t]/g, ' ').trim());
     let split = name.length;
@@ -83,34 +84,39 @@ async function prepareRasterLabel(data) {
     }
     const productLines = [name.slice(0, split).join('').trim()];
     if (split < name.length) productLines.push(name.slice(split).join('').trim());
-    const storeHeight = 6 * dpi / 72 * 1.1 * fontScale;
     const nameLineHeight = productPt * dpi / 72 * 1.1;
     const nameHeight = nameLineHeight * productLines.length;
     const digitsHeight = 8 * dpi / 72 * fontScale;
     const priceHeight = pricePt * dpi / 72 * 1.1;
     const barHeight = px(7 * fontScale);
-    const gap = Math.max(0, (innerHeight - storeHeight - nameHeight - digitsHeight - priceHeight - barHeight) / 4);
-    let y = paddingY;
-    textLine(data.storeName, 6 * fontScale, 'normal', y);
-    y += storeHeight + gap;
-    productLines.forEach((line, index) => textLine(line, productPt, 'bold', y + index * nameLineHeight));
-    y += nameHeight + gap;
-    // Integer pixel modules and a >=10-module quiet zone on both sides.
-    const moduleWidth = Math.min(4, Math.floor(innerWidth / 115));
+    const digitsGap = px(0.7 * fontScale);
+    const barcodeHeight = barHeight + digitsGap + digitsHeight;
+    const columnGap = px(2);
+    const barcodeWidth = sideBySide ? Math.floor((innerWidth - columnGap) * 0.48) : innerWidth;
+    const priceWidth = sideBySide ? innerWidth - barcodeWidth - columnGap : innerWidth;
+    const barcodeCenter = sideBySide ? paddingX + barcodeWidth / 2 : canvas.width / 2;
+    const priceCenter = sideBySide ? paddingX + barcodeWidth + columnGap + priceWidth / 2 : canvas.width / 2;
+    const layoutHeight = Math.min(innerHeight, px(34));
+    const contentTop = paddingY + (innerHeight - layoutHeight) / 2;
+    productLines.forEach((line, index) => textLine(line, productPt, 'bold', contentTop + index * nameLineHeight));
+    const bottomHeight = sideBySide ? Math.max(priceHeight, barcodeHeight) : priceHeight + barcodeHeight + px(1);
+    const bottomY = Math.max(contentTop + nameHeight + px(1), contentTop + layoutHeight - bottomHeight);
+    const barY = sideBySide ? bottomY + (bottomHeight - barcodeHeight) / 2 : bottomY;
+    // Integer pixel modules and >=10-module quiet spaces within the EAN column.
+    const moduleWidth = Math.min(4, Math.floor(barcodeWidth / 115));
     if (moduleWidth < 1) throw new Error('BARCODE_TOO_NARROW');
-    const start = Math.floor((canvas.width - 95 * moduleWidth) / 2);
-    const top = Math.round(y);
+    const start = Math.floor(barcodeCenter - 95 * moduleWidth / 2);
+    const top = Math.round(barY);
     for (let index = 0; index < data.bits.length; index += 1) {
       if (data.bits[index] !== '1') continue;
       const guard = index < 3 || (index >= 45 && index < 50) || index >= 92;
       ctx.fillRect(start + index * moduleWidth, top, moduleWidth, guard ? barHeight : Math.round(barHeight * 52 / 58));
     }
-    y += barHeight + gap;
-    textLine(data.barcode, 8 * fontScale, 'normal', y);
-    y += digitsHeight + gap;
-    // Keep the full monetary amount visible even on narrow configured stock.
+    textLine(data.barcode, 8 * fontScale, 'normal', barY + barHeight + digitsGap, barcodeCenter, barcodeWidth);
+    // Fit the entire amount; never truncate monetary digits or the currency.
     ctx.font = `bold ${pricePt * dpi / 72}px Arial, sans-serif`;
-    ctx.fillText(data.priceText, canvas.width / 2, y, innerWidth);
+    const priceY = sideBySide ? bottomY + (bottomHeight - priceHeight) / 2 : bottomY + barcodeHeight + px(1);
+    ctx.fillText(data.priceText, priceCenter, priceY, priceWidth);
     const png = canvas.toDataURL('image/png');
     if (!png.startsWith('data:image/png;base64,')) throw new Error('PNG_UNAVAILABLE');
     image.src = png;
@@ -139,7 +145,7 @@ export function writeEan13Label(printWindow, {barcode, productName, price, store
   const heightMm = dimension(settings?.heightMm, 38, 25, 80);
   const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
   const priceText = Number(price || 0).toLocaleString('el-GR', {style:'currency', currency:'EUR'});
-  const data = JSON.stringify({barcode, bits:encodeEan13(barcode), productName:String(productName ?? ''), storeName:String(storeName ?? ''), priceText, widthMm, heightMm}).replace(/</g, '\\u003c');
+  const data = JSON.stringify({barcode, bits:encodeEan13(barcode), productName:String(productName ?? ''), priceText, widthMm, heightMm}).replace(/</g, '\\u003c');
   printWindow.opener = null;
   printWindow.document.open();
   printWindow.document.write(`<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Ετικέτα ${escapeHtml(barcode)}</title><style>
@@ -148,6 +154,6 @@ html,body{margin:0;padding:0;color:#000;font-family:Arial,sans-serif}
 .label{display:block;width:${widthMm}mm;height:${heightMm}mm;margin:0;break-inside:avoid;break-after:avoid}
 .label[hidden]{display:none}.action{margin:16px;font-size:16px}button.action{padding:12px}
 @media print{html,body{width:${widthMm}mm;height:${heightMm}mm}.action{display:none!important}.label{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
-</style></head><body><img id="label-image" class="label" hidden alt="${escapeHtml([storeName, productName, barcode, priceText].join(' · '))}"><button id="print-label" class="action" disabled>Εκτύπωση ετικέτας</button><p id="label-status" class="action" role="status">Προετοιμασία εικόνας ετικέτας…</p><p class="action">Προτεινόμενος εκτυπωτής: ${escapeHtml(settings?.printerName || 'επιλέξτε εκτυπωτή')} · Χαρτί ${widthMm} × ${heightMm} mm · Κλίμακα 100% · Χωρίς περιθώρια</p><script>(${prepareRasterLabel.toString()})(${data});</script></body></html>`);
+</style></head><body><img id="label-image" class="label" hidden alt="${escapeHtml([productName, barcode, priceText].join(' · '))}"><button id="print-label" class="action" disabled>Εκτύπωση ετικέτας</button><p id="label-status" class="action" role="status">Προετοιμασία εικόνας ετικέτας…</p><p class="action">Προτεινόμενος εκτυπωτής: ${escapeHtml(settings?.printerName || 'επιλέξτε εκτυπωτή')} · Χαρτί ${widthMm} × ${heightMm} mm · Κλίμακα 100% · Χωρίς περιθώρια</p><script>(${prepareRasterLabel.toString()})(${data});</script></body></html>`);
   printWindow.document.close();
 }

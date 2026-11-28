@@ -9,6 +9,7 @@ test('native sales details keep historical costs, all101 identities, store overr
   const tables={
    Store:'"id" text primary key,"companyId" text,"name" text,"active" bool',
    Product:'"id" text primary key,"companyId" text,"name" text,"sku" text,"unit" text,"categoryId" text,"subcategoryId" text,"masterProductId" text,"productCompanyId" text,"costPrice" numeric,"salePrice" numeric',
+   ProductBarcode:'"productId" text,"barcode" text',
    ProductCategory:'"id" text primary key,"companyId" text,"name" text',
    ProductSubcategory:'"id" text primary key,"companyId" text,"name" text',
    MasterProduct:'"id" text primary key,"subcategoryName" text,"categoryName" text,"brandName" text',

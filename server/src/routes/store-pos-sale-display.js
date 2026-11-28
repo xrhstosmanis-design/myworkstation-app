@@ -3,6 +3,7 @@ import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import crypto from "crypto";
 import {prisma} from "../prisma.js";
+import {salesProductSearch} from '../lib/sales-product-search.js';
 
 const router=Router();
 let audienceColumnReady=false;
@@ -173,6 +174,7 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
 
 router.get("/sales/journal",async(req,res,next)=>{
   try{
+    const search=salesProductSearch(req.query.q);
     await ensureAudienceColumn();
     const storeId=req.query.storeId?String(req.query.storeId):null;
     if(req.user?.tokenType==="STORE_OPERATOR"){
@@ -197,8 +199,18 @@ router.get("/sales/journal",async(req,res,next)=>{
         AND (${operatorStoreId}::text IS NULL OR s."storeId"=${operatorStoreId})
         AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
         AND s."source" IN ('POS','EXCHANGE','POS_REVERSAL')
+        AND (${search.text===''} OR EXISTS(
+          SELECT 1 FROM "SaleLine" searched
+          LEFT JOIN "Product" product ON product."id"=searched."productId" AND product."companyId"=s."companyId"
+          WHERE searched."saleId"=s."id" AND (
+            TRANSLATE(LOWER(searched."description"),'άέήίόύώϊΐϋΰς','αεηιουωιιυυσ') LIKE ${search.like}
+            OR TRANSLATE(LOWER(product."name"),'άέήίόύώϊΐϋΰς','αεηιουωιιυυσ') LIKE ${search.like}
+            OR TRANSLATE(LOWER(product."sku"),'άέήίόύώϊΐϋΰς','αεηιουωιιυυσ') LIKE ${search.like}
+            OR EXISTS(SELECT 1 FROM "ProductBarcode" barcode WHERE barcode."productId"=product."id" AND TRANSLATE(LOWER(barcode."barcode"),'άέήίόύώϊΐϋΰς','αεηιουωιιυυσ') LIKE ${search.like})
+          )
+        ))
       ORDER BY s."occurredAt" DESC LIMIT 500`;
-    res.json({from,to,rows:rows.map(normalizeSale)});
+    res.json({from,to,search:search.text,rows:rows.map(normalizeSale)});
   }catch(error){next(error)}
 });
 

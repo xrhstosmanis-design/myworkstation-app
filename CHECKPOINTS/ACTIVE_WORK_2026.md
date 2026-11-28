@@ -1,8 +1,8 @@
-## 28Nov2026 — Shelf label product/barcode/price layout — ASSIGNED /root
+## 28Nov2026 — Shelf label product/barcode/price layout — INSTALLED / AWAITING OWNER PRINT
 
 - 28/11/2026 · [Ιστορικό πληρωμών προμηθευτών](CHANGES/2026-11-28-supplier-payment-correction-history.md).
 
-Independent owner expansion: no store heading, product at top, compact barcode bottom left, large complete price bottom right, matching supplied shelf-label reference. Existing 27Nov readability owner /root continued; Citizen device owner unchanged. Before-source claim; NOT TESTED. [Checkpoint](CHANGES/2026-11-28-shelf-label-layout.md). [Pending](../docs/roadmap/PENDING_WORK_2026-11-28_SHELF_LABEL.md).
+Independent owner expansion: no store heading, product at top, compact barcode bottom left, large complete price bottom right, matching supplied shelf-label reference. Existing 27Nov readability owner /root continued; Citizen device owner unchanged. Claim #4325 green/main before source; source #4326/full PR and main CI green. Combined449b748 full CI46166166601 and guarded46168050751 SUCCESS; exact healthy449b748 and served renderer PNG identical to reviewed preview. Physical print/scanner acceptance OPEN / ASSIGNED /root. [Checkpoint](CHANGES/2026-11-28-shelf-label-layout.md). [Pending](../docs/roadmap/PENDING_WORK_2026-11-28_SHELF_LABEL.md).
 
 ## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
 
@@ -37,6 +37,7 @@ ASSIGNED /root. INSTALLED: source #4308, green full PR/main CI; exact healthy ru
 - 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).
 - 27/11/2026 · Νο 5 · [Πρόσθετες εταιρικές προβολές](CHANGES/2026-11-27-no5-more-company-reads.md).
 - 28/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών προϊόντος](CHANGES/2026-11-28-no5-product-read-delegation.md).
+- 28/11/2026 · Νο 5 · [Επανεκχώρηση προβολών καρτέλας προϊόντος](CHANGES/2026-11-28-no5-product-detail-reads.md).
 
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
 
@@ -1313,3 +1314,8 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 - 28/11/2026 · [Διόρθωση πληρωμής σε κλεισμένη βάρδια](CHANGES/2026-11-28-closed-shift-payment-correction.md).
 
 - 27/11/2026: Proposal packaging cost, line removal and presentation. See CHECKPOINTS/CHANGES/2026-11-27-proposal-pack-cost.md. Operational acceptance pending.
+
+
+## 28/11/2026 — Sales product search/context / LIVE / AWAITING USER VISUAL ONLY
+
+Owner /root / feat/sales-product-search-actions-20261128 retained. Source #4324 head28f273cc passed CI46164107311; merge449b7489 passed exact-main CI46166166601 (7501PASS/0FAIL/4SKIP). Guarded release46168050751 successful; Render dep-dc5gh4m1egvs73bs5gl0 LIVE17:01:50Z, exact health449b7489 and actual entry-BektcMJG.js markers verified. Search all five tabs by description/SKU/barcode; genuine product context card/purchases stay store/period scoped. Browser sign-in wall prevented authenticated visual review; no financial LAB/USER PASS. No further source or data repair assigned. Single next action: owner full refresh and inspect selected-store Sales search/right-click during common final acceptance. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
