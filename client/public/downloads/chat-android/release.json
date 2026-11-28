@@ -10,11 +10,10 @@
   "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.20-Preview.apk",
   "sha256": "c51c6a19d0c66d53b1db9871c8fef3978ad3767b18fc38ff4532719a63be463e",
   "bytes": 3736620,
-  "sourceCommit": "6e4ba4248ef522cbce8000868f605d930a561d58",
-  "ciRun": 46067212537,
+  "sourceCommit": "a5a86bd3bddb9e0e73ed533ab1a33ef656dcb04b",
+  "ciRun": 46169952297,
   "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
   "signing": "stable-owner-key",
   "acceptance": "TECHNICAL CANDIDATE; physical acceptance pending for session renewal and sender edit/delete.",
-  "signingRun": 46067143226,
-  "sourceSha": "a5a86bd3bddb9e0e73ed533ab1a33ef656dcb04b"
+  "signingRun": 46171968899
 }
