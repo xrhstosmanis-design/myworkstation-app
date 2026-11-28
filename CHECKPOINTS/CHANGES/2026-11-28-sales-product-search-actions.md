@@ -26,3 +26,5 @@ Full CI46162381917 on9e562330: Windows/classifier/wholesale succeeded; full serv
 Clock-policy follow-up verified locally: combined21PASS/0FAIL/0SKIP including unchanged global Greece time policy; final frontend build PASS9.09s / entry-DqDIj9m8.js. Native SQL/cost evidence remains unchanged.
 
 Latest-main reconciliation: main advanced to8f3f39a1b with the other-owner shelf-label claim and the already-live No5 product-read delegation. Git reported only one active-registry prefix conflict. Preserved both owners' complete entries and all peer bytes; no own source behavior changed. The clock-fix head a5a5917f had no CI run while conflicted; a normal merge-parent reconciliation enables the fresh full CI. No force push or ownership takeover.
+
+To avoid repeated conflicts with other pages' new top claims during the long CI run, only this page's source-prepared active-registry block was moved to the end of the unchanged current-main registry. All peer records remain byte-identical and in their existing order. No source, acceptance or ownership change.
