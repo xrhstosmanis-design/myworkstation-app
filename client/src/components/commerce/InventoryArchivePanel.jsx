@@ -276,7 +276,7 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
     bulkSavingRef.current=true;setLoading(true);setError("");try{const r=await api("/api/owner-products/bulk-card",{method:"PATCH",body:JSON.stringify(payload)});if(cardScopeRef.current!==selectedStore)return;setModal(null);setBulk(bulkBlank());await load();setMessage(`Η ομαδική διόρθωση εφαρμόστηκε σε ${r.changed} είδη.`)}catch(e){if(cardScopeRef.current===selectedStore)setError(e.message)}finally{bulkSavingRef.current=false;if(cardScopeRef.current===selectedStore)setLoading(false)}
   };
 
-  const openEdit=async (row,tab="basic")=>{
+  const openEdit=async (row,tab=row.initialTab==="purchases"?"purchases":"basic")=>{
     if(readOnly&&!staffCardEdit)return;
     const selectedStore=storeId,token=++newCardGeneration.current;
     setSelected(row);setLoading(true);setError("");

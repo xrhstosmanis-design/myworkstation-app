@@ -1,10 +1,8 @@
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=value=>value==null?'Μη διαθέσιμο':Number(value).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
-const cell=value=>value==null||value===''?'Δεν έχει οριστεί':escape(value);
 const mounted=new WeakSet();
 
-// Only existing authorized GET APIs are used. Product IDs come from actual rows.
-export function installSalesProductActions(root,getContext,read){
+// Route genuine product identities to the existing complete Warehouse card.
+export function installSalesProductActions(root,getContext){
  if(mounted.has(root))return;mounted.add(root);
  const doc=root.ownerDocument,win=doc.defaultView;
  if(!doc.getElementById('sas-product-actions-style')){
@@ -23,30 +21,18 @@ export function installSalesProductActions(root,getContext,read){
   doc.body.append(dialog);dialog.querySelector('[data-sas-close]').onclick=()=>{close();target?.isConnected&&target.focus()};
   dialog.querySelector('[data-sas-close]').focus();observe(scope);
  };
- async function open(kind,element,scope){
-  const context=getContext(),id=element.dataset.productId;
-  if(!id||!current(scope))return;closeMenu();const request=++operation;
-  present(kind==='card'?'Καρτέλα είδους':'Αγορές είδους','<p>Φόρτωση…</p>',scope);
-  const active=()=>request===operation&&current(scope)&&dialog?.isConnected;
-  try{
-   const params=new URLSearchParams({storeId:context.storeId,from:context.from,to:context.to});
-   if(kind==='card'){
-    params.set('productId',id);
-    const rows=await read(`/api/owner-products/catalog?${params}`,context.token);
-    if(!active())return;
-    const product=Array.isArray(rows)?rows.find(p=>p.id===id):null,store=product?.stores?.find(s=>s.storeId===context.storeId);
-    if(!product||!store)throw Error('Δεν βρέθηκε η καρτέλα στο επιλεγμένο κατάστημα.');
-    const fields=[['Περιγραφή',cell(product.name)],['Κωδικός',cell(product.sku)],['Κατηγορία',cell(product.categoryName)],['Υποκατηγορία',cell(product.subcategoryName)],['Εταιρεία',cell(product.productCompanyName)],['Μονάδα μέτρησης',cell(product.unit)],['Τρέχουσα λιανική καταστήματος',money(store.salePrice??product.salePrice)],['Απόθεμα καταστήματος',cell(store.currentStock)],['ΦΠΑ',product.vatRate==null?'Μη διαθέσιμο':escape(product.vatRate)+'%'],['Κόστος καρτέλας',money(product.costPrice)]];
-    present('Καρτέλα είδους',`<p>Στοιχεία καρτέλας · επιλεγμένο κατάστημα: ${cell(store.storeName||context.storeId)}</p><dl>${fields.map(([label,value])=>`<dt>${label}</dt><dd>${value}</dd>`).join('')}</dl><h3>Barcodes</h3><ul>${(product.barcodes||[]).map(b=>`<li>${cell(b.barcode)} · ${cell(b.unitMultiplier)} ${cell(product.unit)}</li>`).join('')||'<li>Δεν έχουν οριστεί.</li>'}</ul>`,scope);
-   }else{
-    const data=await read(`/api/owner-products/${encodeURIComponent(id)}/purchases?${params}`,context.token);
-    if(!active())return;
-    if(data.product?.id!==id)throw Error('Η αντιστοίχιση του είδους άλλαξε. Άνοιξε ξανά τη γραμμή.');
-    const rows=data.purchases||[];
-    present('Αγορές είδους',`<p><strong>${cell(data.product.name)}</strong> · ${escape(context.from)} έως ${escape(context.to)} · επιλεγμένο κατάστημα</p><p>Έως 1.000 εγγραφές του υπάρχοντος ιστορικού αγορών. Οι ποσότητες αφορούν τη μονάδα της καταγεγραμμένης αγοράς.</p><div class="sas-history"><table><thead><tr>${['Ημερομηνία','Προμηθευτής','Τιμολόγιο','Κατάσταση','Ποσότητα','Καθαρή τιμή μονάδας','Καθαρή αξία','Σύνολο με ΦΠΑ'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><td>${cell(new Date(r.invoicedAt||r.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false}))}</td><td>${cell(r.supplierName)}</td><td>${cell(r.invoiceNumber)}</td><td>${cell(r.status)}</td><td>${cell(r.quantity)}</td><td>${money(r.unitCost)}</td><td>${money(r.netAmount)}</td><td>${money(r.grossAmount)}</td></tr>`).join('')||'<tr><td colspan="8">Δεν υπάρχουν καταγεγραμμένες αγορές στο διάστημα.</td></tr>'}</tbody></table></div>`,scope);
-   }
-  }catch(error){if(active())present(kind==='card'?'Καρτέλα είδους':'Αγορές είδους',`<p role="alert">${escape(error.message||'Αποτυχία φόρτωσης.')}</p>`,scope)}
+ function open(kind,element,scope){
+  const context=getContext(),productId=element.dataset.productId;
+  if(!productId||!current(scope))return;
+  closeMenu();
+  const event=new win.CustomEvent('mws:price-catalog-full-card',{
+   bubbles:true,cancelable:true,
+   detail:{productId,storeId:context.storeId,initialTab:kind==='purchases'?'purchases':'basic'}
+  });
+  root.dispatchEvent(event);
+  if(!event.defaultPrevented)present('Καρτέλα είδους','<p role="alert">Η πλήρης καρτέλα της Αποθήκης δεν είναι διαθέσιμη από αυτή την προβολή.</p>',scope);
  }
+
  function show(event,element){
   if(!element?.dataset.productId||!getContext().storeId||!getContext().valid)return;
   event.preventDefault();close();target=element;const scope=snapshot();
