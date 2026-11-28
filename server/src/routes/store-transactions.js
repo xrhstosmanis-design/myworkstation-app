@@ -798,6 +798,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
   const filters=z.object({
     companyId:z.string().trim().max(180).optional().default(""),
     storeId:z.string().trim().max(180).optional().default(""),
+    view:z.enum(["review","history"]).default("review"),
     from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
   }).parse(req.query||{});
@@ -814,14 +815,15 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
     LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR EXISTS(SELECT 1 FROM "PurchaseDocument" scoped WHERE scoped."id"=a."purchaseDocumentId" AND scoped."companyId"=ss."companyId" AND scoped."storeId"=ss."storeId"))
     LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId" AND (${!delegatedApprovalsRead(req)} OR p."storeId"=ss."storeId")
-    WHERE ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
-      AND ((ss."paymentMethod"='BANK_TRANSFER' AND t."attachmentData" IS NULL) OR ABS(t."amount"-COALESCE((SELECT SUM(aa."amount") FROM "SupplierPaymentAllocation" aa WHERE aa."settlementId"=ss."id"),0))>1.005)
+    WHERE ((${filters.view}='history' AND ss."status"<>'CANCELLED' AND t."reversedAt" IS NULL AND t."storeId"=ss."storeId")
+      OR (${filters.view}='review' AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
+        AND ((ss."paymentMethod"='BANK_TRANSFER' AND t."attachmentData" IS NULL) OR ABS(t."amount"-COALESCE((SELECT SUM(aa."amount") FROM "SupplierPaymentAllocation" aa WHERE aa."settlementId"=ss."id"),0))>1.005)))
       AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR ss."companyId"=${filters.companyId})
       AND (${filters.storeId}='' OR ss."storeId"=${filters.storeId})
       AND (${filters.from||null}::date IS NULL OR ss."paidAt">=(${filters.from||null}::date::timestamp AT TIME ZONE 'Europe/Athens'))
       AND (${filters.to||null}::date IS NULL OR ss."paidAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
-    GROUP BY ss."id",t."id",s."name",st."name",c."name",owner."fullName" ORDER BY ss."createdAt" ASC LIMIT 500
+    GROUP BY ss."id",t."id",s."name",st."name",c."name",owner."fullName" ORDER BY CASE WHEN ${filters.view}='history' THEN ss."paidAt" END DESC, ss."createdAt" ASC LIMIT 500
   `;
   const companies=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`
     SELECT c."id",c."name",owner."fullName" AS "ownerName"
