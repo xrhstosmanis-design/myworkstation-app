@@ -1,3 +1,4 @@
+import PaymentAmountCorrectionAction from "../store/PaymentAmountCorrectionAction.jsx";
 import {withTwinScope,validTwinScope,guardTwinRequest} from "./ai-command-twin-navigation.js";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,CheckCircle2,FileText,RefreshCw,ShieldCheck,X} from "lucide-react";
@@ -71,7 +72,7 @@ export default function SupplierSettlementReviewCenter({request:baseRequest,onCl
       {item.note&&<p className="supplier-review-operator-note"><b>Σημείωση χειριστή:</b> {item.note}</p>}
       <label className="supplier-review-note">Παρατήρηση ελέγχου (προαιρετική)<textarea value={notes[item.id]||""} onChange={event=>changeNote(item.id,event.target.value)} maxLength="500" placeholder="Προαιρετική παρατήρηση για τον έλεγχο."/></label>
       {allocationId===item.id&&<ManualSupplierAllocation item={item} request={request} onCancel={()=>setAllocationId("")} onSaved={async()=>{setAllocationId("");setMessage("Η υπάρχουσα πληρωμή αντιστοιχίστηκε χωρίς νέα εκταμίευση.");await load()}}/>}
-      <footer><button type="button" className="secondary" disabled={Boolean(busy)||Boolean(allocationId)} onClick={()=>setAllocationId(item.id)}>Αντιστοίχιση πληρωμής</button><button type="button" className="secondary" onClick={()=>openEvidence(item)} disabled={busy===`evidence:${item.id}`}><FileText/>{busy===`evidence:${item.id}`?"Άνοιγμα…":"Προβολή αποδεικτικού"}</button><button type="button" onClick={()=>review(item)} disabled={Boolean(busy)||Boolean(allocationId)}><ShieldCheck/>Επιβεβαίωση ελέγχου</button></footer>
+      <footer>{item.storeId&&item.transactionId&&<PaymentAmountCorrectionAction api={request} storeId={item.storeId} transactionId={item.transactionId} onChanged={load}/>}<button type="button" className="secondary" disabled={Boolean(busy)||Boolean(allocationId)} onClick={()=>setAllocationId(item.id)}>Αντιστοίχιση πληρωμής</button><button type="button" className="secondary" onClick={()=>openEvidence(item)} disabled={busy===`evidence:${item.id}`}><FileText/>{busy===`evidence:${item.id}`?"Άνοιγμα…":"Προβολή αποδεικτικού"}</button><button type="button" onClick={()=>review(item)} disabled={Boolean(busy)||Boolean(allocationId)}><ShieldCheck/>Επιβεβαίωση ελέγχου</button></footer>
     </article>})}</div>
   </section></div>;
 }

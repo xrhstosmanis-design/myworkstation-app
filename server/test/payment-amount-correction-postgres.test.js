@@ -63,6 +63,15 @@ test('isolated PostgreSQL payment correction is atomic, serializes races, preser
   await db.$executeRawUnsafe('ALTER TABLE "StoreOperatorAudit" DROP CONSTRAINT "reject_test_audit"');
   for(const rejectedScope of [{...scope,companyId:'foreign'},{...scope,storeId:'foreign'},{...scope,terminalPos:'CONTROL'},{...scope,user:{...user,id:'other'}},{...scope,user:{...user,permissions:[]}}])await assert.rejects(correctPaymentAmount(db,rejectedScope,request()));
   await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED' WHERE "id"='shift'`;await assert.rejects(correctPaymentAmount(db,scope,request()));assert.equal((await state()).events.length,0);
+  const ownerScope={...scope,user:{id:'owner',role:'OWNER',companyId:'company'}};
+  const context=await paymentCorrectionContext(db,ownerScope);
+  assert.equal(context.amount,3);
+  const corrected=await correctPaymentAmount(db,ownerScope,request());
+  assert.equal(corrected.cashDelta,-2);
+  const closedState=await state();
+  assert.equal(Number(closedState.payment.amount),5);
+  assert.equal(closedState.events[0].details.shiftStatus,'CLOSED');
+  assert.equal((await db.$queryRaw`SELECT "status" FROM "CashShiftSession" WHERE "id"='shift'`)[0].status,'CLOSED');
   await reset();await db.$executeRaw`UPDATE "StoreTransaction" SET "type"='SUPPLIER_PAYMENT',"supplierId"='supplier' WHERE "id"='payment'`;
   await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES('doc','company','TEST-DOC',10)`;
   await db.$executeRaw`INSERT INTO "SupplierPaymentSettlement" VALUES('settlement','company','store','payment','CONFIRMED','supplier','owner',NOW(),'Old proof')`;
