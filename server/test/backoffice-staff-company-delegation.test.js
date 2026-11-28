@@ -52,3 +52,19 @@ test('company product details require the catalog and do not grant product mutat
   }
   assert.equal(validCompanyReadDelegationCeiling(['product-card.edit-description']),false);
 });
+
+test('company price and purchase reads keep separate grants and store dependencies',()=>{
+  const parents=['stores.read','product-center.read'];
+  const keys=['product-audience-discounts.read','price-catalog.read','customer-wholesale-prices.read','product-purchases.read'];
+  const actor=[...parents,...keys];
+  assert.deepEqual(companyReadDelegationOptions(actor,keys),keys);
+  assert.deepEqual(companyReadDelegationOptions(actor,[]),[]);
+  assert.deepEqual(companyReadDelegationOptions(parents,keys),[]);
+  assert.equal(companyCapabilitiesAfterDelegation([],'product-audience-discounts.read',true),null);
+  assert.equal(companyCapabilitiesAfterDelegation(['stores.read'],'product-purchases.read',true),null);
+  assert.equal(companyCapabilitiesAfterDelegation(['product-center.read'],'product-purchases.read',true),null);
+  assert.deepEqual(companyCapabilitiesAfterDelegation(parents,'product-purchases.read',true),[...parents,'product-purchases.read']);
+  for(const key of keys.slice(1,3)){
+    assert.deepEqual(companyCapabilitiesAfterDelegation([],key,true),[key]);
+  }
+});
