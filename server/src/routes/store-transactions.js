@@ -825,6 +825,26 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
       AND (${filters.to||null}::date IS NULL OR ss."paidAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
     GROUP BY ss."id",t."id",s."name",st."name",c."name",owner."fullName" ORDER BY CASE WHEN ${filters.view}='history' THEN ss."paidAt" END DESC, ss."createdAt" ASC LIMIT 500
   `;
+
+  const directRows=filters.view==="history"?await prisma.$queryRaw`
+    SELECT t."id",t."id" AS "transactionId",t."storeId",t."amount",t."paymentMethod",
+      t."occurredAt" AS "paidAt",t."occurredAt" AS "createdAt",t."actorName" AS "createdByName",
+      t."description" AS "note",t."attachmentFilename",t."attachmentData" IS NOT NULL AS "hasAttachment",
+      COALESCE(NULLIF(t."supplierName",''),s."name",'Προμηθευτής') AS "supplierName",
+      st."name" AS "storeName",c."name" AS "companyName",'DIRECT' AS "status"
+    FROM "StoreTransaction" t
+    JOIN "Store" st ON st."id"=t."storeId" AND st."companyId"=t."companyId"
+    JOIN "Company" c ON c."id"=t."companyId"
+    LEFT JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
+    WHERE t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+      AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."transactionId"=t."id" AND ss."companyId"=t."companyId" AND ss."storeId"=t."storeId")
+      AND (${scopeCompanyId}::text IS NULL OR t."companyId"=${scopeCompanyId})
+      AND (${filters.companyId}='' OR t."companyId"=${filters.companyId})
+      AND (${filters.storeId}='' OR t."storeId"=${filters.storeId})
+      AND (${filters.from||null}::date IS NULL OR t."occurredAt">=(${filters.from||null}::date::timestamp AT TIME ZONE 'Europe/Athens'))
+      AND (${filters.to||null}::date IS NULL OR t."occurredAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
+    ORDER BY t."occurredAt" DESC,t."id" LIMIT 500
+  `:[];
   const companies=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`
     SELECT c."id",c."name",owner."fullName" AS "ownerName"
     FROM "Company" c
@@ -833,7 +853,8 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     ORDER BY c."name"
   `;
   const stores=delegatedApprovalsRead(req)?[]:await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
-  const items=rows.map(row=>{
+  const historyRows=filters.view==="history"?[...rows,...directRows].sort((a,b)=>new Date(b.paidAt)-new Date(a.paidAt)).slice(0,500):rows;
+  const items=historyRows.map(row=>{
     const amount=Number(row.amount||0),allocations=Array.isArray(row.allocations)?row.allocations:[];
     const allocationTotal=Number(allocations.reduce((sum,item)=>sum+Number(item.amount||0),0).toFixed(2));
     const checks=[];
