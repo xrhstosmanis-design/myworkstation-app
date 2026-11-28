@@ -3,7 +3,8 @@ import {validStaffCompanyCapabilities} from './backoffice-staff-company.mjs';
 export const delegatableCompanyReadKeys=Object.freeze([
   'stores.read','categories.read','category-products.read','vat-departments.read','product-companies.read',
   'expense-categories.read','customer-categories.read','professions.read','shipping-methods.read',
-  'product-center.read','product-barcodes.read','product-set.read','product-stock-package.read'
+  'product-center.read','product-barcodes.read','product-set.read','product-stock-package.read',
+  'product-card.read','product-details.read','product-delivery.read','product-price-history.read'
 ]);
 
 export function validCompanyReadDelegationCeiling(keys){
