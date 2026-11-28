@@ -1,4 +1,6 @@
-- 28/11/2026 · [Διόρθωση πληρωμής σε κλεισμένη βάρδια](CHANGES/2026-11-28-closed-shift-payment-correction.md).
+## 27/11/2026 — Διανομή υπογεγραμμένου Android Chat 0.1.19 — LAB
+
+Δημοσίευση του ελεγμένου APK από το signing run 46067143226. [Checkpoint](CHANGES/2026-11-27-chat-android-019-distribution.md).
 
 ## 27/11/2026 23:48 Athens — branding and sales fields / TECHNICALLY INSTALLED / AWAITING USER VISUAL
 
@@ -579,6 +581,9 @@ Release checkpoint: `CHECKPOINTS/CHANGES/2026-11-17-pos-packs-cash-returns-relea
 - 2026-11-17 · Νο 9 · Αυτόματα email προσφορών και απογραφής · [Checkpoint](CHANGES/2026-11-17-promotion-result-email.md) · Προσφορές CI 5/5, προστέθηκαν απογραφή και lifecycle, ενιαίο CI και τελικό LAB εκκρεμούν.
 - 2026-11-21 · 7–9 · ASSIGNED /root · Stage B πριν-source: νέο ρητό No7 V4 και V3→V4 metadata-only μετάβαση, strict source projection/revalidation και διατήρηση όλων των security deny rows χωρίς ανάγνωση/hash/DML τους. No14 V1 αρχεία/19f6/75dd ανέπαφα, καμία default/env/hosted εφαρμογή. Αναγκαία μόνο computed No5 provenance/packaging/parity αρμοδιότητα, χωρίς authority αλλαγή. [Claim](CHANGES/2026-11-21-report-security-v4-transition-claim.md). Claim #4138 merged f96d2a4. Stage B source candidate: explicit V3→V4, runtime/profile/UI και πραγματικό isolated PG18.7/Node20 native 12 PASS / 0 FAIL / 0 SKIP· 57-source closure/Python parity και frontend build PASS, full CI εκκρεμεί, όχι hosted apply. [Validation](CHANGES/2026-11-21-report-security-v4-transition-validation.md). Draft/root review πριν δημοσίευση source.
 - 2026-11-21 · 7–9 · ASSIGNED /root · Stage A claim #4130 merged 28fb789 πριν source. Τέσσερα νέα ανεξάρτητα αρχεία: frozen security definition/strict read-only collector και SNAPSHOT_ONLY projection/tests. Actual isolated PostgreSQL18.7 + pure batch 7 PASS / 0 FAIL / 0 SKIP, deny rows αμετάβλητα και unknown relations reject. Καμία shared εισαγωγή/profile/No14 αλλαγή ή hosted apply· μελλοντική integration απαιτεί χωριστή ανάληψη. [Receipt](CHANGES/2026-11-21-report-security-compatibility-stage-a.md).
+
+- 28/11/2026 · [Σύνδεση ειδών καταλόγου με εγγυοδοσίες](CHANGES/2026-11-27-supplier-deposit-catalog.md) · Εκκρεμεί LAB BackOffice.
+
 - 2026-11-20 · 7–9 · ASSIGNED /root · #4096 merged 46ec68e, full source/main CI 5/5 SUCCESS, 6915 PASS / 0 FAIL / 4 optional SKIP και 8 backup PASS· native driver/dispatch/legacy/START εκτελέστηκαν. Ανθρώπινη CASH παρουσίαση και ιδιωτικό actual-payload preview με ίδια στοιχεία, χωρίς resend/reset. LIVE 46ec68e επιβεβαιώθηκε με κανονικό guard 44759535947 και exact no-cache health· παλιό ledger 2 ACCEPTED/version 4 αμετάβλητο έως 15:13:59 UTC και θετικό mailbox control 15:14:38 UTC μόνο αρχικό μήνυμα. Δεν έγινε resend και δεν δηλώνεται νέο formatted inbox. Το παλιό RAW JSON email παραμένει παλιό delivery proof, όχι νέο formatted inbox PASS. [Validation](CHANGES/2026-11-20-report-cash-human-mail-validation.md).
 - 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-closed-carry-in-20261120 · Προ-source claim #4085 merged 4c25a5a μετά CI 44720105539 SUCCESS. Πραγματικό Διαδόχου DAILY 19/11 πριν: 4 βάρδιες/HOLD. Υποψήφια περιορισμένη διόρθωση: έγκυρος κλειστός μη επικαλυπτόμενος predecessor context, εκτός owned totals/count/reviewed evidence, εντός fingerprint· open/invalid/foreign/duplicate/overlap HOLD προστατεύονται. Node20 42 PASS / 0 FAIL / 1 native-env SKIP, ανεξάρτητη ανασκόπηση χωρίς blocker. Πλήρες native CI και πραγματικό after εκκρεμούν. [Ανάληψη](CHANGES/2026-11-20-report-closed-carry-in.md), [validation](CHANGES/2026-11-20-report-closed-carry-in-validation.md).
 - 2026-11-20 · 7–9 · ASSIGNED /root, συνέχεια fix/report-chat-compatibility-20261120 · Προ-source ανάληψη strict reports-only V3 για τους τέσσερις υφιστάμενους πίνακες Chat που αποκλείουν το πραγματικό installer inspect με 503. V1/V2 και auth διατηρούνται, καμία αλλαγή συμπεριφοράς Chat ή ανάληψη Νο16/Νο14. [Checkpoint](CHANGES/2026-11-20-report-chat-compatibility-claim.md). Claim #4079 merged e23eaa1 πριν source. V3 source prepared: 25 focused PASS και 16 ανεξάρτητοι COMPANY/package PASS, 1 τοπικό Docker skip· native PostgreSQL V3 PASS στο source CI44697723679, μία παλιά προσδοκία 47→49 διορθώθηκε· νέο full CI και LAB εκκρεμούν. Κλειστή provenance 47→49, παλιά manifest/COMPANY hashes αμετάβλητα. [Ανασκόπηση](CHANGES/2026-11-20-report-chat-compatibility-provenance.md).
@@ -1289,3 +1294,7 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 ## 27/11/2026 — Μηδενισμός αποθέματος στο Αρχείο ειδών — LAB
 
 Μηδενισμός επιλεγμένων, αρνητικών ή όλων από την Ομαδική διόρθωση του Αρχείου ειδών. [Checkpoint](CHANGES/2026-11-27-inventory-archive-stock-reset.md).
+
+- 27/11/2026 · [Αντιστοιχίσεις συσκευασίας στο POS OCR](CHANGES/2026-11-27-pos-ocr-supplier-pack.md) · Εκκρεμεί δοκιμή ολοκληρωμένης ροής.
+
+- 28/11/2026 · [Διόρθωση πληρωμής σε κλεισμένη βάρδια](CHANGES/2026-11-28-closed-shift-payment-correction.md).

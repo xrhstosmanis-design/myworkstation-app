@@ -192,6 +192,14 @@ BEGIN
   ELSIF v_text ~ '(ΦΙΑΛ|BOTTLE)' THEN v_pack:=20;
   END IF;
   IF v_pack>1 AND (v_text ~ '(ΚΙΒ|ΚΒ|CASE|BOX|PACK|1X[0-9]+|[0-9]+X[0-9]+)') THEN v_unit:='PACKAGE'; ELSE v_pack:=1; END IF;
+  -- The reviewed order line is authoritative for the paired draft document.
+  IF NEW."invoiceUnit"='PACKAGE' THEN
+    v_unit:='PACKAGE';
+    v_pack:=NULLIF(NEW."stockUnitsPerInvoiceUnit",0);
+  ELSIF NEW."invoiceUnit"='PIECE' THEN
+    v_unit:='PIECE';
+    v_pack:=1;
+  END IF;
 
   v_vat:=GREATEST(0,COALESCE(NEW."vatRate",0));
   IF COALESCE(NEW."quantity",0)>0 AND COALESCE(NEW."netAmount",0)>0 THEN
