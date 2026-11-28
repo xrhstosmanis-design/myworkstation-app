@@ -67,22 +67,45 @@ export async function readPosOrderProposal(db,scope){
   }
   const candidates=rows.filter(row=>row.suggestedQuantity>0||row.suggestedQuantity==null);
   const purchases=candidates.length?await tx.$queryRaw`
-   SELECT DISTINCT ON (l."productId") l."productId",s."id" AS "supplierId",s."name" AS "supplierName",
-    l."unit",l."unitsPerPackage",
-    l."netAmount"/NULLIF(l."quantity" * CASE WHEN l."unit"='PACKAGE' THEN NULLIF(l."unitsPerPackage",0) ELSE 1 END,0) AS "unitCost"
-   FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-   JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId" AND s."active"=TRUE
-   WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."status"='APPROVED'
-    AND d."documentType"='INVOICE' AND l."quantity">0 AND l."productId"=ANY(${candidates.map(row=>row.productId)}::text[])
-    AND (${supplier?.id??''}='' OR d."supplierId"=${supplier?.id??''})
-   ORDER BY l."productId",d."documentDate" DESC NULLS LAST,d."id" DESC,l."id" DESC`:[];
-  const byProduct=new Map(purchases.map(row=>[row.productId,row]));
+   WITH receipt_costs AS (
+    SELECT l."productId",s."id" AS "supplierId",s."name" AS "supplierName",
+     d."documentDate" AS date,d."id" AS document,l."id" AS line,
+     CASE WHEN posted.pack>1 THEN posted.pack WHEN l."unit"='PACKAGE' THEN NULLIF(l."unitsPerPackage",0) ELSE 1 END AS pack,
+     l."netAmount"/NULLIF(l."quantity",0) AS "invoiceUnitCost"
+    FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+    JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId" AND s."active"=TRUE
+    LEFT JOIN LATERAL (
+     SELECT CASE WHEN count(*)=1 AND max(o."quantity")=l."quantity"
+      AND bool_and(o."invoiceUnit"='PACKAGE') THEN max(o."stockUnitsPerInvoiceUnit") END AS pack
+     FROM "PurchaseOrderPosting" po JOIN "PurchaseOrder" ord ON ord."id"=po."orderId"
+     JOIN "PurchaseOrderLine" o ON o."orderId"=ord."id" AND o."productId"=l."productId"
+     WHERE po."purchaseDocumentId"=d."id" AND po."companyId"=d."companyId" AND po."supplierId"=s."id"
+      AND ord."companyId"=d."companyId" AND ord."storeId"=d."storeId"
+    ) posted ON TRUE
+    WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."status"='APPROVED'
+     AND d."documentType"='INVOICE' AND l."quantity">0 AND l."productId"=ANY(${candidates.map(row=>row.productId)}::text[])
+     AND (${supplier?.id??''}='' OR d."supplierId"=${supplier?.id??''})
+   ), ranked AS (
+    SELECT *,row_number() OVER (PARTITION BY "productId" ORDER BY date DESC NULLS LAST,document DESC,line DESC) AS latest,
+     row_number() OVER (PARTITION BY "productId","supplierId",(pack>1) ORDER BY date DESC NULLS LAST,document DESC,line DESC) AS supplier_rank
+    FROM receipt_costs
+   )
+   SELECT "productId","supplierId","supplierName",pack,"invoiceUnitCost",latest::int
+   FROM ranked WHERE latest=1 OR (pack>1 AND supplier_rank=1)`:[];
+  const byProduct=new Map(purchases.filter(row=>row.latest===1).map(row=>[row.productId,row]));
+  const priorPacks=new Map(purchases.filter(row=>Number(row.pack)>1).map(row=>[supplierMinimumKey(row.supplierId,row.productId),row]));
   const [minimumSchema]=await tx.$queryRaw`SELECT to_regclass('"ManagementParameters"') IS NOT NULL AS ready`;
   const [configuration]=minimumSchema?.ready?await tx.$queryRaw`
    SELECT "settings"->${supplierMinimumSection} AS minimums FROM "ManagementParameters" WHERE "companyId"=${scope.companyId}`:[];
   rows=candidates.map(row=>{
    const purchase=byProduct.get(row.productId);
-   const pack=purchase?.unit==='PACKAGE'&&Number(purchase.unitsPerPackage)>1?Number(purchase.unitsPerPackage):null;
+   const priorPack=purchase?priorPacks.get(supplierMinimumKey(purchase.supplierId,row.productId)):null;
+   const conflict=Boolean(purchase&&Number(purchase.pack)===1&&priorPack
+    && purchase.invoiceUnitCost!=null&&priorPack.invoiceUnitCost!=null
+    && Number(purchase.invoiceUnitCost)===Number(priorPack.invoiceUnitCost));
+   const basis=conflict?priorPack:purchase;
+   const pack=Number(basis?.pack)>1?Number(basis.pack):null;
+   const cost=basis?.invoiceUnitCost!=null&&Number(basis.pack)>0?Number(basis.invoiceUnitCost)/Number(basis.pack):null;
    const supplierId=supplier?.id??purchase?.supplierId??null;
    const configured=supplierId?configuration?.minimums?.[supplierMinimumKey(supplierId,row.productId)]:null;
    const minimum=Number.isFinite(configured)&&configured>0&&configured<=100000000?configured:null;
@@ -90,7 +113,9 @@ export async function readPosOrderProposal(db,scope){
     suggestedQuantity:roundSupplierQuantity(row.suggestedQuantity,pack,minimum??0),
     orderSupplierId:supplierId,
     orderSupplierName:supplier?.name??purchase?.supplierName??null,
-    orderUnitCost:purchase?.unitCost!=null&&Number(purchase.unitCost)>=0?Number(purchase.unitCost):null};
+    orderUnitCost:Number.isFinite(cost)&&cost>=0?cost:null,
+    orderPackageCost:pack&&cost!=null?Number(basis.invoiceUnitCost):null,
+    warnings:[...row.warnings,...(conflict?['Η τελευταία αγορά γράφει τεμάχιο με ίδια τιμή κιβωτίου. Η εκτίμηση χρησιμοποιεί την προηγούμενη καταγεγραμμένη συσκευασία. Επιβεβαίωσε πριν την αποστολή.']:[])]};
   });
   const alarmState=await readWeeklyStockAlarmState(tx,scope);
   return {...proposal,supplierMinimumAvailable:minimumSchema?.ready===true,storeName:scope.storeName,period:scope.period,supplier,rows:rows.filter(r=>r.suggestedQuantity>0||r.suggestedQuantity==null),supplierBasis:'STORE_PURCHASE_HISTORY',automaticAlarm:alarmState.enabled,alarmState};

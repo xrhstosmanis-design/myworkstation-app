@@ -1,0 +1,2 @@
+# Proposal pack cost and removal
+Proposal quantities remain in stock units. Approved invoices produced by purchase posting can label a packaging line PIECE while keeping invoice-unit quantities. Recover the pack from the uniquely matched scoped posting line. If the latest recorded piece price equals the preceding confirmed pack price, present the pack estimate and a review warning. No source invoice or stock correction. Add line removal and restore, net line estimates and compact controls in both surfaces.
