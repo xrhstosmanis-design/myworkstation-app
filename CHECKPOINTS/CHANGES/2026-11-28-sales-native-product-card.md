@@ -14,4 +14,4 @@ Claim #4333 green CI46175339582 merged990278262 before source. Removed custom su
 
 First prepared revision forwarded an initial purchases card tab; final source instead shares the exact Warehouse context-menu purchase-history implementation to meet both parts of the user's request. No production version of the intermediate change was released. Focused final tests/build recorded below. Full PR/main CI, exact guarded release and shared visual acceptance pending. NOT INSTALLED / NOT LAB PASS.
 
-Final focused19PASS/0FAIL/0SKIP. Final frontend build PASS (TABLE_SERVICE verified); exact served bundle and revision will be recorded after guarded release.
+Final focused20PASS/0FAIL/0SKIP, including immediate stale-export rejection. Final frontend build PASS10.84s / entry-BHNK20K_.js (TABLE_SERVICE verified); exact served bundle and revision will be recorded after guarded release.

@@ -47,7 +47,9 @@ export function installSalesProductActions(root,getContext,read,loadPurchases=()
     }
    });
    if(!active()){view?.remove();return}
-   nativeDialog=view;nativeDialog?.querySelector('[data-close]')?.focus();
+   nativeDialog=view;
+   nativeDialog?.addEventListener('click',event=>{if(!active()){event.preventDefault();event.stopImmediatePropagation();close()}},true);
+   nativeDialog?.querySelector('[data-close]')?.focus();
   }catch(error){if(active())present('Αγορές είδους',`<p role="alert">${escape(error.message||'Αποτυχία φόρτωσης.')}</p>`,scope)}
  }
 

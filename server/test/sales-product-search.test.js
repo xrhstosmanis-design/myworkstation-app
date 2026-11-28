@@ -74,3 +74,9 @@ test('delayed native purchase reads cannot render after a store or token change'
   context={storeId:'other',valid:true,token:'renewed'};root.dispatchEvent(new w.CustomEvent('sas:scope-change'));resolve({purchases:[]});await tick();assert.equal(rendered,0);assert.equal(w.document.querySelector('[role="dialog"]'),null);
  }finally{root.remove();await tick();w.close()}
 });
+
+test('native history export is blocked immediately when its scope changes',async()=>{
+ const dom=new JSDOM('<section id="root"><div data-product-id="p">Product</div></section>',{url:'https://test.invalid'}),w=dom.window,root=w.document.querySelector('#root');let context={storeId:'s',valid:true,token:'t'},exports=0;
+ installSalesProductActions(root,()=>context,async()=>({}),async()=>({openInventoryPurchases:async()=>{const view=w.document.createElement('div');view.innerHTML='<button data-export>CSV</button>';view.firstElementChild.onclick=()=>exports++;w.document.body.append(view);return view}}));
+ try{root.firstElementChild.dispatchEvent(new w.MouseEvent('contextmenu',{bubbles:true,cancelable:true}));w.document.querySelector('[data-kind="purchases"]').click();await tick();context={...context,storeId:'other'};w.document.querySelector('[data-export]').click();assert.equal(exports,0);assert.equal(w.document.querySelector('[data-export]'),null)}finally{root.remove();await tick();w.close()}
+});
