@@ -69,7 +69,7 @@ test("installer backs up an existing shortcut and touches no fiscal software",()
   assert.match(installer,/InstallerBackups/);
   assert.match(installer,/Copy-Item -LiteralPath \$shortcut/);
   assert.doesNotMatch(installer,/C:\\_km|C:\\Kiosk Manager|C:\\CapDriverService|schtasks|Set-Service|Stop-Service|Start-Service|reg\.exe/i);
-  assert.match(installer,/NO RBS \/ NO KIOSK MANAGER \/ NO CAPDRIVER CHANGES/);
+  assert.match(installer,/NO RBS \/ NO FISCAL SOFTWARE \/ NO CAPDRIVER CHANGES/);
 });
 
 test("installer needs no developer tools credentials or observer activation",()=>{
@@ -94,7 +94,7 @@ test("recovery does not alter fiscal software services registry or scheduled tas
   for(const source of [recovery,recoveryLauncher]){
     assert.doesNotMatch(source,/C:\\_km|C:\\Kiosk Manager|C:\\CapDriverService|schtasks|Set-Service|Stop-Service|Start-Service|reg\.exe|Remove-Item/i);
   }
-  assert.match(recovery,/NO RBS \/ NO KIOSK MANAGER \/ NO CAPDRIVER CHANGES/);
+  assert.match(recovery,/NO RBS \/ NO FISCAL SOFTWARE \/ NO CAPDRIVER CHANGES/);
   assert.match(guide,/Αν δεν υπάρχει έγκυρο installation state, σταματά χωρίς αλλαγές/);
 });
 

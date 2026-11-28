@@ -31,7 +31,7 @@ test("the readiness report separates remote work from checks performed at KAT",(
   assert.match(route,/ΑΠΟΜΑΚΡΥΣΜΕΝΑ — Επιβεβαιωμένο backup/);
   assert.match(route,/ΣΤΟ ΚΑΤ — Δοκιμή εισόδου εργαζομένου/);
   assert.match(route,/ΣΤΟ ΚΑΤ — Δοκιμή ανοίγματος και κλεισίματος βάρδιας/);
-  assert.match(route,/ΣΤΟ ΚΑΤ — Επιβεβαίωση ανεπηρέαστου Kiosk Manager/);
+  assert.match(route,/ΣΤΟ ΚΑΤ — Επιβεβαίωση ανεπηρέαστου ταμειακού συστήματος/);
 });
 
 test("readiness is read only and keeps RBS outside the pilot flow",()=>{

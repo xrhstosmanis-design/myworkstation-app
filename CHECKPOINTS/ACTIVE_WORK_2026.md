@@ -1,4 +1,10 @@
-- 27/11/2026 · [Αντιστοιχίσεις συσκευασίας στο POS OCR](CHANGES/2026-11-27-pos-ocr-supplier-pack.md) · Εκκρεμεί δοκιμή ολοκληρωμένης ροής.
+## 27/11/2026 23:48 Athens — branding and sales fields / TECHNICALLY INSTALLED / AWAITING USER VISUAL
+
+Owner /root / fix/myworkstation-visible-branding-20261127 retained. #4311 merged c16d5694; full PR CI46068024100 and exact main CI46070545528 SUCCESS. Guarded release46072139313 / Render dep-dc4vj8jl550s73e3gaug live; health exact c16d5694 and served application entry verified. Existing LAB report read-only presentation observed, no business operation or financial LAB/USER PASS declared. Both source scopes complete. Only common owner visual acceptance remains; next action: full refresh and inspect selected-store Sales/items. No duplicate source assignment. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
+
+## 27/11/2026 — branding + sales fields / source prepared / AWAITING CI
+
+Owner /root retained. Claim4310 merged6e4ba424 before edits. Visible competitor copy removed; protocol/path/import identity preserved. Existing historical-cost reader unchanged; explicit store-scoped detailed items/categories/results, full-source cap validation, genuine missing-cost states and Athens calendar daily averages/CSV. 61 focused PASS + separate10 native PostgreSQL PASS; build PASS before final print CSS. Full CI/release/visual acceptance pending; no functional/manual PASS. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
 
 ## 27/11/2026 — ASSIGNED /root — branding and sales-item completeness
 
@@ -15,6 +21,7 @@ ASSIGNED /root. INSTALLED: source #4308, green full PR/main CI; exact healthy ru
 ## 27/11/2026 — FINANCIAL-CONSUMPTION-01 — ASSIGNED /root
 
 - 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).
+- 27/11/2026 · Νο 5 · [Πρόσθετες εταιρικές προβολές](CHANGES/2026-11-27-no5-more-company-reads.md).
 
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
 
@@ -1271,3 +1278,14 @@ INVOICE-PAYMENT-RECOVERY-01 approved expansion21Nov: user explicitly authorizes 
 - 27/11/2026: Supplier order quantities, scoped POS/Backoffice edits, supplier estimates and email. See CHECKPOINTS/CHANGES/2026-11-27-supplier-order-quantities.md. Operational acceptance pending.
 
 - 27/11/2026 · [Επιστροφές εγγυοδοσίας προμηθευτών](CHANGES/2026-11-27-supplier-deposit-reminders.md) · Ελέγχθηκε σε απομονωμένη PostgreSQL. Εκκρεμεί LAB BackOffice.
+
+
+## Source CI follow-up — 27/11/2026
+
+PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs passed. Full server suite:7491PASS/1FAIL/4SKIP (7496tests); the sole failure was the old visible «Προεπισκόπηση Kiosk» expectation in owner-payments-kiosk-preview-v1.test.js. Updated only that expectation to «Προεπισκόπηση πληρωμών»; confirmation/cancel/read-only/tenant assertions are unchanged. Focused preview suite4PASS/0FAIL/0SKIP. Final frontend build passed13.69s and generated JS/HTML contains no «Kiosk Manager». Full source rerun / main CI / guarded release / user visual acceptance remain pending. NOT LAB PASS / NOT INSTALLED.
+
+## 27/11/2026 — Μηδενισμός αποθέματος στο Αρχείο ειδών — LAB
+
+Μηδενισμός επιλεγμένων, αρνητικών ή όλων από την Ομαδική διόρθωση του Αρχείου ειδών. [Checkpoint](CHANGES/2026-11-27-inventory-archive-stock-reset.md).
+
+- 27/11/2026 · [Αντιστοιχίσεις συσκευασίας στο POS OCR](CHANGES/2026-11-27-pos-ocr-supplier-pack.md) · Εκκρεμεί δοκιμή ολοκληρωμένης ροής.

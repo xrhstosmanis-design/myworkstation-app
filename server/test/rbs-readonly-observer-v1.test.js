@@ -38,7 +38,7 @@ test("UI states read-only limits and preserves Kiosk Manager RBS as fiscal path"
   assert.match(ui,/Παρατηρήσεις \(όχι αποδείξεις\)/);
   assert.match(ui,/Παλαιό μη ταξινομημένο συμβάν/);
   assert.match(ui,/Καμία εγγραφή δεν επιβεβαιώνει ότι η απόδειξη εκδόθηκε/);
-  assert.match(ui,/Μοναδική φορολογική διαδρομή:<\/b> Kiosk Manager \/ RBS/);
+  assert.match(ui,/Μοναδική φορολογική διαδρομή:<\/b> Ταμειακό σύστημα \/ RBS/);
 });
 
 test("UI can create a short-lived Observer pairing code without changing fiscal gates",()=>{

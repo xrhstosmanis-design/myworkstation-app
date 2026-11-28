@@ -8,7 +8,7 @@
     },
     {
       "name": "Recover-KAT.ps1",
-      "sha256": "a4eef5f5b0b39893a018d778928894d5ddb334df43a80a65eccda69ae8c92132"
+      "sha256": "f8c7145fcdcafeb39bfe9031db576bd0b4b489a7cbd54d4d1717ad203ac1daa9"
     },
     {
       "name": "PRECHECK_KAT.cmd",
@@ -24,7 +24,7 @@
     },
     {
       "name": "KAT_REAL_TEST_CHECKLIST.txt",
-      "sha256": "ec42edce4da2d1e69e869d56fe7d0f390c1e317e9ac66c272759833a11fbe185"
+      "sha256": "8dfe3413385a710bcfc346235b46c6ce5e5957e5f543158cdd59cda9c1e69444"
     }
   ]
 }
