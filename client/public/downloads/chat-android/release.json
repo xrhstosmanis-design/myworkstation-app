@@ -1,19 +1,19 @@
 {
   "package": "gr.myworkstation.chat.preview",
-  "version": "0.1.18-preview",
-  "versionCode": 19,
+  "version": "0.1.19-preview",
+  "versionCode": 20,
   "minimumAndroid": 8,
   "videoCaptureMinimumAndroid": 11,
   "maximumVideoSeconds": 30,
   "maximumVideoBytes": 12582912,
   "videoFormat": "MP4 H264/AAC",
-  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.18-Preview.apk",
-  "sha256": "de0e7fa96bba9535270d0ba2021b7d39c55387f6b2f3bd78bc5d9fd5a86fb88d",
-  "bytes": 3736616,
-  "sourceCommit": "67acd44d7966eb59c46957562d4895d98147a1bf",
-  "ciRun": 45639328253,
+  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.19-Preview.apk",
+  "sha256": "cf598010b020bb5775b1be2bdf1e3d4e3c7f044f26845ce7dabf278eecac6579",
+  "bytes": 3736620,
+  "sourceCommit": "6e4ba4248ef522cbce8000868f605d930a561d58",
+  "ciRun": 46067212537,
   "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
   "signing": "stable-owner-key",
-  "acceptance": "TECHNICAL CANDIDATE; physical acceptance pending for cash date, notification sound and Super Admin session renewal.",
-  "signingRun": 45639539673
+  "acceptance": "TECHNICAL CANDIDATE; physical acceptance pending for session renewal and sender edit/delete.",
+  "signingRun": 46067143226
 }

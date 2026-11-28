@@ -1,3 +1,7 @@
+## 27/11/2026 — Διανομή υπογεγραμμένου Android Chat 0.1.19 — LAB
+
+Δημοσίευση του ελεγμένου APK από το signing run 46067143226. [Checkpoint](CHANGES/2026-11-27-chat-android-019-distribution.md).
+
 ## 27/11/2026 23:48 Athens — branding and sales fields / TECHNICALLY INSTALLED / AWAITING USER VISUAL
 
 Owner /root / fix/myworkstation-visible-branding-20261127 retained. #4311 merged c16d5694; full PR CI46068024100 and exact main CI46070545528 SUCCESS. Guarded release46072139313 / Render dep-dc4vj8jl550s73e3gaug live; health exact c16d5694 and served application entry verified. Existing LAB report read-only presentation observed, no business operation or financial LAB/USER PASS declared. Both source scopes complete. Only common owner visual acceptance remains; next action: full refresh and inspect selected-store Sales/items. No duplicate source assignment. [Checkpoint](CHANGES/2026-11-27-visible-branding.md).
