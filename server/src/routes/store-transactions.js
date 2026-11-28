@@ -209,6 +209,7 @@ function requireLedgerAccess(req,res,next){
     const capability=req.staffGrant?.capability;
     const path=String(req.originalUrl||"").split("?")[0];
     if(['sales.read','payments.supplier','payments.expense'].includes(capability))return next();
+    if(capability==='approvals.supplier-recovery'&&/^\/api\/transactions\/stores\/[^/]+\/payments\/[^/]+\/(?:correction-context|correct-amount)$/.test(path))return next();
     if(capability==='approvals.expense-confirm'&&req.method==='POST'&&/^\/api\/transactions\/other-expenses\/[^/]+\/review$/.test(path))return next();
     if(capability==='approvals.supplier-recovery'&&['GET','POST'].includes(req.method)&&/^\/api\/transactions\/other-expenses\/[^/]+\/supplier-advance$/.test(path))return next();
     if(capability==='payments.advance-allocate'&&req.method==='POST'&&/^\/api\/transactions\/stores\/[^/]+\/supplier-advances\/[^/]+\/allocate$/.test(path))return next();
@@ -496,7 +497,9 @@ async function correctionScope(req){
   if(!store)throw Object.assign(new Error("Δεν βρέθηκε το ενεργό κατάστημα."),{status:404});
   const companyId=store.companyId||req.user.companyId;
   const user={...req.user,companyId,role:platform?'SUPER_ADMIN':req.user.role,paymentCorrectionCapability:req.staffGrant?.capability};
-  return {companyId,storeId,transactionId:req.params.transactionId,user,terminalPos:platform?null:await requestTerminal(req)};
+  const authorize=req.user.staffAccess===true?db=>requireStaffAction(db,req,storeId,'approvals.supplier-recovery'):null;
+  if(authorize)await authorize(prisma);
+  return {companyId,storeId,transactionId:req.params.transactionId,user,authorize,terminalPos:platform?null:await requestTerminal(req)};
 }
 router.get("/stores/:storeId/payments/:transactionId/correction-context",route(async(req,res)=>{
   res.json(await paymentCorrectionContext(prisma,await correctionScope(req)));

@@ -17,8 +17,9 @@ export function canCorrectPayment(user,row,session,terminalPos){
  if(session.status==='CLOSED'){
   return ['SUPER_ADMIN','OWNER','MANAGER'].includes(user?.role)
    && (user.role!=='MANAGER'||user.storeId===row.storeId)
-   && (user.staffAccess!==true||user.paymentCorrectionCapability===(row.type==='SUPPLIER_PAYMENT'?'payments.supplier':'payments.expense'));
+   && (user.staffAccess!==true||(row.type==='OTHER_EXPENSE'&&user.paymentCorrectionCapability==='approvals.supplier-recovery'));
  }
+ if(user.staffAccess===true)return false;
  return session.status==='OPEN'&&['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(user?.role);
 }
 
@@ -52,6 +53,7 @@ export async function paymentCorrectionContext(db,scope){
 export async function correctPaymentAmount(db,scope,input){
  const body=paymentCorrectionSchema.parse(input),requestHash=crypto.createHash('sha256').update(JSON.stringify({...body,allocations:[...body.allocations].sort((a,b)=>a.purchaseDocumentId.localeCompare(b.purchaseDocumentId))})).digest('hex');
  return db.$transaction(async tx=>{
+  if(scope.authorize)await scope.authorize(tx);
   // Document locks precede the shift lock, matching settlement creation.
   const initial=await payment(tx,scope),initialAllocations=await allocationRows(tx,scope);
   if(initialAllocations.length){

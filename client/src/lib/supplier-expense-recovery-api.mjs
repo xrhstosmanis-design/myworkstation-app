@@ -21,6 +21,14 @@ export function supplierExpenseRecoveryApi({api,storeId,isCurrent=()=>true}){
       reviews.clear();contexts.clear();for(const item of items)reviews.set(String(item.id),item);
       return {items,companies:[],stores:[]};
     }
+    const correction=url.pathname.match(/^\/api\/transactions\/stores\/([^/]+)\/payments\/([^/]+)\/(correction-context|correct-amount)$/);
+    if(correction&&!url.search&&!url.hash&&decodeURIComponent(correction[1])===storeId&&
+       method===(correction[3]==='correction-context'?'GET':'POST')&&
+       [...reviews.values()].some(item=>item.transactionId===decodeURIComponent(correction[2]))){
+      const result=await api(path,options);
+      assertCurrent();
+      return result;
+    }
     const match=url.pathname.match(/^\/api\/transactions\/other-expenses\/([^/]+)\/supplier-advance$/);
     if(!match||url.search||url.hash||!['GET','POST'].includes(method))throw Error('Μη επιτρεπτή ενέργεια ανάκτησης.');
     const reviewId=decodeURIComponent(match[1]),review=reviews.get(reviewId);
