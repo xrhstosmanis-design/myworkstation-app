@@ -8,12 +8,18 @@ const amount=z.coerce.number().finite().refine(v=>v!==0&&Math.abs(v)<=999999999&
 export const paymentCorrectionSchema=z.object({amount,expectedAmount:amount,expectedCorrectionId:z.string().uuid().nullable(),reason:z.string().trim().min(3).max(500),idempotencyKey:z.string().uuid(),allocations:z.array(z.object({purchaseDocumentId:z.string().min(1).max(180),amount:amount.refine(v=>v>0)})).max(100).default([])}).strict();
 
 export function canCorrectPayment(user,row,session,terminalPos){
- if(!row||!session||session.status!=='OPEN'||row.sessionId!==session.id||row.companyId!==user?.companyId||row.storeId!==session.storeId||row.reversedAt||!['SUPPLIER_PAYMENT','OTHER_EXPENSE'].includes(row.type))return false;
+ if(!row||!session||row.sessionId!==session.id||row.companyId!==user?.companyId||row.storeId!==session.storeId||row.reversedAt||!['SUPPLIER_PAYMENT','OTHER_EXPENSE'].includes(row.type))return false;
  if(user?.tokenType==='STORE_OPERATOR'){
+  if(session.status!=='OPEN')return false;
   const permissions=user.permissions||[];
   return user.storeId===row.storeId&&user.id===row.actorId&&session.terminalPos===terminalPos&&permissions.includes(row.type==='SUPPLIER_PAYMENT'?'SUPPLIER_PAYMENT':'THIRD_PARTY_PAYMENT');
  }
- return ['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(user?.role);
+ if(session.status==='CLOSED'){
+  return ['SUPER_ADMIN','OWNER','MANAGER'].includes(user?.role)
+   && (user.role!=='MANAGER'||user.storeId===row.storeId)
+   && (user.staffAccess!==true||user.paymentCorrectionCapability===(row.type==='SUPPLIER_PAYMENT'?'payments.supplier':'payments.expense'));
+ }
+ return session.status==='OPEN'&&['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(user?.role);
 }
 
 async function payment(db,{companyId,storeId,transactionId},lock=false){
@@ -30,15 +36,15 @@ async function latestCorrection(db,scope){
 async function allocationRows(db,scope){
  return db.$queryRaw`SELECT a."id",a."purchaseDocumentId",a."amount",s."id" AS "settlementId",s."status",s."supplierId",p."documentNumber",p."totalGross" FROM "SupplierPaymentSettlement" s JOIN "SupplierPaymentAllocation" a ON a."settlementId"=s."id" AND a."companyId"=s."companyId" JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=a."companyId" WHERE s."companyId"=${scope.companyId} AND s."storeId"=${scope.storeId} AND s."transactionId"=${scope.transactionId} ORDER BY a."purchaseDocumentId"`;
 }
-async function activeSession(db,scope,row,lock=false){
+async function correctionSession(db,scope,row,lock=false){
  const rows=lock
   ?await db.$queryRaw`SELECT "id","companyId","storeId","status","terminalPos" FROM "CashShiftSession" WHERE "id"=${row.sessionId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} FOR UPDATE`
   :await db.$queryRaw`SELECT "id","companyId","storeId","status","terminalPos" FROM "CashShiftSession" WHERE "id"=${row.sessionId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
- if(!canCorrectPayment(scope.user,row,rows[0],scope.terminalPos))fail(403,'Επιτρέπεται μόνο διόρθωση δικής σου πληρωμής στην ενεργή βάρδια, με δικαίωμα πληρωμών.');
+ if(!canCorrectPayment(scope.user,row,rows[0],scope.terminalPos))fail(403,'Δεν έχεις δικαίωμα διόρθωσης για αυτή την πληρωμή ή βάρδια.');
  return rows[0];
 }
 export async function paymentCorrectionContext(db,scope){
- const row=await payment(db,scope);await activeSession(db,scope,row);
+ const row=await payment(db,scope);await correctionSession(db,scope,row);
  const latest=await latestCorrection(db,scope),allocations=await allocationRows(db,scope);
  return {storeId:scope.storeId,transactionId:row.id,sessionId:row.sessionId,amount:Number(row.amount),subtractFromShift:row.subtractFromShift,description:row.description,supplierName:row.supplierName,expectedCorrectionId:latest?.id||null,allocations:allocations.map(a=>({purchaseDocumentId:a.purchaseDocumentId,documentNumber:a.documentNumber,amount:Number(a.amount)}))};
 }
@@ -52,7 +58,7 @@ export async function correctPaymentAmount(db,scope,input){
    const ids=initialAllocations.map(a=>a.purchaseDocumentId);
    await tx.$queryRaw`SELECT "id" FROM "PurchaseDocument" WHERE "companyId"=${scope.companyId} AND "id"=ANY(${ids}::text[]) ORDER BY "id" FOR UPDATE`;
   }
-  const session=await activeSession(tx,scope,initial,true),row=await payment(tx,scope,true);
+  const session=await correctionSession(tx,scope,initial,true),row=await payment(tx,scope,true);
   if(!canCorrectPayment(scope.user,row,session,scope.terminalPos))fail(409,'Η βάρδια ή η πληρωμή άλλαξε. Κάνε ανανέωση.');
   const previous=await tx.$queryRaw`SELECT "id","actorId","details" FROM "StoreOperatorAudit" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "eventType"='PAYMENT_AMOUNT_CORRECTED' AND "details"->>'transactionId'=${row.id} AND "details"->>'idempotencyKey'=${body.idempotencyKey} LIMIT 1`;
   if(previous[0]){
@@ -88,7 +94,7 @@ export async function correctPaymentAmount(db,scope,input){
   await tx.$executeRaw`UPDATE "OtherExpenseReview" SET "status"='PENDING_REVIEW',"reviewedBy"=NULL,"reviewedAt"=NULL,"reviewNote"=NULL WHERE "transactionId"=${row.id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
   await tx.$executeRaw`UPDATE "BankLedgerEntry" SET "amount"=${-body.amount},"status"=CASE WHEN "attachmentData" IS NULL THEN 'PENDING_PROOF' ELSE 'PENDING_REVIEW' END,"reviewedBy"=NULL,"reviewedAt"=NULL,"reviewNote"=NULL WHERE "sourceTransactionId"=${row.id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"<>'CANCELLED'`;
   const correctionId=crypto.randomUUID(),result={transactionId:row.id,storeId:scope.storeId,previousAmount:Number(row.amount),newAmount:body.amount,cashDelta:row.subtractFromShift?-delta/100:0};
-  const details={...result,transactionType:row.type,sessionId:row.sessionId,terminalPos:session.terminalPos,actorName:scope.user.fullName||'Χρήστης',reason:body.reason,paymentMethod:row.paymentMethod,supplierId:row.supplierId,supplierName:row.supplierName,previousCorrectionId:latest?.id||null,allocationsBefore:allocations.map(a=>({purchaseDocumentId:a.purchaseDocumentId,amount:Number(a.amount)})),allocationsAfter:body.allocations,idempotencyKey:body.idempotencyKey,requestHash,result};
+  const details={...result,transactionType:row.type,sessionId:row.sessionId,shiftStatus:session.status,terminalPos:session.terminalPos,actorName:scope.user.fullName||'Χρήστης',reason:body.reason,paymentMethod:row.paymentMethod,supplierId:row.supplierId,supplierName:row.supplierName,previousCorrectionId:latest?.id||null,allocationsBefore:allocations.map(a=>({purchaseDocumentId:a.purchaseDocumentId,amount:Number(a.amount)})),allocationsAfter:body.allocations,idempotencyKey:body.idempotencyKey,requestHash,result};
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details","createdAt") VALUES (${correctionId},${scope.companyId},${scope.storeId},${scope.user.operatorId||scope.user.id},${scope.user.id},'PAYMENT_AMOUNT_CORRECTED',${JSON.stringify(details)}::jsonb,clock_timestamp())`;
   return {ok:true,correctionId,...result};
  }).catch(error=>{

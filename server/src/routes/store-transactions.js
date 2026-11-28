@@ -489,7 +489,7 @@ router.use(auth,requireLedgerAccess);
 async function correctionScope(req){
   assertStoreAccess(req,req.params.storeId);
   await ownedStore(req.params.storeId,req.user.companyId);
-  return {companyId:req.user.companyId,storeId:req.params.storeId,transactionId:req.params.transactionId,user:req.user,terminalPos:await requestTerminal(req)};
+  return {companyId:req.user.companyId,storeId:req.params.storeId,transactionId:req.params.transactionId,user:{...req.user,paymentCorrectionCapability:req.staffGrant?.capability},terminalPos:await requestTerminal(req)};
 }
 router.get("/stores/:storeId/payments/:transactionId/correction-context",route(async(req,res)=>{
   res.json(await paymentCorrectionContext(prisma,await correctionScope(req)));

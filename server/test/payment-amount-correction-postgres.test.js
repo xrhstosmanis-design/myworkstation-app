@@ -16,6 +16,12 @@ test('payment correction enforces own tenant/terminal, active payment and cent p
  assert.equal(paymentCorrectionSchema.safeParse(request({amount:0.29})).success,true);
  assert.equal(paymentCorrectionSchema.safeParse(request({reason:' '})).success,false);
  assert.equal(paymentCorrectionSchema.safeParse({...request(),expectedCorrectionId:undefined}).success,false);
+ const closed={...session,status:'CLOSED'};
+ for(const role of ['SUPER_ADMIN','OWNER','MANAGER']){
+  assert.equal(canCorrectPayment({role,companyId:'company',storeId:'store'},row,closed,'MAIN'),true);
+ }
+ assert.equal(canCorrectPayment({role:'MANAGER',companyId:'company',storeId:'other'},row,closed,'MAIN'),false);
+ assert.equal(canCorrectPayment({role:'ADMIN',companyId:'company'},row,closed,'MAIN'),false);
 });
 
 test('isolated PostgreSQL payment correction is atomic, serializes races, preserves identity and reconciles linked amounts',{skip:!isolated()},async()=>{
