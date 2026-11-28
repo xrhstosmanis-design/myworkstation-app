@@ -38,6 +38,7 @@ ASSIGNED /root. INSTALLED: source #4308, green full PR/main CI; exact healthy ru
 - 27/11/2026 · Νο 5 · [Πρόσθετες εταιρικές προβολές](CHANGES/2026-11-27-no5-more-company-reads.md).
 - 28/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών προϊόντος](CHANGES/2026-11-28-no5-product-read-delegation.md).
 - 28/11/2026 · Νο 5 · [Επανεκχώρηση προβολών καρτέλας προϊόντος](CHANGES/2026-11-28-no5-product-detail-reads.md).
+- 28/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών τιμών και αγορών προϊόντος](CHANGES/2026-11-28-no5-product-price-purchase-reads.md).
 
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
 
