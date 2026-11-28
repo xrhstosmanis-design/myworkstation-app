@@ -1,3 +1,7 @@
+## 27/11/2026 23:48 Athens — visible branding and complete sales fields / AWAITING USER VISUAL ONLY
+
+ASSIGNED - /root / fix/myworkstation-visible-branding-20261127, owner retained until common final visual acceptance. Implementation #4311, full PR/main CI and guarded live revision c16d5694 complete. No further source work, data repair or production load test assigned. Single next action: owner full refresh and inspect selected-store Sales/items. Technical installation only; no financial LAB PASS or USER PASS. [Final handoff](../../CHECKPOINTS/CHANGES/2026-11-27-visible-branding.md).
+
 ## 24/11/2026 — Πρόσθετοι παραλήπτες ειδοποιήσεων πορτοφολιού AI
 
 ASSIGNED - /root / fix/ai-wallet-extra-email. Στενή συνέχεια της ανάθεσης πορτοφολιού AI. Αποθήκευση εταιρικής λίστας, μεμονωμένη παράδοση και έλεγχοι ανάκλησης και επαναφοράς. BEFORE SOURCE. [Checkpoint](../../CHECKPOINTS/CHANGES/2026-11-24-ai-wallet-extra-email.md).

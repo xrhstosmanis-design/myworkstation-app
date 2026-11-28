@@ -237,6 +237,21 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
   };
 
   const openBulk=()=>{setBulk({...bulkBlank(),requestId:crypto.randomUUID()});setError("");setModal("bulk")};
+  const resetArchiveStock=async(scope)=>{
+    if(readOnly||operatorMode||!can("edit")||!storeId||bulkSavingRef.current||loading)return;
+    if(scope==="SELECTED"&&!checked.length)return;
+    const selectedStore=storeId,storeName=store?.name||data.store?.name||"επιλεγμένο κατάστημα";
+    const description=scope==="ALL"?"όλα τα είδη, ανεξάρτητα από φίλτρα":scope==="NEGATIVE"?"μόνο τα είδη με αρνητικό απόθεμα, σε όλες τις σελίδες":`${checked.length} επιλεγμένα είδη`;
+    if(!window.confirm(`Να μηδενιστεί το απόθεμα για ${description} στο «${storeName}»;`))return;
+    bulkSavingRef.current=true;setLoading(true);setError("");
+    try{
+      const result=await api("/api/owner-products/bulk-stock-reset",{method:"POST",body:JSON.stringify({scope,storeId:selectedStore,...(scope==="SELECTED"?{productIds:checked}:{})})});
+      if(cardScopeRef.current!==selectedStore)return;
+      setModal(null);await load();
+      if(cardScopeRef.current===selectedStore)setMessage(`Μηδενίστηκε το απόθεμα σε ${result.changed} είδη στο «${storeName}».`);
+    }catch(error){if(cardScopeRef.current===selectedStore)setError(error.message);}
+    finally{bulkSavingRef.current=false;if(cardScopeRef.current===selectedStore)setLoading(false);}
+  };
   const applyBulk=async()=>{
     if(bulkSavingRef.current)return;
     if(!bulk.allProducts&&!checked.length)return setError("Επίλεξε πρώτα είδη.");
@@ -432,7 +447,15 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose,ini
       {merge.preview&&<><table><thead><tr><th>Είδος</th><th>Ενέργεια</th><th>Λιανική</th><th>Απόθεμα</th></tr></thead><tbody>{merge.preview.rows.map(r=><tr key={r.id}><td>{r.sku} · {r.name}</td><td>{r.id===merge.targetId?"Διατήρηση":"Αρχειοθέτηση"}</td><td>{money(r.salePrice)}</td><td>{qty(r.currentStock)}</td></tr>)}</tbody></table><p><b>Τελικό απόθεμα: {qty(merge.preview.combinedStock)}</b></p><p>Barcode: {merge.preview.barcodes.map(b=>`${b.barcode}${b.salePrice==null?"":` (${money(b.salePrice)})`}`).join(", ")||"Δεν υπάρχουν"}</p>{merge.preview.blockers.length>0?<div role="alert">{merge.preview.blockers.map((b,i)=><p key={i}>{b}</p>)}</div>:<><label>Αιτιολογία<input value={merge.reason} onChange={e=>setMerge(x=>({...x,reason:e.target.value}))} maxLength="300"/></label><label className="check"><input type="checkbox" checked={merge.confirmed} onChange={e=>setMerge(x=>({...x,confirmed:e.target.checked}))}/>Έλεγξα ότι είναι το ίδιο προϊόν και επιβεβαιώνω την καρτέλα που κρατάω.</label></>}</>}
       </div><div className="ia-modal-actions"><button onClick={()=>setModal(null)} disabled={loading}>Επιστροφή</button><button className="primary" onClick={confirmMerge} disabled={loading||!merge.preview||merge.preview.blockers.length>0||!merge.confirmed||merge.reason.trim().length<3}>Επιβεβαίωση συγχώνευσης</button></div></Modal>}
 
-    {modal==="bulk"&&<Modal title={`Ομαδική διόρθωση · ${bulk.allProducts?"Όλα τα είδη":`${checked.length} είδη`}`} onClose={()=>!loading&&setModal(null)}>{error&&<div className="ia-alert error" role="alert">{error}</div>}<p className="ia-bulk-note">Λιανική και κατάσταση: μόνο {store?.name||"επιλεγμένο κατάστημα"}. Κατηγορία, υποκατηγορία, Τμήμα ΦΠΑ και άδεια αλλαγής τιμής POS: κοινά στοιχεία της εταιρικής καρτέλας, ισχύουν όπου χρησιμοποιείται το ίδιο προϊόν.</p><div className="ia-form-grid"><label>Εφαρμογή άδειας POS<select value={bulk.allProducts?"ALL":"SELECTED"} onChange={e=>setBulk(x=>({...x,allProducts:e.target.value==="ALL"}))}><option value="SELECTED">Στα επιλεγμένα ({checked.length})</option><option value="ALL">Σε όλα τα είδη του καταστήματος</option></select></label><label>Αλλαγή τιμής στο POS<select value={bulk.allowPosPriceChange} disabled={!can("prices")} onChange={e=>setBulk(x=>({...x,allowPosPriceChange:e.target.value}))}><option value="KEEP">Χωρίς αλλαγή</option><option value="YES">Ναι</option><option value="NO">Όχι</option></select></label></div>{bulk.allProducts?<p className="ia-bulk-note">Θα αλλάξει μόνο η άδεια αλλαγής τιμής POS σε όλα τα είδη του επιλεγμένου καταστήματος, ενεργά και ανενεργά, σε όλες τις σελίδες και ανεξάρτητα από τα φίλτρα αναζήτησης. Οι τιμές και τα δικαιώματα χειριστών παραμένουν ίδια.</p>:<><div className="ia-form-grid">
+    {modal==="bulk"&&<Modal title={`Ομαδική διόρθωση · ${bulk.allProducts?"Όλα τα είδη":`${checked.length} είδη`}`} onClose={()=>!loading&&setModal(null)}>{error&&<div className="ia-alert error" role="alert">{error}</div>}{!readOnly&&!operatorMode&&can("edit")&&<fieldset className="ia-stock-reset">
+        <legend>Μηδενισμός αποθέματος · {store?.name||data.store?.name||"επιλεγμένο κατάστημα"}</legend>
+        <p>Οι επιλογές «αρνητικά» και «όλα» εφαρμόζονται σε όλες τις σελίδες του καταστήματος.</p>
+        <div className="ia-stock-reset-actions">
+          <button type="button" disabled={loading||!storeId||!checked.length} onClick={()=>resetArchiveStock("SELECTED")}>Μηδενισμός επιλεγμένων ({checked.length})</button>
+          <button type="button" disabled={loading||!storeId} onClick={()=>resetArchiveStock("NEGATIVE")}>Μηδενισμός μόνο αρνητικών</button>
+          <button type="button" disabled={loading||!storeId} onClick={()=>resetArchiveStock("ALL")}>Μηδενισμός όλων στο κατάστημα</button>
+        </div>
+      </fieldset>}<p className="ia-bulk-note">Λιανική και κατάσταση: μόνο {store?.name||"επιλεγμένο κατάστημα"}. Κατηγορία, υποκατηγορία, Τμήμα ΦΠΑ και άδεια αλλαγής τιμής POS: κοινά στοιχεία της εταιρικής καρτέλας, ισχύουν όπου χρησιμοποιείται το ίδιο προϊόν.</p><div className="ia-form-grid"><label>Εφαρμογή άδειας POS<select value={bulk.allProducts?"ALL":"SELECTED"} onChange={e=>setBulk(x=>({...x,allProducts:e.target.value==="ALL"}))}><option value="SELECTED">Στα επιλεγμένα ({checked.length})</option><option value="ALL">Σε όλα τα είδη του καταστήματος</option></select></label><label>Αλλαγή τιμής στο POS<select value={bulk.allowPosPriceChange} disabled={!can("prices")} onChange={e=>setBulk(x=>({...x,allowPosPriceChange:e.target.value}))}><option value="KEEP">Χωρίς αλλαγή</option><option value="YES">Ναι</option><option value="NO">Όχι</option></select></label></div>{bulk.allProducts?<p className="ia-bulk-note">Θα αλλάξει μόνο η άδεια αλλαγής τιμής POS σε όλα τα είδη του επιλεγμένου καταστήματος, ενεργά και ανενεργά, σε όλες τις σελίδες και ανεξάρτητα από τα φίλτρα αναζήτησης. Οι τιμές και τα δικαιώματα χειριστών παραμένουν ίδια.</p>:<><div className="ia-form-grid">
       <label>Κατηγορία<select value={bulk.categoryId} disabled={!can("edit")} onChange={e=>setBulk(x=>({...x,categoryId:e.target.value,subcategoryId:"KEEP"}))}><option value="">Χωρίς αλλαγή</option>{taxonomyCategories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <label>Υποκατηγορία<select value={bulk.subcategoryId} disabled={!can("edit")} onChange={e=>setBulk(x=>({...x,subcategoryId:e.target.value}))}><option value="KEEP">{bulk.categoryId?"Χωρίς υποκατηγορία στη νέα κατηγορία":"Χωρίς αλλαγή"}</option><option value="">Καθαρισμός υποκατηγορίας</option>{taxonomySubcategories.filter(c=>c.categoryId===bulk.categoryId).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <label>Τμήμα ΦΠΑ<select value={bulk.vatDepartmentId} disabled={!can("edit")} onChange={e=>setBulk(x=>({...x,vatDepartmentId:e.target.value}))}><option value="">Χωρίς αλλαγή</option>{(data.vatDepartments||[]).map(v=><option key={v.id} value={v.id}>{v.description} · {Number(v.vatRate)}% · ταμειακή {v.cashRegisterDepartment??"—"}</option>)}</select></label>

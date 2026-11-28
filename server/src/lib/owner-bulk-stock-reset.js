@@ -1,4 +1,4 @@
-export function resetOwnerStock(db,{company,storeId,ids,all,batchId,userId}) {
+export function resetOwnerStock(db,{company,storeId,ids,all,negativeOnly=false,batchId,userId}) {
  return db.$transaction(async tx=>{
     const stores=await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "companyId"=${company} AND "id"=${storeId} AND "active"=true FOR KEY SHARE`;
     if(!stores.length)throw Object.assign(new Error("Δεν βρέθηκε ενεργό κατάστημα."),{status:404});
@@ -14,7 +14,8 @@ export function resetOwnerStock(db,{company,storeId,ids,all,batchId,userId}) {
         SELECT sp."productId",sp."currentStock" AS previous,p."costPrice"
         FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId"
         WHERE sp."storeId"=${storeId} AND p."companyId"=${company}
-          AND sp."currentStock"<>0 AND (${all} OR sp."productId"=ANY(${ids}::text[]))
+          AND sp."currentStock"<>0 AND (NOT ${negativeOnly} OR sp."currentStock"<0)
+          AND (${all} OR sp."productId"=ANY(${ids}::text[]))
         ORDER BY sp."productId" FOR UPDATE OF sp
       ), changed AS (
         UPDATE "StoreProduct" sp SET "currentStock"=0,"updatedAt"=CURRENT_TIMESTAMP
