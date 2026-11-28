@@ -29,6 +29,7 @@ function SupplierMinimum({row,sending,onApply,onSave}){
 }
 export default function PosOrderSuggestions({api,store,operator,open,onOpen,onClose,backoffice=false}){
  const [quantities,setQuantities]=useState({});
+ const [removed,setRemoved]=useState({});
  const [allowed,setAllowed]=useState(false),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[q,setQ]=useState('');
  const [filters,setFilters]=useState(defaults),[request,setRequest]=useState(defaults),[suppliers,setSuppliers]=useState([]);
  const [emailOpen,setEmailOpen]=useState(false),[recipients,setRecipients]=useState(''),[sending,setSending]=useState(false),[attempted,setAttempted]=useState(''),[message,setMessage]=useState('');
@@ -43,7 +44,7 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
   api(`/api/pos-order-suggestions/stores/${encodeURIComponent(store.id)}/suppliers`).then(r=>{if(!live||id!==generation.current)return;if(r.storeId!==store.id)throw Error('Δεν επιβεβαιώθηκε το κατάστημα.');setSuppliers(r.suppliers||[])}).catch(e=>{if(live&&id===generation.current)setError(e.message)});
   return()=>{live=false};
  },[api,store.id,open,allowed]);
- useEffect(()=>{setQuantities({});setData(null);if(!open||!allowed||dirty){setBusy(false);return;}let live=true;const id=generation.current;setBusy(true);setError('');setMessage('');setAttempted('');
+ useEffect(()=>{setQuantities({});setRemoved({});setData(null);if(!open||!allowed||dirty){setBusy(false);return;}let live=true;const id=generation.current;setBusy(true);setError('');setMessage('');setAttempted('');
   const params=new URLSearchParams(request);
   api(`/api/pos-order-suggestions/stores/${encodeURIComponent(store.id)}/proposal?${params}`).then(r=>{if(!live||id!==generation.current)return;if(r.storeId!==store.id||!Array.isArray(r.rows))throw Error('Δεν επιβεβαιώθηκε το κατάστημα.');setData(r);setRecipients(current=>current||r.supplier?.email||'')}).catch(e=>{if(live&&id===generation.current)setError(e.message)}).finally(()=>{if(live&&id===generation.current)setBusy(false)});
   return()=>{live=false};
@@ -51,7 +52,7 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
  if(!allowed)return backoffice?createPortal(<div className="pos-order-proposals-overlay"><section role="dialog" aria-label="Πρόταση παραγγελίας" className="pos-order-proposals-window"><button type="button" onClick={onClose}>Κλείσιμο</button><p role="status">Έλεγχος πρόσβασης. Αν η οθόνη δεν ανοίξει, έλεγξε την ενεργοποίηση και το δικαίωμα για το κατάστημα.</p></section></div>,document.body):null;
  const cadence=suppliers.find(s=>s.id===filters.supplierId)?.receiptCadence;
  const editable=Boolean(backoffice||data?.rows.some(row=>Object.hasOwn(row,'requiredQuantity')));
- const rows=data?posProposalRows(data,q):[];
+ const rows=data?posProposalRows(data,q).filter(row=>!Object.hasOwn(removed,row.productId)):[];
  let finalReport=data;
  try{if(data)finalReport=applyProposalQuantities(data,quantities)}catch{finalReport=null}
  const finalRows=finalReport?posProposalRows(finalReport,q):[];
@@ -60,6 +61,15 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
  const ready=Boolean(finalReport?.reportId)&&!dirty&&!busy&&finalRows.length>0;
  const change=(key,value)=>{setFilters(current=>({...current,[key]:value}));setData(null);setError('');setMessage('');setEmailOpen(false);if(key==='supplierId')setRecipients(suppliers.find(s=>s.id===value)?.email||'')};
  const calculate=e=>{e.preventDefault();setRequest({...filters});setEmailOpen(false)};
+ const removeLine=row=>{
+  setRemoved(current=>({...current,[row.productId]:{name:row.name,quantity:quantities[row.productId]}}));
+  setQuantities(current=>({...current,[row.productId]:0}));
+ };
+ const restoreLine=id=>{
+  const previous=removed[id]?.quantity;
+  setRemoved(current=>{const next={...current};delete next[id];return next});
+  setQuantities(current=>{const next={...current};if(previous===undefined)delete next[id];else next[id]=previous;return next});
+ };
  const saveMinimum=async(row,minimum)=>{
   if(sendingRef.current||!data?.reportId)return;
   const id=generation.current,reportId=data.reportId;
@@ -107,11 +117,18 @@ export default function PosOrderSuggestions({api,store,operator,open,onOpen,onCl
   {data?.expectedReceipts?.available===false&&<p role="status">Οι αναμενόμενες παραλαβές δεν είναι διαθέσιμες στον υπολογισμό. Έλεγξέ τες πριν παραγγείλεις.</p>}
   {editable&&totals.map(total=><p key={total.id??''}><strong>{total.name}</strong> · Εκτιμώμενη καθαρή αξία {fmt(total.cents/100)} €{total.missing>0&&` · ${total.missing} είδη χωρίς πλήρη εκτίμηση`}</p>)}
   {data&&!finalReport&&<p role="alert">Συμπλήρωσε έγκυρες ποσότητες. Βάλε 0 για εξαίρεση είδους.</p>}
+  {Object.keys(removed).length>0&&<details className="proposal-removed">
+   <summary>Αφαιρεμένα είδη ({Object.keys(removed).length})</summary>
+   {Object.entries(removed).map(([id,line])=><div key={id}>{line.name} <button type="button" disabled={sending} onClick={()=>restoreLine(id)}>Επαναφορά</button></div>)}
+  </details>}
   {data&&<div className="pos-order-proposals-scroll"><table><thead><tr><th>Είδος</th><th>Καθαρές πωλήσεις περιόδου</th><th>Απόθεμα</th><th>Alarm</th><th>Πρόταση</th><th>Έλεγχος</th></tr></thead><tbody>{rows.map(r=><tr key={r.productId}><td>{r.name}<small>{r.sku}</small></td><td>{fmt(r.netQuantity)}<small>Πωλήσεις {fmt(r.soldQuantity)} · επιστροφές {fmt(r.returnedQuantity)}</small></td><td>{fmt(r.currentStock)}</td><td>{fmt(r.minStock)}</td><td>{editable?<><input type="number" min="0" max="100000000" step="0.0001" aria-label={`Ποσότητα ${r.name}`} disabled={sending} value={Object.hasOwn(quantities,r.productId)?quantities[r.productId]??'':r.suggestedQuantity??''} onChange={e=>{const value=e.target.value;setQuantities(current=>({...current,[r.productId]:value===''?null:Number(value)}));setMessage('')}}/> {r.unitLabel}
-   {r.orderSupplierId&&r.requiredQuantity>0&&<SupplierMinimum row={r} sending={sending} onSave={backoffice&&data.supplierMinimumAvailable?minimum=>saveMinimum(r,minimum):null}
-    onApply={quantity=>{setQuantities(current=>({...current,[r.productId]:quantity}));setMessage('')}}/>}
+   {r.orderSupplierId&&r.requiredQuantity>0&&<details className="proposal-minimum"><summary>Ρύθμιση ελάχιστου</summary><SupplierMinimum row={r} sending={sending} onSave={backoffice&&data.supplierMinimumAvailable?minimum=>saveMinimum(r,minimum):null}
+    onApply={quantity=>{setQuantities(current=>({...current,[r.productId]:quantity}));setMessage('')}}/></details>}
    {r.supplierPack&&<small>Συσκευασία {fmt(r.supplierPack)} · ανάγκη {fmt(r.requiredQuantity)}</small>}
-   <small>{r.orderSupplierName||'Χωρίς προμηθευτή'} · {r.orderUnitCost==null?'Κόστος προς έλεγχο':`${fmt(r.orderUnitCost)} € / ${r.unitLabel} χωρίς ΦΠΑ`}</small>
+   <small>{r.orderSupplierName||'Χωρίς προμηθευτή'}</small>
+   <small>{r.orderPackageCost!=null?`${fmt(r.orderPackageCost)} € / κιβώτιο ${fmt(r.supplierPack)}`:r.orderUnitCost==null?'Κόστος προς έλεγχο':`${fmt(r.orderUnitCost)} € / ${r.unitLabel}`} {r.orderUnitCost!=null&&'χωρίς ΦΠΑ'}</small>
+   {r.orderUnitCost!=null&&finalByProduct.get(r.productId)&&<strong>{fmt(Math.round(finalByProduct.get(r.productId).suggestedQuantity*r.orderUnitCost*100)/100)} €</strong>}
+   <button className="proposal-remove" type="button" disabled={sending} aria-label={`Αφαίρεση ${r.name}`} onClick={()=>removeLine(r)}>Αφαίρεση</button>
    {finalByProduct.get(r.productId)?.warnings?.includes('Η ποσότητα δεν είναι πολλαπλάσιο της γνωστής συσκευασίας.')&&<small>Έλεγξε τη συσκευασία με τον προμηθευτή.</small>}</>:<>{fmt(r.suggestedQuantity)} {r.unitLabel}</>}</td><td>{r.reason}{r.confirmedPendingStockQuantity>0&&<small>Επιβεβαιωμένο αναμενόμενο υπόλοιπο: {fmt(r.confirmedPendingStockQuantity)} {r.unitLabel}</small>}{r.pendingPurchaseReview?.map(review=><small key={review.status}>{review.status==='NEW'?'Πρόχειρες αγορές':'Προς τιμολόγηση'}: {review.orderCount} · {review.recordedStockQuantity==null?'Μετατροπή προς έλεγχο':`${fmt(review.recordedStockQuantity)} ${r.unitLabel} καταγεγραμμένα`}</small>)}{r.warnings.map(w=><small key={w}>{w}</small>)}</td></tr>)}</tbody></table>{!rows.length&&<p>Δεν υπάρχουν προτάσεις με αυτά τα κριτήρια.</p>}</div>}
  </section></div>,document.body)}</>;
 }

@@ -1300,3 +1300,5 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 - 27/11/2026 · [Αντιστοιχίσεις συσκευασίας στο POS OCR](CHANGES/2026-11-27-pos-ocr-supplier-pack.md) · Εκκρεμεί δοκιμή ολοκληρωμένης ροής.
 
 - 28/11/2026 · [Διόρθωση πληρωμής σε κλεισμένη βάρδια](CHANGES/2026-11-28-closed-shift-payment-correction.md).
+
+- 27/11/2026: Proposal packaging cost, line removal and presentation. See CHECKPOINTS/CHANGES/2026-11-27-proposal-pack-cost.md. Operational acceptance pending.

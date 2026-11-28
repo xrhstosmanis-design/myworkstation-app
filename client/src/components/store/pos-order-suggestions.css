@@ -10,3 +10,18 @@
 .pos-order-proposals-window input{min-height:44px;padding:8px}
 .pos-order-proposals-filters{display:grid;grid-template-columns:minmax(190px,2fr) repeat(4,minmax(110px,1fr)) auto;gap:10px;align-items:end}.pos-order-proposals-window label{display:flex;flex-direction:column;gap:5px;font-weight:600}.pos-order-proposals-window select{min-height:44px;padding:8px;border:1px solid #afc8bd;border-radius:6px;background:#fff;color:inherit}.pos-order-proposals-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pos-order-proposals-actions>input{flex:1;min-width:160px}.pos-order-proposals-email{background:#edf6f1;border:1px solid #bcd8c9;border-radius:8px;padding:12px;display:grid;gap:10px}.pos-order-proposals-hint{font-size:12px;color:#47665c}.pos-order-proposals-window button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:1000px){.pos-order-proposals-filters{grid-template-columns:repeat(2,minmax(130px,1fr))}.pos-order-proposals-filters>label:first-child{grid-column:1/-1}.pos-order-proposals-scroll{max-height:40dvh}}@media(max-width:500px){.pos-order-proposals-overlay{padding:5px}.pos-order-proposals-window{padding:12px}.pos-order-proposals-window header{align-items:flex-start}.pos-order-proposals-window h2{font-size:20px}}
 .pos-order-proposals-window label{min-width:0}.pos-order-proposals-window label input,.pos-order-proposals-window label select{width:100%;min-width:0;box-sizing:border-box}
+
+.pos-order-proposals-window{background:#f7faf9;box-shadow:0 18px 60px #00251b38;width:min(1180px,100%)}
+.pos-order-proposals-window header{border-bottom:1px solid #d5e4df;padding-bottom:12px}
+.pos-order-proposals-window :is(button,input,select){border:1px solid #a9c2b8;border-radius:7px;background:#fff;color:inherit;font:inherit}
+.pos-order-proposals-window button{cursor:pointer;font-weight:600}
+.pos-order-proposals-window button:disabled{opacity:.55;cursor:default}
+.pos-order-proposals-filters button[type=submit]{background:#076650;color:#fff;border-color:#076650}
+.pos-order-proposals-scroll{border:1px solid #d5e4df;border-radius:8px;background:#fff}
+.pos-order-proposals-scroll th{position:sticky;top:0;background:#e8f3ef;z-index:1}
+.pos-order-proposals-scroll td{vertical-align:top}
+.pos-order-proposals-scroll td input[type=number]{width:7em;max-width:100%;box-sizing:border-box}
+.pos-order-proposals-scroll td small{margin-top:4px}
+.pos-order-proposals-window .proposal-remove{min-height:32px;display:block;color:#8e2630;margin-top:7px}
+.proposal-minimum,.proposal-removed{font-size:.9em;margin:6px 0}
+.proposal-minimum summary,.proposal-removed summary{cursor:pointer;color:#076650;font-weight:600}
