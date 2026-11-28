@@ -679,6 +679,8 @@ Price audit opens a pricing card with VAT-exclusive Margin and Markup, plus the 
 
 - 27/11/2026 · [Android Chat: ανανέωση σύνδεσης στην επιστροφή](CHANGES/2026-11-27-chat-android-resume-session.md).
 
+- 28/11/2026 · [Android Chat: ειδοποιήσεις μετά τη λήξη συνεδρίας](CHANGES/2026-11-28-android-chat-background-notice.md).
+
 ## Κανόνας ενημέρωσης
 
 10/11/2026 — #3786 store-only editor and two-store POS catalog CI pass carried onto current main. New exact-head CI and complete LAB pending.
@@ -1297,4 +1299,4 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 
 - 27/11/2026 · [Αντιστοιχίσεις συσκευασίας στο POS OCR](CHANGES/2026-11-27-pos-ocr-supplier-pack.md) · Εκκρεμεί δοκιμή ολοκληρωμένης ροής.
 
-- 28/11/2026 · [Android Chat: ειδοποιήσεις μετά τη λήξη συνεδρίας](CHANGES/2026-11-28-android-chat-background-notice.md).
+- 28/11/2026 · [Διόρθωση πληρωμής σε κλεισμένη βάρδια](CHANGES/2026-11-28-closed-shift-payment-correction.md).

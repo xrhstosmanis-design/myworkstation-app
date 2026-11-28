@@ -219,6 +219,7 @@ export function staffRequestCapability(method,path,body={},query={}){
  if(method==='GET'&&path==='/api/store-pos/sales/journal')return 'sales-journal.read';
   if(method==='GET'&&/^\/api\/store-chat\/stores\/[^/]+\/messages(?:\/search|\/[^/]+\/attachment)?$/.test(path))return 'chat.read';
   if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/online-radio$/.test(path))return 'radio.read';
+  if(((method==='GET'&&path.endsWith('/correction-context'))||(method==='POST'&&path.endsWith('/correct-amount')))&&/^\/api\/transactions\/stores\/[^/]+\/payments\/[^/]+\/(?:correction-context|correct-amount)$/.test(path))return 'approvals.supplier-recovery';
   if(['GET','POST'].includes(method)&&/^\/api\/transactions\/other-expenses\/[^/]+\/supplier-advance$/.test(path))return 'approvals.supplier-recovery';
   if(method==='POST'&&body?.status==='CONFIRMED'&&/^\/api\/transactions\/other-expenses\/[^/]+\/review$/.test(path))return 'approvals.expense-confirm';
   if(method==='GET'&&['/api/transactions/supplier-settlements/review','/api/transactions/other-expenses/review','/api/transactions/bank-ledger/review'].includes(path))return 'approvals.read';

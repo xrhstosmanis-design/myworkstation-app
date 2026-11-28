@@ -42,7 +42,12 @@ test('sales permission admits only three exact GET endpoints and no correction/p
   assert.equal(staffRequestCapability('GET','/api/store-pos/sales/journal'),'sales-journal.read','journal requires its independently granted right');
   assert.notEqual(staffRequestCapability('GET','/api/store-pos/sales/journal'),'sales.read');
   assert.equal(staffRequestCapability('POST','/api/owner-shifts/shift/force-close'),'shifts.force-close');
-  for(const [method,path] of [['POST','/api/transactions/stores/s'],['POST','/api/transactions/stores/s/payments/p/correct-amount']])assert.equal(staffRequestCapability(method,path),null);
+  assert.equal(staffRequestCapability('POST','/api/transactions/stores/s'),null);
+  const payment='/api/transactions/stores/s/payments/p';
+  assert.equal(staffRequestCapability('GET',payment+'/correction-context'),'approvals.supplier-recovery');
+  assert.equal(staffRequestCapability('POST',payment+'/correct-amount'),'approvals.supplier-recovery');
+  assert.equal(staffRequestCapability('GET',payment+'/correct-amount'),null);
+  assert.equal(staffRequestCapability('POST',payment+'/correction-context'),null);
 });
 
 test('shift reporting grant passes only its own GET endpoint and admitted store through the cash middleware', async()=>{
