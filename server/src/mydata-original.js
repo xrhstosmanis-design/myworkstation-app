@@ -68,6 +68,26 @@ export function providerOriginalRecoveryLinkPattern({includeExistingImpact = fal
   ]);
 }
 
+// Viewer links identify the source of an XML draft. They are never fetched here.
+export function myDataXmlDraftProvider(xml, issuerVat){
+  const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([^<]+)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1]?.trim();
+  if(!raw||raw.length>2048||!/^\d{9}$/.test(issuerVat))return null;
+  const link=raw.replace(/&amp;|&#38;|&#x26;/gi,"&");
+  if(!link.startsWith("https://")||/[\s\\]/.test(link))return null;
+  let url;try{url=new URL(link)}catch{return null}
+  if(url.username||url.password||url.port||url.hash)return null;
+  if(["beta-srv.parochos.gr","srv.parochos.gr"].includes(url.hostname)&&!url.search
+      && /^\/FileDocument\/Get\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(url.pathname))return "PAROCHOS";
+  const params=url.searchParams;
+  if(url.hostname==="invosign.gr"&&url.pathname==="/viewinvoice.php"&&[...params].length===3
+      && params.get("afm")==="EL"+issuerVat&&params.get("file")&&params.get("gvsenc"))return "INVOSIGN";
+  return null;
+}
+
+export async function prepareMyDataXmlReviewDraft(tx,row,userId,provider){
+  return attachReviewDraft(tx,row,row.companyId,row.storeId,row.inboxId,userId,true,{xmlProvider:provider});
+}
+
 export function originalDownloadUrl(xml,issuerVat,storeId){
   const raw=String(xml||"").match(/<(?:\w+:)?downloadingInvoiceUrl\b[^>]*>([\s\S]*?)<\/(?:\w+:)?downloadingInvoiceUrl>/i)?.[1];
   if(!raw)throw error("Ο πάροχος δεν έχει διαβιβάσει σύνδεσμο πρωτοτύπου.");
@@ -321,14 +341,14 @@ export function pdfPackagingLines(rawText, xmlLines) {
 
 // Reuse the existing invoice-assistant draft contract, with explicit myDATA provenance.
 // Only draft shells are created here. Printed rows are proposed and confirmed inside the assistant.
-async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled){
+async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled,{xmlProvider=null}={}){
   if(!enabled)return {reused:true,downloaded:false};
   await lockInvoiceStore(tx,companyId,storeId);
   const inbox=await tx.$queryRaw`SELECT "id","attachmentId","status" FROM "DocumentInbox" WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1 FOR UPDATE`;
-  if(!inbox[0]?.attachmentId)throw error("Δεν βρέθηκε το πρωτότυπο για το πρόχειρο.",404);
-  const jobs=await tx.$queryRaw`SELECT "id","companyId","storeId","attachmentId","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "attachmentId"=${inbox[0].attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
+  if(!inbox[0]||(!inbox[0].attachmentId&&!xmlProvider))throw error("Δεν βρέθηκε το παραστατικό για το πρόχειρο.",404);
+  const jobs=inbox[0].attachmentId?await tx.$queryRaw`SELECT "id","companyId","storeId","attachmentId","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "attachmentId"=${inbox[0].attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`:[];
   const job=jobs[0];
-  const common=await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId);
+  const common=await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId,{reviewOnly:Boolean(xmlProvider)});
   if(common){
     if(common.ok && job?.id && ["RECEIVED","IN_REVIEW"].includes(inbox[0].status)
       && /^(?:1\.[1-6]|2\.[1-4])$/.test(String(row.invoiceType||"")) && (!row.currency||row.currency==="EUR") && Number(row.totalGross)>0){
@@ -365,15 +385,16 @@ async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled
   const supplierId=suppliers.length===1?suppliers[0].id:null;
   const number=[row.series,row.documentNumber].filter(Boolean).join(" ");
   const duplicate=await tx.$queryRaw`SELECT "id" FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "supplierId" IS NOT DISTINCT FROM ${supplierId} AND UPPER(regexp_replace("documentNumber",'\\s','','g'))=UPPER(regexp_replace(${number},'\\s','','g')) AND "status" IN ('DRAFT','APPROVED') LIMIT 1`;
+  if(duplicate.length&&xmlProvider)return {reconciliationRequired:true};
   if(duplicate.length)throw error("Υπάρχει ήδη αγορά με τον ίδιο προμηθευτή και αριθμό. Ελέγξτε την υπάρχουσα εγγραφή.");
-  const documentId=crypto.randomUUID(),orderId=crypto.randomUUID(),jobId=job?.id||crypto.randomUUID();
-  if(!job)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${inbox[0].attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true})}::jsonb,${userId})`;
+  const documentId=crypto.randomUUID(),orderId=crypto.randomUUID(),jobId=job?.id||(xmlProvider?null:crypto.randomUUID());
+  if(!job&&jobId)await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${inbox[0].attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true})}::jsonb,${userId})`;
   await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","purchaseOrderId") VALUES (${documentId},${companyId},${storeId},${supplierId},${String(row.invoiceType).startsWith("5.")?"CREDIT_NOTE":"INVOICE"},${number},${new Date(row.issueDate)},0,0,${Number(row.totalGross)},'POS_OCR_DRAFT','DRAFT',${userId},${orderId})`;
-  await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${companyId},${storeId},${supplierId},'NEW',${number},${"myDATA • MARK "+row.mark+" — Ανάγνωση από βοηθό — ΠΡΟΣ ΕΛΕΓΧΟ"},${userId},'Λήψη myDATA','Λήψη myDATA','POS_OCR_DRAFT',${documentId})`;
-  await prefillReviewDraft(tx,row,job||{id:jobId,companyId,storeId,attachmentId:inbox[0].attachmentId,resultJson:{}},companyId,storeId,orderId,supplierId);
-  await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"stage"='MYDATA_DRAFT_READY',"status"='AWAITING_APPROVAL',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,mydataDraftOrderId:orderId})}::jsonb,"updatedAt"=NOW() WHERE "id"=${jobId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
-  await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό"},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
-  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataDraftOrderId:orderId,mydataDraftDocumentId:documentId})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${companyId},${storeId},${supplierId},'NEW',${number},${"myDATA • MARK "+row.mark+(xmlProvider?" — Στοιχεία XML myDATA":" — Ανάγνωση από βοηθό")+" — ΠΡΟΣ ΕΛΕΓΧΟ"},${userId},'Λήψη myDATA','Λήψη myDATA','POS_OCR_DRAFT',${documentId})`;
+  const filled=await prefillReviewDraft(tx,row,job||(jobId?{id:jobId,companyId,storeId,attachmentId:inbox[0].attachmentId,resultJson:{}}:null),companyId,storeId,orderId,supplierId);
+  if(jobId)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"stage"='MYDATA_DRAFT_READY',"status"='AWAITING_APPROVAL',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({source:"MYDATA_PROVIDER_ORIGINAL",myDataMark:row.mark,requiresHumanReview:true,mydataDraftOrderId:orderId})}::jsonb,"updatedAt"=NOW() WHERE "id"=${jobId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  await tx.$executeRaw`UPDATE "DocumentInbox" SET "status"='IN_REVIEW',"note"=${"myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές"+(xmlProvider?(filled?" — XML myDATA, προς έλεγχο":" — XML myDATA, χρειάζεται συμπλήρωση γραμμών"):" — Ανάγνωση από βοηθό")},"updatedAt"=NOW() WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
+  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataDraftOrderId:orderId,mydataDraftDocumentId:documentId,...(xmlProvider?{mydataDraftSource:"AADE_XML",mydataViewerProvider:xmlProvider}:{})})}::jsonb WHERE "inboxId"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId}`;
   return {reused:true,downloaded:false,jobId,purchaseOrderId:orderId};
 }
 

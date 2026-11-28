@@ -1,3 +1,4 @@
+import {ensureInvoiceCommonDraftSchema} from "../lib/invoice-common-draft.js";
 import {ensureMyDataBranchSchema,hasMyDataBranchMappings,readMyDataBranchForStore} from "../services/mydata-store-branch.js";
 import {readMyDataPdfDraftReadiness} from '../lib/mydata-pdf-draft-readiness.js';
 import {greeceDateInput,greeceExportRows} from "../../../shared/greece-time.mjs";
@@ -15,7 +16,7 @@ import {invoiceNodes,invoiceRecipientBranch,invoiceSummary,myDataError,nextPage,
 import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {linkStoredPosInvoicePhotos} from "../lib/pos-unlinked-mydata.js";
-import {acquireOriginal,fetchStaffMyDataInboxOriginal,prefillStoredMyDataDraft,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
+import {acquireOriginal,myDataXmlDraftProvider,prepareMyDataXmlReviewDraft,fetchStaffMyDataInboxOriginal,prefillStoredMyDataDraft,providerOriginalRecoveryLinkPattern} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
@@ -23,6 +24,8 @@ import {myDataReceivingScope,readMyDataReceivingContinuation,saveMyDataReceiving
 
 const router=Router();
 let schemaPromise;
+const xmlDraftLabCompanyId="cmulmjjoa000oqlbfyi0h53ju";
+const xmlDraftLabStoreId="cmulmjjoc000qqlbf2bn2ifj0";
 
 function canSync(req){return req.user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(req.user?.role)}
 async function ensureSchema(){
@@ -233,6 +236,12 @@ async function performSync(req,branch=null){
   const rows=await prisma.$queryRaw`SELECT "environment","credentialsEnc","enabled","metadataJson","receiveFromDate"::text AS "receiveFromDate" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
   const integration=rows[0];if(!integration?.enabled)throw syncError("Δεν έχει ενεργοποιηθεί σύνδεση myDATA για αυτό το κατάστημα.",409);
   if(!["SANDBOX","PRODUCTION"].includes(integration.environment))throw syncError("Μη έγκυρο περιβάλλον myDATA.",409);
+  const xmlDraftScope=(integration.environment==="SANDBOX"
+    && req.user.companyId===xmlDraftLabCompanyId && store.id===xmlDraftLabStoreId)
+    || (integration.environment==="PRODUCTION" && store.id===panormouStoreId);
+  const canPrepareXmlDraft=xmlDraftScope
+    && Boolean(req.license?.superAdminBypass||req.license?.activeModules?.includes("INVENTORY"));
+  if(canPrepareXmlDraft)await ensureInvoiceCommonDraftSchema(prisma);
   const credentials=decryptStoreIntegrationCredentials(integration.credentialsEnc);
   // The cursor belongs to this store AND environment. Never reuse a sandbox MARK in production.
   const source=`AADE_MYDATA_${integration.environment}`;
@@ -273,7 +282,18 @@ async function performSync(req,branch=null){
       const inboxId=crypto.randomUUID(),recordId=crypto.randomUUID(),title=["myDATA",doc.series,doc.documentNumber].filter(Boolean).join(" ");
       const note=`${title} • MARK ${doc.mark} • ${doc.totalGross.toFixed(2)} € • Πρόχειρο — απαιτείται πρωτότυπο PDF/OCR και επιβεβαίωση πριν την αποθήκη`;
       await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","status","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${store.id},${supplier?.id||null},'RECEIVED',${note},'Αυτόματη λήψη myDATA',${req.user.id})`;
-      await tx.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","uid","issuerVat","counterpartVat","series","documentNumber","issueDate","invoiceType","currency","totalNet","totalVat","totalGross","rawPayload") VALUES (${recordId},${req.user.companyId},${store.id},${inboxId},${doc.mark},${doc.uid},${doc.issuerVat},${doc.counterpartVat},${doc.series},${doc.documentNumber},${doc.issueDate?new Date(`${doc.issueDate}T00:00:00Z`):null},${doc.invoiceType},${doc.currency},${doc.totalNet},${doc.totalVat},${doc.totalGross},${JSON.stringify({source,xml:invoice,originalPending:true,...(branch===null?{}:{recipientBranch:branch})})}::jsonb)`;
+      const provider=canPrepareXmlDraft?myDataXmlDraftProvider(invoice,doc.issuerVat):null;
+      const issueDate=doc.issueDate?new Date(`${doc.issueDate}T00:00:00Z`):null;
+      const rawPayload={source,xml:invoice,originalPending:!provider,...(provider?{mydataViewerProvider:provider}:{}),...(branch===null?{}:{recipientBranch:branch})};
+      await tx.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","uid","issuerVat","counterpartVat","series","documentNumber","issueDate","invoiceType","currency","totalNet","totalVat","totalGross","rawPayload") VALUES (${recordId},${req.user.companyId},${store.id},${inboxId},${doc.mark},${doc.uid},${doc.issuerVat},${doc.counterpartVat},${doc.series},${doc.documentNumber},${issueDate},${doc.invoiceType},${doc.currency},${doc.totalNet},${doc.totalVat},${doc.totalGross},${JSON.stringify(rawPayload)}::jsonb)`;
+      if(provider&&issueDate&&Number.isFinite(issueDate.getTime())&&doc.documentNumber&&doc.totalGross>0&&(!doc.currency||doc.currency==="EUR")
+          && /^(?:1\.[1-6]|2\.[1-4]|5\.[12])$/.test(doc.invoiceType)){
+        const result=await prepareMyDataXmlReviewDraft(tx,{...doc,id:recordId,companyId:req.user.companyId,
+          storeId:store.id,inboxId,issueDate,rawPayload},req.user.id,provider);
+        if(result.reconciliationRequired)await tx.$executeRaw`UPDATE "DocumentInbox"
+          SET "note"=${title+" • Υπάρχει πιθανή αντίστοιχη αγορά — απαιτείται έλεγχος"}
+          WHERE "id"=${inboxId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id}`;
+      }
       return {id:inboxId,...doc,supplierName:supplier?.name||null};
   }
   function matchingInvoices(invoices){
@@ -408,7 +428,7 @@ export async function runMyDataReceivingSweep(){
     if(backgroundDrain.stopping||workerBusy)return;workerBusy=true;
     try{
       await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);
-      const targets=await prisma.$queryRaw`SELECT c."companyId",c."storeId" FROM "StoreIntegrationCredential" c JOIN "Store" s ON s."id"=c."storeId" AND s."companyId"=c."companyId" WHERE c."kind"='MYDATA' AND c."enabled"=true AND c."environment"='PRODUCTION' AND s."active"=true AND c."companyId" NOT ILIKE 'customer-demo-%' AND c."storeId" NOT ILIKE 'customer-demo-%' ORDER BY c."companyId",c."storeId"`;
+      const targets=await prisma.$queryRaw`SELECT c."companyId",c."storeId" FROM "StoreIntegrationCredential" c JOIN "Store" s ON s."id"=c."storeId" AND s."companyId"=c."companyId" WHERE c."kind"='MYDATA' AND c."enabled"=true AND (c."environment"='PRODUCTION' OR (c."environment"='SANDBOX' AND c."companyId"=${xmlDraftLabCompanyId} AND c."storeId"=${xmlDraftLabStoreId})) AND s."active"=true AND c."companyId" NOT ILIKE 'customer-demo-%' AND c."storeId" NOT ILIKE 'customer-demo-%' ORDER BY c."companyId",c."storeId"`;
       for(const target of targets){if(backgroundDrain.stopping)break;if(isCustomerDemoTenant(target))continue;try{
         const state=await companyModuleState(target.companyId);
         if(!state?.licenseAllowed||!state.activeModules.includes("DOCUMENTS"))continue;

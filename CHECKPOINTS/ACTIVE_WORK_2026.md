@@ -1,3 +1,7 @@
+## 28/11/2026 — Νο 09 · Αυτόματα πρόχειρα myDATA στο LAB
+
+Συνέχεια της ανάθεσης 09 για Parochos.gr και iNVOsign. Τοπική υλοποίηση από XML και έλεγχοι. Εγκατάσταση και δοκιμή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-28-mydata-provider-xml-drafts.md).
+
 ## 28Nov2026 — Shelf label product/barcode/price layout — INSTALLED / AWAITING OWNER PRINT
 
 - 28/11/2026 · [Ιστορικό πληρωμών προμηθευτών](CHANGES/2026-11-28-supplier-payment-correction-history.md).

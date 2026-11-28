@@ -458,7 +458,7 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
 }
 // Called during original acquisition. Exact POS-first headers can reuse its
 // existing draft; uncertain candidates keep the PDF for the review screen.
-export async function attachInboundToExistingDraft(tx,scope,actorId){
+export async function attachInboundToExistingDraft(tx,scope,actorId,{reviewOnly=false}={}){
  const row=await inbound(tx,scope),orders=await candidateOrders(tx,row),pos=orders.filter(o=>!o.isMyData);
  if((row.rawPayload?.mydataDraftOrderId||row.jobDocumentId)&&!orders.some(o=>o.isMyData))throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
  if(!pos.length){
@@ -467,7 +467,7 @@ export async function attachInboundToExistingDraft(tx,scope,actorId){
   return canonical?{ok:true,reused:true,orderId:canonical.orderId,documentId:canonical.documentId,purchaseOrderId:canonical.orderId,downloaded:false,stockUpdated:false,paymentChanged:false}:null;
  }
  const exact=pos.filter(o=>o.exact);
- if(exact.length!==1||pos.length!==1)return {reconciliationRequired:true,candidateOrderIds:pos.map(o=>o.orderId),downloaded:false};
+ if(reviewOnly||exact.length!==1||pos.length!==1)return {reconciliationRequired:true,candidateOrderIds:pos.map(o=>o.orderId),downloaded:false};
  try{
   const result=await reconcileInvoiceDrafts(tx,scope,{posOrderId:exact[0].orderId,automatic:true,actorId});
   return {...result,purchaseOrderId:result.orderId,downloaded:false};

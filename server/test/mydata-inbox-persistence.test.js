@@ -4,13 +4,15 @@ import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../src/cus
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
+import {myDataXmlDraftProvider,providerOriginalRecoveryLinkPattern} from "../src/mydata-original.js";
 import * as xmlHelpers from "../src/mydata-xml.js";
 
 test("real sync handler uses raw Supplier lookup and writes one draft, including unmatched suppliers",async()=>{
   const source=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8");
   const routes=new Map(),queries=[],writes=[];
   let matchingSupplier=true,alreadyExists=false,pendingOriginals=[],emptyDrafts=[];
-  const acquired=[];
+  const acquired=[],prepared=[];
+  let companyId="company-one",storeId="store-one",environment="PRODUCTION";
   const tx={
     async $queryRawUnsafe(sql){assert.match(sql,/current_schema/);return [{schema:'public',fence:null}]},
     async $queryRaw(strings,...values){
@@ -24,11 +26,11 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     async $executeRaw(strings,...values){writes.push({sql:strings.join("?"),values});return 1}
   };
   const prisma={
-    store:{async findFirst(){return {id:"store-one",company:{taxId:"088888888"}}}},
+    store:{async findFirst(){return {id:storeId,company:{taxId:"088888888"}}}},
     async $executeRawUnsafe(){return 0},
     async $queryRaw(strings){
       const sql=strings.join("?");
-      if(sql.includes('FROM "StoreIntegrationCredential"'))return [{enabled:true,environment:"PRODUCTION",credentialsEnc:"fixture"}];
+      if(sql.includes('FROM "StoreIntegrationCredential"'))return [{enabled:true,environment,credentialsEnc:"fixture"}];
       if(sql.includes('MAX('))return [{lastMark:"0"}];
       if(sql.includes('originalPending'))return pendingOriginals;
       if(sql.includes('automaticPrefillChecked'))return emptyDrafts;
@@ -37,9 +39,10 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     async $transaction(callback){return callback(tx)}
   };
   const key="__mydataPersistenceTest";
-  globalThis[key]={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,linkStoredPosInvoicePhotos:async()=>0,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
+  globalThis[key]={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,myDataXmlDraftProvider,providerOriginalRecoveryLinkPattern,ensureInvoiceCommonDraftSchema:async()=>{},
+    prepareMyDataXmlReviewDraft:async(db,row,actor,provider)=>{assert.equal(db,tx);prepared.push({row,actor,provider});return {purchaseOrderId:"draft"}},linkStoredPosInvoicePhotos:async()=>0,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
   const injected=`import crypto from "node:crypto";
-    const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,linkStoredPosInvoicePhotos,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
+    const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,myDataXmlDraftProvider,providerOriginalRecoveryLinkPattern,ensureInvoiceCommonDraftSchema,prepareMyDataXmlReviewDraft,linkStoredPosInvoicePhotos,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
     const requireCompanyModule=()=>()=>{};
     const ensureStoreIntegrationSchema=async()=>{};
     const ensureMyDataBranchSchema=async()=>{},hasMyDataBranchMappings=async()=>false,readMyDataBranchForStore=async()=>null;
@@ -52,7 +55,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
   try{
     const run=async()=>{
       let result,failure;
-      await handler({body:{storeId:"store-one"},license:{activeModules:["DOCUMENTS","AI_READER","INVENTORY"]},user:{companyId:"company-one",id:"owner-one",role:"OWNER"}},{json(value){result=value}},error=>{failure=error});
+      await handler({body:{storeId},license:{activeModules:["DOCUMENTS","AI_READER","INVENTORY"]},user:{companyId,id:"owner-one",role:"OWNER"}},{json(value){result=value}},error=>{failure=error});
       assert.ifError(failure);return result;
     };
     let result=await run();assert.equal(result.created,1);assert.equal(result.documents[0].supplierName,"Supplier One");
@@ -75,6 +78,48 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     assert.equal(result.originalsDownloaded,0);
     assert.deepEqual(acquired.at(-1).slice(1),["company-one","store-one","older-empty-draft","owner-one",true]);
     assert.equal(writes.length,0); // attachment helper mocked; receiving replay still writes nothing
+
+    companyId="cmulmjjoa000oqlbfyi0h53ju";
+    storeId="cmulmjjoc000qqlbf2bn2ifj0";
+    environment="SANDBOX";
+    alreadyExists=false;
+    emptyDrafts=[];
+    const viewers=[
+      ["PAROCHOS","https://beta-srv.parochos.gr/FileDocument/Get/01234567-89ab-cdef-0123-456789abcdef"],
+      ["INVOSIGN","https://invosign.gr/viewinvoice.php?afm=EL099999999&amp;file=sample&amp;gvsenc=fixture"]
+    ];
+    for(const [index,[provider,url]] of viewers.entries()){
+      const payload=invoice.replace("<aa>42</aa>","<aa>42</aa><issueDate>2026-11-28</issueDate><invoiceType>1.1</invoiceType>")
+        .replace("<mark>12345</mark>",`<mark>${12345+index}</mark>`)
+        .replace("</invoice>",`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl></invoice>`);
+      globalThis.fetch=async()=>({ok:true,text:async()=>payload});
+      writes.length=0;
+      result=await run();
+      assert.equal(result.created,1);
+      assert.equal(prepared[index].provider,provider);
+      assert.equal(prepared[index].row.storeId,storeId);
+      assert.equal(prepared[index].row.rawPayload.originalPending,false);
+      assert.match(writes[1].sql,/INSERT INTO "MyDataInboundDocument"/);
+      alreadyExists=true;
+      assert.equal((await run()).duplicates,1);
+      assert.equal(prepared.length,index+1);
+      alreadyExists=false;
+    }
+    storeId="other-store";
+    result=await run();
+    assert.equal(result.created,1);
+    assert.equal(prepared.length,2);
+    assert.equal(acquired.length,2);
+    environment="PRODUCTION";
+    storeId="cmwqvuxrx001is8g4uqlyzwg2";
+    result=await run();
+    assert.equal(result.created,1);
+    assert.equal(prepared.length,3);
+    assert.equal(prepared[2].row.storeId,storeId);
+    storeId="other-store";
+    await run();
+    assert.equal(prepared.length,3);
+
 
   }finally{globalThis.fetch=previousFetch}
 });
