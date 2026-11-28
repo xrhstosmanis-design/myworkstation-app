@@ -180,10 +180,10 @@ export default function CommerceLauncher(){
     const workspace=workspaceElementRef.current;
     if(!workspace||mode!=="legacy"||minimized)return;
     const openCard=event=>{
-      const {productId,storeId,initialTab}=event.detail||{};
+      const {productId,storeId}=event.detail||{};
       if(!productId||!storeId||!stores.some(store=>store.id===storeId)||wholesaleLockRef.current)return;
       event.preventDefault();
-      setInventoryInitialProduct({productId,initialTab:initialTab==="purchases"?"purchases":"basic"});
+      setInventoryInitialProduct({productId});
       setInventoryStoreId(storeId);
       setMode("inventory");
     };

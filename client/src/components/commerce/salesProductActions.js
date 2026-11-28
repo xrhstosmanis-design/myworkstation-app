@@ -2,35 +2,53 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const mounted=new WeakSet();
 
 // Route genuine product identities to the existing complete Warehouse card.
-export function installSalesProductActions(root,getContext){
+export function installSalesProductActions(root,getContext,read,loadPurchases=()=>import('./inventoryProductActionsV2.js')){
  if(mounted.has(root))return;mounted.add(root);
  const doc=root.ownerDocument,win=doc.defaultView;
  if(!doc.getElementById('sas-product-actions-style')){
   const style=doc.createElement('style');style.id='sas-product-actions-style';
   style.textContent='.sas-product-menu{position:fixed;z-index:2147483646;background:white;border:1px solid #aac0d5;border-radius:9px;padding:6px;box-shadow:0 8px 35px #1235;max-width:95vw}.sas-product-menu button{display:block;width:100%;padding:10px;text-align:left;background:white;border:0;color:#143c5d;cursor:pointer}.sas-product-menu button:focus,.sas-product-menu button:hover{background:#eef6ff}.sas-product-backdrop{position:fixed;inset:0;z-index:2147483647;background:#1238;display:grid;place-items:center;padding:16px}.sas-product-dialog{background:white;color:#17324b;border-radius:12px;max-height:90vh;width:min(1050px,96vw);overflow:auto;padding:20px}.sas-product-dialog header{display:flex;justify-content:space-between;gap:12px}.sas-product-dialog table{border-collapse:collapse;width:100%}.sas-product-dialog th,.sas-product-dialog td{padding:8px;border:1px solid #cad8e5;text-align:left}.sas-product-dialog .sas-history{overflow:auto}.sas-product-dialog dl{display:grid;grid-template-columns:auto 1fr;gap:10px}.sas-product-dialog button{padding:8px 12px;cursor:pointer}.sas-product-dialog [role=alert]{color:#b42318}@media print{.sas-product-menu,.sas-product-backdrop{display:none!important}}';doc.head.append(style);
  }
- let menu=null,dialog=null,watch=null,operation=0,target=null;
+ let menu=null,dialog=null,nativeDialog=null,watch=null,operation=0,target=null;
  const snapshot=()=>JSON.stringify(getContext());
  const current=scope=>root.isConnected&&root.style.display!=='none'&&getContext().valid&&snapshot()===scope;
- const closeMenu=()=>{menu?.remove();menu=null;if(watch&&!dialog){win.clearInterval(watch);watch=null}};
- const close=()=>{++operation;closeMenu();dialog?.remove();dialog=null;if(watch)win.clearInterval(watch);watch=null};
- const observe=scope=>{if(watch)win.clearInterval(watch);watch=win.setInterval(()=>{if(!current(scope))close()},250)};
+ const closeMenu=()=>{menu?.remove();menu=null;if(watch&&!dialog&&!nativeDialog){win.clearInterval(watch);watch=null}};
+ const close=()=>{++operation;closeMenu();dialog?.remove();dialog=null;nativeDialog?.remove();nativeDialog=null;if(watch)win.clearInterval(watch);watch=null};
+ const observe=scope=>{if(watch)win.clearInterval(watch);watch=win.setInterval(()=>{if(!current(scope)||nativeDialog&&!nativeDialog.isConnected)close()},250)};
  const present=(title,body,scope)=>{
   dialog?.remove();dialog=doc.createElement('div');dialog.className='sas-product-backdrop';
   dialog.innerHTML=`<section class="sas-product-dialog" role="dialog" aria-modal="true" aria-label="${escape(title)}"><header><h2>${escape(title)}</h2><button type="button" data-sas-close aria-label="Κλείσιμο">×</button></header>${body}</section>`;
   doc.body.append(dialog);dialog.querySelector('[data-sas-close]').onclick=()=>{close();target?.isConnected&&target.focus()};
   dialog.querySelector('[data-sas-close]').focus();observe(scope);
  };
- function open(kind,element,scope){
+ async function open(kind,element,scope){
   const context=getContext(),productId=element.dataset.productId;
   if(!productId||!current(scope))return;
   closeMenu();
-  const event=new win.CustomEvent('mws:price-catalog-full-card',{
-   bubbles:true,cancelable:true,
-   detail:{productId,storeId:context.storeId,initialTab:kind==='purchases'?'purchases':'basic'}
-  });
-  root.dispatchEvent(event);
-  if(!event.defaultPrevented)present('Καρτέλα είδους','<p role="alert">Η πλήρης καρτέλα της Αποθήκης δεν είναι διαθέσιμη από αυτή την προβολή.</p>',scope);
+  if(kind==='card'){
+   const event=new win.CustomEvent('mws:price-catalog-full-card',{
+    bubbles:true,cancelable:true,detail:{productId,storeId:context.storeId}
+   });
+   root.dispatchEvent(event);
+   if(!event.defaultPrevented)present('Καρτέλα είδους','<p role="alert">Η πλήρης καρτέλα της Αποθήκης δεν είναι διαθέσιμη από αυτή την προβολή.</p>',scope);
+   return;
+  }
+  const request=++operation,active=()=>request===operation&&current(scope);
+  observe(scope);
+  try{
+   const {openInventoryPurchases}=await loadPurchases();
+   if(!active())return;
+   const view=await openInventoryPurchases({productId,storeId:context.storeId,name:element.dataset.productName||element.textContent.trim(),
+    api:async path=>{
+     if(!active())throw Error('Η προβολή άλλαξε.');
+     const result=await read(path,context.token);
+     if(!active())throw Error('Η προβολή άλλαξε.');
+     return result;
+    }
+   });
+   if(!active()){view?.remove();return}
+   nativeDialog=view;nativeDialog?.querySelector('[data-close]')?.focus();
+  }catch(error){if(active())present('Αγορές είδους',`<p role="alert">${escape(error.message||'Αποτυχία φόρτωσης.')}</p>`,scope)}
  }
 
  function show(event,element){
@@ -47,7 +65,7 @@ export function installSalesProductActions(root,getContext){
  root.addEventListener('sas:scope-change',close);
  const outside=event=>{if(menu&&!menu.contains(event.target))closeMenu()};
  const key=event=>{
-  if(event.key==='Escape'&&(menu||dialog)){close();target?.isConnected&&target.focus()}
+  if(event.key==='Escape'&&(menu||dialog||nativeDialog)){close();target?.isConnected&&target.focus()}
   if(event.key==='Tab'&&dialog){const button=dialog.querySelector('button');event.preventDefault();button?.focus()}
   if(menu&&['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();const buttons=[...menu.querySelectorAll('button')],index=buttons.indexOf(doc.activeElement);buttons[(index+(event.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus()}
  };
