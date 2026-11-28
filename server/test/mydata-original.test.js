@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal,panormouOriginalStoreId} from "../src/mydata-original.js";
+import {prepareMyDataXmlReviewDraft,myDataXmlDraftProvider,originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal,panormouOriginalStoreId} from "../src/mydata-original.js";
 
 test("Megasoft appends the PDF suffix to the exact InvoiceLink query value", () => {
   const link = "https://invoicelink.megasoft.gr/invoiceinspect/qr?QrCode=" + "A".repeat(100);
@@ -228,4 +228,56 @@ test("aborted response body retains the provider deadline diagnosis",async t=>{
   t.mock.method(AbortSignal,"timeout",()=>AbortSignal.abort(new DOMException("deadline","TimeoutError")));
   const response=async()=>({ok:true,headers:new Headers({"content-type":"application/pdf"}),body:{async *[Symbol.asyncIterator](){throw new DOMException("body cancelled","AbortError")}}});
   await assert.rejects(fetchOriginalPdf(row,response),e=>e.status===504&&/45/.test(e.message));
+});
+
+test("recipient viewer URLs identify XML drafts without entering original PDF acquisition", () => {
+  const vat = "099999999";
+  const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
+  const parochos = "https://beta-srv.parochos.gr/FileDocument/Get/01234567-89ab-cdef-0123-456789abcdef";
+  const panormouParochos = "https://srv2.parochos.gr/fd/0123456789abcdef0123456789abcdef:1";
+  assert.equal(myDataXmlDraftProvider(xml(panormouParochos), vat), "PAROCHOS");
+  assert.equal(myDataXmlDraftProvider(xml(panormouParochos + "/pdf"), vat), null);
+  const invosign = "https://invosign.gr/viewinvoice.php?afm=EL099999999&amp;file=sample&amp;gvsenc=fixture";
+  assert.equal(myDataXmlDraftProvider(xml(parochos), vat), "PAROCHOS");
+  assert.equal(myDataXmlDraftProvider(xml(invosign), vat), "INVOSIGN");
+  for (const url of [parochos, panormouParochos, invosign]) assert.throws(() => originalDownloadUrl(xml(url), vat));
+  for (const url of [parochos + "/pdf", invosign + "&amp;file=second", invosign.replace(vat,"088888888"),
+    invosign.replace("invosign.gr", "invosign.gr.example"), parochos.replace("https:", "http:")]) {
+    assert.equal(myDataXmlDraftProvider(xml(url), vat), null);
+  }
+});
+
+test("XML intake records a single review draft without an original attachment or AI job", async () => {
+  const writes=[];
+  const source={...row,id:"source",companyId:"company",storeId:"lab",inboxId:"inbox",rawPayload:{xml:"<invoice/>"}};
+  let orderId,documentId;
+  const tx={
+    async $queryRaw(strings){
+      const sql=strings.join("?");
+      if(sql.includes('pg_advisory_xact_lock'))return [];
+      if(sql.includes('FROM "DocumentInbox"'))return [{id:source.inboxId,status:orderId?"IN_REVIEW":"RECEIVED",attachmentId:null}];
+      if(sql.includes('FROM "MyDataInboundDocument"'))return [source];
+      if(sql.includes('AS "orderId"'))return orderId?[{orderId,documentId,status:"NEW",documentStatus:"DRAFT",lineCount:0}]:[];
+      if(sql.includes('FROM "Supplier"'))return [{id:"supplier"}];
+      if(sql.includes('FROM "PurchaseOrder"'))return orderId?[{id:orderId,documentId,supplierId:"supplier",status:"NEW"}]:[];
+      if(sql.includes('FROM "PurchaseDocument"')||sql.includes('FROM "PurchaseOrderLine"'))return [];
+      throw new Error(sql);
+    },
+    async $executeRaw(strings,...values){
+      const sql=strings.join("?");writes.push(sql);
+      if(sql.startsWith('INSERT INTO "PurchaseDocument"'))documentId=values[0];
+      if(sql.startsWith('INSERT INTO "PurchaseOrder"'))orderId=values[0];
+      if(sql.startsWith('UPDATE "MyDataInboundDocument"')&&typeof values[0]==="string"&&values[0].startsWith("{")){
+        Object.assign(source.rawPayload,JSON.parse(values[0]));
+      }
+    }
+  };
+  const run=()=>prepareMyDataXmlReviewDraft(tx,source,"owner","INVOSIGN");
+  assert.ok((await run()).purchaseOrderId);
+  assert.equal(source.rawPayload.mydataDraftSource,"AADE_XML");
+  assert.equal(source.rawPayload.originalDownloaded,undefined);
+  assert.equal(writes.filter(sql=>sql.startsWith('INSERT INTO "PurchaseOrder"')).length,1);
+  assert.equal(writes.some(sql=>/DocumentAttachment|AiReaderJob|StoreTransaction|StockMovement/.test(sql)),false);
+  assert.equal((await run()).purchaseOrderId,orderId);
+  assert.equal(writes.filter(sql=>sql.startsWith('INSERT INTO "PurchaseOrder"')).length,1);
 });

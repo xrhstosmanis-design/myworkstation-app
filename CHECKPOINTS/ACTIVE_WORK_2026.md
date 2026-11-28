@@ -1,3 +1,7 @@
+## 28/11/2026 — Νο 09 · Αυτόματα πρόχειρα myDATA στο LAB
+
+Συνέχεια της ανάθεσης 09 για Parochos.gr και iNVOsign. Τοπική υλοποίηση από XML και έλεγχοι. Εγκατάσταση και δοκιμή LAB εκκρεμούν. [Checkpoint](CHANGES/2026-11-28-mydata-provider-xml-drafts.md).
+
 ## 28Nov2026 — Shelf label product/barcode/price layout — INSTALLED / AWAITING OWNER PRINT
 
 - 28/11/2026 · [Ιστορικό πληρωμών προμηθευτών](CHANGES/2026-11-28-supplier-payment-correction-history.md).
@@ -1319,5 +1323,10 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 ## 28/11/2026 — Sales product search/context / LIVE / AWAITING USER VISUAL ONLY
 
 Owner /root / feat/sales-product-search-actions-20261128 retained. Source #4324 head28f273cc passed CI46164107311; merge449b7489 passed exact-main CI46166166601 (7501PASS/0FAIL/4SKIP). Guarded release46168050751 successful; Render dep-dc5gh4m1egvs73bs5gl0 LIVE17:01:50Z, exact health449b7489 and actual entry-BektcMJG.js markers verified. Search all five tabs by description/SKU/barcode; genuine product context card/purchases stay store/period scoped. Browser sign-in wall prevented authenticated visual review; no financial LAB/USER PASS. No further source or data repair assigned. Single next action: owner full refresh and inspect selected-store Sales search/right-click during common final acceptance. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
+
+
+## 28/11/2026 — Sales native warehouse card/purchases correction / ASSIGNED / BEFORE SOURCE
+
+Owner /root / fix/sales-native-product-card-20261128, continuation of #4324. User screenshot rejects the summary dialog and explicitly requests the same complete card and purchases as Warehouse. Prior search/menu deployment449b7489 remains technically verified; summary presentation is rejected by user, native routing NOT TESTED. Reuse existing CommerceLauncher warehouse initialProduct bridge, selecting basic or purchases tab; remove the custom summary/history renderer. Preserve all five-tab search, product/store identity, keyboard/scope fences, existing Warehouse edit permissions and all other owners. No financial action, schema, API or grant change. Common visual acceptance later. [Checkpoint](CHANGES/2026-11-28-sales-native-product-card.md).
 
 - 28/11/2026 · [Υπογεγραμμένο Android Chat 0.1.20](CHANGES/2026-11-28-android-chat-020-publication.md).
