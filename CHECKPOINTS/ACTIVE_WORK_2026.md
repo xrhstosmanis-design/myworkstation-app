@@ -1311,3 +1311,8 @@ PR #4311 source c1f373c8 / CI46066315571: Windows, classifier and wholesale jobs
 - 28/11/2026 · [Διόρθωση πληρωμής σε κλεισμένη βάρδια](CHANGES/2026-11-28-closed-shift-payment-correction.md).
 
 - 27/11/2026: Proposal packaging cost, line removal and presentation. See CHECKPOINTS/CHANGES/2026-11-27-proposal-pack-cost.md. Operational acceptance pending.
+
+
+## 28/11/2026 — Sales product search/context / SOURCE PREPARED / AWAITING CI
+
+Owner /root / feat/sales-product-search-actions-20261128 retained. Claim4323 green/merged091e524c7 before edits. Common five-tab query, subset totals/averages, pre-cap journal search, genuine-ID context card/purchase reads and stale/tenant boundaries implemented. Focused21 (including global Greece clock policy) + native PostgreSQL2 passed; frontend build9.09s passed. Sole full-CI clock-format failure corrected; latest full rerun required. No financial/write/permission/infrastructure change. Full source CI/release/common visual acceptance pending. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
