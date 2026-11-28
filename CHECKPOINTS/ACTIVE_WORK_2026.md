@@ -1,6 +1,6 @@
 ## 28Nov2026 — Shelf label product/barcode/price layout — ASSIGNED /root
 
-Independent owner expansion: no store heading, product at top, compact barcode bottom left, large complete price bottom right, matching supplied shelf-label reference. Existing 27Nov readability owner /root continued; Citizen device owner unchanged. Before-source claim; NOT TESTED. [Checkpoint](CHANGES/2026-11-28-shelf-label-layout.md). [Pending](../docs/roadmap/PENDING_WORK_2026-11-28_SHELF_LABEL.md).
+Independent owner expansion: no store heading, product at top, compact barcode bottom left, large complete price bottom right, matching supplied shelf-label reference. Existing 27Nov readability owner /root continued; Citizen device owner unchanged. Claim #4325 green/main before source. Source/local8PASS/buildPASS; full CI/release pending, physical print/scanner NOT TESTED. [Checkpoint](CHANGES/2026-11-28-shelf-label-layout.md). [Pending](../docs/roadmap/PENDING_WORK_2026-11-28_SHELF_LABEL.md).
 
 ## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
 
