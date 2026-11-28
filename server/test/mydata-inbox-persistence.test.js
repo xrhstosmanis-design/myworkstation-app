@@ -85,7 +85,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     alreadyExists=false;
     emptyDrafts=[];
     const viewers=[
-      ["PAROCHOS","https://beta-srv.parochos.gr/FileDocument/Get/01234567-89ab-cdef-0123-456789abcdef"],
+      ["PAROCHOS","https://srv2.parochos.gr/fd/0123456789abcdef0123456789abcdef:1"],
       ["INVOSIGN","https://invosign.gr/viewinvoice.php?afm=EL099999999&amp;file=sample&amp;gvsenc=fixture"]
     ];
     for(const [index,[provider,url]] of viewers.entries()){

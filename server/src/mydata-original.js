@@ -78,6 +78,7 @@ export function myDataXmlDraftProvider(xml, issuerVat){
   if(url.username||url.password||url.port||url.hash)return null;
   if(["beta-srv.parochos.gr","srv.parochos.gr"].includes(url.hostname)&&!url.search
       && /^\/FileDocument\/Get\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(url.pathname))return "PAROCHOS";
+  if(url.hostname==="srv2.parochos.gr"&&!url.search&&/^\/fd\/[a-f0-9]{32}:[0-9]$/i.test(url.pathname))return "PAROCHOS";
   const params=url.searchParams;
   if(url.hostname==="invosign.gr"&&url.pathname==="/viewinvoice.php"&&[...params].length===3
       && params.get("afm")==="EL"+issuerVat&&params.get("file")&&params.get("gvsenc"))return "INVOSIGN";

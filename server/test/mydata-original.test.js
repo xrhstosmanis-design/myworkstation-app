@@ -234,10 +234,13 @@ test("recipient viewer URLs identify XML drafts without entering original PDF ac
   const vat = "099999999";
   const xml = url => `<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`;
   const parochos = "https://beta-srv.parochos.gr/FileDocument/Get/01234567-89ab-cdef-0123-456789abcdef";
+  const panormouParochos = "https://srv2.parochos.gr/fd/0123456789abcdef0123456789abcdef:1";
+  assert.equal(myDataXmlDraftProvider(xml(panormouParochos), vat), "PAROCHOS");
+  assert.equal(myDataXmlDraftProvider(xml(panormouParochos + "/pdf"), vat), null);
   const invosign = "https://invosign.gr/viewinvoice.php?afm=EL099999999&amp;file=sample&amp;gvsenc=fixture";
   assert.equal(myDataXmlDraftProvider(xml(parochos), vat), "PAROCHOS");
   assert.equal(myDataXmlDraftProvider(xml(invosign), vat), "INVOSIGN");
-  for (const url of [parochos, invosign]) assert.throws(() => originalDownloadUrl(xml(url), vat));
+  for (const url of [parochos, panormouParochos, invosign]) assert.throws(() => originalDownloadUrl(xml(url), vat));
   for (const url of [parochos + "/pdf", invosign + "&amp;file=second", invosign.replace(vat,"088888888"),
     invosign.replace("invosign.gr", "invosign.gr.example"), parochos.replace("https:", "http:")]) {
     assert.equal(myDataXmlDraftProvider(xml(url), vat), null);
