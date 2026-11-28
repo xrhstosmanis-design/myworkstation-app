@@ -1328,3 +1328,8 @@ Owner /root / feat/sales-product-search-actions-20261128 retained. Source #4324 
 ## 28/11/2026 — Sales native warehouse card/purchases correction / ASSIGNED / BEFORE SOURCE
 
 Owner /root / fix/sales-native-product-card-20261128, continuation of #4324. User screenshot rejects the summary dialog and explicitly requests the same complete card and purchases as Warehouse. Prior search/menu deployment449b7489 remains technically verified; summary presentation is rejected by user, native routing NOT TESTED. Reuse existing CommerceLauncher warehouse initialProduct bridge, selecting basic or purchases tab; remove the custom summary/history renderer. Preserve all five-tab search, product/store identity, keyboard/scope fences, existing Warehouse edit permissions and all other owners. No financial action, schema, API or grant change. Common visual acceptance later. [Checkpoint](CHANGES/2026-11-28-sales-native-product-card.md).
+
+
+## Sales native card correction — SOURCE PREPARED / AWAITING CI
+
+Owner /root / fix/sales-native-product-card-20261128 retained. Before-source claim4333 merged990278262 after green CI. Custom summary removed; same Warehouse complete card via existing scoped launcher bridge and exact shared Warehouse purchases history. Focused final tests include real mounted native component, selected-store event, actual purchases history/CSV, stale purchase rejection and unchanged five-tab search. No API/grant/business transaction. Full CI/build/release/user acceptance pending. [Checkpoint](CHANGES/2026-11-28-sales-native-product-card.md).

@@ -49,23 +49,34 @@ test('all five real tabs keep the product query and scoped dates; dirty filters 
  }finally{dom.window.close()}
 });
 
-test('context actions use the selected product/store, escape data and discard delayed responses after scope changes',async()=>{
+test('context actions route exact product/store to the native Warehouse card; stale scopes never navigate',async()=>{
  const dom=new JSDOM('<section id="root"><div tabindex="0" data-product-id="p">A</div><div tabindex="0" data-product-id="q">B</div></section>',{url:'https://test.invalid'}),w=dom.window,root=w.document.querySelector('#root'),calls=[];
- let context={storeId:'s',from:'2026-11-01',to:'2026-11-28',query:'',token:'t',tab:'items',generation:1,valid:true},pending;
- const read=async(url,token)=>{calls.push({url,token});if(url.includes('/purchases?'))return {product:{id:'q',name:'<img src=x>'},purchases:[{supplierName:'<script>x</script>',createdAt:'2026-11-01T00:00:00Z',quantity:2,grossAmount:3}]};return await new Promise(r=>{pending=r})};
- installSalesProductActions(root,()=>context,read);
- const open=kind=>{root.querySelector('[data-product-id="q"]').dispatchEvent(new w.MouseEvent('contextmenu',{bubbles:true,clientX:50,clientY:50,cancelable:true}));w.document.querySelector(`[data-kind="${kind}"]`).click()};
+ let context={storeId:'s',from:'2026-11-01',to:'2026-11-28',query:'',token:'t',tab:'items',generation:1,valid:true};
+ root.addEventListener('mws:price-catalog-full-card',e=>{calls.push(e.detail);e.preventDefault()});
+ installSalesProductActions(root,()=>context,async()=>({}),async()=>({openInventoryPurchases:async d=>{calls.push({productId:d.productId,storeId:d.storeId,nativePurchases:true});await d.api('/native-test');return null}}));
+ const show=()=>root.querySelector('[data-product-id="q"]').dispatchEvent(new w.MouseEvent('contextmenu',{bubbles:true,clientX:50,clientY:50,cancelable:true}));
  try{
-  open('purchases');await tick();assert.match(calls[0].url,/\/q\/purchases\?/);assert.equal(new URL(calls[0].url,'https://test.invalid').searchParams.get('storeId'),'s');assert.equal(w.document.querySelector('.sas-product-dialog img'),null);assert.equal(w.document.querySelector('.sas-product-dialog script'),null);assert.match(w.document.querySelector('.sas-product-dialog').textContent,/<script>x<\/script>/);
-  w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(w.document.querySelector('[role="dialog"]'),null);
-  open('card');context={...context,storeId:'other'};root.dispatchEvent(new w.CustomEvent('sas:scope-change'));
-  pending([{id:'q',name:'STALE',stores:[{storeId:'s',salePrice:1}]}]);await tick();assert.equal(w.document.querySelector('[role="dialog"]'),null);assert.equal(w.document.body.textContent.includes('STALE'),false);
-  root.firstElementChild.focus();w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(w.document.activeElement,root.firstElementChild,'inactive sales actions must not steal focus from other dialogs');
-  context={...context,storeId:'s',generation:2};open('card');pending([{id:'q',name:'<img src=x>',costPrice:null,stores:[{storeId:'other',salePrice:999},{storeId:'s',storeName:'Selected',salePrice:0,currentStock:0}],barcodes:[{barcode:'<b>123</b>',unitMultiplier:1}]}]);await tick();
-  assert.equal(w.document.querySelector('.sas-product-dialog img'),null);assert.match(w.document.querySelector('.sas-product-dialog').textContent,/0,00/);assert.equal(w.document.querySelector('.sas-product-dialog').textContent.includes('999'),false);
-  w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
-  open('card');context={...context,token:'renewed'};await new Promise(r=>setTimeout(r,280));pending([{id:'q',name:'OLD TOKEN',stores:[{storeId:'s',salePrice:1}]}]);await tick();assert.equal(w.document.querySelector('[role="dialog"]'),null);
-  assert.equal(calls.every(c=>!c.url.includes('PATCH')),true);
-  context={...context,valid:false};root.firstElementChild.dispatchEvent(new w.MouseEvent('contextmenu',{bubbles:true}));assert.equal(w.document.querySelector('[role="menu"]'),null);
+  show();w.document.querySelector('[data-kind="purchases"]').click();await tick();assert.deepEqual(calls[0],{productId:'q',storeId:'s',nativePurchases:true});assert.equal(w.document.querySelector('[role="dialog"]'),null);assert.equal(w.document.querySelector('[role="menu"]'),null);
+  show();w.document.querySelector('[data-kind="card"]').click();assert.deepEqual(calls[1],{productId:'q',storeId:'s'});
+  show();context={...context,storeId:'other'};w.document.querySelector('[data-kind="card"]').click();assert.equal(calls.length,2);root.dispatchEvent(new w.CustomEvent('sas:scope-change'));assert.equal(w.document.querySelector('[role="menu"]'),null);
+  root.firstElementChild.focus();w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(w.document.activeElement,root.firstElementChild);
+  context={...context,storeId:'s'};show();context={...context,token:'renewed'};await new Promise(r=>setTimeout(r,280));assert.equal(w.document.querySelector('[role="menu"]'),null);assert.equal(calls.length,2);
+  context={...context,valid:false};show();assert.equal(w.document.querySelector('[role="menu"]'),null);
  }finally{root.remove();await tick();w.close()}
+});
+
+test('delayed native purchase reads cannot render after a store or token change',async()=>{
+ const dom=new JSDOM('<section id="root"><div data-product-id="p">Product</div></section>',{url:'https://test.invalid'}),w=dom.window,root=w.document.querySelector('#root');
+ let context={storeId:'s',valid:true,token:'t'},resolve,rendered=0;
+ installSalesProductActions(root,()=>context,()=>new Promise(r=>{resolve=r}),async()=>({openInventoryPurchases:async d=>{await d.api('/purchases');rendered++;return null}}));
+ try{
+  root.firstElementChild.dispatchEvent(new w.MouseEvent('contextmenu',{bubbles:true,cancelable:true}));w.document.querySelector('[data-kind="purchases"]').click();await tick();
+  context={storeId:'other',valid:true,token:'renewed'};root.dispatchEvent(new w.CustomEvent('sas:scope-change'));resolve({purchases:[]});await tick();assert.equal(rendered,0);assert.equal(w.document.querySelector('[role="dialog"]'),null);
+ }finally{root.remove();await tick();w.close()}
+});
+
+test('native history export is blocked immediately when its scope changes',async()=>{
+ const dom=new JSDOM('<section id="root"><div data-product-id="p">Product</div></section>',{url:'https://test.invalid'}),w=dom.window,root=w.document.querySelector('#root');let context={storeId:'s',valid:true,token:'t'},exports=0;
+ installSalesProductActions(root,()=>context,async()=>({}),async()=>({openInventoryPurchases:async()=>{const view=w.document.createElement('div');view.innerHTML='<button data-export>CSV</button>';view.firstElementChild.onclick=()=>exports++;w.document.body.append(view);return view}}));
+ try{root.firstElementChild.dispatchEvent(new w.MouseEvent('contextmenu',{bubbles:true,cancelable:true}));w.document.querySelector('[data-kind="purchases"]').click();await tick();context={...context,storeId:'other'};w.document.querySelector('[data-export]').click();assert.equal(exports,0);assert.equal(w.document.querySelector('[data-export]'),null)}finally{root.remove();await tick();w.close()}
 });
