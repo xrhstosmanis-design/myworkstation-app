@@ -1,3 +1,7 @@
+## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
+
+Owner /root / feat/sales-product-search-actions-20261128, same page continuation of #4311/#4318. User explicitly extends all five SalesAnalysisSuite tabs with product search and item-row context actions for product card and purchases. Independent expansion; historical-cost/hourly/report/POS/inventory owners retain other scopes. Before-source only: NOT TESTED / NOT INSTALLED. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
+
 ## 27/11/2026 — Διανομή υπογεγραμμένου Android Chat 0.1.19 — LAB
 
 Δημοσίευση του ελεγμένου APK από το signing run 46067143226. [Checkpoint](CHANGES/2026-11-27-chat-android-019-distribution.md).

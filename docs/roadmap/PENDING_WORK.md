@@ -1,3 +1,7 @@
+## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
+
+Owner /root / feat/sales-product-search-actions-20261128, same page continuation of #4311/#4318. User explicitly extends all five SalesAnalysisSuite tabs with product search and item-row context actions for product card and purchases. Independent expansion; historical-cost/hourly/report/POS/inventory owners retain other scopes. Before-source only: NOT TESTED / NOT INSTALLED. [Checkpoint](../../CHECKPOINTS/CHANGES/2026-11-28-sales-product-search-actions.md).
+
 ## 27/11/2026 23:48 Athens — visible branding and complete sales fields / AWAITING USER VISUAL ONLY
 
 ASSIGNED - /root / fix/myworkstation-visible-branding-20261127, owner retained until common final visual acceptance. Implementation #4311, full PR/main CI and guarded live revision c16d5694 complete. No further source work, data repair or production load test assigned. Single next action: owner full refresh and inspect selected-store Sales/items. Technical installation only; no financial LAB PASS or USER PASS. [Final handoff](../../CHECKPOINTS/CHANGES/2026-11-27-visible-branding.md).
