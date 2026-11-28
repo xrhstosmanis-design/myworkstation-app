@@ -17,3 +17,5 @@ Node20.20.2 focused16PASS/0FAIL/0SKIP, including actual installed five-tab DOM, 
 
 
 Final source review before release: the screen has an outer hub selector and an inner analytics selector. The new query/context now reads the inner report selector, and observes programmatic store changes. A real installed-DOM regression includes a conflicting outer selector and verifies the inner selected store is used. Dirty/failed/no-report/token-changed states suppress CSV. Focused16PASS/0FAIL/0SKIP repeated after this bounded fence correction; final build PASS9.71s / entry-ZX8uhnSG.js. Full CI on the latest head and exact guarded release remain required.
+
+Final interaction fence: Escape is handled only while this feature owns an open menu/dialog, so it cannot move focus away from unrelated dialogs. A focused DOM regression verifies the inactive handler leaves focus unchanged. Focused16/0/0 and final frontend build remain green; the latest head must pass full CI before release.

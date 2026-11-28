@@ -61,7 +61,7 @@ export function installSalesProductActions(root,getContext,read){
  root.addEventListener('sas:scope-change',close);
  const outside=event=>{if(menu&&!menu.contains(event.target))closeMenu()};
  const key=event=>{
-  if(event.key==='Escape'){close();target?.isConnected&&target.focus()}
+  if(event.key==='Escape'&&(menu||dialog)){close();target?.isConnected&&target.focus()}
   if(event.key==='Tab'&&dialog){const button=dialog.querySelector('button');event.preventDefault();button?.focus()}
   if(menu&&['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();const buttons=[...menu.querySelectorAll('button')],index=buttons.indexOf(doc.activeElement);buttons[(index+(event.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus()}
  };

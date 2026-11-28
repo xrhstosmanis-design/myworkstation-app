@@ -60,6 +60,7 @@ test('context actions use the selected product/store, escape data and discard de
   w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(w.document.querySelector('[role="dialog"]'),null);
   open('card');context={...context,storeId:'other'};root.dispatchEvent(new w.CustomEvent('sas:scope-change'));
   pending([{id:'q',name:'STALE',stores:[{storeId:'s',salePrice:1}]}]);await tick();assert.equal(w.document.querySelector('[role="dialog"]'),null);assert.equal(w.document.body.textContent.includes('STALE'),false);
+  root.firstElementChild.focus();w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(w.document.activeElement,root.firstElementChild,'inactive sales actions must not steal focus from other dialogs');
   context={...context,storeId:'s',generation:2};open('card');pending([{id:'q',name:'<img src=x>',costPrice:null,stores:[{storeId:'other',salePrice:999},{storeId:'s',storeName:'Selected',salePrice:0,currentStock:0}],barcodes:[{barcode:'<b>123</b>',unitMultiplier:1}]}]);await tick();
   assert.equal(w.document.querySelector('.sas-product-dialog img'),null);assert.match(w.document.querySelector('.sas-product-dialog').textContent,/0,00/);assert.equal(w.document.querySelector('.sas-product-dialog').textContent.includes('999'),false);
   w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
