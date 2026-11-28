@@ -1,3 +1,7 @@
+## 28Nov2026 — Shelf label product/barcode/price layout — ASSIGNED /root
+
+Independent owner expansion: no store heading, product at top, compact barcode bottom left, large complete price bottom right, matching supplied shelf-label reference. Existing 27Nov readability owner /root continued; Citizen device owner unchanged. Before-source claim; NOT TESTED. [Checkpoint](CHANGES/2026-11-28-shelf-label-layout.md). [Pending](../docs/roadmap/PENDING_WORK_2026-11-28_SHELF_LABEL.md).
+
 ## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
 
 Owner /root / feat/sales-product-search-actions-20261128, same page continuation of #4311/#4318. User explicitly extends all five SalesAnalysisSuite tabs with product search and item-row context actions for product card and purchases. Independent expansion; historical-cost/hourly/report/POS/inventory owners retain other scopes. Before-source only: NOT TESTED / NOT INSTALLED. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
