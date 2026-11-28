@@ -209,6 +209,7 @@ function requireLedgerAccess(req,res,next){
     const capability=req.staffGrant?.capability;
     const path=String(req.originalUrl||"").split("?")[0];
     if(['sales.read','payments.supplier','payments.expense'].includes(capability))return next();
+    if(capability==='approvals.supplier-recovery'&&/^\/api\/transactions\/stores\/[^/]+\/payments\/[^/]+\/(?:correction-context|correct-amount)$/.test(path))return next();
     if(capability==='approvals.expense-confirm'&&req.method==='POST'&&/^\/api\/transactions\/other-expenses\/[^/]+\/review$/.test(path))return next();
     if(capability==='approvals.supplier-recovery'&&['GET','POST'].includes(req.method)&&/^\/api\/transactions\/other-expenses\/[^/]+\/supplier-advance$/.test(path))return next();
     if(capability==='payments.advance-allocate'&&req.method==='POST'&&/^\/api\/transactions\/stores\/[^/]+\/supplier-advances\/[^/]+\/allocate$/.test(path))return next();
@@ -488,8 +489,17 @@ router.use(auth,requireLedgerAccess);
 
 async function correctionScope(req){
   assertStoreAccess(req,req.params.storeId);
-  await ownedStore(req.params.storeId,req.user.companyId);
-  return {companyId:req.user.companyId,storeId:req.params.storeId,transactionId:req.params.transactionId,user:req.user,terminalPos:await requestTerminal(req)};
+  const storeId=req.params.storeId;
+  const platform=req.user.tokenType!=='STORE_OPERATOR'&&req.user.staffAccess!==true&&isSuperAdminReview(req);
+  const store=platform
+    ?(await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "id"=${storeId} AND "active"=true`)[0]
+    :await ownedStore(storeId,req.user.companyId);
+  if(!store)throw Object.assign(new Error("Δεν βρέθηκε το ενεργό κατάστημα."),{status:404});
+  const companyId=store.companyId||req.user.companyId;
+  const user={...req.user,companyId,role:platform?'SUPER_ADMIN':req.user.role,paymentCorrectionCapability:req.staffGrant?.capability};
+  const authorize=req.user.staffAccess===true?db=>requireStaffAction(db,req,storeId,'approvals.supplier-recovery'):null;
+  if(authorize)await authorize(prisma);
+  return {companyId,storeId,transactionId:req.params.transactionId,user,authorize,terminalPos:platform?null:await requestTerminal(req)};
 }
 router.get("/stores/:storeId/payments/:transactionId/correction-context",route(async(req,res)=>{
   res.json(await paymentCorrectionContext(prisma,await correctionScope(req)));
@@ -793,7 +803,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
   }).parse(req.query||{});
   if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:"Η ημερομηνία «Από» δεν μπορεί να είναι μετά την «Έως»."});
   const rows=await prisma.$queryRaw`
-    SELECT ss."id",ss."status",ss."paymentMethod",ss."paidAt",ss."note",ss."createdAt",ss."createdByName",
+    SELECT ss."id",ss."storeId",ss."status",ss."paymentMethod",ss."paidAt",ss."note",ss."createdAt",ss."createdByName",
            t."id" AS "transactionId",t."amount",EXISTS (SELECT 1 FROM "StoreOperatorAudit" audit WHERE audit."companyId"=ss."companyId" AND audit."storeId"=ss."storeId" AND audit."details"->>'transactionId'=t."id" AND (audit."eventType"='OTHER_EXPENSE_SUPPLIER_ADVANCE' OR (audit."eventType" IN ('SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED','SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_ADVANCE_DECLARED') AND audit."details"->>'advanceAcknowledged'='true'))) AS "advanceDeclared",t."attachmentFilename",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
            COALESCE(json_agg(json_build_object('purchaseDocumentId',a."purchaseDocumentId",'amount',a."amount",'documentNumber',p."documentNumber") ORDER BY p."documentDate") FILTER (WHERE a."id" IS NOT NULL),'[]'::json) AS allocations
     FROM "SupplierPaymentSettlement" ss
@@ -959,7 +969,7 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
   const filters=z.object({companyId:z.string().trim().max(180).optional().default(""),storeId:z.string().trim().max(180).optional().default(""),from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()}).parse(req.query||{});
   if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:"Η ημερομηνία «Από» δεν μπορεί να είναι μετά την «Έως»."});
   const items=await prisma.$queryRaw`
-    SELECT er."id",er."status",er."createdAt",t."id" AS "transactionId",t."amount",t."description",t."paymentMethod",t."attachmentFilename",t."attachmentData" IS NOT NULL AS "hasAttachment",t."occurredAt",t."actorName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName"
+    SELECT er."id",er."status",er."createdAt",er."storeId",t."id" AS "transactionId",t."amount",t."description",t."paymentMethod",t."attachmentFilename",t."attachmentData" IS NOT NULL AS "hasAttachment",t."occurredAt",t."actorName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName"
     FROM "OtherExpenseReview" er
     JOIN "StoreTransaction" t ON t."id"=er."transactionId" AND t."companyId"=er."companyId" AND (${!delegatedApprovalsRead(req)} OR t."storeId"=er."storeId") AND t."reversedAt" IS NULL
     JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId"
