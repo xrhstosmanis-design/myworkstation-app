@@ -28,3 +28,12 @@ Clock-policy follow-up verified locally: combined21PASS/0FAIL/0SKIP including un
 Latest-main reconciliation: main advanced to8f3f39a1b with the other-owner shelf-label claim and the already-live No5 product-read delegation. Git reported only one active-registry prefix conflict. Preserved both owners' complete entries and all peer bytes; no own source behavior changed. The clock-fix head a5a5917f had no CI run while conflicted; a normal merge-parent reconciliation enables the fresh full CI. No force push or ownership takeover.
 
 To avoid repeated conflicts with other pages' new top claims during the long CI run, only this page's source-prepared active-registry block was moved to the end of the unchanged current-main registry. All peer records remain byte-identical and in their existing order. No source, acceptance or ownership change.
+
+
+## Final technical handoff — 28/11/2026 19:03 Athens
+
+Source PR #4324 final head28f273cc395086a782441d54b80db429e3526326 passed full CI46164107311; all five jobs successful,7505 server tests /7501PASS /0FAIL /4SKIP. Merged449b74899ec8e3258e6ecffd87f9a4ff92140482, exact own source/test blob hashes preserved and peer changes retained. Exact main CI46166166601 also passed all five jobs with7501PASS /0FAIL /4SKIP. Guarded release46168050751 completed successfully. Render deploy dep-dc5gh4m1egvs73bs5gl0 is LIVE, finished17:01:50Z; production /api/health returns ok:true and exact449b74899ec8e3258e6ecffd87f9a4ff92140482. Public bootstrap main-DRlZARoz.js points to served entry-BektcMJG.js; all six search/menu/Greek-caption markers verified in that actual entry. No extra deploy, paid scaling or resource change.
+
+Browser reached the canonical /platform-admin sign-in screen; no authenticated session available for a live LAB visual check. No credentials entered, no business data written, no financial LAB PASS or USER PASS inferred. Technical implementation/CI/installation complete. Common user visual acceptance only remains: full refresh the existing signed-in app, search by description/SKU/barcode in Sales, then right click a genuine product for card/purchases. In the category view expand its products first. The card is read-only and purchases retain selected store and report dates.
+
+Owner /root / feat/sales-product-search-actions-20261128 remains assigned until common final visual acceptance. No duplicate source work or extra transaction needed. Single next action: owner full refresh and inspect search/right-click in the selected-store Sales page during the common acceptance session.
