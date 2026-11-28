@@ -1,6 +1,10 @@
 ## 28/11/2026 — Sales product search/context / SOURCE PREPARED / AWAITING CI
 
-Owner /root / feat/sales-product-search-actions-20261128 retained. Claim4323 green/merged091e524c7 before edits. Common five-tab query, subset totals/averages, pre-cap journal search, genuine-ID context card/purchase reads and stale/tenant boundaries implemented. Focused16 + native PostgreSQL2 passed; frontend build9.64s passed. No financial/write/permission/infrastructure change. Full source CI/release/common visual acceptance pending. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
+Owner /root / feat/sales-product-search-actions-20261128 retained. Claim4323 green/merged091e524c7 before edits. Common five-tab query, subset totals/averages, pre-cap journal search, genuine-ID context card/purchase reads and stale/tenant boundaries implemented. Focused21 (including global Greece clock policy) + native PostgreSQL2 passed; frontend build9.09s passed. Sole full-CI clock-format failure corrected; latest full rerun required. No financial/write/permission/infrastructure change. Full source CI/release/common visual acceptance pending. [Checkpoint](CHANGES/2026-11-28-sales-product-search-actions.md).
+
+## 28Nov2026 — Shelf label product/barcode/price layout — ASSIGNED /root
+
+Independent owner expansion: no store heading, product at top, compact barcode bottom left, large complete price bottom right, matching supplied shelf-label reference. Existing 27Nov readability owner /root continued; Citizen device owner unchanged. Before-source claim; NOT TESTED. [Checkpoint](CHANGES/2026-11-28-shelf-label-layout.md). [Pending](../docs/roadmap/PENDING_WORK_2026-11-28_SHELF_LABEL.md).
 
 ## 28/11/2026 — Αναζήτηση είδους και δεξί κλικ στην Αναλυτική / ASSIGNED / BEFORE SOURCE
 
@@ -34,6 +38,7 @@ ASSIGNED /root. INSTALLED: source #4308, green full PR/main CI; exact healthy ru
 
 - 27/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών](CHANGES/2026-11-27-no5-company-read-delegation.md).
 - 27/11/2026 · Νο 5 · [Πρόσθετες εταιρικές προβολές](CHANGES/2026-11-27-no5-more-company-reads.md).
+- 28/11/2026 · Νο 5 · [Επανεκχώρηση εταιρικών προβολών προϊόντος](CHANGES/2026-11-28-no5-product-read-delegation.md).
 
 Branch `feat/financial-consumption-20261127`. Explicit owner request: Καταστροφές and Ιδιοκατανάλωση INSIDE existing Οικονομικές αναφορές; purchase and sale values, SuperAdmin/Owner and separately authorized Manager; monthly analysis in the existing monthly store email and configured recipients. Owner approved publication in this existing public repository on 27/11 after the disclosure question.
 

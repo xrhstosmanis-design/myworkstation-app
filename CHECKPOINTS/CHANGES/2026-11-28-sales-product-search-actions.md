@@ -24,3 +24,5 @@ Final interaction fence: Escape is handled only while this feature owns an open 
 Full CI46162381917 on9e562330: Windows/classifier/wholesale succeeded; full server7500PASS/1FAIL/4SKIP out of7505 tests. Sole failure: global Greece clock policy requires explicit hour12:false on the new purchase date display. Corrected the formatter, retaining the policy test unchanged. Latest full rerun/main CI/guarded release still required; no production operation or financial acceptance.
 
 Clock-policy follow-up verified locally: combined21PASS/0FAIL/0SKIP including unchanged global Greece time policy; final frontend build PASS9.09s / entry-DqDIj9m8.js. Native SQL/cost evidence remains unchanged.
+
+Latest-main reconciliation: main advanced to8f3f39a1b with the other-owner shelf-label claim and the already-live No5 product-read delegation. Git reported only one active-registry prefix conflict. Preserved both owners' complete entries and all peer bytes; no own source behavior changed. The clock-fix head a5a5917f had no CI run while conflicted; a normal merge-parent reconciliation enables the fresh full CI. No force push or ownership takeover.
